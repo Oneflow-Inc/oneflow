@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import math
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -129,7 +130,10 @@ def box_encode(ref_boxes, boxes, regression_weights, name=None):
 
 
 @oneflow_export("detection.box_decode")
-def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
+def box_decode(ref_boxes, boxes_delta, regression_weights, bbox_xform_clip=None, name=None):
+    if bbox_xform_clip is None:
+        bbox_xform_clip = math.log(1000. / 16)
+
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -147,6 +151,7 @@ def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
         regression_weights_proto
     )
     op_conf.box_decode_conf.boxes = "boxes"
+    op_conf.box_decode_conf.bbox_xform_clip = bbox_xform_clip
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

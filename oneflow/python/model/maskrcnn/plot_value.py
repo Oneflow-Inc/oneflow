@@ -37,7 +37,7 @@ def plot_value(df):
         )
         .mark_line()
     )
-    chart += polynomial_fit
+    # chart += polynomial_fit
     chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
         alt.Y("value:Q")
     )
@@ -78,6 +78,7 @@ def plot_many_by_legend(df_dict):
                     print("skipping legend: {}".format(legend))
 
     limit, rate = get_limit_and_rate(list(df_dict.values()))
+    print(limit, rate)
     # limit, rate = 520, 1
     for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
@@ -111,6 +112,7 @@ def get_df(path, wildcard=None, index=-1, post_process=None):
     if os.path.isdir(path) and wildcard is not None:
         path = wildcard_at(os.path.join(path, wildcard), index)
     df = pd.read_csv(path)
+    print(path)
     if callable(post_process):
         df = post_process(df)
     return df
@@ -122,7 +124,7 @@ def get_limit_and_rate(dfs):
     limit = min(maxs)
     rate = 1
     if limit * len(dfs) > 5000:
-        rate = limit / (5000 // len(dfs)) + 1
+        rate = int(limit / (5000 // len(dfs)) + 1)
     return limit, rate
 
 
@@ -146,6 +148,7 @@ def get_with_path_print(dict, path):
 
 def post_process_flow(df):
     cfg = parse_cfg(df)
+    get_with_path_print(cfg, "MODEL.WEIGHT")
     get_with_path_print(cfg, "INPUT.MIRROR_PROB")
     get_with_path_print(cfg, "MODEL.RPN.RANDOM_SAMPLE")
     get_with_path_print(cfg, "MODEL.ROI_HEADS.RANDOM_SAMPLE")
@@ -190,8 +193,6 @@ if __name__ == "__main__":
         torch_metrics_path
     )
 
-    limit, rate = (520, 1)
-
     plot_many_by_legend(
         {
             "flow": get_df(
@@ -203,7 +204,7 @@ if __name__ == "__main__":
             # "flow1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
-            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--15-55-19.csv",
+            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--21-27-34.csv",
             #     ),
             #     post_process=post_process_flow,
             # ),
@@ -222,8 +223,7 @@ if __name__ == "__main__":
             #         args.metrics_dir,
             #         "torch-520-batch_size-8-image_dir-coco_instances_val2017_subsample_8_repeated-2019-12-29--06-25-23.csv",
             #     ),
-            #     -1,
-            #     post_process_torch,
+            #     post_process=post_process_torch,
             # ),
         }
     )
@@ -232,18 +232,18 @@ if __name__ == "__main__":
     #         "flow1": get_df(
     #             flow_metrics_path, "loss*.csv", -1, post_process_flow
     #         ),
-    #         "flow2": get_df(
-    #             flow_metrics_path, "loss*.csv", -2, post_process_flow
-    #         ),
+    #         # "flow2": get_df(
+    #         #     flow_metrics_path, "loss*.csv", -2, post_process_flow
+    #         # ),
     #     }
     # )
     # plot_many_by_legend(
     #     {
     #         "torch1": get_df(
-    #             flow_metrics_path, "torch*.csv", -1, post_process_torch
+    #             flow_metrics_path, "torch*.csv", -2, post_process_torch
     #         ),
     #         "torch2": get_df(
-    #             flow_metrics_path, "torch*.csv", -2, post_process_torch
+    #             flow_metrics_path, "torch*.csv", -3, post_process_torch
     #         ),
     #     }
     # )

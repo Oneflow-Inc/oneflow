@@ -496,6 +496,7 @@ class IterationProcessor(object):
                 self.image_dir,
                 str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
             )
+            npy_file_name = npy_file_name.replace("/", "-")
             self.metrics.to_csv(npy_file_name, index=False)
             print("saved: {}".format(npy_file_name))
 
