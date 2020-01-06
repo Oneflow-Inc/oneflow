@@ -154,6 +154,12 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     CHECK(maybe.IsOk());                                                  \
     maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
+#define OF_RETURN_IF_ERROR(...)                                         \
+  const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+  if (!maybe.IsOk()) {                                                  \
+    LOG(INFO) << "maybe failed:" << __LOC__;                            \
+    return maybe.error();                                               \
+  }
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST
