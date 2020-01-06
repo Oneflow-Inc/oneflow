@@ -32,11 +32,13 @@ class OnDemandHostBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OnDemandHostBlob);
   explicit OnDemandHostBlob(const Blob* like) {
-    blob_desc_.reset(new RtBlobDesc(like->blob_desc().blob_desc_proto()));
+    Shape shape;
+    like->shape().ToShape(&shape);
+    blob_desc_.reset(new RtBlobDesc(BlobDesc(shape, like->data_type())));
     Init();
   }
   explicit OnDemandHostBlob(const RtBlobDesc& blob_desc) {
-    blob_desc_.reset(new RtBlobDesc(blob_desc.blob_desc_proto()));
+    blob_desc_.reset(new RtBlobDesc(BlobDesc(blob_desc.body_shape(), blob_desc.data_type())));
     Init();
   }
   explicit OnDemandHostBlob(const Shape& shape, DataType data_type) {
@@ -51,8 +53,10 @@ class OnDemandHostBlob final {
 
  private:
   void Init() {
-    data.resize(blob_desc_->TotalByteSize());
-    blob_.reset(new Blob(nullptr, blob_desc_.get(), data.data()));
+    data.resize(blob_desc_->AlignedTotalByteSize());
+    MemoryCase host_mem_case;
+    host_mem_case.mutable_host_mem();
+    blob_.reset(new Blob(host_mem_case, blob_desc_.get(), nullptr, data.data()));
   }
 
   std::vector<char> data;
@@ -133,13 +137,13 @@ class AutoSyncBlobAccessor final {
         host_blob_(underlying) {
     if (read_sync_) {
       SyncCopyToHost<device_type>(device_ctx_, underlying_->dptr(), host_blob_.blob()->mut_dptr(),
-                                  underlying_->ByteSizeOfDataContentField());
+                                  underlying_->ByteSizeOfBlobBody());
     }
   }
   ~AutoSyncBlobAccessor() {
     if (write_sync_) {
       SyncCopyToDevice<device_type>(device_ctx_, host_blob_.blob()->dptr(), underlying_->mut_dptr(),
-                                    underlying_->ByteSizeOfDataContentField());
+                                    underlying_->ByteSizeOfBlobBody());
     }
   }
 
@@ -294,7 +298,7 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
     const ParallelContext& parallel_ctx = this->kernel_conf().model_io_v2_conf().parallel_ctx();
     const VariableOpConf& original_variable_conf = conf.original_variable_conf();
     const Shape logical_blob_shape(original_variable_conf.shape());
-    const bool is_broadcast = logical_blob_shape == in_blob->shape();
+    const bool is_broadcast = ShapeView(logical_blob_shape) == in_blob->shape();
     const DataType data_type = original_variable_conf.data_type();
     if (is_broadcast && parallel_ctx.parallel_id() != 0) { return; }
     const std::string snapshot_path =

@@ -19,8 +19,9 @@ SnapshotReader::SnapshotReader(const std::string& snapshot_root_path)
     : root_path_(snapshot_root_path) {}
 
 void SnapshotReader::Read(const std::string& key, Blob* blob) const {
-  Read(key, blob->shape(), blob->data_type(), TensorSliceView(blob->shape()),
-       blob->mut_dptr<char>());
+  Shape shape;
+  blob->shape().ToShape(&shape);
+  Read(key, shape, blob->data_type(), TensorSliceView(shape), blob->mut_dptr<char>());
 }
 
 void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shape,
@@ -49,7 +50,7 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
 
 void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shape,
                           const TensorSliceView& slice, Blob* blob) const {
-  CHECK_EQ(slice.shape(), blob->shape());
+  CHECK_EQ(ShapeView(slice.shape()), blob->shape());
   Read(key, logical_blob_shape, blob->data_type(), slice, blob->mut_dptr<char>());
 }
 
@@ -79,7 +80,7 @@ void SnapshotWriter::Write(const std::string& key, const char* data, size_t size
 }
 
 void SnapshotWriter::Write(const std::string& key, const Blob* blob) {
-  Write(key, blob->dptr<char>(), blob->ByteSizeOfDataContentField());
+  Write(key, blob->dptr<char>(), blob->ByteSizeOfBlobBody());
 }
 
 void SnapshotWriter::Close() {
