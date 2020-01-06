@@ -53,12 +53,14 @@ class OnDemandHostBlob final {
 
  private:
   void Init() {
-    data.resize(blob_desc_->AlignedTotalByteSize());
+    header.resize(blob_desc_->ByteSizeOfBlobHeader());
+    data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
     MemoryCase host_mem_case;
     host_mem_case.mutable_host_mem();
-    blob_.reset(new Blob(host_mem_case, blob_desc_.get(), nullptr, data.data()));
+    blob_.reset(new Blob(host_mem_case, blob_desc_.get(), header.data(), data.data()));
   }
 
+  std::vector<char> header;
   std::vector<char> data;
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<RtBlobDesc> blob_desc_;

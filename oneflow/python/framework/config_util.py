@@ -149,9 +149,12 @@ def persistence_buf_byte(val):
 
 @oneflow_export('config.enable_model_io_v2')
 def enable_model_io_v2(val):
-    assert config_proto_mutable == True
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
     assert type(val) is bool
-    default_config_proto.io_conf.enable_model_io_v2 = val
+    sess.config_proto.io_conf.enable_model_io_v2 = val
 
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
