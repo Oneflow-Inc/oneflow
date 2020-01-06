@@ -17,6 +17,7 @@ class BoxDecodeKernel final : public KernelIf<device_type> {
     Blob* boxes_blob = BnInOp2Blob("boxes");
     const BBoxRegressionWeights reg_weights =
         this->op_conf().box_decode_conf().regression_weights();
+    const float bbox_xform_clip = this->op_conf().box_decode_conf().bbox_xform_clip();
 
     CHECK_EQ(ref_boxes_blob->shape().NumAxes(), 2);
     CHECK_EQ(ref_boxes_blob->shape().At(1), 4);
@@ -31,7 +32,7 @@ class BoxDecodeKernel final : public KernelIf<device_type> {
     BoxDecodeUtil<device_type, T>::Decode(ctx.device_ctx, num_boxes_delta, num_ref_boxes,
                                           ref_boxes_ptr, boxes_delta_ptr, reg_weights.weight_x(),
                                           reg_weights.weight_y(), reg_weights.weight_w(),
-                                          reg_weights.weight_h(), boxes_ptr);
+                                          reg_weights.weight_h(), bbox_xform_clip, boxes_ptr);
   }
 };
 
@@ -40,7 +41,7 @@ struct BoxDecodeUtil<DeviceType::kCPU, T> {
   static void Decode(DeviceCtx* ctx, const int32_t num_boxes_delta, const int32_t num_ref_boxes,
                      const T* ref_boxes_ptr, const T* boxes_delta_ptr, const float weight_x,
                      const float weight_y, const float weight_w, const float weight_h,
-                     T* boxes_ptr) {
+                     const float bbox_xform_clip, T* boxes_ptr) {
     UNIMPLEMENTED();
   }
 };
