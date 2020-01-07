@@ -86,17 +86,6 @@ void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  FunctionPass("SetDefaultVariableConf")(job);
-  FunctionPass("AutoMixedPrecision")(job);
-  FunctionPass("TieUpChainHeadersUnReachableFromAnyVariableOps")(job);
-  FunctionPass("NonDistributedOptimizerPass")(job);
-  FunctionPass("AutoTrainStep")(job);
-  FunctionPass("AutoLearningRate")(job);
-  FunctionPass("GenerateBackwardAndOptimizerOpConfs")(job);
-  FunctionPass("SequentializeNcclTupleBroadcastReducePass")(job);
-  FunctionPass("AddAllReduceGroupPass")(job);
-  FunctionPass("AddLbiDiffWatcherOpConfs")(job);
-  FunctionPass("SequentializeAllReduceGroupPass")(job);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
