@@ -242,7 +242,7 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);

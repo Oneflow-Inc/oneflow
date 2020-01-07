@@ -31,7 +31,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
 
 }  // namespace
 
-void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
+void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) const {
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2model_size;

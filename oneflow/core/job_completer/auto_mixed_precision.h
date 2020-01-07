@@ -21,18 +21,18 @@ class AutoMixedPrecision final : public OpGraphPass {
   ~AutoMixedPrecision() = default;
 
   bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) override;
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 
  private:
-  void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set);
+  void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
   void FillWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set);
+                    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const;
   void PropagateWhiteThroughClearNodes(const OpGraph& op_graph,
                                        std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                        const HashSet<OpNode*>& black_set,
-                                       HashSet<OpNode*>* white_set);
+                                       HashSet<OpNode*>* white_set) const;
   void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                    JobBuilder* job_builder);
+                    JobBuilder* job_builder) const;
 
   const AMPList& white_list_;
   const AMPList& black_list_;
