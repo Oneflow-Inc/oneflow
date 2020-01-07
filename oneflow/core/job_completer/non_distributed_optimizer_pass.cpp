@@ -35,7 +35,9 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
   OF_DISALLOW_COPY_AND_MOVE(NonDistributedOptimizerPass);
   NonDistributedOptimizerPass() = default;
   ~NonDistributedOptimizerPass() = default;
-  bool IsEnabled() const override { return GlobalJobDesc().enable_non_distributed_optimizer(); }
+  bool IsEnabled() const override {
+    return GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer();
+  }
   void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
