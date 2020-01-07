@@ -23,6 +23,13 @@ jobs:
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule foreach --recursive git fetch
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
-    - name: Build the Docker image
-      run: docker build --build-arg http_proxy=192.168.1.11:8118 --build-arg https_proxy=192.168.1.11:8118 --rm -t oneflow-build -f docker/build/Dockerfile .
+    - name: Build Builder Docker image
+      run: |
+        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+        git_branch=${GITHUB_REF##*/}
+        docker build --build-arg http_proxy=192.168.1.11:8118 --build-arg https_proxy=192.168.1.11:8118 --rm -t oneflow-build:${git_branch} -t oneflow-build:${git_hash} -f docker/build/Dockerfile .
+        docker run --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /dist/*.whl $PWD"
+    - name: Build Test Docker image
+      run: |
+        docker build --build-arg http_proxy=192.168.1.11:8118 --build-arg https_proxy=192.168.1.11:8118 --rm -t oneflow-test -f docker/test/Dockerfile .
 
