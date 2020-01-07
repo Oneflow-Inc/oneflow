@@ -31,5 +31,5 @@ jobs:
         docker run --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD"
     - name: Build Test Docker image
       run: |
-        docker build --build-arg http_proxy=192.168.1.11:8118 --build-arg https_proxy=192.168.1.11:8118 --rm -t oneflow-test -f docker/test/Dockerfile .
+        docker build --rm -t oneflow-test -f docker/test/Dockerfile .
 
