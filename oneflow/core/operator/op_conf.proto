@@ -1760,6 +1760,7 @@ message BoxDecodeOpConf {
   required string boxes = 3;
   // conf
   required BBoxRegressionWeights regression_weights = 4;
+  required float bbox_xform_clip = 5;
 }
 
 message LevelMapOpConf {
