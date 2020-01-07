@@ -13,7 +13,7 @@ class AllReduceSequencePass final : public OpGraphPass {
   AllReduceSequencePass() = default;
   ~AllReduceSequencePass() = default;
   bool IsEnabled() const override { return !GlobalJobDesc().disable_all_reduce_sequence(); }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) override;
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 }  // namespace oneflow

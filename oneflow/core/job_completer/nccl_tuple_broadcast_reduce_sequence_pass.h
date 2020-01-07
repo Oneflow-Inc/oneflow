@@ -14,7 +14,7 @@ class NcclTupleBroadcastReduceSequencePass final {
   NcclTupleBroadcastReduceSequencePass() = default;
   ~NcclTupleBroadcastReduceSequencePass() = default;
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder);
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
 }  // namespace oneflow

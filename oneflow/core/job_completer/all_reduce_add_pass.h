@@ -15,7 +15,7 @@ class AllReduceAddPass final : public OpGraphPass {
     return !GlobalJobDesc().enable_non_distributed_optimizer()
            && GlobalJobDesc().enable_all_reduce_group();
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) override;
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 }  // namespace oneflow
