@@ -45,19 +45,6 @@ void WithOpGraphAndMutJobBuilder(Job* job,
   Handler(op_graph, &job_builder);
 }
 
-void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
-  auto op_type_case = op_node.op().op_conf().op_type_case();
-  if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
-    std::unique_ptr<GenerateFacadeImplOpConfWrapperStruct> obj;
-    obj.reset(NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case));
-    obj->Call(op_node, job_builder);
-  }
-}
-
-void ReplaceFacade(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
-}
-
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
     const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
   auto& mut_pairs =
@@ -274,6 +261,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     return false;
   };
+  HashMap<const OperatorConf*, HashSet<std::string>> op_conf2ctrl_in_op_names;
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
@@ -291,12 +279,17 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
       }
     }
     if (mutable_consumer == nullptr) { return; }
-    OperatorConf mut_mutable_consumer_op_conf(*mutable_consumer);
     for (const auto* fw_bw_op : naive_consumers) {
-      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
+      op_conf2ctrl_in_op_names[mutable_consumer].insert(fw_bw_op->name());
+    }
+  });
+  for (const auto& pair : op_conf2ctrl_in_op_names) {
+    OperatorConf mut_mutable_consumer_op_conf(*pair.first);
+    for (const auto& fw_bw_op_name : pair.second) {
+      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op_name);
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
-  });
+  }
 }
 
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -316,8 +309,6 @@ void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* j
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  // replace facade op
-  WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   AutoMixedPrecision()(job);
