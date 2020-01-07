@@ -602,3 +602,22 @@ def argmax(input, axis=None, output_type=None, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("math.reduced_shape_elem_cnt")
+def elem_cnt(input_blob, axis=None, dtype=None, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("ShapeElemCnt_"))
+    op_conf.shape_elem_cnt_conf.x = input_blob.logical_blob_name
+    if axis is None:
+        op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
+    else:
+        assert isinstance(axis, (tuple, list))
+        op_conf.shape_elem_cnt_conf.include_axis_conf.axis.extend(axis)
+    if dtype is not None:
+        op_conf.shape_elem_cnt_conf.data_type = dtype
+    op_conf.shape_elem_cnt_conf.y = "y"
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    out_lbi.op_name = op_conf.name
+    out_lbi.blob_name = "y"
+    return remote_blob_util.RemoteBlob(out_lbi)
