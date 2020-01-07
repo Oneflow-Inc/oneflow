@@ -370,24 +370,19 @@ message SparseCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
-message SigmoidCrossEntropyLossOpConf {
+message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional bool normalize = 4 [default = true];
-  optional float scale = 5 [default = 1.0];
-  optional ScalarReductionType reduction = 6 [default = kSumOverN];
-  optional float weight_scalar = 7 [default = 1.0];
-  optional string weight = 8;
+  required DataType label_type = 4;
 }
 
-message SigmoidCrossEntropyLossGradOpConf {
+message SigmoidCrossEntropyGradOpConf {
   required string prediction = 1;
   required string label = 2;
-  required string loss_diff = 3;
-  required string prediction_diff = 4;
-  optional float weight_scalar = 5 [default = 1.0];
-  optional ScalarReductionType reduction = 6 [default = kSumOverN];
+  required string prediction_diff = 3;
+  required string loss_diff = 4;
+  required DataType label_type = 5;
 }
 
 message IdentityLossOpConf {
@@ -1700,7 +1695,7 @@ message OperatorConf {
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
-    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     OneHotOpConf one_hot_conf = 258;
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
@@ -1742,7 +1737,7 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
-    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
+    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
     ModelInitV2OpConf model_init_v2_conf = 308;
     ModelLoadV2OpConf model_load_v2_conf = 309;

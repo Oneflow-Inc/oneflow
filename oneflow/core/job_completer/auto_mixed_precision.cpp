@@ -1,5 +1,6 @@
 #include <algorithm>
-#include "oneflow/core/job_completer/auto_mixed_precision.h"
+#include "oneflow/core/job_completer/auto_mixed_precision_lists.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/device/cuda_util.h"
 
@@ -175,9 +176,38 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   job_builder->MutOpsOnlyOnce(dst_op_confs);
 }
 
-}  // namespace
+class AutoMixedPrecision final : public OpGraphPass {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AutoMixedPrecision);
+  AutoMixedPrecision()
+      : white_list_(AutoMixedPrecisionLists::WhiteList()),
+        black_list_(AutoMixedPrecisionLists::BlackList()),
+        gray_list_(AutoMixedPrecisionLists::GrayList()),
+        clear_list_(AutoMixedPrecisionLists::ClearList()) {}
+  ~AutoMixedPrecision() = default;
 
-void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
+  bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
+
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+ private:
+  void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
+  void FillWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
+                    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const;
+  void PropagateWhiteThroughClearNodes(const OpGraph& op_graph,
+                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
+                                       const HashSet<OpNode*>& black_set,
+                                       HashSet<OpNode*>* white_set) const;
+  void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
+                    JobBuilder* job_builder) const;
+
+  const AMPList& white_list_;
+  const AMPList& black_list_;
+  const AMPList& gray_list_;
+  const AMPList& clear_list_;
+};
+
+void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -202,7 +232,7 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder)
   InsertCastOp(op_graph, white_set, job_builder);
 }
 
-void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) {
+void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {
   HashSet<OpNode*> upstream_or_part_of_black_and_gray;
   DfsTopoGraphTraversal(
       op_graph, true,
@@ -231,7 +261,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
 void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                       const HashSet<OpNode*>& black_set,
-                                      HashSet<OpNode*>* white_set) {
+                                      HashSet<OpNode*>* white_set) const {
   HashSet<OpNode*> upstream_or_part_of_white;
   auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
     return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
@@ -261,7 +291,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) {
+    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
     DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
                           [&](OpNode* node) {
@@ -281,9 +311,13 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
 }
 
 void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                                      JobBuilder* job_builder) {
+                                      JobBuilder* job_builder) const {
   InsertCastOpImpl(true, op_graph, white_set, job_builder);
   InsertCastOpImpl(false, op_graph, white_set, job_builder);
 }
+
+REGISTER_FUNCTION_PASS("AutoMixedPrecision", AutoMixedPrecision);
+
+}  // namespace
 
 }  // namespace oneflow

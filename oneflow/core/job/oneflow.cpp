@@ -6,7 +6,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/job_completer/user_job_completer.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
@@ -744,7 +744,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     AddJobName2JobId(jobs.at(job_id).job_conf().job_name(), job_id);
     {
       auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(job_id).job_conf(), job_id);
-      UserJobCompleter().Complete(&jobs.at(job_id));
+      FunctionPass("CompleteOfrecordDecoder")(&jobs.at(job_id));
       CompileCurJobOnMaster(&jobs.at(job_id), &sub_plans.at(job_id), true);
     }
   }
