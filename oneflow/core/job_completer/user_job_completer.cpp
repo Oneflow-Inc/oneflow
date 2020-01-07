@@ -130,33 +130,11 @@ void AddRecordLoadOps(Job* job) {
   }
 }
 
-void FixInputOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  HashSet<std::string> input_op_names;
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_input_conf()) { CHECK(input_op_names.emplace(op_conf.name()).second); }
-  }
-  HashSet<std::string> updated_op_names;
-  HashSet<LogicalBlobId> input_lbis_fixed;
-  job_builder.ForEachOperator([&](const Operator& op) {
-    for (const auto& ibn : op.input_bns()) {
-      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
-      if (input_op_names.find(lbi.op_name()) == input_op_names.end()) { continue; }
-      if (updated_op_names.find(lbi.op_name()) != updated_op_names.end()) { continue; }
-      if (input_lbis_fixed.insert(lbi).second) {
-        job_builder.MutParallelConfOnlyOnce(lbi.op_name(),
-                                            job_builder.ParallelConf4OpName(op.op_name()));
-      }
-    }
-  });
-}
-
 }  // namespace
 
 void UserJobCompleter::Complete(Job* job) const {
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  FixInputOpParallelConf(job);
 }
 
 }  // namespace oneflow
