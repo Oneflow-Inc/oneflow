@@ -45,19 +45,6 @@ void WithOpGraphAndMutJobBuilder(Job* job,
   Handler(op_graph, &job_builder);
 }
 
-void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
-  auto op_type_case = op_node.op().op_conf().op_type_case();
-  if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
-    std::unique_ptr<GenerateFacadeImplOpConfWrapperStruct> obj;
-    obj.reset(NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case));
-    obj->Call(op_node, job_builder);
-  }
-}
-
-void ReplaceFacade(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
-}
-
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
     const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
   auto& mut_pairs =
@@ -322,8 +309,6 @@ void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* j
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  // replace facade op
-  WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   AutoMixedPrecision()(job);
