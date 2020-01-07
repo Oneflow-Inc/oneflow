@@ -9,6 +9,7 @@
 FROM ubuntu:18.04
 ENV LANG C.UTF-8
 
+RUN apt update && apt install ca-certificates
 COPY docker/test/sources.list /etc/apt/sources.list
 RUN APT_INSTALL="apt-get install -y --no-install-recommends" && \
     PIP_INSTALL="python -m pip --no-cache-dir install --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple" && \
