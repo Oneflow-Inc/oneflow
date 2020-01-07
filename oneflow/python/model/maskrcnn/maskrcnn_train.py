@@ -558,9 +558,7 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-        if p.checkpoint_period > 0 and (
-            i % p.checkpoint_period == 0 or i == p.max_iter
-        ):
+        if  (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
             save_model(p.check_point, i)
 
 if __name__ == "__main__":
