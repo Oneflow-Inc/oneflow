@@ -27,8 +27,8 @@ def plot_value(df):
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_line()
-    # chart = base.mark_circle()
+    # chart = base.mark_line()
+    chart = base.mark_circle()
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -37,7 +37,7 @@ def plot_value(df):
         )
         .mark_line()
     )
-    # chart += polynomial_fit
+    chart += polynomial_fit
     chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
         alt.Y("value:Q")
     )
