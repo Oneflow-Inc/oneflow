@@ -9,6 +9,9 @@ namespace oneflow {
 
 class OpGraphPass {
  public:
+  OpGraphPass() = default;
+  virtual ~OpGraphPass() = default;
+
   void operator()(Job* job) const {
     if (IsEnabled() == false) { return; }
     Apply(job);

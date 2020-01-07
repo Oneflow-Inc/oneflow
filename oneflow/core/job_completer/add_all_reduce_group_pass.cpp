@@ -1,4 +1,4 @@
-#include "oneflow/core/job_completer/all_reduce_add_pass.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
@@ -240,9 +240,18 @@ void BuildAllReduceStruct(
                        all_reduced_lbi, GetLastTouchedOpName);
 }
 
-}  // namespace
+class AddAllReduceGroupPass final : public OpGraphPass {
+ public:
+  AddAllReduceGroupPass() = default;
+  ~AddAllReduceGroupPass() = default;
+  bool IsEnabled() const override {
+    return GlobalJobDesc().IsTrain() && !GlobalJobDesc().enable_non_distributed_optimizer()
+           && GlobalJobDesc().enable_all_reduce_group();
+  }
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+};
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void AddAllReduceGroupPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
@@ -285,5 +294,9 @@ void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) c
         }
       });
 }
+
+}  // namespace
+
+REGISTER_FUNCTION_PASS("AddAllReduceGroupPass", AddAllReduceGroupPass);
 
 }  // namespace oneflow

@@ -94,7 +94,9 @@ std::function<bool(OpNode*)> MakePredicatorIsReachableFromAnyVariableOps(const O
 REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_pseudo_chain_merge", false,
                                     "ties up chain headers unreachable from any variable ops");
 class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass {
-  bool IsEnabled() const override { return GlobalJobDesc().Bool("enable_pseudo_chain_merge"); }
+  bool IsEnabled() const override {
+    return GlobalJobDesc().IsTrain() && GlobalJobDesc().Bool("enable_pseudo_chain_merge");
+  }
 
   void Apply(const OpGraph& op_graph, Job* job) const override {
     auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
