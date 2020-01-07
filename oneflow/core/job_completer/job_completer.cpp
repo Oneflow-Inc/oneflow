@@ -5,11 +5,8 @@
 #include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/job_completer/set_default_variable_conf.h"
 #include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
-#include "oneflow/core/job_completer/auto_mixed_precision.h"
-#include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
@@ -190,11 +187,11 @@ void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* j
 
 void JobCompleter::Complete(Job* job) const {
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
-  AutoMixedPrecision()(job);
+  FunctionPass("SetDefaultVariableConf")(job);
+  FunctionPass("AutoMixedPrecision")(job);
   if (GlobalJobDesc().IsTrain()) {
-    FindFunctionPass("TieUpChainHeadersUnReachableFromAnyVariableOps")(job);
-    NonDistributedOptimizerPass()(job);
+    FunctionPass("TieUpChainHeadersUnReachableFromAnyVariableOps")(job);
+    FunctionPass("NonDistributedOptimizerPass")(job);
     WithOpGraphAndMutJob(job, &AutoTrainStep);
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning

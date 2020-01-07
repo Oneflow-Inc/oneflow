@@ -1,4 +1,4 @@
-#include "oneflow/core/job_completer/user_job_completer.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -132,9 +132,15 @@ void AddRecordLoadOps(Job* job) {
 
 }  // namespace
 
-void UserJobCompleter::Complete(Job* job) const {
-  SplitDecodeOps(job);
-  AddRecordLoadOps(job);
-}
+class CompleteOfrecordDecoder final : public OpGraphPass {
+ public:
+  bool IsEnabled() const override { return true; }
+  void Apply(Job* job) const override {
+    SplitDecodeOps(job);
+    AddRecordLoadOps(job);
+  }
+};
+
+REGISTER_FUNCTION_PASS("CompleteOfrecordDecoder", CompleteOfrecordDecoder);
 
 }  // namespace oneflow
