@@ -91,8 +91,7 @@ RUN APT_INSTALL="apt-get install -y --no-install-recommends" && \
         typing \
         && \
     $PIP_INSTALL \
-        --pre torch torchvision -f \
-        https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html \
+        torch torchvision \
         && \
 
 # ==================================================================
