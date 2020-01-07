@@ -177,7 +177,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
 
 }  // namespace
 
-void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
+void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -202,7 +202,7 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder)
   InsertCastOp(op_graph, white_set, job_builder);
 }
 
-void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) {
+void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {
   HashSet<OpNode*> upstream_or_part_of_black_and_gray;
   DfsTopoGraphTraversal(
       op_graph, true,
@@ -231,7 +231,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
 void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                       const HashSet<OpNode*>& black_set,
-                                      HashSet<OpNode*>* white_set) {
+                                      HashSet<OpNode*>* white_set) const {
   HashSet<OpNode*> upstream_or_part_of_white;
   auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
     return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
@@ -261,7 +261,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) {
+    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
     DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
                           [&](OpNode* node) {
@@ -281,7 +281,7 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
 }
 
 void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                                      JobBuilder* job_builder) {
+                                      JobBuilder* job_builder) const {
   InsertCastOpImpl(true, op_graph, white_set, job_builder);
   InsertCastOpImpl(false, op_graph, white_set, job_builder);
 }

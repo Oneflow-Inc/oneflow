@@ -3,7 +3,8 @@
 
 namespace oneflow {
 
-void NcclTupleBroadcastReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
+void NcclTupleBroadcastReduceSequencePass::Apply(const OpGraph& op_graph,
+                                                 JobBuilder* builder) const {
   std::vector<OperatorConf> broadcast_ops;
   std::vector<OperatorConf> reduce_ops;
   op_graph.ForEachNode([&](const OpNode* node) {

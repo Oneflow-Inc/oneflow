@@ -15,7 +15,7 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
   NonDistributedOptimizerPass() = default;
   ~NonDistributedOptimizerPass() = default;
   bool IsEnabled() const override { return GlobalJobDesc().enable_non_distributed_optimizer(); }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) override;
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 }  // namespace oneflow
