@@ -337,9 +337,8 @@ void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(
 }
 
 void InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(
-    const std::vector<std::shared_ptr<Job>>& jobs, Plan* plan, int64_t user_job_size) {
-  if (user_job_size == 1) { return; }
-  std::vector<std::shared_ptr<Job>> user_jobs(jobs.begin(), jobs.begin() + user_job_size);
+    const std::vector<std::shared_ptr<Job>>& user_jobs, Plan* plan) {
+  if (user_jobs.size() == 1) { return; }
   std::vector<HashSet<int64_t>> reuse_mem_job_groups = GetMutualExclusionJobGroups(user_jobs);
 
   HashMap<int64_t, ChunkProto> chunk_id2chunk;

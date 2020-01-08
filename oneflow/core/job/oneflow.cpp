@@ -674,19 +674,26 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   job_conf->set_default_data_type(data_type);
 }
 
+REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
+
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
-  size_t user_job_size = conf_jobs.size();
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  std::vector<std::shared_ptr<Job>> function_jobs;
+  function_jobs.reserve(jobs.size());
+  FOR_RANGE(int, i, 0, jobs.size()) {
+    JobDesc job_desc(jobs.at(i)->job_conf(), i);
+    if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
+  }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
                                   &push_op_name2parallel_blob_conf);
     HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
                                   &pull_op_name2parallel_blob_conf);
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, function_jobs,
                                   &var_op_name2parallel_blob_conf);
     for (const auto& pair : push_op_name2parallel_blob_conf) {
       auto push_job = std::make_shared<Job>();
@@ -700,7 +707,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
                   pull_job.get());
       jobs.emplace_back(pull_job);
     }
-    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf,
+    MakeModelIoJobs(function_jobs, var_op_name2parallel_blob_conf,
                     [&](Job* job) { jobs.emplace_back(new Job(*job)); });
   }
   std::vector<Plan> sub_plans(jobs.size());
@@ -711,7 +718,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
-    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);
+    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;

@@ -41,14 +41,12 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_CONFIG_DEF().Bool("is_user_function", true, "is user defined function");
-
 Maybe<void> JobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id_);
   auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(job_); };
-  if (GlobalJobDesc().Bool("is_user_function")) {
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
     DoPass("CompleteOfrecordDecoder");
     DoPass("SetDefaultVariableConf");
     DoPass("AutoMixedPrecision");
