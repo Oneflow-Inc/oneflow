@@ -679,6 +679,17 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defin
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
+    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
+                                  &var_op_name2parallel_blob_conf);
+    auto AppendJob = [&](Job* job) {
+      JobDesc job_desc(job->job_conf(), jobs.size());
+      CHECK(!job_desc.Bool("__is_user_function__"));
+      jobs.emplace_back(new Job(*job));
+    };
+    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+  }
   std::vector<std::shared_ptr<Job>> function_jobs;
   function_jobs.reserve(jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) {
@@ -692,9 +703,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
                                   &pull_op_name2parallel_blob_conf);
-    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, function_jobs,
-                                  &var_op_name2parallel_blob_conf);
     for (const auto& pair : push_op_name2parallel_blob_conf) {
       auto push_job = std::make_shared<Job>();
       MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second,
@@ -707,8 +715,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
                   pull_job.get());
       jobs.emplace_back(pull_job);
     }
-    MakeModelIoJobs(function_jobs, var_op_name2parallel_blob_conf,
-                    [&](Job* job) { jobs.emplace_back(new Job(*job)); });
   }
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
