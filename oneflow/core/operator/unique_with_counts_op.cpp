@@ -33,7 +33,9 @@ void UniqueWithCountsOp::InitFromOpConf() {
   EnrollOutputBn("num_unique", false);
 }
 
-const PbMessage& UniqueWithCountsOp::GetCustomizedConf() const { return op_conf().unique_with_counts_conf(); }
+const PbMessage& UniqueWithCountsOp::GetCustomizedConf() const {
+  return op_conf().unique_with_counts_conf();
+}
 
 Maybe<void> UniqueWithCountsOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -58,8 +60,7 @@ Maybe<void> UniqueWithCountsOp::InferBlobDescs(
 
 void UniqueWithCountsOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-}
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
 REGISTER_OP(OperatorConf::kUniqueWithCountsConf, UniqueWithCountsOp);
 
