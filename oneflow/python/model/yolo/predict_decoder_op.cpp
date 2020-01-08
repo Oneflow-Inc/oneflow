@@ -44,17 +44,16 @@ class YoloDecoderKernel final : public oneflow::user_op::OpKernel {
 
   void Compute(oneflow::user_op::KernelContext* ctx) override {
     double time=what_time_is_it_now();
-    image im = load_image_color(paths[batch_id_], 0, 0);
+    image im = load_image_color(paths[batch_id_%dataset_size_], 0, 0);
     image sized = letterbox_image(im, 608, 608);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* origin_image_info_blob = ctx->Tensor4ArgNameAndIndex("origin_image_info", 0);
     *origin_image_info_blob->mut_dptr<int32_t>() = im.h;
     *(origin_image_info_blob->mut_dptr<int32_t>() + 1) = im.w;
     memcpy(out_blob->mut_dptr(), sized.data, out_blob->shape().elem_cnt() * sizeof(float));
-    batch_id_ ++; 
-    if(batch_id_ >= dataset_size_){
-      batch_id_ -= dataset_size_;
-    }
+    batch_id_++; 
+    free_image(im);
+    free_image(sized);
     //printf("%f seconds.\n", what_time_is_it_now()-time);
     //printf("%dimage:%s\n", dataset_size_, paths[batch_id_-1]);
   }
