@@ -5,7 +5,7 @@ namespace oneflow {
 REGISTER_USER_OP("unary")
     .Input("x")
     .Output("y")
-    .Attr("operator", UserOpAttrType::kAtString)
+    .Attr("unary_math_type", UserOpAttrType::kAtString)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -27,6 +27,7 @@ REGISTER_USER_OP("unary_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
+    .Attr("unary_math_type", UserOpAttrType::kAtString)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
@@ -55,6 +56,7 @@ REGISTER_USER_OP_GRAD("unary").SetGenBackwardOpConfFn([](const user_op::UserOpWr
             .Input("y", op.output("y", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
             .Output("dx")
+            .Attr<std::string>("unary_math_type", op.attr<std::string>("unary_math_type"))
             .Build();
     op.BindGradTensorWithOpInput(unary_grad_op.output("dx", 0), "x", 0);
     AddOp(unary_grad_op);
