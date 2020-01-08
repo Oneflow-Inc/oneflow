@@ -251,9 +251,6 @@ void ForEachOutputCriticalSectionOpNodes(
     Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
             GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));
   }
-  for (const auto* op_node : op_type_case2op_nodes[OperatorConf::kSwitchOutputConf]) {
-    Handler({op_node}, GetOpNames({op_node}));
-  }
 }
 
 std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,

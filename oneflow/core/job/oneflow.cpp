@@ -326,8 +326,6 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
       lbn = op_name + "/" + op_conf.input_conf().out();
     } else if (op_conf.has_output_conf()) {
       lbn = op_name + "/" + op_conf.output_conf().out();
-    } else if (op_conf.has_switch_output_conf()) {
-      lbn = op_name + "/" + op_conf.switch_output_conf().out();
     } else if (op_conf.has_return_conf()) {
       lbn = op_name + "/" + op_conf.return_conf().out();
     } else {
@@ -675,63 +673,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   job_conf->mutable_predict_conf();
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
-}
-
-void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& parallel_blob_conf,
-                    const std::string& input_op_name,
-                    const std::vector<std::string>& output_op_names, Job* job) {
-  CHECK_EQ(output_op_names.empty(), false);
-  for (const auto& output_op_name : output_op_names) { CHECK_NE(output_op_name, input_op_name); }
-  auto* op_name2arg_pass_job_info =
-      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2arg_pass_job_info();
-  CHECK(op_name2arg_pass_job_info->find(input_op_name) == op_name2arg_pass_job_info->end());
-  auto* arg_pass_job_info = &(*op_name2arg_pass_job_info)[input_op_name];
-  arg_pass_job_info->set_intput_or_var_op_name(input_op_name);
-  arg_pass_job_info->set_arg_pass_job_name(job_name);
-  auto* op_name2in_index = arg_pass_job_info->mutable_output_or_var_op_name2in_index();
-
-  JobBuilder job_builder(job);
-  OperatorConf foreign_input_op_conf;
-  {
-    foreign_input_op_conf.set_name(std::string("System-ArgPass-ForeignInput_") + NewUniqueId());
-    auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
-    foreign_input_conf->set_out("out");
-    foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
-    auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    blob_conf->mutable_shape()->add_dim(1);
-    blob_conf->set_data_type(DataType::kInt32);
-    blob_conf->mutable_split_axis()->clear_value();
-    blob_conf->mutable_batch_axis()->clear_value();
-    ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
-    job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
-  }
-  std::vector<OperatorConf> input_op_confs(output_op_names.size());
-  FOR_RANGE(int64_t, i, 0, output_op_names.size()) {
-    input_op_confs.at(i).set_name(output_op_names.at(i));
-    (*op_name2in_index)[output_op_names.at(i)] = i;
-    auto* input_conf = input_op_confs.at(i).mutable_input_conf();
-    input_conf->set_out("out");
-    auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
-  }
-  job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
-  OperatorConf switch_output_op_conf;
-  {
-    switch_output_op_conf.set_name(input_op_name);
-    auto* switch_output_conf = switch_output_op_conf.mutable_switch_output_conf();
-    switch_output_conf->set_in_index(foreign_input_op_conf.name() + "/out");
-    for (const auto& op_conf : input_op_confs) {
-      switch_output_conf->add_in(op_conf.name() + "/out");
-    }
-    switch_output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(switch_output_conf->mutable_blob_conf(), parallel_blob_conf);
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {switch_output_op_conf});
-  }
-  auto* job_conf = job->mutable_job_conf();
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
 }
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
