@@ -678,16 +678,17 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<Job> jobs(conf_jobs.size());
   std::vector<Plan> sub_plans(conf_jobs.size());
-  FOR_RANGE(int64_t, job_id, 0, sub_plans.size()) {
-    jobs.at(job_id) = conf_jobs.Get(job_id);
-    AddJobName2JobId(jobs.at(job_id).job_conf().job_name(), job_id);
+  size_t user_job_size = jobs.size();
+  int64_t job_id = -1;
+  FOR_RANGE(int64_t, i, 0, sub_plans.size()) {
+    jobs.at(i) = conf_jobs.Get(i);
+    AddJobName2JobId(jobs.at(i).job_conf().job_name(), i);
     {
-      auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(job_id).job_conf(), job_id);
-      CompileCurJobOnMaster(&jobs.at(job_id), &sub_plans.at(job_id), true);
+      auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i).job_conf(), i);
+      CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
     }
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    size_t user_job_size = jobs.size();
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                   &push_op_name2parallel_blob_conf);
@@ -697,7 +698,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
                                   &var_op_name2parallel_blob_conf);
-    int64_t job_id = -1;
     {
       size_t helper_job_size =
           push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
@@ -727,6 +727,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileHelperJob(&pull_job);
     }
     MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
+  }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
