@@ -32,6 +32,7 @@ def Compile(function_desc, config_proto):
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         _CompileJob(function_desc)
+        c_api_util.CurJobBuildAndInferCtx_Complete()
 
 def _CompileJob(function_desc):
     func = function_desc.job_func

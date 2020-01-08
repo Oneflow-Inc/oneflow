@@ -1,18 +1,11 @@
 #include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
-#include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
-#include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
-#include "oneflow/core/job_completer/auto_train_step.h"
-#include "oneflow/core/job_completer/auto_learning_rate.h"
-#include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 #include "oneflow/core/framework/config_def.h"
-
 #include "oneflow/core/job_completer/xrt_compilation.h"
 
 namespace oneflow {
@@ -40,95 +33,6 @@ void WithOpGraphAndMutJobBuilder(Job* job,
   OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   Handler(op_graph, &job_builder);
-}
-
-void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
-  auto& mut_pairs =
-      (*job_builder->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
-  for (const auto& pair : lbi2diff_lbi) {
-    auto* mut_pair = mut_pairs.add_pair();
-    *mut_pair->mutable_first() = pair.first;
-    *mut_pair->mutable_second() = pair.second;
-  }
-}
-
-void BindIdenticalSbpObaPairsBetweenIbns(const OpNode& op_node, JobBuilder* job_builder) {
-  HashMap<LogicalBlobId, std::vector<OpBlobArg>> in_lbi2obas;
-  for (const std::string& ibn : op_node.op().input_bns()) {
-    in_lbi2obas[op_node.op().BnInOp2Lbi(ibn)].push_back(GenOpBlobArg(op_node.op().op_name(), ibn));
-  }
-  for (const auto& pair : in_lbi2obas) {
-    if (pair.second.size() > 1) {
-      FOR_RANGE(int32_t, i, 1, pair.second.size()) {
-        job_builder->BindIdenticalSbpOpBlobArgPair(pair.second.at(0), pair.second.at(i));
-      }
-    }
-  }
-}
-
-void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuilder* job_builder) {
-  HashMap<OpBlobArg, const SbpParallel*> oba2sbp_parallel;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
-      for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
-      for (const auto& obn : op_node->op().output_bns()) { Handler(obn); }
-    };
-    ForEachBn([&](const std::string& bn_in_op) {
-      const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
-      oba2sbp_parallel[oba] = &op_node->SbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
-    });
-  });
-  auto HasSbpParallel = [&](const OpBlobArg& oba) {
-    return oba2sbp_parallel.find(oba) != oba2sbp_parallel.end();
-  };
-  for (const auto& pair : job_builder->job().helper().identical_sbp_oba_pairs().pair()) {
-    const SbpParallel* sbp_parallel = nullptr;
-    if (HasSbpParallel(pair.first()) && HasSbpParallel(pair.second())) {
-      CHECK(oba2sbp_parallel.at(pair.first()) == oba2sbp_parallel.at(pair.second()));
-      sbp_parallel = oba2sbp_parallel.at(pair.first());
-    } else if (HasSbpParallel(pair.first())) {
-      sbp_parallel = oba2sbp_parallel.at(pair.first());
-    } else if (HasSbpParallel(pair.second())) {
-      sbp_parallel = oba2sbp_parallel.at(pair.second());
-    } else {
-      UNIMPLEMENTED();
-    }
-    *job_builder->MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
-    *job_builder->MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
-  }
-}
-
-void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.ForEachNode(
-      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
-  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
-}
-
-void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) {
-  LogicalBlobId total_loss_instance_num;
-  HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
-  std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
-  AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
-  AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
-  UpdateOpSbpSignatureHint(op_graph, job_builder);
-}
-
-std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
-    Placement* placement) {
-  auto op_name2parallel_conf = std::make_shared<HashMap<std::string, ParallelConf*>>();
-  FOR_RANGE(int, idx, 0, placement->placement_group_size()) {
-    auto* placement_group = placement->mutable_placement_group(idx);
-    for (const std::string& op_name : placement_group->op_set().op_name()) {
-      ParallelConf* parallel_conf = placement_group->mutable_parallel_conf();
-      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
-    }
-  }
-  return [op_name2parallel_conf](const std::string& op_name) {
-    return op_name2parallel_conf->at(op_name);
-  };
 }
 
 void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -179,28 +83,9 @@ void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job
   op_graph.DumpSbpSignature(job_builder);
 }
 
-void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
-  NcclTupleBroadcastReduceSequencePass().Apply(op_graph, job_builder);
-}
-
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  // complete variable ops
-  FunctionPass("SetDefaultVariableConf")(job);
-  FunctionPass("AutoMixedPrecision")(job);
-  if (GlobalJobDesc().IsTrain()) {
-    FunctionPass("TieUpChainHeadersUnReachableFromAnyVariableOps")(job);
-    FunctionPass("NonDistributedOptimizerPass")(job);
-    WithOpGraphAndMutJob(job, &AutoTrainStep);
-    WithOpGraphAndMutJob(job, &AutoLearningRate);
-    // complete ops for trainning
-    WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
-    AllReduceAddPass()(job);
-    AddLbiDiffWatcherOpConfs(job);
-    AllReduceSequencePass()(job);
-  }
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
