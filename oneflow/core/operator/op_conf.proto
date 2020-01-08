@@ -805,13 +805,6 @@ message OutputOpConf {
   required InterfaceBlobConf blob_conf = 3;
 }
 
-message SwitchOutputOpConf {
-  repeated string in = 1;
-  required string in_index = 2;
-  required string out = 3;
-  required InterfaceBlobConf blob_conf = 4;
-}
-
 message ForeignOutputOpConf {
   required string in = 1;
   required string ofblob_buffer_name = 3;
@@ -1609,7 +1602,6 @@ message OperatorConf {
     ForeignInputOpConf foreign_input_conf = 142;
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
-    SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
     NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;

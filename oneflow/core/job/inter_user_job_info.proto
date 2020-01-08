@@ -1,16 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-message ArgPassJobInfo {
-  map<string, int64> output_or_var_op_name2in_index = 1;
-  required string intput_or_var_op_name = 2;
-  required string arg_pass_job_name = 3;
-}
-
 message InterUserJobInfo {
   map<string, string> input_or_var_op_name2push_job_name = 1;
   map<string, string> output_or_var_op_name2pull_job_name = 2;
-  map<string, ArgPassJobInfo> input_or_var_op_name2arg_pass_job_info = 3;
   required string global_model_init_job_name = 4;
   required string global_model_load_job_name = 5;
   required string global_model_save_job_name = 6;
