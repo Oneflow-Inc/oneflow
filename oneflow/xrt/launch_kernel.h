@@ -50,6 +50,8 @@ class XrtLaunchKernel : public KernelIf<device_type> {
   void MappingParamsToFunctionNames(std::vector<xrt::Parameter> *entry_params,
                                     std::vector<xrt::Parameter> *return_params) const;
 
+  bool IsStateless() const override { return false; }
+
  private:
   mutable BlobDescGetter<device_type> desc_getter_;
   mutable std::shared_ptr<xrt::CompilationCache> compilation_cache_;

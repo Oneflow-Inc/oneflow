@@ -34,7 +34,6 @@ enum TaskType {
   kReduceIdentity = 36;
   kAcc = 37;
   kOptimizer = 38;
-  kEveryNth = 39;
   kSourceTick = 40;
   kTick = 41;
   kAccTick = 42;

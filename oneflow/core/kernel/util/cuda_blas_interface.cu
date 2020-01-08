@@ -1,22 +1,11 @@
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
 namespace {
-
-__inline__ half float16_2half(float16 x) {
-  // TODO: Potential loss of accuracy
-  half* ret = reinterpret_cast<half*>(&x);
-  return *ret;
-}
-
-__inline__ float16 half2float16(half x) {
-  // TODO: Potential loss of accuracy
-  float16* ret = reinterpret_cast<float16*>(&x);
-  return *ret;
-}
 
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;

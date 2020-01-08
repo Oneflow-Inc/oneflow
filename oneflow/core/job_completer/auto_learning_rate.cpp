@@ -1,9 +1,23 @@
-#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
 
-void AutoLearningRate(const OpGraph& op_graph, Job* job) {
+namespace {
+
+class AutoLearningRate final : public OpGraphPass {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AutoLearningRate);
+  AutoLearningRate() = default;
+  ~AutoLearningRate() override = default;
+
+  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+
+  void Apply(const OpGraph& op_graph, Job* job) const override;
+};
+
+void AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
@@ -57,5 +71,9 @@ void AutoLearningRate(const OpGraph& op_graph, Job* job) {
     }
   }
 }
+
+REGISTER_FUNCTION_PASS("AutoLearningRate", AutoLearningRate);
+
+}  // namespace
 
 }  // namespace oneflow
