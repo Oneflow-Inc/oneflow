@@ -40,6 +40,8 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
+Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
+
 Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() { return JUST(GetCurInferCtx())->HasJobConf(); }
 
 Maybe<std::string> CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(
