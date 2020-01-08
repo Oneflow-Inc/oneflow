@@ -746,8 +746,8 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
   return ret;
 }
 
-void OpGraph::DumpLogicalBlobDesc(JobBuilder* job_builder) const {
-  auto* helper = job_builder->mutable_helper();
+void OpGraph::DumpLogicalBlobDesc(Job* job) const {
+  auto* helper = job->mutable_helper();
   ForEachNode([&](const OpNode* node) {
     for (const auto& obn : node->op().output_bns()) {
       const auto& lbi = node->op().BnInOp2Lbi(obn);
@@ -757,17 +757,17 @@ void OpGraph::DumpLogicalBlobDesc(JobBuilder* job_builder) const {
   });
 }
 
-void OpGraph::DumpSbpSignature(JobBuilder* job_builder) const {
+void OpGraph::DumpSbpSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) {
-    (*job_builder->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
+    (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
         node->sbp_signature();
   });
 }
 
-void OpGraph::DumpOpTimeShape(JobBuilder* job_builder) const {
+void OpGraph::DumpOpTimeShape(Job* job) const {
   ForEachNode([&](OpNode* op_node) {
     auto* op_time_shape =
-        &(*job_builder->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
     if (op_node->out_blob_time_shape() != nullptr) {
       op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
     }
@@ -778,14 +778,15 @@ void OpGraph::DumpOpTimeShape(JobBuilder* job_builder) const {
   });
 }
 
-void OpGraph::DumpBatchAxisLbi(JobBuilder* job_builder) const {
-  auto* lbn2batch_axis = job_builder->mutable_helper()->mutable_lbn2batch_axis();
+void OpGraph::DumpBatchAxisLbi(Job* job) const {
+  auto* lbn2batch_axis = job->mutable_helper()->mutable_lbn2batch_axis();
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
       const auto& lbn = GenLogicalBlobName(lbi);
-      const auto& pair = PbMapPair<std::string, OptInt64>(lbn, op_node->BatchAxis4Lbi(lbi));
-      CHECK(lbn2batch_axis->insert(pair).second);
+      const auto& batch_axis = op_node->BatchAxis4Lbi(lbi);
+      const auto& pair = PbMapPair<std::string, OptInt64>(lbn, batch_axis);
+      CHECK(lbn2batch_axis->insert(pair).first->second == batch_axis);
     }
   });
 }
