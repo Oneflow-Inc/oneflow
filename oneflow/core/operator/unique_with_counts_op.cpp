@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/unique_op_util.h"
 
 namespace oneflow {
 
@@ -31,6 +32,7 @@ void UniqueWithCountsOp::InitFromOpConf() {
   EnrollOutputBn("idx", false);
   EnrollOutputBn("count", false);
   EnrollOutputBn("num_unique", false);
+  EnrollTmpBn("workspace");
 }
 
 const PbMessage& UniqueWithCountsOp::GetCustomizedConf() const {
@@ -55,6 +57,12 @@ Maybe<void> UniqueWithCountsOp::InferBlobDescs(
   BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
   num_unique->mut_shape() = Shape({1});
   num_unique->set_data_type(idx_data_type);
+  BlobDesc* workspace = GetBlobDesc4BnInOp("workspace");
+  workspace->set_data_type(DataType::kChar);
+  int64_t workspace_size_in_bytes;
+  UniqueOpUtil::GetWorkspaceSizeInBytes(device_type(), x->data_type(), idx_data_type,
+                                        x->shape().elem_cnt(), &workspace_size_in_bytes);
+  workspace->mut_shape() = Shape({workspace_size_in_bytes});
   return Maybe<void>::Ok();
 }
 
