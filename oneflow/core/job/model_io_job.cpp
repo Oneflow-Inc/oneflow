@@ -68,10 +68,10 @@ OperatorConf GenTickOpConf(const std::string& op_name) {
   return tick_op_conf;
 }
 
-void FilterVariableOps(const std::vector<Job>& jobs,
+void FilterVariableOps(const std::vector<std::shared_ptr<Job>>& jobs,
                        HashMap<std::string, OperatorConf>* var_op_name2op_conf) {
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
-    for (const OperatorConf& op_conf : jobs.at(job_id).net().op()) {
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (op_conf.has_variable_conf()) {
         if (var_op_name2op_conf->find(op_conf.name()) == var_op_name2op_conf->end()) {
           CHECK(var_op_name2op_conf->emplace(op_conf.name(), op_conf).second);
@@ -194,7 +194,7 @@ void MakeModelSaveJob(
 
 }  // namespace
 
-void MakeModelIoJobs(const std::vector<Job>& jobs,
+void MakeModelIoJobs(const std::vector<std::shared_ptr<Job>>& jobs,
                      const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
                      const std::function<void(Job*)>& Handler) {
   HashMap<std::string, OperatorConf> var_op_name2op_conf;
