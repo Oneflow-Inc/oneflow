@@ -10,8 +10,8 @@ struct InterJobMemSharingUtil {
   static void MergeMemSharedInterfaceMemBlockBetweenJobs(
       const std::vector<std::shared_ptr<Job>>& jobs, Plan* plan);
 
-  static void MergeMemReusedChunkBetweenUserJobs(const std::vector<std::shared_ptr<Job>>& jobs,
-                                                 Plan* plan, int64_t user_job_size);
+  static void MergeMemReusedChunkBetweenUserJobs(const std::vector<std::shared_ptr<Job>>& user_jobs,
+                                                 Plan* plan);
 };
 
 }  // namespace oneflow
