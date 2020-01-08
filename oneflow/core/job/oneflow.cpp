@@ -342,11 +342,11 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
 }
 
 void FilterOpName2ParallelBlobConf(
-    const HashSet<OperatorConf::OpTypeCase>& match, std::vector<Job>* jobs,
+    const HashSet<OperatorConf::OpTypeCase>& match, const std::vector<std::shared_ptr<Job>>& jobs,
     HashMap<std::string, ParallelBlobConf>* op_name2parallel_blob_conf) {
-  FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
-    JobBuilder job_builder(&jobs->at(job_id));
-    for (const OperatorConf& op_conf : jobs->at(job_id).net().op()) {
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    JobBuilder job_builder(jobs.at(job_id).get());
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (match.find(op_conf.op_type_case()) == match.end()) { continue; }
       const auto& iter = op_name2parallel_blob_conf->find(op_conf.name());
       if (iter == op_name2parallel_blob_conf->end()) {
@@ -361,8 +361,7 @@ void FilterOpName2ParallelBlobConf(
   }
 }
 
-void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
-                 std::vector<std::string>* identity_tick_op_names,
+void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names,
                  LogicalBlobId* critical_section_sink_lbi) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   std::vector<OperatorConf> op_confs;
@@ -677,44 +676,38 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   size_t user_job_size = conf_jobs.size();
-  std::vector<Job> jobs(conf_jobs.begin(), conf_jobs.end());
+  std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
+  FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    int64_t job_id = -1;
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, jobs,
                                   &push_op_name2parallel_blob_conf);
     HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, &jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, jobs,
                                   &pull_op_name2parallel_blob_conf);
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
                                   &var_op_name2parallel_blob_conf);
-    {
-      size_t helper_job_size =
-          push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
-      // + 3 for model init job, model load job and model save job
-      helper_job_size += 3;
-      jobs.resize(user_job_size + helper_job_size);
-      job_id = user_job_size;
-    }
-    auto AppendHelperJob = [&](Job* job) { jobs.at(job_id++) = *job; };
     for (const auto& pair : push_op_name2parallel_blob_conf) {
-      Job push_job;
-      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, &push_job);
-      AppendHelperJob(&push_job);
+      auto push_job = std::make_shared<Job>();
+      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second,
+                  push_job.get());
+      jobs.emplace_back(push_job);
     }
     for (const auto& pair : pull_op_name2parallel_blob_conf) {
-      Job pull_job;
-      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
-      AppendHelperJob(&pull_job);
+      auto pull_job = std::make_shared<Job>();
+      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second,
+                  pull_job.get());
+      jobs.emplace_back(pull_job);
     }
-    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendHelperJob);
+    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf,
+                    [&](Job* job) { jobs.emplace_back(new Job(*job)); });
   }
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
-    AddJobName2JobId(jobs.at(i).job_conf().job_name(), i);
-    auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i).job_conf(), i);
-    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
+    AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
+    auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
+    CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
@@ -726,7 +719,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     {
       Job main_job;
       LogicalBlobId critical_section_sink_lbi;
-      MakeMainJob(jobs, &main_job, &identity_tick_op_names, &critical_section_sink_lbi);
+      MakeMainJob(&main_job, &identity_tick_op_names, &critical_section_sink_lbi);
       AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
