@@ -60,8 +60,9 @@ Maybe<void> UniqueWithCountsOp::InferBlobDescs(
   BlobDesc* workspace = GetBlobDesc4BnInOp("workspace");
   workspace->set_data_type(DataType::kChar);
   int64_t workspace_size_in_bytes;
-  UniqueOpUtil::GetWorkspaceSizeInBytes(device_type(), x->data_type(), idx_data_type,
-                                        x->shape().elem_cnt(), &workspace_size_in_bytes);
+  UniqueOpUtil::GetUniqueWithCountsWorkspaceSizeInBytes(device_type(), x->data_type(),
+                                                        idx_data_type, x->shape().elem_cnt(),
+                                                        &workspace_size_in_bytes);
   workspace->mut_shape() = Shape({workspace_size_in_bytes});
   return Maybe<void>::Ok();
 }

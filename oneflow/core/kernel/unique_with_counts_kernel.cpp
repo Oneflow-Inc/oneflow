@@ -18,7 +18,24 @@ class UniqueWithCountsKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T, typename K>
 void UniqueWithCountsKernel<device_type, T, K>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* x = BnInOp2Blob("x");
+  Blob* y = BnInOp2Blob("y");
+  Blob* idx = BnInOp2Blob("idx");
+  Blob* count = BnInOp2Blob("count");
+  Blob* workspace = BnInOp2Blob("workspace");
+  Blob* num_unique = BnInOp2Blob("num_unique");
+  void* workspace_ptr = nullptr;
+  int64_t workspace_size_in_bytes = 0;
+  if (workspace != nullptr) {
+    workspace_ptr = workspace->mut_dptr();
+    workspace_size_in_bytes = workspace->ByteSizeOfBlobBody();
+  }
+  UniqueKernelUtil<device_type, T, K>::UniqueWithCounts(
+      ctx.device_ctx, x->shape().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
+      y->mut_dptr<T>(), idx->mut_dptr<K>(), count->mut_dptr<K>(), workspace_ptr,
+      workspace_size_in_bytes);
+}
 
 #define MAKE_UNIQUE_WITH_COUNTS_KERNEL_ENTRY(device_type_v, data_type_pair, indices_type_pair) \
   NEW_REGISTER_KERNEL(OperatorConf::kUniqueWithCountsConf,                                     \

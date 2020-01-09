@@ -262,7 +262,13 @@ template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kGPU, KEY, IDX> {
   static void Unique(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
                      IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes);
-  static void GetWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n, int64_t* workspace_size_in_bytes);
+  static void UniqueWithCounts(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique,
+                               KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
+                               int64_t workspace_size_in_bytes);
+  static void GetUniqueWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+                                            int64_t* workspace_size_in_bytes);
+  static void GetUniqueWithCountsWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+                                                      int64_t* workspace_size_in_bytes);
 };
 
 template<typename KEY, typename IDX>
@@ -270,9 +276,19 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::Unique(DeviceCtx* ctx, int64_
                                                           IDX* num_unique, KEY* unique_out,
                                                           IDX* idx_out, void* workspace,
                                                           int64_t workspace_size_in_bytes) {
+  int64_t count_size = GetTempBufferSize<IDX>(n);
+  UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
+      ctx, n, in, num_unique, unique_out, idx_out, reinterpret_cast<IDX*>(workspace),
+      reinterpret_cast<unsigned char*>(workspace) + count_size,
+      workspace_size_in_bytes - count_size);
+}
+
+template<typename KEY, typename IDX>
+void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
+    DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out, IDX* idx_out,
+    IDX* count, void* workspace, int64_t workspace_size_in_bytes) {
   int64_t rt_workspace_size;
   IDX* cub_sort_values_in_ptr = idx_out;
-  IDX* cub_rle_count_out_ptr = idx_out;
   Buffer<KEY> cub_sort_keys_out;
   Buffer<IDX> cub_sort_values_out;
   Buffer<void> cub_temp_storage;
@@ -286,7 +302,7 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::Unique(DeviceCtx* ctx, int64_
       cub_sort_values_in_ptr, cub_sort_values_out.ptr, n, 0, sizeof(KEY) * 8, ctx->cuda_stream()));
   CudaCheck(cub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, IDX*>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, cub_sort_keys_out.ptr, unique_out,
-      cub_rle_count_out_ptr, num_unique, n, ctx->cuda_stream()));
+      count, num_unique, n, ctx->cuda_stream()));
   UniqueCountingIterator<IDX, KEY> unique_counting_iter(cub_sort_keys_out.ptr, 0);
   RemappingIterator<IDX, IDX> remapping_iter(idx_out, cub_sort_values_out.ptr, 0);
   CudaCheck(
@@ -299,7 +315,15 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::Unique(DeviceCtx* ctx, int64_
 }
 
 template<typename KEY, typename IDX>
-void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetWorkspaceSizeInBytes(
+void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWorkspaceSizeInBytes(
+    DeviceCtx* ctx, int64_t n, int64_t* workspace_size_in_bytes) {
+  UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWithCountsWorkspaceSizeInBytes(
+      ctx, n, workspace_size_in_bytes);
+  *workspace_size_in_bytes += GetTempBufferSize<IDX>(n);
+}
+
+template<typename KEY, typename IDX>
+void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetUniqueWithCountsWorkspaceSizeInBytes(
     DeviceCtx* ctx, int64_t n, int64_t* workspace_size_in_bytes) {
   UniqueAliasWorkspace<KEY, IDX>(ctx, n, nullptr, workspace_size_in_bytes, nullptr, nullptr,
                                  nullptr);
@@ -308,7 +332,7 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::GetWorkspaceSizeInBytes(
 #define INSTANTIATE_UNIQUE_KERNEL_UTIL_GPU(key_type_pair, idx_type_pair)              \
   template struct UniqueKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(key_type_pair), \
                                    OF_PP_PAIR_FIRST(idx_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNIQUE_KERNEL_UTIL_GPU, INDEX_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNIQUE_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_UNIQUE_KERNEL_UTIL_GPU
 
