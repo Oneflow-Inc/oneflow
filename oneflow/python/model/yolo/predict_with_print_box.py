@@ -15,7 +15,7 @@ parser.add_argument(
 )
 parser.add_argument("-class_num", "--class_num", type=int, default=85742, required=False)
 parser.add_argument("-batch_size", "--batch_size", type=int, default=1, required=False)
-parser.add_argument("-total_batch_num", "--total_batch_num", type=int, default=307, required=False)
+parser.add_argument("-total_batch_num", "--total_batch_num", type=int, default=310, required=False)
 parser.add_argument("-num_of_batches_in_snapshot", "--num_of_batches_in_snapshot", type=int, required=False)
 parser.add_argument("-lr", "--base_lr", type=float, default=0, required=False)
 parser.add_argument("-weight_l2", "--weight_l2", type=float, default=0, required=False)
@@ -39,19 +39,18 @@ with open('coco.names','r') as f:
 
 #nms=False
 nms=True
+print("nms:", nms)
 def print_detect_box(positions, probs):
     if nms==True:
-        for i in range(1, 80):
+        for i in range(1, 81):
             for j in range(positions.shape[1]):
                 if positions[i][j][1]!=0 and positions[i][j][2]!=0 and probs[i][j]!=0:
-                    pass
-                    #print(label_2_name[i-1], positions[i][j][0], " ", positions[i][j][1], " ", positions[i][j][2], " ", positions[i][j][3], " ", probs[i][j]*100,"%")
+                    print(label_2_name[i-1], " ", probs[i][j]*100,"%", "  ", positions[i][j][0], " ", positions[i][j][1], " ", positions[i][j][2], " ", positions[i][j][3])
     else:
         for j in range(positions.shape[1]):
-            for i in range(1, 80):
+            for i in range(1, 81):
                 if positions[0][j][1]!=0 and positions[0][j][2]!=0 and probs[0][j][i]!=0:
-                    pass
-                    #print(label_2_name[i-1], positions[0][j][0], " ", positions[0][j][1], " ", positions[0][j][2], " ", positions[0][j][3], " ", probs[0][j][i]*100,"%")
+                    print(label_2_name[i-1], " ", probs[0][j][i]*100,"%", "  ",positions[0][j][0], " ", positions[0][j][1], " ", positions[0][j][2], " ", positions[0][j][3])
 
 
 @flow.function(func_config)
@@ -81,9 +80,9 @@ if __name__ == "__main__":
             yolo_pos, yolo_prob = ret
             #print(yolo_pos.shape, yolo_pos)
             #print(yolo_prob.shape, yolo_prob)
-            #print_detect_box(yolo_pos, yolo_prob)
-            np.save("tmp/pos-step"+str(step), yolo_pos.ndarray())
-            np.save("tmp/prob-step"+str(step), yolo_prob.ndarray())
+            print_detect_box(yolo_pos, yolo_prob)
+            #np.save("tmp/pos-step"+str(step), yolo_pos.ndarray())
+            #np.save("tmp/prob-step"+str(step), yolo_prob.ndarray())
             global cur_time
             if step==0:
                 print("start_time:", time.time())

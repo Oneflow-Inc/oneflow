@@ -144,7 +144,7 @@ if __name__ == "__main__":
             print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
             global cur_time
             #print(time.time()-cur_time, yolo0_loss.mean())
-            print(yolo0_loss.shape, yolo1_loss.shape, yolo2_loss.shape)
+            print(time.time()-cur_time, yolo0_loss.shape, yolo1_loss.shape, yolo2_loss.shape)
             #print(fmt_str.format(step, yolo_pos.mean(), yolo_prob.mean(), time.time()-cur_time))
             cur_time = time.time()
 

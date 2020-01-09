@@ -268,13 +268,9 @@ def YoloNetBody(in_blob, gt_bbox_blob=None, gt_label_blob=None,gt_valid_num_blob
       gathered_yolo_positions = flow.reshape(gathered_yolo_positions, shape=(gathered_yolo_positions.shape[0], yolo_probs.shape[2], yolo_positions.shape[1], yolo_positions.shape[2]), name="reshape2") #(b, 81, n_boxes, 4)
       gathered_yolo_positions = flow.reshape(gathered_yolo_positions, shape=(gathered_yolo_positions.shape[0] * yolo_probs.shape[2], yolo_positions.shape[1], yolo_positions.shape[2]), name="reshape3")#(b * 81, n_boxes, 4)
 
-      #yolo_probs_transpose_reshape = flow.reshape(yolo_probs_transpose, shape=(yolo_probs_transpose.shape[0], yolo_probs_transpose.shape[1]*yolo_probs_transpose.shape[2]))#(b, 81*n_boxes)
-      #gathered_yolo_probs = flow.gather(yolo_probs_transpose_reshape, pre_nms_top_k_inds, axis=1, batch_dims=1)#(b, 81*n_boxes)
-      #gathered_yolo_probs = flow.reshape(gathered_yolo_probs, shape=(gathered_yolo_probs.shape[0], yolo_probs.shape[2], yolo_positions.shape[1])) #(b, 81, n_boxes)
-      #gathered_yolo_probs = flow.reshape(gathered_yolo_probs, shape=(gathered_yolo_probs.shape[0] * yolo_probs.shape[2], yolo_positions.shape[1]))#(b * 81, n_boxes)
       yolo_probs_transpose_reshape = flow.reshape(yolo_probs_transpose, shape=(yolo_probs_transpose.shape[0] * yolo_probs_transpose.shape[1], yolo_probs_transpose.shape[2]))#(b*81, n_boxes)
-      pre_nms_top_k_inds_reshape =  flow.reshape(pre_nms_top_k_inds, shape=(pre_nms_top_k_inds.shape[0]*pre_nms_top_k_inds.shape[1], pre_nms_top_k_inds.shape[2]))#(b, 81*n_boxes)
-      gathered_yolo_probs = flow.gather(yolo_probs_transpose_reshape, pre_nms_top_k_inds_reshape, axis=1, batch_dims=1)#(b, 81*n_boxes)
+      pre_nms_top_k_inds_reshape =  flow.reshape(pre_nms_top_k_inds, shape=(pre_nms_top_k_inds.shape[0]*pre_nms_top_k_inds.shape[1], pre_nms_top_k_inds.shape[2]))#(b*81, n_boxes)
+      gathered_yolo_probs = flow.gather(yolo_probs_transpose_reshape, pre_nms_top_k_inds_reshape, axis=1, batch_dims=1)#(b* 81, n_boxes)
 
       nms_val = flow.detection.nms(gathered_yolo_positions, gathered_yolo_probs, nms_iou_threshold=nms_threshold, post_nms_top_n=-1)
       nms_val_cast = flow.cast(nms_val, dtype=flow.float)
