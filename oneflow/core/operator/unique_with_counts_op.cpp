@@ -49,10 +49,10 @@ Maybe<void> UniqueWithCountsOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* x = GetBlobDesc4BnInOp("x");
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
-  CHECK(IsIndexDataType(x->data_type()));
   BlobDesc* y = GetBlobDesc4BnInOp("y");
   *y = *x;
   const DataType idx_data_type = op_conf().unique_with_counts_conf().out_idx();
+  CHECK(IsIndexDataType(idx_data_type));
   BlobDesc* idx = GetBlobDesc4BnInOp("idx");
   *idx = *x;
   idx->set_data_type(idx_data_type);
