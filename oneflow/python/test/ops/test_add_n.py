@@ -51,8 +51,5 @@ def GenerateTest(test_case, shape, num_inputs):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
-    r = None
     r = AddJob(inputs).get().ndarray()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
-    flow.clear_default_session()
-
