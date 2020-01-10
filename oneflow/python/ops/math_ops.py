@@ -20,6 +20,23 @@ def add(x, y, name=None):
     else:
         return broadcast_add(x, y, name)
 
+@oneflow_export("math.add_n")
+def add_n(inputs, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("AddN_"),
+    )
+    assert len(inputs) > 1
+    for blob in inputs:
+        getattr(op_conf.add_conf, "in").append(blob.logical_blob_name)
+    op_conf.add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("math.subtract")
 def subtract(x, y, name=None):
