@@ -19,12 +19,20 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     CudaCheck(cudaSetDevice(dev_id));
     CudaCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
-      const std::string mark("GpuThread cb_event_poller " + cb_event.op_name);
-      nvtxRangePush(mark.c_str());
+      // const std::string mark_sync("gpu cb sync " + cb_event.op_name);
+      // nvtxRangePush(mark_sync.c_str());
       CudaCheck(cudaEventSynchronize(cb_event.event));
+      // nvtxRangePop();
+
+      // const std::string mark_cb("gpu cb call " + cb_event.op_name);
+      // nvtxRangePush(mark_cb.c_str());
       cb_event.callback();
+      // nvtxRangePop();
+
+      // const std::string mark_des("gpu cb destroy " + cb_event.op_name);
+      // nvtxRangePush(mark_des.c_str());
       CudaCheck(cudaEventDestroy(cb_event.event));
-      nvtxRangePop();
+      // nvtxRangePop();
     }
   });
 }
