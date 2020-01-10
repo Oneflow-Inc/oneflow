@@ -38,4 +38,9 @@ void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
   status_.regst_desc_id = regst_desc_->regst_desc_id();
 }
 
+Blob* Regst::GetMutSoleBlob() {
+  CHECK_EQ(GetBlobSize(), 1);
+  return lbi2blob_.begin()->second.get();
+}
+
 }  // namespace oneflow

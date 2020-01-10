@@ -4,6 +4,16 @@
 
 namespace oneflow {
 
+namespace {
+
+bool IsSoleBlobAndDynamicEmpty(Regst* regst) {
+  if (regst == nullptr) { return false; }
+  if (regst->GetBlobSize() != 1) { return false; }
+  return regst->GetMutSoleBlob()->IsBodyEmpty();
+}
+
+}  // namespace
+
 ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
                                            Regst* regst_raw_ptr) {
   ActorMsg msg;
@@ -18,6 +28,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
   }
   msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
+  msg.regst_wrapper_.is_regst_empty = IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
   return msg;
 }
 
@@ -29,6 +40,8 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
   msg.regst_wrapper_.comm_net_token = nullptr;
+  // you can NOT access the regst ptr when multi nodes, because the address is in another machine
+  msg.regst_wrapper_.is_regst_empty = false;
   return msg;
 }
 
@@ -87,6 +100,11 @@ int64_t ActorMsg::act_id() const {
 void* ActorMsg::comm_net_token() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_token;
+}
+
+bool ActorMsg::is_regst_empty() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.is_regst_empty;
 }
 
 int64_t ActorMsg::eord_regst_desc_id() const {

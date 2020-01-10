@@ -18,6 +18,7 @@ class CopyCommNetActor final : public Actor {
     Regst* regst_raw_ptr;
     int64_t producer;
     int64_t act_id;
+    bool is_regst_empty;
   };
 
   void VirtualActorInit(const TaskProto&) override;
