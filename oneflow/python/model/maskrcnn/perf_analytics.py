@@ -1,5 +1,6 @@
 import pandas as pd
 import sqlite3
+import altair as alt
 
 
 def set_pd_opts():
@@ -85,8 +86,9 @@ def get_gpu_span_with_text(con, text):
 
 def update_gpu_span(nvtx):
     activity = query_all_activity_with_runtime_span(con, nvtx.start, nvtx.end)
-    nvtx["gpu_start"] = activity.start.min()
-    nvtx["gpu_end"] = activity.end.max()
+    start_min = activity.start.min()
+    end_max = activity.end.max()
+    nvtx["gpu_span"] = end_max - start_min
     return nvtx
 
 
@@ -111,6 +113,18 @@ if __name__ == "__main__":
     db_path = "file:///home/tsai/Downloads/1x-perf-2/mask-rcnn-unknown-2020-01-09-17:08:15-CST.sqlite"
     db_path = "file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite"
     con = sqlite3.connect(db_path)
-    df = get_gpu_span_with_text(con, "Backward pass")
-    print(df)
+    text = "Backward pass"
+    df = get_gpu_span_with_text(con, text)
+    df["text"] = text
+    chart = (
+        alt.Chart(df)
+        .mark_area()
+        .encode(
+            alt.X("index:Q"),
+            alt.Y("gpu_span:Q", stack="center", axis=None),
+            alt.Color("text:N", scale=alt.Scale(scheme="category20b")),
+        )
+        .interactive()
+    )
+    chart.display()
     con.close()
