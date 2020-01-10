@@ -28,7 +28,7 @@ def nvtx_range_push(x, msg, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nvtx.range_pop")
-def nvtx_range_pop(x, msg, name=None):
+def nvtx_range_pop(x, name=None):
     if name is None: name = id_util.UniqueStr("NvtxRangePop_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
