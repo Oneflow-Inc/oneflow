@@ -1,6 +1,7 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -45,18 +46,21 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id_);
   auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(job_); };
-  DoPass("CompleteOfrecordDecoder");
-  DoPass("SetDefaultVariableConf");
-  DoPass("AutoMixedPrecision");
-  DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
-  DoPass("NonDistributedOptimizerPass");
-  DoPass("AutoTrainStep");
-  DoPass("AutoLearningRate");
-  DoPass("GenerateBackwardAndOptimizerOpConfs");
-  DoPass("SequentializeNcclTupleBroadcastReducePass");
-  DoPass("AddAllReduceGroupPass");
-  DoPass("AddLbiDiffWatcherOpConfs");
-  DoPass("SequentializeAllReduceGroupPass");
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
+    DoPass("CompleteOfrecordDecoder");
+    DoPass("SetDefaultVariableConf");
+    DoPass("AutoMixedPrecision");
+    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
+    DoPass("NonDistributedOptimizerPass");
+    DoPass("AutoTrainStep");
+    DoPass("AutoLearningRate");
+    DoPass("GenerateBackwardAndOptimizerOpConfs");
+    DoPass("SequentializeNcclTupleBroadcastReducePass");
+    DoPass("AddAllReduceGroupPass");
+    DoPass("AddLbiDiffWatcherOpConfs");
+    DoPass("SequentializeAllReduceGroupPass");
+  }
+  DoPass("DumpTimeShapeAndBlobParallelConfPass");
   return Maybe<void>::Ok();
 }
 
