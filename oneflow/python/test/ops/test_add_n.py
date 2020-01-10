@@ -10,7 +10,6 @@ def test_naive(test_case):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
-    r = None
     r = AddJob(inputs).get().ndarray()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
