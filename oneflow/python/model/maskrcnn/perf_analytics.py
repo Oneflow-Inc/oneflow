@@ -68,27 +68,49 @@ def query_all_activity_with_runtime_span(con, r_start, r_end):
             if kind is not "RUNTIME"
         ],
         axis=0,
-    ).sort_values(by=["end"], ascending=True)
+    )
 
 
-def query_span_with_text(con, text):
+def query_nvtx_with_text(con, text):
     df = pd.read_sql_query(
         f"SELECT start, end FROM NVTX_EVENTS where text = '{text}';", con
     )
     return df
 
 
-# debug with file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite
-# 46813
-# 1st bw
-# 63482843839 63577992899
-# in runtime
-# 63577960546 63577977294
+def get_gpu_span_with_text(con, text):
+    nvtx_df = query_nvtx_with_text(con, text)
+    return nvtx_df.apply(update_gpu_span, axis=1)
+
+
+def update_gpu_span(nvtx):
+    activity = query_all_activity_with_runtime_span(con, nvtx.start, nvtx.end)
+    nvtx["gpu_start"] = activity.start.min()
+    nvtx["gpu_end"] = activity.end.max()
+    return nvtx
+
+
+def test1():
+    db_path = "file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite"
+    # 46813
+    # 1st bw
+    # nvtx
+    # 63482843839 63577992899
+    # in runtime
+    # 63577960546 63577977294
+    # in kernel
+    # 63634936998 63634938342
+    con = sqlite3.connect(db_path)
+    bw_span = query_nvtx_with_text(con, "Backward pass").iloc[0]
+    print(query_all_activity_with_runtime_span(con, bw_span.start, bw_span.end))
+    con.close()
+
+
 if __name__ == "__main__":
     set_pd_opts()
     db_path = "file:///home/tsai/Downloads/1x-perf-2/mask-rcnn-unknown-2020-01-09-17:08:15-CST.sqlite"
     db_path = "file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite"
     con = sqlite3.connect(db_path)
-    bw_span = query_span_with_text(con, "Backward pass").iloc[0]
-    print(query_all_activity_with_runtime_span(con, bw_span.start, bw_span.end))
+    df = get_gpu_span_with_text(con, "Backward pass")
+    print(df)
     con.close()
