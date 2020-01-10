@@ -44,13 +44,13 @@ class NvtxRangePopKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx &ctx,
                           std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), BnInOp2Blob("in"));
+    nvtxRangePop();
   }
   void ForwardLoD(const KernelCtx &ctx,
                   std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     const Blob *in_blob = BnInOp2Blob("in");
     Blob *out_blob = BnInOp2Blob("out");
     out_blob->tree_lod_mut_view().UpdateLoD(in_blob->tree_lod_view().lod_tree());
-    nvtxRangePop();
   }
 };
 
