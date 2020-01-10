@@ -6,20 +6,37 @@ template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
   static void Unique(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
                      IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes) {
-    UNIMPLEMENTED();
+    UniqueKernelUtil<DeviceType::kCPU, KEY, IDX>::UniqueWithCounts(
+        ctx, n, in, num_unique, unique_out, idx_out, nullptr, workspace, workspace_size_in_bytes);
   }
   static void UniqueWithCounts(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes) {
-    UNIMPLEMENTED();
+    HashMap<KEY, IDX> map;
+    FOR_RANGE(int64_t, i, 0, n) {
+      KEY in_i = in[i];
+      auto it = map.find(in_i);
+      if (it == map.end()) {
+        IDX idx = map.size();
+        if (count != nullptr) { count[idx] = 1; }
+        idx_out[i] = idx;
+        unique_out[idx] = in_i;
+        map[in_i] = idx;
+      } else {
+        IDX idx = it->second;
+        if (count != nullptr) { count[idx] += 1; }
+        idx_out[i] = idx;
+      }
+    }
+    *num_unique = map.size();
   }
   static void GetUniqueWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
                                             int64_t* workspace_size_in_bytes) {
-    UNIMPLEMENTED();
+    *workspace_size_in_bytes = 1;
   }
   static void GetUniqueWithCountsWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
                                                       int64_t* workspace_size_in_bytes) {
-    UNIMPLEMENTED();
+    *workspace_size_in_bytes = 1;
   }
 };
 
