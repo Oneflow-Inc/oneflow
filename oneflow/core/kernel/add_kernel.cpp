@@ -29,7 +29,6 @@ struct AddUtil {
     static const int kWidth = 8;
     int r = in_num % kWidth;
     if (r) {
-      LOG(ERROR) << "R1 " << r;
       tuple_switch(r, add_kernel->tp_,
                    AdditionFunction<device_type, T, decltype(add_kernel)>{
                        out_blob, BnInOp2Blob, ctx.device_ctx, 0, add_kernel});
