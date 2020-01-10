@@ -28,6 +28,7 @@ def add_n(inputs, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("AddN_"),
     )
+    assert len(inputs) > 1
     for blob in inputs:
         getattr(op_conf.add_conf, "in").append(blob.logical_blob_name)
     op_conf.add_conf.out = "out"
