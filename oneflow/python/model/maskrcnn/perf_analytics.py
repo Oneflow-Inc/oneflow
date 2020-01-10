@@ -1,6 +1,7 @@
 import pandas as pd
 import sqlite3
 import altair as alt
+from plot_value import plot_value
 
 
 def set_pd_opts():
@@ -130,6 +131,7 @@ def get_gpu_span_with_text(con, text, activity_df):
         return nvtx
 
     nvtx_df["text"] = text
+    nvtx_df["iter"] = nvtx_df.index + 1
     return nvtx_df.apply(update_gpu_span, axis=1)
 
 
@@ -163,17 +165,9 @@ if __name__ == "__main__":
     con = sqlite3.connect(db_path)
     text = "Backward pass"
     df = get_gpu_span(con, ["Forward pass", "Backward pass"])
-    df["gpu_span"] = df["gpu_span"] / 1e6
+    df["value"] = df["gpu_span"] / 1e6
+    df["legend"] = df["text"]
+    df = df[df["iter"] > 1]
+    plot_value(df)
     # print(df)
-    chart = (
-        alt.Chart(df)
-        .mark_area()
-        .encode(
-            alt.X("index:Q", axis=alt.Axis(domain=False, tickSize=0),),
-            alt.Y("gpu_span:Q", stack="center", axis=None),
-            alt.Color("text:N", scale=alt.Scale(scheme="category20b")),
-        )
-        .interactive()
-    )
-    chart.display()
     con.close()
