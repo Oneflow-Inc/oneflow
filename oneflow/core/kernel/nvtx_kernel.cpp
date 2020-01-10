@@ -19,8 +19,8 @@ class NvtxRangePopKernel final : public KernelIf<device_type> {
   ~NvtxRangePopKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx &,
-                          std::function<Blob *(const std::string &)>) const override {
+  void ForwardDataContent(const KernelCtx &ctx,
+                          std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), BnInOp2Blob("in"));
   }
   void ForwardLoD(const KernelCtx &ctx,
