@@ -21,7 +21,12 @@ class UniqueWithCountsOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    const OptInt64* x_batch_axis = BatchAxis4BnInOp("x");
+    *BatchAxis4BnInOp("y") = *x_batch_axis;
+    *BatchAxis4BnInOp("idx") = *x_batch_axis;
+    *BatchAxis4BnInOp("count") = *x_batch_axis;
+    BatchAxis4BnInOp("num_unique")->clear_value();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -69,7 +74,10 @@ Maybe<void> UniqueWithCountsOp::InferBlobDescs(
 
 void UniqueWithCountsOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->mutable_unique_with_counts_conf()->set_indices_data_type(
+      op_conf().unique_with_counts_conf().out_idx());
+}
 
 REGISTER_OP(OperatorConf::kUniqueWithCountsConf, UniqueWithCountsOp);
 

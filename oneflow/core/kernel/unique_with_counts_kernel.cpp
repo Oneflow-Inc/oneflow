@@ -49,7 +49,7 @@ void UniqueWithCountsKernel<device_type, T, K>::ForwardDataContent(
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_UNIQUE_WITH_COUNTS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #undef MAKE_UNIQUE_WITH_COUNTS_KERNEL_ENTRY
 
 }  // namespace oneflow
