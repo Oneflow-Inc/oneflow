@@ -1977,6 +1977,17 @@ message RandomLikeOpConf {
   optional int64 random_seed = 3;
 }
 
+message NvtxRangePushOp {
+  required string in = 1;
+  required string out = 2;
+  required string msg = 3;
+}
+
+message NvtxRangePopOp {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2205,6 +2216,10 @@ message OperatorConf {
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
+
+    // debug op
+    NvtxRangePushOp nvtx_range_push_op_conf = 801;
+    NvtxRangePopOp nvtx_range_pop_op_conf = 802;
   }
 }
 
