@@ -166,16 +166,6 @@ __global__ void IotaKernel(int64_t n, IDX* out) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, n) { out[i] = static_cast<IDX>(i); }
 }
 
-template<typename KEY, typename IDX>
-__global__ void CheckKernel(const int64_t n, const KEY* in, const IDX* num_unique,
-                            const KEY* unique_out, const IDX* idx_out) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    IDX idx = idx_out[i];
-    assert(idx < *num_unique);
-    assert(unique_out[idx] == in[i]);
-  }
-}
-
 }  // namespace
 
 template<typename KEY, typename IDX>
@@ -229,9 +219,6 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
                                           PermutationIterator<IDX, IDX*, IDX*>>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, unique_counting_iter, remapping_iter, n,
       ctx->cuda_stream()));
-  CheckKernel<KEY, IDX>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, in, num_unique, unique_out, idx_out);
 }
 
 template<typename KEY, typename IDX>
