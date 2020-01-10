@@ -21,11 +21,11 @@ struct SwitchUtil final {
 #define SWITCH_ENTRY(func_name, device_type, T, U) func_name<device_type, T, U>
   DEFINE_STATIC_SWITCH_FUNC(void, GetUniqueWorkspaceSizeInBytes, SWITCH_ENTRY,
                             MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
+                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
                             MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
   DEFINE_STATIC_SWITCH_FUNC(void, GetUniqueWithCountsWorkspaceSizeInBytes, SWITCH_ENTRY,
                             MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
+                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
                             MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
 #undef SWITCH_ENTRY
 };
