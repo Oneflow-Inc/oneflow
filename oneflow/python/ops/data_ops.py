@@ -353,10 +353,10 @@ class ImageAlign(object):
 
 @oneflow_export("data.DataLoader")
 class DataLoader(object):
-    def __init__(self, dataset, batch_size, batch_cache_size):
+    def __init__(self, dataset, batch_size, num_parallels):
         self._dataset = dataset
         self._batch_size = batch_size
-        self._batch_cache_size = batch_cache_size
+        self._num_parallels = num_parallels
         self._blobs = []
         self._transforms = []
 
@@ -427,7 +427,7 @@ class DataLoader(object):
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
         op_conf.data_load_conf.batch_size = self._batch_size
-        op_conf.data_load_conf.batch_cache_size = self._batch_cache_size
+        op_conf.data_load_conf.num_parallels = self._num_parallels
         self._dataset.to_proto(op_conf.data_load_conf.dataset)
         op_conf.data_load_conf.transforms.extend(
             [transform.to_proto() for transform in self._transforms]

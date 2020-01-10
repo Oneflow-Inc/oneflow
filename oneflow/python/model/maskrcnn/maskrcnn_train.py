@@ -171,6 +171,7 @@ def merge_and_compare_config(args):
 
 
 def set_train_config(cfg):
+    flow.config.persistence_buf_byte(1024 * 1024)
     flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
     flow.config.cudnn_conv_heuristic_search_algo(cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO)
     flow.config.cudnn_conv_use_deterministic_algo_only(
@@ -544,8 +545,8 @@ def run():
 
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
-        if p.checkpoint_period > 0 and i == start_iter:
-            save_model(p.check_point, loaded_iter)
+        # if p.checkpoint_period > 0 and i == start_iter:
+        #     save_model(p.check_point, loaded_iter)
         if use_fake_images:
             if config.ASYNC_GET:
                 train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))
@@ -558,8 +559,9 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-        if  (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
-            save_model(p.check_point, i)
+        # if (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
+        #     save_model(p.check_point, i)
+
 
 if __name__ == "__main__":
     run()

@@ -950,7 +950,7 @@ message DataLoadOpConf {
   required DatasetProto dataset = 3;
   repeated BlobConf blobs = 4;
   repeated DataTransformProto transforms = 5;
-  optional int32 batch_cache_size = 6 [default = 3];
+  required int32 num_parallels = 6;
 }
 
 message DecodeOFRecordOpConf {
