@@ -170,6 +170,10 @@ message XrtLaunchKernelConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message UniqueWithCountsKernelConf {
+  required DataType indices_data_type = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -194,6 +198,7 @@ message KernelConf {
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
+    UniqueWithCountsKernelConf unique_with_counts_conf = 354;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
