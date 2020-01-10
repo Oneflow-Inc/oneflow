@@ -72,6 +72,28 @@ def query_all_activity_with_runtime_span(con, r_start, r_end):
     )
 
 
+def query_activity(con, kind):
+    kind_str = kind.upper()
+    assert kind_str in ACTIVITY_KIND
+    sql = f"""
+    SELECT a.correlationId, r.start as runtime_start, r.end as runtime_end, a.start as gpu_start, a.end as gpu_end
+    FROM CUPTI_ACTIVITY_KIND_RUNTIME as r 
+        LEFT JOIN CUPTI_ACTIVITY_KIND_{kind_str} as a
+    ON r.correlationId = a.correlationId
+    where a.correlationId not null and r.correlationId not null
+    """
+    df = pd.read_sql_query(sql, con)
+    df["kind"] = kind
+    return df
+
+
+def query_all_activity(con):
+    return pd.concat(
+        [query_activity(con, kind) for kind in ACTIVITY_KIND if kind is not "RUNTIME"],
+        axis=0,
+    )
+
+
 def query_nvtx_with_text(con, text):
     df = pd.read_sql_query(
         f"SELECT start, end FROM NVTX_EVENTS where text = '{text}';", con
@@ -79,17 +101,43 @@ def query_nvtx_with_text(con, text):
     return df
 
 
-def get_gpu_span_with_text(con, text):
+def get_gpu_span_with_text_by_query(con, text):
     nvtx_df = query_nvtx_with_text(con, text)
+
+    def update_gpu_span(nvtx):
+        activity = query_all_activity_with_runtime_span(con, nvtx.start, nvtx.end)
+        start_min = activity.start.min()
+        end_max = activity.end.max()
+        nvtx["gpu_span"] = end_max - start_min
+        return nvtx
+
     return nvtx_df.apply(update_gpu_span, axis=1)
 
 
-def update_gpu_span(nvtx):
-    activity = query_all_activity_with_runtime_span(con, nvtx.start, nvtx.end)
-    start_min = activity.start.min()
-    end_max = activity.end.max()
-    nvtx["gpu_span"] = end_max - start_min
-    return nvtx
+def get_gpu_span_with_text(con, text, activity_df):
+    nvtx_df = query_nvtx_with_text(con, text)
+
+    def update_gpu_span(nvtx):
+        activity = activity_df[
+            (activity_df.runtime_start > nvtx.start)
+            & (activity_df.runtime_end < nvtx.end)
+        ]
+        start_min = activity.gpu_start.min()
+        end_max = activity.gpu_end.max()
+
+        nvtx["gpu_end"] = end_max
+        nvtx["gpu_span"] = end_max - start_min
+        return nvtx
+
+    nvtx_df["text"] = text
+    return nvtx_df.apply(update_gpu_span, axis=1)
+
+
+def get_gpu_span(con, text_list):
+    activity_df = query_all_activity(con)
+    return pd.concat(
+        [get_gpu_span_with_text(con, text, activity_df) for text in text_list], axis=0
+    )
 
 
 def test1():
@@ -114,13 +162,14 @@ if __name__ == "__main__":
     db_path = "file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite"
     con = sqlite3.connect(db_path)
     text = "Backward pass"
-    df = get_gpu_span_with_text(con, text)
-    df["text"] = text
+    df = get_gpu_span(con, ["Forward pass", "Backward pass"])
+    df["gpu_span"] = df["gpu_span"] / 1e6
+    # print(df)
     chart = (
         alt.Chart(df)
         .mark_area()
         .encode(
-            alt.X("index:Q"),
+            alt.X("index:Q", axis=alt.Axis(domain=False, tickSize=0),),
             alt.Y("gpu_span:Q", stack="center", axis=None),
             alt.Color("text:N", scale=alt.Scale(scheme="category20b")),
         )
