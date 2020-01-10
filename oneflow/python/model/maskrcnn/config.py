@@ -75,7 +75,7 @@ _C.DATALOADER.SIZE_DIVISIBILITY = 32
 # is compatible. This groups portrait images together, and landscape images
 # are not batched with portrait images.
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
-_C.DATALOADER.CACHE_SIZE = 3
+_C.DATALOADER.NUM_WORKERS = 8
 
 # ---------------------------------------------------------------------------- #
 # Backbone options

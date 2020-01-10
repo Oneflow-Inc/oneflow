@@ -11,7 +11,7 @@ namespace data {
 DataLoader::DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& kernel_conf)
     : op_conf_(op_conf),
       kernel_conf_(kernel_conf),
-      batch_buffer_(op_conf.batch_cache_size()),
+      batch_buffer_(op_conf.num_parallels() * 2),
       is_closed_(false) {
   dataset_ = Global<DatasetManager>::Get()->GetOrCreateDataset(op_conf.dataset());
   sampler_ctx_.num_replicas_ = kernel_conf.parallel_num();
@@ -51,24 +51,30 @@ std::shared_ptr<DataLoader::BatchDataInstance> DataLoader::FetchBatch() {
 void DataLoader::LoadBatch() {
   const std::string mark("DataLoader::LoadBatch");
   nvtxRangePush(mark.c_str());
-  std::vector<int64_t> batch_idx_seq =
-      dataset_->FetchBatchIndexSequence(&sampler_ctx_, kernel_conf_.device_batch_size());
-
-  BatchDataInstance batch_data(batch_idx_seq.size());
-  auto batch_data_inst_ptr = std::make_shared<BatchDataInstance>(std::move(batch_data));
-
-  MultiThreadLoop(batch_idx_seq.size(),
-                  [this, batch_data_inst_ptr, &batch_idx_seq](size_t idx_in_batch) {
-                    DataInstance* data_inst = &(batch_data_inst_ptr->at(idx_in_batch));
-                    data_inst->InitFromProto(kernel_conf_.data_instance());
-                    int64_t data_idx = batch_idx_seq.at(idx_in_batch);
-                    dataset_->GetData(data_idx, data_inst);
-                  });
-
-  for (const auto& trans_proto : op_conf_.transforms()) {
-    BatchTransform(batch_data_inst_ptr, trans_proto);
+  const size_t batch_size = kernel_conf_.device_batch_size();
+  const size_t num_batchs = op_conf_.num_parallels();
+  std::vector<int64_t> idx_vec;
+  idx_vec.reserve(num_batchs * batch_size);
+  FOR_RANGE(size_t, i, 0, num_batchs) {
+    std::vector<int64_t> batch_idx_vec =
+        dataset_->FetchBatchIndexSequence(&sampler_ctx_, batch_size);
+    idx_vec.insert(idx_vec.end(), batch_idx_vec.begin(), batch_idx_vec.end());
   }
-  batch_buffer_.Send(batch_data_inst_ptr);
+  std::vector<std::shared_ptr<BatchDataInstance>> batch_data_inst_vec(num_batchs);
+  MultiThreadLoop(num_batchs, [this, batch_size, &batch_data_inst_vec, &idx_vec](size_t i) {
+    BatchDataInstance batch_data(batch_size);
+    batch_data_inst_vec[i] = std::make_shared<BatchDataInstance>(std::move(batch_data));
+    FOR_RANGE(size_t, j, 0, batch_size) {
+      DataInstance* data_inst = &(batch_data_inst_vec[i]->at(j));
+      data_inst->InitFromProto(kernel_conf_.data_instance());
+      int64_t data_idx = idx_vec.at(i * batch_size + j);
+      dataset_->GetData(data_idx, data_inst);
+    }
+    for (const auto& trans_proto : op_conf_.transforms()) {
+      BatchTransform(batch_data_inst_vec[i], trans_proto);
+    }
+  });
+  for (auto batch_data_inst_ptr : batch_data_inst_vec) { batch_buffer_.Send(batch_data_inst_ptr); }
   nvtxRangePop();
 }
 

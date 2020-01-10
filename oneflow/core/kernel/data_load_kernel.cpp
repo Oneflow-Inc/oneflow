@@ -42,15 +42,14 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
                           std::multiplies<int64_t>());
       CHECK_EQ(elem_cnt, exp_elem_cnt);
     }
-    MultiThreadLoop(batch_data->size(), [&blob_conf, &dense_shape, batch_data, elem_cnt,
-                                         dptr](int64_t n) {
+    FOR_RANGE(size_t, n, 0, batch_data->size()) {
       const DataField* data_field = batch_data->at(n).GetField(blob_conf.data_source());
       size_t elem_bytes_size = GetSizeOfDataType(blob_conf.data_type());
       data_field->ToBuffer(dptr + n * elem_cnt * elem_bytes_size, blob_conf.data_type());
       Shape shape;
       data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape, nullptr);
       CHECK(dense_shape == shape);
-    });
+    }
     DimVector dense_shape_vec = dense_shape.dim_vec();
     dense_shape_vec.insert(dense_shape_vec.begin(), batch_data->size());
     dense_shape = Shape(dense_shape_vec);
