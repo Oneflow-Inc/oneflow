@@ -9,6 +9,9 @@ namespace {
 bool IsSoleBlobAndDynamicEmpty(Regst* regst) {
   if (regst == nullptr) { return false; }
   if (regst->GetBlobSize() != 1) { return false; }
+  Blob* sole_blob = regst->GetMutSoleBlob();
+  if (sole_blob->num_of_tensor_list_slices() != 1) { return false; }
+  if (sole_blob->total_num_of_tensors() != 1) { return false; }
   return regst->GetMutSoleBlob()->IsBodyEmpty();
 }
 
@@ -28,7 +31,8 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
   }
   msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
-  msg.regst_wrapper_.is_regst_empty = IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
+  msg.regst_wrapper_.has_sole_empty_tensor_in_sole_tensor_list =
+      IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
   return msg;
 }
 
@@ -41,7 +45,7 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.regst_wrapper_.regst = regst_raw_ptr;
   msg.regst_wrapper_.comm_net_token = nullptr;
   // you can NOT access the regst ptr when multi nodes, because the address is in another machine
-  msg.regst_wrapper_.is_regst_empty = false;
+  msg.regst_wrapper_.has_sole_empty_tensor_in_sole_tensor_list = false;
   return msg;
 }
 
@@ -102,9 +106,9 @@ void* ActorMsg::comm_net_token() const {
   return regst_wrapper_.comm_net_token;
 }
 
-bool ActorMsg::is_regst_empty() const {
+bool ActorMsg::has_sole_empty_tensor_in_sole_tensor_list() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.is_regst_empty;
+  return regst_wrapper_.has_sole_empty_tensor_in_sole_tensor_list;
 }
 
 int64_t ActorMsg::eord_regst_desc_id() const {

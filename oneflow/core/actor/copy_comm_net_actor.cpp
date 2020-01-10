@@ -55,7 +55,8 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
-  regst_ctx.is_regst_empty = msg.is_regst_empty();
+  regst_ctx.has_sole_empty_tensor_in_sole_tensor_list =
+      msg.has_sole_empty_tensor_in_sole_tensor_list();
   CHECK(piece_id2regst_ctx_.emplace(msg.piece_id(), regst_ctx).second);
   return true;
 }
@@ -68,11 +69,15 @@ void CopyCommNetActor::Act() {
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Regst* writeable_regst = GetNaiveCurWriteable("copy_out");
-  // if (readable_it->second.is_regst_empty) {
-  if (false) {
+  if (readable_it->second.has_sole_empty_tensor_in_sole_tensor_list) {
     // pass if regst dynamic body is emtpy
-    TensorBackInserter back_inserter(writeable_regst->GetMutSoleBlob());
+    Blob* data_blob = writeable_regst->GetMutSoleBlob();
+    TensorBackInserter back_inserter(data_blob);
     back_inserter.ReserveOneEmptyTensorList();
+    FullyMutTensorView* tensor_view = back_inserter.add_tensor();
+    Shape empty_shape = data_blob->static_shape();
+    for (int i = 0; i < empty_shape.NumAxes(); ++i) { empty_shape.Set(i, 0); }
+    tensor_view->set_shape(empty_shape);
   } else {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async
