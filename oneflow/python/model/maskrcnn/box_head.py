@@ -14,7 +14,6 @@ class BoxHead(object):
     # gt_labels_list: list of [G] wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
     def build_train(self, proposals, gt_boxes_list, gt_labels_list, features):
-        features[-1] = flow.nvtx.range_push(features[-1], "box_head")
         with flow.deprecated.variable_scope("roi"):
             # used in box_head
             label_list = []
@@ -25,6 +24,8 @@ class BoxHead(object):
             pos_gt_indices_list = []
 
             for img_idx in range(len(proposals)):
+                if img_idx == 0:
+                    proposals[0] = flow.nvtx.range_push(proposals[0], "box_head")
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
                         self.cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD,
