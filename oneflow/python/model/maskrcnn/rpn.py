@@ -92,7 +92,7 @@ class RPNHead(object):
                     ),
                     perm=[0, 2, 3, 1],
                 )
-                if layer_i == len(features):
+                if layer_i == 1:
                     bbox_preds = flow.nvtx.range_pop(bbox_preds)
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
@@ -431,7 +431,7 @@ class RPNProposal(object):
                         axis=0,
                         name="img{}_proposals".format(img_idx),
                     )
-                if img_idx == (len(image_size_list) - 1):
+                if img_idx == 0:
                     proposal_in_one_img = flow.nvtx.range_pop(proposal_in_one_img)
                 proposals.append(proposal_in_one_img)
             return proposals
