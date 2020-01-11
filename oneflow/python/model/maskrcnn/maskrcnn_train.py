@@ -107,7 +107,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # with flow.watch_scope(
     #     blob_watcher=blob_watched
     # ):
-    image = flow.nvtx.range_push(image, "Forward pass")
+
     features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
 
     # RPN
@@ -135,11 +135,11 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         proposals, gt_bbox_list, gt_label_list, features
     )
 
+    features[0] = flow.nvtx.range_push(features[0], "mask_head")
     # Mask Head
     mask_loss = mask_head.build_train(
         pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
-    
     mask_loss = flow.nvtx.range_pop(mask_loss)
     return {
         "loss_rpn_box_reg": rpn_bbox_loss,

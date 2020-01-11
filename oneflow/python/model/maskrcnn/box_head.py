@@ -14,6 +14,7 @@ class BoxHead(object):
     # gt_labels_list: list of [G] wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
     def build_train(self, proposals, gt_boxes_list, gt_labels_list, features):
+        features[-1] = flow.nvtx.range_push(features[-1], "box_head")
         with flow.deprecated.variable_scope("roi"):
             # used in box_head
             label_list = []
@@ -128,7 +129,7 @@ class BoxHead(object):
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
-
+            box_head_box_loss = flow.nvtx.range_pop(box_head_box_loss)
             return (
                 box_head_box_loss,
                 box_head_cls_loss,

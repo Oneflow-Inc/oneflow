@@ -38,6 +38,7 @@ class RPNHead(object):
 
     # features: list of [C_i, H_i, W_i] wrt. fpn layers
     def build(self, features):
+        features[0] = flow.nvtx.range_push(features[0], "rpn_head")
         with flow.deprecated.variable_scope("rpn-head"):
 
             def split_to_instances(inputs, name):
@@ -106,7 +107,7 @@ class RPNHead(object):
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
-
+        bbox_pred_list[-1][-1] = flow.nvtx.range_pop(bbox_pred_list[-1][-1])
         return cls_logit_list, bbox_pred_list
 
 
@@ -127,6 +128,7 @@ class RPNLoss(object):
         bbox_pred_list,
         cls_logit_list,
     ):
+        bbox_pred_list[-1][-1] = flow.nvtx.range_push(bbox_pred_list[-1][-1], "rpn_loss")
         with flow.deprecated.variable_scope("rpn-loss"):
             sampled_bbox_pred_list = []
             sampled_bbox_target_list = []
@@ -274,7 +276,7 @@ class RPNLoss(object):
             cls_loss_mean = flow.math.divide(
                 cls_loss, total_sample_cnt, name="objectness_loss_mean"
             )
-
+        bbox_loss_mean = flow.nvtx.range_push(bbox_loss_mean, "rpn_loss")
         return bbox_loss_mean, cls_loss_mean
 
 
@@ -309,6 +311,7 @@ class RPNProposal(object):
         image_size_list,
         resized_gt_boxes_list,
     ):
+        bbox_pred_list[-1][-1] = flow.nvtx.range_push(bbox_pred_list[-1][-1], "rpn_post_processor")
         with flow.deprecated.variable_scope("rpn-postprocess"):
             proposals = []
             for img_idx in range(len(image_size_list)):
