@@ -426,7 +426,7 @@ class RPNProposal(object):
                     )
 
                 proposals.append(proposal_in_one_img)
-
+            proposals[-1] = flow.nvtx.range_pop(proposals[-1])
             return proposals
 
 
