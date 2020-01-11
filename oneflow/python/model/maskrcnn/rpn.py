@@ -128,7 +128,6 @@ class RPNLoss(object):
         bbox_pred_list,
         cls_logit_list,
     ):
-        bbox_pred_list[-1][-1] = flow.nvtx.range_push(bbox_pred_list[-1][-1], "rpn_loss")
         with flow.deprecated.variable_scope("rpn-loss"):
             sampled_bbox_pred_list = []
             sampled_bbox_target_list = []
@@ -139,8 +138,11 @@ class RPNLoss(object):
             # concat bbox_pred from all fpn layers for each image
             # list (wrt. images) of [M, 4]
             bbox_pred_wrt_img_list = []
-            for _, tup in enumerate(zip(*bbox_pred_list)):
-                bbox_pred_wrt_img_list += [flow.concat(list(tup), axis=0)]
+            for i, tup in enumerate(zip(*bbox_pred_list)):
+                tup = list(tup)
+                if i == 0:
+                    tup[0] = flow.nvtx.range_push(tup[0], "rpn_loss")
+                bbox_pred_wrt_img_list += [flow.concat(tup, axis=0)]
 
             # concat cls_logit from all fpn layers for each image
             # list (wrt. images) of [M,]
