@@ -38,7 +38,6 @@ class RPNHead(object):
 
     # features: list of [C_i, H_i, W_i] wrt. fpn layers
     def build(self, features):
-        features[0] = flow.nvtx.range_push(features[0], "rpn_head")
         with flow.deprecated.variable_scope("rpn-head"):
 
             def split_to_instances(inputs, name):
@@ -58,6 +57,8 @@ class RPNHead(object):
             # list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
             cls_logit_list = []
             for layer_i, feature in enumerate(features, 1):
+                if layer_i == 1:
+                    feature = flow.nvtx.range_push(feature, "rpn_head")
                 x = _Conv2d(
                     feature,
                     256,
@@ -91,7 +92,8 @@ class RPNHead(object):
                     ),
                     perm=[0, 2, 3, 1],
                 )
-
+                if layer_i == len(features):
+                    bbox_preds = flow.nvtx.range_pop(bbox_preds)
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
                     for x in split_to_instances(
@@ -107,7 +109,7 @@ class RPNHead(object):
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
-        bbox_pred_list[-1][-1] = flow.nvtx.range_pop(bbox_pred_list[-1][-1])
+
         return cls_logit_list, bbox_pred_list
 
 
@@ -429,9 +431,9 @@ class RPNProposal(object):
                         axis=0,
                         name="img{}_proposals".format(img_idx),
                     )
-
+                if img_idx == (len(image_size_list) - 1):
+                    proposal_in_one_img = flow.nvtx.range_pop(proposal_in_one_img)
                 proposals.append(proposal_in_one_img)
-            proposals[-1] = flow.nvtx.range_pop(proposals[-1])
             return proposals
 
 
