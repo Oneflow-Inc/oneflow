@@ -195,6 +195,7 @@ class RPNLoss(object):
                     neg_inds,
                     total_subsample_num=self.cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE,
                     pos_fraction=self.cfg.MODEL.RPN.POSITIVE_FRACTION,
+                    name="img{}_pos_neg_sample".format(img_idx)
                 )
 
                 sampled_bbox_target_list.append(
@@ -212,6 +213,7 @@ class RPNLoss(object):
                             "weight_h": 1.0,
                             "weight_w": 1.0,
                         },
+                        name="img{}_pos_box_encode".format(img_idx)
                     )
                 )
                 sampled_bbox_pred_list.append(
@@ -250,8 +252,9 @@ class RPNLoss(object):
                         sampled_bbox_target_list, axis=0, name="bbox_target"
                     ),  # CHECK_POINT: bbox_target
                     beta=1.0 / 9.0,
+                    name="box_reg_loss"
                 ),
-                name="box_reg_loss",
+                name="box_reg_loss_sum",
             )
             bbox_loss_mean = flow.math.divide(
                 bbox_loss, total_sample_cnt, name="box_reg_loss_mean"

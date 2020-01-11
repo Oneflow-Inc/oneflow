@@ -75,7 +75,7 @@ _C.DATALOADER.SIZE_DIVISIBILITY = 32
 # is compatible. This groups portrait images together, and landscape images
 # are not batched with portrait images.
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
-_C.DATALOADER.CACHE_SIZE = 3
+_C.DATALOADER.NUM_WORKERS = 8
 
 # ---------------------------------------------------------------------------- #
 # Backbone options
@@ -211,8 +211,8 @@ _C.SOLVER.STEPS = (120000, 160000)
 _C.SOLVER.LR_DECAY_VALUES = (1, 0.1, 0.01)
 _C.SOLVER.ENABLE_LR_DECAY = True
 
-_C.SOLVER.WARMUP_FACTOR = 1.0 / 1000
-_C.SOLVER.WARMUP_ITERS = 1000
+_C.SOLVER.WARMUP_FACTOR = 1.0 / 3
+_C.SOLVER.WARMUP_ITERS = 500
 _C.SOLVER.WARMUP_METHOD = "linear"
 _C.SOLVER.ENABLE_WARMUP = True
 

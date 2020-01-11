@@ -1,4 +1,4 @@
-# pip3 install -U altair vega_datasets jupyterlab --user
+# pip3 install -U altair vega_datasets jupyterlab pyyaml --user
 import altair as alt
 import pandas as pd
 import numpy as np

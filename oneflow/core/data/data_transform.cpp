@@ -454,22 +454,19 @@ void DoDataTransform<TransformCase::kImageRandomFlip>(DataInstance* data_inst,
   DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip>::Apply(data_inst, proto);
 }
 
-#define DEFINE_MULTI_THREAD_BATCH_TRANSFORM(trans)                                             \
-  template<>                                                                                   \
-  void DoBatchTransform<trans>(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_ptr, \
-                               const DataTransformProto& proto) {                              \
-    MultiThreadLoop(batch_data_inst_ptr->size(), [batch_data_inst_ptr, &proto](size_t n) {     \
-      DataInstance* data_inst = &(batch_data_inst_ptr->at(n));                                 \
-      DoDataTransform<trans>(data_inst, proto);                                                \
-    });                                                                                        \
+#define DEFINE_BATCH_TRANSFORM_PROCESS(trans)                                                   \
+  template<>                                                                                    \
+  void DoBatchTransform<trans>(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_ptr,  \
+                               const DataTransformProto& proto) {                               \
+    for (auto& data_inst : *batch_data_inst_ptr) { DoDataTransform<trans>(&data_inst, proto); } \
   }
 
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kResize)
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kTargetResize)
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToMask)
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToAlignedMask)
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kImageNormalizeByChannel)
-DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kImageRandomFlip)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kResize)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kTargetResize)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kSegmentationPolyToMask)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kSegmentationPolyToAlignedMask)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kImageNormalizeByChannel)
+DEFINE_BATCH_TRANSFORM_PROCESS(TransformCase::kImageRandomFlip)
 
 template<>
 void DoBatchTransform<TransformCase::kImageAlign>(
@@ -506,15 +503,14 @@ void DoBatchTransform<TransformCase::kImageAlign>(
   max_rows = RoundUp(max_rows, alignment);
   max_cols = RoundUp(max_cols, alignment);
 
-  MultiThreadLoop(batch_data_inst_ptr->size(), [batch_data_inst_ptr, max_rows, max_cols](size_t i) {
-    DataInstance& data_inst = batch_data_inst_ptr->at(i);
+  for (DataInstance& data_inst : *batch_data_inst_ptr) {
     auto* image_field = dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
     CHECK_NOTNULL(image_field);
     auto& image_mat = image_field->data();
     cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), image_mat.type());
     image_mat.copyTo(dst(cv::Rect(0, 0, image_mat.cols, image_mat.rows)));
     image_field->data() = dst;
-  });
+  }
 }
 
 void DataTransform(DataInstance* data_inst, const DataTransformProto& trans_proto) {
