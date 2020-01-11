@@ -313,7 +313,6 @@ class RPNProposal(object):
         image_size_list,
         resized_gt_boxes_list,
     ):
-        bbox_pred_list[-1][-1] = flow.nvtx.range_push(bbox_pred_list[-1][-1], "rpn_post_processor")
         with flow.deprecated.variable_scope("rpn-postprocess"):
             proposals = []
             for img_idx in range(len(image_size_list)):
@@ -333,6 +332,10 @@ class RPNProposal(object):
                     score_per_layer = flow.local_gather(
                         cls_probs, pre_nms_top_k_inds
                     )
+                    if img_idx == 0 and layer_i == 0:
+                        bbox_pred_i_i = flow.nvtx.range_push(bbox_pred_list[layer_i][img_idx], "rpn_post_processor")
+                    else:
+                        bbox_pred_i_i = bbox_pred_list[layer_i][img_idx]
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(
                             anchors[layer_i],
@@ -342,7 +345,7 @@ class RPNProposal(object):
                             ),
                         ),
                         flow.local_gather(
-                            bbox_pred_list[layer_i][img_idx],
+                            bbox_pred_i_i,
                             pre_nms_top_k_inds,
                             name="img{}_layer{}_box_delta".format(
                                 img_idx, layer_i
