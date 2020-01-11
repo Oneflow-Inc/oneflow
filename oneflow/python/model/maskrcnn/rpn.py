@@ -276,7 +276,7 @@ class RPNLoss(object):
             cls_loss_mean = flow.math.divide(
                 cls_loss, total_sample_cnt, name="objectness_loss_mean"
             )
-        bbox_loss_mean = flow.nvtx.range_push(bbox_loss_mean, "rpn_loss")
+        bbox_loss_mean = flow.nvtx.range_pop(bbox_loss_mean)
         return bbox_loss_mean, cls_loss_mean
 
 
