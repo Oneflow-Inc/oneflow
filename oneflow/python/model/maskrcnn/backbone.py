@@ -13,5 +13,4 @@ class Backbone(object):
         with flow.deprecated.variable_scope("backbone"):
             features = self.resnet.build(in_blob)
             layer_features = self.fpn.build(features)
-            layer_features[0] = flow.nvtx.range_pop(layer_features[0])
         return layer_features
