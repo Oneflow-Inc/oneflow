@@ -128,6 +128,7 @@ class BoxHead(object):
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
+
             return (
                 box_head_box_loss,
                 box_head_cls_loss,

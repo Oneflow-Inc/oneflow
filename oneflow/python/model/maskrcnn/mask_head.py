@@ -24,6 +24,7 @@ class MaskHead(object):
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
             )
             proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals")
+
             # mask head feature extractor
             x = self.mask_feature_extractor(proposals, img_ids, features)
 
