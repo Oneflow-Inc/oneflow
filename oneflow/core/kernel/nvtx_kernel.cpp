@@ -11,6 +11,7 @@ class NvtxRangePushKernel final : public KernelIf<device_type> {
   ~NvtxRangePushKernel() = default;
 
  private:
+  bool IsStateless() const override { return false; }
   void ForwardDataContent(const KernelCtx &ctx,
                           std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     nvtxRangePush(this->op_conf().nvtx_range_push_conf().msg().c_str());
@@ -25,6 +26,7 @@ class NvtxRangePopKernel final : public KernelIf<device_type> {
   ~NvtxRangePopKernel() = default;
 
  private:
+  bool IsStateless() const override { return false; }
   void ForwardDataContent(const KernelCtx &ctx,
                           std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     nvtxRangePop();
