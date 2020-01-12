@@ -18,24 +18,14 @@ def nvtx_range_push(x, msg, name=None):
     if name is None: name = id_util.UniqueStr("NvtxRangePush_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.nvtx_range_push_conf, "in", x.logical_blob_name)
+    getattr(op_conf.nvtx_range_push_conf, "in").extend([i.logical_blob_name for i in x])
     setattr(op_conf.nvtx_range_push_conf, "msg", msg)
-    op_conf.nvtx_range_push_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nvtx.range_pop")
 def nvtx_range_pop(x, name=None):
     if name is None: name = id_util.UniqueStr("NvtxRangePop_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.nvtx_range_pop_conf, "in", x.logical_blob_name)
-    op_conf.nvtx_range_pop_conf.out = "out"
+    getattr(op_conf.nvtx_range_push_conf, "in").extend([i.logical_blob_name for i in x])
     compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)

@@ -10,8 +10,10 @@ class NvtxRangePushOp final : public Operator {
   ~NvtxRangePushOp() override = default;
 
   void InitFromOpConf() override {
-    EnrollInputBn("in");
-    EnrollOutputBn("out")->set_const_inplace_ibn("in");
+    CHECK(op_conf().has_nvtx_range_push_conf());
+    int32_t in_size = op_conf().nvtx_range_push_conf().in_size();
+    CHECK_GT(in_size, 0);
+    EnrollRepeatedInputBn("in", in_size);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_push_conf(); }
@@ -29,7 +31,7 @@ class NvtxRangePushOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
+    const auto bns = StdVec2PbRpf<std::string>({"in"});
     SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
     const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
     SbpSignatureBuilder().Split(bns, 0).MakeSplitSignatureListBuilder(num_axes).Build(sbp_sig_list);
@@ -44,14 +46,15 @@ class NvtxRangePopOp final : public Operator {
   ~NvtxRangePopOp() override = default;
 
   void InitFromOpConf() override {
-    EnrollInputBn("in");
-    EnrollOutputBn("out")->set_const_inplace_ibn("in");
+    CHECK(op_conf().has_nvtx_range_pop_conf());
+    int32_t in_size = op_conf().nvtx_range_pop_conf().in_size();
+    CHECK_GT(in_size, 0);
+    EnrollRepeatedInputBn("in", in_size);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_pop_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
     return Maybe<void>::Ok();
   }
 
@@ -63,7 +66,7 @@ class NvtxRangePopOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
+    const auto bns = StdVec2PbRpf<std::string>({"in"});
     SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
     const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
     SbpSignatureBuilder().Split(bns, 0).MakeSplitSignatureListBuilder(num_axes).Build(sbp_sig_list);
