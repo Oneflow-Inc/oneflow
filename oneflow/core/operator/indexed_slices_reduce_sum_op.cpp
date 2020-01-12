@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/operator/unique_op_util.h"
+#include "oneflow/core/operator/indexed_slices_reduce_sum_op_util.h"
 
 namespace oneflow {
 
@@ -70,7 +70,9 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
   BlobDesc* workspace = GetBlobDesc4BnInOp("workspace");
   workspace->set_data_type(DataType::kChar);
   int64_t workspace_size_in_bytes;
-  // TODO
+  IndexedSlicesReduceSumOpUtil::GetReduceSumWorkspaceSizeInBytes(
+      device_type(), x_values->data_type(), x_indices->data_type(), x_indices->shape().elem_cnt(),
+      x_values->shape().Count(1), &workspace_size_in_bytes);
   workspace->mut_shape() = Shape({workspace_size_in_bytes});
   return Maybe<void>::Ok();
 }
