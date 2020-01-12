@@ -1561,6 +1561,14 @@ message UniqueWithCountsOpConf {
   optional DataType out_idx = 6 [default = kInt32];
 }
 
+message IndexedSlicesReduceSumOpConf {
+  required string x_indices = 1;
+  required string x_values = 2;
+  required string y_indices = 3;
+  required string y_values = 4;
+  required string num_unique = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1714,6 +1722,7 @@ message OperatorConf {
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
+    IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 

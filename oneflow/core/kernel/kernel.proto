@@ -174,6 +174,10 @@ message UniqueWithCountsKernelConf {
   required DataType indices_data_type = 1;
 }
 
+message IndexedSlicesReduceSumKernelConf {
+  required DataType indices_data_type = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -199,6 +203,7 @@ message KernelConf {
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
+    IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
