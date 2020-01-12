@@ -90,6 +90,7 @@ class RPNHead(object):
                     ),
                     perm=[0, 2, 3, 1],
                 )
+
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
                     for x in split_to_instances(
@@ -105,6 +106,7 @@ class RPNHead(object):
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
+
         return cls_logit_list, bbox_pred_list
 
 
@@ -272,6 +274,7 @@ class RPNLoss(object):
             cls_loss_mean = flow.math.divide(
                 cls_loss, total_sample_cnt, name="objectness_loss_mean"
             )
+
         return bbox_loss_mean, cls_loss_mean
 
 
@@ -418,7 +421,9 @@ class RPNProposal(object):
                         axis=0,
                         name="img{}_proposals".format(img_idx),
                     )
+
                 proposals.append(proposal_in_one_img)
+
             return proposals
 
 

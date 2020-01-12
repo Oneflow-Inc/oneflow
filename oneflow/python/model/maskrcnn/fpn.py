@@ -30,6 +30,7 @@ class FPN(object):
                     inner_blobs[i] = lateral_blobs[i] + topdown_blobs[i + 1]
                     topdown_blobs[i] = self.interpolate(inner_blobs[i], topdown_name)
                 layer_blobs[i] = self.layer(inner_blobs[i], layer_name)
+
             layer_blobs.append(
                 self.max_pool(layer_blobs[-1], "layer{}".format(len(layer_blobs) + 1))
             )
