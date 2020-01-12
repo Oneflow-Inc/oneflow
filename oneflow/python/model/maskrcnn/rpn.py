@@ -141,10 +141,9 @@ class RPNLoss(object):
             # list (wrt. images) of [M, 4]
             bbox_pred_wrt_img_list = []
             for i, tup in enumerate(zip(*bbox_pred_list)):
-                tup = list(tup)
                 if i == 0:
                     flow.nvtx.range_push(tup[0], "rpn_loss")
-                bbox_pred_wrt_img_list += [flow.concat(tup, axis=0)]
+                bbox_pred_wrt_img_list += [flow.concat(list(tup), axis=0)]
 
             # concat cls_logit from all fpn layers for each image
             # list (wrt. images) of [M,]
