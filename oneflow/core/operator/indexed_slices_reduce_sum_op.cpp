@@ -53,16 +53,20 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* x_indices = GetBlobDesc4BnInOp("x_indices");
   const BlobDesc* x_values = GetBlobDesc4BnInOp("x_values");
-  CHECK_EQ_OR_RETURN(x_indices->shape(), x_values->shape());
+  CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, x_indices->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(x_indices->shape().At(i), x_values->shape().At(i));
+  }
   CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
-  const Shape out_kv_shape({x_indices->shape().elem_cnt()});
+  const int64_t n = x_indices->shape().elem_cnt();
+  const int64_t m = x_values->shape().elem_cnt() / n;
   BlobDesc* y_indices = GetBlobDesc4BnInOp("y_indices");
   BlobDesc* y_values = GetBlobDesc4BnInOp("y_indices");
   *y_indices = *x_indices;
-  y_indices->mut_shape() = out_kv_shape;
+  y_indices->mut_shape() = Shape({n});
   y_indices->set_is_dynamic(true);
   *y_values = *x_values;
-  y_values->mut_shape() = out_kv_shape;
+  y_indices->mut_shape() = Shape({n, m});
   y_values->set_is_dynamic(true);
   BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
   num_unique->mut_shape() = Shape({1});
@@ -71,8 +75,7 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
   workspace->set_data_type(DataType::kChar);
   int64_t workspace_size_in_bytes;
   IndexedSlicesReduceSumOpUtil::GetReduceSumWorkspaceSizeInBytes(
-      device_type(), x_values->data_type(), x_indices->data_type(), x_indices->shape().elem_cnt(),
-      x_values->shape().Count(1), &workspace_size_in_bytes);
+      device_type(), x_values->data_type(), x_indices->data_type(), n, m, &workspace_size_in_bytes);
   workspace->mut_shape() = Shape({workspace_size_in_bytes});
   return Maybe<void>::Ok();
 }
