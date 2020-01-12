@@ -61,13 +61,11 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
   const int64_t n = x_indices->shape().elem_cnt();
   const int64_t m = x_values->shape().elem_cnt() / n;
   BlobDesc* y_indices = GetBlobDesc4BnInOp("y_indices");
-  BlobDesc* y_values = GetBlobDesc4BnInOp("y_indices");
+  BlobDesc* y_values = GetBlobDesc4BnInOp("y_values");
   *y_indices = *x_indices;
   y_indices->mut_shape() = Shape({n});
-  y_indices->set_is_dynamic(true);
   *y_values = *x_values;
-  y_indices->mut_shape() = Shape({n, m});
-  y_values->set_is_dynamic(true);
+  y_values->mut_shape() = Shape({n, m});
   BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
   num_unique->mut_shape() = Shape({1});
   num_unique->set_data_type(DataType::kInt64);
@@ -83,6 +81,7 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
 void IndexedSlicesReduceSumOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("x_values")->data_type());
   kernel_conf->mutable_indexed_slices_reduce_sum_conf()->set_indices_data_type(
       GetBlobDesc4BnInOp("x_indices")->data_type());
 }
