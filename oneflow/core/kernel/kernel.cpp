@@ -70,7 +70,9 @@ void Kernel::Forward(const KernelCtx& ctx,
   // nvtxRangePush(mark2.c_str());
   bool will_return = (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless());
   // nvtxRangePop();
-  if (will_return) { return; }
+  bool is_nvtx_op =
+      this->op_conf().has_nvtx_range_start_conf() || this->op_conf().has_nvtx_range_end_conf();
+  if (will_return && is_nvtx_op == false) { return; }
 
   // const std::string mark3("ForwardDataContent "
   //                         + this->kernel_conf().op_attribute().op_conf().name());

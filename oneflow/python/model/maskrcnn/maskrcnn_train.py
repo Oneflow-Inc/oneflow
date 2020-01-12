@@ -107,8 +107,9 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # with flow.watch_scope(
     #     blob_watcher=blob_watched
     # ):
+    image = flow.transpose(image, perm=[0, 3, 1, 2])
     flow.nvtx.range_start(image, "backbone")
-    features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
+    features = backbone.build(image)
     flow.nvtx.range_end(features, "backbone")
 
     def flatlist(l, acc=None):

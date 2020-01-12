@@ -4,7 +4,13 @@ namespace oneflow {
 
 void NvtxCtx::PutRangeId(const std::string& msg, const nvtxRangeId_t id) {
   std::lock_guard<std::mutex> lock(this->mutex_);
-  this->msg2range_id_[msg] = id;
+  auto iter = this->msg2range_id_.find(msg);
+  if (iter != this->msg2range_id_.end()) {
+    LOG(FATAL) << "NVTX range id entry not empty when putting new id, message: " << msg
+               << ", range id: " << iter->second;
+  } else {
+    this->msg2range_id_[msg] = id;
+  }
 }
 
 nvtxRangeId_t NvtxCtx::PopRangeId(const std::string& msg) {
@@ -15,7 +21,7 @@ nvtxRangeId_t NvtxCtx::PopRangeId(const std::string& msg) {
     ret = iter->second;
     this->msg2range_id_.erase(iter);
   } else {
-    LOG(FATAL) << "NVTX range id not found, message: " << msg;
+    LOG(FATAL) << "NVTX range id not found when poping message: " << msg;
   }
   return ret;
 }
