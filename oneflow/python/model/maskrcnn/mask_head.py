@@ -19,12 +19,12 @@ class MaskHead(object):
     def build_train(
         self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features
     ):
+        flow.nvtx.range_push(pos_proposals, "mask_head")
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
             )
             proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals")
-            flow.nvtx.range_push(proposals, "mask_head")
             # mask head feature extractor
             x = self.mask_feature_extractor(proposals, img_ids, features)
 

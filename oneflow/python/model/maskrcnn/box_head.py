@@ -23,9 +23,8 @@ class BoxHead(object):
             pos_proposal_list = []
             pos_gt_indices_list = []
 
+            flow.nvtx.range_push(proposals, "box_head")
             for img_idx in range(len(proposals)):
-                if img_idx == 0:
-                    flow.nvtx.range_push(proposals[0], "box_head")
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
                         self.cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD,

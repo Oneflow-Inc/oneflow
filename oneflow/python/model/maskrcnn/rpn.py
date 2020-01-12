@@ -38,6 +38,7 @@ class RPNHead(object):
 
     # features: list of [C_i, H_i, W_i] wrt. fpn layers
     def build(self, features):
+        flow.nvtx.range_push(features, "rpn_head")
         with flow.deprecated.variable_scope("rpn-head"):
 
             def split_to_instances(inputs, name):
@@ -57,8 +58,6 @@ class RPNHead(object):
             # list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
             cls_logit_list = []
             for layer_i, feature in enumerate(features, 1):
-                if layer_i == 1:
-                    flow.nvtx.range_push(feature, "rpn_head")
                 x = _Conv2d(
                     feature,
                     256,
@@ -92,8 +91,6 @@ class RPNHead(object):
                     ),
                     perm=[0, 2, 3, 1],
                 )
-                if layer_i == 1:
-                    flow.nvtx.range_pop(bbox_preds)
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
                     for x in split_to_instances(
@@ -109,7 +106,7 @@ class RPNHead(object):
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
-
+        flow.nvtx.range_pop([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer])
         return cls_logit_list, bbox_pred_list
 
 
@@ -130,6 +127,7 @@ class RPNLoss(object):
         bbox_pred_list,
         cls_logit_list,
     ):
+        flow.nvtx.range_push([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer], "rpn_loss")
         with flow.deprecated.variable_scope("rpn-loss"):
             sampled_bbox_pred_list = []
             sampled_bbox_target_list = []
@@ -140,9 +138,7 @@ class RPNLoss(object):
             # concat bbox_pred from all fpn layers for each image
             # list (wrt. images) of [M, 4]
             bbox_pred_wrt_img_list = []
-            for i, tup in enumerate(zip(*bbox_pred_list)):
-                if i == 0:
-                    flow.nvtx.range_push(tup[0], "rpn_loss")
+            for _, tup in enumerate(zip(*bbox_pred_list)):
                 bbox_pred_wrt_img_list += [flow.concat(list(tup), axis=0)]
 
             # concat cls_logit from all fpn layers for each image
@@ -314,6 +310,7 @@ class RPNProposal(object):
         image_size_list,
         resized_gt_boxes_list,
     ):
+        flow.nvtx.range_push([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer], "rpn_post_processor")
         with flow.deprecated.variable_scope("rpn-postprocess"):
             proposals = []
             for img_idx in range(len(image_size_list)):
@@ -333,8 +330,6 @@ class RPNProposal(object):
                     score_per_layer = flow.local_gather(
                         cls_probs, pre_nms_top_k_inds
                     )
-                    if img_idx == 0 and layer_i == 0:
-                        flow.nvtx.range_push(bbox_pred_list[layer_i][img_idx], "rpn_post_processor")
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(
                             anchors[layer_i],
@@ -428,9 +423,8 @@ class RPNProposal(object):
                         axis=0,
                         name="img{}_proposals".format(img_idx),
                     )
-                if img_idx == 0:
-                    flow.nvtx.range_pop(proposal_in_one_img)
                 proposals.append(proposal_in_one_img)
+            flow.nvtx.range_pop([proposals_per_image for proposals_per_image in proposals])
             return proposals
 
 
