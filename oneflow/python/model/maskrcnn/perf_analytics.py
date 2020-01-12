@@ -25,13 +25,7 @@ def rank(con):
     print(grouped[:100])
 
 
-ACTIVITY_KIND = [
-    "KERNEL",
-    "MEMCPY",
-    "MEMSET",
-    "RUNTIME",
-    "SYNCHRONIZATION",
-]
+ACTIVITY_KIND = ["KERNEL", "MEMCPY", "MEMSET", "RUNTIME", "SYNCHRONIZATION"]
 
 
 def query_kernel_activity_with_runtime_span(con, r_start, r_end):
@@ -90,7 +84,11 @@ def query_activity(con, kind):
 
 def query_all_activity(con):
     return pd.concat(
-        [query_activity(con, kind) for kind in ACTIVITY_KIND if kind is not "RUNTIME"],
+        [
+            query_activity(con, kind)
+            for kind in ACTIVITY_KIND
+            if kind is not "RUNTIME"
+        ],
         axis=0,
     )
 
@@ -106,7 +104,9 @@ def get_gpu_span_with_text_by_query(con, text):
     nvtx_df = query_nvtx_with_text(con, text)
 
     def update_gpu_span(nvtx):
-        activity = query_all_activity_with_runtime_span(con, nvtx.start, nvtx.end)
+        activity = query_all_activity_with_runtime_span(
+            con, nvtx.start, nvtx.end
+        )
         start_min = activity.start.min()
         end_max = activity.end.max()
         nvtx["gpu_span"] = end_max - start_min
@@ -136,9 +136,15 @@ def get_gpu_span_with_text(con, text, activity_df):
 
 
 def get_gpu_span(con, text_list):
+    if isinstance(text_list, (str)):
+        text_list = [text_list]
+    else:
+        assert isinstance(text_list, (list, tuple))
     activity_df = query_all_activity(con)
     return pd.concat(
-        [get_gpu_span_with_text(con, text, activity_df) for text in text_list], axis=0
+        [get_gpu_span_with_text(con, text, activity_df) for text in text_list],
+        axis=0,
+        sort=False,
     )
 
 
@@ -161,10 +167,20 @@ def test1():
 if __name__ == "__main__":
     set_pd_opts()
     db_path = "file:///home/tsai/Downloads/1x-perf-2/mask-rcnn-unknown-2020-01-09-17:08:15-CST.sqlite"
-    db_path = "file:///home/tsai/Downloads/torch-2020-01-10-06:41:12-UTC.sqlite"
+    db_path = "/Users/jackal/Downloads/mask-rcnn-unknown-2020-01-10-23-50-15-CST.sqlite"
+    db_path = "/Users/jackal/Downloads/maskrcnn.sqlite"
     con = sqlite3.connect(db_path)
     text = "Backward pass"
-    df = get_gpu_span(con, ["Forward pass", "Backward pass"])
+    # df = get_gpu_span(con, ["Forward pass", "Backward pass"])
+    text_list = [
+        "backbone",
+        "rpn_head",
+        "rpn_loss",
+        "rpn_post_processor",
+        "box_head",
+        "mask_head",
+    ]
+    df = get_gpu_span(con, text_list)
     df["value"] = df["gpu_span"] / 1e6
     df["legend"] = df["text"]
     df = df[df["iter"] > 1]

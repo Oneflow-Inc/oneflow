@@ -9,39 +9,42 @@ import operator
 from functools import reduce
 
 
-def plot_value(df):
+def plot_value(df, fit=False):
     if df.empty:
         return
     legends = df["legend"].unique()
-    poly_data = pd.DataFrame(
-        {"iter": np.linspace(df["iter"].min(), df["iter"].max(), 1000)}
-    )
-    for legend in legends:
-        poly_data[legend + "-fit"] = np.poly1d(
-            np.polyfit(
-                df[df["legend"] == legend]["iter"],
-                df[df["legend"] == legend]["value"],
-                3,
-            )
-        )(poly_data["iter"])
 
     base = alt.Chart(df).interactive()
 
     # chart = base.mark_line()
     chart = base.mark_circle()
 
-    polynomial_fit = (
-        alt.Chart(poly_data)
-        .transform_fold(
-            [legend + "-fit" for legend in legends], as_=["legend", "value"]
-        )
-        .mark_line()
-    )
-    chart += polynomial_fit
     chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
         alt.Y("value:Q")
     )
     chart = chart.encode(color="legend:N")
+
+    if fit:
+        poly_data = pd.DataFrame(
+            {"iter": np.linspace(df["iter"].min(), df["iter"].max(), 1000)}
+        )
+        for legend in legends:
+            poly_data[legend + "-fit"] = np.poly1d(
+                np.polyfit(
+                    df[df["legend"] == legend]["iter"],
+                    df[df["legend"] == legend]["value"],
+                    3,
+                )
+            )(poly_data["iter"])
+        polynomial_fit = (
+            alt.Chart(poly_data)
+            .transform_fold(
+                [legend + "-fit" for legend in legends], as_=["legend", "value"]
+            )
+            .mark_line()
+        )
+        chart += polynomial_fit
+
     chart.display()
     # chart.save("{}.svg".format("".join(legends)))
 
