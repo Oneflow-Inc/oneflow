@@ -5,7 +5,6 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 def _check(test_case, x_indices, x_values, y_indices, y_values, num_unique):
-    print(y_indices)
     ref_indices = np.unique(x_indices)
     np.sort(ref_indices)
     num_unique = num_unique.item()
