@@ -15,6 +15,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("nvtx.range_push")
 def nvtx_range_push(x, msg, name=None):
+    if isinstance(x, (list, tuple)):
+        x = [x]
     if name is None: name = id_util.UniqueStr("NvtxRangePush_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -24,6 +26,8 @@ def nvtx_range_push(x, msg, name=None):
 
 @oneflow_export("nvtx.range_pop")
 def nvtx_range_pop(x, name=None):
+    if isinstance(x, (list, tuple)):
+        x = [x]
     if name is None: name = id_util.UniqueStr("NvtxRangePop_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
