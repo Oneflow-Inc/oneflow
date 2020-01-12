@@ -3,20 +3,20 @@
 
 namespace oneflow {
 
-class NvtxRangePushOp final : public Operator {
+class NvtxRangeStartOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NvtxRangePushOp);
-  NvtxRangePushOp() = default;
-  ~NvtxRangePushOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NvtxRangeStartOp);
+  NvtxRangeStartOp() = default;
+  ~NvtxRangeStartOp() override = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_nvtx_range_push_conf());
-    int32_t in_size = op_conf().nvtx_range_push_conf().in_size();
+    CHECK(op_conf().has_nvtx_range_start_conf());
+    int32_t in_size = op_conf().nvtx_range_start_conf().in_size();
     CHECK_GT(in_size, 0);
     EnrollRepeatedInputBn("in", in_size);
   }
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_push_conf(); }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_start_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     return Maybe<void>::Ok();
@@ -38,20 +38,20 @@ class NvtxRangePushOp final : public Operator {
   }
 };
 
-class NvtxRangePopOp final : public Operator {
+class NvtxRangeEndOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NvtxRangePopOp);
-  NvtxRangePopOp() = default;
-  ~NvtxRangePopOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NvtxRangeEndOp);
+  NvtxRangeEndOp() = default;
+  ~NvtxRangeEndOp() override = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_nvtx_range_pop_conf());
-    int32_t in_size = op_conf().nvtx_range_pop_conf().in_size();
+    CHECK(op_conf().has_nvtx_range_end_conf());
+    int32_t in_size = op_conf().nvtx_range_end_conf().in_size();
     CHECK_GT(in_size, 0);
     EnrollRepeatedInputBn("in", in_size);
   }
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_pop_conf(); }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().nvtx_range_end_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     return Maybe<void>::Ok();
@@ -73,7 +73,7 @@ class NvtxRangePopOp final : public Operator {
   }
 };
 
-REGISTER_OP(OperatorConf::kNvtxRangePushConf, NvtxRangePushOp);
-REGISTER_OP(OperatorConf::kNvtxRangePopConf, NvtxRangePopOp);
+REGISTER_OP(OperatorConf::kNvtxRangeStartConf, NvtxRangeStartOp);
+REGISTER_OP(OperatorConf::kNvtxRangeEndConf, NvtxRangeEndOp);
 
 }  // namespace oneflow
