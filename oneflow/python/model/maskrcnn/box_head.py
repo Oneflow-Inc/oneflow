@@ -25,7 +25,7 @@ class BoxHead(object):
 
             for img_idx in range(len(proposals)):
                 if img_idx == 0:
-                    proposals[0] = flow.nvtx.range_push(proposals[0], "box_head")
+                    flow.nvtx.range_push(proposals[0], "box_head")
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
                         self.cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD,
@@ -130,7 +130,7 @@ class BoxHead(object):
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
-            box_head_box_loss = flow.nvtx.range_pop(box_head_box_loss)
+            flow.nvtx.range_pop(box_head_box_loss)
             return (
                 box_head_box_loss,
                 box_head_cls_loss,

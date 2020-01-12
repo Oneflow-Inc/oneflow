@@ -24,7 +24,7 @@ class MaskHead(object):
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
             )
             proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals")
-            proposals = flow.nvtx.range_push(proposals, "mask_head")
+            flow.nvtx.range_push(proposals, "mask_head")
             # mask head feature extractor
             x = self.mask_feature_extractor(proposals, img_ids, features)
 
@@ -86,7 +86,7 @@ class MaskHead(object):
             )
 
             mask_loss = mask_loss / elem_cnt
-            mask_loss = flow.nvtx.range_pop(mask_loss)
+            flow.nvtx.range_pop(mask_loss)
             return mask_loss
 
     def build_eval(self, proposals, features):

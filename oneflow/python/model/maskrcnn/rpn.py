@@ -58,7 +58,7 @@ class RPNHead(object):
             cls_logit_list = []
             for layer_i, feature in enumerate(features, 1):
                 if layer_i == 1:
-                    feature = flow.nvtx.range_push(feature, "rpn_head")
+                    flow.nvtx.range_push(feature, "rpn_head")
                 x = _Conv2d(
                     feature,
                     256,
@@ -93,7 +93,7 @@ class RPNHead(object):
                     perm=[0, 2, 3, 1],
                 )
                 if layer_i == 1:
-                    bbox_preds = flow.nvtx.range_pop(bbox_preds)
+                    flow.nvtx.range_pop(bbox_preds)
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
                     for x in split_to_instances(
@@ -143,7 +143,7 @@ class RPNLoss(object):
             for i, tup in enumerate(zip(*bbox_pred_list)):
                 tup = list(tup)
                 if i == 0:
-                    tup[0] = flow.nvtx.range_push(tup[0], "rpn_loss")
+                    flow.nvtx.range_push(tup[0], "rpn_loss")
                 bbox_pred_wrt_img_list += [flow.concat(tup, axis=0)]
 
             # concat cls_logit from all fpn layers for each image
@@ -280,7 +280,7 @@ class RPNLoss(object):
             cls_loss_mean = flow.math.divide(
                 cls_loss, total_sample_cnt, name="objectness_loss_mean"
             )
-        bbox_loss_mean = flow.nvtx.range_pop(bbox_loss_mean)
+        flow.nvtx.range_pop(bbox_loss_mean)
         return bbox_loss_mean, cls_loss_mean
 
 
@@ -335,9 +335,7 @@ class RPNProposal(object):
                         cls_probs, pre_nms_top_k_inds
                     )
                     if img_idx == 0 and layer_i == 0:
-                        bbox_pred_i_i = flow.nvtx.range_push(bbox_pred_list[layer_i][img_idx], "rpn_post_processor")
-                    else:
-                        bbox_pred_i_i = bbox_pred_list[layer_i][img_idx]
+                        flow.nvtx.range_push(bbox_pred_list[layer_i][img_idx], "rpn_post_processor")
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(
                             anchors[layer_i],
@@ -347,7 +345,7 @@ class RPNProposal(object):
                             ),
                         ),
                         flow.local_gather(
-                            bbox_pred_i_i,
+                            bbox_pred_list[layer_i][img_idx],
                             pre_nms_top_k_inds,
                             name="img{}_layer{}_box_delta".format(
                                 img_idx, layer_i
@@ -432,7 +430,7 @@ class RPNProposal(object):
                         name="img{}_proposals".format(img_idx),
                     )
                 if img_idx == 0:
-                    proposal_in_one_img = flow.nvtx.range_pop(proposal_in_one_img)
+                    flow.nvtx.range_pop(proposal_in_one_img)
                 proposals.append(proposal_in_one_img)
             return proposals
 

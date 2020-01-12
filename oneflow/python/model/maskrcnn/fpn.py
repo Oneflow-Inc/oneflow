@@ -32,7 +32,7 @@ class FPN(object):
                 layer_blobs[i] = self.layer(inner_blobs[i], layer_name)
             last_layer_blob = layer_blobs[-1]
             if i == 0:
-                last_layer_blob = flow.nvtx.range_pop(last_layer_blob)
+                flow.nvtx.range_pop(last_layer_blob)
             layer_blobs.append(
                 self.max_pool(last_layer_blob, "layer{}".format(len(layer_blobs) + 1))
             )

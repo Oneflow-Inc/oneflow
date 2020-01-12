@@ -31,5 +31,5 @@ def nvtx_range_pop(x, name=None):
     if name is None: name = id_util.UniqueStr("NvtxRangePop_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    getattr(op_conf.nvtx_range_push_conf, "in").extend([i.logical_blob_name for i in x])
+    getattr(op_conf.nvtx_range_pop_conf, "in").extend([i.logical_blob_name for i in x])
     compile_context.CurJobAddOp(op_conf)
