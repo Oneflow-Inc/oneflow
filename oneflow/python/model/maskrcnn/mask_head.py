@@ -19,7 +19,6 @@ class MaskHead(object):
     def build_train(
         self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features
     ):
-        flow.nvtx.range_push(pos_proposals, "mask_head")
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
@@ -86,7 +85,6 @@ class MaskHead(object):
             )
 
             mask_loss = mask_loss / elem_cnt
-            flow.nvtx.range_pop(mask_loss)
             return mask_loss
 
     def build_eval(self, proposals, features):

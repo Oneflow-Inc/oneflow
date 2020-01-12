@@ -38,7 +38,6 @@ class RPNHead(object):
 
     # features: list of [C_i, H_i, W_i] wrt. fpn layers
     def build(self, features):
-        flow.nvtx.range_push(features, "rpn_head")
         with flow.deprecated.variable_scope("rpn-head"):
 
             def split_to_instances(inputs, name):
@@ -106,7 +105,6 @@ class RPNHead(object):
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
-        flow.nvtx.range_pop([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer])
         return cls_logit_list, bbox_pred_list
 
 
@@ -127,7 +125,6 @@ class RPNLoss(object):
         bbox_pred_list,
         cls_logit_list,
     ):
-        flow.nvtx.range_push([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer], "rpn_loss")
         with flow.deprecated.variable_scope("rpn-loss"):
             sampled_bbox_pred_list = []
             sampled_bbox_target_list = []
@@ -275,7 +272,6 @@ class RPNLoss(object):
             cls_loss_mean = flow.math.divide(
                 cls_loss, total_sample_cnt, name="objectness_loss_mean"
             )
-        flow.nvtx.range_pop(bbox_loss_mean)
         return bbox_loss_mean, cls_loss_mean
 
 
@@ -310,7 +306,6 @@ class RPNProposal(object):
         image_size_list,
         resized_gt_boxes_list,
     ):
-        flow.nvtx.range_push([bbox_pred_per_image_list for bbox_pred_layer in bbox_pred_list for bbox_pred_per_image_list in bbox_pred_layer], "rpn_post_processor")
         with flow.deprecated.variable_scope("rpn-postprocess"):
             proposals = []
             for img_idx in range(len(image_size_list)):
@@ -424,7 +419,6 @@ class RPNProposal(object):
                         name="img{}_proposals".format(img_idx),
                     )
                 proposals.append(proposal_in_one_img)
-            flow.nvtx.range_pop([proposals_per_image for proposals_per_image in proposals])
             return proposals
 
 

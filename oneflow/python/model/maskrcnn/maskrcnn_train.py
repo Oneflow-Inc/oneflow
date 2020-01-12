@@ -107,21 +107,42 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # with flow.watch_scope(
     #     blob_watcher=blob_watched
     # ):
+    flow.nvtx.range_push(image, "backbone")
     features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
+    flow.nvtx.range_pop(features)
 
+    def flatlist(l, acc=None): 
+        if acc is None:
+            acc = []
+        if isinstance(l, (list, tuple)):
+            for i in l: 
+                if isinstance(i, (list, tuple)): 
+                    flatlist(i, acc) 
+                else: 
+                    acc.append(i) 
+        else:
+            acc.append(i) 
+        return acc
     # RPN
     # with flow.watch_scope(
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
     # ):
+    flow.nvtx.range_push(features, "rpn_head")
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
+    flow.nvtx.range_pop(flatlist([cls_logit_list, bbox_pred_list]))
+
+    flow.nvtx.range_push(flatlist([anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list]), "rpn_loss")
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list
     )
+    flow.nvtx.range_pop([rpn_bbox_loss, rpn_objectness_loss])
 
     # with flow.watch_scope(blob_watched):
+    flow.nvtx.range_push(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
     proposals = rpn_proposal.build(
         anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list
     )
+    flow.nvtx.range_pop(flatlist(proposals))
 
     # with flow.watch_scope(
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
@@ -130,14 +151,18 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     diff_blob_watcher=MakeWatcherCallback("backward"),
     # ):
     # Box Head
+    flow.nvtx.range_push(flatlist([proposals, gt_bbox_list, gt_label_list, features]), "box_head")
     (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
         proposals, gt_bbox_list, gt_label_list, features
     )
+    flow.nvtx.range_pop(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]))
 
     # Mask Head
+    flow.nvtx.range_push(flatlist([pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features]), "mask_head")
     mask_loss = mask_head.build_train(
         pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
+    flow.nvtx.range_pop(mask_loss)
 
     return {
         "loss_rpn_box_reg": rpn_bbox_loss,

@@ -23,7 +23,6 @@ class BoxHead(object):
             pos_proposal_list = []
             pos_gt_indices_list = []
 
-            flow.nvtx.range_push(proposals, "box_head")
             for img_idx in range(len(proposals)):
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
@@ -129,7 +128,6 @@ class BoxHead(object):
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
-            flow.nvtx.range_pop(box_head_box_loss)
             return (
                 box_head_box_loss,
                 box_head_cls_loss,
