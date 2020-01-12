@@ -72,11 +72,10 @@ void Kernel::Forward(const KernelCtx& ctx,
   // nvtxRangePop();
   if (will_return) { return; }
 
-  // const std::string mark3("ForwardDataContent "
-  //                         + this->kernel_conf().op_attribute().op_conf().name());
-  // nvtxRangePush(mark3.c_str());
+  const std::string mark3("FWData " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark3.c_str());
   ForwardDataContent(ctx, BnInOp2Blob);
-  // nvtxRangePop();
+  nvtxRangePop();
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
