@@ -104,7 +104,7 @@ num_piece_in_batch=16#16
 @flow.function(func_config)
 def yolo_train_job():
     (images, ground_truth, gt_valid_num) = yolo_decode("my_yolo")
-    with flow.fixed_placement("cpu", "0:0"):
+    with flow.fixed_placement("cpu", "0:0-3"):
         images_ = flow.unpack(flow.identity(images), num_piece_in_batch)
         ground_truth_ = flow.unpack(flow.identity(ground_truth), num_piece_in_batch)
         gt_valid_num_ = flow.unpack(flow.identity(gt_valid_num), num_piece_in_batch)
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         def callback(ret):
             yolo0_loss, yolo1_loss, yolo2_loss = ret
             global cur_time
-            print(fmt_str.format(step, abs(yolo0_loss.sum()), abs(yolo1_loss.sum()), abs(yolo2_loss.sum()), time.time()-cur_time))
+            print(fmt_str.format(step, abs(yolo0_loss.mean()), abs(yolo1_loss.mean()), abs(yolo2_loss.mean()), time.time()-cur_time))
             cur_time = time.time()
 
         if step % args.loss_print_steps == 0:
