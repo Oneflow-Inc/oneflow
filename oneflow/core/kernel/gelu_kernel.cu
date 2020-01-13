@@ -7,6 +7,14 @@ namespace oneflow {
 
 namespace {
 
+__device__ float fgelu_forward(float x, float inv_sqrt2) {
+  return 0.5f * x * (1.0f + erff(inv_sqrt2 * x));
+}
+
+__device__ float fgelu_backward(float x, float dy, float inv_sqrt2, float coef) {
+  return 0.5f * (1.0f + erff(inv_sqrt2 * x) + x * coef * expf(-0.5f * x * x)) * dy;
+}
+
 template<typename T>
 __global__ void GeluForwardGpu(const int64_t n, const T* x, const T inv_sqrt2, T* y) {
   UNIMPLEMENTED();
@@ -20,16 +28,13 @@ __global__ void GeluBackwardGpu(const int64_t n, const T* x, const T* dy, const 
 
 template<>
 __global__ void GeluForwardGpu(const int64_t n, const float* x, const float inv_sqrt2, float* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 0.5f * x[i] * (1.0f + erff(inv_sqrt2 * x[i])); }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fgelu_forward(x[i], inv_sqrt2); }
 }
 
 template<>
 __global__ void GeluBackwardGpu(const int64_t n, const float* x, const float* dy,
                                 const float inv_sqrt2, const float coef, float* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    dx[i] =
-        0.5f * (1.0f + erff(inv_sqrt2 * x[i]) + x[i] * coef * expf(-0.5f * x[i] * x[i])) * dy[i];
-  }
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = fgelu_backward(x[i], dy[i], inv_sqrt2, coef); }
 }
 
 template<>
@@ -110,23 +115,20 @@ REGISTER_GELU_KERNELS(GeluGrad, double);
 
 namespace {
 
-__global__ void NaiveGeluForwardGpu(const int64_t n, const half* x, const float inv_sqrt2,
-                                    half* y) {
+__global__ void NaiveHalfGeluForwardGpu(const int64_t n, const half* x, const float inv_sqrt2,
+                                        half* y) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     float f_x = __half2float(x[i]);
-    float f_y = 0.5f * f_x * (1.0f + erff(inv_sqrt2 * f_x));
-    y[i] = __float2half(f_y);
+    y[i] = __float2half(fgelu_forward(f_x, inv_sqrt2));
   }
 }
 
-__global__ void NaiveGeluBackwardGpu(const int64_t n, const half* x, const half* dy,
-                                     const float inv_sqrt2, const float coef, half* dx) {
+__global__ void NaiveHalfGeluBackwardGpu(const int64_t n, const half* x, const half* dy,
+                                         const float inv_sqrt2, const float coef, half* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     float f_x = __half2float(x[i]);
     float f_dy = __half2float(dy[i]);
-    float f_dx =
-        0.5f * (1.0f + erff(inv_sqrt2 * f_x) + f_x * coef * expf(-0.5f * f_x * f_x)) * f_dy;
-    dx[i] = __float2half(f_dx);
+    dx[i] = __float2half(fgelu_backward(f_x, f_dy, inv_sqrt2, coef));
   }
 }
 
@@ -146,9 +148,9 @@ class GeluNaiveHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const float16* x = in_blob->dptr<float16>();
     float16* y = BnInOp2Blob("out")->mut_dptr<float16>();
 
-    NaiveGeluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                          ctx.device_ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
-                                                           sqrt(0.5), reinterpret_cast<half*>(y));
+    NaiveHalfGeluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                              ctx.device_ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), sqrt(0.5), reinterpret_cast<half*>(y));
   }
   const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().gelu_conf(); }
 };
@@ -171,8 +173,8 @@ class GeluGradNaiveHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const float16* dy = BnInOp2Blob("dy")->dptr<float16>();
     float16* dx = BnInOp2Blob("dx")->mut_dptr<float16>();
 
-    NaiveGeluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                           ctx.device_ctx->cuda_stream()>>>(
+    NaiveHalfGeluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                               ctx.device_ctx->cuda_stream()>>>(
         n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(dy), sqrt(0.5),
         sqrt(2.0 / acos(-1.0)), reinterpret_cast<half*>(dx));
   }
