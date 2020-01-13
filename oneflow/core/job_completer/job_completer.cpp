@@ -310,8 +310,8 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
     return op_conf.has_nvtx_range_start_conf() || op_conf.has_nvtx_range_end_conf();
   };
   std::vector<OperatorConf> consumer_op_confs_to_update{};
-  op_graph.ForEachNode([&](OpNode* op_node) {if (IsNVTXOp(op_node->op().op_conf()) == false) { return; }
-    if (op_node->out_edges().size() <= 1) { return; }
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    if (IsNVTXOp(op_node->op().op_conf()) == false) { return; }
     const Operator& nvtx_op = op_node->op();
     std::vector<const OperatorConf*> naive_consumers;
     for (OpEdge* in_edge_of_nvtx : op_node->in_edges()) {
