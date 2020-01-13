@@ -88,13 +88,7 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                                OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU,
-                                 FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t,
-                                                                             DataType::kInt32)
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-                                     FLOAT16_DATA_TYPE_SEQ
-#endif
-                                 ,
-                                 INDEX_DATA_TYPE_SEQ);
+                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU
 
 }  // namespace oneflow

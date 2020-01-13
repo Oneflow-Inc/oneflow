@@ -31,7 +31,7 @@ void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K>::UnsortedSegmentSum(
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                                OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU,
-                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU
 
 }  // namespace oneflow
