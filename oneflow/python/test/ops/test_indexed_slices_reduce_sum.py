@@ -31,8 +31,14 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
     out_indices, out_values, num_unique = TestJob(indices, values).get()
     _check(test_case, indices, values, out_indices.ndarray(), out_values.ndarray(), num_unique.ndarray())
 
-def test_indexed_slices_reduce_sum(test_case):
+def test_indexed_slices_reduce_sum_gpu(test_case):
     indices = np.random.randint(0, 32, 1024).astype(np.int32)
     values = np.random.rand(1024, 8).astype(np.float32)
     _run_test(test_case, indices, values, flow.int32, flow.float32, 'gpu')
+
+
+def test_indexed_slices_reduce_sum_cpu(test_case):
+    indices = np.random.randint(0, 32, 1024).astype(np.int32)
+    values = np.random.rand(1024, 8).astype(np.float32)
+    _run_test(test_case, indices, values, flow.int32, flow.float32, 'cpu')
    
