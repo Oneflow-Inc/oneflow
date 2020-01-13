@@ -110,76 +110,33 @@ REGISTER_GELU_KERNELS(GeluGrad, double);
 
 namespace {
 
-__inline__ __device__ half zero_point_five() { return __float2half(0.5); }
-__inline__ __device__ half magic_number() { return __float2half(0.044715); }
-__inline__ __device__ half magic_number_times_three() { return __float2half(0.044715 * 3); }
-__inline__ __device__ half sqrt_two_divide_pi() { return __float2half(0.79788456080286541); }
-__inline__ __device__ half square(const half x) { return __hmul(x, x); }
-
-__inline__ __device__ half Tanh(const half x) {
-  half ex = hexp(x);
-  half e_x = hexp(__hneg(x));
-  return __hdiv(__hsub(ex, e_x), __hadd(ex, e_x));
-}
-
-__inline__ __device__ half SimpleFunc(const half x) {
-  half cub = __hmul(square(x), x);
-  half tmp = __hadd(x, __hmul(magic_number(), cub));
-  return __hmul(sqrt_two_divide_pi(), tmp);  // magic number is sqrt(2/pi)
-}
-
-__inline__ __device__ half Cdf(const half x) {
-  return __hmul(zero_point_five(), __hadd(hone(), Tanh(SimpleFunc(x))));
-}
-
-// See gelu() in official bert/modeling.py for more details
-__global__ void GeluForwardHalfGpu(const int64_t n, const half* x, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+__global__ void NaiveGeluForwardGpu(const int64_t n, const half* x, const float inv_sqrt2,
+                                    half* y) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    half tmp_x = x[i];
-    y[i] = __hmul(tmp_x, Cdf(tmp_x));
+    float f_x = __half2float(x[i]);
+    float f_y = 0.5f * f_x * (1.0f + erff(inv_sqrt2 * f_x));
+    y[i] = __float2half(f_y);
   }
-#else
-  HALF_CHECK_FAILED;
-#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
-__inline__ __device__ half TanhBackward(const half dy, const half y) {
-  return __hmul(dy, __hsub(hone(), __hmul(y, y)));
-}
-
-__inline__ __device__ half CdfBackward(const half dy, const half x) {
-  half tanh_x = Tanh(SimpleFunc(x));
-  half tmp_dy = __hmul(zero_point_five(), dy);
-  tmp_dy = TanhBackward(tmp_dy, tanh_x);
-  tmp_dy = __hmul(sqrt_two_divide_pi(), tmp_dy);
-  half tmp = __hadd(hone(), __hmul(magic_number_times_three(), square(x)));
-  return __hmul(tmp_dy, tmp);
-}
-
-__global__ void GeluBackwardHalfGpu(const int64_t n, const half* x, const half* dy, half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+__global__ void NaiveGeluBackwardGpu(const int64_t n, const half* x, const half* dy,
+                                     const float inv_sqrt2, const float coef, half* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    half tmp_x = x[i];
-    half tmp_dy = dy[i];
-
-    half cdf_x = Cdf(tmp_x);
-    half dx_res = __hmul(tmp_dy, cdf_x);
-
-    dx[i] = dx_res + CdfBackward(__hmul(tmp_dy, tmp_x), tmp_x);
+    float f_x = __half2float(x[i]);
+    float f_dy = __half2float(dy[i]);
+    float f_dx =
+        0.5f * (1.0f + erff(inv_sqrt2 * f_x) + f_x * coef * expf(-0.5f * f_x * f_x)) * f_dy;
+    dx[i] = __float2half(f_dx);
   }
-#else
-  HALF_CHECK_FAILED;
-#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
 }  // namespace
 
-class GeluHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
+class GeluNaiveHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GeluHalfGpuKernel);
-  GeluHalfGpuKernel() = default;
-  ~GeluHalfGpuKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GeluNaiveHalfGpuKernel);
+  GeluNaiveHalfGpuKernel() = default;
+  ~GeluNaiveHalfGpuKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
@@ -189,21 +146,21 @@ class GeluHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const float16* x = in_blob->dptr<float16>();
     float16* y = BnInOp2Blob("out")->mut_dptr<float16>();
 
-    GeluForwardHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
-                                                          reinterpret_cast<half*>(y));
+    NaiveGeluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                          ctx.device_ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
+                                                           sqrt(0.5), reinterpret_cast<half*>(y));
   }
   const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().gelu_conf(); }
 };
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGeluConf, DeviceType::kGPU, float16,
-                                      GeluHalfGpuKernel);
+                                      GeluNaiveHalfGpuKernel);
 
-class GeluGradHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
+class GeluGradNaiveHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GeluGradHalfGpuKernel);
-  GeluGradHalfGpuKernel() = default;
-  ~GeluGradHalfGpuKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GeluGradNaiveHalfGpuKernel);
+  GeluGradNaiveHalfGpuKernel() = default;
+  ~GeluGradNaiveHalfGpuKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
@@ -214,15 +171,14 @@ class GeluGradHalfGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const float16* dy = BnInOp2Blob("dy")->dptr<float16>();
     float16* dx = BnInOp2Blob("dx")->mut_dptr<float16>();
 
-    GeluBackwardHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                          ctx.device_ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
-                                                           reinterpret_cast<const half*>(dy),
-                                                           reinterpret_cast<half*>(dx));
+    NaiveGeluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                           ctx.device_ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(dy), sqrt(0.5),
+        sqrt(2.0 / acos(-1.0)), reinterpret_cast<half*>(dx));
   }
   const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().gelu_grad_conf(); }
 };
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGeluGradConf, DeviceType::kGPU, float16,
-                                      GeluGradHalfGpuKernel);
-
+                                      GeluGradNaiveHalfGpuKernel);
 }  // namespace oneflow
