@@ -318,6 +318,11 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
       for (OpEdge* edge : in_edge_of_nvtx->src_node()->out_edges()) {
         const OperatorConf& consumer_op_conf = edge->dst_node()->op().op_conf();
         if (consumer_op_conf.name() == nvtx_op.op_name()) { continue; }
+        // precaution against circle in graph
+        if (consumer_op_conf.has_nvtx_range_start_conf()
+            && nvtx_op.op_conf().has_nvtx_range_end_conf()) {
+          continue;
+        }
         auto iter = op_name2consumer_op_conf.find(consumer_op_conf.name());
         if (iter == op_name2consumer_op_conf.end()) {
           OperatorConf mut_consumer_op_conf(consumer_op_conf);
