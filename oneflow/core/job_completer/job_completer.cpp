@@ -327,7 +327,7 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
           const auto& existed_ctrl_in_op_names = iter->second.ctrl_in_op_name();
           if (std::find(existed_ctrl_in_op_names.begin(), existed_ctrl_in_op_names.end(),
                         nvtx_op.op_name())
-              != existed_ctrl_in_op_names.end()) {
+              == existed_ctrl_in_op_names.end()) {
             iter->second.add_ctrl_in_op_name(nvtx_op.op_name());
           }
         }
