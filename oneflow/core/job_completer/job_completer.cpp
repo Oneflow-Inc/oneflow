@@ -309,7 +309,7 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto IsNVTXOp = [](const OperatorConf& op_conf) -> bool {
     return op_conf.has_nvtx_range_start_conf() || op_conf.has_nvtx_range_end_conf();
   };
-  std::vector<OperatorConf> consumer_op_confs_to_update{};
+  HashMap<std::string, OperatorConf> op_name2consumer_op_conf{};
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (IsNVTXOp(op_node->op().op_conf()) == false) { return; }
     const Operator& nvtx_op = op_node->op();
@@ -320,13 +320,20 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
           if (consumer_op_conf.name() == nvtx_op.op_name()) {
             continue;
           }
-          OperatorConf mut_consumer_op_conf(consumer_op_conf);
-          mut_consumer_op_conf.add_ctrl_in_op_name(nvtx_op.op_name());
-          consumer_op_confs_to_update.push_back(mut_consumer_op_conf);
+          auto iter = op_name2consumer_op_conf.find(consumer_op_conf.name());
+          if (iter == op_name2consumer_op_conf.end()) {
+            OperatorConf mut_consumer_op_conf(consumer_op_conf);
+            mut_consumer_op_conf.add_ctrl_in_op_name(nvtx_op.op_name());
+            op_name2consumer_op_conf.emplace(consumer_op_conf.name(), mut_consumer_op_conf);
+          } else {
+            iter->second.add_ctrl_in_op_name(nvtx_op.op_name());
+          }
       }
     }
   });
-  job_builder->MutOpsOnlyOnce(consumer_op_confs_to_update);
+  for (auto& pair : op_name2consumer_op_conf) {
+    job_builder->MutOpsOnlyOnce({pair.second});
+  }
 }
 
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
