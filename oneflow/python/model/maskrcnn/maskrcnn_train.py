@@ -107,6 +107,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # with flow.watch_scope(
     #     blob_watcher=blob_watched
     # ):
+    image = flow.nvtx.range_push(image, "Forward pass")
     features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
 
     # RPN
@@ -138,7 +139,8 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     mask_loss = mask_head.build_train(
         pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
-
+    
+    mask_loss = flow.nvtx.range_pop(mask_loss)
     return {
         "loss_rpn_box_reg": rpn_bbox_loss,
         "loss_objectness": rpn_objectness_loss,
@@ -171,6 +173,7 @@ def merge_and_compare_config(args):
 
 
 def set_train_config(cfg):
+    flow.config.persistence_buf_byte(1024 * 1024)
     flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
     flow.config.cudnn_conv_heuristic_search_algo(cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO)
     flow.config.cudnn_conv_use_deterministic_algo_only(
@@ -544,8 +547,8 @@ def run():
 
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
-        if p.checkpoint_period > 0 and i == start_iter:
-            save_model(p.check_point, loaded_iter)
+        # if p.checkpoint_period > 0 and i == start_iter:
+        #     save_model(p.check_point, loaded_iter)
         if use_fake_images:
             if config.ASYNC_GET:
                 train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))
@@ -558,8 +561,9 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-        if  (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
-            save_model(p.check_point, i)
+        # if (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
+        #     save_model(p.check_point, i)
+
 
 if __name__ == "__main__":
     run()

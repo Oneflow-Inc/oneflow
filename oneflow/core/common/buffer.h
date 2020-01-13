@@ -30,8 +30,8 @@ class Buffer final {
 template<typename T>
 BufferStatus Buffer<T>::Send(const T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (is_closed_) { return kBufferStatusErrorClosed; }
   cond_.wait(lock, [this]() { return queue_.size() < max_len_; });
+  if (is_closed_) { return kBufferStatusErrorClosed; }
   queue_.push(item);
   cond_.notify_one();
   return kBufferStatusSuccess;
