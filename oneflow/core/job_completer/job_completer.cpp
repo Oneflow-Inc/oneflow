@@ -316,24 +316,25 @@ void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
     std::vector<const OperatorConf*> naive_consumers;
     for (OpEdge* in_edge_of_nvtx : op_node->in_edges()) {
       for (OpEdge* edge : in_edge_of_nvtx->src_node()->out_edges()) {
-          const OperatorConf& consumer_op_conf = edge->dst_node()->op().op_conf();
-          if (consumer_op_conf.name() == nvtx_op.op_name()) {
-            continue;
-          }
-          auto iter = op_name2consumer_op_conf.find(consumer_op_conf.name());
-          if (iter == op_name2consumer_op_conf.end()) {
-            OperatorConf mut_consumer_op_conf(consumer_op_conf);
-            mut_consumer_op_conf.add_ctrl_in_op_name(nvtx_op.op_name());
-            op_name2consumer_op_conf.emplace(consumer_op_conf.name(), mut_consumer_op_conf);
-          } else {
+        const OperatorConf& consumer_op_conf = edge->dst_node()->op().op_conf();
+        if (consumer_op_conf.name() == nvtx_op.op_name()) { continue; }
+        auto iter = op_name2consumer_op_conf.find(consumer_op_conf.name());
+        if (iter == op_name2consumer_op_conf.end()) {
+          OperatorConf mut_consumer_op_conf(consumer_op_conf);
+          mut_consumer_op_conf.add_ctrl_in_op_name(nvtx_op.op_name());
+          op_name2consumer_op_conf.emplace(consumer_op_conf.name(), mut_consumer_op_conf);
+        } else {
+          const auto& existed_ctrl_in_op_names = iter->second.ctrl_in_op_name();
+          if (std::find(existed_ctrl_in_op_names.begin(), existed_ctrl_in_op_names.end(),
+                        nvtx_op.op_name())
+              != existed_ctrl_in_op_names.end()) {
             iter->second.add_ctrl_in_op_name(nvtx_op.op_name());
           }
+        }
       }
     }
   });
-  for (auto& pair : op_name2consumer_op_conf) {
-    job_builder->MutOpsOnlyOnce({pair.second});
-  }
+  for (auto& pair : op_name2consumer_op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
 }
 
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
