@@ -15,7 +15,7 @@ def test_top_k(static_shape, dynamic_shape, k):
         )
     ):
       return flow.math.top_k(input_blob, k)
-        
+
     input_blob = np.random.randint(1024, size=dynamic_shape).astype(np.float32)
     tf_out = tf.nn.top_k(tf.Variable(input_blob), k, sorted=True).indices.numpy()
     of_out = TopKJob(input_blob).get().ndarray()
@@ -24,9 +24,19 @@ def test_top_k(static_shape, dynamic_shape, k):
 
 
 if __name__ == "__main__":
-  test_top_k((1000,), (100,), 1)
-  test_top_k((1, 1000,), (1, 100), 1)
-  test_top_k((1024, 1024), (1000, 1000), 256)
-  test_top_k((2048, 2048), (2000, 2000), 50)
-  test_top_k((10, 10, 1000), (10, 10, 1000), 256)
-  test_top_k((10, 10, 1000), (10, 10, 1000), 50)
+  test_top_k((2000,), (1024,), 1)
+  test_top_k((2000,), (1024,), 64)
+  test_top_k((2000,), (1024,), 128)
+  test_top_k((2000,), (1024,), 256)
+  test_top_k((1, 2000,), (1, 1024), 1)
+  test_top_k((1, 2000,), (1, 1024), 64)
+  test_top_k((1, 2000,), (1, 1024), 128)
+  test_top_k((1, 2000,), (1, 1024), 256)
+  test_top_k((2000, 2000), (1024, 1024), 32)
+  test_top_k((2000, 2000), (1024, 1024), 64)
+  test_top_k((2000, 2000), (1024, 1024), 128)
+  test_top_k((2000, 2000), (1024, 1024), 256)
+  test_top_k((10, 10, 2000), (10, 10, 1024), 32)
+  test_top_k((10, 10, 2000), (10, 10, 1024), 64)
+  test_top_k((10, 10, 2000), (10, 10, 1024), 128)
+  test_top_k((10, 10, 2000), (10, 10, 1024), 256)

@@ -58,6 +58,31 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
+void Kernel::ForwardDataContectWithPerformanceMetric(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->op_conf().device_type() == DeviceType::kGPU) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, ctx.device_ctx->cuda_stream());
+
+    ForwardDataContent(ctx, BnInOp2Blob);
+
+    cudaEventRecord(stop, ctx.device_ctx->cuda_stream());
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    std::cout << this->kernel_conf().op_attribute().op_conf().name()
+              << " ForwardDataContent GPU elapsed time in cuda stream: " << milliseconds << "ms"
+              << std::endl;
+  } else if (this->op_conf().device_type() == DeviceType::kCPU) {
+    // TODO: support performance metric for cpu op, skip for now
+    ForwardDataContent(ctx, BnInOp2Blob);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const std::string mark1("ForwardHeader " + this->kernel_conf().op_attribute().op_conf().name());
@@ -75,7 +100,12 @@ void Kernel::Forward(const KernelCtx& ctx,
   const std::string mark3("ForwardDataContent "
                           + this->kernel_conf().op_attribute().op_conf().name());
   nvtxRangePush(mark3.c_str());
-  ForwardDataContent(ctx, BnInOp2Blob);
+  const char* performance_metric = getenv("KERNEL_PERFORMANCE_METRIC");
+  if (performance_metric != nullptr && std::tolower(performance_metric[0]) == 't') {
+    ForwardDataContectWithPerformanceMetric(ctx, BnInOp2Blob);
+  } else {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
   nvtxRangePop();
 }
 
