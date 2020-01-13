@@ -6,7 +6,6 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/job_completer/user_job_completer.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
@@ -327,8 +326,6 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
       lbn = op_name + "/" + op_conf.input_conf().out();
     } else if (op_conf.has_output_conf()) {
       lbn = op_name + "/" + op_conf.output_conf().out();
-    } else if (op_conf.has_switch_output_conf()) {
-      lbn = op_name + "/" + op_conf.switch_output_conf().out();
     } else if (op_conf.has_return_conf()) {
       lbn = op_name + "/" + op_conf.return_conf().out();
     } else {
@@ -345,11 +342,11 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
 }
 
 void FilterOpName2ParallelBlobConf(
-    const HashSet<OperatorConf::OpTypeCase>& match, std::vector<Job>* jobs,
+    const HashSet<OperatorConf::OpTypeCase>& match, const std::vector<std::shared_ptr<Job>>& jobs,
     HashMap<std::string, ParallelBlobConf>* op_name2parallel_blob_conf) {
-  FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
-    JobBuilder job_builder(&jobs->at(job_id));
-    for (const OperatorConf& op_conf : jobs->at(job_id).net().op()) {
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    JobBuilder job_builder(jobs.at(job_id).get());
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (match.find(op_conf.op_type_case()) == match.end()) { continue; }
       const auto& iter = op_name2parallel_blob_conf->find(op_conf.name());
       if (iter == op_name2parallel_blob_conf->end()) {
@@ -364,8 +361,7 @@ void FilterOpName2ParallelBlobConf(
   }
 }
 
-void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
-                 std::vector<std::string>* identity_tick_op_names,
+void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names,
                  LogicalBlobId* critical_section_sink_lbi) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   std::vector<OperatorConf> op_confs;
@@ -678,118 +674,57 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   job_conf->set_default_data_type(data_type);
 }
 
-void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& parallel_blob_conf,
-                    const std::string& input_op_name,
-                    const std::vector<std::string>& output_op_names, Job* job) {
-  CHECK_EQ(output_op_names.empty(), false);
-  for (const auto& output_op_name : output_op_names) { CHECK_NE(output_op_name, input_op_name); }
-  auto* op_name2arg_pass_job_info =
-      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2arg_pass_job_info();
-  CHECK(op_name2arg_pass_job_info->find(input_op_name) == op_name2arg_pass_job_info->end());
-  auto* arg_pass_job_info = &(*op_name2arg_pass_job_info)[input_op_name];
-  arg_pass_job_info->set_intput_or_var_op_name(input_op_name);
-  arg_pass_job_info->set_arg_pass_job_name(job_name);
-  auto* op_name2in_index = arg_pass_job_info->mutable_output_or_var_op_name2in_index();
-
-  JobBuilder job_builder(job);
-  OperatorConf foreign_input_op_conf;
-  {
-    foreign_input_op_conf.set_name(std::string("System-ArgPass-ForeignInput_") + NewUniqueId());
-    auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
-    foreign_input_conf->set_out("out");
-    foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
-    auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    blob_conf->mutable_shape()->add_dim(1);
-    blob_conf->set_data_type(DataType::kInt32);
-    blob_conf->mutable_split_axis()->clear_value();
-    blob_conf->mutable_batch_axis()->clear_value();
-    ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
-    job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
-  }
-  std::vector<OperatorConf> input_op_confs(output_op_names.size());
-  FOR_RANGE(int64_t, i, 0, output_op_names.size()) {
-    input_op_confs.at(i).set_name(output_op_names.at(i));
-    (*op_name2in_index)[output_op_names.at(i)] = i;
-    auto* input_conf = input_op_confs.at(i).mutable_input_conf();
-    input_conf->set_out("out");
-    auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
-  }
-  job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
-  OperatorConf switch_output_op_conf;
-  {
-    switch_output_op_conf.set_name(input_op_name);
-    auto* switch_output_conf = switch_output_op_conf.mutable_switch_output_conf();
-    switch_output_conf->set_in_index(foreign_input_op_conf.name() + "/out");
-    for (const auto& op_conf : input_op_confs) {
-      switch_output_conf->add_in(op_conf.name() + "/out");
-    }
-    switch_output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(switch_output_conf->mutable_blob_conf(), parallel_blob_conf);
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {switch_output_op_conf});
-  }
-  auto* job_conf = job->mutable_job_conf();
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
-}
+REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
-  std::vector<Job> jobs(conf_jobs.size());
-  std::vector<Plan> sub_plans(conf_jobs.size());
-  FOR_RANGE(int64_t, job_id, 0, sub_plans.size()) {
-    jobs.at(job_id) = conf_jobs.Get(job_id);
-    AddJobName2JobId(jobs.at(job_id).job_conf().job_name(), job_id);
-    {
-      auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(job_id).job_conf(), job_id);
-      UserJobCompleter().Complete(&jobs.at(job_id));
-      CompileCurJobOnMaster(&jobs.at(job_id), &sub_plans.at(job_id), true);
-    }
+  std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
+  FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
+    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
+                                  &var_op_name2parallel_blob_conf);
+    auto AppendJob = [&](Job* job) {
+      JobDesc job_desc(job->job_conf(), jobs.size());
+      CHECK(!job_desc.Bool("__is_user_function__"));
+      jobs.emplace_back(new Job(*job));
+    };
+    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+  }
+  std::vector<std::shared_ptr<Job>> function_jobs;
+  function_jobs.reserve(jobs.size());
+  FOR_RANGE(int, i, 0, jobs.size()) {
+    JobDesc job_desc(jobs.at(i)->job_conf(), i);
+    if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    size_t user_job_size = jobs.size();
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
                                   &push_op_name2parallel_blob_conf);
     HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, &jobs,
+    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
                                   &pull_op_name2parallel_blob_conf);
-    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
-                                  &var_op_name2parallel_blob_conf);
-    int64_t job_id = -1;
-    {
-      size_t helper_job_size =
-          push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
-      // + 3 for model init job, model load job and model save job
-      helper_job_size += 3;
-      jobs.resize(user_job_size + helper_job_size);
-      sub_plans.resize(user_job_size + helper_job_size);
-      job_id = user_job_size;
-    }
-    auto CompileHelperJob = [&](Job* job) {
-      jobs.at(job_id) = *job;
-      AddJobName2JobId(job->job_conf().job_name(), job_id);
-      {
-        auto scope = std::make_unique<GlobalJobDescScope>(job->job_conf(), job_id);
-        CompileCurJobOnMaster(job, &sub_plans.at(job_id), true);
-      }
-      ++job_id;
-    };
     for (const auto& pair : push_op_name2parallel_blob_conf) {
-      Job push_job;
-      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, &push_job);
-      CompileHelperJob(&push_job);
+      auto push_job = std::make_shared<Job>();
+      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second,
+                  push_job.get());
+      jobs.emplace_back(push_job);
     }
     for (const auto& pair : pull_op_name2parallel_blob_conf) {
-      Job pull_job;
-      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
-      CompileHelperJob(&pull_job);
+      auto pull_job = std::make_shared<Job>();
+      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second,
+                  pull_job.get());
+      jobs.emplace_back(pull_job);
     }
-    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
+  }
+  std::vector<Plan> sub_plans(jobs.size());
+  FOR_RANGE(int64_t, i, 0, jobs.size()) {
+    AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
+    auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
+    CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true);
+  }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
-    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);
+    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
@@ -797,8 +732,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     {
       Job main_job;
       LogicalBlobId critical_section_sink_lbi;
-      MakeMainJob(jobs, &main_job, &identity_tick_op_names, &critical_section_sink_lbi);
-      AddJobName2JobId(main_job.job_conf().job_name(), job_id);
+      MakeMainJob(&main_job, &identity_tick_op_names, &critical_section_sink_lbi);
+      AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);

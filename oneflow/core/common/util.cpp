@@ -53,7 +53,7 @@ double oneflow_cast(const std::string& s) {
 // COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
-void AbortSignalHandler(int signal) { LOG(FATAL) << "aborted!"; }
+void AbortSignalHandler(int signal) { exit(-1); }
 
 COMMAND(std::signal(SIGINT, AbortSignalHandler));
 

@@ -1,10 +1,21 @@
-#include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
-void NcclTupleBroadcastReduceSequencePass::Apply(const OpGraph& op_graph,
-                                                 JobBuilder* builder) const {
+class SequentializeNcclTupleBroadcastReducePass final : public OpGraphPass {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SequentializeNcclTupleBroadcastReducePass);
+  SequentializeNcclTupleBroadcastReducePass() = default;
+  ~SequentializeNcclTupleBroadcastReducePass() = default;
+
+  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+};
+
+void SequentializeNcclTupleBroadcastReducePass::Apply(const OpGraph& op_graph,
+                                                      JobBuilder* builder) const {
   std::vector<OperatorConf> broadcast_ops;
   std::vector<OperatorConf> reduce_ops;
   op_graph.ForEachNode([&](const OpNode* node) {
@@ -40,5 +51,8 @@ void NcclTupleBroadcastReduceSequencePass::Apply(const OpGraph& op_graph,
   builder->MutOpsOnlyOnce(broadcast_ops);
   builder->MutOpsOnlyOnce(reduce_ops);
 }
+
+REGISTER_FUNCTION_PASS("SequentializeNcclTupleBroadcastReducePass",
+                       SequentializeNcclTupleBroadcastReducePass);
 
 }  // namespace oneflow

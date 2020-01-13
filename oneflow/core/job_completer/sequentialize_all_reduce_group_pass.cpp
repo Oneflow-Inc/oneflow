@@ -1,4 +1,4 @@
-#include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 
 namespace oneflow {
 
@@ -52,9 +52,18 @@ void ReOrderAllReduceGroups(std::vector<AllReduceGroup>* all_reduce_groups) {
             all_reduce_groups->end() - lazy_count);
 }
 
-}  // namespace
+class SequentializeAllReduceGroupPass final : public OpGraphPass {
+ public:
+  SequentializeAllReduceGroupPass() = default;
+  ~SequentializeAllReduceGroupPass() = default;
+  bool IsEnabled() const override {
+    return GlobalJobDesc().IsTrain() && !GlobalJobDesc().disable_all_reduce_sequence();
+  }
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+};
 
-void AllReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void SequentializeAllReduceGroupPass::Apply(const OpGraph& op_graph,
+                                            JobBuilder* job_builder) const {
   std::vector<AllReduceGroup> all_reduce_groups;
   FindAllReduceGroups(op_graph, &all_reduce_groups);
   ReOrderAllReduceGroups(&all_reduce_groups);
@@ -67,5 +76,9 @@ void AllReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* job_build
     job_builder->MutOpsOnlyOnce({succ_identity_op_conf});
   }
 }
+
+REGISTER_FUNCTION_PASS("SequentializeAllReduceGroupPass", SequentializeAllReduceGroupPass);
+
+}  // namespace
 
 }  // namespace oneflow

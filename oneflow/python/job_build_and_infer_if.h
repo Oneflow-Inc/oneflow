@@ -30,6 +30,10 @@ void CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf,
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void CurJobBuildAndInferCtx_Complete(std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_Complete().GetDataAndSerializedErrorProto(error_str);
+}
+
 bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
   return oneflow::CurJobBuildAndInferCtx_HasJobConf().GetDataAndSerializedErrorProto(error_str,
                                                                                      false);

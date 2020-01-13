@@ -1,9 +1,22 @@
-#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
 
-void AutoTrainStep(const OpGraph& op_graph, Job* job) {
+namespace {
+
+class AutoTrainStep final : public OpGraphPass {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AutoTrainStep);
+  AutoTrainStep() = default;
+  ~AutoTrainStep() override = default;
+
+  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+
+  void Apply(const OpGraph& op_graph, Job* job) const override;
+};
+
+void AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   if (job->job_conf().train_conf().has_train_step_lbn()) { return; }
   OperatorConf variable_op_conf{};
   const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
@@ -41,5 +54,9 @@ void AutoTrainStep(const OpGraph& op_graph, Job* job) {
                      {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
 }
+
+REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);
+
+}  // namespace
 
 }  // namespace oneflow
