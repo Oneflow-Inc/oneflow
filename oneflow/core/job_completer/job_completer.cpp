@@ -15,6 +15,7 @@
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 #include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -304,6 +305,30 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   });
 }
 
+void SetCtrlInOp4NVTXOp(const OpGraph& op_graph, JobBuilder* job_builder) {
+  auto IsNVTXOp = [](const OperatorConf& op_conf) -> bool {
+    return op_conf.has_nvtx_range_start_conf() || op_conf.has_nvtx_range_end_conf();
+  };
+  std::vector<OperatorConf> consumer_op_confs_to_update{};
+  op_graph.ForEachNode([&](OpNode* op_node) {if (IsNVTXOp(op_node->op().op_conf()) == false) { return; }
+    if (op_node->out_edges().size() <= 1) { return; }
+    const Operator& nvtx_op = op_node->op();
+    std::vector<const OperatorConf*> naive_consumers;
+    for (OpEdge* in_edge_of_nvtx : op_node->in_edges()) {
+      for (OpEdge* edge : in_edge_of_nvtx->src_node()->out_edges()) {
+          const OperatorConf& consumer_op_conf = edge->dst_node()->op().op_conf();
+          if (consumer_op_conf.name() == nvtx_op.op_name()) {
+            continue;
+          }
+          OperatorConf mut_consumer_op_conf(consumer_op_conf);
+          mut_consumer_op_conf.add_ctrl_in_op_name(nvtx_op.op_name());
+          consumer_op_confs_to_update.push_back(mut_consumer_op_conf);
+      }
+    }
+  });
+  job_builder->MutOpsOnlyOnce(consumer_op_confs_to_update);
+}
+
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.DumpOpTimeShape(job_builder);
   op_graph.DumpBatchAxisLbi(job_builder);
@@ -368,6 +393,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
+  WithOpGraphAndMutJobBuilder(job, &SetCtrlInOp4NVTXOp);
   // complete tick ops
   WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
