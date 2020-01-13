@@ -58,7 +58,7 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
-void Kernel::ForwardDataContectWithPerformanceMetric(
+void Kernel::ForwardDataContentWithPerformanceMetric(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().device_type() == DeviceType::kGPU) {
     cudaEvent_t start, stop;
