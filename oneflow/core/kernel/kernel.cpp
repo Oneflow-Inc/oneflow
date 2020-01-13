@@ -102,7 +102,7 @@ void Kernel::Forward(const KernelCtx& ctx,
   // nvtxRangePush(mark3.c_str());
   const char* performance_metric = getenv("KERNEL_PERFORMANCE_METRIC");
   if (performance_metric != nullptr && std::tolower(performance_metric[0]) == 't') {
-    ForwardDataContectWithPerformanceMetric(ctx, BnInOp2Blob);
+    ForwardDataContentWithPerformanceMetric(ctx, BnInOp2Blob);
   } else {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
