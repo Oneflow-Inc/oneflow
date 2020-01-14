@@ -12,7 +12,7 @@ bool IsSoleBlobAndDynamicEmpty(Regst* regst) {
   Blob* sole_blob = regst->GetMutSoleBlob();
   if (sole_blob->num_of_tensor_list_slices() != 1) { return false; }
   if (sole_blob->total_num_of_tensors() != 1) { return false; }
-  if (!regst->GetMutSoleBlob()->IsBodyEmpty()) { return false; }
+  if (!regst->GetSoleBlob()->IsBodyEmpty()) { return false; }
   const auto& shape = sole_blob->shape();
   for (int i = 0; i < shape.NumAxes(); ++i) {
     if (shape.At(i) != 0) { return false; }
