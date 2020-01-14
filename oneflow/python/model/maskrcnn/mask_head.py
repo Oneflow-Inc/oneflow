@@ -17,13 +17,13 @@ class MaskHead(object):
     # gt_labels: list of (G,) wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
     def build_train(
-        self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features
+        self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features, zero_ctrl
     ):
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
             )
-            proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals")
+            proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals") + zero_ctrl
 
             # mask head feature extractor
             x = self.mask_feature_extractor(proposals, img_ids, features)

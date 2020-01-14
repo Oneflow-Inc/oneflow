@@ -140,7 +140,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # flow.nvtx.range_end([rpn_bbox_loss, rpn_objectness_loss], "rpn_loss")
     # with flow.watch_scope(blob_watched):
     # flow.nvtx.range_start(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
-    zero_ctrl = rpn_bbox_loss * 0 + rpn_objectness_loss * 0
+    zero_ctrl = (rpn_bbox_loss + rpn_objectness_loss) * 0
     zero_ctrl = flow.identity(zero_ctrl)
     proposals = rpn_proposal.build(
         anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list, zero_ctrl
@@ -159,19 +159,20 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         proposals, gt_bbox_list, gt_label_list, features
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
+    zero_ctrl = (box_loss + cls_loss) * 0
 
     # Mask Head
     # flow.nvtx.range_start(flatlist([pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features]), "mask_head")
     mask_loss = mask_head.build_train(
-        pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
+        pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features, zero_ctrl
     )
     # flow.nvtx.range_end(mask_loss, "mask_head")
 
     return {
         "loss_rpn_box_reg": rpn_bbox_loss + 0,
         "loss_objectness": rpn_objectness_loss + 0,
-        "loss_box_reg": box_loss,
-        "loss_classifier": cls_loss,
+        "loss_box_reg": box_loss + 0,
+        "loss_classifier": cls_loss + 0,
         "loss_mask": mask_loss,
     }
 
