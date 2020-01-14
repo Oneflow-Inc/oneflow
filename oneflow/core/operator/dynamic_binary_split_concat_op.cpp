@@ -48,16 +48,16 @@ Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
   FOR_RANGE(int, i, 0, output_bns().size()) {
     out_sizes.at(i) = current_size;
     total_size += current_size;
-    current_size = current_size << 1;
+    if (i > 0) { current_size = current_size << 1; }
   }
-  CHECK_EQ_OR_RETURN(total_size + base_size, current_size);
+  CHECK_EQ_OR_RETURN(total_size, current_size);
   int64_t in_blob_size = RtBlobDesc(in_blob_desc).AlignedTotalByteSize();
   CHECK_LE_OR_RETURN(in_blob_size, total_size);
   FOR_RANGE(int, i, 0, output_bns().size()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     CHECK_OR_RETURN(blob_desc != nullptr);
     *blob_desc = in_blob_desc;
-    // out blob shape sort from large to small like 32,16,8,4,2,1
+    // out blob shape sort from large to small like 32,16,8,8
     blob_desc->mut_shape() = Shape({out_sizes.at(output_bns().size() - 1 - i)});
     blob_desc->set_data_type(DataType::kChar);
   }
@@ -165,7 +165,12 @@ Maybe<void> DynamicBinaryConcatOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  *sbp_signature = op_conf().dynamic_binary_concat_conf().out_sbp_sig();
+  for (const auto& ibn : input_bns()) {
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())[ibn] =
+        JUST(SbpInferHint4Ibn(ibn))->sbp_parallel();
+  }
+  (*sbp_signature->mutable_bn_in_op2sbp_parallel())["out"] =
+      op_conf().dynamic_binary_concat_conf().out_sbp();
   return Maybe<void>::Ok();
 }
 

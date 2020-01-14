@@ -64,18 +64,21 @@ void DynamicBinarySplitKernel::ForwardShape(
   for (const auto& output_bn : this->op_attribute().output_bns()) {
     Blob* out_blob = BnInOp2Blob(output_bn);
     int64_t static_out_size = GetBlobStaticBodySize(out_blob);
+    LOG(INFO) << "cclog: remain_size = " << remain_size << " static_out_size:" << static_out_size;
     if (remain_size >= static_out_size) {
       remain_size -= static_out_size;
       out_blob->mut_shape_view()->set_shape(Shape({static_out_size}));
     } else {
       out_blob->mut_shape_view()->set_shape(Shape({0}));
     }
+    LOG(INFO) << "cclog: out_blob_shape = " << out_blob->shape_view();
   }
   if (remain_size > 0) {
     int32_t out_num = this->op_attribute().output_bns().size();
     const std::string& last_obn = this->op_attribute().output_bns(out_num - 1);
     Blob* last_out_blob = BnInOp2Blob(last_obn);
     CHECK(last_out_blob->IsBodyEmpty());
+    LOG(INFO) << "cclog: last_out_blob shape: " << last_out_blob->shape_view();
     last_out_blob->mut_shape_view()->set_shape(Shape({remain_size}));
   }
 }

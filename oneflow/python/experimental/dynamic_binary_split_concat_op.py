@@ -14,7 +14,6 @@ import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-
 @oneflow_export('experimental.dynamic_binary_split')
 def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -28,8 +27,10 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     for i in range(out_num):
         obns.append("out_" + str(i))
 
-    op_conf.dynamic_binary_split_conf.in = x.logical_blob_name
+    setattr(op_conf.dynamic_binary_split_conf, "in", x.logical_blob_name)
+    # op_conf.dynamic_binary_split_conf.in = x.logical_blob_name
     op_conf.dynamic_binary_split_conf.out[:] = obns
+    op_conf.dynamic_binary_split_conf.base_shift = base_shift
 
     compile_context.CurJobAddOp(op_conf)
     for i in range(out_num):
@@ -41,7 +42,7 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     return out_remote_blobs
 
 @oneflow_export('experimental.dynamic_binary_concat')
-def dynamic_binary_concat(input_blob_list, source_blob, name=None):
+def dynamic_binary_concat(input_blob_list, source_blob, source_sbp=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr('DynamicBinaryConcat_')
@@ -50,17 +51,27 @@ def dynamic_binary_concat(input_blob_list, source_blob, name=None):
 
     in_lbns = []
     for in_blob in input_blob_list:
-        in_lbns.append()
+        in_lbns.append(in_blob.logical_blob_name)
 
-    op_conf.dynamic_binary_split_conf.in = x.logical_blob_name
-    op_conf.dynamic_binary_split_conf.out[:] = obns
+    getattr(op_conf.dynamic_binary_concat_conf, "in").extend(in_lbns)
+    # op_conf.dynamic_binary_concat_conf.in[:] = in_lbns
+    op_conf.dynamic_binary_concat_conf.out = "out"
+    op_conf.dynamic_binary_concat_conf.out_data_type = source_blob.dtype
+    op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(list(source_blob.shape))
+    if source_blob.batch_axis is not None:
+        op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis
+    else:
+        op_conf.dynamic_binary_concat_conf.out_batch_axis.SetInParent()
+    if source_sbp is None:
+        op_conf.dynamic_binary_concat_conf.out_sbp.split_parallel.axis = 0
+    else:
+        # TODO()
+        # op_conf.dynamic_binary_concat_conf.out_sbp = source_sbp
+        op_conf.dynamic_binary_concat_conf.out_sbp.SetInParent()
 
     compile_context.CurJobAddOp(op_conf)
-    for i in range(out_num):
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        out_lbi.op_name = op_conf.name
-        out_lbi.blob_name = obns[i]
-        out_remote_blobs.append(remote_blob_util.RemoteBlob(out_lbi))
-
-    return out_remote_blobs
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    out_lbi.op_name = op_conf.name
+    out_lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(out_lbi)
 

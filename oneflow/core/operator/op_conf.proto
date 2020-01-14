@@ -1564,7 +1564,7 @@ message DynamicBinaryConcatOpConf {
   required DataType out_data_type = 3;
   required ShapeProto out_shape = 4;
   required OptInt64 out_batch_axis = 5;
-  required SbpSignature out_sbp_sig = 6;
+  required SbpParallel out_sbp = 6;
 }
 
 message UniqueWithCountsOpConf {
