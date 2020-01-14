@@ -1,7 +1,9 @@
 #include "oneflow/core/kernel/kernel.h"
+#include <string>
 #include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 
@@ -37,9 +39,22 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+<<<<<<< HEAD
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
+=======
+  const std::string mark("Kernel::Launch " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark.c_str());
+  if (kernel_conf_.is_forward()) {
+    gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+    Forward(ctx, BnInOp2Blob);
+    gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
+  } else {
+    UNIMPLEMENTED();
+  }
+  nvtxRangePop();
+>>>>>>> b0c775844655d7adf5255ad20428bee797b8706c
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
