@@ -64,10 +64,11 @@ class Session(object):
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN: self.Init()
         return self
-    
+
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         _TryInitEnv()
+        _TryCompleteConfigProto(self.config_proto_)
         c_api_util.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
             compiler.Compile(func_desc, self.config_proto_)
@@ -104,7 +105,7 @@ class Session(object):
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
         return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
-    
+
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         job_name = job_func.__name__
@@ -130,7 +131,7 @@ class Session(object):
 
     def HasAnyCallbackAfterFunctionReturn(self):
         return len(self.uuid2watch_handler) > 0
-    
+
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
         self.cond_var_.acquire()
@@ -152,9 +153,13 @@ def clear_default_session():
 def sync_default_session():
     session_ctx.GetDefaultSession().Sync()
 
+def _TryCompleteConfigProto(config_proto):
+    if config_proto.resource.machine_num == 0:
+        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+
 def _GetDefaultConfigProto():
     config_proto = job_set_util.ConfigProto()
-    config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+    config_proto.resource.machine_num = 0
     config_proto.resource.gpu_device_num = 1
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
