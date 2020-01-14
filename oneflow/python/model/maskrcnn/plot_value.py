@@ -170,6 +170,8 @@ def post_process_flow(df):
     get_with_path_print(cfg, "MODEL.ROI_MASK_HEAD.ZERO_CTRL")
     print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
     print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
+    print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
+    print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
     df.drop(["rank", "note"], axis=1)
     print("min iter: {}".format(df["iter"].min()))
     print("max iter: {}".format(df["iter"].max()))
@@ -180,6 +182,11 @@ def post_process_flow(df):
 
 
 def post_process_torch(df):
+    df = df[df["iter"] < 2500]
+    print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
+    print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
+    print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
+    print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
     if df[df["value"].notnull()]["iter"].min() == 0:
         df["iter"] += 1
     return df
@@ -225,9 +232,7 @@ if __name__ == "__main__":
             #     ),
             #     post_process=post_process_flow,
             # ),
-            # "torch": get_df(
-            #     torch_metrics_path, "torch*.csv", -1, post_process_torch
-            # ),
+            "torch": get_df(torch_metrics_path, "torch*.csv", -1, post_process_torch),
             # "torch1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
