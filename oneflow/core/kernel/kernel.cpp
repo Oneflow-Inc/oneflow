@@ -39,22 +39,12 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-<<<<<<< HEAD
+  const std::string mark("Kernel::Launch " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark.c_str());
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
-=======
-  const std::string mark("Kernel::Launch " + this->kernel_conf().op_attribute().op_conf().name());
-  nvtxRangePush(mark.c_str());
-  if (kernel_conf_.is_forward()) {
-    gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-    Forward(ctx, BnInOp2Blob);
-    gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
-  } else {
-    UNIMPLEMENTED();
-  }
   nvtxRangePop();
->>>>>>> b0c775844655d7adf5255ad20428bee797b8706c
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
