@@ -58,7 +58,7 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
-void Kernel::ForwardDataContentWithPerformanceMetric(
+void Kernel::ForwardDataContentWithPerformanceMeasure(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().device_type() == DeviceType::kGPU) {
     cudaEvent_t start, stop;
@@ -76,7 +76,7 @@ void Kernel::ForwardDataContentWithPerformanceMetric(
               << " ForwardDataContent GPU elapsed time in cuda stream: " << milliseconds << "ms"
               << std::endl;
   } else if (this->op_conf().device_type() == DeviceType::kCPU) {
-    // TODO: support performance metric for cpu op, skip for now
+    // TODO: support performance measure for cpu op, skip for now
     ForwardDataContent(ctx, BnInOp2Blob);
   } else {
     UNIMPLEMENTED();
@@ -100,9 +100,9 @@ void Kernel::Forward(const KernelCtx& ctx,
   // const std::string mark3("ForwardDataContent "
   //                         + this->kernel_conf().op_attribute().op_conf().name());
   // nvtxRangePush(mark3.c_str());
-  const char* performance_metric = getenv("KERNEL_PERFORMANCE_METRIC");
-  if (performance_metric != nullptr && std::tolower(performance_metric[0]) == 't') {
-    ForwardDataContentWithPerformanceMetric(ctx, BnInOp2Blob);
+  const char* performance_measure = getenv("KERNEL_PERFORMANCE_MEASURE");
+  if (performance_measure != nullptr && std::tolower(performance_measure[0]) == 't') {
+    ForwardDataContentWithPerformanceMeasure(ctx, BnInOp2Blob);
   } else {
     ForwardDataContent(ctx, BnInOp2Blob);
   }

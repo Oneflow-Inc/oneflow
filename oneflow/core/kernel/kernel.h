@@ -60,7 +60,7 @@ class Kernel {
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void ForwardDataContentWithPerformanceMetric(const KernelCtx& ctx,
+  virtual void ForwardDataContentWithPerformanceMeasure(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
