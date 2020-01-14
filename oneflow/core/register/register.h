@@ -34,6 +34,9 @@ class Regst final {
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbi(const LogicalBlobId& lbi);
+  const Blob* GetSoleBlob() const;
+  Blob* GetMutSoleBlob();
+  int64_t GetBlobSize() const { return lbi2blob_.size(); }
   const HashMap<LogicalBlobId, std::unique_ptr<Blob>>& lbi2blob() const { return lbi2blob_; }
   Blob* packed_blob() { return packed_blob_.get(); }
   bool IsMaxCol() const { return col_id() == max_col_id(); }
