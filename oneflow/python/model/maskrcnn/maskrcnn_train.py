@@ -107,11 +107,6 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # with flow.watch_scope(
     #     blob_watcher=blob_watched
     # ):
-    image = flow.transpose(image, perm=[0, 3, 1, 2])
-    flow.nvtx.range_start(image, "backbone")
-    features = backbone.build(image)
-    flow.nvtx.range_end(features, "backbone")
-
     def flatlist(l, acc=None):
         if acc is None:
             acc = []
@@ -124,26 +119,33 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         else:
             acc.append(i)
         return acc
+
+    image = flow.transpose(image, perm=[0, 3, 1, 2])
+    # flow.nvtx.range_start(image, "backbone")
+    features = backbone.build(image)
+    # flow.nvtx.range_end(features, "backbone")
+
     # RPN
     # with flow.watch_scope(
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
     # ):
-    flow.nvtx.range_start(features, "rpn_head")
+    # flow.nvtx.range_start(features, "rpn_head")
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    flow.nvtx.range_end(flatlist([cls_logit_list, bbox_pred_list]), "rpn_head")
+    # flow.nvtx.range_end(flatlist([cls_logit_list, bbox_pred_list]), "rpn_head")
 
-    flow.nvtx.range_start(flatlist([anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list]), "rpn_loss")
+    # flow.nvtx.range_start(flatlist([anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list]), "rpn_loss")
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list
     )
-    flow.nvtx.range_end([rpn_bbox_loss, rpn_objectness_loss], "rpn_loss")
-
+    # flow.nvtx.range_end([rpn_bbox_loss, rpn_objectness_loss], "rpn_loss")
     # with flow.watch_scope(blob_watched):
-    flow.nvtx.range_start(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
+    # flow.nvtx.range_start(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
+    zero_ctrl = rpn_bbox_loss * 0 + rpn_objectness_loss * 0
+    zero_ctrl = flow.identity(zero_ctrl)
     proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list
+        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list, zero_ctrl
     )
-    flow.nvtx.range_end(flatlist(proposals), "rpn_post_processor")
+    # flow.nvtx.range_end(flatlist(proposals), "rpn_post_processor")
 
     # with flow.watch_scope(
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
@@ -152,22 +154,22 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     diff_blob_watcher=MakeWatcherCallback("backward"),
     # ):
     # Box Head
-    flow.nvtx.range_start(flatlist([proposals, gt_bbox_list, gt_label_list, features]), "box_head")
+    # flow.nvtx.range_start(flatlist([proposals, gt_bbox_list, gt_label_list, features]), "box_head")
     (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
         proposals, gt_bbox_list, gt_label_list, features
     )
-    flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
+    # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
 
     # Mask Head
-    flow.nvtx.range_start(flatlist([pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features]), "mask_head")
+    # flow.nvtx.range_start(flatlist([pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features]), "mask_head")
     mask_loss = mask_head.build_train(
         pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
-    flow.nvtx.range_end(mask_loss, "mask_head")
+    # flow.nvtx.range_end(mask_loss, "mask_head")
 
     return {
-        "loss_rpn_box_reg": rpn_bbox_loss,
-        "loss_objectness": rpn_objectness_loss,
+        "loss_rpn_box_reg": rpn_bbox_loss + 0,
+        "loss_objectness": rpn_objectness_loss + 0,
         "loss_box_reg": box_loss,
         "loss_classifier": cls_loss,
         "loss_mask": mask_loss,
