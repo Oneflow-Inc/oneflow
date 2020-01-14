@@ -184,7 +184,7 @@ def post_process_flow(df):
 
 def post_process_torch(df):
     # df = df[df["iter"] > 25]
-    # df = df[df["iter"] < 2500]
+    df = df[df["iter"] < 1000]
     # df = df[df["value"] < 1]
     # df = df[df["value"] > 0.2]
     # df["value"] *= 1000
@@ -193,7 +193,7 @@ def post_process_torch(df):
     print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
     print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
     if df[df["value"].notnull()]["iter"].min() == 0:
-        df["iter"] += 1
+        df.loc[:]["iter"] + 1
     return df
 
 
