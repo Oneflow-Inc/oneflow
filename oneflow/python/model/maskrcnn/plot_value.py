@@ -16,8 +16,10 @@ def plot_value(df, fit=True):
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_line()
-    # chart = base.mark_circle()
+    if fit:
+        chart = base.mark_circle()
+    else:
+        chart = base.mark_line()
 
     if fit:
         poly_data = pd.DataFrame(
@@ -183,9 +185,9 @@ def post_process_flow(df):
 def post_process_torch(df):
     # df = df[df["iter"] > 25]
     # df = df[df["iter"] < 2500]
-    df = df[df["value"] < 1]
-    df = df[df["value"] > 0.2]
-    df["value"] *= 1000
+    # df = df[df["value"] < 1]
+    # df = df[df["value"] > 0.2]
+    # df["value"] *= 1000
     print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
     print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
     print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
@@ -219,7 +221,7 @@ if __name__ == "__main__":
 
     plot_many_by_legend(
         {
-            # "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
+            "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
             # "flow2": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
             # "flow1": get_df(
             #     os.path.join(
