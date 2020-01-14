@@ -20,6 +20,7 @@ class JobBuildAndInferCtx {
 
   Maybe<OperatorConf> CheckAndCompleteUserOpConf(const OperatorConf& op_conf);
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
+  Maybe<void> Complete();
   Maybe<void> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
   Maybe<void> AddAndInferConsistentOp(const OperatorConf& op_conf,
                                       const ParallelConf& parallel_conf);

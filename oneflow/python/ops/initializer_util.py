@@ -50,7 +50,7 @@ def random_uniform_initializer(
         data_type_conf_util.kInt64,
     ]:
         setattr(initializer.random_uniform_int_conf, "min", int(minval))
-        setattr(initializer.random_uniform_int_cof, "max", int(maxval))
+        setattr(initializer.random_uniform_int_conf, "max", int(maxval))
     else:
         raise NotImplementedError("Do not support such data type")
 
