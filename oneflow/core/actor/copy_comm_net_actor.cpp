@@ -78,12 +78,10 @@ void CopyCommNetActor::Act() {
     Shape empty_shape = data_blob->static_shape();
     for (int i = 0; i < empty_shape.NumAxes(); ++i) { empty_shape.Set(i, 0); }
     tensor_view->set_shape(empty_shape);
-    LOG(INFO) << "cclog: PASS";
   } else {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async
     Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
-    LOG(INFO) << "cclog: READ";
   }
 }
 
