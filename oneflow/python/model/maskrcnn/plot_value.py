@@ -16,8 +16,8 @@ def plot_value(df, fit=False):
 
     base = alt.Chart(df).interactive()
 
-    # chart = base.mark_line()
-    chart = base.mark_circle()
+    chart = base.mark_line()
+    # chart = base.mark_circle()
 
     chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
         alt.Y("value:Q")
@@ -141,12 +141,23 @@ def parse_cfg(df):
     return yaml.safe_load(yaml_string)
 
 
+def getitem(d, k):
+    if k in d and d is not None:
+        return d[k]
+    else:
+        return None
+
+
 def get_with_path(dict, path):
-    return reduce(operator.getitem, path.split("."), dict)
+    return reduce(getitem, path.split("."), dict)
 
 
 def get_with_path_print(dict, path):
-    print("{}: {}".format(path, get_with_path(dict, path)))
+    got = get_with_path(dict, path)
+    if got is None:
+        print(f"{path} not found")
+    else:
+        print("{}: {}".format(path, got))
 
 
 def post_process_flow(df):
@@ -155,6 +166,10 @@ def post_process_flow(df):
     get_with_path_print(cfg, "INPUT.MIRROR_PROB")
     get_with_path_print(cfg, "MODEL.RPN.RANDOM_SAMPLE")
     get_with_path_print(cfg, "MODEL.ROI_HEADS.RANDOM_SAMPLE")
+    get_with_path_print(cfg, "MODEL.RPN.ZERO_CTRL")
+    get_with_path_print(cfg, "MODEL.ROI_MASK_HEAD.ZERO_CTRL")
+    print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
+    print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
     df.drop(["rank", "note"], axis=1)
     print("min iter: {}".format(df["iter"].min()))
     print("max iter: {}".format(df["iter"].max()))
@@ -189,21 +204,13 @@ if __name__ == "__main__":
     if hasattr(args, "pytorch_metrics_path"):
         torch_metrics_path = args.pytorch_metrics_path
 
-    assert os.path.exists(flow_metrics_path), "{} not found".format(
-        flow_metrics_path
-    )
-    assert os.path.exists(torch_metrics_path), "{} not found".format(
-        torch_metrics_path
-    )
+    assert os.path.exists(flow_metrics_path), "{} not found".format(flow_metrics_path)
+    assert os.path.exists(torch_metrics_path), "{} not found".format(torch_metrics_path)
 
     plot_many_by_legend(
         {
-            "flow": get_df(
-                flow_metrics_path, "loss*.csv", -1, post_process_flow
-            ),
-            # "flow2": get_df(
-            #     flow_metrics_path, "loss*.csv", -2, post_process_flow
-            # ),
+            "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
+            "flow2": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
             # "flow1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
@@ -218,9 +225,9 @@ if __name__ == "__main__":
             #     ),
             #     post_process=post_process_flow,
             # ),
-            "torch": get_df(
-                torch_metrics_path, "torch*.csv", -1, post_process_torch
-            ),
+            # "torch": get_df(
+            #     torch_metrics_path, "torch*.csv", -1, post_process_torch
+            # ),
             # "torch1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
