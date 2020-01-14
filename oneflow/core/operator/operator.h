@@ -296,10 +296,10 @@ struct OnlyCpuSupportPredicator {
 struct RuntimeRegstNum4OpSameOutputBlob final {
   RuntimeRegstNum4OpSameOutputBlob(size_t num) : num_(num) {}
   RuntimeRegstNum4OpSameOutputBlob(std::function<size_t()> get_num)
-    : get_num_(new std::function<size_t()>(get_num)) {}
-  operator size_t() { 
+      : get_num_(new std::function<size_t()>(get_num)) {}
+  operator size_t() {
     if (!get_num_) { return num_; }
-    return get_num_();
+    return (*this->get_num_)();
   }
 
  private:

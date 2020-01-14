@@ -8,76 +8,19 @@
 
 namespace oneflow {
 
-// the smaller, the higher priority VpuSet is
-enum VpuSet {
-  kSymbolVpuSet = 0,
-  kHostMemoryVpuSet,
-  kDeviceVpuSet,
-  kHaltVpuSet,
-};
-
-template<VpuSet vpu_set>
-struct VpuPriority final {
-  static const int value = vpu_set;
-};
-
-template<VpuSet vpu_set>
-struct VpuParallelTrait final { };
-template<>
-struct VpuParallelTrait<VpuSet::kSymbolVpuSet> final {
-  static const bool partial_enabled = false;
-};
-
-template<>
-struct VpuParallelTrait<VpuSet::kHostMemoryVpuSet> final {
-  static const bool partial_enabled = true;
-};
-
-template<>
-struct VpuParallelTrait<VpuSet::kDeviceVpuSet> final {
-  static const bool partial_enabled = true;
-};
-
-template<>
-struct VpuParallelTrait<VpuSet::kHaltVpuSet> final {
-  static const bool partial_enabled = false;
-};
-
 struct SymbolValue final {
   POD_PROTO_DEFINE_FIELD(int64_t, value);
 };
 
-struct MakeSymbolInstruction final {
-};
+struct MakeSymbolInstruction final {};
 
 struct ReallocSymbolBufferInstruction final {
   POD_PROTO_DEFINE_FIELD(int64_t, size);
 };
 
-struct SymbolFactoryVpu final {
-  static const vpu_set = kSymbolVpuSet;
-// clang-format off
-  POD_PROTO_DEFINE_ONEOF(instruction_type,
-      POD_PROTO_ONEOF_FIELD(MakeSymbolInstruction, make_symbol)
-      POD_PROTO_ONEOF_FIELD(ReallocSymbolBufferInstruction, realloc_symbol_buffer));
-// clang-format on
-};
-
 struct RemoteCopyRange final {
   POD_PROTO_DEFINE_FIELD(int64_t, offset);
   POD_PROTO_DEFINE_FIELD(int64_t, length);
-};
-
-struct SymbolCopierVpu final {
-  static const vpu_set = kSymbolVpuSet;
-// clang-format off
-  POD_PROTO_DEFINE_ONEOF(range,
-      POD_PROTO_ONEOF_FIELD(RemoteCopyRange, copy_range));
-// clang-format on
-};
-
-struct SmallSymbolCopierVpu final {
-  static const vpu_set = kSymbolVpuSet;
 };
 
 struct NewHostBlobInstruction final {
@@ -89,25 +32,22 @@ struct DeleteHostBlobInstruction final {
 };
 
 struct HostMemoryVpu final {
-  static const vpu_set = kHostMemoryVpuSet;
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(instruction_type,
+      POD_PROTO_ONEOF_FIELD(MakeSymbolInstruction, make_symbol)
+      POD_PROTO_ONEOF_FIELD(ReallocSymbolBufferInstruction, realloc_symbol_buffer)
       POD_PROTO_ONEOF_FIELD(NewHostBlobInstruction, new_host_blob)
       POD_PROTO_ONEOF_FIELD(DeleteHostBlobInstruction, delete_host_blob));
-// clang-format on
+  // clang-format on
 };
 
-struct MemoryBarrierVpu final {
-  static const vpu_set = kHostMemoryVpuSet;
-};
+struct DeviceMemoryVpu final {};
 
 struct CpuDeviceVpu final {
-  static const vpu_set = kDeviceVpuSet;
   VpuInstructionParallel parallel;
 };
 
 struct GpuDeviceVpu final {
-  static const vpu_set = kDeviceVpuSet;
   VpuInstructionParallel parallel;
 };
 
@@ -116,87 +56,108 @@ struct CopyHDInstruction final {
   POD_PROTO_DEFINE_FIELD(SymbolValue, dst_blob_name_symbol);
 };
 
-struct H2DCopierVpu final {
-  static const vpu_set = kDeviceVpuSet;
+struct H2DTransportVpu final {
   VpuInstructionParallel parallel;
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(instruction_type,
       POD_PROTO_ONEOF_FIELD(CopyHDInstruction, copy_h2d));
-// clang-format on
+  // clang-format on
 };
 
-struct D2HCopierVpu final {
-  static const vpu_set = kDeviceVpuSet;
+struct D2HTransportVpu final {
   VpuInstructionParallel parallel;
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(instruction_type,
       POD_PROTO_ONEOF_FIELD(CopyHDInstruction, copy_d2h);
-// clang-format on
+  // clang-format on
 };
 
 struct RemoteCopyInstruction final {
   POD_PROTO_DEFINE_FIELD(SymbolValue, src_blob_name_symbol);
   POD_PROTO_DEFINE_FIELD(SymbolValue, dst_blob_name_symbol);
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(range,
       POD_PROTO_ONEOF_FIELD(RemoteCopyRange, contiguous_header_body_range)
       POD_PROTO_ONEOF_FIELD(RemoteCopyRange, header_range)
       POD_PROTO_ONEOF_FIELD(RemoteCopyRange, body_range));
-// clang-format on
+  // clang-format on
 };
 
 // local host to remote host
-struct L2RPusherVpu final {
-  static const vpu_set = kDeviceVpuSet;
+struct L2RTransportVpu final {
   VpuInstructionParallel parallel;
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(instruction_type,
       POD_PROTO_ONEOF_FIELD(RemoteCopyInstruction, copy));
-// clang-format on
+  // clang-format on
+};
+
+// local host to remote host
+struct L2RTransportLTE4096Vpu final {
+  VpuInstructionParallel parallel;
+  // clang-format off
+  POD_PROTO_DEFINE_ONEOF(instruction_type,
+      POD_PROTO_ONEOF_FIELD(RemoteCopyInstruction, copy));
+  // clang-format on
 };
 
 // remote host to local host
-struct R2LPullerVpu final {
-  static const vpu_set = kDeviceVpuSet;
+struct R2LTransportVpu final {
   VpuInstructionParallel parallel;
-// clang-format off
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(instruction_type,
       POD_PROTO_ONEOF_FIELD(RemoteCopyInstruction, copy));
-// clang-format on
+  // clang-format on
 };
 
-struct HaltVpu final {
-  static const vpu_set = kHaltVpuSet;
+// remote host to local host
+struct R2LTransportLTE4096Vpu final {
+  VpuInstructionParallel parallel;
+  // clang-format off
+  POD_PROTO_DEFINE_ONEOF(instruction_type,
+      POD_PROTO_ONEOF_FIELD(RemoteCopyInstruction, copy));
+  // clang-format on
 };
 
-struct AllVpuParallel final {};
+struct HaltInstruction final {};
 
-struct VpuInstructionParallel final {
-// clang-format off
-  POD_PROTO_DEFINE_ONEOF(parallel_type,
-      POD_PROTO_ONEOF_FIELD(AllVpuParallel, all_vpu)
+struct SyncInstruction final {};
+
+struct ControlVpu final {
+  // clang-format off
+  POD_PROTO_DEFINE_ONEOF(instruction_type,
+      POD_PROTO_ONEOF_FIELD(SyncInstruction, sync)
+      POD_PROTO_ONEOF_FIELD(HaltInstruction, halt));
+  // clang-format on
+};
+
+struct AllEnabledMask final {};
+struct VpuInstructionMask final {
+  // clang-format off
+  POD_PROTO_DEFINE_ONEOF(mask_type,
+      POD_PROTO_ONEOF_FIELD(AllEnabledMask, all_enabled_mask)
       POD_PROTO_ONEOF_FIELD(SymbolValue, parallel_desc_symbol));
-// clang-format on
+  // clang-format on
 };
 
 struct VpuInstruction final {
-// clang-format off
+  POD_PROTO_DEFINE_FIELD(VpuInstructionMask, instruction_mask);
+  // clang-format off
   POD_PROTO_DEFINE_ONEOF(vpu_type,
-      POD_PROTO_ONEOF_FIELD(SymbolFactoryVpu, symbol_factory)
-      POD_PROTO_ONEOF_FIELD(SymbolCopierVpu, symbol_copier)
-      POD_PROTO_ONEOF_FIELD(SmallSymbolCopierVpu, small_symbol_copier)
-      POD_PROTO_ONEOF_FIELD(HostMemoryVpu, host)
-      POD_PROTO_ONEOF_FIELD(MemoryBarrierVpu, memory_barrier)
+      POD_PROTO_ONEOF_FIELD(HostMemoryVpu, host_memory)
+      POD_PROTO_ONEOF_FIELD(DeviceMemoryVpu, device_memory)
       POD_PROTO_ONEOF_FIELD(CpuDeviceVpu, cpu_device)
       POD_PROTO_ONEOF_FIELD(GpuDeviceVpu, gpu_device)
-      POD_PROTO_ONEOF_FIELD(H2DCopierVpu, h2d_copier)
-      POD_PROTO_ONEOF_FIELD(D2HCopierVpu, d2h_copier)
-      POD_PROTO_ONEOF_FIELD(L2RPusherVpu, l2r_pusher)
-      POD_PROTO_ONEOF_FIELD(R2LPullerVpu, r2l_puller)
-      POD_PROTO_ONEOF_FIELD(HaltVpu, halt));
-// clang-format on
+      POD_PROTO_ONEOF_FIELD(H2DTransportVpu, h2d_transport)
+      POD_PROTO_ONEOF_FIELD(D2HTransportVpu, d2h_transport)
+      POD_PROTO_ONEOF_FIELD(L2RTransportVpu, l2r_transport)
+      POD_PROTO_ONEOF_FIELD(R2LTransportVpu, r2l_transport)
+      POD_PROTO_ONEOF_FIELD(L2RTransportLTE4096Vpu, l2r_transport_lte4096)
+      POD_PROTO_ONEOF_FIELD(R2LTransportLTE4096Vpu, r2l_transport_lte4096)
+      POD_PROTO_ONEOF_FIELD(ControlVpu, control));
+  // clang-format on
 };
 
-}
+}  // namespace oneflow
 
 #endif ONEFLOW_CORE_EAGER_VPU_H_
