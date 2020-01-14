@@ -38,23 +38,27 @@ Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
+  CHECK_OR_RETURN(in_blob_desc.is_dynamic());
+  CHECK_GE_OR_RETURN(output_bns().size(), 2);
   int32_t base_shift = op_conf().dynamic_binary_split_conf().base_shift();
   std::vector<int64_t> out_sizes(output_bns().size(), -1);
   int64_t base_size = static_cast<int64_t>(1) << base_shift;
+  int64_t current_size = base_size;
   int64_t total_size = 0;
   FOR_RANGE(int, i, 0, output_bns().size()) {
-    out_sizes.at(i) = base_size;
-    total_size += base_size;
-    if (i > 0) { base_size = base_size << 1; }
+    out_sizes.at(i) = current_size;
+    total_size += current_size;
+    current_size = current_size << 1;
   }
-  CHECK_EQ(total_size, base_size);
+  CHECK_EQ_OR_RETURN(total_size + base_size, current_size);
   int64_t in_blob_size = RtBlobDesc(in_blob_desc).AlignedTotalByteSize();
-  CHECK_LE(in_blob_size, total_size);
+  CHECK_LE_OR_RETURN(in_blob_size, total_size);
   FOR_RANGE(int, i, 0, output_bns().size()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
-    CHECK(blob_desc != nullptr);
+    CHECK_OR_RETURN(blob_desc != nullptr);
     *blob_desc = in_blob_desc;
-    blob_desc->mut_shape() = Shape({out_sizes.at(i)});
+    // out blob shape sort from large to small like 32,16,8,4,2,1
+    blob_desc->mut_shape() = Shape({out_sizes.at(output_bns().size() - 1 - i)});
     blob_desc->set_data_type(DataType::kChar);
   }
   return Maybe<void>::Ok();
@@ -129,6 +133,16 @@ Maybe<void> DynamicBinaryConcatOp::InferBlobDescs(
   *out_blob_desc = *GetBlobDesc4BnInOp(input_bns().Get(0));
   out_blob_desc->set_data_type(conf.out_data_type());
   out_blob_desc->mut_shape() = Shape(conf.out_shape());
+  // check valid
+  CHECK_GE_OR_RETURN(input_bns().size(), 2);
+  CHECK_OR_RETURN(out_blob_desc->is_dynamic());
+  int64_t input_total_size = 0;
+  for (const auto& ibn : input_bns()) {
+    const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(ibn);
+    CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), DataType::kChar);
+    input_total_size += RtBlobDesc(*in_blob_desc).ByteSizeOfBlobBody();
+  }
+  CHECK_GE_OR_RETURN(input_total_size, RtBlobDesc(*out_blob_desc).AlignedTotalByteSize());
   return Maybe<void>::Ok();
 }
 
