@@ -43,4 +43,9 @@ Blob* Regst::GetMutSoleBlob() {
   return lbi2blob_.begin()->second.get();
 }
 
+const Blob* Regst::GetSoleBlob() const {
+  CHECK_EQ(GetBlobSize(), 1);
+  return lbi2blob_.begin()->second.get();
+}
+
 }  // namespace oneflow
