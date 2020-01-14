@@ -308,7 +308,7 @@ class RPNProposal(object):
         bbox_pred_list,
         image_size_list,
         resized_gt_boxes_list,
-        zero_ctrl
+        zero_ctrl=None
     ):
         with flow.deprecated.variable_scope("rpn-postprocess"):
             proposals = []
@@ -316,8 +316,11 @@ class RPNProposal(object):
                 proposal_list = []
                 score_list = []
                 for layer_i in range(len(cls_logit_list)):
+                    cls_logits = cls_logit_list[layer_i][img_idx]
+                    if zero_ctrl is not None:
+                        cls_logits += zero_ctrl
                     cls_probs = flow.keras.activations.sigmoid(
-                        flow.identity(cls_logit_list[layer_i][img_idx]) + zero_ctrl,
+                        cls_logits,
                         name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
                     )
                     # cls_probs = cls_logit_list[layer_i][img_idx]
