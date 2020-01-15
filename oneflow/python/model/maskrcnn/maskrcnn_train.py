@@ -320,6 +320,13 @@ def train_net(config, image=None):
         "loss_mask",
     )
 
+    def add_loss(loss_list):
+        if config.SOLVER.REDUCE_ALL_LOSSES:
+            flow.losses.add_loss(sum(loss_list))
+        else:
+            for loss in loss_list:
+                flow.losses.add_loss(loss)
+
     if config.ENV.NUM_GPUS > 1:
         distribute_train_func = flow.experimental.mirror_execute(
             config.ENV.NUM_GPUS, 1
@@ -333,9 +340,7 @@ def train_net(config, image=None):
             data_loader("gt_labels"),
         )
         for outputs_per_rank in outputs:
-            for k, v in outputs_per_rank.items():
-                if k in loss_name_tup:
-                    flow.losses.add_loss(v)
+            add_loss([v for k, v in outputs_per_rank.items() if k in loss_name_tup])
 
     else:
         outputs = maskrcnn_train(
@@ -346,9 +351,7 @@ def train_net(config, image=None):
             data_loader("gt_segm"),
             data_loader("gt_labels"),
         )
-        for k, v in outputs.items():
-            if k in loss_name_tup:
-                flow.losses.add_loss(v)
+        add_loss([v for k, v in outputs.items() if k in loss_name_tup])
 
     return outputs
 
@@ -430,14 +433,18 @@ def init_train_func(config, input_fake_image):
 
         @flow.function
         def train():
-            set_train_config(config)
-            # model_update_conf = set_train_config(config)
-            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            step_lr = None
+            if config.SOLVER.MAKE_LR:
+                model_update_conf = set_train_config(config)
+                step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            else:
+                set_train_config(config)
             outputs = train_net(config)
-            # if isinstance(outputs, (list, tuple)):
-            #     outputs[0].update(step_lr)
-            # else:
-            #     outputs.update(step_lr)
+            if step_lr is not None:
+                if isinstance(outputs, (list, tuple)):
+                    outputs[0].update(step_lr)
+                else:
+                    outputs.update(step_lr)
             return outputs
 
         return train

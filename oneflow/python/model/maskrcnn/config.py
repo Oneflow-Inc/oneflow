@@ -199,6 +199,7 @@ _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 _C.SOLVER = CN()
 _C.SOLVER.MAX_ITER = 180000
 
+_C.SOLVER.MAKE_LR = False
 _C.SOLVER.BASE_LR = 0.01
 _C.SOLVER.BIAS_LR_FACTOR = 2
 
@@ -225,6 +226,7 @@ _C.SOLVER.METRICS_PERIOD = 0
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 8
+_C.SOLVER.REDUCE_ALL_LOSSES = False
 
 # ---------------------------------------------------------------------------- #
 # Precision options
@@ -412,9 +414,7 @@ if __name__ == "__main__":
     if hasattr(args, "pytorch_config_yaml"):
         torch_cfg.merge_from_file(args.pytorch_config_yaml)
 
-    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(
-        flow_cfg, torch_cfg
-    )
+    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(flow_cfg, torch_cfg)
     print("oneflow diff:\n{}\n".format(d1_diff))
     print("pytorch diff:\n{}\n".format(d2_diff))
     print("oneflow only:\n{}\n".format("\n".join(d1_only)))
