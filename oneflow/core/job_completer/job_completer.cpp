@@ -73,20 +73,10 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   }
 }
 
-void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.DumpOpTimeShape(job_builder);
-  op_graph.DumpBatchAxisLbi(job_builder);
-}
-
-void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.DumpLogicalBlobDesc(job_builder);
-  op_graph.DumpSbpSignature(job_builder);
-}
-
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
@@ -97,9 +87,7 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
-
+  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);

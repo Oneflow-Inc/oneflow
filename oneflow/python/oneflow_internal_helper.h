@@ -154,22 +154,4 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
-namespace {
-
-struct GlobalChecker final {
-  GlobalChecker() = default;
-  ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) {
-      std::cerr << "global session is not closed yet" << std::endl;
-    }
-    if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
-      std::cerr << "global session is not destroyed yet" << std::endl;
-    }
-  }
-};
-
-GlobalChecker checker;
-
-}  // namespace
-
 }  // namespace oneflow
