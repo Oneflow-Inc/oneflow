@@ -174,8 +174,7 @@ def post_process_flow(df):
     print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
     print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
     df.drop(["rank", "note"], axis=1)
-    print("min iter: {}".format(df["iter"].min()))
-    print("max iter: {}".format(df["iter"].max()))
+    print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
     if "primary_lr" in df["legend"].unique():
         df["legend"].replace("primary_lr", "lr", inplace=True)
     df = df.groupby(["iter", "legend"], as_index=False).mean()
@@ -184,16 +183,17 @@ def post_process_flow(df):
 
 def post_process_torch(df):
     # df = df[df["iter"] > 25]
-    df = df[df["iter"] < 1000]
+    # df = df[df["iter"] < 1000]
     # df = df[df["value"] < 1]
     # df = df[df["value"] > 0.2]
     # df["value"] *= 1000
+    print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
     print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
     print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
     print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
     print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
     if df[df["value"].notnull()]["iter"].min() == 0:
-        df.loc[:]["iter"] + 1
+        df.loc[:]["iter"] += 1
     return df
 
 
