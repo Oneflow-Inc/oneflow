@@ -1977,15 +1977,14 @@ message RandomLikeOpConf {
   optional int64 random_seed = 3;
 }
 
-message NvtxRangePushOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string msg = 3;
+message NvtxRangeStartOpConf {
+  repeated string in = 1;
+  required string msg = 2;
 }
 
-message NvtxRangePopOpConf {
-  required string in = 1;
-  required string out = 2;
+message NvtxRangeEndOpConf {
+  repeated string in = 1;
+  required string msg = 2;
 }
 
 message OperatorConf {
@@ -2218,8 +2217,8 @@ message OperatorConf {
     AxpyOpConf axpy_conf = 752;
 
     // debug op
-    NvtxRangePushOpConf nvtx_range_push_conf = 801;
-    NvtxRangePopOpConf nvtx_range_pop_conf = 802;
+    NvtxRangeStartOpConf nvtx_range_start_conf = 801;
+    NvtxRangeEndOpConf nvtx_range_end_conf = 802;
   }
 }
 

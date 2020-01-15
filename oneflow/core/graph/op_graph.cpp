@@ -412,7 +412,9 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
   for (const auto& op_conf : job.net().op()) {
     for (const auto& ctrl_in_op_name : op_conf.ctrl_in_op_name()) {
       auto* consumer_op_names = &producer_op_name2ctrl_consumer_op_names_[ctrl_in_op_name];
-      CHECK(consumer_op_names->emplace(op_conf.name()).second);
+      CHECK(consumer_op_names->emplace(op_conf.name()).second)
+          << "op name of ctrl edge consumer already exists, producer_op_name: " << ctrl_in_op_name
+          << " op name: " << op_conf.name();
     }
   }
 }

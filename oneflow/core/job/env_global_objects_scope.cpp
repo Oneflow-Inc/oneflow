@@ -35,6 +35,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   int64_t this_mchn_id =
       Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
+  Global<NvtxCtx>::New();
   return Maybe<void>::Ok();
 }
 
@@ -43,10 +44,12 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<CtrlServer>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
+  CHECK_NOTNULL(Global<NvtxCtx>::Get());
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
+  Global<NvtxCtx>::Delete();
 }
 
 }  // namespace oneflow

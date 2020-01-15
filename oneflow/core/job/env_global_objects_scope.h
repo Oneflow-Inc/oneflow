@@ -3,6 +3,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/job/nvtx_ctx.h"
 
 namespace oneflow {
 
