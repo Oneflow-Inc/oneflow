@@ -110,7 +110,7 @@ class BoxHead(object):
                 )
             )
             total_elem_cnt = flow.elem_cnt(labels, dtype=box_head_cls_loss.dtype)
-            box_head_cls_loss = box_head_cls_loss / total_elem_cnt
+            box_head_cls_loss = flow.math.divide(box_head_cls_loss, total_elem_cnt, name="box_head_cls_loss_div")
             # construct bbox loss
             total_pos_inds = flow.squeeze(
                 flow.local_nonzero(labels != flow.constant_scalar(int(0), flow.int32)), axis=[1]
@@ -124,9 +124,10 @@ class BoxHead(object):
                 flow.gather(params=pos_bbox_reg, indices=indices, batch_dims=1), axis=[1]
             )
             bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
-            box_head_box_loss = (
-                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
-                / total_elem_cnt
+            box_head_box_loss = flow.math.divide(
+                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target)),
+                total_elem_cnt,
+                name="box_head_box_loss_div"
             )
 
             return (
