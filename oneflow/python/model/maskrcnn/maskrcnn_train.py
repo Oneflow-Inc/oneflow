@@ -30,22 +30,31 @@ def str2bool(v):
 
 
 parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
-parser.add_argument("-c", "--config_file", help="yaml config file", type=str, required=False)
+parser.add_argument(
+    "-c", "--config_file", help="yaml config file", type=str, required=False
+)
 parser.add_argument("-cp", "--ctrl_port", type=int, default=19765, required=False)
 parser.add_argument("-fake", "--fake_image_path", type=str, required=False)
 parser.add_argument(
     "-save",
     "--model_save_dir",
     type=str,
-    default="./model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))),
+    default="./model_save-{}".format(
+        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
+    ),
     required=False,
 )
 parser.add_argument(
     "-pr", "--print_loss_each_rank", default=False, action="store_true", required=False
 )
-parser.add_argument("-v", "--verbose", default=False, action="store_true", required=False)
 parser.add_argument(
-    "opts", help="yaml config given in terminal command", default=None, nargs=argparse.REMAINDER
+    "-v", "--verbose", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "opts",
+    help="yaml config given in terminal command",
+    default=None,
+    nargs=argparse.REMAINDER,
 )
 terminal_args = parser.parse_args()
 
@@ -94,12 +103,17 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
 
     gt_bbox_list = flow.piece_slice(gt_bbox, gt_bbox.shape[0], name="gt_bbox_per_img")
 
-    gt_label_list = flow.piece_slice(gt_label, gt_label.shape[0], name="gt_label_per_img")
+    gt_label_list = flow.piece_slice(
+        gt_label, gt_label.shape[0], name="gt_label_per_img"
+    )
 
     gt_segm_list = flow.piece_slice(gt_segm, gt_segm.shape[0], name="gt_segm_per_img")
 
     anchors = gen_anchors(
-        image, cfg.MODEL.RPN.ANCHOR_STRIDE, cfg.MODEL.RPN.ANCHOR_SIZES, cfg.MODEL.RPN.ASPECT_RATIOS
+        image,
+        cfg.MODEL.RPN.ANCHOR_STRIDE,
+        cfg.MODEL.RPN.ANCHOR_SIZES,
+        cfg.MODEL.RPN.ASPECT_RATIOS,
     )
 
     # Backbone
@@ -140,12 +154,17 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # flow.nvtx.range_end([rpn_bbox_loss, rpn_objectness_loss], "rpn_loss")
     # with flow.watch_scope(blob_watched):
     # flow.nvtx.range_start(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
-    
+
     zero_ctrl_rpn = None
     if cfg.MODEL.RPN.ZERO_CTRL:
         zero_ctrl_rpn = (rpn_bbox_loss + rpn_objectness_loss) * 0
     proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list, zero_ctrl_rpn
+        anchors,
+        cls_logit_list,
+        bbox_pred_list,
+        image_size_list,
+        gt_bbox_list,
+        zero_ctrl_rpn,
     )
     # flow.nvtx.range_end(flatlist(proposals), "rpn_post_processor")
 
@@ -168,7 +187,12 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # Mask Head
     # flow.nvtx.range_start(flatlist([pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features]), "mask_head")
     mask_loss = mask_head.build_train(
-        pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features, zero_ctrl_mask
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segm_list,
+        gt_label_list,
+        features,
+        zero_ctrl_mask,
     )
     # flow.nvtx.range_end(mask_loss, "mask_head")
 
@@ -213,7 +237,9 @@ def merge_and_compare_config(args):
 def set_train_config(cfg):
     flow.config.persistence_buf_byte(1024 * 1024)
     flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
-    flow.config.cudnn_conv_heuristic_search_algo(cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO)
+    flow.config.cudnn_conv_heuristic_search_algo(
+        cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO
+    )
     flow.config.cudnn_conv_use_deterministic_algo_only(
         cfg.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
     )
@@ -295,9 +321,9 @@ def train_net(config, image=None):
     )
 
     if config.ENV.NUM_GPUS > 1:
-        distribute_train_func = flow.experimental.mirror_execute(config.ENV.NUM_GPUS, 1)(
-            maskrcnn_train
-        )
+        distribute_train_func = flow.experimental.mirror_execute(
+            config.ENV.NUM_GPUS, 1
+        )(maskrcnn_train)
         outputs = distribute_train_func(
             config,
             flow.identity(image) if image else data_loader("image"),
@@ -374,7 +400,11 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
             )
         assert secondary_lr_blob is not None
 
-        return {"train_step": train_step_id, "lr": primary_lr_blob, "lr2": secondary_lr_blob}
+        return {
+            "train_step": train_step_id,
+            "lr": primary_lr_blob,
+            "lr2": secondary_lr_blob,
+        }
 
 
 def init_train_func(config, input_fake_image):
@@ -463,7 +493,10 @@ def add_metrics(metrics_df, iter=None, **kwargs):
                         )
             elif isinstance(v, dict):
                 dfs = [
-                    pd.DataFrame({"iter": iter, "legend": legend, "value": value.item()}, index=[0])
+                    pd.DataFrame(
+                        {"iter": iter, "legend": legend, "value": value.item()},
+                        index=[0],
+                    )
                     for legend, value in v.items()
                 ]
             else:
@@ -473,14 +506,19 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             metrics_df = pd.concat(
                 [
                     metrics_df,
-                    pd.DataFrame({"iter": iter, "legend": k, "value": v, "rank": 0}, index=[0]),
+                    pd.DataFrame(
+                        {"iter": iter, "legend": k, "value": v, "rank": 0}, index=[0]
+                    ),
                 ],
                 axis=0,
                 sort=False,
             )
         elif k is not "outputs":
             metrics_df = pd.concat(
-                [metrics_df, pd.DataFrame({"iter": iter, "legend": k, "value": v}, index=[0])],
+                [
+                    metrics_df,
+                    pd.DataFrame({"iter": iter, "legend": k, "value": v}, index=[0]),
+                ],
                 axis=0,
                 sort=False,
             )
@@ -514,7 +552,9 @@ class IterationProcessor(object):
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
-        rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
+        rank_size = (
+            metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
+        )
         if terminal_args.print_loss_each_rank and rank_size > 1:
             for rank_i in range(rank_size):
                 tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
@@ -544,7 +584,10 @@ class IterationProcessor(object):
         # save_blob_watched(iter)
 
         if iter == self.max_iter:
-            print("median of elapsed time per batch:", statistics.median(self.elapsed_times))
+            print(
+                "median of elapsed time per batch:",
+                statistics.median(self.elapsed_times),
+            )
 
 
 def run():
@@ -566,7 +609,9 @@ def run():
     # check_point.load(terminal_args.model_load_dir)
 
     iter_file = os.path.join(
-        config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out"
+        config.MODEL.WEIGHT,
+        "System-Train-TrainStep-{}".format(train_func.__name__),
+        "out",
     )
     loaded_iter = load_iter_num_from_file(iter_file)
 
@@ -589,7 +634,9 @@ def run():
         #     save_model(p.check_point, loaded_iter)
         if use_fake_images:
             if config.ASYNC_GET:
-                train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))
+                train_func(fake_image_list[i - start_iter]).async_get(
+                    lambda x, i=i: p.step(i, x)
+                )
             else:
                 outputs = train_func(fake_image_list[i - start_iter]).get()
                 p.step(i, outputs)
