@@ -11,6 +11,6 @@ struct ZeroOnlyZipUtil final {
   void UnzipToExpectedSize(const SizedBufferView& size_buffer, char* data, size_t expected_size);
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ZERO_ONLY_ZIP_H_
