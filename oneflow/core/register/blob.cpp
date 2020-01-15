@@ -253,7 +253,7 @@ bool Blob::IsBodyEmpty() const {
   return shape_list_len == 0 || shape().elem_cnt() == 0;
 }
 
-char* Blob::mut_header_ptr() {
+char* Blob::mut_contiguous_header_ptr() {
   // check header and body is continuous
   CHECK_EQ(header_ptr() + blob_desc_->ByteSizeOfBlobHeader(), dptr<char>());
   return header_ptr_->ptr();

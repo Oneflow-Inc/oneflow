@@ -101,7 +101,7 @@ void DynamicBinaryConcatKernel::ForwardDataContent(
     Blob* in_blob = BnInOp2Blob(ibn);
     int64_t dynamic_in_size = GetBlobDynamicBodySize(in_blob);
     if (dynamic_in_size > 0) {
-      memcpy(out_blob->mut_header_ptr() + offset, in_blob->dptr(), dynamic_in_size);
+      memcpy(out_blob->mut_contiguous_header_ptr() + offset, in_blob->dptr(), dynamic_in_size);
     }
     offset += dynamic_in_size;
   }
