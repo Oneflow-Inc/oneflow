@@ -151,6 +151,7 @@ message GatherMs0KernelConf {
 
 message GatherMs0GradKernelConf {
   required int64 offset = 1;
+  required DataType indices_data_type = 2;
 }
 
 message NcclTupleReduceConf {
