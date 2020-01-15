@@ -9,7 +9,7 @@ namespace user_op {
 
 template<typename T>
 __device__ T AbsCalInDiff4Gpu(T x, T y, T dy) {
-  return x > 0 ? dy : -dy;
+  return x < 0 ? -dy : dy;
 }
 
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                 \
@@ -32,7 +32,7 @@ __device__ T AbsCalInDiff4Gpu(T x, T y, T dy) {
                            const Tensor* tensor_dy, Tensor* tensor_dx) {                   \
     const dtype* x = tensor_x->dptr<dtype>();                                              \
     const dtype* y = tensor_y->dptr<dtype>();                                              \
-    const dtype* dy = tensor_x->dptr<dtype>();                                             \
+    const dtype* dy = tensor_dy->dptr<dtype>();                                            \
     dtype* dx = tensor_dx->mut_dptr<dtype>();                                              \
     int64_t n = tensor_x->shape().elem_cnt();                                              \
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                 \
@@ -83,6 +83,33 @@ REGISTER_USER_KERNEL("unary")
       return Maybe<void>::Ok();
     });
 */
+
+class MathUnaryGradGpuFloatKernel final : public OpKernel {
+ public:
+  MathUnaryGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathUnaryGradGpuFloatKernel() = default;
+  ~MathUnaryGradGpuFloatKernel() = default;
+
+ private:
+  void Compute(KernelContext* ctx) override {
+    const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
+    if (unary_math_type == "Abs") {
+      AbsBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx);
+    }
+  }
+};
+
+REGISTER_USER_KERNEL("unary_grad")
+    .SetCreateFn([](const KernelInitContext& ctx) { return new MathUnaryGradGpuFloatKernel(ctx); })
+    .SetIsMatchedPred([](const KernelRegContext& ctx) {
+      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      return false;
+    });
+
 #endif  // WITH_CUDA
 
 }  // namespace user_op
