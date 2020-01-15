@@ -161,6 +161,14 @@ def get_with_path_print(dict, path):
         print("{}: {}".format(path, got))
 
 
+def print_perf_summary(df, skip_iter_before=1):
+    df = df[df["iter"] > skip_iter_before]
+    print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
+    print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
+    print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
+    print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
+
+
 def post_process_flow(df):
     cfg = parse_cfg(df)
     get_with_path_print(cfg, "MODEL.WEIGHT")
@@ -169,10 +177,7 @@ def post_process_flow(df):
     get_with_path_print(cfg, "MODEL.ROI_HEADS.RANDOM_SAMPLE")
     get_with_path_print(cfg, "MODEL.RPN.ZERO_CTRL")
     get_with_path_print(cfg, "MODEL.ROI_MASK_HEAD.ZERO_CTRL")
-    print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
-    print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
-    print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
-    print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
+    print_perf_summary(df, skip_iter_before=1)
     df.drop(["rank", "note"], axis=1)
     print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
     if "primary_lr" in df["legend"].unique():
@@ -182,16 +187,7 @@ def post_process_flow(df):
 
 
 def post_process_torch(df):
-    # df = df[df["iter"] > 25]
-    # df = df[df["iter"] < 1000]
-    # df = df[df["value"] < 1]
-    # df = df[df["value"] > 0.2]
-    # df["value"] *= 1000
-    print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
-    print("elapsed_time median", df[df["legend"] == "elapsed_time"]["value"].median())
-    print("elapsed_time mean", df[df["legend"] == "elapsed_time"]["value"].mean())
-    print("elapsed_time min", df[df["legend"] == "elapsed_time"]["value"].min())
-    print("elapsed_time max", df[df["legend"] == "elapsed_time"]["value"].max())
+    print_perf_summary(df, skip_iter_before=2)
     if df[df["value"].notnull()]["iter"].min() == 0:
         df.loc[:]["iter"] += 1
     return df
