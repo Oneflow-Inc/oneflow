@@ -10,7 +10,6 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -42,7 +41,7 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     return out_remote_blobs
 
 @oneflow_export('experimental.dynamic_binary_concat')
-def dynamic_binary_concat(input_blob_list, source_blob, source_sbp=None, name=None):
+def dynamic_binary_concat(input_blob_list, source_blob, source_sbp="S:0", name=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr('DynamicBinaryConcat_')
@@ -62,11 +61,15 @@ def dynamic_binary_concat(input_blob_list, source_blob, source_sbp=None, name=No
         op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis
     else:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.SetInParent()
-    if source_sbp is None:
-        op_conf.dynamic_binary_concat_conf.out_sbp.split_parallel.axis = 0
+    if "S" in source_sbp:
+        axis = int(source_sbp.split(':')[-1])
+        op_conf.dynamic_binary_concat_conf.out_sbp.split_parallel.axis = axis
+    elif "B" in source_sbp:
+        op_conf.dynamic_binary_concat_conf.out_sbp.broadcast_parallel.SetInParent()
+    elif "P" in source_sbp:
+        op_conf.dynamic_binary_concat_conf.out_sbp.partial_sum_parallel.SetInParent()
     else:
-        # TODO()
-        # op_conf.dynamic_binary_concat_conf.out_sbp = source_sbp
+        print("Error! invalid sbp str:", source_sbp)
         op_conf.dynamic_binary_concat_conf.out_sbp.SetInParent()
 
     compile_context.CurJobAddOp(op_conf)
