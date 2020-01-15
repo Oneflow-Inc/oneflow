@@ -7,8 +7,8 @@
 namespace oneflow {
 
 struct ZeroOnlyZipUtil final {
-  void ZipToSizedBuffer(const char* data, size_t size, SizedBufferView* sized_buffer);
-  void UnzipToExpectedSize(const SizedBufferView& size_buffer, char* data, size_t expected_size);
+  void ZipToSizedBuffer(const char* data, size_t size, SizedBufferView* sized_buffer) { TODO(); }
+  void UnzipToExpectedSize(const SizedBufferView& size_buffer, char* data, size_t expected_size) { TODO(); }
 };
 
 }
