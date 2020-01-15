@@ -117,7 +117,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
-      # list(APPEND of_all_test_cc ${oneflow_single_file})
+      list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
