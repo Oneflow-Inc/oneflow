@@ -12,6 +12,10 @@ __device__ T AbsCalInDiff4Gpu(T x, T y, T dy) {
   return x < 0 ? -dy : dy;
 }
 
+__device__ float AcosCalInDiff4GpuFloat(float x, float y, float dy) {
+  return dy * (-rsqrtf(1 - x * x));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                 \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {           \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                    \
@@ -41,6 +45,7 @@ __device__ T AbsCalInDiff4Gpu(T x, T y, T dy) {
   }
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
+MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
 /*
 __global__ void AbsForwardGpu(const int n, const float* x, float* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fabsf(x[i]); }
@@ -67,6 +72,7 @@ class MathUnaryGpuFloatKernel final : public OpKernel {
     Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
     if (unary_math_type == "Abs") { AbsForward(ctx->device_ctx(), tensor_x, tensor_y); }
+    if (unary_math_type == "Acos") { AcosForward(ctx->device_ctx(), tensor_x, tensor_y); }
   }
 };
 
@@ -99,6 +105,9 @@ class MathUnaryGradGpuFloatKernel final : public OpKernel {
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
     if (unary_math_type == "Abs") {
       AbsBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx);
+    }
+    if (unary_math_type == "Acos") {
+      AcosBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx);
     }
   }
 };

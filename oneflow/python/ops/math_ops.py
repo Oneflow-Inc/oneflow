@@ -650,3 +650,14 @@ def abs(x, name=None):
             .SetAttr("unary_math_type", "Abs", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.acos")
+def acos(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Acos_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Acos", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+
