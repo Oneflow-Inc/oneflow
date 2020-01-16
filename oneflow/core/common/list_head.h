@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_LIST_H_
-#define ONEFLOW_CORE_COMMON_LIST_H_
+#ifndef ONEFLOW_CORE_COMMON_LIST_HEAD_H_
+#define ONEFLOW_CORE_COMMON_LIST_HEAD_H_
 
 #include "oneflow/core/common/struct_traits.h"
 #include <glog/logging.h>
@@ -10,16 +10,16 @@ struct ListHead final {
  public:
   ListHead() { Clear(); }
 
-  void Clear() {
-    prev_ = this;
-    next_ = this;
-  }
   ListHead* prev() const { return prev_; }
   ListHead* next() const { return next_; }
 
   void AppendTo(ListHead* prev) {
     prev->set_next(this);
     this->set_prev(prev);
+  }
+  void Clear() {
+    prev_ = this;
+    next_ = this;
   }
 
  private:
@@ -48,9 +48,10 @@ class EmbeddedListViewImpl {
   using container_type = typename ContainerField::struct_type;
   using item_type = typename ItemField::struct_type;
 
-  static_assert(std::is_same<ContainerField::field_type, ListHead>::value,
+  static_assert(std::is_same<typename ContainerField::field_type, ListHead>::value,
                 "no ListHead found in container");
-  static_assert(std::is_same<ItemField::field_type, ListHead>::value, "no ListHead found in item");
+  static_assert(std::is_same<typename ItemField::field_type, ListHead>::value,
+                "no ListHead found in item");
   explicit EmbeddedListViewImpl(container_type* container) : container_(container) {}
   ~EmbeddedListViewImpl() = default;
 
@@ -58,14 +59,7 @@ class EmbeddedListViewImpl {
     CHECK_NE(item, end_item());
     ListHead* list_head = ItemField::FieldPtr4StructPtr(item);
     list_head->next()->AppendTo(list_head->prev());
-    item->Clear();
-  }
-  void InsertAfter(item_type* prev_item, item_type* new_item) {
-    ListHead* prev_list_head = ItemField::FieldPtr4StructPtr(prev_item);
-    ListHead* next_list_head = prev_list_head->next();
-    ListHead* new_list_head = ItemField::FieldPtr4StructPtr(new_item);
-    new_list_head->AppendTo(prev_list_head);
-    next_list_head->AppendTo(new_list_head);
+    list_head->Clear();
   }
   void PushBack(item_type* item) { InsertAfter(last_item(), item); }
   void PushFront(item_type* item) { InsertAfter(end_item(), item); }
@@ -96,14 +90,25 @@ class EmbeddedListViewImpl {
   }
 
  private:
+  void InsertAfter(item_type* prev_item, item_type* new_item) {
+    ListHead* prev_list_head = ItemField::FieldPtr4StructPtr(prev_item);
+    ListHead* next_list_head = prev_list_head->next();
+    ListHead* new_list_head = ItemField::FieldPtr4StructPtr(new_item);
+    new_list_head->AppendTo(prev_list_head);
+    next_list_head->AppendTo(new_list_head);
+  }
   container_type* container_;
 };
 
-#define _DEFINE_EMBEDDED_LIST_VIEW(container_field, item_field) \
-  template<>                                                    \
-  class EmbeddedListView<container_field> final                 \
-      : EmbeddedListViewImpl<container_field, item_field> {};
+#define _DEFINE_EMBEDDED_LIST_VIEW(container_field, item_field)           \
+  template<>                                                              \
+  class EmbeddedListView<container_field> final                           \
+      : public EmbeddedListViewImpl<container_field, item_field> {        \
+   public:                                                                \
+    explicit EmbeddedListView(container_type* container)                  \
+        : EmbeddedListViewImpl<container_field, item_field>(container) {} \
+  };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_LIST_H_
+#endif  // ONEFLOW_CORE_COMMON_LIST_HEAD_H_
