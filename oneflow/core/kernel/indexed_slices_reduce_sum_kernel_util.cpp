@@ -1,6 +1,6 @@
 #include "oneflow/core/kernel/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/kernel/unique_kernel_util.h"
-#include "oneflow/core/kernel/gather_kernel_util.h"
+#include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 
 namespace oneflow {
 
@@ -24,8 +24,9 @@ void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::ReduceSum(
                                                 unique_workspace_size);
   const Shape flat_in_shape({1, n, m});
   Memset<device_type>(ctx, values_out, 0, n * m * sizeof(T));
-  GatherKernelUtilImpl<device_type, T, IDX>::Backward(ctx, unique_idx_ptr, n, values, flat_in_shape,
-                                                      values_out, 0);
+
+  UnsortedSegmentSumKernelUtil<device_type, T, IDX>::UnsortedSegmentSum(ctx, unique_idx_ptr, values,
+                                                                        n, n, 1, m, 0, values_out);
 }
 
 template<DeviceType device_type, typename K, typename T, typename IDX>
