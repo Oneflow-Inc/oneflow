@@ -16,6 +16,10 @@ __device__ float AcosCalInDiff4GpuFloat(float x, float y, float dy) {
   return dy * (-rsqrtf(1 - x * x));
 }
 
+__device__ float AcoshCalInDiff4GpuFloat(float x, float y, float dy) {
+  return dy * (rsqrtf(x * x - 1));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                 \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {           \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                    \
@@ -46,20 +50,8 @@ __device__ float AcosCalInDiff4GpuFloat(float x, float y, float dy) {
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
-/*
-__global__ void AbsForwardGpu(const int n, const float* x, float* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fabsf(x[i]); }
-}
+MATH_UNARY_GPU(Acosh, acoshf, AcoshCalInDiff4GpuFloat, float);
 
-void Abs(DeviceCtx* ctx, const Tensor* tensor_x, Tensor* tensor_y) {
-  const float* x = tensor_x->dptr<float>();
-  float* y = tensor_y->mut_dptr<float>();
-  int64_t n = tensor_x->shape().elem_cnt();
-  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-  AbsForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x,
-                                                                                             y);
-}
-*/
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
   MathUnaryGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
@@ -73,6 +65,7 @@ class MathUnaryGpuFloatKernel final : public OpKernel {
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
     if (unary_math_type == "Abs") { AbsForward(ctx->device_ctx(), tensor_x, tensor_y); }
     if (unary_math_type == "Acos") { AcosForward(ctx->device_ctx(), tensor_x, tensor_y); }
+    if (unary_math_type == "Acosh") { AcoshForward(ctx->device_ctx(), tensor_x, tensor_y); }
   }
 };
 
@@ -108,6 +101,9 @@ class MathUnaryGradGpuFloatKernel final : public OpKernel {
     }
     if (unary_math_type == "Acos") {
       AcosBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx);
+    }
+    if (unary_math_type == "Acosh") {
+      AcoshBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx);
     }
   }
 };
