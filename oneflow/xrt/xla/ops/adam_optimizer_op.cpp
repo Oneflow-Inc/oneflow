@@ -6,8 +6,7 @@ namespace mola {
 
 class AdamOptimizerOp : public OptimizerOp {
  private:
-  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp instance_num,
-                   xla::XlaOp learning_rate) override {
+  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
     xla::XlaOp weight = ctx->Input("model");
     xla::XlaOp m = ctx->Input("m");
     xla::XlaOp v = ctx->Input("v");
@@ -17,10 +16,8 @@ class AdamOptimizerOp : public OptimizerOp {
       for (int i = 0; i < gradient_shape.NumAxes() - 1; ++i) {
         bcast_sizes.push_back(gradient_shape.At(i));
       }
-      instance_num = xla::Broadcast(instance_num, bcast_sizes);
       learning_rate = xla::Broadcast(learning_rate, bcast_sizes);
     }
-    gradient = gradient / instance_num;
 
     NormalModelUpdateOpUserConf *user_conf =
         dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
