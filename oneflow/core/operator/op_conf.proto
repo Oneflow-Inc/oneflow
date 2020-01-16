@@ -600,7 +600,6 @@ message NormalModelUpdateOpUserConf {
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
@@ -611,7 +610,6 @@ message NormalModelUpdateOpConf {
 message NaiveModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
@@ -623,7 +621,6 @@ message MomentumModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
@@ -634,7 +631,6 @@ message MomentumModelUpdateOpConf {
 message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
@@ -646,7 +642,6 @@ message LARSModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
@@ -661,7 +656,6 @@ message AdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
@@ -676,7 +670,6 @@ message LazyAdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;

@@ -7,13 +7,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(int64_t n, const T* batch_instance_num_ptr,
-                               const int64_t* train_step, const float* learning_rate, T decay_rate,
-                               T epsilon, T l1, T l2, const T* model_diff, T* model,
+__global__ void UpdateModelGpu(int64_t n, const int64_t* train_step, const float* learning_rate,
+                               T decay_rate, T epsilon, T l1, T l2, const T* model_diff, T* model,
                                T* mean_square) {
   const T cur_decay_rate = *train_step == 0 ? 0 : decay_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], l1, l2, model[i]);
     mean_square[i] = (1 - cur_decay_rate) * reg_diff * reg_diff + cur_decay_rate * mean_square[i];
     model[i] = model[i] - *learning_rate * reg_diff / std::sqrt(mean_square[i] + epsilon);
   }
@@ -24,12 +23,11 @@ __global__ void UpdateModelGpu(int64_t n, const T* batch_instance_num_ptr,
 template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* batch_instance_num_ptr,
-                          const int64_t* train_step, const float* learning_rate, T decay_rate,
-                          T epsilon, T l1, T l2, const T* model_diff, T* model, T* mean_square) {
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const int64_t* train_step,
+                          const float* learning_rate, T decay_rate, T epsilon, T l1, T l2,
+                          const T* model_diff, T* model, T* mean_square) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, batch_instance_num_ptr, train_step, learning_rate, decay_rate, epsilon, l1, l2,
-        model_diff, model, mean_square);
+        n, train_step, learning_rate, decay_rate, epsilon, l1, l2, model_diff, model, mean_square);
   }
 };
 

@@ -19,14 +19,12 @@ void NormalMdUpdateKernel<device_type, T>::VirtualKernelInit() {
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
   const int64_t* train_step_ptr = BnInOp2Blob("train_step")->dptr<int64_t>();
   const float* learning_rate_ptr = BnInOp2Blob("learning_rate")->dptr<float>();
   if (user_conf_.has_clip_conf()) {
-    ClipGradient(ctx.device_ctx, user_conf_.clip_conf(), batch_instance_num_ptr, BnInOp2Blob);
+    ClipGradient(ctx.device_ctx, user_conf_.clip_conf(), BnInOp2Blob);
   }
-  UpdateModel(ctx.device_ctx, batch_instance_num_ptr, l1_, l2_, train_step_ptr, learning_rate_ptr,
-              BnInOp2Blob);
+  UpdateModel(ctx.device_ctx, l1_, l2_, train_step_ptr, learning_rate_ptr, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
@@ -55,7 +53,6 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
 
 template<DeviceType device_type, typename T>
 void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNormConf& conf,
-                      const T* batch_instance_num_ptr,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) {
   int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
   T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
@@ -66,7 +63,6 @@ void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNormConf& conf,
     // The Dot does not read the result, so the global_norm need not be initialized.
     KernelUtil<device_type, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm_ptr);
     KernelUtil<device_type, T>::Sqrt(ctx, 1, global_norm_ptr, global_norm_ptr);
-    KernelUtil<device_type, T>::Div(ctx, 1, global_norm_ptr, batch_instance_num_ptr);
   }
   T* ratio_ptr = BnInOp2Blob("data_tmp")->mut_dptr<T>();
   NormalMdUpdateKernelUtil<device_type, T>::CmptClipRatioByGlobalNorm(
@@ -78,11 +74,10 @@ void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNormConf& conf,
 
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::ClipGradient(
-    DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
+    DeviceCtx* ctx, const ClipConf& conf,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (conf.has_clip_by_global_norm()) {
-    ClipByGlobalNorm<device_type, T>(ctx, conf.clip_by_global_norm(), batch_instance_num_ptr,
-                                     BnInOp2Blob);
+    ClipByGlobalNorm<device_type, T>(ctx, conf.clip_by_global_norm(), BnInOp2Blob);
   } else {
     UNIMPLEMENTED();
   }

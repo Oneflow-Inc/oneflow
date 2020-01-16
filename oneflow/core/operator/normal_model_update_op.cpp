@@ -5,7 +5,6 @@ namespace oneflow {
 
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
-  EnrollInputBn("total_instance_num_diff", false);
   EnrollInputBn("model", false)->set_is_mutable(true);
   EnrollInputBn("learning_rate", false);
   EnrollInputBn("train_step", false);
@@ -50,7 +49,6 @@ Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   const auto& bns = AlwaysBroadcastParallelBns();
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
-  *broadcast_bns.Add() = "total_instance_num_diff";
   *broadcast_bns.Add() = "learning_rate";
   *broadcast_bns.Add() = "train_step";
   FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes()) {

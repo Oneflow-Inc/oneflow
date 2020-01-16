@@ -16,13 +16,13 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
  protected:
   NormalMdUpdateKernel() = default;
-  virtual void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                           const int64_t* train_step, const float* learning_rate,
+  virtual void UpdateModel(DeviceCtx* ctx, T l1, T l2, const int64_t* train_step,
+                           const float* learning_rate,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
   void VirtualKernelInit() override;
-  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
+  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   NormalModelUpdateOpUserConf user_conf_;
