@@ -8,8 +8,7 @@ void RsqrtKernel<device_type, T>::ForwardDataContent(
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   out->CopyDataContentFrom(ctx.device_ctx, in);
-  KernelUtil<device_type, T>::Rsqrt(ctx.device_ctx, out->shape().elem_cnt(), out->mut_dptr<T>(),
-                                    this->op_conf().rsqrt_conf().epsilon());
+  KernelUtil<device_type, T>::Rsqrt(ctx.device_ctx, out->shape().elem_cnt(), out->mut_dptr<T>(), 0);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRsqrtConf, RsqrtKernel, FLOATING_DATA_TYPE_SEQ);
