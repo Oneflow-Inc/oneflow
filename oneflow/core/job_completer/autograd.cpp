@@ -205,6 +205,27 @@ void BuildConstantOpAsTotalLossInstanceNum(
   };
 }
 
+void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
+                                             const int64_t loss_instance_num) {
+  if (loss_instance_num == 1) { return; }
+  const float scale_factor = 1.0f / static_cast<float>(loss_instance_num);
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    OperatorConf scalar_mul_op_conf{};
+    scalar_mul_op_conf.set_name("System-ModelDiffScale-ScalarMul_" + NewUniqueId());
+    ScalarMulOpConf* scalar_mul_conf = scalar_mul_op_conf.mutable_scalar_mul_conf();
+    scalar_mul_conf->set_float_operand(scale_factor);
+    scalar_mul_conf->set_in(GenLogicalBlobName(diff_lbi));
+    scalar_mul_conf->set_out("out");
+    job_builder->AddOps(op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf(),
+                        {scalar_mul_op_conf});
+    diff_lbi.set_op_name(scalar_mul_op_conf.name());
+    diff_lbi.set_blob_name(scalar_mul_conf->out());
+  }
+}
+
 void AddTotalLossInstanceNumOpConfForDynamicDim0(
     const HashMap<ParallelDesc, int32_t>& parallel_desc2optimizer_node_cnt,
     const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node, JobBuilder* job_builder,
@@ -251,6 +272,66 @@ void AddTotalLossInstanceNumOpConfForDynamicDim0(
   }
   BuildTotalLossInstanceNumIdOpConf(parallel_desc2optimizer_node_cnt, job_builder,
                                     total_loss_instance_num_lbi, LossInstanceNum4ParallelDesc);
+}
+
+void ScaleModelDiffByDynamicLossInstanceNum(
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
+    const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node) {
+  auto BuildInstanceNumOpConf4LossOpNode = [&](const LogicalBlobId& loss_lbi, const OpNode* op_node,
+                                               LogicalBlobId* lbi) {
+    OperatorConf instance_num_op;
+    instance_num_op.set_name("System-Autograd-" + loss_lbi.op_name() + "-" + loss_lbi.blob_name()
+                             + "-LossInstanceNum");
+    auto* instance_num_op_conf = instance_num_op.mutable_shape_elem_cnt_conf();
+    instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
+    instance_num_op_conf->set_y("y");
+    instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
+    instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
+    job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
+    lbi->set_op_name(instance_num_op.name());
+    lbi->set_blob_name("y");
+  };
+  LogicalBlobId total_loss_instance_num_lbi;
+  if (loss_lbi2loss_node.size() == 1) {
+    const auto& pair_it = loss_lbi2loss_node.begin();
+    BuildInstanceNumOpConf4LossOpNode(pair_it->first, pair_it->second,
+                                      &total_loss_instance_num_lbi);
+  } else if (loss_lbi2loss_node.size() > 1) {
+    OperatorConf op_conf;
+    op_conf.set_name("System-Autograd-total_loss_instance_num");
+    TotalLossInstanceNumOpConf* total_loss_instance_num_conf =
+        op_conf.mutable_total_loss_instance_num_conf();
+    for (const auto& pair : loss_lbi2loss_node) {
+      LogicalBlobId loss_instance_num_lbi;
+      BuildInstanceNumOpConf4LossOpNode(pair.first, pair.second, &loss_instance_num_lbi);
+      total_loss_instance_num_conf->add_in(GenLogicalBlobName(loss_instance_num_lbi));
+    }
+    total_loss_instance_num_conf->set_out("out");
+
+    ParallelConf parallel_conf;
+    parallel_conf.add_device_name("0:cpu:0");
+    job_builder->AddOps(parallel_conf, {op_conf});
+
+    total_loss_instance_num_lbi.set_op_name(op_conf.name());
+    total_loss_instance_num_lbi.set_blob_name("out");
+  } else {
+    UNIMPLEMENTED();
+  }
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    OperatorConf broadcast_div_op_conf{};
+    broadcast_div_op_conf.set_name("System-ModelDiffScale-BroadcastDiv_" + NewUniqueId());
+    BroadcastDivOpConf* broadcast_div_conf = broadcast_div_op_conf.mutable_broadcast_div_conf();
+    broadcast_div_conf->set_a(GenLogicalBlobName(diff_lbi));
+    broadcast_div_conf->set_b(GenLogicalBlobName(total_loss_instance_num_lbi));
+    broadcast_div_conf->set_out("out");
+    job_builder->AddOps(op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf(),
+                        {broadcast_div_op_conf});
+    diff_lbi.set_op_name(broadcast_div_op_conf.name());
+    diff_lbi.set_blob_name(broadcast_div_conf->out());
+  }
 }
 
 std::function<OpNode*(const std::string&)> MakeGetterLossOpNode4OpName(const OpGraph& op_graph) {
@@ -542,6 +623,63 @@ void AddTotalLossInstanceNumOpConf(
     }
     BuildConstantOpAsTotalLossInstanceNum(parallel_desc2optimizer_node_cnt, *blob_desc, job_builder,
                                           LossInstanceNum4ParallelDesc);
+  }
+}
+
+void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                     HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  auto LossOpNode4OpName = MakeGetterLossOpNode4OpName(op_graph);
+  const auto& train_conf = GetTrainConf();
+  HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
+  for (const auto& loss_lbn : train_conf.loss_lbn()) {
+    const auto& lbi = GenLogicalBlobId(loss_lbn);
+    CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
+  }
+  const Shape src_time_shape(
+      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
+  bool all_loss_time_shape_eq_src = true;
+  for (const auto& pair : loss_lbi2op_node) {
+    const Shape* time_shape = pair.second->out_blob_time_shape();
+    const int64_t time_shape_elem_cnt = time_shape->elem_cnt();
+    if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
+      CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
+      all_loss_time_shape_eq_src = false;
+    }
+  }
+  if (all_loss_time_shape_eq_src) {
+    const BlobDesc* blob_desc = nullptr;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
+      blob_desc = cur_blob_desc;
+    }
+    if (blob_desc->is_dynamic()) {
+      ScaleModelDiffByDynamicLossInstanceNum(op_graph, job_builder, lbi2diff_lbi, loss_lbi2op_node);
+    } else {
+      ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
+                                              blob_desc->shape().elem_cnt());
+    }
+  } else {
+    std::unique_ptr<BlobDesc> blob_desc;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      // TODO: support dynamic
+      CHECK(!cur_blob_desc->is_dynamic());
+      const DataType loss_data_type = cur_blob_desc->data_type();
+      const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
+      // TODO: consider batch_axis or sbp
+      const int64_t loss_elem_cnt =
+          cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
+      if (blob_desc) {
+        CHECK_EQ(blob_desc->data_type(), loss_data_type);
+        CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
+      } else {
+        blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
+      }
+    }
+    ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
+                                            blob_desc->shape().elem_cnt());
   }
 }
 
