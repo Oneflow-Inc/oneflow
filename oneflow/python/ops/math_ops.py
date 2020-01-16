@@ -670,4 +670,14 @@ def acosh(x, name=None):
             .SetAttr("unary_math_type", "Acosh", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.asin")
+def acosh(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Asin_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Asin", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 

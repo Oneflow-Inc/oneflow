@@ -20,6 +20,10 @@ __device__ float AcoshCalInDiff4GpuFloat(float x, float y, float dy) {
   return dy * (rsqrtf(x * x - 1));
 }
 
+__device__ float AsinCalInDiff4GpuFloat(float x, float y, float dy) {
+  return dy * (rsqrtf(1 - x * x));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                 \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {           \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                    \
@@ -48,14 +52,16 @@ __device__ float AcoshCalInDiff4GpuFloat(float x, float y, float dy) {
                              ctx->cuda_stream()>>>(n, x, y, dy, dx);                       \
   }
 
-#define MATH_UNARY_GPU_FLOAT_SEQ     \
-  OF_PP_MAKE_TUPLE_SEQ("Abs", Abs)   \
-  OF_PP_MAKE_TUPLE_SEQ("Acos", Acos) \
-  OF_PP_MAKE_TUPLE_SEQ("Acosh", Acosh)
+#define MATH_UNARY_GPU_FLOAT_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ("Abs", Abs)     \
+  OF_PP_MAKE_TUPLE_SEQ("Acos", Acos)   \
+  OF_PP_MAKE_TUPLE_SEQ("Acosh", Acosh) \
+  OF_PP_MAKE_TUPLE_SEQ("Asin", Asin)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Acosh, acoshf, AcoshCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Asin, asinf, AsinCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
@@ -113,7 +119,7 @@ class MathUnaryGradGpuFloatKernel final : public OpKernel {
   }
 
     OF_PP_FOR_EACH_TUPLE(MATH_UNARY_BACKWARD, MATH_UNARY_GPU_FLOAT_SEQ);
-#undef MATH_UNARY_FORWARD
+#undef MATH_UNARY_BACKWARD
   }
 };
 
