@@ -95,6 +95,8 @@ void GatherMs0GradOp::VirtualGenKernelConf(
   BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
   int64_t offset = bs.At(parallel_ctx->parallel_id()).begin();
   kernel_conf->mutable_gather_ms0_grad_conf()->set_offset(offset);
+  kernel_conf->mutable_gather_ms0_grad_conf()->set_indices_data_type(
+      GetBlobDesc4BnInOp("indices")->data_type());
 }
 
 REGISTER_OP(OperatorConf::kGatherMs0GradConf, GatherMs0GradOp);
