@@ -554,7 +554,6 @@ class IterationProcessor(object):
         now_time = time.perf_counter()
         elapsed_time = now_time - self.start_time
         self.elapsed_times.append(elapsed_time)
-        self.start_time = now_time
 
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
@@ -589,6 +588,8 @@ class IterationProcessor(object):
             print("saved: {}".format(npy_file_name))
 
         # save_blob_watched(iter)
+
+        self.start_time = time.perf_counter()
 
         if iter == self.max_iter:
             print(
