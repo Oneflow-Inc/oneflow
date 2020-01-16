@@ -31,7 +31,6 @@ void GenerateBackwardOpConf(
     scalar_add_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("moving_variance")));
     scalar_add_conf->set_float_operand(conf.epsilon());
     scalar_add_conf->set_out("out");
-
     OperatorConf rsqrt_op;
     rsqrt_op.set_name("System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt");
     RsqrtOpConf* rsqrt_conf = rsqrt_op.mutable_rsqrt_conf();
