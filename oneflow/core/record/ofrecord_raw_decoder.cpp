@@ -85,6 +85,7 @@ void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)
   DEFINE_ONE_ELIF(int32, int32_t)
+  DEFINE_ONE_ELIF(int64, int64_t)
 #undef DEFINE_ONE_ELIF
   else {
     UNIMPLEMENTED();
