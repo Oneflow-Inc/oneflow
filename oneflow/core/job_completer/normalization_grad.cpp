@@ -36,7 +36,6 @@ void GenerateBackwardOpConf(
     RsqrtOpConf* rsqrt_conf = rsqrt_op.mutable_rsqrt_conf();
     rsqrt_conf->set_in(scalar_add_conf->out());
     rsqrt_conf->set_out("out");
-
     op_confs->push_back(rsqrt_op);
     LogicalBlobId inv_variance;
     inv_variance.set_op_name(rsqrt_op.name());
