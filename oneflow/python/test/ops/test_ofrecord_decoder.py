@@ -85,41 +85,60 @@ def gen_example(length=32):
     int32_list = random_int(length, 32)
     int64_list = random_int(length, 64)
     float_list = random_float(length)
-    #bytes_list = random_string(length)
+    bytes_list = random_string(length)
 
     example = ofrecord.OFRecord(feature = {
         'int32': int32_feature(int32_list),
         'int64': int64_feature(int64_list),
         'float': float_feature(float_list),
         'double': double_feature(float_list),
-        #'bytes': bytes_feature(bytes_list),
+        'bytes': bytes_feature(bytes_list),
     })
-    return example, int32_list, int64_list, float_list#, bytes_list
+    return example, int32_list, int64_list, float_list, bytes_list
 
 
 def ofrecord_decoder_test(num_examples, length, batch_size):
     with open(os.path.join(GetSavePath(), "part-0"), 'wb') as f:
+        int32_data = []
+        int64_data = []
+        float_data = []
+        bytes_data = []
         for i in range(num_examples):
-            example, int32_list, int64_list, float_list = gen_example(length)
+            example, int32_list, int64_list, float_list, bytes_list = gen_example(length)
             l = example.ByteSize()
             f.write(struct.pack("q", l))
             f.write(example.SerializeToString())
 
+            int32_data.append(int32_list)
+            int64_data.append(int64_list)
+            float_data.append(float_list)
+            bytes_data.append(bytes_list)
+        int32_np = np.array(int32_data, dtype=np.int32).reshape(-1, batch_size, length)
+        int64_np = np.array(int64_data, dtype=np.int64).reshape(-1, batch_size, length)
+        float_np = np.array(float_data, dtype=np.float).reshape(-1, batch_size, length)
+        double_np = np.array(float_data, dtype=np.double).reshape(-1, batch_size, length)
+        return int32_np, int64_np, float_np, double_np, bytes_data
+
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
-def test_naive(test_case):
+def test_ofrecord_decoder(test_case):
     num_examples = 1000
     batch_size = 100
+    assert num_examples % batch_size == 0
     length = 64
-    ofrecord_decoder_test(num_examples, length, batch_size)
+    int32_np, int64_np, float_np, double_np, bytes_data = ofrecord_decoder_test(num_examples, length, batch_size)
 
     @flow.function(func_config)
     def OfrecordDecoderJob():
         data = decoder(GetSavePath(), length, batch_size)
         return data
 
-    z = OfrecordDecoderJob().get()
-    print(z)
-    #test_case.assertTrue(np.array_equal(z, x + y + y))
+    for i in range(num_examples//batch_size):
+        d = OfrecordDecoderJob().get()
+        test_case.assertTrue(np.array_equal(d['int32'].ndarray(), int32_np[i]))
+        test_case.assertTrue(np.array_equal(d['int64'].ndarray(), int64_np[i]))
+        #test_case.assertTrue(np.array_equal(d['float'].ndarray(), float_np[i]))
+        assert np.allclose(d['float'].ndarray(), float_np[i], rtol=1e-5, atol=1e-5)
+        test_case.assertTrue(np.array_equal(d['double'].ndarray(), double_np[i]))
 
