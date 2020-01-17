@@ -1,0 +1,54 @@
+#include "oneflow/core/operator/operator.h"
+
+namespace oneflow {
+
+class ConstantLikeOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConstantLikeOp);
+  ConstantLikeOp() = default;
+  ~ConstantLikeOp() = default;
+
+  void InitFromOpConf() override {
+    CHECK(op_conf().has_constant_like_conf());
+    EnrollInputBn("in", false);
+    EnrollOutputBn("out", false);
+  }
+  const PbMessage& GetCustomizedConf() const override {
+    return this->op_conf().constant_like_conf();
+  }
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+    const ConstantLikeOpConf& conf = op_conf().constant_like_conf();
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+    *out_blob_desc = *GetBlobDesc4BnInOp("in");
+    if (conf.has_data_type()) { out_blob_desc->set_data_type(conf.data_type()); }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .MakeSplitSignatureListBuilder(
+            JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+        .Build(sbp_sig_list);
+    SbpSignatureBuilder()
+        .PartialSum(input_bns())
+        .Broadcast(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
+
+}  // namespace oneflow
