@@ -41,6 +41,7 @@ int32_t OFRecordDecoderImpl<EncodeCase::kRaw, T>::GetColNumOfFeature(
   DEFINE_ONE_ELIF(float)
   DEFINE_ONE_ELIF(double)
   DEFINE_ONE_ELIF(int32)
+  DEFINE_ONE_ELIF(int64)
 #undef DEFINE_ONE_ELIF
   else {
     UNIMPLEMENTED();
