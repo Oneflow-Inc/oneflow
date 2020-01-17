@@ -25,12 +25,17 @@ void GenerateBackwardOpConf(
     grad_conf->set_inv_variance(GenLogicalBlobName(op.BnInOp2Lbi("inv_variance")));
   } else {
     grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("moving_mean")));
+    OperatorConf scarlar_add_op;
+    scarlar_add_op.set_name("System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon");
+    ScalarAddOpConf* scalar_add_conf = scarlar_add_op.mutable_scalar_add_conf();
+    scalar_add_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("moving_variance")));
+    scalar_add_conf->set_float_operand(conf.epsilon());
+    scalar_add_conf->set_out("out");
     OperatorConf rsqrt_op;
     rsqrt_op.set_name("System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt");
     RsqrtOpConf* rsqrt_conf = rsqrt_op.mutable_rsqrt_conf();
-    rsqrt_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("moving_variance")));
+    rsqrt_conf->set_in(scalar_add_conf->out());
     rsqrt_conf->set_out("out");
-    rsqrt_conf->set_epsilon(conf.epsilon());
     op_confs->push_back(rsqrt_op);
     LogicalBlobId inv_variance;
     inv_variance.set_op_name(rsqrt_op.name());
