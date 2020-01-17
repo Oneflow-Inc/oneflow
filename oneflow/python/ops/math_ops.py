@@ -350,9 +350,8 @@ def sqrt(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("math.rsqrt")
 def rsqrt(x, name=None):
-    # TODO: not ready yet
-    raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
     setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
