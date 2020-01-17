@@ -164,6 +164,7 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (0.25, 0.125, 0.0625, 0.03125)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 81
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT = False
 
 # ---------------------------------------------------------------------------- #
 #  Mask

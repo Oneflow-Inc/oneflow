@@ -176,8 +176,18 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # ):
     # Box Head
     # flow.nvtx.range_start(flatlist([proposals, gt_bbox_list, gt_label_list, features]), "box_head")
-    (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
-        proposals, gt_bbox_list, gt_label_list, features
+    (
+        box_loss,
+        cls_loss,
+        pos_proposal_list,
+        pos_gt_indices_list,
+        total_pos_inds_elem_cnt,
+    ) = box_head.build_train(
+        proposals,
+        gt_bbox_list,
+        gt_label_list,
+        features,
+        return_total_pos_inds_elem_cnt=cfg.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT,
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
     zero_ctrl_mask = None
@@ -203,13 +213,16 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         box_loss += 0
         cls_loss += 0
 
-    return {
+    ret = {
         "loss_rpn_box_reg": rpn_bbox_loss,
         "loss_objectness": rpn_objectness_loss,
         "loss_box_reg": box_loss,
         "loss_classifier": cls_loss,
         "loss_mask": mask_loss,
     }
+    if total_pos_inds_elem_cnt is not None:
+        ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
+    return ret
 
 
 def merge_and_compare_config(args):
@@ -436,7 +449,12 @@ def init_train_func(config, input_fake_image):
             step_lr = None
             if config.SOLVER.MAKE_LR:
                 model_update_conf = set_train_config(config)
-                step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+                step_lr = make_lr(
+                    "System-Train-TrainStep-train",
+                    model_update_conf,
+                    flow.config.train.get_primary_lr(),
+                    flow.config.train.get_secondary_lr(),
+                )
             else:
                 set_train_config(config)
             outputs = train_net(config)

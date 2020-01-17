@@ -3,7 +3,7 @@ ENV:
 DATASETS:
   ANNOTATION_TRAIN: "annotations/instances_train2017.json"
   IMAGE_DIR_TRAIN: "train2017"
-  SHUFFLE: False
+  SHUFFLE: True
 INPUT:
   MIRROR_PROB: 0.5
 MODEL:
@@ -13,6 +13,8 @@ MODEL:
     ZERO_CTRL: True
   ROI_HEADS:
     RANDOM_SAMPLE: True
+  ROI_BOX_HEAD:
+    RETURN_TOTAL_POS_INDS_ELEM_CNT: True
   ROI_MASK_HEAD:
     ZERO_CTRL: True
 SOLVER:

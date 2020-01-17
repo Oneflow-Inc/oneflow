@@ -13,7 +13,14 @@ class BoxHead(object):
     # gt_boxes_list: list of [G, 4] wrt. images
     # gt_labels_list: list of [G] wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
-    def build_train(self, proposals, gt_boxes_list, gt_labels_list, features):
+    def build_train(
+        self,
+        proposals,
+        gt_boxes_list,
+        gt_labels_list,
+        features,
+        return_total_pos_inds_elem_cnt=False,
+    ):
         with flow.deprecated.variable_scope("roi"):
             # used in box_head
             label_list = []
@@ -30,14 +37,20 @@ class BoxHead(object):
                         self.cfg.MODEL.ROI_HEADS.BG_IOU_THRESHOLD,
                     )
                     matched_indices = box_head_matcher.build(
-                        proposals[img_idx], gt_boxes_list[img_idx], allow_low_quality_matches=False
+                        proposals[img_idx],
+                        gt_boxes_list[img_idx],
+                        allow_low_quality_matches=False,
                     )
                 pos_inds = flow.squeeze(
-                    flow.local_nonzero(matched_indices >= flow.constant_scalar(0, flow.int32)),
+                    flow.local_nonzero(
+                        matched_indices >= flow.constant_scalar(0, flow.int32)
+                    ),
                     axis=[1],
                 )
                 neg_inds = flow.squeeze(
-                    flow.local_nonzero(matched_indices == flow.constant_scalar(-1, flow.int32)),
+                    flow.local_nonzero(
+                        matched_indices == flow.constant_scalar(-1, flow.int32)
+                    ),
                     axis=[1],
                 )
 
@@ -54,9 +67,13 @@ class BoxHead(object):
                     pos_fraction=self.cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION,
                     name="img{}_pos_neg_sampler".format(img_idx),
                 )
-                sampled_pos_neg_inds = flow.concat([sampled_pos_inds, sampled_neg_inds], axis=0)
+                sampled_pos_neg_inds = flow.concat(
+                    [sampled_pos_inds, sampled_neg_inds], axis=0
+                )
 
-                clamped_matched_indices = flow.clip_by_value(t=matched_indices, clip_value_min=0)
+                clamped_matched_indices = flow.clip_by_value(
+                    t=matched_indices, clip_value_min=0
+                )
                 proposal_gt_labels = flow.local_gather(
                     gt_labels_list[img_idx], clamped_matched_indices
                 )
@@ -65,17 +82,32 @@ class BoxHead(object):
                     flow.expand_dims(sampled_neg_inds, axis=1),
                     flow.constant_like(sampled_neg_inds, int(0)),
                 )
-                matched_gt_label = flow.local_gather(proposal_gt_labels, sampled_pos_neg_inds)
+                matched_gt_label = flow.local_gather(
+                    proposal_gt_labels, sampled_pos_neg_inds
+                )
                 label_list.append(matched_gt_label)
 
-                gt_indices = flow.local_gather(clamped_matched_indices, sampled_pos_neg_inds)
-                pos_gt_indices = flow.local_gather(
-                    clamped_matched_indices, sampled_pos_inds, name="img{}_gt_inds".format(img_idx)
+                gt_indices = flow.local_gather(
+                    clamped_matched_indices, sampled_pos_neg_inds
                 )
-                proposal_per_img = flow.local_gather(proposals[img_idx], sampled_pos_neg_inds)
-                pos_proposal_per_img = flow.local_gather(proposals[img_idx], sampled_pos_inds)
+                pos_gt_indices = flow.local_gather(
+                    clamped_matched_indices,
+                    sampled_pos_inds,
+                    name="img{}_gt_inds".format(img_idx),
+                )
+                proposal_per_img = flow.local_gather(
+                    proposals[img_idx], sampled_pos_neg_inds
+                )
+                pos_proposal_per_img = flow.local_gather(
+                    proposals[img_idx], sampled_pos_inds
+                )
                 gt_boxes_per_img = flow.local_gather(gt_boxes_list[img_idx], gt_indices)
-                (weight_x, weight_y, weight_h, weight_w) = self.cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
+                (
+                    weight_x,
+                    weight_y,
+                    weight_h,
+                    weight_w,
+                ) = self.cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
                 bbox_target_list.append(
                     flow.detection.box_encode(
                         gt_boxes_per_img,
@@ -93,7 +125,9 @@ class BoxHead(object):
                 pos_gt_indices_list.append(pos_gt_indices)
 
             proposals = flow.concat(proposal_list, axis=0)
-            img_ids = flow.concat(flow.detection.extract_piece_slice_id(proposal_list), axis=0)
+            img_ids = flow.concat(
+                flow.detection.extract_piece_slice_id(proposal_list), axis=0
+            )
             labels = flow.concat(label_list, axis=0)
             bbox_targets = flow.concat(bbox_target_list, axis=0)
 
@@ -110,32 +144,45 @@ class BoxHead(object):
                 )
             )
             total_elem_cnt = flow.elem_cnt(labels, dtype=box_head_cls_loss.dtype)
-            box_head_cls_loss = flow.math.divide(box_head_cls_loss, total_elem_cnt, name="box_head_cls_loss_div")
+            box_head_cls_loss = flow.math.divide(
+                box_head_cls_loss, total_elem_cnt, name="box_head_cls_loss_div"
+            )
             # construct bbox loss
             total_pos_inds = flow.squeeze(
-                flow.local_nonzero(labels != flow.constant_scalar(int(0), flow.int32)), axis=[1]
+                flow.local_nonzero(labels != flow.constant_scalar(int(0), flow.int32)),
+                axis=[1],
             )
             # [R, 81, 4]
             pos_bbox_reg = flow.local_gather(bbox_regression, total_pos_inds)
             pos_bbox_reg = flow.dynamic_reshape(pos_bbox_reg, shape=[-1, 81, 4])
             # [R, 1]
-            indices = flow.expand_dims(flow.local_gather(labels, total_pos_inds), axis=1)
+            indices = flow.expand_dims(
+                flow.local_gather(labels, total_pos_inds), axis=1
+            )
             bbox_pred = flow.squeeze(
-                flow.gather(params=pos_bbox_reg, indices=indices, batch_dims=1), axis=[1]
+                flow.gather(params=pos_bbox_reg, indices=indices, batch_dims=1),
+                axis=[1],
             )
             bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
             box_head_box_loss = flow.math.divide(
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target)),
                 total_elem_cnt,
-                name="box_head_box_loss_div"
+                name="box_head_box_loss_div",
             )
-
-            return (
+            ret = (
                 box_head_box_loss,
                 box_head_cls_loss,
                 pos_proposal_list,
                 pos_gt_indices_list,
             )
+            if return_total_pos_inds_elem_cnt:
+                total_pos_inds_elem_cnt = flow.elem_cnt(
+                    total_pos_inds, dtype=flow.float
+                )
+                ret += (total_pos_inds_elem_cnt,)
+            else:
+                ret += (None,)
+            return ret
 
     # Input:
     # rpn_proposals: list of [R, 4] wrt. images
@@ -145,7 +192,9 @@ class BoxHead(object):
     # results: list of (boxes, scores, labels, image_size) wrt. images
     def build_eval(self, rpn_proposals, features, image_size_list):
         with flow.deprecated.variable_scope("roi"):
-            image_ids = flow.concat(flow.detection.extract_piece_slice_id(rpn_proposals), axis=0)
+            image_ids = flow.concat(
+                flow.detection.extract_piece_slice_id(rpn_proposals), axis=0
+            )
             concat_rpn_proposals = flow.concat(rpn_proposals, axis=0)
             x = self.box_feature_extractor(concat_rpn_proposals, image_ids, features)
             box_pred, cls_logits = self.box_predictor(x)
@@ -167,7 +216,8 @@ class BoxHead(object):
 
         level_idx_list = [
             flow.squeeze(
-                flow.local_nonzero(levels == flow.constant_scalar(i, flow.int32)), axis=[1]
+                flow.local_nonzero(levels == flow.constant_scalar(i, flow.int32)),
+                axis=[1],
             )
             for i in range(len(pooler_scales))
         ]
@@ -196,7 +246,8 @@ class BoxHead(object):
         )
 
         roi_features_flat = flow.dynamic_reshape(
-            roi_features_reorder, [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)]
+            roi_features_reorder,
+            [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)],
         )
 
         representation_size = self.cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
@@ -275,7 +326,9 @@ class BoxHead(object):
                 "weight_w": 5.0,
             },
         )
-        proposals_list = flow.detection.maskrcnn_split(concat_proposals, rpn_proposals_list)
+        proposals_list = flow.detection.maskrcnn_split(
+            concat_proposals, rpn_proposals_list
+        )
         cls_probs_list = flow.detection.maskrcnn_split(cls_probs, rpn_proposals_list)
         assert len(proposals_list) == len(cls_probs_list) == len(image_size_list)
 
@@ -295,7 +348,9 @@ class BoxHead(object):
                 inds = flow.squeeze(
                     flow.local_nonzero(
                         flow.squeeze(
-                            flow.slice_v2(inds_all, [{}, {"begin": j, "end": j + 1, "stride": 1}]),
+                            flow.slice_v2(
+                                inds_all, [{}, {"begin": j, "end": j + 1, "stride": 1}]
+                            ),
                             axis=[1],
                         )
                     ),
@@ -318,7 +373,9 @@ class BoxHead(object):
                 # Apply NMS to boxes
                 inds_after_nms = flow.squeeze(
                     flow.local_nonzero(
-                        flow.detection.nms(boxes_j, nms_iou_threshold=0.5, post_nms_top_n=-1)
+                        flow.detection.nms(
+                            boxes_j, nms_iou_threshold=0.5, post_nms_top_n=-1
+                        )
                     ),
                     axis=[1],
                 )
