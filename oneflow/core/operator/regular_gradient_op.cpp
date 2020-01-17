@@ -17,6 +17,9 @@ class RegularGradientOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 void RegularGradientOp::InitFromOpConf() {
@@ -45,6 +48,18 @@ Maybe<void> RegularGradientOp::InferBatchAxis(
   OF_CHECK(!BatchAxis4BnInOp("model")->has_value());
   OF_CHECK(!BatchAxis4BnInOp("model_diff")->has_value());
   BatchAxis4BnInOp("out")->clear_value();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RegularGradientOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+      .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
