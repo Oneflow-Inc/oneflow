@@ -11,6 +11,8 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
               HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                      HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
+                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);

@@ -17,23 +17,6 @@ void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& par
   obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void GenerateDownScaleOpConf(const std::string& name, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, LogicalBlobId* diff_lbi_of_var_out) {
-  int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
-  if (loss_scale_factor == 1) { return; }
-  float down_scale_factor = 1.0 / loss_scale_factor;
-
-  OperatorConf down_scale_mul_op;
-  down_scale_mul_op.set_name(name);
-  ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
-  conf->set_in(GenLogicalBlobName(*diff_lbi_of_var_out));
-  conf->set_out("out");
-  conf->set_float_operand(down_scale_factor);
-
-  *diff_lbi_of_var_out = GenLogicalBlobId(name + "/out");
-  job_builder->AddOps(parallel_conf, {down_scale_mul_op});
-}
-
 void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -43,8 +26,6 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
 
     LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateDownScaleOpConf(var_op->op_name() + "-down_scale", parallel_desc.parallel_conf(),
-                            job_builder, &diff_lbi_of_var_out);
     GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
                               diff_lbi_of_var_out);
   });

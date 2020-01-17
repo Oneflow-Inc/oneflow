@@ -136,6 +136,10 @@ void GenerateOriginDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
   out_diff_lbi->set_blob_name("out");
 }
 
+ParallelConf ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
+  return op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf();
+}
+
 void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                              HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                                              const int64_t loss_instance_num) {
@@ -150,8 +154,7 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
     scalar_mul_conf->set_float_operand(scale_factor);
     scalar_mul_conf->set_in(GenLogicalBlobName(diff_lbi));
     scalar_mul_conf->set_out("out");
-    job_builder->AddOps(op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf(),
-                        {scalar_mul_op_conf});
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op_conf});
     diff_lbi.set_op_name(scalar_mul_op_conf.name());
     diff_lbi.set_blob_name(scalar_mul_conf->out());
   }
@@ -210,8 +213,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     broadcast_div_conf->set_a(GenLogicalBlobName(diff_lbi));
     broadcast_div_conf->set_b(GenLogicalBlobName(total_loss_instance_num_lbi));
     broadcast_div_conf->set_out("out");
-    job_builder->AddOps(op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf(),
-                        {broadcast_div_op_conf});
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {broadcast_div_op_conf});
     diff_lbi.set_op_name(broadcast_div_op_conf.name());
     diff_lbi.set_blob_name(broadcast_div_conf->out());
   }
@@ -500,6 +502,26 @@ void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_bu
     }
     ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
                                             blob_desc->shape().elem_cnt());
+  }
+}
+
+void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
+                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  const int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
+  if (loss_scale_factor == 1) { return; }
+  const float down_scale_factor = 1.0 / loss_scale_factor;
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    OperatorConf down_scale_mul_op;
+    down_scale_mul_op.set_name("System-ModelDiffScale-ScalarMul-" + NewUniqueId());
+    ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
+    conf->set_in(GenLogicalBlobName(diff_lbi));
+    conf->set_out("out");
+    conf->set_float_operand(down_scale_factor);
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {down_scale_mul_op});
+    diff_lbi.set_op_name(down_scale_mul_op.name());
+    diff_lbi.set_blob_name(conf->out());
   }
 }
 
