@@ -1164,7 +1164,6 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
-  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
