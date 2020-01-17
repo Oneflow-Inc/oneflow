@@ -7,7 +7,7 @@ template<DeviceType device_type, typename T>
 class ConstantLikeKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeKernel);
-  ConstantLikeKernel() = default;
+  ConstantLikeKernel() : is_init_(false) {}
   ~ConstantLikeKernel() = default;
 
  private:
@@ -43,5 +43,7 @@ REGISTER_CONSTANT_LIKE_KERNEL(double);
 REGISTER_CONSTANT_LIKE_KERNEL(int8_t);
 REGISTER_CONSTANT_LIKE_KERNEL(int32_t);
 REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
+
+#undef REGISTER_CONSTANT_LIKE_KERNEL
 
 }  // namespace oneflow

@@ -60,6 +60,8 @@ def constant_like(like, value, dtype=None, name=None):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):
         op_conf.constant_like_conf.float_operand = value
+    else:
+        raise NotImplementedError
     if dtype is not None:
         setattr(op_conf.constant_like_conf, "data_type", dtype)
     setattr(op_conf.constant_like_conf, "out", "out")

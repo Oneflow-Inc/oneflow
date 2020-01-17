@@ -13,9 +13,11 @@ class ConstantLikeOp final : public Operator {
     EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
   }
+
   const PbMessage& GetCustomizedConf() const override {
     return this->op_conf().constant_like_conf();
   }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
@@ -36,15 +38,12 @@ class ConstantLikeOp final : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
     SbpSignatureBuilder()
-        .Split(input_bns(), 0)
-        .Split(output_bns(), 0)
-        .MakeSplitSignatureListBuilder(
-            JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+        .Split("like", 0)
+        .Split("out", 0)
+        .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("like"))->shape().NumAxes())
         .Build(sbp_sig_list);
-    SbpSignatureBuilder()
-        .PartialSum(input_bns())
-        .Broadcast(output_bns())
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder().PartialSum("like").Broadcast("out").Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };

@@ -10,14 +10,14 @@ void GenerateBackwardOpConf(
   CHECK(op.op_conf().has_sqrt_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf broadcast_div_op;
-    broadcast_div_op.set_name(op.op_name() + "_broadcast_div_grad");
+    broadcast_div_op.set_name(op.op_name() + "_grad_broadcast_div");
     BroadcastDivOpConf* broadcast_div_op_conf = broadcast_div_op.mutable_broadcast_div_conf();
     broadcast_div_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     broadcast_div_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("out")));
     broadcast_div_op_conf->set_out("out");
     op_confs->push_back(broadcast_div_op);
     OperatorConf scalar_mul_op;
-    scalar_mul_op.set_name(op.op_name() + "_scalar_mul_in_grad");
+    scalar_mul_op.set_name(op.op_name() + "_grad_scalar_mul");
     ScalarMulOpConf* scalar_mul_op_conf = scalar_mul_op.mutable_scalar_mul_conf();
     scalar_mul_op_conf->set_float_operand(0.5);
     scalar_mul_op_conf->set_in(broadcast_div_op_conf->out());
