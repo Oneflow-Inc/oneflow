@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-struct TestOptional final {
-  FLAT_MSG(TestOptional);
-
-  FLAT_MSG_DEFINE_FIELD(int, bar);
-};
+// clang-format off
+BEGIN_FLAT_MSG(TestOptional)
+  FLAT_MSG_DEFINE_FIELD(int32_t, bar);
+END_FLAT_MSG(TestOptional)
+// clang-format on
 
 TEST(FlatMsg, optional) {
-  FlatMsg<TestOptional> foo_box;
+  FLAT_MSG(TestOptional) foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
   ASSERT_TRUE(!foo.has_bar());
@@ -19,37 +19,35 @@ TEST(FlatMsg, optional) {
   ASSERT_EQ(foo.bar(), 9527);
 }
 
-struct FooOneof final {
-  FLAT_MSG(FooOneof);
-
-  FLAT_MSG_DEFINE_FIELD(int, x);
-  // clang-format off
+// clang-format off
+BEGIN_FLAT_MSG(FooOneof)
+  FLAT_MSG_DEFINE_FIELD(int32_t, x);
   FLAT_MSG_DEFINE_ONEOF(type,
-      FLAT_MSG_ONEOF_FIELD(int, case_0)
-      FLAT_MSG_ONEOF_FIELD(int, case_1));
-  // clang-format on
-};
+      FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
+      FLAT_MSG_ONEOF_FIELD(int32_t, case_1));
+END_FLAT_MSG(FooOneof)
+// clang-format on
 
 TEST(FlatMsg, oneof) {
-  FlatMsg<FooOneof> foo_box;
+  FLAT_MSG(FooOneof) foo_box;
   auto& foo = *foo_box.Mutable();
   foo.mutable_case_0();
   ASSERT_TRUE(foo.has_case_0());
-  FooOneof::FLAT_MSG_ONEOF_ENUM_TYPE(type) x = foo.type_case();
-  ASSERT_TRUE(x == FooOneof::FLAT_MSG_ONEOF_ENUM_VALUE(case_0));
+  FLAT_MSG_ONEOF_ENUM_TYPE(FooOneof, type) x = foo.type_case();
+  ASSERT_TRUE(x == FLAT_MSG_ONEOF_ENUM_VALUE(FooOneof, case_0));
   *foo.mutable_case_1() = 9527;
   ASSERT_TRUE(foo.has_case_1());
   ASSERT_EQ(foo.case_1(), 9527);
 }
 
-struct FooRepeated final {
-  FLAT_MSG(FooRepeated);
-
+// clang-format off
+BEGIN_FLAT_MSG(FooRepeated)
   FLAT_MSG_DEFINE_REPEATED_FIELD(TestOptional, bar, 10);
-};
+END_FLAT_MSG(FooRepeated)
+// clang-format on
 
 TEST(FlatMsg, repeated) {
-  FlatMsg<FooRepeated> foo_box;
+  FLAT_MSG(FooRepeated) foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_EQ(foo.bar_size(), 0);
   ASSERT_EQ(foo.bar().size(), 0);
