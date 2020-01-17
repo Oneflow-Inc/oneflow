@@ -23,8 +23,7 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
 }
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
-                             const LogicalBlobId& total_loss_instance_num_lbi) {
+                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m", 0.f);
   const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v", 0.f);
   job_builder->AddOps(parallel_conf, {m_var, v_var});
@@ -44,8 +43,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
     SetScalarShapeAndSbpConf(&beta2_t_var);
     job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
   }
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, total_loss_instance_num_lbi, job_builder,
-                        mdupdt_op_conf);
+  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
   mdupdt_op_conf->set_v(v_var.name() + "/out");
   if (adam_conf.do_bias_correction()) {
