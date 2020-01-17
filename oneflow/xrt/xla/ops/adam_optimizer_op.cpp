@@ -40,16 +40,6 @@ class AdamOptimizerOp : public OptimizerOp {
       gradient = m / (xla::Sqrt(v) + epsilon);
     }
 
-    float l1_val = ctx->GetAttr<float>("l1");
-    float l2_val = ctx->GetAttr<float>("l2");
-    if (std::abs(l1_val) > 1e-6) {
-      xla::XlaOp l1 = xla::ScalarLike(gradient, l1_val);
-      gradient = gradient + l1 * xla::Sign(weight);
-    }
-    if (std::abs(l2_val) > 1e-6) {
-      xla::XlaOp l2 = xla::ScalarLike(gradient, l2_val);
-      gradient = gradient + l2 * weight;
-    }
     ctx->SetOutput("model", weight - learning_rate * gradient);
     // ctx->SetOutput("out", weight - learning_rate * gradient);
   }
