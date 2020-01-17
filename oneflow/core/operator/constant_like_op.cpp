@@ -10,7 +10,7 @@ class ConstantLikeOp final : public Operator {
 
   void InitFromOpConf() override {
     CHECK(op_conf().has_constant_like_conf());
-    EnrollInputBn("in", false);
+    EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
   }
   const PbMessage& GetCustomizedConf() const override {
@@ -21,7 +21,7 @@ class ConstantLikeOp final : public Operator {
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     const ConstantLikeOpConf& conf = op_conf().constant_like_conf();
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-    *out_blob_desc = *GetBlobDesc4BnInOp("in");
+    *out_blob_desc = *GetBlobDesc4BnInOp("like");
     if (conf.has_data_type()) { out_blob_desc->set_data_type(conf.data_type()); }
     return Maybe<void>::Ok();
   }
@@ -50,5 +50,6 @@ class ConstantLikeOp final : public Operator {
 };
 
 REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kConstantLikeConf, 1);
 
 }  // namespace oneflow

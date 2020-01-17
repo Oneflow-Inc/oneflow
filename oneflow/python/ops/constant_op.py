@@ -48,14 +48,14 @@ def constant_scalar(value, dtype=None, name=None):
 
 
 @oneflow_export("constant_like")
-def constant_like(input, value, dtype=None, name=None):
+def constant_like(like, value, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ConstantLike_"),
     )
-    setattr(op_conf.constant_like_conf, "in", input.logical_blob_name)
+    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):
@@ -70,9 +70,9 @@ def constant_like(input, value, dtype=None, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 @oneflow_export("ones_like")
-def ones_like(input, dtype=None, name=None):
-    return constant_like(input, 1, dtype=dtype, name=name)
+def ones_like(like, dtype=None, name=None):
+    return constant_like(like, 1, dtype=dtype, name=name)
 
 @oneflow_export("zeros_like")
-def zeros_like(input, dtype=None, name=None):
-    return constant_like(input, 0, dtype=dtype, name=name)
+def zeros_like(like, dtype=None, name=None):
+    return constant_like(like, 0, dtype=dtype, name=name)

@@ -1624,7 +1624,7 @@ message IndexedSlicesReduceSumOpConf {
 }
 
 message ConstantLikeOpConf {
-  required string in = 1;
+  required string like = 1;
   required string out = 2;
   optional DataType data_type = 3;
   oneof scalar_operand {

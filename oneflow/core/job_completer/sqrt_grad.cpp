@@ -20,7 +20,7 @@ void GenerateBackwardOpConf(
     scalar_mul_op.set_name(op.op_name() + "_scalar_mul_in_grad");
     ScalarMulOpConf* scalar_mul_op_conf = scalar_mul_op.mutable_scalar_mul_conf();
     scalar_mul_op_conf->set_float_operand(0.5);
-    scalar_mul_op_conf->set_in(broadcast_div_op.name() + "/out");
+    scalar_mul_op_conf->set_in(broadcast_div_op_conf->out());
     scalar_mul_op_conf->set_out("out");
     op_confs->push_back(scalar_mul_op);
     DiffLbi4BnInOp("in")->set_op_name(scalar_mul_op.name());
