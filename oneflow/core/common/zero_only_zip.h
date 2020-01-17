@@ -38,11 +38,11 @@ struct ZeroOnlyZipUtil final {
   }
 
   void UnzipToExpectedSize(const SizedBufferView& size_buffer, char* data, size_t expected_size) {
-    size_t cur_index = 0;
+    size_t cursor = 0;
     size_t cur_index = 0;
     while (cur_index < expected_size) {
       if (int(size_buffer.data[cursor]) > 0) {
-        int cur_index = size_buffer.data[cursor++];
+        int cur_size = size_buffer.data[cursor++];
         for (size_t index = 0; index < cur_size; index++, cur_index++) {
           *(data + cur_index) = size_buffer.data[cursor++];
         }
