@@ -20,14 +20,6 @@ class OptimizerOp : public XlaOpKernel {
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp gradient = ctx->Input("model_diff");
     xla::XlaOp learning_rate = ctx->Input("learning_rate");
-
-    NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
-    CHECK(user_conf) << "Can not get message `user_conf`.";
-    if (user_conf->has_clip_conf()) {
-      gradient = ClipGradient(ctx, gradient, user_conf->clip_conf());
-    }
-
     ApplyUpdate(ctx, gradient, learning_rate);
   }
 
