@@ -69,6 +69,12 @@ def make_data_loader(cfg, is_train):
             variable_length_axes=(0,),
             is_dynamic=True,
         )
+        data_loader.add_blob(
+            "image_id",
+            data_util.kImageId,
+            shape=(1, ),
+            dtype=flow.int64,
+        )
         data_loader.add_transform(
             flow.data.TargetResizeTransform(cfg.INPUT.MIN_SIZE_TRAIN, cfg.INPUT.MAX_SIZE_TRAIN)
         )

@@ -5,6 +5,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow as flow
 
 def InputOpByBlobDesc(blob_desc):
     op_conf = op_conf_util.OperatorConf()
@@ -12,7 +13,11 @@ def InputOpByBlobDesc(blob_desc):
     op_conf.input_conf.out = blob_desc.blob_name
     op_conf.input_conf.blob_conf.CopyFrom(blob_desc.ToInterfaceBlobConf())
     op_conf.input_conf.blob_conf.batch_axis.value = 0
-    compile_context.CurJobAddInputOp(op_conf)
+    if blob_desc.op_name in ["Input_0", "Input_1", "Input_2", "Input_3"]:
+        with flow.device_prior_placement("cpu", "0:0"):
+            compile_context.CurJobAddInputOp(op_conf)
+    else:
+        compile_context.CurJobAddInputOp(op_conf)
     return remote_blob_util.RemoteBlob(blob_desc.lbi)
 
 def RetOpByRemoteBlob(remote_blob):

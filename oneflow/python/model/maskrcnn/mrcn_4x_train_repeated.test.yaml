@@ -1,0 +1,26 @@
+ENV:
+  NUM_GPUS: 4
+DATASETS:
+  ANNOTATION_TRAIN: "annotations/instances_val2017_subsample_8_repeated.json"
+  IMAGE_DIR_TRAIN: "val2017"
+  SHUFFLE: False
+INPUT:
+  MIRROR_PROB: 0.0
+MODEL:
+  WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_4x_iter500"
+  RPN:
+    RANDOM_SAMPLE: False
+  ROI_HEADS:
+    RANDOM_SAMPLE: False
+SOLVER:
+  IMS_PER_BATCH: 8
+  MAX_ITER: 501
+  BASE_LR: 1.0
+  WEIGHT_DECAY: 0.0
+  STEPS: (120000, 160000)
+  LR_DECAY_VALUES: (1, 0.1, 0.01)
+  METRICS_PERIOD: 100
+  ENABLE_WARMUP: True
+  CHECKPOINT_PERIOD: 1
+  MAKE_LR: True
+  OPTIMIZER: "sgd"

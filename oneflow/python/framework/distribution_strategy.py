@@ -66,6 +66,12 @@ class MirrorDistributionStrategy(DistributionStrategy):
         def wrapped_fn(*args, **kwargs):
             args_ = [distribute_split(arg) if isinstance(arg, RemoteBlob) else arg for arg in args]
             args_is_blob = [True if isinstance(arg, RemoteBlob) else False for arg in args]
+            args_is_blob_list = [
+                all([isinstance(a, RemoteBlob) for a in arg])
+                if isinstance(arg, (list, tuple))
+                else False
+                for arg in args
+            ]
 
             kwargs_ = dict(
                 zip(
@@ -82,6 +88,17 @@ class MirrorDistributionStrategy(DistributionStrategy):
                     [True if isinstance(v, RemoteBlob) else False for v in kwargs.values()],
                 )
             )
+            kwargs_is_blob_list = dict(
+                zip(
+                    kwargs.keys(),
+                    [
+                        all([isinstance(v_, RemoteBlob) for v_ in v])
+                        if isinstance(v, (list, tuple))
+                        else False
+                        for v in kwargs.values()
+                    ],
+                )
+            )
 
             self.save_placement_scope()
             self.register_variable_getter()
@@ -95,13 +112,17 @@ class MirrorDistributionStrategy(DistributionStrategy):
                     ):
                         with distribution_name_scope(node_i, device_i):
                             args__ = [
-                                arg[self.cur_rank] if is_blob else arg
-                                for arg, is_blob in zip(args_, args_is_blob)
+                                arg[self.cur_rank] if (is_blob or is_blob_list) else arg
+                                for arg, is_blob, is_blob_list in zip(
+                                    args_, args_is_blob, args_is_blob_list
+                                )
                             ]
                             kwargs__ = dict(
                                 [
-                                    (k, v[self.cur_rank]) if is_blob else (k, v)
-                                    for k, v, is_blob in dictzip(kwargs_, kwargs_is_blob)
+                                    (k, v[self.cur_rank]) if (is_blob or is_blob_list) else (k, v)
+                                    for k, v, is_blob, is_blob_list in dictzip(
+                                        kwargs_, kwargs_is_blob, kwargs_is_blob_list
+                                    )
                                 ]
                             )
                             result.append(fn(*args__, **kwargs__))

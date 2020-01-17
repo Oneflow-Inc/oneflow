@@ -7,6 +7,7 @@ import pandas as pd
 import argparse
 import time
 import statistics
+import glob
 import oneflow as flow
 
 from datetime import datetime
@@ -71,7 +72,7 @@ def MakeWatcherCallback(prompt):
     return Callback
 
 
-def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
+def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=None):
     """Mask-RCNN
     Args:
         image: (N, H, W, C)
@@ -219,9 +220,13 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         "loss_box_reg": box_loss,
         "loss_classifier": cls_loss,
         "loss_mask": mask_loss,
+        "image_id": image_id,
     }
     if total_pos_inds_elem_cnt is not None:
         ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
+    for k, v in ret.items():
+        if "loss" in k:
+            ret[k] = v * (1.0 / cfg.ENV.NUM_GPUS)
     return ret
 
 
@@ -344,13 +349,24 @@ def train_net(config, image=None):
         distribute_train_func = flow.experimental.mirror_execute(
             config.ENV.NUM_GPUS, 1
         )(maskrcnn_train)
+
+        if image is None:
+            image = data_loader("image")
+        else:
+            if isinstance(image, (tuple, list)):
+                with flow.device_prior_placement("cpu", "0:0"):
+                    image = [flow.identity(img_per_gpu) for img_per_gpu in image]
+            else:
+                image = flow.identity(image)
+
         outputs = distribute_train_func(
             config,
-            flow.identity(image) if image else data_loader("image"),
+            image,
             data_loader("image_size"),
             data_loader("gt_bbox"),
             data_loader("gt_segm"),
             data_loader("gt_labels"),
+            data_loader("image_id"),
         )
         for outputs_per_rank in outputs:
             add_loss([v for k, v in outputs_per_rank.items() if k in loss_name_tup])
@@ -363,6 +379,7 @@ def train_net(config, image=None):
             data_loader("gt_bbox"),
             data_loader("gt_segm"),
             data_loader("gt_labels"),
+            data_loader("image_id"),
         )
         add_loss([v for k, v in outputs.items() if k in loss_name_tup])
 
@@ -423,48 +440,63 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
         }
 
 
-def init_train_func(config, input_fake_image):
+def make_train(config, fake_images=None):
     flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.enable_inplace(config.ENV.ENABLE_INPLACE)
     flow.config.gpu_device_num(config.ENV.NUM_GPUS)
     flow.config.default_data_type(get_flow_dtype(config.DTYPE))
 
-    if input_fake_image:
-
-        @flow.function
-        def train(
-            image_blob=flow.input_blob_def(
-                shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
-            )
-        ):
+    def do_train(fake_images=None):
+        step_lr = None
+        if config.SOLVER.MAKE_LR:
+            model_update_conf = set_train_config(config)
+            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+        else:
             set_train_config(config)
-            return train_net(config, image_blob)
+        outputs = train_net(config, fake_images)
+        if step_lr is not None:
+            if isinstance(outputs, (list, tuple)):
+                outputs[0].update(step_lr)
+            else:
+                outputs.update(step_lr)
+        return outputs
 
+    if fake_images is not None:
+        assert len(list(fake_images.values())[0]) == config.ENV.NUM_GPUS
+        
+        if config.ENV.NUM_GPUS == 1:
+            @flow.function
+            def train(
+                image_blob=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                )
+            ):
+                return do_train(image_blob)
+        elif config.ENV.NUM_GPUS == 4:
+            @flow.function
+            def train(
+                image_blob_0=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                ),
+                image_blob_1=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                ),
+                image_blob_2=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                ),
+                image_blob_3=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                ),
+            ):
+                return do_train([image_blob_0, image_blob_1, image_blob_2, image_blob_3])
+        else:
+            raise NotImplementedError
         return train
 
     else:
-
         @flow.function
         def train():
-            step_lr = None
-            if config.SOLVER.MAKE_LR:
-                model_update_conf = set_train_config(config)
-                step_lr = make_lr(
-                    "System-Train-TrainStep-train",
-                    model_update_conf,
-                    flow.config.train.get_primary_lr(),
-                    flow.config.train.get_secondary_lr(),
-                )
-            else:
-                set_train_config(config)
-            outputs = train_net(config)
-            if step_lr is not None:
-                if isinstance(outputs, (list, tuple)):
-                    outputs[0].update(step_lr)
-                else:
-                    outputs.update(step_lr)
-            return outputs
-
+            return do_train()
         return train
 
 
@@ -573,6 +605,16 @@ class IterationProcessor(object):
         elapsed_time = now_time - self.start_time
         self.elapsed_times.append(elapsed_time)
 
+        def outputs_postprocess(outputs):
+            if isinstance(outputs, (list, tuple)):
+                for outputs_per_rank in outputs:
+                    outputs_per_rank.pop("image_id")
+            elif isinstance(outputs, dict):
+                outputs.pop("image_id")
+            else:
+                raise ValueError("outputs has error type")
+
+        outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
@@ -616,18 +658,29 @@ class IterationProcessor(object):
             )
 
 
-def run():
-    use_fake_images = False
-    if hasattr(terminal_args, "fake_image_path"):
-        use_fake_images = True
-        file_list = os.listdir(terminal_args.fake_image_path)
-        fake_image_list = [
-            np.load(os.path.join(terminal_args.fake_image_path, f)) for f in file_list
-        ]
+def load_fake_images(path):
+    iter_dirs = glob.glob("{}/iter_*".format(path))
+    iters = [int(iter_dir.split("/")[-1][len("iter_"):]) for iter_dir in iter_dirs]
+    image_paths = []
+    for iter_dir in iter_dirs:
+        image_paths_per_iter = glob.glob("{}/image*.npy".format(iter_dir))
+        if (len(image_paths_per_iter) > 1):
+            image_paths_per_iter.sort(
+                key=lambda x: int(os.path.splitext(os.path.basename(x))[0][len("image_"):])
+            )
+        image_paths.append(image_paths_per_iter)
+    return dict(zip(iters, image_paths))
 
+
+def run():
     # Get mrcn train function
     config = merge_and_compare_config(terminal_args)
-    train_func = init_train_func(config, use_fake_images)
+    fake_images = None
+    if hasattr(terminal_args, "fake_image_path"):
+        fake_images = load_fake_images(terminal_args.fake_image_path)
+        train_func = make_train(config, fake_images=fake_images)
+    else:
+        train_func = make_train(config)
 
     # model init
     check_point = flow.train.CheckPoint()
@@ -651,20 +704,18 @@ def run():
         start_iter, config.SOLVER.MAX_ITER
     )
 
-    if use_fake_images:
-        assert len(fake_image_list) >= config.SOLVER.MAX_ITER - start_iter + 1
-
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
-        # if p.checkpoint_period > 0 and i == start_iter:
-        #     save_model(p.check_point, loaded_iter)
-        if use_fake_images:
+        if p.checkpoint_period > 0 and i == start_iter:
+            save_model(p.check_point, loaded_iter)
+
+        if fake_images is not None:
+            assert i in fake_images, "there is not iter {} fake images".format(i)
+            fake_images_for_iter = [np.load(fake_images_path) for fake_images_path in fake_images[i]]
             if config.ASYNC_GET:
-                train_func(fake_image_list[i - start_iter]).async_get(
-                    lambda x, i=i: p.step(i, x)
-                )
+                train_func(*fake_images_for_iter).async_get(lambda x, i=i: p.step(i, x))
             else:
-                outputs = train_func(fake_image_list[i - start_iter]).get()
+                outputs = train_func(*fake_images_for_iter).get()
                 p.step(i, outputs)
         else:
             if config.ASYNC_GET:
@@ -672,8 +723,9 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-        # if (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
-        #     save_model(p.check_point, i)
+
+        if (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
+            save_model(p.check_point, i)
 
 
 if __name__ == "__main__":
