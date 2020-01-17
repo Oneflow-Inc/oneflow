@@ -38,7 +38,8 @@ void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNo
   for (OpNode* src_node : op_nodes) {
     for (OpNode* dst_node : op_nodes) {
       if (src_node == dst_node) { continue; }
-      CHECK(!IsReachable(src_node, dst_node));
+      CHECK(!IsReachable(src_node, dst_node))
+          << "src_node: " << src_node->op().op_name() << " dst_node: " << dst_node->op().op_name();
     }
   }
 }
