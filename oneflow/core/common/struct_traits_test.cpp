@@ -50,4 +50,24 @@ TEST(StructField, const_struct_const_field) {
   ASSERT_EQ(field_ptr, bar);
 }
 
+namespace {
+
+struct Foo {
+  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();
+  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->x),
+                                            &((Foo*)nullptr)->x);
+  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->y),
+                                            &((Foo*)nullptr)->y);
+  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->z),
+                                            &((Foo*)nullptr)->z);
+
+  int x;
+  int y;
+  int z;
+
+  DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Foo);
+};
+
+}  // namespace
+
 }  // namespace oneflow
