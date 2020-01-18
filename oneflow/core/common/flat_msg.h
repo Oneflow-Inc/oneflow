@@ -3,15 +3,19 @@
 
 #include <array>
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/struct_traits.h"
 
 namespace oneflow {
 
-#define BEGIN_FLAT_MSG(struct_name)         \
-  struct FLAT_MSG_TYPE(struct_name) final { \
+#define BEGIN_FLAT_MSG(struct_name)                         \
+  struct FLAT_MSG_TYPE(struct_name) final {                 \
+    using this_pointer_type = FLAT_MSG_TYPE(struct_name) *; \
+    DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();          \
     FLAT_MSG_DEFINE_BASIC_METHODS(FLAT_MSG_TYPE(struct_name));
 
-#define END_FLAT_MSG(struct_name) \
-  }                               \
+#define END_FLAT_MSG(struct_name)                                            \
+  DSS_STATIC_ASSERT_STRUCT_SIZE("flat message", FLAT_MSG_TYPE(struct_name)); \
+  }                                                                          \
   ;
 
 #define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
@@ -20,14 +24,22 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name), \
                         FLAT_MSG_ONEOF_FIELD(type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
-  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
-  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
-  FLAT_MSG_DEFINE_ONEOF_UNION(MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));               \
-  _FLAT_MSG_DEFINE_FIELD(_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name), _FLAT_MSG_ONEOF_CASE(oneof_name));
+#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                                 \
+  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                            \
+  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq))      \
+  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));        \
+  _FLAT_MSG_DEFINE_FIELD(_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name), _FLAT_MSG_ONEOF_CASE(oneof_name)); \
+  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(                                                       \
+      "flat message",                                                                              \
+      (sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(oneof_name, _))                             \
+       + sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(_FLAT_MSG_ONEOF_CASE(oneof_name), _))),   \
+      (&((this_pointer_type) nullptr)->OF_PP_CAT(oneof_name, _)));
 
-#define FLAT_MSG_DEFINE_REPEATED_FIELD(type, field_name, max_size) \
-  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(type), field_name, max_size)
+#define FLAT_MSG_DEFINE_REPEATED_FIELD(type, field_name, max_size)                     \
+  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(type), field_name, max_size);          \
+  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(                                           \
+      "flat message", sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(field_name, _)), \
+      (&((this_pointer_type) nullptr)->OF_PP_CAT(field_name, _)));
 
 #define FLAT_MSG_ONEOF_FIELD(type, field_name) OF_PP_MAKE_TUPLE_SEQ(type, field_name)
 
@@ -110,7 +122,7 @@ DEFINE_FLAT_MSG_TYPE(double);
  public:                                                                                  \
   const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                        \
     CHECK(_FLAT_MSG_ONEOF_CASE(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair))); \
-    return OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                                         \
+    return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                \
   }                                                                                       \
   bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                                 \
     return _FLAT_MSG_ONEOF_CASE(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair)); \
@@ -122,17 +134,17 @@ DEFINE_FLAT_MSG_TYPE(double);
   OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {               \
     OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
     (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                            \
-    return &OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                                        \
+    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);               \
   }                                                                                       \
   void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {     \
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                \
   }
 
-#define FLAT_MSG_DEFINE_ONEOF_UNION(type_and_field_name_seq)                       \
+#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)           \
  private:                                                                          \
   union {                                                                          \
     OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq) \
-  };
+  } OF_PP_CAT(oneof_name, _);
 
 #define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(type, field_name) type OF_PP_CAT(field_name, _);
 
