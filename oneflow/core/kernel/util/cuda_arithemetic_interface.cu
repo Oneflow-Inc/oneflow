@@ -133,6 +133,11 @@ __global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half 
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
+template<typename T>
+__global__ void FillGpu(const int64_t n, const T value, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = value; }
+}
+
 }  // namespace
 
 #define MUL_BY_SCALAR(T)                                                                           \
@@ -154,5 +159,20 @@ void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t 
   MulByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
 }
+
+#define FILL(T)                                                                              \
+  void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
+                                             T* y) {                                         \
+    FillGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>( \
+        n, value, y);                                                                        \
+  }
+
+FILL(float)
+FILL(double)
+FILL(int8_t)
+FILL(int32_t)
+FILL(int64_t)
+
+#undef FILL
 
 }  // namespace oneflow
