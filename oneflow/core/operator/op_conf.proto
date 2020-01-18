@@ -1616,7 +1616,6 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-<<<<<<< HEAD
 message RegularGradientOpConf {
   required string model = 1;
   required string model_diff = 2;
@@ -1642,7 +1641,8 @@ message BroadcastMinimumOpConf {
   required string b = 2;
   required string out = 3;
   optional bool is_const = 4 [default = false];
-=======
+}
+
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1651,7 +1651,6 @@ message ConstantLikeOpConf {
     int64 int_operand = 4;
     double float_operand = 5;
   }
->>>>>>> dev_python
 }
 
 message OperatorConf {
