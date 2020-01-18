@@ -1619,6 +1619,11 @@ message RegularGradientOpConf {
   required float l2_scale = 5;
 }
 
+message SquareSumOpConf {
+  required string x = 1;
+  required string y = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1774,6 +1779,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    SquareSumOpConf square_sum_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
