@@ -1624,6 +1624,20 @@ message SquareSumOpConf {
   required string y = 2;
 }
 
+message BroadcastMaximumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMinimumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1779,7 +1793,6 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
-    SquareSumOpConf square_sum_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -1801,6 +1814,9 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
+    SquareSumOpConf square_sum_conf = 518;
+    BroadcastMaximumOpConf broadcast_maximum_conf = 519;
+    BroadcastMinimumOpConf broadcast_minimum_conf = 520;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
