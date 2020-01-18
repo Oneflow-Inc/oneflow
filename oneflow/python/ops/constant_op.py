@@ -48,18 +48,33 @@ def constant_scalar(value, dtype=None, name=None):
 
 
 @oneflow_export("constant_like")
-def constant_like(input, value, name=None):
+def constant_like(like, value, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ConstantLike_"),
     )
-    setattr(op_conf.constant_like_conf, "in", input.logical_blob_name)
-    setattr(op_conf.constant_like_conf, "scalar", value)
+    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
+    if isinstance(value, int):
+        op_conf.constant_like_conf.int_operand = value
+    elif isinstance(value, float):
+        op_conf.constant_like_conf.float_operand = value
+    else:
+        raise NotImplementedError
+    if dtype is not None:
+        setattr(op_conf.constant_like_conf, "data_type", dtype)
     setattr(op_conf.constant_like_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("ones_like")
+def ones_like(like, dtype=None, name=None):
+    return constant_like(like, 1, dtype=dtype, name=name)
+
+@oneflow_export("zeros_like")
+def zeros_like(like, dtype=None, name=None):
+    return constant_like(like, 0, dtype=dtype, name=name)
