@@ -13,7 +13,7 @@ struct ZeroOnlyZipUtil final {
     size_t count = 0;
     size_t cursor = 0;
     while (cur_index < size) {
-      if (data[cur_index] != '0' && cur_index != size) {
+      if (data[cur_index] != 0x00 && cur_index != size) {
         cur_index++;
         count++;
       }
@@ -26,7 +26,7 @@ struct ZeroOnlyZipUtil final {
         }
         count = 0;
         if (cur_index == size) break;
-        while (cur_index < size && data[cur_index] == '0') {
+        while (cur_index < size && data[cur_index] == 0x00) {
           count++;
           cur_index++;
         }
@@ -43,14 +43,14 @@ struct ZeroOnlyZipUtil final {
     while (cur_index < expected_size) {
       if (int(size_buffer.data[cursor]) > 0) {
         int cur_size = size_buffer.data[cursor++];
-        for (size_t index = 0; index < cur_size; index++, cur_index++) {
+        for (int index = 0; index < cur_size; index++, cur_index++) {
           *(data + cur_index) = size_buffer.data[cursor++];
         }
       }
       else {
         int cur_size = -int(size_buffer.data[cursor++];
-        for (size_t index = 0; index < cur_size; index++, cur_index++) {
-          *(data + cur_index) = '0';
+        for (int index = 0; index < cur_size; index++, cur_index++) {
+          *(data + cur_index) = 0x00;
         }
       }
     }
