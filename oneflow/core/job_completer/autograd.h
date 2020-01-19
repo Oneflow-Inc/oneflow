@@ -13,6 +13,8 @@ void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_bu
                                      HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);

@@ -349,6 +349,105 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
   });
 }
 
+void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
+                              HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
+                              const ClipByGlobalNormConf& conf) {
+  if (lbi2diff_lbi->size() <= 0) { return; }
+  HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    lbi2parallel_desc[lbi] = &model_op_node->parallel_desc();
+    OperatorConf parallel_cast_op_conf{};
+    parallel_cast_op_conf.set_name("System-ClipGradient-ParallelCast-" + NewUniqueId());
+    ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
+    parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
+    parallel_cast_conf->set_out("out");
+    const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
+    if (model_sbp.has_broadcast_parallel()) {
+      parallel_cast_conf->clear_split_axis();
+    } else if (model_sbp.has_split_parallel()) {
+      parallel_cast_conf->mutable_split_axis()->set_value(model_sbp.split_parallel().axis());
+    } else {
+      UNIMPLEMENTED();
+    }
+    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
+    diff_lbi.set_op_name(parallel_cast_op_conf.name());
+    diff_lbi.set_blob_name(parallel_cast_conf->out());
+  }
+  bool all_same_parallel_desc = true;
+  const ParallelDesc* parallel_desc = nullptr;
+  for (const auto& pair : lbi2parallel_desc) {
+    if (parallel_desc == nullptr) {
+      parallel_desc = pair.second;
+    } else if (*parallel_desc != *pair.second) {
+      all_same_parallel_desc = false;
+      break;
+    } else {
+      continue;
+    }
+  }
+  ParallelConf global_norm_parallel_conf =
+      all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
+  OperatorConf global_norm_add_op_conf{};
+  global_norm_add_op_conf.set_name("System-ClipGradient-GlobalNorm-Add-" + NewUniqueId());
+  AddOpConf* global_norm_add_conf = global_norm_add_op_conf.mutable_add_conf();
+  for (const auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& diff_lbi = pair.second;
+    OperatorConf square_sum_op_conf{};
+    square_sum_op_conf.set_name("System-ClipGradient-GlobalNorm-SquareSum-" + NewUniqueId());
+    SquareSumOpConf* square_sum_conf = square_sum_op_conf.mutable_square_sum_conf();
+    square_sum_conf->set_x(GenLogicalBlobName(diff_lbi));
+    square_sum_conf->set_y("y");
+    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op_conf});
+    *global_norm_add_conf->mutable_in()->Add() =
+        GenLogicalBlobName(square_sum_op_conf.name(), square_sum_conf->y());
+  }
+  global_norm_add_conf->set_out("out");
+  job_builder->AddOps(global_norm_parallel_conf, {global_norm_add_op_conf});
+  OperatorConf inv_global_norm_op_conf{};
+  inv_global_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId());
+  RsqrtOpConf* inv_global_norm_rsqrt_conf = inv_global_norm_op_conf.mutable_rsqrt_conf();
+  inv_global_norm_rsqrt_conf->set_in(
+      GenLogicalBlobName(global_norm_add_op_conf.name(), global_norm_add_conf->out()));
+  inv_global_norm_rsqrt_conf->set_out("out");
+  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op_conf});
+  OperatorConf inv_clip_norm_op_conf{};
+  inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
+  ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
+      inv_clip_norm_op_conf.mutable_constant_like_conf();
+  inv_clip_norm_constant_like_conf->set_like(
+      GenLogicalBlobName(inv_global_norm_op_conf.name(), inv_global_norm_rsqrt_conf->out()));
+  inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
+  inv_clip_norm_constant_like_conf->set_out("out");
+  job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
+  OperatorConf minimum_op_conf{};
+  minimum_op_conf.set_name("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId());
+  BroadcastMinimumOpConf* minimum_conf = minimum_op_conf.mutable_broadcast_minimum_conf();
+  minimum_conf->set_a(
+      GenLogicalBlobName(inv_global_norm_op_conf.name(), inv_global_norm_rsqrt_conf->out()));
+  minimum_conf->set_b(
+      GenLogicalBlobName(inv_clip_norm_op_conf.name(), inv_clip_norm_constant_like_conf->out()));
+  minimum_conf->set_out("out");
+  job_builder->AddOps(global_norm_parallel_conf, {minimum_op_conf});
+  const std::string gradient_scale_factor_lbn =
+      GenLogicalBlobName(minimum_op_conf.name(), minimum_conf->out());
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    OperatorConf broadcast_mul_op_conf{};
+    broadcast_mul_op_conf.set_name("System-ClipGradient-GlobalNorm-BroadcastMul-" + NewUniqueId());
+    BroadcastMulOpConf* broadcast_mul_conf = broadcast_mul_op_conf.mutable_broadcast_mul_conf();
+    broadcast_mul_conf->set_a(GenLogicalBlobName(diff_lbi));
+    broadcast_mul_conf->set_b(gradient_scale_factor_lbn);
+    broadcast_mul_conf->set_out("out");
+    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {broadcast_mul_op_conf});
+    diff_lbi.set_op_name(broadcast_mul_op_conf.name());
+    diff_lbi.set_blob_name(broadcast_mul_conf->out());
+  }
+}
+
 }  // namespace
 
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
@@ -522,6 +621,15 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {down_scale_mul_op});
     diff_lbi.set_op_name(down_scale_mul_op.name());
     diff_lbi.set_blob_name(conf->out());
+  }
+}
+
+void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
+  if (clip_conf.has_clip_by_global_norm()) {
+    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, clip_conf.clip_by_global_norm());
+  } else {
+    UNIMPLEMENTED();
   }
 }
 

@@ -101,7 +101,13 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   ScaleModelDiffByLossInstanceNum(op_graph, job_builder, &model_lbi2model_diff_lbi);
   ScaleModelDiffByLossScale(op_graph, job_builder, &model_lbi2model_diff_lbi);
+  const NormalModelUpdateOpUserConf& model_update_conf =
+      job_builder->job().job_conf().train_conf().model_update_conf();
+  if (model_update_conf.has_clip_conf()) {
+    ClipGradient(op_graph, job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
+  }
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
+
   for (const auto& pair : model_lbi2model_diff_lbi) { lbi2diff_lbi[pair.first] = pair.second; }
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
