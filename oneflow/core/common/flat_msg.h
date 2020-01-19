@@ -7,10 +7,10 @@
 
 namespace oneflow {
 
-#define BEGIN_FLAT_MSG(struct_name)                         \
-  struct FLAT_MSG_TYPE(struct_name) final {                 \
-    using this_pointer_type = FLAT_MSG_TYPE(struct_name) *; \
-    DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();          \
+#define BEGIN_FLAT_MSG(struct_name)                \
+  struct FLAT_MSG_TYPE(struct_name) final {        \
+    using self_type = FLAT_MSG_TYPE(struct_name);  \
+    DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(); \
     FLAT_MSG_DEFINE_BASIC_METHODS(FLAT_MSG_TYPE(struct_name));
 
 #define END_FLAT_MSG(struct_name)                                            \
@@ -24,22 +24,15 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name), \
                         FLAT_MSG_ONEOF_FIELD(type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                                 \
-  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                            \
-  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq))      \
-  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));        \
-  _FLAT_MSG_DEFINE_FIELD(_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name), _FLAT_MSG_ONEOF_CASE(oneof_name)); \
-  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(                                                       \
-      "flat message",                                                                              \
-      (sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(oneof_name, _))                             \
-       + sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(_FLAT_MSG_ONEOF_CASE(oneof_name), _))),   \
-      (&((this_pointer_type) nullptr)->OF_PP_CAT(oneof_name, _)));
+#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
+  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
+  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
+  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(oneof_name, _));
 
-#define FLAT_MSG_DEFINE_REPEATED_FIELD(type, field_name, max_size)                     \
-  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(type), field_name, max_size);          \
-  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(                                           \
-      "flat message", sizeof(((this_pointer_type) nullptr)->OF_PP_CAT(field_name, _)), \
-      (&((this_pointer_type) nullptr)->OF_PP_CAT(field_name, _)));
+#define FLAT_MSG_DEFINE_REPEATED_FIELD(type, field_name, max_size)            \
+  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(type), field_name, max_size); \
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_ONEOF_FIELD(type, field_name) OF_PP_MAKE_TUPLE_SEQ(type, field_name)
 
@@ -115,6 +108,7 @@ DEFINE_FLAT_MSG_TYPE(double);
 #define MAKE_FLAT_MSG_ONEOF_ENUM_CASE(type, field_name) _FLAT_MSG_ONEOF_ENUM_VALUE(field_name),
 
 #define FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                    \
+  _FLAT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name));     \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_ACCESSOR, (_FLAT_MSG_ONEOF_ENUM_VALUE), \
                                    (oneof_name), type_and_field_name_seq)
 
@@ -140,37 +134,41 @@ DEFINE_FLAT_MSG_TYPE(double);
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                \
   }
 
-#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)           \
- private:                                                                          \
-  union {                                                                          \
-    OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq) \
+#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \
+ private:                                                                            \
+  struct {                                                                           \
+    union {                                                                          \
+      OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq) \
+    };                                                                               \
+    _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                     \
   } OF_PP_CAT(oneof_name, _);
 
 #define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(type, field_name) type OF_PP_CAT(field_name, _);
 
 #define SNAKE_TO_CAMEL(name) OF_PP_CAT(__FlatMsgSnakeToCamel__, name)
 
-#define _FLAT_MSG_DEFINE_FIELD(T, field_name)                                        \
- public:                                                                             \
-  const T& field_name() const { return OF_PP_CAT(field_name, _); }                   \
-                                                                                     \
- private:                                                                            \
-  void OF_PP_CAT(set_, field_name)(const T& val) { OF_PP_CAT(field_name, _) = val; } \
-  T OF_PP_CAT(field_name, _);
+#define _FLAT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                         \
+ public:                                                                            \
+  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; } \
+                                                                                    \
+ private:                                                                           \
+  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                       \
+    OF_PP_CAT(oneof_name, _).case_ = val;                                           \
+  }
 
-#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                          \
- public:                                                                                           \
-  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }     \
-  const FlatMsgRepeatedField<T, N>& field_name() const { return OF_PP_CAT(field_name, _); }        \
-  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }                 \
-  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mutable_, field_name)() {                                  \
-    return &OF_PP_CAT(field_name, _);                                                              \
-  }                                                                                                \
-  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }    \
-  void OF_PP_CAT(add_, field_name)(const T& val) { return *OF_PP_CAT(field_name, _).Add() = val; } \
-  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                       \
-                                                                                                   \
- private:                                                                                          \
+#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                       \
+ public:                                                                                        \
+  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }  \
+  const FlatMsgRepeatedField<T, N>& field_name() const { return OF_PP_CAT(field_name, _); }     \
+  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }              \
+  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mutable_, field_name)() {                               \
+    return &OF_PP_CAT(field_name, _);                                                           \
+  }                                                                                             \
+  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); } \
+  T* OF_PP_CAT(add_, field_name)() { return OF_PP_CAT(field_name, _).Add(); }                   \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                    \
+                                                                                                \
+ private:                                                                                       \
   FlatMsgRepeatedField<T, N> OF_PP_CAT(field_name, _)
 
 template<typename T, std::size_t N>

@@ -13,8 +13,8 @@ namespace oneflow {
 
 // DSS is short for domain specific struct
 #define DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET() _DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET()
-#define DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(dss_type, size, offset) \
-  _DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(dss_type, size, offset)
+#define DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(dss_type, type, field) \
+  _DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(dss_type, type, field)
 #define DSS_STATIC_ASSERT_STRUCT_SIZE(dss_type, type) _DSS_STATIC_ASSERT_STRUCT_SIZE(dss_type, type)
 
 // details
@@ -68,15 +68,15 @@ struct StructFieldImpl {
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
-#define _DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET(dss_type, size, offset)                \
+#define _DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(dss_type, type, field)                      \
  private:                                                                                 \
   template<typename fake>                                                                 \
   struct __DSS__FieldSizeOfCodeLine<__LINE__, fake> {                                     \
-    constexpr static int Get() { return size; }                                           \
+    constexpr static int Get() { return sizeof(((type*)nullptr)->field); }                \
   };                                                                                      \
   template<typename fake>                                                                 \
   struct __DSS__OffsetOfDefiningField<__LINE__, fake> {                                   \
-    constexpr static int Get() { return (int)(long long)(offset); }                       \
+    constexpr static int Get() { return (int)offsetof(type, field); }                     \
   };                                                                                      \
   static void OF_PP_CAT(__DSS__StaticAssertFieldCodeLineFieldSizeAndOffset, __LINE__)() { \
     static_assert(__DSS__AccumulatedSizeOfDefinedFields<__LINE__>::Get()                  \
