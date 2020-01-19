@@ -17,7 +17,7 @@ from box_head import BoxHead
 from mask_head import MaskHead
 from data_load import make_data_loader
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
-
+import accuracy
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -222,6 +222,8 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         "loss_mask": mask_loss,
         "image_id": image_id,
     }
+    ret.update(accuracy.get_metrics_dict())
+    accuracy.clear_metrics_dict()
     if total_pos_inds_elem_cnt is not None:
         ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
     for k, v in ret.items():
@@ -463,7 +465,7 @@ def make_train(config, fake_images=None):
 
     if fake_images is not None:
         assert len(list(fake_images.values())[0]) == config.ENV.NUM_GPUS
-        
+
         if config.ENV.NUM_GPUS == 1:
             @flow.function
             def train(
@@ -524,9 +526,11 @@ def print_metrics(m):
         "lr",
         "lr2",
         "elapsed_time",
+        "rpn/num_pos_anchors",
+        "rpn/num_neg_anchors",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
-    print(m[to_print_with_order].to_string(index=False))
+    print(m[to_print_with_order].to_string(index=False, float_format='%11.6f'))
 
 
 def add_metrics(metrics_df, iter=None, **kwargs):
@@ -611,6 +615,17 @@ class IterationProcessor(object):
                     outputs_per_rank.pop("image_id")
             elif isinstance(outputs, dict):
                 outputs.pop("image_id")
+                rpn_num_pos_anchors_mask = outputs.pop("rpn/num_pos_anchors_mask")
+                rpn_num_neg_anchors_mask = outputs.pop("rpn/num_neg_anchors_mask")
+                rpn_num_pos_anchors = outputs.pop("rpn/num_pos_anchors")
+                rpn_num_neg_anchors = outputs.pop("rpn/num_neg_anchors")
+
+                print("rpn_num_pos_anchors_mask", rpn_num_pos_anchors_mask)
+                print("rpn_num_neg_anchors_mask", rpn_num_neg_anchors_mask)
+                print("rpn_num_pos_anchors_mask_sum_in_py", np.sum(rpn_num_pos_anchors_mask.ndarray()))
+                print("rpn_num_neg_anchors_mask_sum_in_py", np.sum(rpn_num_neg_anchors_mask.ndarray()))
+                print("rpn_num_pos_anchors", rpn_num_pos_anchors)
+                print("rpn_num_neg_anchors", rpn_num_neg_anchors)
             else:
                 raise ValueError("outputs has error type")
 
