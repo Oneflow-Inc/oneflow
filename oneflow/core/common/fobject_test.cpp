@@ -56,19 +56,20 @@ TEST(FOBJECT, naive) {
   //  auto bar = FOBJECT(FObjectBar)::New();
 }
 
-/*
 // clang-format off
 BEGIN_FOBJECT(FObjectBar)
- public:
-  void __Init__(int32_t bar);
-
   FOBJECT_DEFINE_FIELD(FObjectFoo, bar);
+
+ public:
+  void __Init__();
 END_FOBJECT(FObjectBar)
 // clang-format on
-*/
+
+void FOBJECT_METHOD(FObjectBar, __Init__)() { set_bar(FOBJECT(FObjectFoo)::New(9527)); }
 
 TEST(FOBJECT, nested_objects) {
-  //  auto bar = FOBJECT(FObjectBar)::New();
+  auto bar = FOBJECT(FObjectBar)::New();
+  ASSERT_TRUE(bar->bar()->bar() == 9527);
 }
 
 }  // namespace test
