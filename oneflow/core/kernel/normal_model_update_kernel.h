@@ -23,11 +23,9 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
  private:
   void VirtualKernelInit() override;
 
-  NormalModelUpdateOpUserConf user_conf_;
   T l1_;
   T l2_;
 };
-
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 

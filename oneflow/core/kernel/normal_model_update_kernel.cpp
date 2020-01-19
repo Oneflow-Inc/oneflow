@@ -11,7 +11,6 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::VirtualKernelInit() {
   const PbMessage& op_conf = this->GetCustomizedOpConf();
-  user_conf_ = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(op_conf, "user_conf");
   l1_ = static_cast<T>(GetValFromPbMessage<float>(op_conf, "l1"));
   l2_ = static_cast<T>(GetValFromPbMessage<float>(op_conf, "l2"));
 }
@@ -27,29 +26,5 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
   template struct NormalMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-
-namespace {
-
-Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
-  const NormalModelUpdateOpUserConf& user_conf =
-      kernel_conf.op_attribute().op_conf().normal_mdupdt_conf().user_conf();
-  if (user_conf.has_naive_conf()) {
-    return CreateNaiveMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_momentum_conf()) {
-    return CreateMomentumMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_rmsprop_conf()) {
-    return CreateRMSPropMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_lars_conf()) {
-    return CreateLARSMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_adam_conf()) {
-    return CreateAdamMdUpdtKernel(kernel_conf);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel);
 
 }  // namespace oneflow
