@@ -16,9 +16,9 @@ void ScalarAddKernel<device_type, T>::ForwardDataContent(
   } else {
     UNIMPLEMENTED();
   }
-  KernelUtil<device_type, T>::AddByScalar(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                          in_blob->dptr<T>(), scalar_operand,
-                                          out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::AddByScalarPara(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                              in_blob->dptr<T>(), scalar_operand,
+                                              out_blob->mut_dptr<T>());
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarAddConf, ScalarAddKernel, ARITHMETIC_DATA_TYPE_SEQ);
