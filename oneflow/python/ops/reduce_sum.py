@@ -6,13 +6,19 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-
+import oneflow
 
 import collections
 
 
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
+    if input_tensor.dtype is oneflow.int8:
+        print(
+            "warnning: int 8 blob: {} is used in a reduce sum, could lead to overflow".format(
+                input_tensor.logical_blob_name
+            )
+        )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ReduceSum_")
