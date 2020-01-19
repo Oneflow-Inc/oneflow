@@ -5,7 +5,7 @@ namespace oneflow {
 
 // clang-format off
 BEGIN_FLAT_MSG(TestOptional)
-  FLAT_MSG_DEFINE_FIELD(int32_t, bar);
+  FLAT_MSG_DEFINE_FIELD(TestOptional, int32_t, bar);
 END_FLAT_MSG(TestOptional)
 // clang-format on
 
@@ -21,8 +21,8 @@ TEST(FlatMsg, optional) {
 
 // clang-format off
 BEGIN_FLAT_MSG(FooOneof)
-  FLAT_MSG_DEFINE_FIELD(int32_t, x);
-  FLAT_MSG_DEFINE_ONEOF(type,
+  FLAT_MSG_DEFINE_FIELD(FooOneof, int32_t, x);
+  FLAT_MSG_DEFINE_ONEOF(FooOneof, type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
       FLAT_MSG_ONEOF_FIELD(int64_t, case_1));
 END_FLAT_MSG(FooOneof)
@@ -42,8 +42,8 @@ TEST(FlatMsg, oneof) {
 
 // clang-format off
 BEGIN_FLAT_MSG(FooRepeated)
-  FLAT_MSG_DEFINE_REPEATED_FIELD(char, char_field, 1);
-  FLAT_MSG_DEFINE_REPEATED_FIELD(TestOptional, bar, 10);
+  FLAT_MSG_DEFINE_REPEATED_FIELD(FooRepeated, char, char_field, 1);
+  FLAT_MSG_DEFINE_REPEATED_FIELD(FooRepeated, TestOptional, bar, 10);
 END_FLAT_MSG(FooRepeated)
 // clang-format on
 

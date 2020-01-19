@@ -35,32 +35,41 @@ struct StructFieldImpl {
   }
 };
 
-#define _DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET()                                     \
- private:                                                                                  \
-  template<int x, typename fake = void>                                                    \
-  struct __DSS__FieldSize4CodeLine {                                                       \
-    constexpr static int Get() { return 0; }                                               \
-  };                                                                                       \
-                                                                                           \
-  template<int x, typename fake = void>                                                    \
-  struct __DSS__FieldOffset4CodeLine {                                                     \
-    constexpr static int Get() { return __DSS__FieldOffset4CodeLine<x - 1, fake>::Get(); } \
-  };                                                                                       \
-  template<typename fake>                                                                  \
-  struct __DSS__FieldOffset4CodeLine<__LINE__, fake> {                                     \
-    constexpr static int Get() { return 0; }                                               \
-  };                                                                                       \
-                                                                                           \
-  template<int x, typename fake = void>                                                    \
-  struct __DSS__AccumulatedAlignedSize4CodeLine {                                          \
-    constexpr static int Get() {                                                           \
-      return __DSS__AccumulatedAlignedSize4CodeLine<x - 1, fake>::Get()                    \
-             + __DSS__FieldSize4CodeLine<x - 1, fake>::Get();                              \
-    }                                                                                      \
-  };                                                                                       \
-  template<typename fake>                                                                  \
-  struct __DSS__AccumulatedAlignedSize4CodeLine<__LINE__, fake> {                          \
-    constexpr static int Get() { return 0; }                                               \
+#define _DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET()                                          \
+ private:                                                                                       \
+  template<int x, typename fake = void>                                                         \
+  struct __DSS__FieldSize4CodeLine {                                                            \
+    constexpr static int Get() { return 0; }                                                    \
+  };                                                                                            \
+                                                                                                \
+  template<int x, typename fake = void>                                                         \
+  struct __DSS__FieldOffset4CodeLine {                                                          \
+    constexpr static int Get() { return __DSS__FieldOffset4CodeLine<x - 1, fake>::Get(); }      \
+  };                                                                                            \
+  template<typename fake>                                                                       \
+  struct __DSS__FieldOffset4CodeLine<__LINE__, fake> {                                          \
+    constexpr static int Get() { return 0; }                                                    \
+  };                                                                                            \
+                                                                                                \
+  template<int offset, typename fake = void>                                                    \
+  struct __DSS__CodeLine4FieldOffset {                                                          \
+    constexpr static int Get() { return __DSS__CodeLine4FieldOffset<offset - 1, fake>::Get(); } \
+  };                                                                                            \
+  template<typename fake>                                                                       \
+  struct __DSS__CodeLine4FieldOffset<-1, fake> {                                                \
+    constexpr static int Get() { return __LINE__; }                                             \
+  };                                                                                            \
+                                                                                                \
+  template<int x, typename fake = void>                                                         \
+  struct __DSS__AccumulatedAlignedSize4CodeLine {                                               \
+    constexpr static int Get() {                                                                \
+      return __DSS__AccumulatedAlignedSize4CodeLine<x - 1, fake>::Get()                         \
+             + __DSS__FieldSize4CodeLine<x - 1, fake>::Get();                                   \
+    }                                                                                           \
+  };                                                                                            \
+  template<typename fake>                                                                       \
+  struct __DSS__AccumulatedAlignedSize4CodeLine<__LINE__, fake> {                               \
+    constexpr static int Get() { return 0; }                                                    \
   };
 
 #define ASSERT_VERBOSE(dss_type)                                            \
@@ -76,7 +85,11 @@ struct StructFieldImpl {
   };                                                                                      \
   template<typename fake>                                                                 \
   struct __DSS__FieldOffset4CodeLine<__LINE__, fake> {                                    \
-    constexpr static int Get() { return (int)offsetof(type, field); }                     \
+    constexpr static int Get() { return (int)(long long)&((type*)nullptr)->field; }       \
+  };                                                                                      \
+  template<typename fake>                                                                 \
+  struct __DSS__CodeLine4FieldOffset<(int)(long long)&((type*)nullptr)->field, fake> {    \
+    constexpr static int Get() { return __LINE__; }                                       \
   };                                                                                      \
   static void OF_PP_CAT(__DSS__StaticAssertFieldCodeLineFieldSizeAndOffset, __LINE__)() { \
     static_assert(__DSS__AccumulatedAlignedSize4CodeLine<__LINE__>::Get()                 \
