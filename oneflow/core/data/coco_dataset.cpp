@@ -194,13 +194,12 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, const nlohmann::json&
   right = std::min(std::max(right, min_size), image_width - to_remove);
   bottom = std::min(std::max(bottom, min_size), image_height - to_remove);
 
-  auto& bbox_vec = bbox_field->data();
   // remove empty
   if (right > left && bottom > top) {
-    bbox_vec.push_back(left);
-    bbox_vec.push_back(top);
-    bbox_vec.push_back(right);
-    bbox_vec.push_back(bottom);
+    bbox_field->PushBack(left);
+    bbox_field->PushBack(top);
+    bbox_field->PushBack(right);
+    bbox_field->PushBack(bottom);
   }
 }
 
@@ -208,7 +207,7 @@ void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_fie
   CHECK(label_json.is_number_integer());
   auto* label_field = dynamic_cast<TensorListDataField<int32_t>*>(data_field);
   if (!label_field) { return; }
-  label_field->data().push_back(category_id2contiguous_id_.at(label_json.get<int32_t>()));
+  label_field->PushBack(category_id2contiguous_id_.at(label_json.get<int32_t>()));
 }
 
 void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {

@@ -1210,55 +1210,6 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
-message BroadcastEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastNotEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLogicalAndOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
 message BroadcastFloorModOpConf {
   required string a = 1;
   required string b = 2;
@@ -1698,12 +1649,6 @@ message ClipByValueOpConf {
   optional float max_val = 3;
   // out
   required string out = 4;
-}
-
-message ConstantLikeOpConf {
-  required string in = 1;
-  required float scalar = 2;
-  required string out = 3;
 }
 
 message LocalNonzeroOpConf {
@@ -2267,16 +2212,14 @@ message OperatorConf {
     BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
     BroadcastMinOpConf broadcast_min_conf = 512;
     BroadcastMaxOpConf broadcast_max_conf = 513;
-    SquareOpConf square_conf = 513;
-    SqrtOpConf sqrt_conf = 514;
-    RsqrtOpConf rsqrt_conf = 515;
-    ScalarAddOpConf scalar_add_conf = 516;
-    ScalarMulOpConf scalar_mul_conf = 517;
-    ConstantLikeOpConf constant_like_conf = 518;
+    SquareOpConf square_conf = 514;
+    SqrtOpConf sqrt_conf = 515;
+    RsqrtOpConf rsqrt_conf = 516;
+    ScalarAddOpConf scalar_add_conf = 517;
+    ScalarMulOpConf scalar_mul_conf = 518;
     ReduceMaxOpConf reduce_max_conf = 519;
     ArgmaxOpConf argmax_conf = 520;
     RandomLikeOpConf random_like_conf = 521;
-    BroadcastFloorModOpConf broadcast_floor_mod_conf = 522;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;

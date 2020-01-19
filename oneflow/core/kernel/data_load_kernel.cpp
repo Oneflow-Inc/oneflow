@@ -65,7 +65,7 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
     auto* mut_shape_view = blob->mut_shape_view();
     if (mut_shape_view) { mut_shape_view->set_shape(Shape(shape_vec)); }
   } else {
-    auto tensor_inserter = blob->tensor_back_inserter();
+    TensorBackInserter tensor_inserter(blob);
     tensor_inserter.ReserveOneEmptyTensorList();
     for (DataInstance& data_inst : *batch_data) {
       auto* tensor = tensor_inserter.add_tensor();

@@ -69,6 +69,9 @@ message TargetResizeTransform {
   required int32 max_size = 2;
 }
 
+message SegmentationPolygonListToMask {
+}
+
 message SegmentationPolygonListToAlignedMask {
 }
 
@@ -95,6 +98,7 @@ message DataTransformProto {
     ResizeTransform resize = 1;
     TargetResizeTransform target_resize = 2;
     ImageNormalizeByChannel image_normalize_by_channel = 4;
+    SegmentationPolygonListToMask segmentation_poly_to_mask = 8;
     SegmentationPolygonListToAlignedMask segmentation_poly_to_aligned_mask = 5;
     ImageAlign image_align = 6;
     ImageRandomFlip image_random_flip = 7;

@@ -54,8 +54,8 @@ class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
                MakeHostMemCase(), size->mem_case());
     ctx.device_ctx->AddCallBack(
         [out, cuda_host_mem_ptr, conf, this]() {
-          out->dense_shape_mut_view()->Set(conf.axis(),
-                                           *reinterpret_cast<int32_t*>(cuda_host_mem_ptr->Ptr()));
+          out->mut_shape_view()->Set(conf.axis(),
+                                     *reinterpret_cast<int32_t*>(cuda_host_mem_ptr->Ptr()));
           std::lock_guard<std::mutex> lock(mutex_);
           queue_.push(cuda_host_mem_ptr);
         },

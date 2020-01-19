@@ -42,9 +42,9 @@ void Kernel::Launch(const KernelCtx& ctx,
   // const std::string mark("Kernel::Launch " +
   // this->kernel_conf().op_attribute().op_conf().name()); nvtxRangePush(mark.c_str());
   // auto CachedBnInOp2Blob = WithResultCached(BnInOp2Blob);
-  gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
-  Forward(ctx, CachedBnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);
+  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+  Forward(ctx, BnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   // nvtxRangePop();
 }
 

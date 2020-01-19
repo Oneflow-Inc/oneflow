@@ -358,6 +358,12 @@ void DoDataTransform<TransformCase::kTargetResize>(DataInstance* data_inst,
 }
 
 template<>
+void DoDataTransform<TransformCase::kSegmentationPolyToMask>(DataInstance* data_inst,
+                                                             const DataTransformProto& proto) {
+  UNIMPLEMENTED();
+}
+
+template<>
 void DoDataTransform<TransformCase::kSegmentationPolyToAlignedMask>(
     DataInstance* data_inst, const DataTransformProto& proto) {
   CHECK(proto.has_segmentation_poly_to_aligned_mask());
@@ -467,6 +473,7 @@ void BatchTransform(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_p
   switch (trans_proto.transform_case()) {
     MAKE_CASE(DataTransformProto::kResize)
     MAKE_CASE(DataTransformProto::kTargetResize)
+    MAKE_CASE(DataTransformProto::kSegmentationPolyToMask)
     MAKE_CASE(DataTransformProto::kSegmentationPolyToAlignedMask)
     MAKE_CASE(DataTransformProto::kImageNormalizeByChannel)
     MAKE_CASE(DataTransformProto::kImageAlign)

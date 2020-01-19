@@ -23,7 +23,7 @@ class PieceSliceKernel final : public KernelIf<device_type> {
     auto in_tensor = in_blob->BeginTensor();
     FOR_RANGE(size_t, i, 0, out_size) {
       Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
-      auto tensor_inserter = out_blob->tensor_back_inserter();
+      TensorBackInserter tensor_inserter(out_blob);
       tensor_inserter.ReserveOneEmptyTensorList();
       auto* out_tensor = tensor_inserter.add_tensor();
       DimVector dim_vec;
