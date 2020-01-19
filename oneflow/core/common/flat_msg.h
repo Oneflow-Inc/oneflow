@@ -20,21 +20,19 @@ namespace oneflow {
 
 #define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
 
-#define FLAT_MSG_DEFINE_FIELD(struct_name, field_type, field_name)                 \
-  FLAT_MSG_DEFINE_ONEOF(struct_name, OF_PP_CAT(__flat_msg_optional__, field_name), \
+#define FLAT_MSG_DEFINE_FIELD(field_type, field_name)                 \
+  FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name), \
                         FLAT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(struct_name, oneof_name, type_and_field_name_seq)               \
+#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
   FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
   FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", FLAT_MSG_TYPE(struct_name),            \
-                                       OF_PP_CAT(oneof_name, _));
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(oneof_name, _));
 
-#define FLAT_MSG_DEFINE_REPEATED_FIELD(struct_name, field_type, field_name, max_size) \
-  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size);   \
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", FLAT_MSG_TYPE(struct_name),    \
-                                       OF_PP_CAT(field_name, _));
+#define FLAT_MSG_DEFINE_REPEATED_FIELD(field_type, field_name, max_size)            \
+  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_ONEOF_FIELD(field_type, field_name) OF_PP_MAKE_TUPLE_SEQ(field_type, field_name)
 
