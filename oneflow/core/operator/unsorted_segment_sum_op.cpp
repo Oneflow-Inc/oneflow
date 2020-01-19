@@ -74,6 +74,13 @@ Maybe<void> UnsortedSegmentSumOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
+void UnsortedSegmentSumOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->mutable_unsorted_segment_sum_conf()->set_indices_data_type(
+      GetBlobDesc4BnInOp("segment_ids")->data_type());
+}
+
 REGISTER_OP(OperatorConf::kUnsortedSegmentSumConf, UnsortedSegmentSumOp);
 
 }  // namespace oneflow

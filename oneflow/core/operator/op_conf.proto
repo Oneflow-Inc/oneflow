@@ -544,6 +544,11 @@ message LinearCosineDecayConf {
   optional double beta = 4 [default = 0.001];
 }
 
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2;
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -553,6 +558,7 @@ message LearningRateDecayConf {
     PolynomialDecayConf polynomial_conf = 2004;
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
 }
 
@@ -1169,7 +1175,6 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
-  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
@@ -1199,6 +1204,55 @@ message BroadcastMulOpConf {
 }
 
 message BroadcastDivOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastNotEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLogicalAndOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
@@ -1990,6 +2044,16 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message ConstantLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional DataType data_type = 3;
+  oneof scalar_operand {
+    int64 int_operand = 4;
+    double float_operand = 5;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2189,17 +2253,19 @@ message OperatorConf {
     BroadcastGreaterThanOpConf broadcast_greater_than_conf = 508;
     BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
     BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
-    BroadcastMinOpConf broadcast_min_conf = 511;
-    BroadcastMaxOpConf broadcast_max_conf = 512;
+    BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
+    BroadcastMinOpConf broadcast_min_conf = 512;
+    BroadcastMaxOpConf broadcast_max_conf = 513;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
-    ReduceMaxOpConf reduce_max_conf = 518;
-    ArgmaxOpConf argmax_conf = 519;
-    RandomLikeOpConf random_like_conf = 520;
-    BroadcastFloorModOpConf broadcast_floor_mod_conf = 521;
+    ConstantLikeOpConf constant_like_conf = 518;
+    ReduceMaxOpConf reduce_max_conf = 519;
+    ArgmaxOpConf argmax_conf = 520;
+    RandomLikeOpConf random_like_conf = 521;
+    BroadcastFloorModOpConf broadcast_floor_mod_conf = 522;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
