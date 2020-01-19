@@ -615,17 +615,6 @@ class IterationProcessor(object):
                     outputs_per_rank.pop("image_id")
             elif isinstance(outputs, dict):
                 outputs.pop("image_id")
-                rpn_num_pos_anchors_mask = outputs.pop("rpn/num_pos_anchors_mask")
-                rpn_num_neg_anchors_mask = outputs.pop("rpn/num_neg_anchors_mask")
-                rpn_num_pos_anchors = outputs.pop("rpn/num_pos_anchors")
-                rpn_num_neg_anchors = outputs.pop("rpn/num_neg_anchors")
-
-                # print("rpn_num_pos_anchors_mask", rpn_num_pos_anchors_mask)
-                # print("rpn_num_neg_anchors_mask", rpn_num_neg_anchors_mask)
-                print("rpn_num_pos_anchors_mask_sum_in_py", np.sum(rpn_num_pos_anchors_mask.ndarray()))
-                print("rpn_num_neg_anchors_mask_sum_in_py", np.sum(rpn_num_neg_anchors_mask.ndarray()))
-                print("rpn_num_pos_anchors", rpn_num_pos_anchors)
-                print("rpn_num_neg_anchors", rpn_num_neg_anchors)
             else:
                 raise ValueError("outputs has error type")
 

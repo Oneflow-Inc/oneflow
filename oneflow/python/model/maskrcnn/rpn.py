@@ -265,15 +265,12 @@ class RPNLoss(object):
                     )
             # num_pos_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8), name="rpn_num_pos_anchors")
             # num_neg_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8), name="rpn_num_neg_anchors")
-            # num_pos_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8)
+            num_pos_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8)
             num_neg_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8)
-            num_pos_anchors_mask = num_neg_anchors_mask
-            num_pos_anchors = flow.math.reduce_sum(num_pos_anchors_mask)
-            num_neg_anchors = flow.math.reduce_sum(num_neg_anchors_mask)
+            num_pos_anchors = flow.math.reduce_sum(flow.cast(num_pos_anchors_mask, dtype=flow.int32))
+            num_neg_anchors = flow.math.reduce_sum(flow.cast(num_neg_anchors_mask, dtype=flow.int32))
             accuracy.put_metrics(
                 {
-                    "rpn/num_pos_anchors_mask" : num_pos_anchors_mask,
-                    "rpn/num_neg_anchors_mask" : num_neg_anchors_mask,
                     "rpn/num_pos_anchors" : num_pos_anchors,
                     "rpn/num_neg_anchors" : num_neg_anchors
                 }
