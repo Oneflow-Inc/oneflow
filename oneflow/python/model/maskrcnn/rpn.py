@@ -263,13 +263,11 @@ class RPNLoss(object):
             gt_objectness_logits = flow.concat(
                         sampled_cls_label_list, axis=0, name="cls_label"
                     )
-            # num_pos_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8), name="rpn_num_pos_anchors")
-            # num_neg_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8), name="rpn_num_neg_anchors")
-            num_pos_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8)
-            num_neg_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8)
-            num_pos_anchors = flow.math.reduce_sum(flow.cast(num_pos_anchors_mask, dtype=flow.float))
-            num_neg_anchors = flow.math.reduce_sum(flow.cast(num_neg_anchors_mask, dtype=flow.float))
             if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                num_pos_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8)
+                num_neg_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8)
+                num_pos_anchors = flow.math.reduce_sum(flow.cast(num_pos_anchors_mask, dtype=flow.float))
+                num_neg_anchors = flow.math.reduce_sum(flow.cast(num_neg_anchors_mask, dtype=flow.float))
                 accuracy.put_metrics(
                     {
                         "rpn/num_pos_anchors" : num_pos_anchors * (1.0 / len(image_size_list)),
