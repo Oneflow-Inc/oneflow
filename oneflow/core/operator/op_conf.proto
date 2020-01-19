@@ -1623,6 +1623,16 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message ConstantLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional DataType data_type = 3;
+  oneof scalar_operand {
+    int64 int_operand = 4;
+    double float_operand = 5;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1777,6 +1787,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    ConstantLikeOpConf constant_like_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
