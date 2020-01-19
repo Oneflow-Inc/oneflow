@@ -1,7 +1,7 @@
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow as flow
 from matcher import Matcher
-
+import accuracy
 
 def _Conv2d(
     inputs,
@@ -260,11 +260,25 @@ class RPNLoss(object):
                 bbox_loss, total_sample_cnt, name="box_reg_loss_mean"
             )
 
+            gt_objectness_logits = flow.concat(
+                        sampled_cls_label_list, axis=0, name="cls_label"
+                    )
+            # num_pos_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8), name="rpn_num_pos_anchors")
+            # num_neg_anchors = flow.math.reduce_sum(gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8), name="rpn_num_neg_anchors")
+            num_pos_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=1, dtype=flow.int8)
+            num_neg_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8)
+            num_pos_anchors = flow.math.reduce_sum(flow.cast(num_pos_anchors_mask, dtype=flow.float))
+            num_neg_anchors = flow.math.reduce_sum(flow.cast(num_neg_anchors_mask, dtype=flow.float))
+            if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                accuracy.put_metrics(
+                    {
+                        "rpn/num_pos_anchors" : num_pos_anchors * (1.0 / len(image_size_list)),
+                        "rpn/num_neg_anchors" : num_neg_anchors * (1.0 / len(image_size_list))
+                    }
+                )
             cls_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(
-                    flow.concat(
-                        sampled_cls_label_list, axis=0, name="cls_label"
-                    ),  # CHECK_POINT: cls label
+                    gt_objectness_logits,  # CHECK_POINT: cls label
                     flow.concat(
                         sampled_cls_logit_list, axis=0, name="cls_logit"
                     ),  # CHECK_POINT: cls logit

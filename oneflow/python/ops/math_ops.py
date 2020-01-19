@@ -7,6 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
 
 @oneflow_export("math.add")
@@ -163,6 +164,9 @@ def broadcast_mul(x, y, name=None):
 
 
 def scalar_mul(x, operand, name=None):
+    # TODO: fix me, this cast should not be mandatory, now it always return zero.
+    if x.dtype is oneflow.int8 and isinstance(operand, (float,)):
+        x = oneflow.cast(x, dtype=oneflow.float)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMul_")

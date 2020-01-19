@@ -17,7 +17,7 @@ from box_head import BoxHead
 from mask_head import MaskHead
 from data_load import make_data_loader
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
-
+import accuracy
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -182,13 +182,11 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         cls_loss,
         pos_proposal_list,
         pos_gt_indices_list,
-        total_pos_inds_elem_cnt,
     ) = box_head.build_train(
         proposals,
         gt_bbox_list,
         gt_label_list,
         features,
-        return_total_pos_inds_elem_cnt=cfg.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT,
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
     zero_ctrl_mask = None
@@ -222,8 +220,8 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         "loss_mask": mask_loss,
         "image_id": image_id,
     }
-    if total_pos_inds_elem_cnt is not None:
-        ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
+    ret.update(accuracy.get_metrics_dict())
+    accuracy.clear_metrics_dict()
     for k, v in ret.items():
         if "loss" in k:
             ret[k] = v * (1.0 / cfg.ENV.NUM_GPUS)
@@ -463,7 +461,7 @@ def make_train(config, fake_images=None):
 
     if fake_images is not None:
         assert len(list(fake_images.values())[0]) == config.ENV.NUM_GPUS
-        
+
         if config.ENV.NUM_GPUS == 1:
             @flow.function
             def train(
@@ -519,14 +517,16 @@ def print_metrics(m):
         "loss_box_reg",
         "loss_classifier",
         "loss_mask",
-        "total_pos_inds_elem_cnt",
         "train_step",
         "lr",
         "lr2",
         "elapsed_time",
+        # "total_pos_inds_elem_cnt",
+        # "rpn/num_pos_anchors",
+        # "rpn/num_neg_anchors",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
-    print(m[to_print_with_order].to_string(index=False))
+    print(m[to_print_with_order].to_string(index=False, float_format='%11.6f'))
 
 
 def add_metrics(metrics_df, iter=None, **kwargs):
