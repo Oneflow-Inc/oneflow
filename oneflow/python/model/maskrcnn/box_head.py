@@ -28,7 +28,7 @@ class BoxHead(object):
             # used to generate positive proposals for mask_head
             pos_proposal_list = []
             pos_gt_indices_list = []
-
+            num_bg_samples = []
             for img_idx in range(len(proposals)):
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
@@ -129,6 +129,17 @@ class BoxHead(object):
             )
             labels = flow.concat(label_list, axis=0)
             bbox_targets = flow.concat(bbox_target_list, axis=0)
+            if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                # NOTE: in d2, bg is NUM_CLASSES not 0
+                num_bg_samples_mask = labels == flow.constant_scalar(value=0, dtype=labels.dtype)
+                num_bg_samples = flow.math.reduce_sum(flow.cast(num_bg_samples_mask, dtype=flow.float))
+                num_fg_samples = flow.elem_cnt(labels, dtype=flow.float) - num_bg_samples
+                accuracy.put_metrics(
+                    {
+                        "roi_head/num_fg_samples" : num_fg_samples * (1.0 / len(pos_proposal_list)),
+                        "roi_head/num_bg_samples" : num_bg_samples * (1.0 / len(pos_proposal_list))
+                    }
+                )
 
             # box feature extractor
             x = self.box_feature_extractor(proposals, img_ids, features)

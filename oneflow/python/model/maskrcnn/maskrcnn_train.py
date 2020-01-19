@@ -521,9 +521,11 @@ def print_metrics(m):
         "lr",
         "lr2",
         "elapsed_time",
-        # "total_pos_inds_elem_cnt",
         # "rpn/num_pos_anchors",
         # "rpn/num_neg_anchors",
+        # "roi_head/num_fg_samples",
+        # "roi_head/num_bg_samples"
+        # "total_pos_inds_elem_cnt",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
     print(m[to_print_with_order].to_string(index=False, float_format='%11.6f'))
