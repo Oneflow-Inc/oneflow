@@ -156,8 +156,8 @@ def test_2n8c(test_case):
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
-#def test_inplace(test_case):
-#    test_case.assertTrue(np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)))
+def test_inplace(test_case):
+    test_case.assertTrue(np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)))
 
 def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)

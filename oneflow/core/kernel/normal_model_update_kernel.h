@@ -22,20 +22,12 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
  private:
   void VirtualKernelInit() override;
-  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   NormalModelUpdateOpUserConf user_conf_;
   T l1_;
   T l2_;
 };
 
-template<DeviceType device_type, typename T>
-class NormalMdUpdateKernelUtil final {
- public:
-  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
-                                        T* ratio_ptr);
-};
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 
