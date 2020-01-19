@@ -68,7 +68,6 @@ def gen_example(length=32):
     int64_list = random_int(length, 64)
     float_list = random_float(length)
     bytes_list = random_string(length)
-    #print(bytes_list)
 
     example = ofrecord.OFRecord(feature = {
         'int32': int32_feature(int32_list),
@@ -110,7 +109,8 @@ def decoder(data_dir, length, batch_size=1, data_part_num=1):
     blob_confs.append(_blob_conf('int64', [length], dtype=flow.int64))
     blob_confs.append(_blob_conf('float', [length], dtype=flow.float))
     blob_confs.append(_blob_conf('double', [length], dtype=flow.double))
-    blob_confs.append(_blob_conf('bytes', [1, 4], dtype=flow.int8, codec=flow.data.BytesListCodec()))
+    blob_confs.append(_blob_conf('bytes', [1, length], dtype=flow.int8,
+                                 codec=flow.data.BytesListCodec()))
 
     blobs = flow.data.decode_ofrecord(data_dir, blob_confs, batch_size=batch_size, name="decode",
                                       data_part_num=data_part_num)
@@ -123,11 +123,12 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 def test_ofrecord_decoder(test_case):
-    num_examples = 100
-    batch_size = 10
+    num_examples = 1000
+    batch_size = 100
     assert num_examples % batch_size == 0
-    length = 4
-    int32_np, int64_np, float_np, double_np, bytes_data = gen_ofrecord(num_examples, length, batch_size)
+    length = 64
+    int32_np, int64_np, float_np, double_np, bytes_data = gen_ofrecord(num_examples, length,
+                                                                       batch_size)
 
     @flow.function(func_config)
     def OfrecordDecoderJob():
@@ -141,5 +142,7 @@ def test_ofrecord_decoder(test_case):
         #test_case.assertTrue(np.array_equal(d['float'].ndarray(), float_np[i]))
         assert np.allclose(d['float'].ndarray(), float_np[i], rtol=1e-5, atol=1e-5)
         test_case.assertTrue(np.array_equal(d['double'].ndarray(), double_np[i]))
-        print(d['bytes'])
+        for j, int8_list in enumerate(d['bytes']):
+            #print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
+            assert ''.join([chr(x) for x in int8_list[0]]) == bytes_data[i*batch_size + j]
 
