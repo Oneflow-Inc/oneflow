@@ -53,7 +53,7 @@ TEST(StructField, const_struct_const_field) {
 namespace {
 
 struct Foo {
-  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();
+  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(0);
   int x;
   int y;
   int z;
@@ -63,6 +63,12 @@ struct Foo {
   DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, z);
 
   DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Foo);
+};
+
+struct Bar {
+  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(0);
+
+  DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Bar);
 };
 
 }  // namespace
