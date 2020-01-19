@@ -1787,6 +1787,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    ConstantLikeOpConf constant_like_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -1808,7 +1809,6 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
-    ConstantLikeOpConf constant_like_conf = 518;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
