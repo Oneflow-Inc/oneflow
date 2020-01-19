@@ -54,13 +54,13 @@ namespace {
 
 struct Foo {
   DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, x);
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, y);
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, z);
-
   int x;
   int y;
   int z;
+
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, x);
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, y);
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, z);
 
   DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Foo);
 };

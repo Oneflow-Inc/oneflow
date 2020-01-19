@@ -20,30 +20,32 @@ namespace oneflow {
 
 #define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
 
-#define FLAT_MSG_DEFINE_FIELD(type, field_name)                       \
-  FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name), \
-                        FLAT_MSG_ONEOF_FIELD(type, field_name))
+#define FLAT_MSG_DEFINE_FIELD(struct_name, field_type, field_name)                 \
+  FLAT_MSG_DEFINE_ONEOF(struct_name, OF_PP_CAT(__flat_msg_optional__, field_name), \
+                        FLAT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
+#define FLAT_MSG_DEFINE_ONEOF(struct_name, oneof_name, type_and_field_name_seq)               \
   FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
   FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(oneof_name, _));
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", FLAT_MSG_TYPE(struct_name),            \
+                                       OF_PP_CAT(oneof_name, _));
 
-#define FLAT_MSG_DEFINE_REPEATED_FIELD(type, field_name, max_size)            \
-  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(type), field_name, max_size); \
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", self_type, OF_PP_CAT(field_name, _));
+#define FLAT_MSG_DEFINE_REPEATED_FIELD(struct_name, field_type, field_name, max_size) \
+  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size);   \
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("flat message", FLAT_MSG_TYPE(struct_name),    \
+                                       OF_PP_CAT(field_name, _));
 
-#define FLAT_MSG_ONEOF_FIELD(type, field_name) OF_PP_MAKE_TUPLE_SEQ(type, field_name)
+#define FLAT_MSG_ONEOF_FIELD(field_type, field_name) OF_PP_MAKE_TUPLE_SEQ(field_type, field_name)
 
-#define FLAT_MSG_ONEOF_ENUM_TYPE(type, oneof_name) \
-  FLAT_MSG_TYPE(type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
+#define FLAT_MSG_ONEOF_ENUM_TYPE(field_type, oneof_name) \
+  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
 
-#define FLAT_MSG_ONEOF_ENUM_VALUE(type, field) \
-  FLAT_MSG_TYPE(type)::_FLAT_MSG_ONEOF_ENUM_VALUE(field)
+#define FLAT_MSG_ONEOF_ENUM_VALUE(field_type, field) \
+  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_ENUM_VALUE(field)
 
-#define FLAT_MSG_ONEOF_NOT_SET_VALUE(type, oneof_name) \
-  FLAT_MSG_TYPE(type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
+#define FLAT_MSG_ONEOF_NOT_SET_VALUE(field_type, oneof_name) \
+  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
 
 #define FLAT_MSG_TYPE(type_name) OF_PP_CAT(type_name, __flat_msg_type__)
 
@@ -86,8 +88,8 @@ DEFINE_FLAT_MSG_TYPE(double);
 #define MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq) \
   OF_PP_FOR_EACH_TUPLE(SUBSTITUTE_FLAT_MSG_TYPE, type_and_field_name_seq)
 
-#define SUBSTITUTE_FLAT_MSG_TYPE(type, field_name) \
-  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(type), field_name)
+#define SUBSTITUTE_FLAT_MSG_TYPE(field_type, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
 
 #define FLAT_MSG_DEFINE_BASIC_METHODS(T) _FLAT_MSG_DEFINE_BASIC_METHODS(T)
 
@@ -105,7 +107,8 @@ DEFINE_FLAT_MSG_TYPE(double);
     OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_ENUM_CASE, type_and_field_name_seq) \
   }
 
-#define MAKE_FLAT_MSG_ONEOF_ENUM_CASE(type, field_name) _FLAT_MSG_ONEOF_ENUM_VALUE(field_name),
+#define MAKE_FLAT_MSG_ONEOF_ENUM_CASE(field_type, field_name) \
+  _FLAT_MSG_ONEOF_ENUM_VALUE(field_name),
 
 #define FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                    \
   _FLAT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name));     \
@@ -143,7 +146,7 @@ DEFINE_FLAT_MSG_TYPE(double);
     _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                     \
   } OF_PP_CAT(oneof_name, _);
 
-#define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(type, field_name) type OF_PP_CAT(field_name, _);
+#define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(field_type, field_name) field_type OF_PP_CAT(field_name, _);
 
 #define SNAKE_TO_CAMEL(name) OF_PP_CAT(__FlatMsgSnakeToCamel__, name)
 
