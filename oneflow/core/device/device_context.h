@@ -21,6 +21,9 @@ class DeviceCtx {
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
   virtual void AddCallBack(std::function<void()>) const = 0;
+  virtual void AddCallBack(std::function<void()> callback, const std::string& op_name) const {
+    AddCallBack(callback);
+  };
 
  protected:
   DeviceCtx() = default;

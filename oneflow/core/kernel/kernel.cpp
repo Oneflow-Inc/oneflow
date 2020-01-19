@@ -1,7 +1,9 @@
 #include "oneflow/core/kernel/kernel.h"
+#include <string>
 #include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 
@@ -37,9 +39,13 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-  Forward(ctx, BnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
+  // const std::string mark("Kernel::Launch " +
+  // this->kernel_conf().op_attribute().op_conf().name()); nvtxRangePush(mark.c_str());
+  // auto CachedBnInOp2Blob = WithResultCached(BnInOp2Blob);
+  gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
+  Forward(ctx, CachedBnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);
+  // nvtxRangePop();
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -54,9 +60,22 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // const std::string mark1("ForwardHeader " +
+  // this->kernel_conf().op_attribute().op_conf().name()); nvtxRangePush(mark1.c_str());
   ForwardHeader(ctx, BnInOp2Blob);
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  // nvtxRangePop();
+
+  // const std::string mark2("IsEmptyOrStateless "
+  // + this->kernel_conf().op_attribute().op_conf().name());
+  // nvtxRangePush(mark2.c_str());
+  bool will_return = (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless());
+  // nvtxRangePop();
+  if (will_return) { return; }
+
+  const std::string mark3("FWData " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark3.c_str());
   ForwardDataContent(ctx, BnInOp2Blob);
+  nvtxRangePop();
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,

@@ -81,6 +81,14 @@ class TopKKernel final : public KernelIf<device_type> {
   ~TopKKernel() = default;
 
  private:
+  void ForwardDenseShape(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Shape shape;
+    BnInOp2Blob("in")->dense_shape_view().ToShape(&shape);
+    shape.Set(shape.NumAxes() - 1, std::min(static_cast<int64_t>(this->op_conf().top_k_conf().k()),
+                                            shape.At(shape.NumAxes() - 1)));
+    BnInOp2Blob("out")->dense_shape_mut_view()->set_shape(shape);
+  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");

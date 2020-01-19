@@ -1,0 +1,21 @@
+ENV:
+  NUM_GPUS: 2
+DATASETS:
+  ANNOTATION_TRAIN: "annotations/instances_train2017.json"
+  IMAGE_DIR_TRAIN: "train2017"
+  SHUFFLE: True
+INPUT:
+  MIRROR_PROB: 0.5
+MODEL:
+  WEIGHT: "/model_zoo/detection/R-50"
+  RPN:
+    RANDOM_SAMPLE: True
+  ROI_HEADS:
+    RANDOM_SAMPLE: True
+SOLVER:
+  IMS_PER_BATCH: 4
+  MAX_ITER: 100
+  BASE_LR: 0.005
+  STEPS: (60000, 80000)
+  LR_DECAY_VALUES: (1.0, 0.1, 0.01)
+  METRICS_PERIOD: 20

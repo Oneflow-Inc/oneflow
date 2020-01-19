@@ -926,7 +926,7 @@ message DataLoadOpConf {
   required DatasetProto dataset = 3;
   repeated BlobConf blobs = 4;
   repeated DataTransformProto transforms = 5;
-  optional int32 batch_cache_size = 6 [default = 3];
+  required int32 num_parallels = 6;
 }
 
 message DecodeOFRecordOpConf {
@@ -1785,6 +1785,7 @@ message BoxDecodeOpConf {
   required string boxes = 3;
   // conf
   required BBoxRegressionWeights regression_weights = 4;
+  required float bbox_xform_clip = 5;
 }
 
 message LevelMapOpConf {
@@ -2054,6 +2055,16 @@ message ConstantLikeOpConf {
   }
 }
 
+message NvtxRangeStartOpConf {
+  repeated string in = 1;
+  required string msg = 2;
+}
+
+message NvtxRangeEndOpConf {
+  repeated string in = 1;
+  required string msg = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2286,6 +2297,10 @@ message OperatorConf {
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
+
+    // debug op
+    NvtxRangeStartOpConf nvtx_range_start_conf = 801;
+    NvtxRangeEndOpConf nvtx_range_end_conf = 802;
   }
 }
 

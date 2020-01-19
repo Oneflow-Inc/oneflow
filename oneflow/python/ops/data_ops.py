@@ -222,18 +222,19 @@ class COCODataset(object):
         random_seed,
         shuffle=True,
         group_by_aspect_ratio=True,
-        max_segm_poly_points=1024,
+        remove_images_without_annotations=True,
+        max_segm_poly_points_per_image=65536,
         name=None,
     ):
-        name = name or id_util.UniqueStr("COCODataset_")
+        self.name = name or id_util.UniqueStr("COCODataset_")
         self.dataset_dir = dataset_dir
         self.annotation_file = annotation_file
         self.image_dir = image_dir
         self.random_seed = random_seed
         self.shuffle = shuffle
         self.group_by_aspect_ratio = group_by_aspect_ratio
-        self.max_segm_poly_points = max_segm_poly_points
-        self.name = name
+        self.remove_images_without_annotations = remove_images_without_annotations
+        self.max_segm_poly_points_per_image = max_segm_poly_points_per_image
 
     def to_proto(self, proto=None):
         if proto is None:
@@ -246,7 +247,8 @@ class COCODataset(object):
         proto.coco.annotation_file = self.annotation_file
         proto.coco.image_dir = self.image_dir
         proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
-        proto.coco.max_segm_poly_points = self.max_segm_poly_points
+        proto.coco.remove_images_without_annotations = self.remove_images_without_annotations
+        proto.coco.max_segm_poly_points = self.max_segm_poly_points_per_image
         return proto
 
 
@@ -350,10 +352,10 @@ class ImageAlign(object):
 
 @oneflow_export("data.DataLoader")
 class DataLoader(object):
-    def __init__(self, dataset, batch_size, batch_cache_size):
+    def __init__(self, dataset, batch_size, num_parallels):
         self._dataset = dataset
         self._batch_size = batch_size
-        self._batch_cache_size = batch_cache_size
+        self._num_parallels = num_parallels
         self._blobs = []
         self._transforms = []
 
@@ -424,7 +426,7 @@ class DataLoader(object):
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
         op_conf.data_load_conf.batch_size = self._batch_size
-        op_conf.data_load_conf.batch_cache_size = self._batch_cache_size
+        op_conf.data_load_conf.num_parallels = self._num_parallels
         self._dataset.to_proto(op_conf.data_load_conf.dataset)
         op_conf.data_load_conf.transforms.extend(
             [transform.to_proto() for transform in self._transforms]
@@ -435,7 +437,7 @@ class DataLoader(object):
             blob_conf.data_source = blob["data_source"]
             blob_conf.shape.dim.extend(blob["shape"])
             blob_conf.data_type = blob["dtype"]
-            if blob_conf.data_source == data_util.DataSourceCase.kImage:
+            if blob_conf.data_source == data_util.kImage:
                 blob_conf.encode_case.jpeg.SetInParent()
             else:
                 blob_conf.encode_case.raw.SetInParent()

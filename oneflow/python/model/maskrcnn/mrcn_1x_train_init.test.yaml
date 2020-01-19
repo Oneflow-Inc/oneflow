@@ -1,0 +1,24 @@
+ENV:
+  NUM_GPUS: 1
+DATASETS:
+  ANNOTATION_TRAIN: "annotations/instances_train2017.json"
+  IMAGE_DIR_TRAIN: "train2017"
+  SHUFFLE: False
+INPUT:
+  MIRROR_PROB: 0.0
+MODEL:
+  WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_1x_init"
+  RPN:
+    RANDOM_SAMPLE: False
+  ROI_HEADS:
+    RANDOM_SAMPLE: False
+SOLVER:
+  IMS_PER_BATCH: 2
+  MAX_ITER: 10
+  BASE_LR: 0.0025
+  STEPS: (480000, 640000)
+  LR_DECAY_VALUES: (1, 0.1, 0.01)
+  CHECKPOINT_PERIOD: 1
+  METRICS_PERIOD: 100
+  # ENABLE_WARMUP: False
+  # OPTIMIZER: "sgd"

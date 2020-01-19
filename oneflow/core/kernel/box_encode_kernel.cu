@@ -10,20 +10,29 @@ __global__ void EncodeGpu(const int32_t num_boxes, const T* ref_boxes_ptr, const
                           const float weight_h, T* boxes_delta_ptr) {
   const T TO_REMOVE = 1.0;
   CUDA_1D_KERNEL_LOOP(i, num_boxes) {
-    const T ref_box_x1 = ref_boxes_ptr[i * 4];
-    const T ref_box_y1 = ref_boxes_ptr[i * 4 + 1];
-    const T ref_box_width = ref_boxes_ptr[i * 4 + 2] - ref_box_x1 + TO_REMOVE;
-    const T ref_box_height = ref_boxes_ptr[i * 4 + 3] - ref_box_y1 + TO_REMOVE;
-    const T box_x1 = boxes_ptr[i * 4];
-    const T box_y1 = boxes_ptr[i * 4 + 1];
-    const T box_width = boxes_ptr[i * 4 + 2] - box_x1 + TO_REMOVE;
-    const T box_height = boxes_ptr[i * 4 + 3] - box_y1 + TO_REMOVE;
-    boxes_delta_ptr[i * 4] =
-        weight_x * ((ref_box_x1 + 0.5 * ref_box_width) - (box_x1 + 0.5 * box_width)) / box_width;
-    boxes_delta_ptr[i * 4 + 1] =
-        weight_y * ((ref_box_y1 + 0.5 * ref_box_height) - (box_y1 + 0.5 * box_height)) / box_height;
-    boxes_delta_ptr[i * 4 + 2] = weight_w * log(ref_box_width / box_width);
-    boxes_delta_ptr[i * 4 + 3] = weight_h * log(ref_box_height / box_height);
+    int xmin = i * 4 + 0;
+    int ymin = i * 4 + 1;
+    int xmax = i * 4 + 2;
+    int ymax = i * 4 + 3;
+
+    const T ref_box_width = ref_boxes_ptr[xmax] - ref_boxes_ptr[xmin] + TO_REMOVE;
+    const T ref_box_height = ref_boxes_ptr[ymax] - ref_boxes_ptr[ymin] + TO_REMOVE;
+    const T ref_box_x = ref_boxes_ptr[xmin] + 0.5 * ref_box_width;
+    const T ref_box_y = ref_boxes_ptr[ymin] + 0.5 * ref_box_height;
+
+    const T box_width = boxes_ptr[xmax] - boxes_ptr[xmin] + TO_REMOVE;
+    const T box_height = boxes_ptr[ymax] - boxes_ptr[ymin] + TO_REMOVE;
+    const T box_x = boxes_ptr[xmin] + 0.5 * box_width;
+    const T box_y = boxes_ptr[ymin] + 0.5 * box_height;
+
+    // dx
+    boxes_delta_ptr[xmin] = weight_x * (ref_box_x - box_x) / box_width;
+    // dy
+    boxes_delta_ptr[ymin] = weight_y * (ref_box_y - box_y) / box_height;
+    // dw
+    boxes_delta_ptr[xmax] = weight_w * log(ref_box_width / box_width);
+    // dh
+    boxes_delta_ptr[ymax] = weight_h * log(ref_box_height / box_height);
   }
 }
 

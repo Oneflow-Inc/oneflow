@@ -11,6 +11,7 @@ namespace oneflow {
 struct CudaCBEvent {
   std::function<void()> callback;
   cudaEvent_t event;
+  std::string op_name;
 };
 
 class CudaStreamHandle final {
@@ -26,6 +27,7 @@ class CudaStreamHandle final {
   const cudnnHandle_t* cudnn_handle();
 
   void AddCallBack(std::function<void()> callback);
+  void AddCallBack(std::function<void()> callback, const std::string& op_name);
 
   ~CudaStreamHandle();
 

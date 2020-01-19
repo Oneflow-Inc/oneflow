@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"

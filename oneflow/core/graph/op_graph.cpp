@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/op_graph.h"
+#include <memory>
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/normal_model_update_op.h"
 
@@ -386,13 +387,22 @@ void OpGraph::Init(const Job& job) {
 
 void OpGraph::CheckIsDAG() const {
   CHECK(!FindFirstNontrivialSCC());
+  OpNode* for_each_in_current_node = nullptr;
+  OpNode* for_each_out_current_node = nullptr;
   auto ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    for_each_in_current_node = node;
     ForEachDataAndCtrlInNode(node, Handler);
   };
   auto ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    for_each_out_current_node = node;
     ForEachDataAndCtrlOutNode(node, Handler);
   };
-  CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
+  CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut))
+      << "for_each_in_current_node: "
+      << (for_each_in_current_node == nullptr ? "empty" : for_each_in_current_node->op().op_name())
+      << " for_each_out_current_node: "
+      << (for_each_out_current_node == nullptr ? "empty"
+                                               : for_each_out_current_node->op().op_name());
 }
 
 void OpGraph::InitNodes(const Job& job) {
@@ -439,7 +449,9 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
   for (const auto& op_conf : job.net().op()) {
     for (const auto& ctrl_in_op_name : op_conf.ctrl_in_op_name()) {
       auto* consumer_op_names = &producer_op_name2ctrl_consumer_op_names_[ctrl_in_op_name];
-      CHECK(consumer_op_names->emplace(op_conf.name()).second);
+      CHECK(consumer_op_names->emplace(op_conf.name()).second)
+          << "op name of ctrl edge consumer already exists, producer_op_name: " << ctrl_in_op_name
+          << " op name: " << op_conf.name();
     }
   }
 }

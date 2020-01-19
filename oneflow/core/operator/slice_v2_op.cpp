@@ -1,3 +1,4 @@
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 

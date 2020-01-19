@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 
@@ -20,7 +21,10 @@ void DataLoadKernel::VirtualKernelInit() {
 
 void DataLoadKernel::Forward(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // const std::string mark("DataLoadKernel::Forward FetchBatch");
+  // nvtxRangePush(mark.c_str());
   auto batch_data = data_loader_->FetchBatch();
+  // nvtxRangePop();
   FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
     Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
     const BlobConf& blob_conf = op_conf().data_load_conf().blobs(i);
@@ -48,14 +52,14 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
                           std::multiplies<int64_t>());
       CHECK_EQ(elem_cnt, exp_elem_cnt);
     }
-    MultiThreadLoop(batch_data->size(), [&](int64_t n) {
+    FOR_RANGE(size_t, n, 0, batch_data->size()) {
       const DataField* data_field = batch_data->at(n).GetField(blob_conf.data_source());
       size_t elem_bytes_size = GetSizeOfDataType(blob_conf.data_type());
       data_field->ToBuffer(dptr + n * elem_cnt * elem_bytes_size, blob_conf.data_type());
       Shape shape;
       data_field->InferShape(blob_conf.shape(), var_axis, &shape);
       CHECK(instance_shape == shape);
-    });
+    }
     DimVector shape_vec(instance_shape.dim_vec());
     shape_vec.insert(shape_vec.begin(), batch_data->size());
     auto* mut_shape_view = blob->mut_shape_view();
