@@ -336,9 +336,8 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("math.sqrt")
 def sqrt(x, name=None):
-    # TODO: not ready yet
-    raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
     setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
@@ -350,9 +349,8 @@ def sqrt(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("math.rsqrt")
 def rsqrt(x, name=None):
-    # TODO: not ready yet
-    raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
     setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
@@ -638,3 +636,19 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export('math.square')
+def square(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Square_"),
+    )
+    setattr(op_conf.square_conf, "in", x.logical_blob_name)
+    setattr(op_conf.square_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

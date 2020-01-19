@@ -67,7 +67,6 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
         new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
     begin_mut_tensor_.reset(new DataOnlyMutTensorView(
         this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
-    tensor_back_inserter_.reset(new TensorBackInserter(this));
     int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
     shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {

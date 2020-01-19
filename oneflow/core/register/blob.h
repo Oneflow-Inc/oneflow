@@ -54,7 +54,6 @@ class Blob final {
   bool IsEndTensor(const DataOnlyMutTensorView& tensor) const;
 
   friend class TensorBackInserter;
-  const TensorBackInserter& tensor_back_inserter() { return *tensor_back_inserter_; }
 
   // tensor list slice
   size_t num_of_tensor_list_slices() const;
@@ -128,7 +127,6 @@ class Blob final {
   std::unique_ptr<PodPtr> header_ptr_;
   std::unique_ptr<TensorView> begin_tensor_;
   std::unique_ptr<DataOnlyMutTensorView> begin_mut_tensor_;
-  std::unique_ptr<TensorBackInserter> tensor_back_inserter_;
   // TODO(); remove this ugly code
   int32_t record_num_;
 };

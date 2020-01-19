@@ -10,16 +10,21 @@ class ConstantLikeOp final : public Operator {
 
   void InitFromOpConf() override {
     CHECK(op_conf().has_constant_like_conf());
-    EnrollInputBn("in", false);
+    EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
   }
+
   const PbMessage& GetCustomizedConf() const override {
     return this->op_conf().constant_like_conf();
   }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+    const ConstantLikeOpConf& conf = op_conf().constant_like_conf();
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+    *out_blob_desc = *GetBlobDesc4BnInOp("like");
+    if (conf.has_data_type()) { out_blob_desc->set_data_type(conf.data_type()); }
     return Maybe<void>::Ok();
   }
 
@@ -28,26 +33,22 @@ class ConstantLikeOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
-  Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const auto& bn2conf_sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
-    const SbpParallel* sbp_parallel = nullptr;
-    const auto& conf_sbp_it = bn2conf_sbp.find("out");
-    if (conf_sbp_it == bn2conf_sbp.end()) {
-      sbp_parallel = &(JUST(SbpInferHint4Ibn("in"))->sbp_parallel());
-    } else {
-      sbp_parallel = &conf_sbp_it->second;
-    }
-    (*bn2sbp)["in"] = *sbp_parallel;
-    (*bn2sbp)["out"] = *sbp_parallel;
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureBuilder()
+        .Split("like", 0)
+        .Split("out", 0)
+        .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("like"))->shape().NumAxes())
+        .Build(sbp_sig_list);
+    SbpSignatureBuilder().PartialSum("like").Broadcast("out").Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
 
 REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kConstantLikeConf, 1);
 
 }  // namespace oneflow
