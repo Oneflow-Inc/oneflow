@@ -620,8 +620,8 @@ class IterationProcessor(object):
                 rpn_num_pos_anchors = outputs.pop("rpn/num_pos_anchors")
                 rpn_num_neg_anchors = outputs.pop("rpn/num_neg_anchors")
 
-                print("rpn_num_pos_anchors_mask", rpn_num_pos_anchors_mask)
-                print("rpn_num_neg_anchors_mask", rpn_num_neg_anchors_mask)
+                # print("rpn_num_pos_anchors_mask", rpn_num_pos_anchors_mask)
+                # print("rpn_num_neg_anchors_mask", rpn_num_neg_anchors_mask)
                 print("rpn_num_pos_anchors_mask_sum_in_py", np.sum(rpn_num_pos_anchors_mask.ndarray()))
                 print("rpn_num_neg_anchors_mask_sum_in_py", np.sum(rpn_num_neg_anchors_mask.ndarray()))
                 print("rpn_num_pos_anchors", rpn_num_pos_anchors)

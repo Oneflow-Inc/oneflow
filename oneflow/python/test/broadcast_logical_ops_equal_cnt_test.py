@@ -1,4 +1,4 @@
-/home/caishenghang/oneflow/oneflow/python/test/broadcast_logical_ops_test.pyimport oneflow as flow
+import oneflow as flow
 import numpy as np
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 
@@ -6,7 +6,7 @@ flow.env.ctrl_port(20099)
 of_dtype = flow.int8
 dtype = convert_of_dtype_to_numpy_dtype(of_dtype)
 flow.config.default_data_type(of_dtype)
-shape = (4, 4)
+shape = (512,)
 
 
 def input_blob_def():
@@ -17,13 +17,22 @@ def input_blob_def():
 def EqualJob(a=input_blob_def()):
     flow.config.default_data_type(of_dtype)
     b = flow.constant_scalar(value=0, dtype=flow.int8)
-    return (a == b, flow.math.reduce_sum(a == b))
+    equal = a == b
+    return (equal, flow.math.reduce_sum(equal))
 
 
 x = np.random.randint(0, 2, shape).astype(dtype)
-print("x = ", x)
-print("x == 0 --------------------------------")
 y = EqualJob(x).get()
 y, cnt = y
-assert cnt.ndarray() == np.sum(y.ndarray())
-assert cnt.ndarray() == np.sum(x == 0)
+
+a = x == 0
+b = y.ndarray()
+assert (a == b).all(), "{} vs {}".format(a, b)
+
+a = cnt.ndarray().item()
+b = np.sum(y.ndarray())
+assert a == b, "{} vs {}".format(a, b)
+
+a = cnt.ndarray().item()
+b = np.sum(x == 0)
+assert a == b, "{} vs {}".format(a, b)
