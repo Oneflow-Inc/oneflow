@@ -182,13 +182,11 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         cls_loss,
         pos_proposal_list,
         pos_gt_indices_list,
-        total_pos_inds_elem_cnt,
     ) = box_head.build_train(
         proposals,
         gt_bbox_list,
         gt_label_list,
         features,
-        return_total_pos_inds_elem_cnt=cfg.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT,
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
     zero_ctrl_mask = None
@@ -224,8 +222,6 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
     }
     ret.update(accuracy.get_metrics_dict())
     accuracy.clear_metrics_dict()
-    if total_pos_inds_elem_cnt is not None:
-        ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
     for k, v in ret.items():
         if "loss" in k:
             ret[k] = v * (1.0 / cfg.ENV.NUM_GPUS)

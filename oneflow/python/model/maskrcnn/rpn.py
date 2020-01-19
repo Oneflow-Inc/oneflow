@@ -269,18 +269,13 @@ class RPNLoss(object):
             num_neg_anchors_mask = gt_objectness_logits == flow.constant_scalar(value=0, dtype=flow.int8)
             num_pos_anchors = flow.math.reduce_sum(flow.cast(num_pos_anchors_mask, dtype=flow.int32))
             num_neg_anchors = flow.math.reduce_sum(flow.cast(num_neg_anchors_mask, dtype=flow.int32))
-            accuracy.put_metrics(
-                {
-                    "rpn/num_pos_anchors" : num_pos_anchors,
-                    "rpn/num_neg_anchors" : num_neg_anchors
-                }
-            )
-            # accuracy.put_metrics(
-            #     {
-            #         "rpn/num_pos_anchors" : num_pos_anchors * (1.0 / len(image_size_list)),
-            #         "rpn/num_neg_anchors" : num_neg_anchors * (1.0 / len(image_size_list))
-            #     }
-            # )
+            if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                accuracy.put_metrics(
+                    {
+                        "rpn/num_pos_anchors" : num_pos_anchors * (1.0 / len(image_size_list)),
+                        "rpn/num_neg_anchors" : num_neg_anchors * (1.0 / len(image_size_list))
+                    }
+                )
             cls_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(
                     gt_objectness_logits,  # CHECK_POINT: cls label

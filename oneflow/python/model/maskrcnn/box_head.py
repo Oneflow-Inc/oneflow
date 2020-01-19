@@ -3,7 +3,7 @@ import operator
 
 from matcher import Matcher
 import oneflow as flow
-
+import accuracy
 
 class BoxHead(object):
     def __init__(self, cfg):
@@ -19,7 +19,6 @@ class BoxHead(object):
         gt_boxes_list,
         gt_labels_list,
         features,
-        return_total_pos_inds_elem_cnt=False,
     ):
         with flow.deprecated.variable_scope("roi"):
             # used in box_head
@@ -169,20 +168,18 @@ class BoxHead(object):
                 total_elem_cnt,
                 name="box_head_box_loss_div",
             )
-            ret = (
+            if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                accuracy.put_metrics(
+                    {
+                        "total_pos_inds_elem_cnt" : flow.elem_cnt(total_pos_inds, dtype=flow.float),
+                    }
+                )
+            return (
                 box_head_box_loss,
                 box_head_cls_loss,
                 pos_proposal_list,
                 pos_gt_indices_list,
             )
-            if return_total_pos_inds_elem_cnt:
-                total_pos_inds_elem_cnt = flow.elem_cnt(
-                    total_pos_inds, dtype=flow.float
-                )
-                ret += (total_pos_inds_elem_cnt,)
-            else:
-                ret += (None,)
-            return ret
 
     # Input:
     # rpn_proposals: list of [R, 4] wrt. images
