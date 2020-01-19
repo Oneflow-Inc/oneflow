@@ -1616,7 +1616,7 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message RegularGradientOpConf {
+message RegularizeGradientOpConf {
   required string model = 1;
   required string model_diff = 2;
   required string out = 3;
@@ -1717,7 +1717,7 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
-    RegularGradientOpConf regular_gradient_conf = 160;
+    RegularizeGradientOpConf regularize_gradient_conf = 160;
     UserOpConf user_conf = 199;
     
     // domain op

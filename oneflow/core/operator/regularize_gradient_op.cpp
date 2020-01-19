@@ -3,11 +3,11 @@
 
 namespace oneflow {
 
-class RegularGradientOp final : public Operator {
+class RegularizeGradientOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RegularGradientOp);
-  RegularGradientOp() = default;
-  ~RegularGradientOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(RegularizeGradientOp);
+  RegularizeGradientOp() = default;
+  ~RegularizeGradientOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -22,18 +22,18 @@ class RegularGradientOp final : public Operator {
       SbpSignatureList* sbp_sig_list) const override;
 };
 
-void RegularGradientOp::InitFromOpConf() {
-  CHECK(op_conf().has_regular_gradient_conf());
+void RegularizeGradientOp::InitFromOpConf() {
+  CHECK(op_conf().has_regularize_gradient_conf());
   EnrollInputBn("model", false);
   EnrollInputBn("model_diff", false);
   EnrollOutputBn("out", false)->set_mutable_inplace_ibn("model_diff");
 }
 
-const PbMessage& RegularGradientOp::GetCustomizedConf() const {
-  return op_conf().regular_gradient_conf();
+const PbMessage& RegularizeGradientOp::GetCustomizedConf() const {
+  return op_conf().regularize_gradient_conf();
 }
 
-Maybe<void> RegularGradientOp::InferBlobDescs(
+Maybe<void> RegularizeGradientOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model = GetBlobDesc4BnInOp("model");
@@ -43,7 +43,7 @@ Maybe<void> RegularGradientOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RegularGradientOp::InferBatchAxis(
+Maybe<void> RegularizeGradientOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   OF_CHECK(!BatchAxis4BnInOp("model")->has_value());
   OF_CHECK(!BatchAxis4BnInOp("model_diff")->has_value());
@@ -51,7 +51,7 @@ Maybe<void> RegularGradientOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RegularGradientOp::GetSbpSignatures(
+Maybe<void> RegularizeGradientOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
@@ -63,6 +63,6 @@ Maybe<void> RegularGradientOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kRegularGradientConf, RegularGradientOp);
+REGISTER_OP(OperatorConf::kRegularizeGradientConf, RegularizeGradientOp);
 
 }  // namespace oneflow
