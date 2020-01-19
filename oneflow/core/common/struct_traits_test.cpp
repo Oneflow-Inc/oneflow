@@ -54,12 +54,9 @@ namespace {
 
 struct Foo {
   DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET();
-  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->x),
-                                            &((Foo*)nullptr)->x);
-  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->y),
-                                            &((Foo*)nullptr)->y);
-  DSS_CHECK_CODE_LINE_FIELD_SIZE_AND_OFFSET("demo dss", sizeof(((Foo*)nullptr)->z),
-                                            &((Foo*)nullptr)->z);
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, x);
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, y);
+  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, z);
 
   int x;
   int y;
