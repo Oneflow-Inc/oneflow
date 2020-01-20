@@ -3,7 +3,6 @@ include (ExternalProject)
 set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_DIR}/opencv/include)
 set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
-set(OPENCV_INSTALL_LIBDIR lib64)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
 set(OPENCV_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/opencv/src/opencv)
@@ -103,7 +102,7 @@ ExternalProject_Add(opencv
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
         -DWITH_ITT:BOOL=ON
-        -DCMAKE_INSTALL_LIBDIR=${OPENCV_INSTALL_LIBDIR}
+        -DLIB_SUFFIX:STRING=64
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
