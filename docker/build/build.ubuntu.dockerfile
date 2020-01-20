@@ -66,7 +66,7 @@ RUN make -j
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc)
+RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON -DBUILD_TESTING=OFF .. && make -j $(nproc)
 
 # BUILD WHEEL
 WORKDIR /workspace
