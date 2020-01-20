@@ -122,7 +122,6 @@ def scalar_add(x, operand, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("math.scalar_add_by_tensor")
 def scalar_add_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(

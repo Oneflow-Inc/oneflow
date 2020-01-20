@@ -135,22 +135,26 @@ __global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half 
 
 template<typename T>
 __global__ void MulByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y_value; }
 }
 
 template<typename T>
 __global__ void AddByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y[0]; }
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y_value; }
 }
 
 template<typename T>
 __global__ void SubByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] - y[0]; }
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] - y_value; }
 }
 
 template<typename T>
 __global__ void DivByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[0]; }
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y_value; }
 }
 
 template<typename T>

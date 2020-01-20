@@ -8,7 +8,7 @@ class ScalarDivByTensorKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScalarDivByTensorKernel);
   ScalarDivByTensorKernel() = default;
-  ~ScalarDivByTensorKernel() = default;
+  ~ScalarDivByTensorKernel() override = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,

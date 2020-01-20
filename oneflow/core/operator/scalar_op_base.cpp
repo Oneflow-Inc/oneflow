@@ -19,20 +19,17 @@ Maybe<void> ScalarOpBase::InferBlobDescs(
   CHECK_EQ_OR_RETURN(scalar_blob_desc->shape().elem_cnt(), 1);
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->set_is_dynamic(in_blob_desc->is_dynamic());
-  JUST(VirtualInferBlobDescs(GetBlobDesc4BnInOp));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ScalarOpBase::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("in", 0)
-      .Broadcast("scalar")
-      .Split("out", 0)
-      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes())
-      .Build(sbp_sig_list);
+  const Shape& in_shape = JUST(LogicalBlobDesc4Ibn("in"))->shape();
+  FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
+    SbpSignatureBuilder().Split("in", i).Broadcast("scalar").Split("out", i).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   JUST(VirtualGetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list));
   return Maybe<void>::Ok();
 }

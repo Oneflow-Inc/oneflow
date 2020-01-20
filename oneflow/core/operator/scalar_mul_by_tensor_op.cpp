@@ -24,6 +24,8 @@ Maybe<void> ScalarMulByTensorOp::VirtualGetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().PartialSum("in").Broadcast("scalar").PartialSum("out").Build(
       sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Broadcast("in").PartialSum("scalar").PartialSum("out").Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
