@@ -86,6 +86,20 @@ class RawCodec(object):
         return proto
 
 
+@oneflow_export("data.BytesListCodec")
+class BytesListCodec(object):
+
+    def __init__(self):
+        pass
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = op_conf_util.EncodeConf()
+
+        proto.bytes_list.SetInParent()
+        return proto
+
+
 @oneflow_export("data.NormByChannelPreprocessor")
 class NormByChannelPreprocessor(object):
     def __init__(
