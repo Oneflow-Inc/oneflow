@@ -121,4 +121,3 @@ def test_div(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-# todo test int
