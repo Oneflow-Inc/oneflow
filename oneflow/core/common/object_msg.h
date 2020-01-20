@@ -136,6 +136,34 @@ struct ObjectMsgRecursiveNew<true> {
   }
 };
 
+template<bool is_pointer>
+struct ObjectMsgRecursiveRelease {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct _ObjectMsgRecursiveRelease {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    ObjectMsgRecursiveRelease<
+        std::is_pointer<PtrFieldType>::value
+        && std::is_base_of<ObjectMsgStruct,
+                           typename std::remove_pointer<PtrFieldType>::type>::value>::Call(ctx,
+                                                                                           field);
+  }
+};
+
+template<>
+struct ObjectMsgRecursiveRelease<true> {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
+    using FieldType = typename std::remove_pointer<PtrFieldType>::type;
+    auto* ptr = *field;
+    ptr->template __ReverseWalkField__<_ObjectMsgRecursiveRelease, WalkCtxType>(ctx);
+    ObjectMsgPtrUtil<FieldType>::ReleaseRef(ptr);
+  }
+};
+
 template<typename T>
 class ObjectMsgPtr final {
  public:
@@ -144,7 +172,7 @@ class ObjectMsgPtr final {
     ptr_ = obj_ptr.ptr_;
     ObjectMsgPtrUtil<T>::Ref(ptr_);
   }
-  ~ObjectMsgPtr() { ObjectMsgPtrUtil<T>::ReleaseRef(ptr_); }
+  ~ObjectMsgPtr() { ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_); }
 
   static ObjectMsgPtr New() {
     ObjectMsgPtr ret;
@@ -153,7 +181,7 @@ class ObjectMsgPtr final {
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
-    ObjectMsgPtrUtil<T>::ReleaseRef(ptr_);
+    ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_);
     ptr_ = rhs.ptr_;
     ObjectMsgPtrUtil<T>::Ref(ptr_);
     return *this;
