@@ -1,9 +1,9 @@
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/gather_kernel_util.h"
+#include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename K>
 class GatherMs0GradKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherMs0GradKernel);
@@ -16,38 +16,46 @@ class GatherMs0GradKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-template<DeviceType device_type, typename T>
-const PbMessage& GatherMs0GradKernel<device_type, T>::GetCustomizedOpConf() const {
+template<DeviceType device_type, typename T, typename K>
+const PbMessage& GatherMs0GradKernel<device_type, T, K>::GetCustomizedOpConf() const {
   return this->op_conf().gather_ms0_grad_conf();
 }
 
-template<DeviceType device_type, typename T>
-void GatherMs0GradKernel<device_type, T>::ForwardDataContent(
+template<DeviceType device_type, typename T, typename K>
+void GatherMs0GradKernel<device_type, T, K>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* indices = BnInOp2Blob("indices");
   const Blob* out_diff = BnInOp2Blob("out_diff");
   Blob* in_diff = BnInOp2Blob("in_diff");
   const int64_t offset = this->kernel_conf().gather_ms0_grad_conf().offset();
   Memset<device_type>(ctx.device_ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfBlobBody());
-  GatherKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices, out_diff, 0, in_diff, offset);
+  const int64_t num_segment_ids = indices->shape().elem_cnt();
+  const ShapeView& in_diff_shape = in_diff->shape();
+  const int64_t inner_dim_size = in_diff_shape.Count(1);
+  const int64_t num_segments = in_diff_shape.At(0);
+  CHECK_EQ(out_diff->shape().elem_cnt(), num_segment_ids * inner_dim_size);
+  UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
+      ctx.device_ctx, indices->dptr<K>(), out_diff->dptr<T>(), num_segment_ids, num_segments, 1,
+      inner_dim_size, offset, in_diff->mut_dptr<T>());
 }
 
 namespace {
 
-Kernel* CreateGatherGradKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (GatherMs0GradKernel),
-                                     DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-        MAKE_KERNEL_CREATOR_ENTRY(GatherMs0GradKernel, DeviceType::kGPU,
-                                  (float16, DataType::kFloat16))
-#endif
-  };
-  return creators.at(
-      GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
-}
+#define MAKE_GATHER_MS0_GRAD_KERNEL_ENTRY(device_type_v, data_type_pair, indices_type_pair) \
+  NEW_REGISTER_KERNEL(OperatorConf::kGatherMs0GradConf,                                     \
+                      GatherMs0GradKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),  \
+                                          OF_PP_PAIR_FIRST(indices_type_pair)>)             \
+      .SetIsMatchedPred([](const KernelConf& kernel_conf) -> bool {                         \
+        return ((kernel_conf.op_attribute().op_conf().device_type() == device_type_v)       \
+                && ((OF_PP_PAIR_SECOND(data_type_pair)) == kernel_conf.data_type())         \
+                && (OF_PP_PAIR_SECOND(indices_type_pair)                                    \
+                    == kernel_conf.gather_ms0_grad_conf().indices_data_type()));            \
+      });
 
-REGISTER_KERNEL_CREATOR(OperatorConf::kGatherMs0GradConf, CreateGatherGradKernel);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_GATHER_MS0_GRAD_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#undef MAKE_GATHER_MS0_GRAD_KERNEL_ENTRY
+
 }  // namespace
 
 }  // namespace oneflow

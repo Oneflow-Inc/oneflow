@@ -112,4 +112,18 @@ MUL_BY_SCALAR(int64_t);
 
 #undef MUL_BY_SCALAR
 
+#define FILL(T)                                                                              \
+  void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
+                                             T* y) {                                         \
+    std::fill_n(y, n, value);                                                                \
+  }
+
+FILL(float);
+FILL(double);
+FILL(int8_t);
+FILL(int32_t);
+FILL(int64_t);
+
+#undef FILL
+
 }  // namespace oneflow

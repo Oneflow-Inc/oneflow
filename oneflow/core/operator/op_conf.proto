@@ -543,6 +543,11 @@ message LinearCosineDecayConf {
   optional double beta = 4 [default = 0.001];
 }
 
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2;
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -552,6 +557,7 @@ message LearningRateDecayConf {
     PolynomialDecayConf polynomial_conf = 2004;
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
 }
 
@@ -1158,7 +1164,6 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
-  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
@@ -1601,6 +1606,21 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message DynamicBinarySplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 base_shift = 3;
+}
+
+message DynamicBinaryConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required DataType out_data_type = 3;
+  required ShapeProto out_shape = 4;
+  required OptInt64 out_batch_axis = 5;
+  required SbpParallel out_sbp = 6;
+}
+
 message UniqueWithCountsOpConf {
   required string x = 1;
   required string y = 2;
@@ -1616,6 +1636,16 @@ message IndexedSlicesReduceSumOpConf {
   required string y_indices = 3;
   required string y_values = 4;
   required string num_unique = 5;
+}
+
+message ConstantLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional DataType data_type = 3;
+  oneof scalar_operand {
+    int64 int_operand = 4;
+    double float_operand = 5;
+  }
 }
 
 message OperatorConf {
@@ -1682,6 +1712,8 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
+    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
+    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     UserOpConf user_conf = 199;
     
     // domain op
@@ -1772,6 +1804,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    ConstantLikeOpConf constant_like_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 

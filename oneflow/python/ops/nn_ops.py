@@ -293,12 +293,12 @@ def softmax_grad(y, dy, axis=None, name=None):
         dx = oneflow.transpose(dx, perm=permute)
     return dx
 
-@oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits(
-    labels=None, logits=None, name=None
+@oneflow_export("nn.sparse_cross_entropy")
+def sparse_cross_entropy(
+    labels=None, prediction=None, name=None
 ):
     assert labels is not None
-    assert logits is not None
+    assert prediction is not None
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -308,7 +308,7 @@ def sparse_softmax_cross_entropy_with_logits(
     setattr(
         op_conf.sparse_cross_entropy_conf,
         "prediction",
-        softmax(logits).logical_blob_name,
+        prediction.logical_blob_name,
     )
     setattr(
         op_conf.sparse_cross_entropy_conf, "label", labels.logical_blob_name
@@ -319,6 +319,14 @@ def sparse_softmax_cross_entropy_with_logits(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
+def sparse_softmax_cross_entropy_with_logits(
+    labels=None, logits=None, name=None
+):
+    assert labels is not None
+    assert logits is not None
+    return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
