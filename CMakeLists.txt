@@ -8,7 +8,7 @@ option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(BUILD_TESTING "" ON)
 option(RELEASE_VERSION "" ON)
-option(PY3 "" OFF)
+option(PY3 "" ON)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 
