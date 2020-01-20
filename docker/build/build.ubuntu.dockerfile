@@ -1,4 +1,4 @@
-ARG CUDA=10.1
+ARG CUDA
 ARG UBUNTU_VERSION=16.04
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-ubuntu${UBUNTU_VERSION}
 
