@@ -64,22 +64,22 @@ def plot_many_by_legend(df_dict):
         "loss_rpn_box_reg",
         "loss_objectness",
         "loss_box_reg",
-        "total_pos_inds_elem_cnt",
         "loss_classifier",
         "loss_mask",
         "lr",
     ]
+    unique_legends = []
     for _, df in df_dict.items():
-        for legend in list(df["legend"].unique()):
-            if (
-                legend not in legend_set_sorted
-                and "note" in df
-                and df[df["legend"] == legend]["note"].isnull().all()
-            ):
-                legend_set_unsored.append(legend)
-            else:
-                if legend not in legend_set_sorted:
-                    print("skipping legend: {}".format(legend))
+        unique_legends += list(df["legend"].unique())
+    unique_legends = set(unique_legends)
+    for legend in unique_legends:
+        if (legend not in legend_set_sorted) and (
+            "note" in df and df[df["legend"] == legend]["note"].isnull().all()
+        ):
+            legend_set_unsored.append(legend)
+        else:
+            if legend not in legend_set_sorted:
+                print("skipping legend: {}".format(legend))
 
     limit, rate = get_limit_and_rate(list(df_dict.values()))
     print(limit, rate)
