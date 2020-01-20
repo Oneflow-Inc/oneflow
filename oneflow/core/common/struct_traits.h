@@ -21,7 +21,7 @@ namespace oneflow {
   _DEFINE_SETTER(is_scalar, field_type, field_name)
 
 // DSS is short for domain specific struct
-#define BEGIN_DSS(base_byte_size) _BEGIN_DSS(__COUNTER__, base_byte_size)
+#define BEGIN_DSS(type, base_byte_size) _BEGIN_DSS(__COUNTER__, type, base_byte_size)
 #define DSS_DEFINE_FIELD(dss_type, type, field) \
   _DSS_DEFINE_FIELD(__COUNTER__, dss_type, type, field)
 #define END_DSS(dss_type, type) _END_DSS(__COUNTER__, dss_type, type)
@@ -49,8 +49,22 @@ constexpr int ConstExprRoundUp() {
   return (x + y - 1) / y * y;
 }
 
-#define _BEGIN_DSS(define_counter, base_byte_size)                                              \
+#define _BEGIN_DSS(define_counter, type, base_byte_size)                                        \
+ public:                                                                                        \
+  template<template<class, class> class F, typename __WalkCtxType__>                            \
+  void __WalkField__(__WalkCtxType__* ctx) {                                                    \
+    __DSS__FieldIter<define_counter, F, __WalkCtxType__>::Call(ctx, this);                      \
+  }                                                                                             \
+                                                                                                \
  private:                                                                                       \
+  using __DssSelfType__ = type;                                                                 \
+  template<int counter, template<class, class> class F, typename __WalkCtxType__,               \
+           typename fake = void>                                                                \
+  struct __DSS__FieldIter {                                                                     \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                             \
+      __DSS__FieldIter<counter + 1, F, __WalkCtxType__>::Call(ctx, self);                       \
+    }                                                                                           \
+  };                                                                                            \
   template<int counter, typename fake = void>                                                   \
   struct __DSS__FieldAlign4Counter {                                                            \
     constexpr static int Get() { return 1; }                                                    \
@@ -90,6 +104,14 @@ constexpr int ConstExprRoundUp() {
 
 #define _DSS_DEFINE_FIELD(define_counter, dss_type, type, field)                              \
  private:                                                                                     \
+  template<template<class, class> class F, typename __WalkCtxType__, typename fake>           \
+  struct __DSS__FieldIter<define_counter, F, __WalkCtxType__, fake> {                         \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                           \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
+      F<__WalkCtxType__, decltype(self->field)>::Call(ctx, &self->field, __field_name__);     \
+      __DSS__FieldIter<define_counter + 1, F, __WalkCtxType__>::Call(ctx, self);              \
+    }                                                                                         \
+  };                                                                                          \
   template<typename fake>                                                                     \
   struct __DSS__FieldAlign4Counter<define_counter, fake> {                                    \
     constexpr static int Get() { return alignof(((type*)nullptr)->field); }                   \
@@ -110,6 +132,10 @@ constexpr int ConstExprRoundUp() {
 
 #define _END_DSS(counter, dss_type, type)                                                         \
  private:                                                                                         \
+  template<template<class, class> class F, typename __WalkCtxType__, typename fake>               \
+  struct __DSS__FieldIter<counter, F, __WalkCtxType__, fake> {                                    \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {}                              \
+  };                                                                                              \
   static void __DSS__StaticAssertStructSize() {                                                   \
     static const int kSize =                                                                      \
         ConstExprRoundUp<__DSS__AccumulatedAlignedSize4Counter<counter>::Get(), alignof(type)>(); \
@@ -124,14 +150,14 @@ struct GetterTrait {};
 template<typename Enabled>
 struct GetterTrait<false, Enabled> {
   template<typename T>
-  static const T& Apply(const T& data) {
+  static const T& Call(const T& data) {
     return data;
   }
 };
 template<typename Enabled>
 struct GetterTrait<true, Enabled> {
   template<typename T>
-  static const T& Apply(const T* data) {
+  static const T& Call(const T* data) {
     return *data;
   }
 };
@@ -142,14 +168,14 @@ struct MutableTrait {};
 template<typename Enabled>
 struct MutableTrait<false, Enabled> {
   template<typename T>
-  static T* Apply(T* data) {
+  static T* Call(T* data) {
     return data;
   }
 };
 template<typename Enabled>
 struct MutableTrait<true, Enabled> {
   template<typename T>
-  static T* Apply(T** data) {
+  static T* Call(T** data) {
     return *data;
   }
 };
@@ -158,14 +184,14 @@ struct MutableTrait<true, Enabled> {
   const typename std::conditional<std::is_pointer<field_type>::value,                       \
                                   std::remove_pointer<field_type>::type, field_type>::type& \
   field_name() const {                                                                      \
-    return GetterTrait<std::is_pointer<field_type>::value>::Apply(this->field_name##_);     \
+    return GetterTrait<std::is_pointer<field_type>::value>::Call(this->field_name##_);      \
   }
 
-#define _DEFINE_MUTABLE(field_type, field_name)                                           \
-  typename std::conditional<std::is_pointer<field_type>::value,                           \
-                            std::remove_pointer<field_type>::type, field_type>::type*     \
-      mutable_##field_name() {                                                            \
-    return MutableTrait<std::is_pointer<field_type>::value>::Apply(&this->field_name##_); \
+#define _DEFINE_MUTABLE(field_type, field_name)                                          \
+  typename std::conditional<std::is_pointer<field_type>::value,                          \
+                            std::remove_pointer<field_type>::type, field_type>::type*    \
+      mutable_##field_name() {                                                           \
+    return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
   }
 
 #define _DEFINE_SETTER(is_scalar, field_type, field_name)                          \

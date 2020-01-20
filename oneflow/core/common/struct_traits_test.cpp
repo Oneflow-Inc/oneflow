@@ -53,7 +53,7 @@ TEST(StructField, const_struct_const_field) {
 namespace {
 
 struct Foo {
-  BEGIN_DSS(0);
+  BEGIN_DSS(Foo, 0);
   int x;
   int y;
   int z;
@@ -66,7 +66,7 @@ struct Foo {
 };
 
 struct Bar {
-  BEGIN_DSS(0);
+  BEGIN_DSS(Foo, 0);
 
   END_DSS("demo dss", Bar);
 };
@@ -99,6 +99,23 @@ struct FooBar {
   int x_;
   Foo* foo_;
 };
+
+template<typename WalkCtxType, typename FieldType>
+struct DumpFieldName {
+  static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
+    ctx->push_back(field_name);
+  }
+};
+
+TEST(DSS, walk_field) {
+  Foo foo;
+  std::vector<std::string> field_names;
+  foo.__WalkField__<DumpFieldName>(&field_names);
+  ASSERT_EQ(field_names.size(), 3);
+  ASSERT_TRUE(field_names[0] == "x");
+  ASSERT_TRUE(field_names[1] == "y");
+  ASSERT_TRUE(field_names[2] == "z");
+}
 
 }  // namespace
 
