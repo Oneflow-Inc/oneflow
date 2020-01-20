@@ -1,3 +1,3 @@
 docker build \
   --rm \
-  -t oneflow-build -f docker/build/Dockerfile .
+  -t oneflow-build -f docker/build/build.ubuntu.dockerfile .
