@@ -1,11 +1,8 @@
-ARG CUDA=10.0
+ARG CUDA=10.1
 ARG UBUNTU_VERSION=16.04
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-ubuntu${UBUNTU_VERSION}
 
 USER 0
-
-ENV http_proxy=http://192.168.1.11:8118
-ENV https_proxy=https://192.168.1.11:8118
 
 RUN apt-get update && \
     apt-get install -y apt-transport-https && \
