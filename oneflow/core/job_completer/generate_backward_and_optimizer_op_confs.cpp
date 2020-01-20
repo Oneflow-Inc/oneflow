@@ -99,6 +99,7 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
+  AddDiffParallelCast(op_graph, job_builder, &model_lbi2model_diff_lbi);
   ScaleModelDiffByLossInstanceNum(op_graph, job_builder, &model_lbi2model_diff_lbi);
   ScaleModelDiffByLossScale(op_graph, job_builder, &model_lbi2model_diff_lbi);
   const NormalModelUpdateOpUserConf& model_update_conf =
@@ -107,8 +108,6 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
     ClipGradient(op_graph, job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
   }
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
-
-  for (const auto& pair : model_lbi2model_diff_lbi) { lbi2diff_lbi[pair.first] = pair.second; }
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }

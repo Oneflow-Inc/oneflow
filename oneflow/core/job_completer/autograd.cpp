@@ -356,25 +356,8 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
-    LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     lbi2parallel_desc[lbi] = &model_op_node->parallel_desc();
-    OperatorConf parallel_cast_op_conf{};
-    parallel_cast_op_conf.set_name("System-ClipGradient-ParallelCast-" + NewUniqueId());
-    ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
-    parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
-    parallel_cast_conf->set_out("out");
-    const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
-    if (model_sbp.has_broadcast_parallel()) {
-      parallel_cast_conf->clear_split_axis();
-    } else if (model_sbp.has_split_parallel()) {
-      parallel_cast_conf->mutable_split_axis()->set_value(model_sbp.split_parallel().axis());
-    } else {
-      UNIMPLEMENTED();
-    }
-    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
-    diff_lbi.set_op_name(parallel_cast_op_conf.name());
-    diff_lbi.set_blob_name(parallel_cast_conf->out());
   }
   bool all_same_parallel_desc = true;
   const ParallelDesc* parallel_desc = nullptr;
@@ -630,6 +613,32 @@ void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
     ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, clip_conf.clip_by_global_norm());
   } else {
     UNIMPLEMENTED();
+  }
+}
+
+void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
+                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
+    OperatorConf parallel_cast_op_conf{};
+    parallel_cast_op_conf.set_name("System-ClipGradient-ParallelCast-" + NewUniqueId());
+    ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
+    parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
+    parallel_cast_conf->set_out("out");
+    const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
+    if (model_sbp.has_broadcast_parallel()) {
+      parallel_cast_conf->mutable_split_axis()->clear_value();
+    } else if (model_sbp.has_split_parallel()) {
+      parallel_cast_conf->mutable_split_axis()->set_value(model_sbp.split_parallel().axis());
+    } else {
+      UNIMPLEMENTED();
+    }
+    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
+    diff_lbi.set_op_name(parallel_cast_op_conf.name());
+    diff_lbi.set_blob_name(parallel_cast_conf->out());
   }
 }
 
