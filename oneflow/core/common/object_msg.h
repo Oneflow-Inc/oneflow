@@ -11,7 +11,7 @@ namespace oneflow {
   class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct { \
    public:                                                           \
     using self_type = OBJECT_MSG_TYPE(class_name);                   \
-    BEGIN_DSS(sizeof(ObjectMsgStruct));
+    BEGIN_DSS(OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct));
 
 #define END_OBJECT_MSG(class_name)                    \
   END_DSS("object_msg", OBJECT_MSG_TYPE(class_name)); \
