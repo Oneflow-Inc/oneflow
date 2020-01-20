@@ -7,7 +7,7 @@ namespace oneflow {
 TEST(ZipOnlyZipUtil, zip1) {
   const char data[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,'2','3','4',0x00,0x00,0x00,0x00,0x00};
   char buffer[4096 + sizeof(SizedBufferView)];
-  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(SizedBufferView));
+  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
   ZeroOnlyZipUtil zero_zip;
   zero_zip.ZipToSizedBuffer(data, sizeof(data), sized_buffer);
   ASSERT_EQ(int(sized_buffer -> data[0]), -7);
@@ -23,7 +23,7 @@ TEST(ZipOnlyZipUtil, zip1) {
 TEST(ZipOnlyZipUtil, zip2) {
   const char data[] = {'a','b','c','d','e',0x00,0x00,0x00,0x00,0x00,0x00,0x00,'2','3','4'};
   char buffer[4096 + sizeof(SizedBufferView)];
-  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(SizedBufferView));
+  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
   ZeroOnlyZipUtil zero_zip;
   zero_zip.ZipToSizedBuffer(data, sizeof(data), sized_buffer);
   ASSERT_EQ(int(sized_buffer -> data[0]), 5);
@@ -44,7 +44,7 @@ TEST(ZipOnlyZipUtil, zip2) {
 TEST(ZipOnlyZipUtil, zip3)
   const char data[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
   char buffer[4096 + sizeof(SizedBufferView)];
-  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(SizedBufferView));
+  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
   ZeroOnlyZipUtil zero_zip;
   zero_zip.ZipToSizedBuffer(data, sizeof(data), sized_buffer);
   ASSERT_EQ(int(sized_buffer -> data[0]), -10);
@@ -54,39 +54,37 @@ TEST(ZipOnlyZipUtil, zip3)
 // test case for -73234-5 -> "\0\0\0\0\0\0\0234\0\0\0\0\0"
 TEST(ZipOnlyZipUtil, unzip1) {
   char buffer[4096 + sizeof(SizedBufferView)];
-  SizedBufferView *sizedbuffer = SizedBufferView::PlacementNew(buffer, sizeof(SizedBufferView));
+  SizedBufferView *sizedbuffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
   sizedbuffer -> data[0] = char(0xf9);
   sizedbuffer -> data[1] = char(3);
   sizedbuffer -> data[2] = '2';
   sizedbuffer -> data[3] = '3';
   sizedbuffer -> data[4] = '4';
   sizedbuffer -> data[5] = char(0xfa);
-  char *data = new char[15];  // actually, new char[1] also works.
   ZeroOnlyZipUtil zero_unzip;
-  zero_unzip.UnzipToExpectedSize(*sizedbuffer, data, 15);
-  ASSERT_EQ(data[0], 0x00);
-  ASSERT_EQ(data[1], 0x00);
-  ASSERT_EQ(data[2], 0x00);
-  ASSERT_EQ(data[3], 0x00);
-  ASSERT_EQ(data[4], 0x00);
-  ASSERT_EQ(data[5], 0x00);
-  ASSERT_EQ(data[6], 0x00);
-  ASSERT_EQ(data[7], '2');
-  ASSERT_EQ(data[8], '3');
-  ASSERT_EQ(data[9], '4');
-  ASSERT_EQ(data[10], 0x00);
-  ASSERT_EQ(data[11], 0x00);
-  ASSERT_EQ(data[12], 0x00);
-  ASSERT_EQ(data[13], 0x00);
-  ASSERT_EQ(data[14], 0x00);
-  delete[] data;
+  zero_unzip.UnzipToExpectedSize(*sizedbuffer, buffer, 15);
+  ASSERT_EQ(buffer[0], 0x00);
+  ASSERT_EQ(buffer[1], 0x00);
+  ASSERT_EQ(buffer[2], 0x00);
+  ASSERT_EQ(buffer[3], 0x00);
+  ASSERT_EQ(buffer[4], 0x00);
+  ASSERT_EQ(buffer[5], 0x00);
+  ASSERT_EQ(buffer[6], 0x00);
+  ASSERT_EQ(buffer[7], '2');
+  ASSERT_EQ(buffer[8], '3');
+  ASSERT_EQ(buffer[9], '4');
+  ASSERT_EQ(buffer[10], 0x00);
+  ASSERT_EQ(buffer[11], 0x00);
+  ASSERT_EQ(buffer[12], 0x00);
+  ASSERT_EQ(buffer[13], 0x00);
+  ASSERT_EQ(buffer[14], 0x00);
 }
 
 
 // test case for 5abcde-73234 -> "abcde\0\0\0\0\0\0\0234"
 TEST(ZipOnlyZipUtil, unzip2) {
   char buffer[4096 + sizeof(SizedBufferView)];
-  SizedBufferView *sizedbuffer = SizedBufferView::PlacementNew(buffer, sizeof(SizedBufferView));
+  SizedBufferView *sizedbuffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
   sizedbuffer -> data[0] = char(5);
   sizedbuffer -> data[1] = 'a';
   sizedbuffer -> data[2] = 'b';
@@ -98,25 +96,39 @@ TEST(ZipOnlyZipUtil, unzip2) {
   sizedbuffer -> data[8] = '2';
   sizedbuffer -> data[9] = '3';
   sizedbuffer -> data[10] = '4';
-  char *data = new char[15];  // actually, new char[1] also works.
   ZeroOnlyZipUtil zero_unzip;
-  zero_unzip.UnzipToExpectedSize(*sizedbuffer, data, 15);
-  ASSERT_EQ(data[0], 'a');
-  ASSERT_EQ(data[1], 'b');
-  ASSERT_EQ(data[2], 'c');
-  ASSERT_EQ(data[3], 'd');
-  ASSERT_EQ(data[4], 'e');
-  ASSERT_EQ(data[5], 0x00);
-  ASSERT_EQ(data[6], 0x00);
-  ASSERT_EQ(data[7], 0x00);
-  ASSERT_EQ(data[8], 0x00);
-  ASSERT_EQ(data[9], 0x00);
-  ASSERT_EQ(data[10], 0x00);
-  ASSERT_EQ(data[11], 0x00);
-  ASSERT_EQ(data[12], '2');
-  ASSERT_EQ(data[13], '3');
-  ASSERT_EQ(data[14], '4');
-  delete[] data;
+  zero_unzip.UnzipToExpectedSize(*sizedbuffer, buffer, 15);
+  ASSERT_EQ(buffer[0], 'a');
+  ASSERT_EQ(buffer[1], 'b');
+  ASSERT_EQ(buffer[2], 'c');
+  ASSERT_EQ(buffer[3], 'd');
+  ASSERT_EQ(buffer[4], 'e');
+  ASSERT_EQ(buffer[5], 0x00);
+  ASSERT_EQ(buffer[6], 0x00);
+  ASSERT_EQ(buffer[7], 0x00);
+  ASSERT_EQ(buffer[8], 0x00);
+  ASSERT_EQ(buffer[9], 0x00);
+  ASSERT_EQ(buffer[10], 0x00);
+  ASSERT_EQ(buffer[11], 0x00);
+  ASSERT_EQ(buffer[12], '2');
+  ASSERT_EQ(buffer[13], '3');
+  ASSERT_EQ(buffer[14], '4');
+}
+
+
+// test case for -5 -> "\0\0\0\0\0"
+TEST(ZeroOnlyZipUtil, unzip3) {
+  char buffer[4096 + sizeof(SizedBufferView)];
+  SizedBufferView *sized_buffer = SizedBufferView::PlacementNew(buffer, sizeof(buffer));
+  sized_buffer -> data[0] = char(-5);
+  ZeroOnlyZipUtil zero_unzip;
+  zero_unzip.UnzipToExpectedSize(*sized_buffer, buffer, 5);
+  ASSERT_EQ(buffer[0], 0x00);
+  ASSERT_EQ(buffer[1], 0x00);
+  ASSERT_EQ(buffer[2], 0x00);
+  ASSERT_EQ(buffer[3], 0x00);
+  ASSERT_EQ(buffer[4], 0x00);
 }
 
 }  // namespace oneflow
+
