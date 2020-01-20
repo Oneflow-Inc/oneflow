@@ -1,4 +1,4 @@
-ARG CUDA=10.1
+ARG CUDA=10.0
 ARG UBUNTU_VERSION=16.04
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-ubuntu${UBUNTU_VERSION}
 
@@ -36,6 +36,7 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
 
+# use this to speed up pip install
 ENV TUNA_PIP_INSTALL="python3 -m pip --no-cache-dir install --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple"
 
 RUN curl https://bootstrap.pypa.io/get-pip.py --output ./get-pip.py \
