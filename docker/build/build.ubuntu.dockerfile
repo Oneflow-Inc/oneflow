@@ -49,18 +49,7 @@ COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
 COPY build/third_party /workspace/build/third_party
-# RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
-RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON ..
-RUN make opencv -j
-RUN make opencv_create_header_dir && make opencv_copy_headers_to_destination
-RUN make opencv_create_library_dir && make opencv_copy_libs_to_destination
-# # FIXME: had to call make command for zlib by hand on ubuntu
-RUN make zlib -j
-RUN make zlib_create_header_dir && make zlib_copy_headers_to_destination
-RUN make zlib_create_library_dir && make zlib_copy_libs_to_destination
-RUN make grpc -j
-RUN make nccl -j
-RUN make -j
+RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
 
 # BUILD ONEFLOW
 COPY oneflow /workspace/oneflow
