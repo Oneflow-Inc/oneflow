@@ -51,28 +51,49 @@ TEST(OBJECT_MSG, naive) {
   ASSERT_TRUE(foo->bar() == 9527);
 }
 
+TEST(OBJECT_MSG, __delete__) {
+  std::string is_deleted;
+  {
+    auto foo = OBJECT_MSG_PTR(ObjectMsgFoo)::New();
+    foo->set_bar(9527);
+    foo->set_raw_ptr_is_deleted(&is_deleted);
+    ASSERT_EQ(foo->bar(), 9527);
+  }
+  ASSERT_TRUE(is_deleted == "deleted");
+}
+
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgBar)
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgFoo, bar);
+ public:
+  void __Delete__(){
+    if (mutable_is_deleted()) { *mutable_is_deleted() = "bar_deleted"; }
+  }
+  OBJECT_MSG_DEFINE_FIELD(ObjectMsgFoo, foo);
+  OBJECT_MSG_DEFINE_RAW_PTR_FIELD(std::string*, is_deleted);
 END_OBJECT_MSG(ObjectMsgBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
   auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
-  bar->mutable_bar()->set_bar(9527);
-  ASSERT_TRUE(bar->bar().bar() == 9527);
+  bar->mutable_foo()->set_bar(9527);
+  ASSERT_TRUE(bar->foo().bar() == 9527);
 }
 
-/*
-TEST(OBJECT_MSG, objects_gc) {
-  //  std::string str;
-  //  {
-  //    auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
-  //    bar->mutable_bar()->set_is_deleted(&str);
-  //  }
-  //  ASSERT_TRUE(str == "deleted");
+TEST(OBJECT_MSG, nested_delete) {
+  std::string bar_is_deleted;
+  std::string is_deleted;
+  {
+    auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
+    bar->set_raw_ptr_is_deleted(&bar_is_deleted);
+    auto* foo = bar->mutable_foo();
+    foo->set_bar(9527);
+    foo->set_raw_ptr_is_deleted(&is_deleted);
+    ASSERT_EQ(foo->bar(), 9527);
+  }
+  ASSERT_EQ(is_deleted, std::string("deleted"));
+  ASSERT_EQ(bar_is_deleted, std::string("bar_deleted"));
 }
-*/
+
 }  // namespace test
 
 }  // namespace oneflow

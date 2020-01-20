@@ -59,15 +59,16 @@ typedef std::string OBJECT_MSG_TYPE(string);
  private:                                                                                      \
   OF_PP_CAT(field_name, __field_type__) OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name) \
- public:                                                             \
-  static_assert(std::is_pointer<field_type>::value,                  \
-                OF_PP_STRINGIZE(field_type) "is not a pointer");     \
-  DEFINE_SETTER(ObjMsgIsScalar, field_type, field_name);             \
-  DEFINE_GETTER(field_type, field_name);                             \
-  DEFINE_MUTABLE(field_type, field_name);                            \
-                                                                     \
- private:                                                            \
+#define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                           \
+ public:                                                                                       \
+  static_assert(std::is_pointer<field_type>::value,                                            \
+                OF_PP_STRINGIZE(field_type) "is not a pointer");                               \
+  void OF_PP_CAT(set_raw_ptr_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
+  DEFINE_SETTER(ObjMsgIsScalar, field_type, field_name);                                       \
+  DEFINE_GETTER(field_type, field_name);                                                       \
+  DEFINE_MUTABLE(field_type, field_name);                                                      \
+                                                                                               \
+ private:                                                                                      \
   field_type OF_PP_CAT(field_name, _);
 
 class ObjectMsgPtrBaseUtil;
