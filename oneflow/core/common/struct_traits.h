@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 
+#include "oneflow/core/common/preprocessor.h"
+
 namespace oneflow {
 
 #define STRUCT_FIELD(T, field) StructField<T, STRUCT_FIELD_OFFSET(T, field)>
@@ -11,13 +13,18 @@ namespace oneflow {
 #define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
 #define STRUCT_FIELD_OFFSET(T, field) ((int)(long long)&((T*)nullptr)->field)
 
+#define DEFINE_GETTER(field_type, field_name) _DEFINE_GETTER(field_type, field_name)
+
+#define DEFINE_MUTABLE(field_type, field_name) _DEFINE_MUTABLE(field_type, field_name)
+
+#define DEFINE_SETTER(is_scalar, field_type, field_name) \
+  _DEFINE_SETTER(is_scalar, field_type, field_name)
+
 // DSS is short for domain specific struct
-#define DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(base_byte_size) \
-  _DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(__COUNTER__, base_byte_size)
-#define DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(dss_type, type, field) \
-  _DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(__COUNTER__, dss_type, type, field)
-#define DSS_STATIC_ASSERT_STRUCT_SIZE(dss_type, type) \
-  _DSS_STATIC_ASSERT_STRUCT_SIZE(__COUNTER__, dss_type, type)
+#define BEGIN_DSS(base_byte_size) _BEGIN_DSS(__COUNTER__, base_byte_size)
+#define DSS_DEFINE_FIELD(dss_type, type, field) \
+  _DSS_DEFINE_FIELD(__COUNTER__, dss_type, type, field)
+#define END_DSS(dss_type, type) _END_DSS(__COUNTER__, dss_type, type)
 
 // details
 template<typename T, int offset>
@@ -42,7 +49,7 @@ constexpr int ConstExprRoundUp() {
   return (x + y - 1) / y * y;
 }
 
-#define _DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(define_counter, base_byte_size)            \
+#define _BEGIN_DSS(define_counter, base_byte_size)                                              \
  private:                                                                                       \
   template<int counter, typename fake = void>                                                   \
   struct __DSS__FieldAlign4Counter {                                                            \
@@ -81,7 +88,7 @@ constexpr int ConstExprRoundUp() {
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
-#define _DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD(define_counter, dss_type, type, field)          \
+#define _DSS_DEFINE_FIELD(define_counter, dss_type, type, field)                              \
  private:                                                                                     \
   template<typename fake>                                                                     \
   struct __DSS__FieldAlign4Counter<define_counter, fake> {                                    \
@@ -101,7 +108,7 @@ constexpr int ConstExprRoundUp() {
                   ASSERT_VERBOSE(dss_type));                                                  \
   }
 
-#define _DSS_STATIC_ASSERT_STRUCT_SIZE(counter, dss_type, type)                                   \
+#define _END_DSS(counter, dss_type, type)                                                         \
  private:                                                                                         \
   static void __DSS__StaticAssertStructSize() {                                                   \
     static const int kSize =                                                                      \
@@ -110,5 +117,62 @@ constexpr int ConstExprRoundUp() {
                   ASSERT_VERBOSE(dss_type));                                                      \
   }
 }
+
+template<bool is_ptr, typename Enabled = void>
+struct GetterTrait {};
+
+template<typename Enabled>
+struct GetterTrait<false, Enabled> {
+  template<typename T>
+  static const T& Apply(const T& data) {
+    return data;
+  }
+};
+template<typename Enabled>
+struct GetterTrait<true, Enabled> {
+  template<typename T>
+  static const T& Apply(const T* data) {
+    return *data;
+  }
+};
+
+template<bool is_ptr, typename Enabled = void>
+struct MutableTrait {};
+
+template<typename Enabled>
+struct MutableTrait<false, Enabled> {
+  template<typename T>
+  static T* Apply(T* data) {
+    return data;
+  }
+};
+template<typename Enabled>
+struct MutableTrait<true, Enabled> {
+  template<typename T>
+  static T* Apply(T** data) {
+    return *data;
+  }
+};
+
+#define _DEFINE_GETTER(field_type, field_name)                                              \
+  const typename std::conditional<std::is_pointer<field_type>::value,                       \
+                                  std::remove_pointer<field_type>::type, field_type>::type& \
+  field_name() const {                                                                      \
+    return GetterTrait<std::is_pointer<field_type>::value>::Apply(this->field_name##_);     \
+  }
+
+#define _DEFINE_MUTABLE(field_type, field_name)                                           \
+  typename std::conditional<std::is_pointer<field_type>::value,                           \
+                            std::remove_pointer<field_type>::type, field_type>::type*     \
+      mutable_##field_name() {                                                            \
+    return MutableTrait<std::is_pointer<field_type>::value>::Apply(&this->field_name##_); \
+  }
+
+#define _DEFINE_SETTER(is_scalar, field_type, field_name)                          \
+  template<typename T>                                                             \
+  void set_##field_name(const T& val) {                                            \
+    static_assert(is_scalar<T>::value, "setter doesn't support non-scalar field"); \
+    *this->mutable_##field_name() = val;                                           \
+  }
 
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
