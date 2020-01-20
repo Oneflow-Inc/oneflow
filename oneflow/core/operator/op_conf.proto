@@ -1648,6 +1648,30 @@ message ConstantLikeOpConf {
   }
 }
 
+message ScalarAddByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarMulByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarSubByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarDivByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1826,6 +1850,10 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
+    ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
+    ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
+    ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
+    ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
