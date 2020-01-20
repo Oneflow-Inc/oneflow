@@ -20,21 +20,13 @@ TEST(ObjectMsgStruct, ref_cnt) {
   ASSERT_EQ(foo.__DecreaseRefCount__(), 0);
 }
 
-TEST(ObjectMsgPtr, new_delete) {
-  std::string str;
-  {
-    class Foo final : public ObjectMsgStruct {
-     public:
-      void __Delete__() { *str_ = "__Delete__"; }
+class TestNew final : public ObjectMsgStruct {
+  BEGIN_DSS(TestNew, sizeof(ObjectMsgStruct));
 
-     private:
-      std::string* str_;
-    };
-    auto foo = ObjectMsgPtr<Foo>::New();
-    foo->str_ = &str;
-  }
-  ASSERT_TRUE(str == "__Delete__");
-}
+  END_DSS("object_msg", TestNew);
+};
+
+TEST(ObjectMsgPtr, obj_new) { ObjectMsgPtr<TestNew>::New(); }
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgFoo)
@@ -65,13 +57,13 @@ BEGIN_OBJECT_MSG(ObjectMsgBar)
 END_OBJECT_MSG(ObjectMsgBar)
 // clang-format on
 
-/*
 TEST(OBJECT_MSG, nested_objects) {
-  //  auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
-  //  bar->mutable_bar()->set_bar(9527);
-  //  ASSERT_TRUE(bar->bar()->bar() == 9527);
+  auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
+  bar->mutable_bar()->set_bar(9527);
+  ASSERT_TRUE(bar->bar().bar() == 9527);
 }
 
+/*
 TEST(OBJECT_MSG, objects_gc) {
   //  std::string str;
   //  {

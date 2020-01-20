@@ -87,6 +87,7 @@ class ObjectMsgStruct {
 
 class ObjectMsgPtrBaseUtil {
  protected:
+  static void InitRefCount(ObjectMsgStruct* ptr) { ptr->__InitRefCount__(); }
   static void IncreaseRefCount(ObjectMsgStruct* ptr) { ptr->__IncreaseRefCount__(); }
   static int32_t DecreaseRefCount(ObjectMsgStruct* ptr) { return ptr->__DecreaseRefCount__(); }
 };
@@ -94,8 +95,9 @@ class ObjectMsgPtrBaseUtil {
 template<typename T>
 class ObjectMsgPtrUtil : private ObjectMsgPtrBaseUtil {
  public:
+  static void InitRef(T* ptr) { InitRefCount(ptr); }
   static void Ref(T* ptr) { IncreaseRefCount(ptr); }
-  static void Release(T* ptr) {
+  static void ReleaseRef(T* ptr) {
     if (ptr == nullptr) { return; }
     if (DecreaseRefCount(ptr) > 0) { return; }
     ptr->__Delete__();
@@ -103,19 +105,55 @@ class ObjectMsgPtrUtil : private ObjectMsgPtrBaseUtil {
   }
 };
 
+template<bool is_pointer>
+struct ObjectMsgRecursiveNew {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct _ObjectMsgRecursiveNew {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    ObjectMsgRecursiveNew<
+        std::is_pointer<PtrFieldType>::value
+        && std::is_base_of<ObjectMsgStruct,
+                           typename std::remove_pointer<PtrFieldType>::type>::value>::Call(ctx,
+                                                                                           field);
+  }
+};
+
+template<>
+struct ObjectMsgRecursiveNew<true> {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field_ptr) {
+    using FieldType = typename std::remove_pointer<PtrFieldType>::type;
+    auto* ptr = new FieldType();
+    *field_ptr = ptr;
+    std::memset(reinterpret_cast<void*>(ptr), 0, sizeof(FieldType));
+    ObjectMsgPtrUtil<FieldType>::InitRef(ptr);
+    ObjectMsgPtrUtil<FieldType>::Ref(ptr);
+    ptr->template __WalkField__<_ObjectMsgRecursiveNew, WalkCtxType>(ctx);
+  }
+};
+
 template<typename T>
 class ObjectMsgPtr final {
  public:
-  ~ObjectMsgPtr() { ObjectMsgPtrUtil<T>::Release(ptr_); }
+  ObjectMsgPtr() : ptr_(nullptr) {}
+  ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
+    ptr_ = obj_ptr.ptr_;
+    ObjectMsgPtrUtil<T>::Ref(ptr_);
+  }
+  ~ObjectMsgPtr() { ObjectMsgPtrUtil<T>::ReleaseRef(ptr_); }
 
   static ObjectMsgPtr New() {
-    auto* ptr = new T();
-    std::memset(reinterpret_cast<void*>(ptr), 0, sizeof(T));
-    return ObjectMsgPtr(ptr);
+    ObjectMsgPtr ret;
+    ObjectMsgRecursiveNew<true>::Call<void, T*>(nullptr, &ret.ptr_);
+    return ret;
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
-    ObjectMsgPtrUtil<T>::Release(ptr_);
+    ObjectMsgPtrUtil<T>::ReleaseRef(ptr_);
     ptr_ = rhs.ptr_;
     ObjectMsgPtrUtil<T>::Ref(ptr_);
     return *this;
@@ -127,13 +165,6 @@ class ObjectMsgPtr final {
   const T& operator*() const { return *ptr_; }
 
  private:
-  ObjectMsgPtr() : ptr_(nullptr) {}
-  ObjectMsgPtr(T* ptr) {
-    static_assert(std::is_base_of<ObjectMsgStruct, T>::value,
-                  "T is not derived from ObjectMsgStruct");
-    ptr_ = ptr;
-    ObjectMsgPtrUtil<T>::Ref(ptr);
-  }
   T* ptr_;
 };
 
