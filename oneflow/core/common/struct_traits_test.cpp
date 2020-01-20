@@ -56,7 +56,7 @@ struct Foo {
   BEGIN_DSS(Foo, 0);
   int x;
   int y;
-  int z;
+  int* z;
 
   DSS_DEFINE_FIELD("demo dss", Foo, x);
   DSS_DEFINE_FIELD("demo dss", Foo, y);
@@ -125,6 +125,35 @@ TEST(DSS, reverse_walk_field) {
   ASSERT_TRUE(field_names[0] == "z");
   ASSERT_TRUE(field_names[1] == "y");
   ASSERT_TRUE(field_names[2] == "x");
+}
+
+template<bool is_pointer>
+struct PushBackPtrFieldName {
+  template<typename WalkCtxType>
+  static void Call(WalkCtxType* ctx, const char* field_name) {}
+};
+
+template<>
+struct PushBackPtrFieldName<true> {
+  template<typename WalkCtxType>
+  static void Call(WalkCtxType* ctx, const char* field_name) {
+    ctx->push_back(field_name);
+  }
+};
+
+template<typename WalkCtxType, typename FieldType>
+struct FilterPointerFieldName {
+  static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
+    PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, field_name);
+  }
+};
+
+TEST(DSS, filter_field) {
+  Foo foo;
+  std::vector<std::string> field_names;
+  foo.__WalkField__<FilterPointerFieldName>(&field_names);
+  ASSERT_EQ(field_names.size(), 1);
+  ASSERT_TRUE(field_names[0] == "z");
 }
 
 }  // namespace
