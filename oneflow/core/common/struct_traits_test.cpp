@@ -53,22 +53,51 @@ TEST(StructField, const_struct_const_field) {
 namespace {
 
 struct Foo {
-  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(0);
+  BEGIN_DSS(0);
   int x;
   int y;
   int z;
 
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, x);
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, y);
-  DSS_DEFINE_AND_CHECK_CODE_LINE_FIELD("demo dss", Foo, z);
+  DSS_DEFINE_FIELD("demo dss", Foo, x);
+  DSS_DEFINE_FIELD("demo dss", Foo, y);
+  DSS_DEFINE_FIELD("demo dss", Foo, z);
 
-  DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Foo);
+  END_DSS("demo dss", Foo);
 };
 
 struct Bar {
-  DSS_DECLARE_CODE_LINE_FIELD_SIZE_AND_OFFSET(0);
+  BEGIN_DSS(0);
 
-  DSS_STATIC_ASSERT_STRUCT_SIZE("demo dss", Bar);
+  END_DSS("demo dss", Bar);
+};
+
+template<typename T>
+struct IsPointer {
+  static const bool value = std::is_pointer<T>::value;
+};
+
+template<typename T>
+struct RemovePointer {
+  using type = typename std::remove_pointer<T>::type;
+};
+
+template<typename T>
+struct IsScalar {
+  static const bool value =
+      std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
+};
+
+struct FooBar {
+  DEFINE_GETTER(int, x);
+  DEFINE_MUTABLE(int, x);
+  DEFINE_SETTER(IsScalar, int, x);
+
+  DEFINE_GETTER(Foo*, foo);
+  DEFINE_MUTABLE(Foo*, foo);
+  DEFINE_SETTER(IsScalar, Foo*, foo);
+
+  int x_;
+  Foo* foo_;
 };
 
 }  // namespace
