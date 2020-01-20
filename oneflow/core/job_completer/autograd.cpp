@@ -113,27 +113,18 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 
 void GenerateOriginDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
                            LogicalBlobId* out_diff_lbi) {
-  OperatorConf mul_zero_op;
-  mul_zero_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage0");
-  ScalarMulOpConf* mul_zero_op_conf = mul_zero_op.mutable_scalar_mul_conf();
-  mul_zero_op_conf->set_in(GenLogicalBlobName(lbi));
-  mul_zero_op_conf->set_out("out");
-  mul_zero_op_conf->set_int_operand(0);
-  op_confs->push_back(mul_zero_op);
-
-  OperatorConf add_origin_grad_op;
-  add_origin_grad_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage1");
-  ScalarAddOpConf* add_origin_grad_op_conf = add_origin_grad_op.mutable_scalar_add_conf();
-  add_origin_grad_op_conf->set_in(mul_zero_op.name() + "/out");
-  add_origin_grad_op_conf->set_out("out");
+  OperatorConf constant_like_op{};
+  constant_like_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_ConstantLike");
+  ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
+  constant_like_conf->set_like(GenLogicalBlobName(lbi));
+  constant_like_conf->set_out("out");
   {
     int32_t origin_grad = GlobalJobDesc().loss_scale_factor();
-    add_origin_grad_op_conf->set_int_operand(origin_grad);
+    constant_like_conf->set_int_operand(origin_grad);
   }
-  op_confs->push_back(add_origin_grad_op);
-
-  out_diff_lbi->set_op_name(add_origin_grad_op.name());
-  out_diff_lbi->set_blob_name("out");
+  op_confs->push_back(constant_like_op);
+  out_diff_lbi->set_op_name(constant_like_op.name());
+  out_diff_lbi->set_blob_name(constant_like_conf->out());
 }
 
 ParallelConf ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
