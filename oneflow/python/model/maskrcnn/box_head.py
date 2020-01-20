@@ -180,9 +180,10 @@ class BoxHead(object):
                 name="box_head_box_loss_div",
             )
             if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                num_fg = flow.elem_cnt(total_pos_inds, dtype=flow.float)
                 accuracy.put_metrics(
                     {
-                        "total_pos_inds_elem_cnt" : flow.elem_cnt(total_pos_inds, dtype=flow.float),
+                        "total_pos_inds_elem_cnt" : num_fg,
                     }
                 )
             return (
