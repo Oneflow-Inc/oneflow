@@ -117,6 +117,16 @@ TEST(DSS, walk_field) {
   ASSERT_TRUE(field_names[2] == "z");
 }
 
+TEST(DSS, reverse_walk_field) {
+  Foo foo;
+  std::vector<std::string> field_names;
+  foo.__ReverseWalkField__<DumpFieldName>(&field_names);
+  ASSERT_EQ(field_names.size(), 3);
+  ASSERT_TRUE(field_names[0] == "z");
+  ASSERT_TRUE(field_names[1] == "y");
+  ASSERT_TRUE(field_names[2] == "x");
+}
+
 }  // namespace
 
 }  // namespace oneflow
