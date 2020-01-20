@@ -180,10 +180,19 @@ class BoxHead(object):
                 name="box_head_box_loss_div",
             )
             if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
-                num_fg = flow.elem_cnt(total_pos_inds, dtype=flow.float)
+                fg_inds = total_pos_inds
+                fg_gt_classes = indices
+                pred_classes = flow.math.argmax(cls_logits)
+                fg_pred_classes = flow.local_gather(pred_classes, fg_gt_classes)
+                fg_num_accurate_mask = fg_pred_classes == fg_gt_classes
+                fg_num_accurate = flow.math.reduce_sum(
+                    flow.cast(fg_num_accurate_mask, dtype=flow.float)
+                )
+                num_fg = flow.elem_cnt(fg_inds, dtype=flow.float)
                 accuracy.put_metrics(
                     {
-                        "total_pos_inds_elem_cnt" : num_fg,
+                        "total_pos_inds_elem_cnt": num_fg,
+                        "fast_rcnn/fg_cls_accuracy": fg_num_accurate / num_fg,
                     }
                 )
             return (
