@@ -9,7 +9,7 @@ from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, data_type, x_shape, scalar, case):
+def compare_with_tensorflow(device_type, data_type, x_shape, case):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -86,7 +86,6 @@ def test_add(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = [flow.float]
     arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["scalar"] = [np.random.rand(10)]
     arg_dict["case"] = ["add"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
@@ -96,7 +95,6 @@ def test_sub(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = [flow.float]
     arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["scalar"] = [np.random.rand(10)]
     arg_dict["case"] = ["sub"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
@@ -106,7 +104,6 @@ def test_mul(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = [flow.float]
     arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["scalar"] = [np.random.rand(10)]
     arg_dict["case"] = ["mul"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
@@ -116,7 +113,6 @@ def test_div(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = [flow.float]
     arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["scalar"] = [np.random.rand(10)]
     arg_dict["case"] = ["div"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
