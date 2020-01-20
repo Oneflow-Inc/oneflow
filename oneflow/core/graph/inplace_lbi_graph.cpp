@@ -216,42 +216,7 @@ void InplaceLbiGraph::Init(const InplaceObasInfo& obas_info,
 
   BuildNodeAndEdge4InplacePairs(obas_info.mut_inplace_oba_pairs, true);
   BuildNodeAndEdge4InplacePairs(obas_info.con_inplace_oba_pairs, false);
-  /*
-  for (const auto& oba : obas.oba()) {
-    const Operator& op = *Op4OpName(oba.op_name());
-    LogicalBlobId lbi;
-    std::string ibn;
-    std::string obn;
-    if (std::find(op.input_bns().begin(), op.input_bns().end(), oba.bn_in_op())
-        != op.input_bns().end()) {
-      ibn = oba.bn_in_op();
-      obn = ibn + "_updated";
-      lbi.set_op_name(op.op_name());
-      lbi.set_blob_name(obn);
-      CHECK(std::find_if(op.output_bns().begin(), op.output_bns().end(),
-                         [&](const std::string& obn) { return op.BnInOp2Lbi(obn) == lbi; })
-            == op.output_bns().end());
-    } else if (std::find(op.output_bns().begin(), op.output_bns().end(), oba.bn_in_op())
-               != op.output_bns().end()) {
-      const auto& obn_modifier = op.OutputBlobModifier4Obn(oba.bn_in_op());
-      if (obn_modifier.has_const_inplace_ibn()) {
-        ibn = obn_modifier.const_inplace_ibn();
-      } else if (obn_modifier.has_mutable_inplace_ibn()) {
-        ibn = obn_modifier.mutable_inplace_ibn();
-      } else {
-        UNIMPLEMENTED();
-      }
-      obn = oba.bn_in_op();
-      lbi = op.BnInOp2Lbi(oba.bn_in_op());
-    } else {
-      UNIMPLEMENTED();
-    }
-    auto* edge = new InplaceLbiEdge(&op, ibn, obn);
-    AddAllocatedEdge(edge);
-    Connect<InplaceLbiNode, InplaceLbiEdge>(FindOrCreateNode(op.BnInOp2Lbi(ibn)), edge,
-                                            FindOrCreateNode(lbi));
-  }
-  */
+
   ForEachNode([](const InplaceLbiNode* node) { CHECK_LE(node->in_edges().size(), 1); });
   CHECK(!FindFirstNontrivialSCC());
 }
