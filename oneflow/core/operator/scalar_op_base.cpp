@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ScalarOpBase::InitFromOpConf() {
   EnrollInputBn("in");
-  EnrollInputBn("scalar", false);
+  EnrollInputBn("scalar");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
   ;
 }

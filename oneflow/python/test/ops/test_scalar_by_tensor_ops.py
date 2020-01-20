@@ -27,8 +27,13 @@ def compare_with_tensorflow(device_type, data_type, x_shape, scalar, case):
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            y = flow.constant(scalar[0], dtype=data_type, shape=(1,))
-            print(x.dtype, y.dtype)
+            y = flow.get_variable(
+                "y",
+                shape=(1,),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
+            )
             if case == "add":
                 loss = flow.math.add(x, y)
             elif case == "sub":
@@ -40,7 +45,9 @@ def compare_with_tensorflow(device_type, data_type, x_shape, scalar, case):
             flow.losses.add_loss(loss)
 
             flow.watch(x, Save("x"))
+            flow.watch(y, Save("y"))
             flow.watch_diff(x, Save("x_diff"))
+            flow.watch_diff(y, Save("y_diff"))
             flow.watch(loss, Save("loss"))
             flow.watch_diff(loss, Save("loss_diff"))
 
@@ -53,22 +60,26 @@ def compare_with_tensorflow(device_type, data_type, x_shape, scalar, case):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
+        y = tf.Variable(np.load(os.path.join(GetSavePath(), "y.npy")))
         if case == "add":
-            tf_out = x + scalar[0]
+            tf_out = x + y
         elif case == "sub":
-            tf_out = x - scalar[0]
+            tf_out = x - y
         elif case == "mul":
-            tf_out = x * scalar[0]
+            tf_out = x * y
         elif case == "div":
-            tf_out = x / scalar[0]
+            tf_out = x / y
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+    tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
-
+    assert np.allclose(
+        np.load(os.path.join(GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 def test_add(test_case):
     arg_dict = OrderedDict()

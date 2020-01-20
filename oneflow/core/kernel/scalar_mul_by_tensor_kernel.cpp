@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -23,9 +24,9 @@ void ScalarMulByTensorKernel<device_type, T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* scalar_blob = BnInOp2Blob("scalar");
   Blob* out_blob = BnInOp2Blob("out");
-  KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                          in_blob->dptr<T>(), scalar_blob->dptr<T>(),
-                                          out_blob->mut_dptr<T>());
+  NewKernelUtil<device_type>::MulByScalarPtr(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                             in_blob->dptr<T>(), scalar_blob->dptr<T>(),
+                                             out_blob->mut_dptr<T>());
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarMulByTensorConf, ScalarMulByTensorKernel,

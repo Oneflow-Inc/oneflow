@@ -18,10 +18,8 @@ def add(x, y, name=None):
     elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
     elif x.static_shape == (1,):
-        print("scalar_add_by_tensor x")
         return scalar_add_by_tensor(y, x, name)
     elif y.static_shape == (1,):
-        print("scalar_add_by_tensor y")
         return scalar_add_by_tensor(x, y, name)
     else:
         return broadcast_add(x, y, name)
@@ -56,7 +54,6 @@ def subtract(x, y, name=None):
     elif x.static_shape == (1, ):
         return scalar_sub_by_tensor(y, x, name)
     elif y.static_shape == (1, ):
-        print("scalar_sub_by_tensor")
         return scalar_sub_by_tensor(x, y, name)
     else:
         return broadcast_sub(x, y, name)
@@ -73,7 +70,6 @@ def multiply(x, y, name=None):
     elif x.static_shape == (1, ):
         return scalar_mul_by_tensor(y, x, name)
     elif y.static_shape == (1, ):
-        print("scalar_mul_by_tensor")
         return scalar_mul_by_tensor(x, y, name)
     else:
         return broadcast_mul(x, y, name)
@@ -91,7 +87,6 @@ def divide(x, y, name=None):
     elif x.static_shape == (1, ):
         return scalar_div_by_tensor(y, x, name)
     elif y.static_shape == (1, ):
-        print("scalar_div_by_tensor")
         return scalar_div_by_tensor(x, y, name)
     else:
         return broadcast_div(x, y, name)
