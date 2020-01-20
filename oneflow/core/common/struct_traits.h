@@ -65,6 +65,17 @@ constexpr int ConstExprRoundUp() {
       __DSS__FieldIter<counter + 1, F, __WalkCtxType__>::Call(ctx, self);                       \
     }                                                                                           \
   };                                                                                            \
+  template<int counter, template<class, class> class F, typename __WalkCtxType__,               \
+           typename fake = void>                                                                \
+  struct __DSS__FieldReverseIter {                                                              \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                             \
+      __DSS__FieldReverseIter<counter - 1, F, __WalkCtxType__>::Call(ctx, self);                \
+    }                                                                                           \
+  };                                                                                            \
+  template<template<class, class> class F, typename __WalkCtxType__, typename fake>             \
+  struct __DSS__FieldReverseIter<define_counter, F, __WalkCtxType__, fake> {                    \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {}                            \
+  };                                                                                            \
   template<int counter, typename fake = void>                                                   \
   struct __DSS__FieldAlign4Counter {                                                            \
     constexpr static int Get() { return 1; }                                                    \
@@ -112,6 +123,14 @@ constexpr int ConstExprRoundUp() {
       __DSS__FieldIter<define_counter + 1, F, __WalkCtxType__>::Call(ctx, self);              \
     }                                                                                         \
   };                                                                                          \
+  template<template<class, class> class F, typename __WalkCtxType__, typename fake>           \
+  struct __DSS__FieldReverseIter<define_counter, F, __WalkCtxType__, fake> {                  \
+    static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                           \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
+      F<__WalkCtxType__, decltype(self->field)>::Call(ctx, &self->field, __field_name__);     \
+      __DSS__FieldReverseIter<define_counter - 1, F, __WalkCtxType__>::Call(ctx, self);       \
+    }                                                                                         \
+  };                                                                                          \
   template<typename fake>                                                                     \
   struct __DSS__FieldAlign4Counter<define_counter, fake> {                                    \
     constexpr static int Get() { return alignof(((type*)nullptr)->field); }                   \
@@ -131,6 +150,12 @@ constexpr int ConstExprRoundUp() {
   }
 
 #define _END_DSS(counter, dss_type, type)                                                         \
+ public:                                                                                          \
+  template<template<class, class> class F, typename __WalkCtxType__>                              \
+  void __ReverseWalkField__(__WalkCtxType__* ctx) {                                               \
+    __DSS__FieldReverseIter<counter, F, __WalkCtxType__>::Call(ctx, this);                        \
+  }                                                                                               \
+                                                                                                  \
  private:                                                                                         \
   template<template<class, class> class F, typename __WalkCtxType__, typename fake>               \
   struct __DSS__FieldIter<counter, F, __WalkCtxType__, fake> {                                    \
