@@ -13,7 +13,7 @@ TEST(FlatMsg, optional) {
   FLAT_MSG(TestOptional) foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
-  ASSERT_TRUE(!foo.has_bar());
+  ASSERT_EQ(foo.bar(), 0);
   *foo.mutable_bar() = 9527;
   ASSERT_TRUE(foo.has_bar());
   ASSERT_EQ(foo.bar(), 9527);
@@ -24,13 +24,16 @@ BEGIN_FLAT_MSG(FooOneof)
   FLAT_MSG_DEFINE_FIELD(int32_t, x);
   FLAT_MSG_DEFINE_ONEOF(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
-      FLAT_MSG_ONEOF_FIELD(int64_t, case_1));
+      FLAT_MSG_ONEOF_FIELD(int64_t, case_1)
+      FLAT_MSG_ONEOF_FIELD(TestOptional, bar));
 END_FLAT_MSG(FooOneof)
 // clang-format on
 
 TEST(FlatMsg, oneof) {
   FLAT_MSG(FooOneof) foo_box;
   auto& foo = *foo_box.Mutable();
+  ASSERT_TRUE(!foo.has_bar());
+  ASSERT_EQ(foo.bar().bar(), 0);
   foo.mutable_case_0();
   ASSERT_TRUE(foo.has_case_0());
   FLAT_MSG_ONEOF_ENUM_TYPE(FooOneof, type) x = foo.type_case();
