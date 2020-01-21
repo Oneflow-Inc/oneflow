@@ -20,31 +20,22 @@ namespace oneflow {
 
 #define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
 
-#define FLAT_MSG_DEFINE_FIELD(field_type, field_name)                 \
-  FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name), \
-                        FLAT_MSG_ONEOF_FIELD(field_type, field_name))
+#define FLAT_MSG_DEFINE_FIELD(field_type, field_name)                       \
+  FLAT_MSG_DEFINE_ONEOF_FIELD(OF_PP_CAT(__flat_msg_optional__, field_name), \
+                              FLAT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
-  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
-  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
-  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
+#define FLAT_MSG_DEFINE_ONEOF_FIELD(oneof_name, type_and_field_name_seq) \
+  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);  \
+  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);      \
+  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)    \
   FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq);
-
-#define FLAT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
-  DSS_DEFINE_FIELD(define_counter, "flat message", OF_PP_CAT(oneof_name, _));               \
-  DSS_DEFINE_UNION_FIELD_VISITOR(                                                           \
-      define_counter, case_,                                                                \
-      OF_PP_FOR_EACH_TUPLE(FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
-
-#define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name)         \
-  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), OF_PP_CAT(field_name, _), \
-                       _FLAT_MSG_ONEOF_ENUM_VALUE(field_name))
 
 #define FLAT_MSG_DEFINE_REPEATED_FIELD(field_type, field_name, max_size)            \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "flat message", OF_PP_CAT(field_name, _));
 
-#define FLAT_MSG_ONEOF_FIELD(field_type, field_name) OF_PP_MAKE_TUPLE_SEQ(field_type, field_name)
+#define FLAT_MSG_ONEOF_FIELD(field_type, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
 
 #define FLAT_MSG_ONEOF_ENUM_TYPE(field_type, oneof_name) \
   FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
@@ -58,6 +49,15 @@ namespace oneflow {
 #define FLAT_MSG_TYPE(type_name) OF_PP_CAT(type_name, __flat_msg_type__)
 
 // details
+
+#define FLAT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
+  DSS_DEFINE_FIELD(define_counter, "flat message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_UNION_FIELD_VISITOR(                                                           \
+      define_counter, case_,                                                                \
+      OF_PP_FOR_EACH_TUPLE(FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
+
+#define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(field_type, OF_PP_CAT(field_name, _), _FLAT_MSG_ONEOF_ENUM_VALUE(field_name))
 
 template<typename T>
 struct FlatMsg final {
@@ -118,12 +118,6 @@ DEFINE_FLAT_MSG_TYPE(double);
 #define _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) SNAKE_TO_CAMEL(oneof_name)
 
 #define _FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name) OF_PP_CAT(k_, OF_PP_CAT(oneof_name, _not_set))
-
-#define MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq) \
-  OF_PP_FOR_EACH_TUPLE(SUBSTITUTE_FLAT_MSG_TYPE, type_and_field_name_seq)
-
-#define SUBSTITUTE_FLAT_MSG_TYPE(field_type, field_name) \
-  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
 
 #define FLAT_MSG_DEFINE_BASIC_METHODS(T) _FLAT_MSG_DEFINE_BASIC_METHODS(T)
 

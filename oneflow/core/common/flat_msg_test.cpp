@@ -47,7 +47,7 @@ TEST(FlatMsg, optional) {
 
 // clang-format off
 BEGIN_FLAT_MSG(FooOneof)
-  FLAT_MSG_DEFINE_ONEOF(type,
+  FLAT_MSG_DEFINE_ONEOF_FIELD(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
       FLAT_MSG_ONEOF_FIELD(int64_t, case_1)
       FLAT_MSG_ONEOF_FIELD(TestOptional, bar));
