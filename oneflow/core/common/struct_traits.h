@@ -60,6 +60,13 @@ constexpr int ConstExprRoundUp() {
                                                                                                 \
  private:                                                                                       \
   using __DssSelfType__ = type;                                                                 \
+  template<int counter, template<class, class> class F, typename WalkCtxType,                   \
+           typename DssFieldType, typename fake = void>                                         \
+  struct __DSS__VisitField {                                                                    \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) {   \
+      F<WalkCtxType, DssFieldType>::Call(ctx, field_ptr, __field_name__);                       \
+    }                                                                                           \
+  };                                                                                            \
   template<int counter, template<class, class> class F, typename __WalkCtxType__,               \
            typename fake = void>                                                                \
   struct __DSS__FieldIter {                                                                     \
@@ -121,7 +128,8 @@ constexpr int ConstExprRoundUp() {
   struct __DSS__FieldIter<define_counter, F, __WalkCtxType__, fake> {                         \
     static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                           \
       const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
-      F<__WalkCtxType__, decltype(self->field)>::Call(ctx, &self->field, __field_name__);     \
+      __DSS__VisitField<define_counter, F, __WalkCtxType__, decltype(self->field)>::Call(     \
+          ctx, &self->field, __field_name__);                                                 \
       __DSS__FieldIter<define_counter + 1, F, __WalkCtxType__>::Call(ctx, self);              \
     }                                                                                         \
   };                                                                                          \
@@ -129,7 +137,8 @@ constexpr int ConstExprRoundUp() {
   struct __DSS__FieldReverseIter<define_counter, F, __WalkCtxType__, fake> {                  \
     static void Call(__WalkCtxType__* ctx, __DssSelfType__* self) {                           \
       const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
-      F<__WalkCtxType__, decltype(self->field)>::Call(ctx, &self->field, __field_name__);     \
+      __DSS__VisitField<define_counter, F, __WalkCtxType__, decltype(self->field)>::Call(     \
+          ctx, &self->field, __field_name__);                                                 \
       __DSS__FieldReverseIter<define_counter - 1, F, __WalkCtxType__>::Call(ctx, self);       \
     }                                                                                         \
   };                                                                                          \
