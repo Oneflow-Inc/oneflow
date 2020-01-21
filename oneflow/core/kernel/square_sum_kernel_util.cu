@@ -24,10 +24,9 @@ __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
 template<typename T>
 struct SquareSumKernelUtil<DeviceType::kGPU, T> {
   static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-        Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
-        SquareSumGpu<T>
-            <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x,
-            y);
+    Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
+    SquareSumGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
   }
 };
 
