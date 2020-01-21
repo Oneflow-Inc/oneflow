@@ -28,9 +28,17 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
   FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_FLAT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "flat message", OF_PP_CAT(oneof_name, _));
+  FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq);
 
-// #define FLAT_MSG_DSS_DEFINE_UION_FIELD(define_counter)
+#define FLAT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
+  DSS_DEFINE_FIELD(define_counter, "flat message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_UNION_FIELD_VISITOR(                                                           \
+      define_counter, case_,                                                                \
+      OF_PP_FOR_EACH_TUPLE(FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
+
+#define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name,       \
+                       _FLAT_MSG_ONEOF_ENUM_VALUE(field_name))
 
 #define FLAT_MSG_DEFINE_REPEATED_FIELD(field_type, field_name, max_size)            \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
