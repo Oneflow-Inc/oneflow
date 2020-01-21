@@ -43,6 +43,7 @@ TEST(FlatMsg, oneof) {
 // clang-format off
 BEGIN_FLAT_MSG(FooRepeated)
   FLAT_MSG_DEFINE_REPEATED_FIELD(TestOptional, bar, 10);
+  FLAT_MSG_DEFINE_REPEATED_FIELD(TestOptional, foobar, 10);
 END_FLAT_MSG(FooRepeated)
 // clang-format on
 
