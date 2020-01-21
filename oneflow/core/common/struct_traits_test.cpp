@@ -156,6 +156,51 @@ TEST(DSS, filter_field) {
   ASSERT_TRUE(field_names[0] == "z");
 }
 
+#define DSS_DEFINE_TEST_UNION_FIELD(define_counter)                        \
+  DSS_DEFINE_FIELD(define_counter, "demo dss", TestDssUnion, union_field); \
+  DSS_DEFINE_UNION_FIELD_VISITOR(define_counter, union_case,               \
+                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1)       \
+                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
+
+struct TestDssUnion {
+  BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), TestDssUnion, 0);
+
+ public:
+  struct {
+    int32_t union_case;
+    union {
+      int32_t x;
+      int64_t y;
+    };
+  } union_field;
+
+  DSS_DEFINE_TEST_UNION_FIELD(DSS_GET_DEFINE_COUNTER());
+  END_DSS(DSS_GET_DEFINE_COUNTER(), "demo dss", TestDssUnion);
+};
+
+TEST(DSS, union_field) {
+  TestDssUnion foo;
+  {
+    std::vector<std::string> field_names;
+    foo.__WalkField__<DumpFieldName>(&field_names);
+    ASSERT_EQ(field_names.size(), 0);
+  }
+  foo.union_field.union_case = 1;
+  {
+    std::vector<std::string> field_names;
+    foo.__WalkField__<DumpFieldName>(&field_names);
+    ASSERT_EQ(field_names.size(), 1);
+    ASSERT_EQ(field_names.at(0), "x");
+  }
+  foo.union_field.union_case = 2;
+  {
+    std::vector<std::string> field_names;
+    foo.__WalkField__<DumpFieldName>(&field_names);
+    ASSERT_EQ(field_names.size(), 1);
+    ASSERT_EQ(field_names.at(0), "y");
+  }
+}
+
 }  // namespace
 
 }  // namespace oneflow
