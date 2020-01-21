@@ -36,8 +36,8 @@ namespace oneflow {
       define_counter, case_,                                                                \
       OF_PP_FOR_EACH_TUPLE(FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
 
-#define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name) \
-  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name,       \
+#define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name)         \
+  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), OF_PP_CAT(field_name, _), \
                        _FLAT_MSG_ONEOF_ENUM_VALUE(field_name))
 
 #define FLAT_MSG_DEFINE_REPEATED_FIELD(field_type, field_name, max_size)            \
