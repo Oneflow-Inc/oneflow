@@ -94,6 +94,23 @@ TEST(OBJECT_MSG, nested_delete) {
   ASSERT_EQ(bar_is_deleted, std::string("bar_deleted"));
 }
 
+// clang-format off
+BEGIN_OBJECT_MSG(TestScalarOneof)
+  OBJECT_MSG_DEFINE_ONEOF_FIELD(type,
+      OBJECT_MSG_ONEOF_FIELD(int32_t, x)
+      OBJECT_MSG_ONEOF_FIELD(int64_t, foo));
+END_OBJECT_MSG(TestScalarOneof)
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(TestPtrOneof)
+  OBJECT_MSG_DEFINE_ONEOF_FIELD(type,
+      OBJECT_MSG_ONEOF_FIELD(ObjectMsgFoo, foo));
+END_OBJECT_MSG(TestPtrOneof)
+// clang-format on
+
+TEST(OBJECT_MSG, oneof) { auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New(); };
+
 }  // namespace test
 
 }  // namespace oneflow

@@ -65,10 +65,11 @@ constexpr int ConstExprRoundUp() {
     }                                                                                          \
   };
 
-#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY(field_type, field_name, field_case_value) \
-  case field_case_value:                                                              \
-    return F<WalkCtxType, field_type>::Call(ctx, &field_ptr->field_name,              \
-                                            OF_PP_STRINGIZE(field_name));
+#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY(field_type, field_name, field_case_value)      \
+  case field_case_value: {                                                                 \
+    const char* case_field_name = OF_PP_STRINGIZE(field_name);                             \
+    return F<WalkCtxType, field_type>::Call(ctx, &field_ptr->field_name, case_field_name); \
+  }
 
 #define _BEGIN_DSS(define_counter, type, base_byte_size)                                        \
  public:                                                                                        \

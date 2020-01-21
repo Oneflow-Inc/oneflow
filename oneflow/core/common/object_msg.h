@@ -26,11 +26,16 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)  \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", OF_PP_CAT(field_name, _));
 
-#define OBJECT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                            \
-  OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                       \
-  OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, MAKE_OBJECT_MSG_TYPE_SEQ(type_and_field_name_seq));   \
-  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, MAKE_OBJECT_MSG_TYPE_SEQ(type_and_field_name_seq)) \
+#define OBJECT_MSG_DEFINE_ONEOF_FIELD(oneof_name, type_and_field_name_seq)       \
+  OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_TYPEDEF_ONEOF_FIELD, type_and_field_name_seq); \
+  OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);        \
+  OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);            \
   OBJECT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq);
+
+//  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq);
+
+#define OBJECT_MSG_ONEOF_FIELD(field_type, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(OBJECT_MSG_TYPE(field_type), field_name)
 
 #define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
 
@@ -38,37 +43,50 @@ namespace oneflow {
 
 // details
 
-#define OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                    \
+#define OBJECT_MSG_TYPEDEF_ONEOF_FIELD(field_type, field_name) \
+  using OF_PP_CAT(field_name, _OneofFieldType) = typename _OBJECT_MSG_STRUCT_MEMBER(field_type);
+
+#define OBJECT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
+  DSS_DEFINE_FIELD(define_counter, "object message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_UNION_FIELD_VISITOR(                                                             \
+      define_counter, case_,                                                                  \
+      OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
+
+#define OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name)                    \
+  OF_PP_MAKE_TUPLE_SEQ(OF_PP_CAT(field_name, _OneofFieldType), OF_PP_CAT(field_name, _), \
+                       _OBJECT_MSG_ONEOF_ENUM_VALUE(field_name))
+
+#define OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                      \
   _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name));     \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ACCESSOR, (_OBJECT_MSG_ONEOF_ENUM_VALUE), \
                                    (oneof_name), type_and_field_name_seq)
 
-#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                    \
- public:                                                                                  \
-  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                        \
-    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                     \
-      return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);              \
-    }                                                                                     \
-    return FlatMsgGetDefault<FlatMsgIsScalar<OF_PP_PAIR_FIRST(pair)>::value>::Call(       \
-        &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));                 \
-  }                                                                                       \
-  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                                 \
-    return _FLAT_MSG_ONEOF_CASE(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair)); \
-  }                                                                                       \
-  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                     \
-    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
-    (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                          \
-  }                                                                                       \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {               \
-    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
-    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                            \
-    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);               \
-  }                                                                                       \
-  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {     \
-    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                \
+#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                \
+ public:                                                                                \
+  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                      \
+    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                   \
+      return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);            \
+    }                                                                                   \
+    return ObjectMsgGetDefault<ObjectMsgIsScalar<OF_PP_PAIR_FIRST(pair)>::value>::Call( \
+        &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));               \
+  }                                                                                     \
+  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                               \
+    return OF_PP_CAT(oneof_name, _case)() == get_enum_value(OF_PP_PAIR_SECOND(pair));   \
+  }                                                                                     \
+  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                   \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                       \
+    (_OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                      \
+  }                                                                                     \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {             \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                       \
+    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                          \
+    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);             \
+  }                                                                                     \
+  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {   \
+    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                              \
   }
 
-#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                         \
+#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                       \
  public:                                                                            \
   T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; } \
                                                                                     \
@@ -78,18 +96,19 @@ namespace oneflow {
   }
 
 #define OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \
- private:                                                                            \
-  struct {                                                                           \
-    union {                                                                          \
+ private:                                                                              \
+  struct {                                                                             \
+    union {                                                                            \
       OF_PP_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq) \
-    };                                                                               \
+    };                                                                                 \
     _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                     \
   } OF_PP_CAT(oneof_name, _);
 
-#define MAKE_OBJECT_MSG_ONEOF_UNION_FIELD(field_type, field_name) field_type* OF_PP_CAT(field_name, _);
+#define MAKE_OBJECT_MSG_ONEOF_UNION_FIELD(field_type, field_name) \
+  _OBJECT_MSG_STRUCT_MEMBER(field_type) OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq)     \
- public:                                                                         \
+ public:                                                                           \
   enum _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name) {                                   \
     _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name) = 0,                               \
     OF_PP_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ENUM_CASE, type_and_field_name_seq) \
@@ -102,9 +121,10 @@ namespace oneflow {
 #define _OBJECT_MSG_ONEOF_ENUM_VALUE(field) OF_PP_CAT(field, _OneofEnumValue)
 #define _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name) OF_PP_CAT(k_, OF_PP_CAT(oneof_name, _NotSet))
 
-#define OBJECT_MSG_STRUCT_MEMBER(class_name)                           \
-  std::conditional<ObjMsgIsScalar<OBJECT_MSG_TYPE(class_name)>::value, \
-                   OBJECT_MSG_TYPE(class_name), OBJECT_MSG_TYPE(class_name)*>::type
+#define OBJECT_MSG_STRUCT_MEMBER(class_name) _OBJECT_MSG_STRUCT_MEMBER(OBJECT_MSG_TYPE(class_name))
+
+#define _OBJECT_MSG_STRUCT_MEMBER(class_name) \
+  std::conditional<ObjectMsgIsScalar<class_name>::value, class_name, class_name*>::type
 
 typedef char OBJECT_MSG_TYPE(char);
 typedef int8_t OBJECT_MSG_TYPE(int8_t);
@@ -122,7 +142,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 #define _OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                                       \
  public:                                                                                       \
   using OF_PP_CAT(field_name, __field_type__) = typename OBJECT_MSG_STRUCT_MEMBER(field_type); \
-  DEFINE_SETTER(ObjMsgIsScalar, OF_PP_CAT(field_name, __field_type__), field_name);            \
+  DEFINE_SETTER(ObjectMsgIsScalar, OF_PP_CAT(field_name, __field_type__), field_name);         \
   DEFINE_GETTER(OF_PP_CAT(field_name, __field_type__), field_name);                            \
   DEFINE_MUTABLE(OF_PP_CAT(field_name, __field_type__), field_name);                           \
                                                                                                \
@@ -134,7 +154,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
   static_assert(std::is_pointer<field_type>::value,                                            \
                 OF_PP_STRINGIZE(field_type) "is not a pointer");                               \
   void OF_PP_CAT(set_raw_ptr_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
-  DEFINE_SETTER(ObjMsgIsScalar, field_type, field_name);                                       \
+  DEFINE_SETTER(ObjectMsgIsScalar, field_type, field_name);                                    \
   DEFINE_GETTER(field_type, field_name);                                                       \
   DEFINE_MUTABLE(field_type, field_name);                                                      \
                                                                                                \
@@ -305,7 +325,7 @@ class ObjectMsgPtr final {
 };
 
 template<typename T>
-struct ObjMsgIsScalar {
+struct ObjectMsgIsScalar {
   const static bool value =
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
 };
