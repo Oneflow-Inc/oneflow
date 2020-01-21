@@ -1875,7 +1875,6 @@ message OperatorConf {
     ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
     ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
     ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
-    ConstantLikeOpConf constant_like_conf = 522;
     SquareSumOpConf square_sum_conf = 523;
     BroadcastMaximumOpConf broadcast_maximum_conf = 524;
     BroadcastMinimumOpConf broadcast_minimum_conf = 525;
