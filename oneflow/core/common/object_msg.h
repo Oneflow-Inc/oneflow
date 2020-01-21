@@ -7,24 +7,25 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                                 \
-  class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct { \
-   public:                                                           \
-    using self_type = OBJECT_MSG_TYPE(class_name);                   \
-    BEGIN_DSS(OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct));
+#define BEGIN_OBJECT_MSG(class_name)                                                           \
+  class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                           \
+   public:                                                                                     \
+    using self_type = OBJECT_MSG_TYPE(class_name);                                             \
+    BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
+    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));
 
-#define END_OBJECT_MSG(class_name)                    \
-  END_DSS("object_msg", OBJECT_MSG_TYPE(class_name)); \
-  }                                                   \
+#define END_OBJECT_MSG(class_name)                                              \
+  END_DSS(DSS_GET_DEFINE_COUNTER(), "object_msg", OBJECT_MSG_TYPE(class_name)); \
+  }                                                                             \
   ;
 
 #define OBJECT_MSG_DEFINE_FIELD(field_type, field_name) \
   _OBJECT_MSG_DEFINE_FIELD(field_type, field_name)      \
-  DSS_DEFINE_FIELD("object_msg", self_type, OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", self_type, OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name) \
   _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)  \
-  DSS_DEFINE_FIELD("object_msg", self_type, OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", self_type, OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
 
@@ -103,6 +104,43 @@ class ObjectMsgPtrUtil : private ObjectMsgPtrBaseUtil {
     if (DecreaseRefCount(ptr) > 0) { return; }
     ptr->__Delete__();
     delete ptr;
+  }
+};
+
+template<typename T>
+struct ObjectMsgStructDefault final {
+  ObjectMsgStructDefault() {
+    std::memset(reinterpret_cast<void*>(Mutable()), 0, sizeof(T));
+    ObjectMsgPtrUtil<T>::InitRef(Mutable());
+  }
+
+  const T& Get() const { return msg_; }
+  T* Mutable() { return &msg_; }
+
+ private:
+  union {
+    T msg_;
+  };
+};
+
+#define OBJECT_MSG_DEFINE_DEFAULT(object_msg_type_name)                           \
+  const object_msg_type_name& __Default__() const {                               \
+    static const ObjectMsgStructDefault<object_msg_type_name> default_object_msg; \
+    return default_object_msg.Get();                                              \
+  }
+
+template<bool is_scalar>
+struct ObjectMsgGetDefault final {
+  template<typename T>
+  static const T& Call(const T* val) {
+    return (*val)->__Default__();
+  }
+};
+template<>
+struct ObjectMsgGetDefault<true> final {
+  template<typename T>
+  static const T& Call(const T* val) {
+    return *val;
   }
 };
 

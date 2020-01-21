@@ -21,9 +21,9 @@ TEST(ObjectMsgStruct, ref_cnt) {
 }
 
 class TestNew final : public ObjectMsgStruct {
-  BEGIN_DSS(TestNew, sizeof(ObjectMsgStruct));
+  BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), TestNew, sizeof(ObjectMsgStruct));
 
-  END_DSS("object_msg", TestNew);
+  END_DSS(DSS_GET_DEFINE_COUNTER(), "object_msg", TestNew);
 };
 
 TEST(ObjectMsgPtr, obj_new) { ObjectMsgPtr<TestNew>::New(); }

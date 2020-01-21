@@ -21,10 +21,12 @@ namespace oneflow {
   _DEFINE_SETTER(is_scalar, field_type, field_name)
 
 // DSS is short for domain specific struct
-#define BEGIN_DSS(type, base_byte_size) _BEGIN_DSS(__COUNTER__, type, base_byte_size)
-#define DSS_DEFINE_FIELD(dss_type, type, field) \
-  _DSS_DEFINE_FIELD(__COUNTER__, dss_type, type, field)
-#define END_DSS(dss_type, type) _END_DSS(__COUNTER__, dss_type, type)
+#define BEGIN_DSS(define_counter, type, base_byte_size) \
+  _BEGIN_DSS(define_counter, type, base_byte_size)
+#define DSS_DEFINE_FIELD(define_counter, dss_type, type, field) \
+  _DSS_DEFINE_FIELD(define_counter, dss_type, type, field)
+#define END_DSS(define_counter, dss_type, type) _END_DSS(define_counter, dss_type, type)
+#define DSS_GET_DEFINE_COUNTER() __COUNTER__
 
 // details
 template<typename T, int offset>

@@ -53,22 +53,22 @@ TEST(StructField, const_struct_const_field) {
 namespace {
 
 struct Foo {
-  BEGIN_DSS(Foo, 0);
+  BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), Foo, 0);
   int x;
   int y;
   int* z;
 
-  DSS_DEFINE_FIELD("demo dss", Foo, x);
-  DSS_DEFINE_FIELD("demo dss", Foo, y);
-  DSS_DEFINE_FIELD("demo dss", Foo, z);
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "demo dss", Foo, x);
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "demo dss", Foo, y);
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "demo dss", Foo, z);
 
-  END_DSS("demo dss", Foo);
+  END_DSS(DSS_GET_DEFINE_COUNTER(), "demo dss", Foo);
 };
 
 struct Bar {
-  BEGIN_DSS(Foo, 0);
+  BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), Foo, 0);
 
-  END_DSS("demo dss", Bar);
+  END_DSS(DSS_GET_DEFINE_COUNTER(), "demo dss", Bar);
 };
 
 template<typename T>
