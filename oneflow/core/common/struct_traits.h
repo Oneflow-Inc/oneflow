@@ -26,6 +26,8 @@ namespace oneflow {
 #define DSS_DEFINE_FIELD(define_counter, dss_type, type, field) \
   _DSS_DEFINE_FIELD(define_counter, dss_type, type, field)
 #define END_DSS(define_counter, dss_type, type) _END_DSS(define_counter, dss_type, type)
+#define DSS_DEFINE_UNION_FIELD_VISITOR(define_counter, field_case, type7field7case_tuple_seq) \
+  _DSS_DEFINE_UNION_FIELD_VISITOR(define_counter, field_case, type7field7case_tuple_seq)
 #define DSS_GET_DEFINE_COUNTER() __COUNTER__
 
 // details
@@ -50,6 +52,23 @@ template<int x, int y>
 constexpr int ConstExprRoundUp() {
   return (x + y - 1) / y * y;
 }
+
+#define _DSS_DEFINE_UNION_FIELD_VISITOR(define_counter, field_case, type7field7case_tuple_seq) \
+  template<template<class, class> class F, typename WalkCtxType, typename DssFieldType,        \
+           typename fake>                                                                      \
+  struct __DSS__VisitField<define_counter, F, WalkCtxType, DssFieldType, fake> {               \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) {  \
+      switch (field_ptr->field_case) {                                                         \
+        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY, type7field7case_tuple_seq)   \
+        default:;                                                                              \
+      }                                                                                        \
+    }                                                                                          \
+  };
+
+#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY(field_type, field_name, field_case_value) \
+  case field_case_value:                                                              \
+    return F<WalkCtxType, field_type>::Call(ctx, &field_ptr->field_name,              \
+                                            OF_PP_STRINGIZE(field_name));
 
 #define _BEGIN_DSS(define_counter, type, base_byte_size)                                        \
  public:                                                                                        \
