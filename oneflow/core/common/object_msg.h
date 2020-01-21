@@ -10,7 +10,6 @@ namespace oneflow {
 #define BEGIN_OBJECT_MSG(class_name)                                                           \
   class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                           \
    public:                                                                                     \
-    using self_type = OBJECT_MSG_TYPE(class_name);                                             \
     BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
     OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));
 
@@ -21,11 +20,11 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_FIELD(field_type, field_name) \
   _OBJECT_MSG_DEFINE_FIELD(field_type, field_name)      \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", self_type, OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name) \
   _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)  \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", self_type, OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object_msg", OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
 
