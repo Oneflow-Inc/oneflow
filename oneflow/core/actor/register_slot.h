@@ -38,7 +38,7 @@ class RegstSlot final {
   void InsertRegstDescId(int64_t regst_desc_id);
 
  private:
-  HashMap<int64_t, std::deque<Regst*>> regst_desc_id2regsts_;
+  std::map<int64_t, std::deque<Regst*>> regst_desc_id2regsts_;
   size_t available_regst_desc_cnt_;
   bool is_inited_;
 };
