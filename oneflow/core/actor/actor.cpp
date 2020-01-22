@@ -2,6 +2,7 @@
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/actor/normal_forward_compute_actor.h"
 
 namespace oneflow {
 
@@ -56,11 +57,15 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
 
+  max_regst_num_ = 0;
+  RegstMgr* global_regst_mgr = Global<RegstMgr>::Get();
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
+    global_regst_mgr->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
+    int64_t regst_num = global_regst_mgr->RegstDesc4RegstDescId(regst_desc_id).register_num();
+    max_regst_num_ = std::max(regst_num, max_regst_num_);
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
     produced_regst2expected_act_id_[regst_desc_id] = act_id_;
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
@@ -75,6 +80,8 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
     std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      int64_t regst_num = global_regst_mgr->RegstDesc4RegstDescId(regst_desc_id).register_num();
+      max_regst_num_ = std::max(regst_num, max_regst_num_);
       regst_desc_id_vec.push_back(regst_desc_id);
     }
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
@@ -496,8 +503,14 @@ bool Actor::IsWriteReady() const {
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
                               std::function<Regst*(int64_t)> Regst4RegstDescId) {
+  bool should_cache_blob =
+      max_regst_num_ == 1 && dynamic_cast<NormalForwardCompActor*>(this) != nullptr;
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      if (should_cache_blob) {
+        auto it = bn_in_op2blob_cache_.find(bn_in_op);
+        if (it != bn_in_op2blob_cache_.end()) { return it->second; }
+      }
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
       Regst* regst = GetNaiveOrInplaceCurWriteable(regst_desc_id_it->second);
@@ -505,7 +518,10 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
       if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
       if (regst == nullptr) { return nullptr; }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
-      return regst->GetBlobByLbi(lbi);
+      double e = GetCurTime();
+      Blob* blob = regst->GetBlobByLbi(lbi);
+      if (should_cache_blob) { bn_in_op2blob_cache_[bn_in_op] = blob; }
+      return blob;
     });
   }
 }

@@ -210,6 +210,7 @@ class Actor {
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
   int64_t remaining_eord_cnt_;
+  int64_t max_regst_num_;
 
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
@@ -233,6 +234,7 @@ class Actor {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+  HashMap<std::string, Blob*> bn_in_op2blob_cache_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
