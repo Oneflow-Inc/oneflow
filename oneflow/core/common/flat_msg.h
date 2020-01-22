@@ -156,6 +156,7 @@ DEFINE_FLAT_MSG_TYPE(double);
     return _FLAT_MSG_ONEOF_CASE(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair)); \
   }                                                                                       \
   void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                     \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) { return; }                          \
     OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
     (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                          \
   }                                                                                       \
