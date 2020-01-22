@@ -33,11 +33,11 @@ BEGIN_OBJECT_MSG(ObjectMsgFoo)
  public:
   void __Delete__();
 
-  OBJECT_MSG_DEFINE_FIELD(int8_t, x);
-  OBJECT_MSG_DEFINE_FIELD(int32_t, foo);
-  OBJECT_MSG_DEFINE_FIELD(int16_t, bar);
-  OBJECT_MSG_DEFINE_FIELD(int64_t, foobar);
-  OBJECT_MSG_DEFINE_RAW_PTR_FIELD(std::string*, is_deleted);
+  OBJECT_MSG_DEFINE_OPTIONAL(int8_t, x);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, foo);
+  OBJECT_MSG_DEFINE_OPTIONAL(int16_t, bar);
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, foobar);
+  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
 END_OBJECT_MSG(ObjectMsgFoo)
 // clang-format on
 
@@ -56,7 +56,7 @@ TEST(OBJECT_MSG, __delete__) {
   {
     auto foo = OBJECT_MSG_PTR(ObjectMsgFoo)::New();
     foo->set_bar(9527);
-    foo->set_raw_ptr_is_deleted(&is_deleted);
+    foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
   }
   ASSERT_TRUE(is_deleted == "deleted");
@@ -68,8 +68,8 @@ BEGIN_OBJECT_MSG(ObjectMsgBar)
   void __Delete__(){
     if (mutable_is_deleted()) { *mutable_is_deleted() = "bar_deleted"; }
   }
-  OBJECT_MSG_DEFINE_FIELD(ObjectMsgFoo, foo);
-  OBJECT_MSG_DEFINE_RAW_PTR_FIELD(std::string*, is_deleted);
+  OBJECT_MSG_DEFINE_OPTIONAL(ObjectMsgFoo, foo);
+  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
 END_OBJECT_MSG(ObjectMsgBar)
 // clang-format on
 
@@ -84,10 +84,10 @@ TEST(OBJECT_MSG, nested_delete) {
   std::string is_deleted;
   {
     auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
-    bar->set_raw_ptr_is_deleted(&bar_is_deleted);
+    bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mutable_foo();
     foo->set_bar(9527);
-    foo->set_raw_ptr_is_deleted(&is_deleted);
+    foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
   }
   ASSERT_EQ(is_deleted, std::string("deleted"));
@@ -96,7 +96,7 @@ TEST(OBJECT_MSG, nested_delete) {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestScalarOneof)
-  OBJECT_MSG_DEFINE_ONEOF_FIELD(type,
+  OBJECT_MSG_DEFINE_ONEOF(type,
       OBJECT_MSG_ONEOF_FIELD(int32_t, x)
       OBJECT_MSG_ONEOF_FIELD(int64_t, foo));
 END_OBJECT_MSG(TestScalarOneof)
@@ -104,7 +104,7 @@ END_OBJECT_MSG(TestScalarOneof)
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestPtrOneof)
-  OBJECT_MSG_DEFINE_ONEOF_FIELD(type,
+  OBJECT_MSG_DEFINE_ONEOF(type,
       OBJECT_MSG_ONEOF_FIELD(ObjectMsgFoo, foo)
       OBJECT_MSG_ONEOF_FIELD(int32_t, int_field));
 END_OBJECT_MSG(TestPtrOneof)
@@ -132,13 +132,13 @@ TEST(OBJECT_MSG, oneof_release) {
   ASSERT_NE(default_foo_ptr, &obj.foo());
   {
     std::string is_delete;
-    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_foo()->set_is_deleted(&is_delete);
     obj.mutable_int_field();
     ASSERT_EQ(is_delete, "deleted");
   }
   {
     std::string is_delete;
-    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_foo()->set_is_deleted(&is_delete);
     obj.mutable_int_field();
     ASSERT_EQ(is_delete, "deleted");
   }
@@ -154,7 +154,7 @@ TEST(OBJECT_MSG, oneof_clear) {
   ASSERT_NE(default_foo_ptr, &obj.foo());
   {
     std::string is_delete;
-    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_foo()->set_is_deleted(&is_delete);
     ASSERT_TRUE(!obj.has_int_field());
     obj.clear_int_field();
     ASSERT_TRUE(!obj.has_int_field());
@@ -175,7 +175,7 @@ TEST(OBJECT_MSG, oneof_set) {
   ASSERT_NE(default_foo_ptr, &obj.foo());
   {
     std::string is_delete;
-    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_foo()->set_is_deleted(&is_delete);
     ASSERT_TRUE(!obj.has_int_field());
     obj.clear_int_field();
     ASSERT_TRUE(!obj.has_int_field());
@@ -185,6 +185,29 @@ TEST(OBJECT_MSG, oneof_set) {
     ASSERT_EQ(is_delete, "deleted");
   }
 };
+
+// clang-format off
+BEGIN_FLAT_MSG(FlatMsgDemo)
+  FLAT_MSG_DEFINE_ONEOF(type,
+      FLAT_MSG_ONEOF_FIELD(int32_t, int32_field)
+      FLAT_MSG_ONEOF_FIELD(float, float_field));
+END_FLAT_MSG(FlatMsgDemo)
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(ObjectMsgContainerDemo)
+  OBJECT_MSG_DEFINE_FLAT_MSG(FlatMsgDemo, flat_field);
+END_OBJECT_MSG(ObjectMsgContainerDemo)
+// clang-format on
+
+TEST(OBJECT_MSG, flat_msg_field) {
+  auto obj = OBJECT_MSG_PTR(ObjectMsgContainerDemo)::New();
+  ASSERT_TRUE(obj->has_flat_field());
+  ASSERT_TRUE(!obj->flat_field().has_int32_field());
+  obj->mutable_flat_field()->set_int32_field(33);
+  ASSERT_TRUE(obj->flat_field().has_int32_field());
+  ASSERT_EQ(obj->flat_field().int32_field(), 33);
+}
 
 }  // namespace test
 

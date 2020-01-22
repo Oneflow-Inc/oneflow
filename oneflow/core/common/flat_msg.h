@@ -9,28 +9,33 @@ namespace oneflow {
 
 #define BEGIN_FLAT_MSG(struct_name)                                     \
   struct FLAT_MSG_TYPE(struct_name) final {                             \
+    static const bool __is_flat_message_type__ = true;                  \
     BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), FLAT_MSG_TYPE(struct_name), 0); \
     FLAT_MSG_DEFINE_BASIC_METHODS(FLAT_MSG_TYPE(struct_name));          \
     FLAT_MSG_DEFINE_DEFAULT(FLAT_MSG_TYPE(struct_name));
 
 #define END_FLAT_MSG(struct_name)                                                \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");  \
   END_DSS(DSS_GET_DEFINE_COUNTER(), "flat message", FLAT_MSG_TYPE(struct_name)); \
   }                                                                              \
   ;
 
 #define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
 
-#define FLAT_MSG_DEFINE_FIELD(field_type, field_name)                       \
-  FLAT_MSG_DEFINE_ONEOF_FIELD(OF_PP_CAT(__flat_msg_optional__, field_name), \
-                              FLAT_MSG_ONEOF_FIELD(field_type, field_name))
+#define FLAT_MSG_DEFINE_OPTIONAL(field_type, field_name)                        \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
+  FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name),           \
+                        FLAT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF_FIELD(oneof_name, type_and_field_name_seq) \
-  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);  \
-  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);      \
-  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)    \
+#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)              \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
+  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);         \
+  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);             \
+  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)           \
   FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq);
 
-#define FLAT_MSG_DEFINE_REPEATED_FIELD(field_type, field_name, max_size)            \
+#define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                  \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");     \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "flat message", OF_PP_CAT(field_name, _));
 

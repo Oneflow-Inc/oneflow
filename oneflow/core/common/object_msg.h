@@ -5,29 +5,40 @@
 #include <memory>
 #include <type_traits>
 #include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/common/flat_msg.h"
 
 namespace oneflow {
 
 #define BEGIN_OBJECT_MSG(class_name)                                                           \
   class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                           \
    public:                                                                                     \
+    static const bool __is_object_message_type__ = true;                                       \
     BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
     OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));
 
 #define END_OBJECT_MSG(class_name)                                                  \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
   END_DSS(DSS_GET_DEFINE_COUNTER(), "object message", OBJECT_MSG_TYPE(class_name)); \
   }                                                                                 \
   ;
 
-#define OBJECT_MSG_DEFINE_FIELD(field_type, field_name)                                   \
-  OBJECT_MSG_DEFINE_ONEOF_FIELD(OF_PP_CAT(field_name, __object_message_optional_field__), \
-                                OBJECT_MSG_ONEOF_FIELD(field_type, field_name))
+#define OBJECT_MSG_DEFINE_OPTIONAL(field_type, field_name)                          \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  OBJECT_MSG_DEFINE_ONEOF(OF_PP_CAT(field_name, __object_message_optional_field__), \
+                          OBJECT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name) \
-  _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)  \
+#define OBJECT_MSG_DEFINE_RAW_PTR(field_type, field_name)                           \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                      \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
 
-#define OBJECT_MSG_DEFINE_ONEOF_FIELD(oneof_name, type_and_field_name_seq) \
+#define OBJECT_MSG_DEFINE_FLAT_MSG(field_type, field_name)                          \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(FLAT_MSG_TYPE(field_type), field_name)          \
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+
+#define OBJECT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_ONEOF_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq)
 
 #define OBJECT_MSG_ONEOF_FIELD(field_type, field_name) \
@@ -179,17 +190,29 @@ typedef float OBJECT_MSG_TYPE(float);
 typedef double OBJECT_MSG_TYPE(double);
 typedef std::string OBJECT_MSG_TYPE(string);
 
-#define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                             \
- public:                                                                                         \
-  static_assert(std::is_pointer<field_type>::value,                                              \
-                OF_PP_STRINGIZE(field_type) "is not a pointer");                                 \
-  void OF_PP_CAT(set_raw_ptr_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; }   \
-  void OF_PP_CAT(clear_raw_ptr_, field_name)() { OF_PP_CAT(set_raw_ptr_, field_name)(nullptr); } \
-  DEFINE_SETTER(ObjectMsgIsScalar, field_type, field_name);                                      \
-  DEFINE_GETTER(field_type, field_name);                                                         \
-  DEFINE_MUTABLE(field_type, field_name);                                                        \
-                                                                                                 \
- private:                                                                                        \
+#define _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(field_type, field_name)            \
+ public:                                                                     \
+  static_assert(field_type::__is_flat_message_type__,                        \
+                OF_PP_STRINGIZE(field_type) "is not a flat message type");   \
+  bool OF_PP_CAT(has_, field_name)() { return true; }                        \
+  DEFINE_GETTER(field_type, field_name);                                     \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); } \
+  DEFINE_MUTABLE(field_type, field_name);                                    \
+                                                                             \
+ private:                                                                    \
+  field_type OF_PP_CAT(field_name, _);
+
+#define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                   \
+ public:                                                                               \
+  static_assert(std::is_pointer<field_type>::value,                                    \
+                OF_PP_STRINGIZE(field_type) "is not a pointer");                       \
+  bool OF_PP_CAT(has_, field_name)() { return OF_PP_CAT(field_name, _) == nullptr; }   \
+  void OF_PP_CAT(set_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }       \
+  DEFINE_GETTER(field_type, field_name);                                               \
+  DEFINE_MUTABLE(field_type, field_name);                                              \
+                                                                                       \
+ private:                                                                              \
   field_type OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_DEFINE_DEFAULT(object_message_type_name)                           \
