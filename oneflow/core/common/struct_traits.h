@@ -200,7 +200,7 @@ constexpr int ConstExprRoundUp() {
   }
 }
 
-template<bool is_ptr, typename Enabled = void>
+template<bool is_pointer, typename Enabled = void>
 struct GetterTrait {};
 
 template<typename Enabled>
@@ -218,7 +218,7 @@ struct GetterTrait<true, Enabled> {
   }
 };
 
-template<bool is_ptr, typename Enabled = void>
+template<bool is_pointer, typename Enabled = void>
 struct MutableTrait {};
 
 template<typename Enabled>
