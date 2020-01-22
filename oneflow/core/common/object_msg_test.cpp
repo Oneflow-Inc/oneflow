@@ -13,11 +13,11 @@ TEST(ObjectMsgStruct, ref_cnt) {
     Foo() = default;
   };
   Foo foo;
-  foo.__InitRefCount__();
-  foo.__IncreaseRefCount__();
-  foo.__IncreaseRefCount__();
-  ASSERT_EQ(foo.__DecreaseRefCount__(), 1);
-  ASSERT_EQ(foo.__DecreaseRefCount__(), 0);
+  foo.InitRefCount();
+  foo.IncreaseRefCount();
+  foo.IncreaseRefCount();
+  ASSERT_EQ(foo.DecreaseRefCount(), 1);
+  ASSERT_EQ(foo.DecreaseRefCount(), 0);
 }
 
 class TestNew final : public ObjectMsgStruct {

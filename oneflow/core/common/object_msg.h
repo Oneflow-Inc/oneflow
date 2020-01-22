@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_H_
 
 #include <atomic>
+#include <memory>
 #include <type_traits>
 #include "oneflow/core/common/struct_traits.h"
 
@@ -30,9 +31,8 @@ namespace oneflow {
   OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_TYPEDEF_ONEOF_FIELD, type_and_field_name_seq); \
   OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);        \
   OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);            \
+  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq);         \
   OBJECT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq);
-
-//  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq);
 
 #define OBJECT_MSG_ONEOF_FIELD(field_type, field_name) \
   OF_PP_MAKE_TUPLE_SEQ(OBJECT_MSG_TYPE(field_type), field_name)
@@ -61,30 +61,32 @@ namespace oneflow {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ACCESSOR, (_OBJECT_MSG_ONEOF_ENUM_VALUE), \
                                    (oneof_name), type_and_field_name_seq)
 
-#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                \
- public:                                                                                \
-  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                      \
-    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                   \
-      return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);            \
-    }                                                                                   \
-    return ObjectMsgGetDefault<ObjectMsgIsScalar<OF_PP_PAIR_FIRST(pair)>::value>::Call( \
-        &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));               \
-  }                                                                                     \
-  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                               \
-    return OF_PP_CAT(oneof_name, _case)() == get_enum_value(OF_PP_PAIR_SECOND(pair));   \
-  }                                                                                     \
-  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                   \
-    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                       \
-    (_OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                      \
-  }                                                                                     \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {             \
-    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                       \
-    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                          \
-    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);             \
-  }                                                                                     \
-  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {   \
-    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                              \
+#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                          \
+ public:                                                                                          \
+  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                                \
+    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                             \
+      return GetterTrait<std::is_base_of<ObjectMsgStruct, OF_PP_PAIR_FIRST(pair)>::value>::Call(  \
+          OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));                        \
+    }                                                                                             \
+    return ObjectMsgGetDefault<std::is_base_of<ObjectMsgStruct, OF_PP_PAIR_FIRST(pair)>::value>:: \
+        Call(&OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));                    \
+  }                                                                                               \
+  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                                         \
+    return OF_PP_CAT(oneof_name, _case)() == get_enum_value(OF_PP_PAIR_SECOND(pair));             \
+  }                                                                                               \
+  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                             \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) { return; }                                  \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                                 \
+    (_OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                                \
   }
+//  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {
+//    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))
+//    (get_enum_value(OF_PP_PAIR_SECOND(pair)));
+//    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);
+//  }
+//  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {
+//    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;
+//  }
 
 #define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                       \
  public:                                                                            \
@@ -161,38 +163,77 @@ typedef std::string OBJECT_MSG_TYPE(string);
  private:                                                                                      \
   field_type OF_PP_CAT(field_name, _);
 
-class ObjectMsgPtrBaseUtil;
+#define OBJECT_MSG_DEFINE_DEFAULT(object_msg_type_name)                           \
+  const object_msg_type_name& __Default__() const {                               \
+    static const ObjectMsgStructDefault<object_msg_type_name> default_object_msg; \
+    return default_object_msg.Get();                                              \
+  }
+
+class ObjectMsgAllocator {
+ public:
+  virtual char* Allocate(std::size_t size) = 0;
+  virtual void Deallocate(char* ptr, std::size_t size) = 0;
+
+ protected:
+  ObjectMsgAllocator() = default;
+};
+
+class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
+ public:
+  ObjectMsgDefaultAllocator() = default;
+
+  static ObjectMsgDefaultAllocator* GlobalObjectMsgAllocator() {
+    static ObjectMsgDefaultAllocator allocator;
+    return &allocator;
+  }
+
+  char* Allocate(std::size_t size) override { return allocator_.allocate(size); }
+  void Deallocate(char* ptr, std::size_t size) override { allocator_.deallocate(ptr, size); }
+
+ private:
+  std::allocator<char> allocator_;
+};
+
+class ObjectMsgPtrUtil;
+template<typename T>
+class ObjectMsgPtr;
 
 class ObjectMsgStruct {
  public:
   void __Delete__() {}
 
+  ObjectMsgAllocator* mut_allocator() { return allocator_; }
+
  private:
-  friend class ObjectMsgPtrBaseUtil;
-  void __InitRefCount__() { ref_cnt_ = 0; }
-  void __IncreaseRefCount__() { ref_cnt_++; }
-  int32_t __DecreaseRefCount__() { return --ref_cnt_; }
+  friend class ObjectMsgPtrUtil;
+  void InitRefCount() { ref_cnt_ = 0; }
+  void set_allocator(ObjectMsgAllocator* allocator) { allocator_ = allocator; }
+  void IncreaseRefCount() { ref_cnt_++; }
+  int32_t DecreaseRefCount() { return --ref_cnt_; }
 
   std::atomic<int32_t> ref_cnt_;
+  ObjectMsgAllocator* allocator_;
 };
 
-class ObjectMsgPtrBaseUtil {
- protected:
-  static void InitRefCount(ObjectMsgStruct* ptr) { ptr->__InitRefCount__(); }
-  static void IncreaseRefCount(ObjectMsgStruct* ptr) { ptr->__IncreaseRefCount__(); }
-  static int32_t DecreaseRefCount(ObjectMsgStruct* ptr) { return ptr->__DecreaseRefCount__(); }
-};
-
-template<typename T>
-class ObjectMsgPtrUtil : private ObjectMsgPtrBaseUtil {
- public:
-  static void InitRef(T* ptr) { InitRefCount(ptr); }
-  static void Ref(T* ptr) { IncreaseRefCount(ptr); }
+struct ObjectMsgPtrUtil final {
+  static void SetAllocator(ObjectMsgStruct* ptr, ObjectMsgAllocator* allocator) {
+    ptr->set_allocator(allocator);
+  }
+  template<typename T>
+  static void InitRef(T* ptr) {
+    ptr->InitRefCount();
+  }
+  template<typename T>
+  static void Ref(T* ptr) {
+    ptr->IncreaseRefCount();
+  }
+  template<typename T>
   static void ReleaseRef(T* ptr) {
     if (ptr == nullptr) { return; }
-    if (DecreaseRefCount(ptr) > 0) { return; }
+    if (ptr->DecreaseRefCount() > 0) { return; }
+    auto* allocator = ptr->mut_allocator();
     ptr->__Delete__();
-    delete ptr;
+    allocator->Deallocate(reinterpret_cast<char*>(ptr), sizeof(T));
   }
 };
 
@@ -200,7 +241,7 @@ template<typename T>
 struct ObjectMsgStructDefault final {
   ObjectMsgStructDefault() {
     std::memset(reinterpret_cast<void*>(Mutable()), 0, sizeof(T));
-    ObjectMsgPtrUtil<T>::InitRef(Mutable());
+    ObjectMsgPtrUtil::InitRef<T>(Mutable());
   }
 
   const T& Get() const { return msg_; }
@@ -212,23 +253,17 @@ struct ObjectMsgStructDefault final {
   };
 };
 
-#define OBJECT_MSG_DEFINE_DEFAULT(object_msg_type_name)                           \
-  const object_msg_type_name& __Default__() const {                               \
-    static const ObjectMsgStructDefault<object_msg_type_name> default_object_msg; \
-    return default_object_msg.Get();                                              \
-  }
-
-template<bool is_scalar>
+template<bool is_object_msg>
 struct ObjectMsgGetDefault final {
   template<typename T>
-  static const T& Call(const T* val) {
+  static const T& Call(T* const* val) {
     return (*val)->__Default__();
   }
 };
 template<>
-struct ObjectMsgGetDefault<true> final {
+struct ObjectMsgGetDefault<false> final {
   template<typename T>
-  static const T& Call(const T* val) {
+  static const T& Call(T const* val) {
     return *val;
   }
 };
@@ -255,11 +290,13 @@ struct ObjectMsgRecursiveNew<true> {
   template<typename WalkCtxType, typename PtrFieldType>
   static void Call(WalkCtxType* ctx, PtrFieldType* field_ptr) {
     using FieldType = typename std::remove_pointer<PtrFieldType>::type;
-    auto* ptr = new FieldType();
+    char* mem_ptr = ctx->Allocate(sizeof(FieldType));
+    auto* ptr = new (mem_ptr) FieldType();
     *field_ptr = ptr;
     std::memset(reinterpret_cast<void*>(ptr), 0, sizeof(FieldType));
-    ObjectMsgPtrUtil<FieldType>::InitRef(ptr);
-    ObjectMsgPtrUtil<FieldType>::Ref(ptr);
+    ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
+    ObjectMsgPtrUtil::SetAllocator(ptr, ctx);
+    ObjectMsgPtrUtil::Ref<FieldType>(ptr);
     ptr->template __WalkField__<_ObjectMsgRecursiveNew, WalkCtxType>(ctx);
   }
 };
@@ -287,8 +324,9 @@ struct ObjectMsgRecursiveRelease<true> {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     using FieldType = typename std::remove_pointer<PtrFieldType>::type;
     auto* ptr = *field;
+    if (ptr == nullptr) { return; }
     ptr->template __ReverseWalkField__<_ObjectMsgRecursiveRelease, WalkCtxType>(ctx);
-    ObjectMsgPtrUtil<FieldType>::ReleaseRef(ptr);
+    ObjectMsgPtrUtil::ReleaseRef<FieldType>(ptr);
   }
 };
 
@@ -298,20 +336,24 @@ class ObjectMsgPtr final {
   ObjectMsgPtr() : ptr_(nullptr) {}
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
     ptr_ = obj_ptr.ptr_;
-    ObjectMsgPtrUtil<T>::Ref(ptr_);
+    ObjectMsgPtrUtil::Ref<T>(ptr_);
   }
-  ~ObjectMsgPtr() { ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_); }
+  ~ObjectMsgPtr() {
+    ObjectMsgRecursiveRelease<true>::Call<ObjectMsgAllocator, T*>(ptr_->mut_allocator(), &ptr_);
+  }
 
-  static ObjectMsgPtr New() {
+  static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
+
+  static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
     ObjectMsgPtr ret;
-    ObjectMsgRecursiveNew<true>::Call<void, T*>(nullptr, &ret.ptr_);
+    ObjectMsgRecursiveNew<true>::Call<ObjectMsgAllocator, T*>(allocator, &ret.ptr_);
     return ret;
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
-    ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_);
+    ObjectMsgRecursiveRelease<true>::Call<ObjectMsgAllocator, T*>(ptr_->mut_allocator(), &ptr_);
     ptr_ = rhs.ptr_;
-    ObjectMsgPtrUtil<T>::Ref(ptr_);
+    ObjectMsgPtrUtil::Ref<T>(ptr_);
     return *this;
   }
 
