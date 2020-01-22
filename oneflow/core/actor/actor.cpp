@@ -381,12 +381,20 @@ void Actor::ActUntilFail() {
     TryLogActEvent([&] { Act(); });
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
-    AsyncSendNaiveProducedRegstMsgToConsumer();
-    AsyncSendInplaceProducedRegstMsgToConsumer();
 
+    if (naive_produced_rs_.total_regst_desc_cnt() > 0) {
+      AsyncSendNaiveProducedRegstMsgToConsumer();
+    }
+    if (inplace_produced_rs_.total_regst_desc_cnt() > 0) {
+      AsyncSendInplaceProducedRegstMsgToConsumer();
+    }
     AsyncSendCustomizedConsumedRegstMsgToProducer();
-    AsyncSendNaiveConsumedRegstMsgToProducer();
-    AsyncRetInplaceConsumedRegstIfNoConsumer();
+    if (naive_consumed_rs_.total_regst_desc_cnt() > 0) {
+      AsyncSendNaiveConsumedRegstMsgToProducer();
+    }
+    if (!inplace_in_ids_with_no_out_consumed_.empty()) {
+      AsyncRetInplaceConsumedRegstIfNoConsumer();
+    }
 
     AsyncSendQueuedMsg();
   }
