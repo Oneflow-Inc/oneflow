@@ -4,7 +4,8 @@
 #include <atomic>
 #include <memory>
 #include <type_traits>
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/common/dss.h"
+#include "oneflow/core/common/list_head.h"
 #include "oneflow/core/common/flat_msg.h"
 
 namespace oneflow {
@@ -30,6 +31,16 @@ namespace oneflow {
 #define OBJECT_MSG_DEFINE_RAW_PTR(field_type, field_name)                           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                      \
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+
+#define OBJECT_MSG_DEFINE_LIST_ITEM(field_name)                                     \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                                    \
+  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+
+#define OBJECT_MSG_DEFINE_LIST_HEAD(field_name)                                     \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_name)                                    \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_DEFINE_FLAT_MSG(field_type, field_name)                          \
@@ -90,20 +101,20 @@ namespace oneflow {
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;      \
   }
 
-#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                                      \
- public:                                                                                           \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                        \
-    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                   \
-    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;                           \
-    static const bool is_ptr = std::is_pointer<FieldType>::value;                                  \
-    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                             \
-      OF_PP_CAT(clear_, oneof_name)();                                                             \
-      ObjectMsgRecursiveNew<is_ptr>::template Call<ObjectMsgAllocator, FieldType>(mut_allocator(), \
-                                                                                  ptr);            \
-      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                                \
-      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                                     \
-    }                                                                                              \
-    return MutableTrait<is_ptr>::Call(ptr);                                                        \
+#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                       \
+ public:                                                                            \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {         \
+    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);    \
+    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;            \
+    static const bool is_ptr = std::is_pointer<FieldType>::value;                   \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                              \
+      OF_PP_CAT(clear_, oneof_name)();                                              \
+      ObjectMsgRecursiveInit<is_ptr>::template Call<ObjectMsgAllocator, FieldType>( \
+          mut_allocator(), ptr);                                                    \
+      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                 \
+      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                      \
+    }                                                                               \
+    return MutableTrait<is_ptr>::Call(ptr);                                         \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(define_counter, oneof_name)                               \
@@ -195,12 +206,20 @@ typedef std::string OBJECT_MSG_TYPE(string);
   static_assert(field_type::__is_flat_message_type__,                        \
                 OF_PP_STRINGIZE(field_type) "is not a flat message type");   \
   bool OF_PP_CAT(has_, field_name)() { return true; }                        \
-  DEFINE_GETTER(field_type, field_name);                                     \
+  DSS_DEFINE_GETTER(field_type, field_name);                                 \
   void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); } \
-  DEFINE_MUTABLE(field_type, field_name);                                    \
+  DSS_DEFINE_MUTABLE(field_type, field_name);                                \
                                                                              \
  private:                                                                    \
   field_type OF_PP_CAT(field_name, _);
+
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_name) \
+ private:                                              \
+  ListHead OF_PP_CAT(field_name, _);
+
+#define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
+ private:                                              \
+  ListHead OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                   \
  public:                                                                               \
@@ -209,8 +228,8 @@ typedef std::string OBJECT_MSG_TYPE(string);
   bool OF_PP_CAT(has_, field_name)() { return OF_PP_CAT(field_name, _) == nullptr; }   \
   void OF_PP_CAT(set_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
   void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }       \
-  DEFINE_GETTER(field_type, field_name);                                               \
-  DEFINE_MUTABLE(field_type, field_name);                                              \
+  DSS_DEFINE_GETTER(field_type, field_name);                                           \
+  DSS_DEFINE_MUTABLE(field_type, field_name);                                          \
                                                                                        \
  private:                                                                              \
   field_type OF_PP_CAT(field_name, _);
@@ -321,16 +340,28 @@ struct ObjectMsgGetDefault<false> final {
   }
 };
 
-template<bool is_pointer>
-struct ObjectMsgRecursiveNew {
-  template<typename WalkCtxType, typename PtrFieldType>
+template<typename WalkCtxType, typename PtrFieldType, typename Enabled = void>
+struct ObjectMsgInitStructMember {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
 
+template<typename WalkCtxType, typename Enabled>
+struct ObjectMsgInitStructMember<WalkCtxType, ListHead, Enabled> {
+  static void Call(WalkCtxType* ctx, ListHead* field) { field->Clear(); }
+};
+
+template<bool is_pointer>
+struct ObjectMsgRecursiveInit {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
+    ObjectMsgInitStructMember<WalkCtxType, PtrFieldType>::Call(ctx, field);
+  }
+};
+
 template<typename WalkCtxType, typename PtrFieldType>
-struct _ObjectMsgRecursiveNew {
+struct _ObjectMsgRecursiveInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    ObjectMsgRecursiveNew<
+    ObjectMsgRecursiveInit<
         std::is_pointer<PtrFieldType>::value
         && std::is_base_of<ObjectMsgStruct,
                            typename std::remove_pointer<PtrFieldType>::type>::value>::Call(ctx,
@@ -339,10 +370,10 @@ struct _ObjectMsgRecursiveNew {
 };
 
 template<>
-struct ObjectMsgRecursiveNew<true> {
+struct ObjectMsgRecursiveInit<true> {
   template<typename WalkCtxType, typename PtrFieldType>
   static void Call(WalkCtxType* ctx, PtrFieldType* field_ptr) {
-    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of ObjectMsgRecursiveNew");
+    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of ObjectMsgRecursiveInit");
     using FieldType = typename std::remove_pointer<PtrFieldType>::type;
     char* mem_ptr = ctx->Allocate(sizeof(FieldType));
     auto* ptr = new (mem_ptr) FieldType();
@@ -351,7 +382,7 @@ struct ObjectMsgRecursiveNew<true> {
     ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
     ObjectMsgPtrUtil::SetAllocator(ptr, ctx);
     ObjectMsgPtrUtil::Ref<FieldType>(ptr);
-    ptr->template __WalkField__<_ObjectMsgRecursiveNew, WalkCtxType>(ctx);
+    ptr->template __WalkField__<_ObjectMsgRecursiveInit, WalkCtxType>(ctx);
   }
 };
 
@@ -398,7 +429,7 @@ class ObjectMsgPtr final {
 
   static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
     ObjectMsgPtr ret;
-    ObjectMsgRecursiveNew<true>::Call<ObjectMsgAllocator, T*>(allocator, &ret.ptr_);
+    ObjectMsgRecursiveInit<true>::Call<ObjectMsgAllocator, T*>(allocator, &ret.ptr_);
     return ret;
   }
 

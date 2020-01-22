@@ -3,7 +3,7 @@
 
 #include <array>
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/common/dss.h"
 
 namespace oneflow {
 

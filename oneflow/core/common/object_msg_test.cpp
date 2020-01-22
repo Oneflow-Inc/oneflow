@@ -209,6 +209,13 @@ TEST(OBJECT_MSG, flat_msg_field) {
   ASSERT_EQ(obj->flat_field().int32_field(), 33);
 }
 
+// clang-format off
+BEGIN_OBJECT_MSG(TestListIter)
+  OBJECT_MSG_DEFINE_LIST_HEAD(foo_list);
+  OBJECT_MSG_DEFINE_LIST_ITEM(bar_list);
+END_OBJECT_MSG(TestListIter)
+// clang-format one
+
 }  // namespace test
 
 }  // namespace oneflow
