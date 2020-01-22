@@ -27,7 +27,7 @@ void CheckSoleFieldName(T* flat_msg, const std::string& expected) {
 }
 // clang-format off
 BEGIN_FLAT_MSG(TestOptional)
-  FLAT_MSG_DEFINE_FIELD(int32_t, bar);
+  FLAT_MSG_DEFINE_OPTIONAL(int32_t, bar);
 END_FLAT_MSG(TestOptional)
 // clang-format on
 
@@ -47,7 +47,7 @@ TEST(FlatMsg, optional) {
 
 // clang-format off
 BEGIN_FLAT_MSG(FooOneof)
-  FLAT_MSG_DEFINE_ONEOF_FIELD(type,
+  FLAT_MSG_DEFINE_ONEOF(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
       FLAT_MSG_ONEOF_FIELD(int64_t, case_1)
       FLAT_MSG_ONEOF_FIELD(TestOptional, bar));
@@ -73,8 +73,8 @@ TEST(FlatMsg, oneof) {
 
 // clang-format off
 BEGIN_FLAT_MSG(FooRepeated)
-  FLAT_MSG_DEFINE_REPEATED_FIELD(char, char_field, 1);
-  FLAT_MSG_DEFINE_REPEATED_FIELD(TestOptional, bar, 10);
+  FLAT_MSG_DEFINE_REPEATED(char, char_field, 1);
+  FLAT_MSG_DEFINE_REPEATED(TestOptional, bar, 10);
 END_FLAT_MSG(FooRepeated)
 // clang-format on
 
