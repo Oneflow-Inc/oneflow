@@ -105,11 +105,86 @@ END_OBJECT_MSG(TestScalarOneof)
 // clang-format off
 BEGIN_OBJECT_MSG(TestPtrOneof)
   OBJECT_MSG_DEFINE_ONEOF_FIELD(type,
-      OBJECT_MSG_ONEOF_FIELD(ObjectMsgFoo, foo));
+      OBJECT_MSG_ONEOF_FIELD(ObjectMsgFoo, foo)
+      OBJECT_MSG_ONEOF_FIELD(int32_t, int_field));
 END_OBJECT_MSG(TestPtrOneof)
 // clang-format on
 
-TEST(OBJECT_MSG, oneof) { auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New(); };
+TEST(OBJECT_MSG, oneof_get) {
+  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto& obj = *test_oneof;
+  const auto* default_foo_ptr = &obj.foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_TRUE(!obj.has_foo());
+  obj.mutable_foo();
+  ASSERT_TRUE(obj.has_foo());
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_NE(default_foo_ptr, &obj.foo());
+};
+
+TEST(OBJECT_MSG, oneof_release) {
+  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto& obj = *test_oneof;
+  const auto* default_foo_ptr = &obj.foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  obj.mutable_foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_NE(default_foo_ptr, &obj.foo());
+  {
+    std::string is_delete;
+    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_int_field();
+    ASSERT_EQ(is_delete, "deleted");
+  }
+  {
+    std::string is_delete;
+    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    obj.mutable_int_field();
+    ASSERT_EQ(is_delete, "deleted");
+  }
+};
+
+TEST(OBJECT_MSG, oneof_clear) {
+  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto& obj = *test_oneof;
+  const auto* default_foo_ptr = &obj.foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  obj.mutable_foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_NE(default_foo_ptr, &obj.foo());
+  {
+    std::string is_delete;
+    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    ASSERT_TRUE(!obj.has_int_field());
+    obj.clear_int_field();
+    ASSERT_TRUE(!obj.has_int_field());
+    ASSERT_TRUE(obj.has_foo());
+    obj.clear_foo();
+    ASSERT_TRUE(!obj.has_foo());
+    ASSERT_EQ(is_delete, "deleted");
+  }
+};
+
+TEST(OBJECT_MSG, oneof_set) {
+  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto& obj = *test_oneof;
+  const auto* default_foo_ptr = &obj.foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  obj.mutable_foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_NE(default_foo_ptr, &obj.foo());
+  {
+    std::string is_delete;
+    obj.mutable_foo()->set_raw_ptr_is_deleted(&is_delete);
+    ASSERT_TRUE(!obj.has_int_field());
+    obj.clear_int_field();
+    ASSERT_TRUE(!obj.has_int_field());
+    ASSERT_TRUE(obj.has_foo());
+    obj.set_int_field(30);
+    ASSERT_TRUE(!obj.has_foo());
+    ASSERT_EQ(is_delete, "deleted");
+  }
+};
 
 }  // namespace test
 
