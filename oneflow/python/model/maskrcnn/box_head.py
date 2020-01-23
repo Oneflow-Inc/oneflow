@@ -189,7 +189,7 @@ class BoxHead(object):
                     flow.cast(fg_num_accurate_mask, dtype=flow.float)
                 )
                 num_fg = flow.elem_cnt(fg_inds, dtype=flow.float)
-
+                num_fg += 1e-5
                 gt_classes = labels
                 num_accurate_mask = pred_classes == gt_classes
                 num_accurate = flow.math.reduce_sum(
