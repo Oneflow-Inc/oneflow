@@ -189,10 +189,19 @@ class BoxHead(object):
                     flow.cast(fg_num_accurate_mask, dtype=flow.float)
                 )
                 num_fg = flow.elem_cnt(fg_inds, dtype=flow.float)
+
+                gt_classes = labels
+                num_accurate_mask = pred_classes == gt_classes
+                num_accurate = flow.math.reduce_sum(
+                    flow.cast(num_accurate_mask, dtype=flow.float)
+                )
+
+                num_instances = total_elem_cnt
                 accuracy.put_metrics(
                     {
                         "total_pos_inds_elem_cnt": num_fg,
                         "fast_rcnn/fg_cls_accuracy": fg_num_accurate / num_fg,
+                        "fast_rcnn/cls_accuracy": num_accurate / num_instances,
                     }
                 )
             return (
