@@ -5,7 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include "oneflow/core/common/dss.h"
-#include "oneflow/core/common/list_head.h"
+#include "oneflow/core/common/embedded_list.h"
 #include "oneflow/core/common/flat_msg.h"
 
 namespace oneflow {
@@ -215,11 +215,11 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_name) \
  private:                                              \
-  ListHead OF_PP_CAT(field_name, _);
+  EmbeddedListItem OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
  private:                                              \
-  ListHead OF_PP_CAT(field_name, _);
+  EmbeddedListItem OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                   \
  public:                                                                               \
@@ -346,8 +346,8 @@ struct ObjectMsgInitStructMember {
 };
 
 template<typename WalkCtxType, typename Enabled>
-struct ObjectMsgInitStructMember<WalkCtxType, ListHead, Enabled> {
-  static void Call(WalkCtxType* ctx, ListHead* field) { field->Clear(); }
+struct ObjectMsgInitStructMember<WalkCtxType, EmbeddedListItem, Enabled> {
+  static void Call(WalkCtxType* ctx, EmbeddedListItem* field) { field->Clear(); }
 };
 
 template<bool is_pointer>
