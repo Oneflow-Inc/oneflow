@@ -1,45 +1,39 @@
-#include "oneflow/core/common/list_head.h"
+#define private public
+#include "oneflow/core/common/embedded_list.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace test {
 
-struct ListHeadFoo final {
-  int head_field_0;
-  int head_field_1;
-  ListHead bar_list;
-};
-
 struct ListItemBar final {
   int value;
-  ListHead bar_list;
+  EmbeddedListItem bar_list;
 };
 
 }  // namespace test
 
-DEFINE_EMBEDDED_LIST_VIEW(test::ListHeadFoo, bar_list, test::ListItemBar, bar_list);
-using BarListView = EMBEDDED_LIST_VIEW(test::ListHeadFoo, bar_list);
+using BarListView = EmbeddedList<STRUCT_FIELD(test::ListItemBar, bar_list)>;
 
 namespace test {
 
-TEST(ListHead, init) {
-  ListHead list_head;
-  ASSERT_EQ(&list_head, list_head.prev());
-  ASSERT_EQ(&list_head, list_head.next());
+TEST(EmbeddedListItem, init) {
+  EmbeddedListItem list_iterator;
+  ASSERT_EQ(&list_iterator, list_iterator.prev());
+  ASSERT_EQ(&list_iterator, list_iterator.next());
 }
 
-TEST(ListHead, append_to) {
-  ListHead list_head0;
-  ListHead list_head1;
-  list_head1.AppendTo(&list_head0);
-  ASSERT_EQ(&list_head0, list_head1.prev());
-  ASSERT_EQ(&list_head1, list_head0.next());
+TEST(EmbeddedListItem, append_to) {
+  EmbeddedListItem list_iter0;
+  EmbeddedListItem list_iter1;
+  list_iter1.AppendTo(&list_iter0);
+  ASSERT_EQ(&list_iter0, list_iter1.prev());
+  ASSERT_EQ(&list_iter1, list_iter0.next());
 }
 
-TEST(ListHead, clear) {
-  ListHead list_head0;
-  ListHead list_head1;
+TEST(EmbeddedListItem, clear) {
+  EmbeddedListItem list_head0;
+  EmbeddedListItem list_head1;
   list_head1.AppendTo(&list_head0);
   list_head1.Clear();
   ASSERT_EQ(&list_head1, list_head1.prev());
@@ -47,33 +41,31 @@ TEST(ListHead, clear) {
 }
 
 TEST(EmbeddedListView, empty) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_TRUE(list_view.empty());
 }
 
 TEST(EmbeddedListView, push_front) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
+  EmbeddedListItem& head = list_view.container_;
   ListItemBar item0;
   list_view.PushFront(&item0);
-  ASSERT_EQ(head.bar_list.next(), &item0.bar_list);
-  ASSERT_EQ(head.bar_list.prev(), &item0.bar_list);
-  ASSERT_EQ(item0.bar_list.next(), &head.bar_list);
-  ASSERT_EQ(item0.bar_list.prev(), &head.bar_list);
+  ASSERT_EQ(head.next(), &item0.bar_list);
+  ASSERT_EQ(head.prev(), &item0.bar_list);
+  ASSERT_EQ(item0.bar_list.next(), &head);
+  ASSERT_EQ(item0.bar_list.prev(), &head);
   ListItemBar item1;
   list_view.PushFront(&item1);
-  ASSERT_EQ(head.bar_list.next(), &item1.bar_list);
-  ASSERT_EQ(item1.bar_list.prev(), &head.bar_list);
+  ASSERT_EQ(head.next(), &item1.bar_list);
+  ASSERT_EQ(item1.bar_list.prev(), &head);
   ASSERT_EQ(item1.bar_list.next(), &item0.bar_list);
   ASSERT_EQ(item0.bar_list.prev(), &item1.bar_list);
-  ASSERT_EQ(item0.bar_list.next(), &head.bar_list);
-  ASSERT_EQ(head.bar_list.prev(), &item0.bar_list);
+  ASSERT_EQ(item0.bar_list.next(), &head);
+  ASSERT_EQ(head.prev(), &item0.bar_list);
 }
 
 TEST(EmbeddedListView, end) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ListItemBar* end_item = list_view.end_item();
   ListItemBar item0;
   list_view.PushFront(&item0);
@@ -81,8 +73,7 @@ TEST(EmbeddedListView, end) {
 }
 
 TEST(EmbeddedListView, begin) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushFront(&item0);
@@ -93,8 +84,7 @@ TEST(EmbeddedListView, begin) {
 }
 
 TEST(EmbeddedListView, last) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushFront(&item0);
@@ -105,8 +95,7 @@ TEST(EmbeddedListView, last) {
 }
 
 TEST(EmbeddedListView, push_back) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushBack(&item0);
@@ -117,8 +106,7 @@ TEST(EmbeddedListView, push_back) {
 }
 
 TEST(EmbeddedListView, erase) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushBack(&item0);
@@ -134,8 +122,7 @@ TEST(EmbeddedListView, erase) {
 }
 
 TEST(EmbeddedListView, pop_front) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushBack(&item0);
@@ -151,8 +138,7 @@ TEST(EmbeddedListView, pop_front) {
 }
 
 TEST(EmbeddedListView, pop_back) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ASSERT_EQ(list_view.begin_item(), list_view.end_item());
   ListItemBar item0;
   list_view.PushBack(&item0);
@@ -168,8 +154,7 @@ TEST(EmbeddedListView, pop_back) {
 }
 
 TEST(EmbeddedListView, next_item) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ListItemBar item0;
   list_view.PushBack(&item0);
   ListItemBar item1;
@@ -186,8 +171,7 @@ TEST(EmbeddedListView, next_item) {
 }
 
 TEST(EmbeddedListView, prev_item) {
-  ListHeadFoo head;
-  BarListView list_view(&head);
+  BarListView list_view;
   ListItemBar item0;
   list_view.PushBack(&item0);
   ListItemBar item1;

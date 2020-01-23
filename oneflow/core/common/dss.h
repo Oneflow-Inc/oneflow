@@ -17,7 +17,7 @@ namespace oneflow {
 
 #define DSS_DEFINE_GETTER(field_type, field_name) _DSS_DEFINE_GETTER(field_type, field_name)
 
-#define DSS_DEFINE_MUTABLE(field_type, field_name) _DSS_DEFINE_MUTABLE(field_type, field_name) 
+#define DSS_DEFINE_MUTABLE(field_type, field_name) _DSS_DEFINE_MUTABLE(field_type, field_name)
 #define DSS_DEFINE_SETTER(is_scalar, field_type, field_name) \
   _DSS_DEFINE_SETTER(is_scalar, field_type, field_name)
 
@@ -107,7 +107,7 @@ namespace oneflow {
     constexpr static int Get() { return 0; }                                                    \
   };
 
-#define DSS_ASSERT_VERBOSE(dss_type)                                            \
+#define DSS_ASSERT_VERBOSE(dss_type)                                        \
   "\n\n\n    please check file " __FILE__ " (before line " OF_PP_STRINGIZE( \
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
@@ -147,7 +147,7 @@ namespace oneflow {
   static void OF_PP_CAT(__DSS__StaticAssertFieldCounter, define_counter)() {                  \
     static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<define_counter>::Get(); \
     static_assert(kAccSize == __DSS__FieldOffset4Counter<define_counter>::Get(),              \
-                  DSS_ASSERT_VERBOSE(dss_type));                                                  \
+                  DSS_ASSERT_VERBOSE(dss_type));                                              \
   }
 
 #define _END_DSS(counter, dss_type, type)                                                         \
@@ -166,24 +166,24 @@ namespace oneflow {
     static const int kSize =                                                                      \
         ConstExprRoundUp<__DSS__AccumulatedAlignedSize4Counter<counter>::Get(), alignof(type)>(); \
     static_assert((kSize == 0 && sizeof(type) == 1) || (kSize == sizeof(type)),                   \
-                  DSS_ASSERT_VERBOSE(dss_type));                                                      \
+                  DSS_ASSERT_VERBOSE(dss_type));                                                  \
   }
 
-#define _DSS_DEFINE_GETTER(field_type, field_name)                                              \
+#define _DSS_DEFINE_GETTER(field_type, field_name)                                          \
   const typename std::conditional<std::is_pointer<field_type>::value,                       \
                                   std::remove_pointer<field_type>::type, field_type>::type& \
   field_name() const {                                                                      \
     return GetterTrait<std::is_pointer<field_type>::value>::Call(this->field_name##_);      \
   }
 
-#define _DSS_DEFINE_MUTABLE(field_type, field_name)                                          \
+#define _DSS_DEFINE_MUTABLE(field_type, field_name)                                      \
   typename std::conditional<std::is_pointer<field_type>::value,                          \
                             std::remove_pointer<field_type>::type, field_type>::type*    \
       mutable_##field_name() {                                                           \
     return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
   }
 
-#define _DSS_DEFINE_SETTER(is_scalar, field_type, field_name)                          \
+#define _DSS_DEFINE_SETTER(is_scalar, field_type, field_name)                      \
   template<typename T>                                                             \
   void set_##field_name(const T& val) {                                            \
     static_assert(is_scalar<T>::value, "setter doesn't support non-scalar field"); \
@@ -230,7 +230,6 @@ struct MutableTrait<true, Enabled> {
     return *data;
   }
 };
-
 }
 
 #endif  // ONEFLOW_CORE_COMMON_DSS_H_
