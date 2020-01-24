@@ -1,4 +1,5 @@
 import oneflow as flow
+import accuracy
 
 
 class MaskHead(object):
@@ -17,7 +18,13 @@ class MaskHead(object):
     # gt_labels: list of (G,) wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
     def build_train(
-        self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features, zero_ctrl=None
+        self,
+        pos_proposals,
+        pos_gt_indices,
+        gt_segms,
+        gt_labels,
+        features,
+        zero_ctrl=None,
     ):
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
@@ -40,19 +47,13 @@ class MaskHead(object):
                 # if it is mask target projected, not need to do piece_slice
                 if isinstance(gt_segms, (list, tuple)):
                     gt_segm_list.append(
-                        flow.local_gather(
-                            gt_segms[img_idx], pos_gt_indices[img_idx]
-                        )
+                        flow.local_gather(gt_segms[img_idx], pos_gt_indices[img_idx])
                     )
                 gt_label_list.append(
-                    flow.local_gather(
-                        gt_labels[img_idx], pos_gt_indices[img_idx]
-                    )
+                    flow.local_gather(gt_labels[img_idx], pos_gt_indices[img_idx])
                 )
 
-            gt_labels = flow.concat(
-                gt_label_list, axis=0, name="concat_gt_labels"
-            )
+            gt_labels = flow.concat(gt_label_list, axis=0, name="concat_gt_labels")
 
             mask_pred = flow.squeeze(
                 flow.gather(
@@ -66,9 +67,7 @@ class MaskHead(object):
             )
 
             if isinstance(gt_segms, (list, tuple)):
-                gt_segms = flow.concat(
-                    gt_segm_list, axis=0, name="concat_gt_segms"
-                )
+                gt_segms = flow.concat(gt_segm_list, axis=0, name="concat_gt_segms")
                 gt_segms = flow.detection.masks_crop_and_resize(
                     flow.expand_dims(gt_segms, 1),
                     proposals,
@@ -76,9 +75,7 @@ class MaskHead(object):
                     mask_pred.shape[2],
                 )
                 gt_segms = flow.squeeze(gt_segms, axis=[1], name="targets")
-                gt_segms = flow.cast(
-                    gt_segms, dtype=flow.int32, name="int_targets"
-                )
+                gt_segms = flow.cast(gt_segms, dtype=flow.int32, name="int_targets")
 
             mask_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
@@ -89,6 +86,20 @@ class MaskHead(object):
             )
 
             mask_loss = mask_loss / elem_cnt
+
+            if self.cfg.MODEL.COLLECT_ACCURACY_METRICS:
+                gt_masks_bool = gt_segms
+                pred_mask_logits = mask_pred
+                zero = flow.constant_scalar(value=0.0, dtype=pred_mask_logits.dtype)
+                mask_incorrect = flow.cast(pred_mask_logits > zero, dtype=gt_masks_bool.dtype) != gt_masks_bool
+                mask_incorrect_num = flow.math.reduce_sum(flow.cast(mask_incorrect, dtype=flow.float))
+                one = flow.constant_scalar(value=1.0, dtype=elem_cnt.dtype)
+                mask_accuracy = 1 - (mask_incorrect_num / (elem_cnt + 1e-5))
+                accuracy.put_metrics(
+                    {
+                        "mask_rcnn/accuracy": mask_accuracy,
+                    }
+                )
             return mask_loss
 
     def build_eval(self, proposals, features):
@@ -108,16 +119,13 @@ class MaskHead(object):
         sampling_ratio = self.cfg.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO
 
         proposals_with_img_ids = flow.concat(
-            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
-            axis=1,
+            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals], axis=1,
         )
         levels = flow.detection.level_map(proposals)
 
         level_idx_list = [
             flow.squeeze(
-                flow.local_nonzero(
-                    levels == flow.constant_scalar(i, flow.int32)
-                ),
+                flow.local_nonzero(levels == flow.constant_scalar(i, flow.int32)),
                 axis=[1],
                 name="squeeze_level_idx_" + str(i),
             )
@@ -139,12 +147,8 @@ class MaskHead(object):
             )
         ]
 
-        roi_features = flow.stack(
-            roi_features_list, axis=0, name="stack_roi_features"
-        )
-        origin_indices = flow.stack(
-            level_idx_list, axis=0, name="stack_origin_indices"
-        )
+        roi_features = flow.stack(roi_features_list, axis=0, name="stack_roi_features")
+        origin_indices = flow.stack(level_idx_list, axis=0, name="stack_origin_indices")
         x = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, float(0)),
             flow.expand_dims(origin_indices, axis=1),
