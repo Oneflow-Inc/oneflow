@@ -197,11 +197,15 @@ class BoxHead(object):
                 )
 
                 num_instances = total_elem_cnt
+
+                num_false_negative_mask = fg_pred_classes == flow.constant_scalar(value=0, dtype=fg_pred_classes.dtype)
+                num_false_negative = flow.math.reduce_sum(flow.cast(num_false_negative_mask, dtype=flow.float))
                 accuracy.put_metrics(
                     {
                         "total_pos_inds_elem_cnt": num_fg,
                         "fast_rcnn/fg_cls_accuracy": fg_num_accurate / num_fg,
                         "fast_rcnn/cls_accuracy": num_accurate / num_instances,
+                        "fast_rcnn/false_negative": num_false_negative / num_fg
                     }
                 )
             return (
