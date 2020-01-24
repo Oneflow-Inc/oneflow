@@ -211,10 +211,16 @@ TEST(OBJECT_MSG, flat_msg_field) {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestListIter)
-  OBJECT_MSG_DEFINE_LIST_HEAD(foo_list);
-  OBJECT_MSG_DEFINE_LIST_ITEM(bar_list);
+  OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
 END_OBJECT_MSG(TestListIter)
-// clang-format one
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(TestListHead)
+  OBJECT_MSG_DEFINE_LIST_HEAD(TestListIter, foo_list);
+  OBJECT_MSG_DEFINE_LIST_ITEM(bar_list);
+END_OBJECT_MSG(TestListHead)
+// clang-format on
 
 }  // namespace test
 

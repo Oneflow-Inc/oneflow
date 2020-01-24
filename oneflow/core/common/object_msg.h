@@ -38,9 +38,9 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                                    \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
 
-#define OBJECT_MSG_DEFINE_LIST_HEAD(field_name)                                     \
+#define OBJECT_MSG_DEFINE_LIST_HEAD(field_type, field_name)                         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_name)                                    \
+  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
   DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_DEFINE_FLAT_MSG(field_type, field_name)                          \
@@ -213,13 +213,14 @@ typedef std::string OBJECT_MSG_TYPE(string);
  private:                                                                    \
   field_type OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_name) \
- private:                                              \
-  EmbeddedListItem OF_PP_CAT(field_name, _);
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                           \
+ private:                                                                                    \
+  PodEmbeddedListHeadIf<STRUCT_FIELD(OBJECT_MSG_TYPE(field_type), OF_PP_CAT(field_name, _))> \
+      OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
  private:                                              \
-  EmbeddedListItem OF_PP_CAT(field_name, _);
+  PodEmbeddedListItem OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                   \
  public:                                                                               \
@@ -346,8 +347,13 @@ struct ObjectMsgInitStructMember {
 };
 
 template<typename WalkCtxType, typename Enabled>
-struct ObjectMsgInitStructMember<WalkCtxType, EmbeddedListItem, Enabled> {
-  static void Call(WalkCtxType* ctx, EmbeddedListItem* field) { field->Clear(); }
+struct ObjectMsgInitStructMember<WalkCtxType, PodEmbeddedListItem, Enabled> {
+  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field) { field->Clear(); }
+};
+
+template<typename WalkCtxType, typename Enabled>
+struct ObjectMsgInitStructMember<WalkCtxType, PodEmbeddedListHead, Enabled> {
+  static void Call(WalkCtxType* ctx, PodEmbeddedListHead* field) { field->Clear(); }
 };
 
 template<bool is_pointer>

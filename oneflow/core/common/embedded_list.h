@@ -6,14 +6,12 @@
 
 namespace oneflow {
 
-struct EmbeddedListItem final {
+struct PodEmbeddedListItem {
  public:
-  EmbeddedListItem() { Clear(); }
+  PodEmbeddedListItem* prev() const { return prev_; }
+  PodEmbeddedListItem* next() const { return next_; }
 
-  EmbeddedListItem* prev() const { return prev_; }
-  EmbeddedListItem* next() const { return next_; }
-
-  void AppendTo(EmbeddedListItem* prev) {
+  void AppendTo(PodEmbeddedListItem* prev) {
     prev->set_next(this);
     this->set_prev(prev);
   }
@@ -23,25 +21,40 @@ struct EmbeddedListItem final {
   }
 
  private:
-  void set_prev(EmbeddedListItem* prev) { prev_ = prev; }
-  void set_next(EmbeddedListItem* next) { next_ = next; }
+  void set_prev(PodEmbeddedListItem* prev) { prev_ = prev; }
+  void set_next(PodEmbeddedListItem* next) { next_ = next; }
 
-  EmbeddedListItem* prev_;
-  EmbeddedListItem* next_;
+  PodEmbeddedListItem* prev_;
+  PodEmbeddedListItem* next_;
+};
+
+class EmbeddedListItem final : public PodEmbeddedListItem {
+ public:
+  EmbeddedListItem() { this->Clear(); }
+};
+
+class PodEmbeddedListHead {
+ public:
+  void Clear() { container_.Clear(); }
+
+ protected:
+  const PodEmbeddedListItem& container() const { return container_; }
+  PodEmbeddedListItem* mut_container() { return &container_; }
+
+ private:
+  PodEmbeddedListItem container_;
 };
 
 template<typename ItemField>
-class EmbeddedListHead {
+class PodEmbeddedListHeadIf : public PodEmbeddedListHead {
  public:
   using item_type = typename ItemField::struct_type;
-  static_assert(std::is_same<typename ItemField::field_type, EmbeddedListItem>::value,
-                "no EmbeddedListItem found in item");
-
-  void Clear() { container_.Clear(); }
+  static_assert(std::is_same<typename ItemField::field_type, PodEmbeddedListItem>::value,
+                "no PodEmbeddedListItem found in item");
 
   void Erase(item_type* item) {
     CHECK_NE(item, end_item());
-    EmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
+    PodEmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
     list_item->next()->AppendTo(list_item->prev());
     list_item->Clear();
   }
@@ -60,30 +73,39 @@ class EmbeddedListHead {
     return first;
   }
 
-  bool empty() const { return begin_item() == end_item(); }
-  item_type* begin_item() const { return next_item(end_item()); }
-  item_type* last_item() const { return prev_item(end_item()); }
-  item_type* end_item() const { return ItemField::StructPtr4FieldPtr(&container_); }
-  item_type* next_item(item_type* current) const {
+  bool empty() const { return &begin_item() == &end_item(); }
+  const item_type& begin_item() const { return next_item(end_item()); }
+  const item_type& last_item() const { return prev_item(end_item()); }
+  const item_type& end_item() const { return *ItemField::StructPtr4FieldPtr(&container()); }
+  const item_type& next_item(const item_type& current) const {
+    return *ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(&current)->next());
+  }
+  const item_type& prev_item(const item_type& current) const {
+    return *ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(&current)->prev());
+  }
+
+  item_type* begin_item() { return next_item(end_item()); }
+  item_type* last_item() { return prev_item(end_item()); }
+  item_type* end_item() { return ItemField::StructPtr4FieldPtr(mut_container()); }
+  item_type* next_item(item_type* current) {
     return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->next());
   }
-  item_type* prev_item(item_type* current) const {
+  item_type* prev_item(item_type* current) {
     return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->prev());
   }
 
  private:
   void InsertAfter(item_type* prev_item, item_type* new_item) {
-    EmbeddedListItem* prev_list_item = ItemField::FieldPtr4StructPtr(prev_item);
-    EmbeddedListItem* next_list_item = prev_list_item->next();
-    EmbeddedListItem* new_list_item = ItemField::FieldPtr4StructPtr(new_item);
+    PodEmbeddedListItem* prev_list_item = ItemField::FieldPtr4StructPtr(prev_item);
+    PodEmbeddedListItem* next_list_item = prev_list_item->next();
+    PodEmbeddedListItem* new_list_item = ItemField::FieldPtr4StructPtr(new_item);
     new_list_item->AppendTo(prev_list_item);
     next_list_item->AppendTo(new_list_item);
   }
-  EmbeddedListItem container_;
 };
 
 template<typename ItemField>
-class EmbeddedList : public EmbeddedListHead<ItemField> {
+class EmbeddedList : public PodEmbeddedListHeadIf<ItemField> {
  public:
   EmbeddedList() { this->Clear(); }
 };

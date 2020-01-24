@@ -7,8 +7,9 @@ namespace oneflow {
 namespace test {
 
 struct ListItemBar final {
+  ListItemBar() { bar_list.Clear(); }
   int value;
-  EmbeddedListItem bar_list;
+  PodEmbeddedListItem bar_list;
 };
 
 }  // namespace test
@@ -47,7 +48,7 @@ TEST(EmbeddedListView, empty) {
 
 TEST(EmbeddedListView, push_front) {
   BarListView list_view;
-  EmbeddedListItem& head = list_view.container_;
+  PodEmbeddedListItem& head = list_view.container_;
   ListItemBar item0;
   list_view.PushFront(&item0);
   ASSERT_EQ(head.next(), &item0.bar_list);

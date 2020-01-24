@@ -8,7 +8,7 @@ namespace oneflow {
 #define STRUCT_FIELD(T, field) \
   StructField<T, STRUCT_FIELD_TYPE(T, field), STRUCT_FIELD_OFFSET(T, field)>
 #define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
-#define STRUCT_FIELD_OFFSET(T, field) ((int)(long long)&((T*)nullptr)->field)
+#define STRUCT_FIELD_OFFSET(T, field) offsetof(T, field)
 
 // details
 template<typename T, typename F, int offset>
