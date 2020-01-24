@@ -608,11 +608,23 @@ class IterationProcessor(object):
         self.elapsed_times.append(elapsed_time)
 
         def outputs_postprocess(outputs):
+            def process_one_rank(outputs_dict):
+                assert isinstance(outputs_dict, dict)
+                outputs.pop("image_id")
+                mask_incorrect = outputs.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
+                gt_masks_bool = outputs.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
+                num_positive = outputs.pop("mask_rcnn/num_positive").ndarray().item()
+                false_positive = (mask_incorrect & ~gt_masks_bool).sum() / max(
+                    gt_masks_bool.size - num_positive, 1.0
+                )
+                false_negative = (mask_incorrect & gt_masks_bool).sum() / max(num_positive, 1.0)
+                outputs["mask_rcnn/false_positive"] = false_positive
+                outputs["mask_rcnn/false_negative"] = false_negative
             if isinstance(outputs, (list, tuple)):
                 for outputs_per_rank in outputs:
-                    outputs_per_rank.pop("image_id")
+                    process_one_rank(outputs_per_rank)
             elif isinstance(outputs, dict):
-                outputs.pop("image_id")
+                process_one_rank(outputs)
             else:
                 raise ValueError("outputs has error type")
 

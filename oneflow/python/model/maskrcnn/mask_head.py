@@ -95,9 +95,14 @@ class MaskHead(object):
                 mask_incorrect_num = flow.math.reduce_sum(flow.cast(mask_incorrect, dtype=flow.float))
                 one = flow.constant_scalar(value=1.0, dtype=elem_cnt.dtype)
                 mask_accuracy = 1 - (mask_incorrect_num / (elem_cnt + 1e-5))
+
+                num_positive = flow.math.reduce_sum(flow.cast(gt_masks_bool, dtype=flow.float))
                 accuracy.put_metrics(
                     {
                         "mask_rcnn/accuracy": mask_accuracy,
+                        "mask_rcnn/mask_incorrect": mask_incorrect,
+                        "mask_rcnn/gt_masks_bool": gt_masks_bool,
+                        "mask_rcnn/num_positive": num_positive,
                     }
                 )
             return mask_loss
