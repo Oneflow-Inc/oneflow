@@ -32,3 +32,7 @@ jobs:
     - name: Run Test
       run: |
         docker run --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/docker/test/test.sh $PWD
+    - uses: actions/upload-artifact@v1
+      with:
+        name: Upload Test Result
+        path: test_result.txt
