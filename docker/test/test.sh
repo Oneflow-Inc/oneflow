@@ -7,4 +7,4 @@ cp -r $pwd/oneflow/python/test $test_dir
 touch $pwd/test_result.txt
 python3 $test_dir/ops/1node_test.py >> $pwd/test_result.txt
 python3 $test_dir/models/1node_test.py >> $pwd/test_result.txt
-chmod 660 $pwd/test_result.txt
+chmod 666 $pwd/test_result.txt
