@@ -19,6 +19,7 @@ jobs:
     - name: Checkout submodules
       shell: bash
       run: |
+        rm -rf *.whl
         rm -rf build/third_party
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
