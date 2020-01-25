@@ -20,8 +20,6 @@ jobs:
       shell: bash
       run: |
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule sync --recursive
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule foreach --recursive git fetch
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build Builder Docker image
       run: |
