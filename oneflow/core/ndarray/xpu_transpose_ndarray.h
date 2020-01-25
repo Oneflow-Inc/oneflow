@@ -46,7 +46,7 @@ class XpuTransposeNdarray final {
 
  private:
   OF_DEVICE_FUNC void Offset2Coord(int64_t offset, int64_t coord[NDIMS]) const {
-    shape_.Offset2Coordinate<NDIMS>(offset, coord);
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
   }
 
   OF_DEVICE_FUNC void PermuteCoord(const int64_t coord[NDIMS],

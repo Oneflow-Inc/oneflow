@@ -1,7 +1,7 @@
 # warning: never share the container image this dockerfile produces
-ARG CUDA=10
+ARG CUDA=10.0
 
-FROM nvidia/cuda:${CUDA}.0-cudnn7-devel-centos7
+FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 RUN yum update -y && yum install -y epel-release
@@ -12,7 +12,7 @@ RUN yum update -y && yum install -y rdma-core-devel \
     git \
     centos-release-scl \
     swig \
-    intel-mkl-2020.0-088 
+    intel-mkl-2020.0-088
     # openblas-devel
 RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake

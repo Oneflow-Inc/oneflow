@@ -35,11 +35,12 @@ void GetOpName2JobId2TaskProtos(
   }
 }
 
-HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
+HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(
+    const std::vector<std::shared_ptr<Job>>& jobs) {
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
-    const auto& job = jobs.at(i);
+    const auto& job = *jobs.at(i);
     for (const auto& op : job.net().op()) {
       if (IsInterfaceOpConf(op)) {
         CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
@@ -53,7 +54,8 @@ HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vect
   return interface_op_name2job_ids;
 }
 
-std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<Job>& jobs) {
+std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(
+    const std::vector<std::shared_ptr<Job>>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_id2mutual_exclusion_ids(job_size);
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
@@ -83,7 +85,8 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
   return job_id2mutual_exclusion_ids;
 }
 
-std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs) {
+std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(
+    const std::vector<std::shared_ptr<Job>>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
   if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
@@ -266,7 +269,7 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
   }
 }
 
-void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, Plan* plan,
+void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs, Plan* plan,
                                   HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids =
       GetInterfaceOpName2JobIds(jobs);
@@ -317,7 +320,7 @@ void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, Plan* plan,
 }  // namespace
 
 void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(
-    const std::vector<Job>& jobs, Plan* plan) {
+    const std::vector<std::shared_ptr<Job>>& jobs, Plan* plan) {
   if (jobs.size() == 1) { return; }
 
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
@@ -333,10 +336,9 @@ void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(
   }
 }
 
-void InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(const std::vector<Job>& jobs,
-                                                                Plan* plan, int64_t user_job_size) {
-  if (user_job_size == 1) { return; }
-  std::vector<Job> user_jobs(jobs.begin(), jobs.begin() + user_job_size);
+void InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(
+    const std::vector<std::shared_ptr<Job>>& user_jobs, Plan* plan) {
+  if (user_jobs.size() == 1) { return; }
   std::vector<HashSet<int64_t>> reuse_mem_job_groups = GetMutualExclusionJobGroups(user_jobs);
 
   HashMap<int64_t, ChunkProto> chunk_id2chunk;
