@@ -14,7 +14,6 @@ RUN yum update -y && yum install -y rdma-core-devel \
     swig \
     intel-mkl-2020.0-088
     # openblas-devel
-RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
 RUN mkdir -p /tmp/download/cmake-extracted && \
@@ -55,9 +54,8 @@ RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. &&
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=OFF .. && make -j $(nproc) ; fi
-
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) ; fi
+RUN RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH; \
+    cmake -DTHIRD_PARTY=OFF .. && make -j $(nproc) ;
 
 ## BUILD WHEEL
 WORKDIR /workspace
