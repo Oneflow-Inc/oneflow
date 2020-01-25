@@ -22,7 +22,7 @@ jobs:
         rm -rf build/third_party
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
-    - name: Build Builder Docker image
+    - name: Build OneFlow
       run: |
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
