@@ -10,7 +10,7 @@ on:
 
 jobs:
 
-  build:
+  build_and_test:
 
     runs-on: [self-hosted, linux]
 
