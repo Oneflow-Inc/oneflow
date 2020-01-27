@@ -53,7 +53,7 @@ struct FooBar {
   Foo* foo_;
 };
 
-template<typename WalkCtxType, typename FieldType>
+template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
     ctx->push_back(field_name);
@@ -94,7 +94,7 @@ struct PushBackPtrFieldName<true> {
   }
 };
 
-template<typename WalkCtxType, typename FieldType>
+template<int field_counter, typename WalkCtxType, typename FieldType>
 struct FilterPointerFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
     PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, field_name);

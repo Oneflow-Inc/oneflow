@@ -367,7 +367,7 @@ struct ObjectMsgRecursiveInit {
   }
 };
 
-template<typename WalkCtxType, typename PtrFieldType>
+template<int field_counter, typename WalkCtxType, typename PtrFieldType>
 struct _ObjectMsgRecursiveInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
     ObjectMsgRecursiveInit<
@@ -401,7 +401,7 @@ struct ObjectMsgRecursiveRelease {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
 
-template<typename WalkCtxType, typename PtrFieldType>
+template<int field_counter, typename WalkCtxType, typename PtrFieldType>
 struct _ObjectMsgRecursiveRelease {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
     ObjectMsgRecursiveRelease<

@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-template<typename WalkCtxType, typename FieldType>
+template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
     ctx->push_back(field_name);
