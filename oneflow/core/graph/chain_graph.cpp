@@ -199,7 +199,8 @@ void ChainGraph::CheckNoCycle() const {
     auto* ptr = scc.get();
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
-    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+    ToDotWithFilePath(
+        OnCycle, [](ChainEdge*) { return true; }, filename);
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
       for (const TaskNode* task_node : chain_node->TaskNodes()) {
@@ -208,7 +209,8 @@ void ChainGraph::CheckNoCycle() const {
     }
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
-    task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    task_gph_.ToDotWithFilePath(
+        TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
     LOG(FATAL) << "cycle in graph detected";
   }
 }
@@ -227,6 +229,18 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
           && dynamic_cast<CompTaskNode*>(node) != nullptr
           && IsAllProducedBlobHasNoBatchAxis(in_node) && !IsAllConsumedBlobHasNoBatchAxis(node)) {
+        LOG(ERROR)
+            << "failed to include node in chain, in_node: "
+            << (dynamic_cast<CompTaskNode*>(in_node)->logical_node()->op_vec().size() > 0
+                    ? dynamic_cast<CompTaskNode*>(in_node)->logical_node()->SoleOp()->op_name()
+                    : "no op")
+            << " IsAllProducedBlobHasNoBatchAxis(in_node): "
+            << IsAllProducedBlobHasNoBatchAxis(in_node)
+            << " !IsAllConsumedBlobHasNoBatchAxis(node): " << !IsAllConsumedBlobHasNoBatchAxis(node)
+            << " node: "
+            << (dynamic_cast<CompTaskNode*>(node)->logical_node()->op_vec().size() > 0
+                    ? dynamic_cast<CompTaskNode*>(node)->logical_node()->SoleOp()->op_name()
+                    : "no op");
         return;
       }
       (*node2ancestors)[node].insert(in_node);

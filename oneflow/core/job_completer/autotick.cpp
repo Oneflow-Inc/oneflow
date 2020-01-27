@@ -137,7 +137,8 @@ OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNod
                         JobBuilder* job_builder) {
   std::vector<std::string> op_names;
   for (const auto* op_node : op_nodes) {
-    CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
+    CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false)
+        << "op namne: " << op_node->op().op_name();
     op_names.push_back(op_node->op().op_name());
   }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
