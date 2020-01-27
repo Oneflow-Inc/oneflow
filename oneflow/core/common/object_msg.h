@@ -11,7 +11,7 @@
 namespace oneflow {
 
 #define BEGIN_OBJECT_MSG(class_name)                                                           \
-  class OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                           \
+  struct OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                          \
    public:                                                                                     \
     static const bool __is_object_message_type__ = true;                                       \
     BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
@@ -213,9 +213,11 @@ typedef std::string OBJECT_MSG_TYPE(string);
  private:                                                                    \
   field_type OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                           \
- private:                                                                                    \
-  PodEmbeddedListHeadIf<STRUCT_FIELD(OBJECT_MSG_TYPE(field_type), OF_PP_CAT(field_name, _))> \
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
+ private:                                                                                 \
+  PodEmbeddedListHeadIf<                                                                  \
+      StructField<OBJECT_MSG_TYPE(field_type), PodEmbeddedListItem,                       \
+                  OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>> \
       OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
@@ -236,6 +238,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
   field_type OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_DEFINE_DEFAULT(object_message_type_name)                           \
+ public:                                                                              \
   const object_message_type_name& __Default__() const {                               \
     static const ObjectMsgStructDefault<object_message_type_name> default_object_msg; \
     return default_object_msg.Get();                                                  \

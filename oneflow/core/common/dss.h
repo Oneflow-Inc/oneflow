@@ -113,6 +113,12 @@ namespace oneflow {
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
 #define _DSS_DEFINE_FIELD(define_counter, dss_type, field)                                    \
+ public:                                                                                      \
+  template<typename Enabled = void>                                                           \
+  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                   \
+    return offsetof(__DssSelfType__, field);                                                  \
+  }                                                                                           \
+                                                                                              \
  private:                                                                                     \
   template<template<class, class> class F, typename WalkCtxType, typename fake>               \
   struct __DSS__FieldIter<define_counter, F, WalkCtxType, fake> {                             \
