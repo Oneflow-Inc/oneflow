@@ -1,4 +1,3 @@
-#define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -7,30 +6,10 @@ namespace oneflow {
 
 namespace test {
 
-TEST(ObjectMsgStruct, ref_cnt) {
-  class Foo final : public ObjectMsgStruct {
-   public:
-    Foo() = default;
-  };
-  Foo foo;
-  foo.InitRefCount();
-  foo.IncreaseRefCount();
-  foo.IncreaseRefCount();
-  ASSERT_EQ(foo.DecreaseRefCount(), 1);
-  ASSERT_EQ(foo.DecreaseRefCount(), 0);
-}
-
-class TestNew final : public ObjectMsgStruct {
-  BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), TestNew, sizeof(ObjectMsgStruct));
-
-  END_DSS(DSS_GET_DEFINE_COUNTER(), "object_msg", TestNew);
-};
-
-TEST(ObjectMsgPtr, obj_new) { ObjectMsgPtr<TestNew>::New(); }
-
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgFoo)
  public:
+  using self_type = OBJECT_MSG_TYPE(ObjectMsgFoo);
   void __Delete__();
 
   OBJECT_MSG_DEFINE_OPTIONAL(int8_t, x);
@@ -197,6 +176,7 @@ END_FLAT_MSG(FlatMsgDemo)
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgContainerDemo)
   OBJECT_MSG_DEFINE_FLAT_MSG(FlatMsgDemo, flat_field);
+
 END_OBJECT_MSG(ObjectMsgContainerDemo)
 // clang-format on
 
