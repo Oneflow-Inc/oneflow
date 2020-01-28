@@ -190,14 +190,20 @@ TEST(OBJECT_MSG, flat_msg_field) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestListIter)
+BEGIN_OBJECT_MSG(TestListItem)
   OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
-END_OBJECT_MSG(TestListIter)
+  OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
+END_OBJECT_MSG(TestListItem)
 // clang-format on
+
+TEST(ObjectMsgList, empty) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  ASSERT_TRUE(foo_list.empty());
+}
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestListHead)
-  OBJECT_MSG_DEFINE_LIST_HEAD(TestListIter, foo_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list);
   OBJECT_MSG_DEFINE_LIST_ITEM(bar_list);
 END_OBJECT_MSG(TestListHead)
 // clang-format on
