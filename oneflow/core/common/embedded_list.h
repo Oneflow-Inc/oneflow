@@ -34,24 +34,14 @@ class EmbeddedListItem final : public PodEmbeddedListItem {
   EmbeddedListItem() { this->Clear(); }
 };
 
-class PodEmbeddedListHead {
- public:
-  void Clear() { container_.Clear(); }
-
- protected:
-  const PodEmbeddedListItem& container() const { return container_; }
-  PodEmbeddedListItem* mut_container() { return &container_; }
-
- private:
-  PodEmbeddedListItem container_;
-};
-
 template<typename ItemField>
-class PodEmbeddedListHeadIf : public PodEmbeddedListHead {
+class PodEmbeddedListHead {
  public:
   using item_type = typename ItemField::struct_type;
   static_assert(std::is_same<typename ItemField::field_type, PodEmbeddedListItem>::value,
                 "no PodEmbeddedListItem found in item");
+
+  void Clear() { container_.Clear(); }
 
   void Erase(item_type* item) {
     CHECK_NE(item, end_item());
@@ -103,10 +93,15 @@ class PodEmbeddedListHeadIf : public PodEmbeddedListHead {
     new_list_item->AppendTo(prev_list_item);
     next_list_item->AppendTo(new_list_item);
   }
+  const PodEmbeddedListItem& container() const { return container_; }
+  PodEmbeddedListItem* mut_container() { return &container_; }
+
+ private:
+  PodEmbeddedListItem container_;
 };
 
 template<typename ItemField>
-class EmbeddedList : public PodEmbeddedListHeadIf<ItemField> {
+class EmbeddedList : public PodEmbeddedListHead<ItemField> {
  public:
   EmbeddedList() { this->Clear(); }
 };
