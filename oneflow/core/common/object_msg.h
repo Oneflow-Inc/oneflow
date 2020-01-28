@@ -15,7 +15,9 @@ namespace oneflow {
    public:                                                                                     \
     static const bool __is_object_message_type__ = true;                                       \
     BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
-    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));
+    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));                                    \
+    OBJECT_MSG_DEFINE_INIT();                                                                  \
+    OBJECT_MSG_DEFINE_DELETE();
 
 #define END_OBJECT_MSG(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
@@ -30,23 +32,19 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_RAW_PTR(field_type, field_name)                           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                      \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+  _OBJECT_MSG_DEFINE_RAW_PTR(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_ITEM(field_name)                                     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                                    \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+  _OBJECT_MSG_DEFINE_LIST_ITEM(DSS_GET_DEFINE_COUNTER(), field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_HEAD(field_type, field_name)                         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+  _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_FLAT_MSG(field_type, field_name)                          \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(FLAT_MSG_TYPE(field_type), field_name)          \
-  DSS_DEFINE_FIELD(DSS_GET_DEFINE_COUNTER(), "object message", OF_PP_CAT(field_name, _));
+  _OBJECT_MSG_DEFINE_FLAT_MSG(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
@@ -101,27 +99,27 @@ namespace oneflow {
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;      \
   }
 
-#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                       \
- public:                                                                            \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {         \
-    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);    \
-    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;            \
-    static const bool is_ptr = std::is_pointer<FieldType>::value;                   \
-    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                              \
-      OF_PP_CAT(clear_, oneof_name)();                                              \
-      ObjectMsgRecursiveInit<is_ptr>::template Call<ObjectMsgAllocator, FieldType>( \
-          mut_allocator(), ptr);                                                    \
-      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                 \
-      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                      \
-    }                                                                               \
-    return MutableTrait<is_ptr>::Call(ptr);                                         \
+#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                                    \
+ public:                                                                                         \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                      \
+    static const char* field_name = OF_PP_STRINGIZE(OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));      \
+    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                 \
+    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;                         \
+    static const bool is_ptr = std::is_pointer<FieldType>::value;                                \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                           \
+      OF_PP_CAT(clear_, oneof_name)();                                                           \
+      ObjectMsgNaiveInit<ObjectMsgAllocator, FieldType>::Call(mut_allocator(), ptr, field_name); \
+      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                              \
+      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                                   \
+    }                                                                                            \
+    return MutableTrait<is_ptr>::Call(ptr);                                                      \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(define_counter, oneof_name)                               \
  public:                                                                                        \
   void OF_PP_CAT(clear_, oneof_name)() {                                                        \
     const char* oneof_name_field = OF_PP_STRINGIZE(OF_PP_CAT(oneof_name, _));                   \
-    __DSS__VisitField<define_counter, _ObjectMsgRecursiveRelease, void,                         \
+    __DSS__VisitField<define_counter, ObjectMsgField__Delete__, void,                           \
                       OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                   \
                                                                      &OF_PP_CAT(oneof_name, _), \
                                                                      oneof_name_field);         \
@@ -201,6 +199,12 @@ typedef float OBJECT_MSG_TYPE(float);
 typedef double OBJECT_MSG_TYPE(double);
 typedef std::string OBJECT_MSG_TYPE(string);
 
+#define _OBJECT_MSG_DEFINE_FLAT_MSG(field_counter, field_type, field_name) \
+  _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(FLAT_MSG_TYPE(field_type), field_name) \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgFlatMsgInit);           \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFlatMsgDelete);       \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+
 #define _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(field_type, field_name)            \
  public:                                                                     \
   static_assert(field_type::__is_flat_message_type__,                        \
@@ -213,6 +217,12 @@ typedef std::string OBJECT_MSG_TYPE(string);
  private:                                                                    \
   field_type OF_PP_CAT(field_name, _);
 
+#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, field_type, field_name)   \
+  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                  \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListHeadInit);     \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete); \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
  private:                                                                                 \
   PodEmbeddedListHeadIf<                                                                  \
@@ -220,9 +230,21 @@ typedef std::string OBJECT_MSG_TYPE(string);
                   OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>> \
       OF_PP_CAT(field_name, _);
 
+#define _OBJECT_MSG_DEFINE_LIST_ITEM(field_counter, field_name)               \
+  _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                              \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListItemInit);     \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListItemDelete); \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+
 #define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
  private:                                              \
   PodEmbeddedListItem OF_PP_CAT(field_name, _);
+
+#define _OBJECT_MSG_DEFINE_RAW_PTR(field_counter, field_type, field_name) \
+  _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)            \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgRawPtrInit);           \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgRawPtrDelete);       \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)                   \
  public:                                                                               \
@@ -243,6 +265,39 @@ typedef std::string OBJECT_MSG_TYPE(string);
     static const ObjectMsgStructDefault<object_message_type_name> default_object_msg; \
     return default_object_msg.Get();                                                  \
   }
+
+#define OBJECT_MSG_DEFINE_INIT()                                            \
+ public:                                                                    \
+  template<typename WalkCtxType>                                            \
+  void ObjectMsg__Init__(WalkCtxType* ctx) {                                \
+    this->template __WalkField__<ObjectMsgField__Init__, WalkCtxType>(ctx); \
+  }                                                                         \
+                                                                            \
+ private:                                                                   \
+  template<int field_counter, typename WalkCtxType, typename PtrFieldType>  \
+  struct ObjectMsgField__Init__ : public ObjectMsgNaiveInit<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_OVERLOAD_INIT(field_counter, init_template)            \
+ private:                                                                 \
+  template<typename WalkCtxType, typename PtrFieldType>                   \
+  struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType> \
+      : public init_template<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_DEFINE_DELETE()                                                \
+ public:                                                                          \
+  void ObjectMsg__Delete__() {                                                    \
+    this->template __ReverseWalkField__<ObjectMsgField__Delete__, void>(nullptr); \
+  }                                                                               \
+                                                                                  \
+ private:                                                                         \
+  template<int field_counter, typename WalkCtxType, typename PtrFieldType>        \
+  struct ObjectMsgField__Delete__ : public ObjectMsgNaiveDelete<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_OVERLOAD_DELETE(field_counter, delete_template)          \
+ private:                                                                   \
+  template<typename WalkCtxType, typename PtrFieldType>                     \
+  struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
+      : public delete_template<WalkCtxType, PtrFieldType> {};
 
 class ObjectMsgAllocator {
  public:
@@ -306,7 +361,8 @@ struct ObjectMsgPtrUtil final {
   template<typename T>
   static void ReleaseRef(T* ptr) {
     if (ptr == nullptr) { return; }
-    if (ptr->DecreaseRefCount() > 0) { return; }
+    int32_t ref_cnt = ptr->DecreaseRefCount();
+    if (ref_cnt > 0) { return; }
     auto* allocator = ptr->mut_allocator();
     ptr->__Delete__();
     allocator->Deallocate(reinterpret_cast<char*>(ptr), sizeof(T));
@@ -344,46 +400,79 @@ struct ObjectMsgGetDefault<false> final {
   }
 };
 
-template<typename WalkCtxType, typename PtrFieldType, typename Enabled = void>
-struct ObjectMsgInitStructMember {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
-};
-
-template<typename WalkCtxType, typename Enabled>
-struct ObjectMsgInitStructMember<WalkCtxType, PodEmbeddedListItem, Enabled> {
-  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field) { field->Clear(); }
-};
-
-template<typename WalkCtxType, typename Enabled>
-struct ObjectMsgInitStructMember<WalkCtxType, PodEmbeddedListHead, Enabled> {
-  static void Call(WalkCtxType* ctx, PodEmbeddedListHead* field) { field->Clear(); }
-};
-
-template<bool is_pointer>
-struct ObjectMsgRecursiveInit {
-  template<typename WalkCtxType, typename PtrFieldType>
-  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
-    ObjectMsgInitStructMember<WalkCtxType, PtrFieldType>::Call(ctx, field);
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgEmbeddedListHeadInit {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    field->Clear();
   }
 };
 
-template<int field_counter, typename WalkCtxType, typename PtrFieldType>
-struct _ObjectMsgRecursiveInit {
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgEmbeddedListHeadDelete {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) { TODO(); }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgEmbeddedListItemInit {
+  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field, const char* field_name) {
+    field->Clear();
+  }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgEmbeddedListItemDelete {
+  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field, const char* field_name) {
+    CHECK(field->empty());
+  }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgRawPtrInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    ObjectMsgRecursiveInit<
-        std::is_pointer<PtrFieldType>::value
-        && std::is_base_of<ObjectMsgStruct,
-                           typename std::remove_pointer<PtrFieldType>::type>::value>::Call(ctx,
-                                                                                           field);
+    static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
+    *field = nullptr;
+  }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgRawPtrDelete {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
+  }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgFlatMsgInit {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {}
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgFlatMsgDelete {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {}
+};
+
+template<bool is_pointer>
+struct _ObjectMsgNaiveInit {
+  template<typename WalkCtxType, typename PtrFieldType>
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgNaiveInit {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
+    _ObjectMsgNaiveInit<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
   }
 };
 
 template<>
-struct ObjectMsgRecursiveInit<true> {
+struct _ObjectMsgNaiveInit<true> {
   template<typename WalkCtxType, typename PtrFieldType>
   static void Call(WalkCtxType* ctx, PtrFieldType* field_ptr) {
-    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of ObjectMsgRecursiveInit");
+    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of _ObjectMsgNaiveInit");
     using FieldType = typename std::remove_pointer<PtrFieldType>::type;
+    static_assert(std::is_base_of<ObjectMsgStruct, FieldType>::value,
+                  "FieldType is not a subclass of ObjectMsgStruct");
     char* mem_ptr = ctx->Allocate(sizeof(FieldType));
     auto* ptr = new (mem_ptr) FieldType();
     *field_ptr = ptr;
@@ -391,35 +480,35 @@ struct ObjectMsgRecursiveInit<true> {
     ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
     ObjectMsgPtrUtil::SetAllocator(ptr, ctx);
     ObjectMsgPtrUtil::Ref<FieldType>(ptr);
-    ptr->template __WalkField__<_ObjectMsgRecursiveInit, WalkCtxType>(ctx);
+    ptr->template ObjectMsg__Init__<WalkCtxType>(ctx);
   }
 };
 
 template<bool is_pointer>
-struct ObjectMsgRecursiveRelease {
+struct _ObjectMsgNaiveDelete {
   template<typename WalkCtxType, typename PtrFieldType>
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
 
-template<int field_counter, typename WalkCtxType, typename PtrFieldType>
-struct _ObjectMsgRecursiveRelease {
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgNaiveDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    ObjectMsgRecursiveRelease<
-        std::is_pointer<PtrFieldType>::value
-        && std::is_base_of<ObjectMsgStruct,
-                           typename std::remove_pointer<PtrFieldType>::type>::value>::Call(ctx,
-                                                                                           field);
+    static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
+    _ObjectMsgNaiveDelete<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
   }
 };
 
 template<>
-struct ObjectMsgRecursiveRelease<true> {
+struct _ObjectMsgNaiveDelete<true> {
   template<typename WalkCtxType, typename PtrFieldType>
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {
+    static_assert(std::is_pointer<PtrFieldType>::value, "invalid use of _ObjectMsgNaiveDelete");
     using FieldType = typename std::remove_pointer<PtrFieldType>::type;
+    static_assert(std::is_base_of<ObjectMsgStruct, FieldType>::value,
+                  "FieldType is not a subclass of ObjectMsgStruct");
     auto* ptr = *field;
     if (ptr == nullptr) { return; }
-    ptr->template __ReverseWalkField__<_ObjectMsgRecursiveRelease, WalkCtxType>(ctx);
+    ptr->ObjectMsg__Delete__();
     ObjectMsgPtrUtil::ReleaseRef<FieldType>(ptr);
   }
 };
@@ -432,18 +521,18 @@ class ObjectMsgPtr final {
     ptr_ = obj_ptr.ptr_;
     ObjectMsgPtrUtil::Ref<T>(ptr_);
   }
-  ~ObjectMsgPtr() { ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_); }
+  ~ObjectMsgPtr() { ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr); }
 
   static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
 
   static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
     ObjectMsgPtr ret;
-    ObjectMsgRecursiveInit<true>::Call<ObjectMsgAllocator, T*>(allocator, &ret.ptr_);
+    ObjectMsgNaiveInit<ObjectMsgAllocator, T*>::Call(allocator, &ret.ptr_, nullptr);
     return ret;
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
-    ObjectMsgRecursiveRelease<true>::Call<void, T*>(nullptr, &ptr_);
+    ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr);
     ptr_ = rhs.ptr_;
     ObjectMsgPtrUtil::Ref<T>(ptr_);
     return *this;
