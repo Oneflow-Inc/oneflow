@@ -7,36 +7,43 @@ namespace oneflow {
 namespace test {
 
 struct ListItemBar final {
-  ListItemBar() { bar_list.Clear(); }
+  ListItemBar() { bar_list.Init(); }
   int value;
-  PodEmbeddedListItem bar_list;
+  EmbeddedListItem bar_list;
 };
 
-}  // namespace test
+class TestEmbeddedListItem final : public EmbeddedListItem {
+ public:
+  TestEmbeddedListItem() { this->Init(); }
+};
 
-using BarListView = EmbeddedList<STRUCT_FIELD(test::ListItemBar, bar_list)>;
+template<typename ItemField>
+class TestEmbeddedList : public EmbeddedListHead<ItemField> {
+ public:
+  TestEmbeddedList() { this->Init(); }
+};
 
-namespace test {
+using BarListView = TestEmbeddedList<STRUCT_FIELD(ListItemBar, bar_list)>;
 
-TEST(EmbeddedListItem, init) {
-  EmbeddedListItem list_iterator;
+TEST(TestEmbeddedListItem, init) {
+  TestEmbeddedListItem list_iterator;
   ASSERT_EQ(&list_iterator, list_iterator.prev());
   ASSERT_EQ(&list_iterator, list_iterator.next());
 }
 
-TEST(EmbeddedListItem, append_to) {
-  EmbeddedListItem list_iter0;
-  EmbeddedListItem list_iter1;
+TEST(TestEmbeddedListItem, append_to) {
+  TestEmbeddedListItem list_iter0;
+  TestEmbeddedListItem list_iter1;
   list_iter1.AppendTo(&list_iter0);
   ASSERT_EQ(&list_iter0, list_iter1.prev());
   ASSERT_EQ(&list_iter1, list_iter0.next());
 }
 
-TEST(EmbeddedListItem, clear) {
-  EmbeddedListItem list_head0;
-  EmbeddedListItem list_head1;
+TEST(TestEmbeddedListItem, clear) {
+  TestEmbeddedListItem list_head0;
+  TestEmbeddedListItem list_head1;
   list_head1.AppendTo(&list_head0);
-  list_head1.Clear();
+  list_head1.Init();
   ASSERT_EQ(&list_head1, list_head1.prev());
   ASSERT_EQ(&list_head1, list_head1.next());
 }
@@ -48,7 +55,7 @@ TEST(EmbeddedListView, empty) {
 
 TEST(EmbeddedListView, push_front) {
   BarListView list_view;
-  PodEmbeddedListItem& head = list_view.container_;
+  EmbeddedListItem& head = list_view.container_;
   ListItemBar item0;
   list_view.PushFront(&item0);
   ASSERT_EQ(head.next(), &item0.bar_list);
