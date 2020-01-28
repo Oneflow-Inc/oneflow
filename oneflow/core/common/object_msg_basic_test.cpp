@@ -22,6 +22,8 @@ TEST(ObjectMsgStruct, ref_cnt) {
 
 class TestNew final : public ObjectMsgStruct {
   BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), TestNew, sizeof(ObjectMsgStruct));
+  OBJECT_MSG_DEFINE_INIT();
+  OBJECT_MSG_DEFINE_DELETE();
 
   END_DSS(DSS_GET_DEFINE_COUNTER(), "object_msg", TestNew);
 };

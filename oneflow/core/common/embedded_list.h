@@ -19,6 +19,7 @@ struct PodEmbeddedListItem {
     prev_ = this;
     next_ = this;
   }
+  bool empty() const { return prev_ == this || next_ == this; }
 
  private:
   void set_prev(PodEmbeddedListItem* prev) { prev_ = prev; }
