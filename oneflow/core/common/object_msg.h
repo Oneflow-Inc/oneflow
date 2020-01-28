@@ -225,7 +225,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
  private:                                                                                 \
-  PodEmbeddedListHeadIf<                                                                  \
+  PodEmbeddedListHead<                                                                    \
       StructField<OBJECT_MSG_TYPE(field_type), PodEmbeddedListItem,                       \
                   OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>> \
       OF_PP_CAT(field_name, _);
