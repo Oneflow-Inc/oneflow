@@ -299,8 +299,10 @@ typedef std::string OBJECT_MSG_TYPE(string);
   struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
       : public delete_template<WalkCtxType, PtrFieldType> {};
 
-#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
-  ObjectMsgList<STRUCT_FIELD(OBJECT_MSG_TYPE(obj_msg_type), OF_PP_CAT(obj_msg_field, _))>
+#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)               \
+  ObjectMsgList<                                                   \
+      StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListItem, \
+                  OBJECT_MSG_TYPE(obj_msg_type)::OF_PP_CAT(obj_msg_field, _DssFieldOffset)()>>
 
 class ObjectMsgAllocator {
  public:
