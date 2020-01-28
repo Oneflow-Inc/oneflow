@@ -225,8 +225,8 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
  private:                                                                                 \
-  PodEmbeddedListHead<                                                                    \
-      StructField<OBJECT_MSG_TYPE(field_type), PodEmbeddedListItem,                       \
+  TrivialObjectMsgList<                                                                   \
+      StructField<OBJECT_MSG_TYPE(field_type), EmbeddedListItem,                          \
                   OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>> \
       OF_PP_CAT(field_name, _);
 
@@ -238,7 +238,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
  private:                                              \
-  PodEmbeddedListItem OF_PP_CAT(field_name, _);
+  EmbeddedListItem OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_RAW_PTR(field_counter, field_type, field_name) \
   _OBJECT_MSG_DEFINE_RAW_POINTER_FIELD(field_type, field_name)            \
@@ -299,6 +299,9 @@ typedef std::string OBJECT_MSG_TYPE(string);
   struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
       : public delete_template<WalkCtxType, PtrFieldType> {};
 
+#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
+  ObjectMsgList<STRUCT_FIELD(OBJECT_MSG_TYPE(obj_msg_type), OF_PP_CAT(obj_msg_field, _))>
+
 class ObjectMsgAllocator {
  public:
   virtual char* Allocate(std::size_t size) = 0;
@@ -333,7 +336,7 @@ class ObjectMsgStruct {
   void __Delete__() {}
 
  protected:
-  ObjectMsgAllocator* mut_allocator() { return allocator_; }
+  ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
  private:
   friend class ObjectMsgPtrUtil;
@@ -402,26 +405,26 @@ struct ObjectMsgGetDefault<false> final {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) { field->Init(); }
+};
+
+template<typename WalkCtxType, typename PtrFieldType>
+struct ObjectMsgEmbeddedListHeadDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
     field->Clear();
   }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) { TODO(); }
-};
-
-template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListItemInit {
-  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field, const char* field_name) {
-    field->Clear();
+  static void Call(WalkCtxType* ctx, EmbeddedListItem* field, const char* field_name) {
+    field->Init();
   }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListItemDelete {
-  static void Call(WalkCtxType* ctx, PodEmbeddedListItem* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, EmbeddedListItem* field, const char* field_name) {
     CHECK(field->empty());
   }
 };
@@ -523,32 +526,109 @@ class ObjectMsgPtr final {
   }
   ~ObjectMsgPtr() { ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr); }
 
-  static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
+  operator bool() const { return ptr_ == nullptr; }
+  const T* Get() const { return ptr_; }
+  const T* operator->() const { return ptr_; }
+  const T& operator*() const { return *ptr_; }
 
+  T* Mutable() { return ptr_; }
+  T* operator->() { return ptr_; }
+  T& operator*() { return *ptr_; }
+
+  void Reset(T* ptr) {
+    Clear();
+    ptr_ = ptr;
+    ObjectMsgPtrUtil::Ref<T>(ptr_);
+  }
+
+  ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
+    Reset(rhs.ptr_);
+    return *this;
+  }
+
+  static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
   static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
     ObjectMsgPtr ret;
     ObjectMsgNaiveInit<ObjectMsgAllocator, T*>::Call(allocator, &ret.ptr_, nullptr);
     return ret;
   }
 
-  ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
+ private:
+  void Clear() {
     ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr);
-    ptr_ = rhs.ptr_;
-    ObjectMsgPtrUtil::Ref<T>(ptr_);
-    return *this;
+    ptr_ = nullptr;
+  }
+  T* ptr_;
+};
+
+template<typename ItemField>
+class TrivialObjectMsgList {
+ public:
+  using item_type = typename ItemField::struct_type;
+
+  std::size_t size() const { return list_head_.size(); }
+  bool empty() const { return list_head_.empty(); }
+
+  void Init() { list_head_.Init(); }
+
+  void GetBegin(ObjectMsgPtr<item_type>* begin) { begin->Reset(list_head_.begin_item()); }
+  void MoveToNext(ObjectMsgPtr<item_type>* ptr) {
+    ptr->Reset(list_head_.next_item(ptr->Mutable()));
   }
 
-  operator bool() const { return ptr_ == nullptr; }
-  const T* get() const { return ptr_; }
-  const T* operator->() const { return ptr_; }
-  const T& operator*() const { return *ptr_; }
+  void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
+    GetBegin(begin);
+    GetBegin(next);
+    MoveToNext(next);
+  }
+  void MoveToNext(ObjectMsgPtr<item_type>* ptr, ObjectMsgPtr<item_type>* next) {
+    *ptr = *next;
+    MoveToNext(next);
+  }
 
-  T* get() { return ptr_; }
-  T* operator->() { return ptr_; }
-  T& operator*() { return *ptr_; }
+  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const {
+    if (!ptr) { return true; }
+    return &ptr.Get() == &list_head_.end_item();
+  }
+
+  void PushBack(ObjectMsgPtr<item_type>* ptr) {
+    list_head_.PushBack(ptr->Mutable());
+    ObjectMsgPtrUtil::Ref(ptr->Mutable());
+  }
+
+  void PushFront(ObjectMsgPtr<item_type>* ptr) {
+    list_head_.PushFront(ptr->Mutable());
+    ObjectMsgPtrUtil::Ref(ptr->Mutable());
+  }
+
+  void Erase(ObjectMsgPtr<item_type>* ptr) {
+    list_head_.Erase(ptr->Mutable());
+    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
+  }
+
+  void PopBack(ObjectMsgPtr<item_type>* ptr) {
+    ptr->Reset(list_head_.PopBack());
+    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
+  }
+
+  void PopFront(ObjectMsgPtr<item_type>* ptr) {
+    ptr->Reset(list_head_.PopFront());
+    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
+  }
+
+  void Clear() {
+    while (!empty()) { ObjectMsgPtrUtil::ReleaseRef(list_head_.PopFront()); }
+  }
 
  private:
-  T* ptr_;
+  EmbeddedListHead<ItemField> list_head_;
+};
+
+template<typename ItemField>
+class ObjectMsgList : public TrivialObjectMsgList<ItemField> {
+ public:
+  ObjectMsgList() { this->Init(); }
+  ~ObjectMsgList() { this->Clear(); }
 };
 
 template<typename T>
