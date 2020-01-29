@@ -8,15 +8,15 @@ namespace test {
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgFoo)
- public:
-  using self_type = OBJECT_MSG_TYPE(ObjectMsgFoo);
-  void __Delete__();
-
   OBJECT_MSG_DEFINE_OPTIONAL(int8_t, x);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, foo);
   OBJECT_MSG_DEFINE_OPTIONAL(int16_t, bar);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, foobar);
   OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
+
+ public:
+  void __Delete__();
+
 END_OBJECT_MSG(ObjectMsgFoo)
 // clang-format on
 
@@ -43,12 +43,13 @@ TEST(OBJECT_MSG, __delete__) {
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgBar)
+  OBJECT_MSG_DEFINE_OPTIONAL(ObjectMsgFoo, foo);
+  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
+
  public:
   void __Delete__(){
     if (mutable_is_deleted()) { *mutable_is_deleted() = "bar_deleted"; }
   }
-  OBJECT_MSG_DEFINE_OPTIONAL(ObjectMsgFoo, foo);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
 END_OBJECT_MSG(ObjectMsgBar)
 // clang-format on
 
@@ -178,7 +179,6 @@ END_FLAT_MSG(FlatMsgDemo)
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgContainerDemo)
   OBJECT_MSG_DEFINE_FLAT_MSG(FlatMsgDemo, flat_field);
-
 END_OBJECT_MSG(ObjectMsgContainerDemo)
 // clang-format on
 
@@ -195,6 +195,8 @@ TEST(OBJECT_MSG, flat_msg_field) {
 BEGIN_OBJECT_MSG(TestListItem)
   OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
   OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
+
+ public:
   void __Delete__() {
     if (has_cnt()) { --*mutable_cnt(); }
   }
