@@ -7,20 +7,20 @@ namespace oneflow {
 namespace test {
 
 struct ListItemBar final {
-  ListItemBar() { bar_list.Init(); }
+  ListItemBar() { bar_list.__Init__(); }
   int value;
   EmbeddedListItem bar_list;
 };
 
 class TestEmbeddedListItem final : public EmbeddedListItem {
  public:
-  TestEmbeddedListItem() { this->Init(); }
+  TestEmbeddedListItem() { this->__Init__(); }
 };
 
 template<typename ItemField>
 class TestEmbeddedList : public EmbeddedListHead<ItemField> {
  public:
-  TestEmbeddedList() { this->Init(); }
+  TestEmbeddedList() { this->__Init__(); }
 };
 
 using BarListView = TestEmbeddedList<STRUCT_FIELD(ListItemBar, bar_list)>;
@@ -43,7 +43,7 @@ TEST(TestEmbeddedListItem, clear) {
   TestEmbeddedListItem list_head0;
   TestEmbeddedListItem list_head1;
   list_head1.AppendTo(&list_head0);
-  list_head1.Init();
+  list_head1.__Init__();
   ASSERT_EQ(&list_head1, list_head1.prev());
   ASSERT_EQ(&list_head1, list_head1.next());
 }

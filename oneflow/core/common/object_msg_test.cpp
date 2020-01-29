@@ -68,6 +68,8 @@ TEST(OBJECT_MSG, nested_delete) {
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
+    ASSERT_EQ(bar->ref_cnt(), 1);
+    ASSERT_EQ(foo->ref_cnt(), 1);
   }
   ASSERT_EQ(is_deleted, std::string("deleted"));
   ASSERT_EQ(bar_is_deleted, std::string("bar_deleted"));
@@ -199,6 +201,44 @@ END_OBJECT_MSG(TestListItem)
 TEST(ObjectMsgList, empty) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   ASSERT_TRUE(foo_list.empty());
+  ASSERT_EQ(foo_list.size(), 0);
+}
+
+TEST(ObjectMsgList, empty_GetBegin) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  foo_list.GetBegin(&obj_ptr);
+  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+}
+
+TEST(ObjectMsgList, empty_MoveToNext) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  ASSERT_TRUE(foo_list.EqualsEnd(next));
+  foo_list.MoveToNext(&obj_ptr);
+  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  foo_list.MoveToNext(&obj_ptr, &next);
+  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  ASSERT_TRUE(foo_list.EqualsEnd(next));
+}
+
+TEST(ObjectMsgList, PushFront) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushFront(&item0);
+  foo_list.PushFront(&item1);
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(obj_ptr == item1);
+  ASSERT_TRUE(next == item0);
 }
 
 // clang-format off
