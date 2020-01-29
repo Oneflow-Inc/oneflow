@@ -537,8 +537,11 @@ class ObjectMsgPtr final {
   T* operator->() { return ptr_; }
   T& operator*() { return *ptr_; }
 
+  void Reset() { Reset(nullptr); }
+
   void Reset(T* ptr) {
     Clear();
+    if (ptr == nullptr) { return; }
     ptr_ = ptr;
     ObjectMsgPtrUtil::Ref<T>(ptr_);
   }
@@ -573,9 +576,15 @@ class TrivialObjectMsgList {
 
   void Init() { list_head_.Init(); }
 
-  void GetBegin(ObjectMsgPtr<item_type>* begin) { begin->Reset(list_head_.begin_item()); }
+  void GetBegin(ObjectMsgPtr<item_type>* begin) {
+    if (list_head_.empty()) { return begin->Reset(); }
+    begin->Reset(list_head_.begin_item());
+  }
   void MoveToNext(ObjectMsgPtr<item_type>* ptr) {
-    ptr->Reset(list_head_.next_item(ptr->Mutable()));
+    if (!*ptr) { return; }
+    auto* next_item = list_head_.next_item(ptr->Mutable());
+    if (next_item == list_head_.end_item()) { next_item = nullptr; }
+    ptr->Reset(next_item);
   }
 
   void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
@@ -588,10 +597,7 @@ class TrivialObjectMsgList {
     MoveToNext(next);
   }
 
-  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const {
-    if (!ptr) { return true; }
-    return &ptr.Get() == &list_head_.end_item();
-  }
+  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return ptr; }
 
   void PushBack(ObjectMsgPtr<item_type>* ptr) {
     list_head_.PushBack(ptr->Mutable());
