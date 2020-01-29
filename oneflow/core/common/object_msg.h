@@ -223,12 +223,20 @@ typedef std::string OBJECT_MSG_TYPE(string);
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete); \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                        \
- private:                                                                                 \
-  TrivialObjectMsgList<                                                                   \
-      StructField<OBJECT_MSG_TYPE(field_type), EmbeddedListItem,                          \
-                  OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>> \
-      OF_PP_CAT(field_name, _);
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                         \
+ public:                                                                                   \
+  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                  \
+      StructField<OBJECT_MSG_TYPE(field_type), EmbeddedListItem,                           \
+                  OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>>; \
+  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
+    return OF_PP_CAT(field_name, _);                                                       \
+  }                                                                                        \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {          \
+    return &OF_PP_CAT(field_name, _);                                                      \
+  }                                                                                        \
+                                                                                           \
+ private:                                                                                  \
+  OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM(field_counter, field_name)               \
   _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                              \
@@ -304,6 +312,14 @@ typedef std::string OBJECT_MSG_TYPE(string);
   ObjectMsgList<                                                   \
       StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListItem, \
                   OBJECT_MSG_TYPE(obj_msg_type)::OF_PP_CAT(obj_msg_field, _DssFieldOffset)()>>
+
+#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, item)                                \
+  for (auto item = (list_ptr)->Begin(), __next_item__ = (list_ptr)->Next(item); \
+       !(list_ptr)->EqualsEnd(item);                                            \
+       item = __next_item__, __next_item__ = (list_ptr)->Next(__next_item__))
+
+#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, item) \
+  for (auto item = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(item); item = (list_ptr)->Next(item))
 
 class ObjectMsgAllocator {
  public:
@@ -592,6 +608,16 @@ class TrivialObjectMsgList {
     if (next_item == list_head_.end_item()) { next_item = nullptr; }
     ptr->Reset(next_item);
   }
+  ObjectMsgPtr<item_type> Begin() {
+    ObjectMsgPtr<item_type> begin;
+    GetBegin(&begin);
+    return begin;
+  }
+  ObjectMsgPtr<item_type> Next(const ObjectMsgPtr<item_type>& ptr) {
+    ObjectMsgPtr<item_type> ret(ptr);
+    MoveToNext(&ret);
+    return ret;
+  }
 
   void GetLast(ObjectMsgPtr<item_type>* last) {
     if (list_head_.empty()) { return last->Reset(); }
@@ -629,11 +655,19 @@ class TrivialObjectMsgList {
     ptr->Reset(list_head_.PopBack());
     ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
   }
+  void PopBack() {
+    ObjectMsgPtr<item_type> ptr;
+    PopBack(&ptr);
+  }
 
   void PopFront(ObjectMsgPtr<item_type>* ptr) {
     if (list_head_.empty()) { ptr->Reset(); }
     ptr->Reset(list_head_.PopFront());
     ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
+  }
+  void PopFront() {
+    ObjectMsgPtr<item_type> ptr;
+    PopFront(&ptr);
   }
 
   void Clear() {
