@@ -101,6 +101,13 @@ namespace oneflow {
 
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                                    \
  public:                                                                                         \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                          \
+    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                 \
+    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;                         \
+    static const bool is_ptr = std::is_pointer<FieldType>::value;                                \
+    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                           \
+    return MutableTrait<is_ptr>::Call(ptr);                                                      \
+  }                                                                                              \
   OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                      \
     static const char* field_name = OF_PP_STRINGIZE(OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));      \
     auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                 \
@@ -230,6 +237,9 @@ typedef std::string OBJECT_MSG_TYPE(string);
                   OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>>; \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
     return OF_PP_CAT(field_name, _);                                                       \
+  }                                                                                        \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {              \
+    return &OF_PP_CAT(field_name, _);                                                      \
   }                                                                                        \
   OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {          \
     return &OF_PP_CAT(field_name, _);                                                      \

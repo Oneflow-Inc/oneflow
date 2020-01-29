@@ -191,6 +191,11 @@ namespace oneflow {
 #define _DSS_DEFINE_MUTABLE(field_type, field_name)                                      \
   typename std::conditional<std::is_pointer<field_type>::value,                          \
                             std::remove_pointer<field_type>::type, field_type>::type*    \
+      mut_##field_name() {                                                               \
+    return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
+  }                                                                                      \
+  typename std::conditional<std::is_pointer<field_type>::value,                          \
+                            std::remove_pointer<field_type>::type, field_type>::type*    \
       mutable_##field_name() {                                                           \
     return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
   }
