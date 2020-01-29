@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor_desc.h"
@@ -30,7 +31,8 @@ class UserOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().user_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
@@ -196,7 +198,9 @@ void UserOp::InitFromOpConf() {
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+                                   const ParallelContext* parallel_ctx,
+                                   const SbpSignature* sbp_signature,
+                                   std::function<void(OpContext*)> EnrollOpCtx) const {
   const user_op::OpRegistrationVal* val =
       user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
   CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
@@ -219,13 +223,13 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
   }
 
-  // tmp buffer size must be inferred after out shape/dtype
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
+  // tmp buffer size must be inferred after out shape/dtype
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
@@ -233,6 +237,41 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
+
+  // get inplace proposal in/out blob pair
+  UserOpCtx* op_ctx = new UserOpCtx();
+  HashSet<std::string> bn_in_op_unique_check;
+  user_op::AddInplaceArgPair AddInplaceArgPairFn =
+      [&](const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
+          int32_t in_arg_index, bool is_mutable) -> Maybe<void> {
+    std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+    std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+    if (is_mutable) {
+      op_ctx->mut_inplace_obn2ibn.emplace(obn, ibn);
+    } else {
+      op_ctx->con_inplace_obn2ibn.emplace(obn, ibn);
+    }
+
+    CHECK_OR_RETURN(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end())
+        << "Cannot find input_arg_name : " << in_arg_name << " input_arg_index : " << in_arg_index
+        << " in op_name: " << op_conf().name();
+    CHECK_OR_RETURN(std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end())
+        << "Cannot find output_arg_name : " << out_arg_name
+        << " output_arg_index : " << out_arg_index << " in op_name: " << op_conf().name();
+
+    std::string repeated_ibn_err_msg =
+        "Cannot repeated set inplace proposal for same intput arg : " + in_arg_name
+        + " index : " + std::to_string(in_arg_index) + " in op_name: " + op_conf().name();
+    std::string repeated_obn_err_msg =
+        "Cannot repeated set inplace proposal for same output arg : " + out_arg_name
+        + " index : " + std::to_string(out_arg_index) + " in op_name: " + op_conf().name();
+    CHECK_OR_RETURN(bn_in_op_unique_check.insert(ibn).second) << repeated_ibn_err_msg;
+    CHECK_OR_RETURN(bn_in_op_unique_check.insert(obn).second) << repeated_obn_err_msg;
+    return Maybe<void>::Ok();
+  };
+  JUST(kernel_reg_val->inplace_proposal_fn(infer_ctx, AddInplaceArgPairFn));
+  EnrollOpCtx(op_ctx);
+
   return Maybe<void>::Ok();
 }
 

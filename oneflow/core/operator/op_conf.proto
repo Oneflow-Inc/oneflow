@@ -543,6 +543,11 @@ message LinearCosineDecayConf {
   optional double beta = 4 [default = 0.001];
 }
 
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2;
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -552,6 +557,7 @@ message LearningRateDecayConf {
     PolynomialDecayConf polynomial_conf = 2004;
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
 }
 
@@ -803,13 +809,6 @@ message OutputOpConf {
   required string in = 1;
   required string out = 2;
   required InterfaceBlobConf blob_conf = 3;
-}
-
-message SwitchOutputOpConf {
-  repeated string in = 1;
-  required string in_index = 2;
-  required string out = 3;
-  required InterfaceBlobConf blob_conf = 4;
 }
 
 message ForeignOutputOpConf {
@@ -1165,7 +1164,6 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
-  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
@@ -1195,6 +1193,55 @@ message BroadcastMulOpConf {
 }
 
 message BroadcastDivOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastNotEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLogicalAndOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
@@ -1559,6 +1606,72 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message DynamicBinarySplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 base_shift = 3;
+}
+
+message DynamicBinaryConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required DataType out_data_type = 3;
+  required ShapeProto out_shape = 4;
+  required OptInt64 out_batch_axis = 5;
+  required SbpParallel out_sbp = 6;
+}
+
+message UniqueWithCountsOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string idx = 3;
+  required string count = 4;
+  required string num_unique = 5;
+  optional DataType out_idx = 6 [default = kInt32];
+}
+
+message IndexedSlicesReduceSumOpConf {
+  required string x_indices = 1;
+  required string x_values = 2;
+  required string y_indices = 3;
+  required string y_values = 4;
+  required string num_unique = 5;
+}
+
+message ConstantLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional DataType data_type = 3;
+  oneof scalar_operand {
+    int64 int_operand = 4;
+    double float_operand = 5;
+  }
+}
+
+message ScalarAddByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarMulByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarSubByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarDivByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1609,7 +1722,6 @@ message OperatorConf {
     ForeignInputOpConf foreign_input_conf = 142;
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
-    SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
     NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
@@ -1624,6 +1736,8 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
+    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
+    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     UserOpConf user_conf = 199;
     
     // domain op
@@ -1712,6 +1826,9 @@ message OperatorConf {
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
+    UniqueWithCountsOpConf unique_with_counts_conf = 337;
+    IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    ConstantLikeOpConf constant_like_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -1720,12 +1837,23 @@ message OperatorConf {
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
-    BroadcastFloorModOpConf broadcast_floor_mod_conf = 504;
+    BroadcastEqualOpConf broadcast_equal_conf = 504;
+    BroadcastNotEqualOpConf broadcast_not_equal_conf = 505;
+    BroadcastLessThanOpConf broadcast_less_than_conf = 506;
+    BroadcastLessEqualOpConf broadcast_less_equal_conf = 507;
+    BroadcastGreaterThanOpConf broadcast_greater_than_conf = 508;
+    BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
+    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
+    BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
+    ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
+    ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
+    ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
+    ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
