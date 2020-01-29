@@ -286,6 +286,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 #define OBJECT_MSG_DEFINE_DELETE()                                                \
  public:                                                                          \
   void ObjectMsg__Delete__() {                                                    \
+    this->__Delete__();                                                           \
     this->template __ReverseWalkField__<ObjectMsgField__Delete__, void>(nullptr); \
   }                                                                               \
                                                                                   \
@@ -337,6 +338,8 @@ class ObjectMsgStruct {
  public:
   void __Delete__() {}
 
+  int32_t ref_cnt() const { return ref_cnt_; }
+
  protected:
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
@@ -365,11 +368,11 @@ struct ObjectMsgPtrUtil final {
   }
   template<typename T>
   static void ReleaseRef(T* ptr) {
-    if (ptr == nullptr) { return; }
+    CHECK_NOTNULL(ptr);
     int32_t ref_cnt = ptr->DecreaseRefCount();
     if (ref_cnt > 0) { return; }
     auto* allocator = ptr->mut_allocator();
-    ptr->__Delete__();
+    ptr->ObjectMsg__Delete__();
     allocator->Deallocate(reinterpret_cast<char*>(ptr), sizeof(T));
   }
 };
@@ -407,7 +410,9 @@ struct ObjectMsgGetDefault<false> final {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) { field->Init(); }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+    field->__Init__();
+  }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
@@ -420,7 +425,7 @@ struct ObjectMsgEmbeddedListHeadDelete {
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListItemInit {
   static void Call(WalkCtxType* ctx, EmbeddedListItem* field, const char* field_name) {
-    field->Init();
+    field->__Init__();
   }
 };
 
@@ -513,7 +518,6 @@ struct _ObjectMsgNaiveDelete<true> {
                   "FieldType is not a subclass of ObjectMsgStruct");
     auto* ptr = *field;
     if (ptr == nullptr) { return; }
-    ptr->ObjectMsg__Delete__();
     ObjectMsgPtrUtil::ReleaseRef<FieldType>(ptr);
   }
 };
@@ -523,15 +527,16 @@ class ObjectMsgPtr final {
  public:
   ObjectMsgPtr() : ptr_(nullptr) {}
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
-    ptr_ = obj_ptr.ptr_;
-    ObjectMsgPtrUtil::Ref<T>(ptr_);
+    ptr_ = nullptr;
+    Reset(obj_ptr.ptr_);
   }
-  ~ObjectMsgPtr() { ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr); }
+  ~ObjectMsgPtr() { Clear(); }
 
-  operator bool() const { return ptr_ == nullptr; }
+  operator bool() const { return ptr_ != nullptr; }
   const T* Get() const { return ptr_; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
+  bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
   T* Mutable() { return ptr_; }
   T* operator->() { return ptr_; }
@@ -560,7 +565,8 @@ class ObjectMsgPtr final {
 
  private:
   void Clear() {
-    ObjectMsgNaiveDelete<void, T*>::Call(nullptr, &ptr_, nullptr);
+    if (ptr_ == nullptr) { return; }
+    ObjectMsgPtrUtil::ReleaseRef<T>(ptr_);
     ptr_ = nullptr;
   }
   T* ptr_;
@@ -574,7 +580,7 @@ class TrivialObjectMsgList {
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
 
-  void Init() { list_head_.Init(); }
+  void __Init__() { list_head_.__Init__(); }
 
   void GetBegin(ObjectMsgPtr<item_type>* begin) {
     if (list_head_.empty()) { return begin->Reset(); }
@@ -587,6 +593,10 @@ class TrivialObjectMsgList {
     ptr->Reset(next_item);
   }
 
+  void GetLast(ObjectMsgPtr<item_type>* last) {
+    if (list_head_.empty()) { return last->Reset(); }
+    last->Reset(list_head_.last_item());
+  }
   void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
     GetBegin(begin);
     GetBegin(next);
@@ -597,7 +607,7 @@ class TrivialObjectMsgList {
     MoveToNext(next);
   }
 
-  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return ptr; }
+  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return !ptr; }
 
   void PushBack(ObjectMsgPtr<item_type>* ptr) {
     list_head_.PushBack(ptr->Mutable());
@@ -615,11 +625,13 @@ class TrivialObjectMsgList {
   }
 
   void PopBack(ObjectMsgPtr<item_type>* ptr) {
+    if (list_head_.empty()) { ptr->Reset(); }
     ptr->Reset(list_head_.PopBack());
     ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
   }
 
   void PopFront(ObjectMsgPtr<item_type>* ptr) {
+    if (list_head_.empty()) { ptr->Reset(); }
     ptr->Reset(list_head_.PopFront());
     ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
   }
@@ -635,7 +647,7 @@ class TrivialObjectMsgList {
 template<typename ItemField>
 class ObjectMsgList : public TrivialObjectMsgList<ItemField> {
  public:
-  ObjectMsgList() { this->Init(); }
+  ObjectMsgList() { this->__Init__(); }
   ~ObjectMsgList() { this->Clear(); }
 };
 

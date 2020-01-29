@@ -15,7 +15,7 @@ struct EmbeddedListItem {
     prev->set_next(this);
     this->set_prev(prev);
   }
-  void Init() {
+  void __Init__() {
     prev_ = this;
     next_ = this;
   }
@@ -62,8 +62,8 @@ class EmbeddedListHead {
   item_type* prev_item(item_type* current) {
     return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->prev());
   }
-  void Init() {
-    container_.Init();
+  void __Init__() {
+    container_.__Init__();
     size_ = 0;
   }
 
@@ -72,7 +72,7 @@ class EmbeddedListHead {
     CHECK_NE(item, end_item());
     EmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
     list_item->next()->AppendTo(list_item->prev());
-    list_item->Init();
+    list_item->__Init__();
     --size_;
   }
   void PushBack(item_type* item) { InsertAfter(last_item(), item); }
