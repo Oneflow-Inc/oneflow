@@ -10,18 +10,18 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                                                           \
-  struct OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                          \
-   public:                                                                                     \
-    static const bool __is_object_message_type__ = true;                                       \
-    BEGIN_DSS(DSS_GET_DEFINE_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
-    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));                                    \
-    OBJECT_MSG_DEFINE_INIT();                                                                  \
+#define BEGIN_OBJECT_MSG(class_name)                                                          \
+  struct OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                         \
+   public:                                                                                    \
+    static const bool __is_object_message_type__ = true;                                      \
+    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
+    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));                                   \
+    OBJECT_MSG_DEFINE_INIT();                                                                 \
     OBJECT_MSG_DEFINE_DELETE();
 
 #define END_OBJECT_MSG(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  END_DSS(DSS_GET_DEFINE_COUNTER(), "object message", OBJECT_MSG_TYPE(class_name)); \
+  END_DSS(DSS_GET_FIELD_COUNTER(), "object message", OBJECT_MSG_TYPE(class_name));  \
   }                                                                                 \
   ;
 
@@ -32,23 +32,23 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_RAW_PTR(field_type, field_name)                           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_RAW_PTR(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
+  _OBJECT_MSG_DEFINE_RAW_PTR(DSS_GET_FIELD_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_ITEM(field_name)                                     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_ITEM(DSS_GET_DEFINE_COUNTER(), field_name);
+  _OBJECT_MSG_DEFINE_LIST_ITEM(DSS_GET_FIELD_COUNTER(), field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_HEAD(field_type, field_name)                         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
+  _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_FLAT_MSG(field_type, field_name)                          \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_FLAT_MSG(DSS_GET_DEFINE_COUNTER(), field_type, field_name);
+  _OBJECT_MSG_DEFINE_FLAT_MSG(DSS_GET_FIELD_COUNTER(), field_type, field_name);
 
 #define OBJECT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_ONEOF_FIELD(DSS_GET_DEFINE_COUNTER(), oneof_name, type_and_field_name_seq)
+  _OBJECT_MSG_DEFINE_ONEOF_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq)
 
 #define OBJECT_MSG_ONEOF_FIELD(field_type, field_name) \
   OF_PP_MAKE_TUPLE_SEQ(OBJECT_MSG_TYPE(field_type), field_name)
@@ -59,29 +59,29 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_ONEOF_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
-  OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_TYPEDEF_ONEOF_FIELD, type_and_field_name_seq);            \
-  OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                   \
-  OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);                       \
-  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(define_counter, oneof_name, type_and_field_name_seq);    \
-  OBJECT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq);
+#define _OBJECT_MSG_DEFINE_ONEOF_FIELD(field_counter, oneof_name, type_and_field_name_seq) \
+  OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_TYPEDEF_ONEOF_FIELD, type_and_field_name_seq);           \
+  OBJECT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                  \
+  OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);                      \
+  OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(field_counter, oneof_name, type_and_field_name_seq);    \
+  OBJECT_MSG_DSS_DEFINE_UION_FIELD(field_counter, oneof_name, type_and_field_name_seq);
 
 #define OBJECT_MSG_TYPEDEF_ONEOF_FIELD(field_type, field_name) \
   using OF_PP_CAT(field_name, _OneofFieldType) = typename OBJECT_MSG_STRUCT_MEMBER(field_type);
 
-#define OBJECT_MSG_DSS_DEFINE_UION_FIELD(define_counter, oneof_name, type_and_field_name_seq) \
-  DSS_DEFINE_FIELD(define_counter, "object message", OF_PP_CAT(oneof_name, _));               \
-  DSS_DEFINE_UNION_FIELD_VISITOR(                                                             \
-      define_counter, case_,                                                                  \
+#define OBJECT_MSG_DSS_DEFINE_UION_FIELD(field_counter, oneof_name, type_and_field_name_seq) \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_UNION_FIELD_VISITOR(                                                            \
+      field_counter, case_,                                                                  \
       OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
 
 #define OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name)                    \
   OF_PP_MAKE_TUPLE_SEQ(OF_PP_CAT(field_name, _OneofFieldType), OF_PP_CAT(field_name, _), \
                        _OBJECT_MSG_ONEOF_ENUM_VALUE(field_name))
 
-#define OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(define_counter, oneof_name, type_and_field_name_seq)  \
+#define OBJECT_MSG_DEFINE_ONEOF_ACCESSOR(field_counter, oneof_name, type_and_field_name_seq)   \
   _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name)); \
-  OBJECT_MSG_MAKE_ONEOF_CLEARER(define_counter, oneof_name);                                   \
+  OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name);                                    \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ACCESSOR, (oneof_name),               \
                                    type_and_field_name_seq)
 
@@ -115,11 +115,11 @@ namespace oneflow {
     return MutableTrait<is_ptr>::Call(ptr);                                                      \
   }
 
-#define OBJECT_MSG_MAKE_ONEOF_CLEARER(define_counter, oneof_name)                               \
+#define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                \
  public:                                                                                        \
   void OF_PP_CAT(clear_, oneof_name)() {                                                        \
     const char* oneof_name_field = OF_PP_STRINGIZE(OF_PP_CAT(oneof_name, _));                   \
-    __DSS__VisitField<define_counter, ObjectMsgField__Delete__, void,                           \
+    __DSS__VisitField<field_counter, ObjectMsgField__Delete__, void,                            \
                       OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                   \
                                                                      &OF_PP_CAT(oneof_name, _), \
                                                                      oneof_name_field);         \
