@@ -282,12 +282,170 @@ TEST(ObjectMsgList, PushBack) {
   ASSERT_TRUE(next == item1);
 }
 
+TEST(ObjectMsgList, Erase) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  foo_list.Erase(&item1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(obj_ptr == item0);
+  ASSERT_TRUE(foo_list.EqualsEnd(next));
+}
+
+TEST(ObjectMsgList, PopBack) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  foo_list.PopBack();
+  ASSERT_EQ(item1->ref_cnt(), 1);
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(obj_ptr == item0);
+  ASSERT_TRUE(foo_list.EqualsEnd(next));
+}
+
+TEST(ObjectMsgList, PopFront) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  foo_list.PopFront();
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(obj_ptr == item1);
+  ASSERT_TRUE(foo_list.EqualsEnd(next));
+}
+
+TEST(ObjectMsgList, Clear) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  foo_list.Clear();
+  ASSERT_TRUE(foo_list.empty());
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+}
+
+TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  int i = 0;
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+    if (i == 0) {
+      ASSERT_TRUE(item == item0);
+    } else if (i == 1) {
+      ASSERT_TRUE(item == item1);
+    }
+    ++i;
+  }
+  ASSERT_EQ(i, 2);
+}
+
+TEST(ObjectMsgList, FOR_EACH) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  int i = 0;
+  OBJECT_MSG_LIST_FOR_EACH(&foo_list, item) {
+    if (i == 0) {
+      ASSERT_TRUE(item == item0);
+      foo_list.Erase(&item);
+    } else if (i == 1) {
+      ASSERT_TRUE(item == item1);
+      foo_list.Erase(&item);
+    }
+    ++i;
+  }
+  ASSERT_EQ(i, 2);
+  ASSERT_TRUE(foo_list.empty());
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+}
+
 // clang-format off
-BEGIN_OBJECT_MSG(TestListHead)
+BEGIN_OBJECT_MSG(TestObjectMsgListHead);
   OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list);
-  OBJECT_MSG_DEFINE_LIST_ITEM(bar_list);
-END_OBJECT_MSG(TestListHead)
+END_OBJECT_MSG(TestObjectMsgListHead);
 // clang-format on
+
+TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
+  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHead)::New();
+  auto& foo_list = *foo_list_head->mutable_foo_list();
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  int i = 0;
+  OBJECT_MSG_LIST_FOR_EACH(&foo_list, item) {
+    if (i == 0) {
+      ASSERT_TRUE(item == item0);
+      foo_list.Erase(&item);
+    } else if (i == 1) {
+      ASSERT_TRUE(item == item1);
+      foo_list.Erase(&item);
+    }
+    ++i;
+  }
+  ASSERT_EQ(i, 2);
+  ASSERT_TRUE(foo_list.empty());
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+}
+
+// clang-format off
+BEGIN_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+  OBJECT_MSG_DEFINE_OPTIONAL(TestObjectMsgListHead, head);
+END_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+// clang-format on
+
+TEST(ObjectMsg, nested_list_delete) {
+  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHeadWrapper)::New();
+  auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  int i = 0;
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+    if (i == 0) {
+      ASSERT_TRUE(item == item0);
+    } else if (i == 1) {
+      ASSERT_TRUE(item == item1);
+    }
+    ++i;
+  }
+  ASSERT_EQ(i, 2);
+  foo_list_head->clear_head();
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+}
 
 }  // namespace test
 
