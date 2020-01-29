@@ -195,6 +195,9 @@ TEST(OBJECT_MSG, flat_msg_field) {
 BEGIN_OBJECT_MSG(TestListItem)
   OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
   OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
+  void __Delete__() {
+    if (has_cnt()) { --*mutable_cnt(); }
+  }
 END_OBJECT_MSG(TestListItem)
 // clang-format on
 
@@ -239,6 +242,44 @@ TEST(ObjectMsgList, PushFront) {
   foo_list.GetBegin(&obj_ptr, &next);
   ASSERT_TRUE(obj_ptr == item1);
   ASSERT_TRUE(next == item0);
+}
+
+TEST(ObjectMsgList, destructor) {
+  int elem_cnt = 2;
+  {
+    OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+    auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+    item0->set_cnt(&elem_cnt);
+    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    item1->set_cnt(&elem_cnt);
+    foo_list.PushFront(&item0);
+    foo_list.PushFront(&item1);
+  }
+  ASSERT_EQ(elem_cnt, 0);
+  elem_cnt = 2;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  {
+    OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+    item0->set_cnt(&elem_cnt);
+    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    item1->set_cnt(&elem_cnt);
+    foo_list.PushFront(&item0);
+    foo_list.PushFront(&item1);
+  }
+  ASSERT_EQ(elem_cnt, 1);
+}
+
+TEST(ObjectMsgList, PushBack) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  foo_list.PushBack(&item0);
+  foo_list.PushBack(&item1);
+  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  OBJECT_MSG_PTR(TestListItem) next;
+  foo_list.GetBegin(&obj_ptr, &next);
+  ASSERT_TRUE(obj_ptr == item0);
+  ASSERT_TRUE(next == item1);
 }
 
 // clang-format off

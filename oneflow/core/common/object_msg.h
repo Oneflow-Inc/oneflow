@@ -250,7 +250,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
  public:                                                                               \
   static_assert(std::is_pointer<field_type>::value,                                    \
                 OF_PP_STRINGIZE(field_type) "is not a pointer");                       \
-  bool OF_PP_CAT(has_, field_name)() { return OF_PP_CAT(field_name, _) == nullptr; }   \
+  bool OF_PP_CAT(has_, field_name)() { return OF_PP_CAT(field_name, _) != nullptr; }   \
   void OF_PP_CAT(set_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
   void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }       \
   DSS_DEFINE_GETTER(field_type, field_name);                                           \
