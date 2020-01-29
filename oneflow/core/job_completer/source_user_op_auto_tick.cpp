@@ -10,7 +10,6 @@ class MutUserOpConTickInputHelper final : public MutOpConTickInputHelper {
 
   bool VirtualIsTickInputBound() const override {
     return !op_conf().user_conf().input().empty();
-    // return op_conf().record_load_conf().has_tick();
   }
 
   OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
