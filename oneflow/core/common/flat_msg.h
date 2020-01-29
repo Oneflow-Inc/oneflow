@@ -165,6 +165,10 @@ DEFINE_FLAT_MSG_TYPE(double);
     OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
     (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                          \
   }                                                                                       \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                   \
+    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                    \
+    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);               \
+  }                                                                                       \
   OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {               \
     OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
     (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                            \
@@ -196,19 +200,21 @@ DEFINE_FLAT_MSG_TYPE(double);
     OF_PP_CAT(oneof_name, _).case_ = val;                                           \
   }
 
-#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                       \
- public:                                                                                        \
-  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }  \
-  const FlatMsgRepeatedField<T, N>& field_name() const { return OF_PP_CAT(field_name, _); }     \
-  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }              \
-  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mutable_, field_name)() {                               \
-    return &OF_PP_CAT(field_name, _);                                                           \
-  }                                                                                             \
-  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); } \
-  T* OF_PP_CAT(add_, field_name)() { return OF_PP_CAT(field_name, _).Add(); }                   \
-  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                    \
-                                                                                                \
- private:                                                                                       \
+#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                         \
+ public:                                                                                          \
+  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }    \
+  const FlatMsgRepeatedField<T, N>& field_name() const { return OF_PP_CAT(field_name, _); }       \
+  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }                \
+  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mut_, field_name)() { return &OF_PP_CAT(field_name, _); } \
+  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mutable_, field_name)() {                                 \
+    return &OF_PP_CAT(field_name, _);                                                             \
+  }                                                                                               \
+  T* OF_PP_CAT(mut_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }       \
+  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }   \
+  T* OF_PP_CAT(add_, field_name)() { return OF_PP_CAT(field_name, _).Add(); }                     \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                      \
+                                                                                                  \
+ private:                                                                                         \
   FlatMsgRepeatedField<T, N> OF_PP_CAT(field_name, _)
 
 template<typename T, std::size_t N>
