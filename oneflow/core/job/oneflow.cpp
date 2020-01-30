@@ -240,7 +240,7 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
 }
 
 void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto&(int64_t)>& TaskProto4TaskId) {
+                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
   for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
     auto* regst = &pair.second;
     CHECK(regst->mem_case().has_host_mem());
@@ -249,7 +249,7 @@ void FixRegstHostMemCase(TaskProto* task_proto,
     for (int64_t consumer_task_id : regst->consumer_task_id()) {
       const auto& consumer_task_proto = TaskProto4TaskId(consumer_task_id);
       used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto.machine_id());
+          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
     }
     regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
   }
