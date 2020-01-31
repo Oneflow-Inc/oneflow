@@ -31,4 +31,4 @@ jobs:
         docker run -u $(id -u ${USER}):$(id -g ${USER}) --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD"
     - name: Run Test
       run: |
-        docker run --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/docker/test/test.sh $PWD
+        docker run --shm-size=8g --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/docker/test/test.sh $PWD
