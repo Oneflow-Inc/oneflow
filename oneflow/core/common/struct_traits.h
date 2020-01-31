@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 
+#include <cstddef>
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
