@@ -11,12 +11,12 @@ namespace oneflow {
 
 // details
 #define _OBJECT_MSG_DEFINE_RAW_PTR(field_counter, field_type, field_name) \
-  _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)            \
+  _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgRawPtrInit);           \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgRawPtrDelete);       \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                   \
+#define _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                       \
  public:                                                                               \
   static_assert(std::is_pointer<field_type>::value,                                    \
                 OF_PP_STRINGIZE(field_type) "is not a pointer");                       \
@@ -43,7 +43,6 @@ struct ObjectMsgRawPtrDelete {
     static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
   }
 };
-
 }
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_

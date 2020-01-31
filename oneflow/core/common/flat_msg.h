@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_FLAT_MSG_H_
 
 #include <array>
+#include <glog/logging.h>
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/dss.h"
 

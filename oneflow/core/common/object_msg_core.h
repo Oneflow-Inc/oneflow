@@ -1,9 +1,11 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
 
+#include <cstring>
 #include <atomic>
 #include <memory>
 #include <type_traits>
+#include <glog/logging.h>
 #include "oneflow/core/common/dss.h"
 
 namespace oneflow {

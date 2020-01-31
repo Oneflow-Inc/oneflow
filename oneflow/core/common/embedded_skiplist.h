@@ -135,6 +135,8 @@ struct EmbeddedSkipListKey {
   const T& key() const { return key_; }
   T* mut_key() { return &key_; }
 
+  void CheckEmpty() const { return skiplist_iter_.CheckEmpty(); }
+
   void Clear() { skiplist_iter_.Clear(); }
 
   const EmbeddedSkipListIterator<N>& skiplist_iter() const { return skiplist_iter_; }
@@ -157,13 +159,13 @@ struct EmbeddedSkipListKey {
   T key_;
 };
 
-template<typename ElemKeyField, int N = 20>
+template<typename ElemKeyField>
 class EmbeddedSkipListHead {
  public:
   using elem_type = typename ElemKeyField::struct_type;
   using elem_key_type = typename ElemKeyField::field_type;
   using key_type = typename elem_key_type::key_type;
-  static const int max_level = N;
+  static const int max_level = elem_key_type::max_level;
 
   void __Init__() {
     skiplist_head_.__Init__();
@@ -171,7 +173,7 @@ class EmbeddedSkipListHead {
   }
 
   std::size_t size() const { return size_; }
-  bool empty() { return size_ == 0; }
+  bool empty() const { return size_ == 0; }
 
   elem_type* Find(const key_type& key) {
     EmbeddedSkipListVisitor<elem_key_type> visitor(&key, &skiplist_head_);
@@ -180,7 +182,7 @@ class EmbeddedSkipListHead {
     if (elem_key == nullptr || !(elem_key->key() == key)) { return nullptr; }
     return ElemKeyField::StructPtr4FieldPtr(elem_key);
   }
-  void Erase(const key_type& key) {
+  elem_type* Erase(const key_type& key) {
     EmbeddedSkipListVisitor<elem_key_type> visitor(&key, &skiplist_head_);
     visitor.SearchLastIteratorLessThanMe();
     elem_key_type* searched = visitor.Next();
@@ -188,6 +190,7 @@ class EmbeddedSkipListHead {
     CHECK(searched->key() == key);
     visitor.EraseNextIterator();
     --size_;
+    return ElemKeyField::StructPtr4FieldPtr(searched);
   }
   void Erase(elem_type* elem) {
     elem_key_type* elem_iter = ElemKeyField::FieldPtr4StructPtr(elem);
@@ -200,23 +203,28 @@ class EmbeddedSkipListHead {
     --size_;
   }
   // return true if success
-  bool Insert(elem_type* elem) {
-    elem_key_type* new_elem_key = ElemKeyField::FieldPtr4StructPtr(elem);
+  std::pair<elem_type*, bool> Insert(elem_type* elem_ptr) {
+    elem_key_type* new_elem_key = ElemKeyField::FieldPtr4StructPtr(elem_ptr);
     EmbeddedSkipListVisitor<elem_key_type> visitor(&new_elem_key->key(), &skiplist_head_);
     visitor.SearchLastIteratorLessThanMe();
     elem_key_type* searched = visitor.Next();
     visitor.InsertNextIterator(new_elem_key);
-    bool ret = ((searched == nullptr) || !(searched->key() == new_elem_key->key()));
-    if (ret) { ++size_; }
-    return ret;
+    bool success = ((searched == nullptr) || !(searched->key() == new_elem_key->key()));
+    elem_type* ret_elem = ElemKeyField::StructPtr4FieldPtr(searched);
+    if (success) {
+      ++size_;
+      ret_elem = elem_ptr;
+    }
+    return std::make_pair(ret_elem, success);
   }
 
   template<typename Callback>
   void Clear(const Callback& cb) {
     EmbeddedSkipListVisitor<elem_key_type> visitor(nullptr, &skiplist_head_);
     while (true) {
-      elem_type* searched = ElemKeyField::StructPtr4FieldPtr(visitor.Next());
-      if (searched == nullptr) { break; }
+      auto* first = visitor.Next();
+      if (first == nullptr) { break; }
+      elem_type* searched = ElemKeyField::StructPtr4FieldPtr(first);
       cb(searched);
       visitor.EraseNextIterator();
       --size_;
@@ -234,7 +242,7 @@ class EmbeddedSkipListHead {
   }
 
  private:
-  EmbeddedSkipListIterator<N> skiplist_head_;
+  EmbeddedSkipListIterator<max_level> skiplist_head_;
   std::size_t size_;
 };
 
