@@ -14,6 +14,14 @@ namespace oneflow {
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), field_type, field_name);
 
+#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, item)                                \
+  for (auto item = (list_ptr)->Begin(), __next_item__ = (list_ptr)->Next(item); \
+       !(list_ptr)->EqualsEnd(item);                                            \
+       item = __next_item__, __next_item__ = (list_ptr)->Next(__next_item__))
+
+#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, item) \
+  for (auto item = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(item); item = (list_ptr)->Next(item))
+
 // details
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, field_type, field_name)   \
@@ -54,14 +62,6 @@ namespace oneflow {
   ObjectMsgList<                                                   \
       StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListItem, \
                   OBJECT_MSG_TYPE(obj_msg_type)::OF_PP_CAT(obj_msg_field, _DssFieldOffset)()>>
-
-#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, item)                                \
-  for (auto item = (list_ptr)->Begin(), __next_item__ = (list_ptr)->Next(item); \
-       !(list_ptr)->EqualsEnd(item);                                            \
-       item = __next_item__, __next_item__ = (list_ptr)->Next(__next_item__))
-
-#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, item) \
-  for (auto item = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(item); item = (list_ptr)->Next(item))
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {

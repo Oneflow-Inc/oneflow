@@ -9,6 +9,7 @@ template<typename ElemKeyField>
 class TestEmbeddedSkipListHead final : public EmbeddedSkipListHead<ElemKeyField> {
  public:
   TestEmbeddedSkipListHead() { this->__Init__(); }
+  ~TestEmbeddedSkipListHead() { this->Clear(); }
 };
 
 struct FooSkipListElem {
@@ -22,7 +23,7 @@ using FooSkipList = TestEmbeddedSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>
 
 TEST(EmbeddedSkipList, empty) {
   FooSkipList skiplist;
-  ASSERT_TRUE(skiplist.empty());
+  ASSERT_TRUE(skiplist.empty_debug());
   ASSERT_EQ(skiplist.size(), 0);
 }
 
@@ -92,6 +93,8 @@ TEST(EmbeddedSkipList, insert_many) {
     auto* searched = skiplist.Find(int(-1001));
     ASSERT_TRUE(searched == nullptr);
   }
+  skiplist.Clear();
+  ASSERT_TRUE(skiplist.empty_debug());
 }
 
 TEST(EmbeddedSkipList, erase_many_by_key) {
@@ -113,6 +116,8 @@ TEST(EmbeddedSkipList, erase_many_by_key) {
   skiplist.Erase(int(0));
   ASSERT_EQ(skiplist.size(), 100);
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
+  skiplist.Clear();
+  ASSERT_TRUE(skiplist.empty_debug());
 }
 
 TEST(EmbeddedSkipList, erase_many_by_elem) {
@@ -134,6 +139,8 @@ TEST(EmbeddedSkipList, erase_many_by_elem) {
   skiplist.Erase(&elem0);
   ASSERT_EQ(skiplist.size(), 100);
   ASSERT_TRUE(skiplist.Find(int(0)) == nullptr);
+  skiplist.Clear();
+  ASSERT_TRUE(skiplist.empty_debug());
 }
 
 }  // namespace test

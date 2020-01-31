@@ -10,7 +10,9 @@ namespace oneflow {
 
 struct EmbeddedSingleListIterator final {
  public:
-  void __Init__() { next_ = nullptr; }
+  void __Init__() { Clear(); }
+
+  void Clear() { next_ = nullptr; }
 
   bool empty() const { return next_ == nullptr; }
 
@@ -37,8 +39,9 @@ template<int max_level>
 struct EmbeddedSkipListIterator final {
  public:
   using self_type = EmbeddedSkipListIterator<max_level>;
-  void __Init__() {
-    for (auto& link : links_) { link.__Init__(); }
+  void __Init__() { Clear(); }
+  void Clear() {
+    for (auto& link : links_) { link.Clear(); }
   }
   void InsertAfter(const std::array<EmbeddedSingleListIterator*, max_level>& prev_links,
                    int levels) {
@@ -51,6 +54,9 @@ struct EmbeddedSkipListIterator final {
                                                          int level) {
     auto* links_ptr = (std::array<EmbeddedSingleListIterator, max_level>*)(slist_ptr - level);
     return StructField<self_type, decltype(links_), LinksOffset()>::StructPtr4FieldPtr(links_ptr);
+  }
+  void CheckEmpty() const {
+    for (const auto& link : links_) { CHECK(link.next() == nullptr); }
   }
 
  private:
@@ -129,6 +135,8 @@ struct EmbeddedSkipListKey {
   const T& key() const { return key_; }
   T* mut_key() { return &key_; }
 
+  void Clear() { skiplist_iter_.Clear(); }
+
   const EmbeddedSkipListIterator<N>& skiplist_iter() const { return skiplist_iter_; }
   EmbeddedSkipListIterator<N>* mut_skiplist_iter() { return &skiplist_iter_; }
 
@@ -200,6 +208,28 @@ class EmbeddedSkipListHead {
     visitor.InsertNextIterator(new_elem_key);
     bool ret = ((searched == nullptr) || !(searched->key() == new_elem_key->key()));
     if (ret) { ++size_; }
+    return ret;
+  }
+
+  template<typename Callback>
+  void Clear(const Callback& cb) {
+    EmbeddedSkipListVisitor<elem_key_type> visitor(nullptr, &skiplist_head_);
+    while (true) {
+      elem_type* searched = ElemKeyField::StructPtr4FieldPtr(visitor.Next());
+      if (searched == nullptr) { break; }
+      cb(searched);
+      visitor.EraseNextIterator();
+      --size_;
+    }
+    CHECK(empty_debug());
+  }
+  void Clear() {
+    Clear([](elem_type*) {});
+  }
+
+  bool empty_debug() const {
+    bool ret = (size_ == 0);
+    if (ret) { skiplist_head_.CheckEmpty(); }
     return ret;
   }
 
