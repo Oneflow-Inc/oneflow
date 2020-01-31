@@ -100,6 +100,18 @@ TEST(FlatMsg, repeated) {
   ASSERT_EQ(foo.bar_size(), 0);
 }
 
+// clang-format off
+template<int N>
+BEGIN_FLAT_MSG(TestTemplateFlatMsg);
+  FLAT_MSG_DEFINE_REPEATED(char, char_field, N);
+END_FLAT_MSG(TestTemplateFlatMsg);
+// clang-format on
+
+TEST(FlatMsg, flat_msg_template) {
+  FLAT_MSG(TestTemplateFlatMsg<1024>) foo;
+  ASSERT_TRUE(foo.Get().char_field().empty());
+}
+
 }  // namespace
 
 }  // namespace oneflow

@@ -52,7 +52,7 @@ namespace oneflow {
 #define FLAT_MSG_ONEOF_NOT_SET_VALUE(field_type, oneof_name) \
   FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
 
-#define FLAT_MSG_TYPE(type_name) OF_PP_CAT(type_name, __flat_msg_type__)
+#define FLAT_MSG_TYPE(type_name) OF_PP_CAT(__flat_message_type__, type_name)
 
 // details
 
@@ -219,7 +219,10 @@ DEFINE_FLAT_MSG_TYPE(double);
   FlatMsgRepeatedField<T, N> OF_PP_CAT(field_name, _)
 
 template<typename T, std::size_t N>
-struct FlatMsgRepeatedField final {
+class FlatMsgRepeatedField final {
+ public:
+  bool empty() const { return size_ == 0; }
+
   std::size_t size() const { return size_; }
 
   void clear() { size_ = 0; }
