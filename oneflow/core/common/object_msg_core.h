@@ -39,7 +39,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
 
-#define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(class_name, __object_message_type__)
+#define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(__object_message_type__, class_name)
 
 // details
 
