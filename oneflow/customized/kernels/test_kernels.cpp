@@ -71,4 +71,28 @@ REGISTER_USER_KERNEL("TestReshape")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestReshapeKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
+class TestSourceKernel final : public oneflow::user_op::OpKernel {
+ public:
+  TestSourceKernel(const oneflow::user_op::KernelInitContext& ctx)
+      : oneflow::user_op::OpKernel(ctx) {}
+  TestSourceKernel() = default;
+  ~TestSourceKernel() = default;
+
+ private:
+  void Compute(oneflow::user_op::KernelContext* ctx) override {
+    oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
+  }
+};
+
+REGISTER_USER_KERNEL("TestSource")
+    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
+      return new TestSourceKernel(ctx);
+    })
+    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
+      if (ctx.device() == DeviceType::kCPU && ctx.data_type() == DataType::kFloat) { return true; }
+      return false;
+    })
+    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 0; });
+
 }  // namespace oneflow
