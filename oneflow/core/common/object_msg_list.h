@@ -173,6 +173,8 @@ class TrivialObjectMsgList {
     PopFront(&ptr);
   }
 
+  void MoveTo(TrivialObjectMsgList* list) { list_head_.MoveTo(&list->list_head_); }
+
   void Clear() {
     while (!empty()) { ObjectMsgPtrUtil::ReleaseRef(list_head_.PopFront()); }
   }
@@ -184,6 +186,8 @@ class TrivialObjectMsgList {
 template<typename ItemField>
 class ObjectMsgList : public TrivialObjectMsgList<ItemField> {
  public:
+  ObjectMsgList(const ObjectMsgList&) = delete;
+  ObjectMsgList(ObjectMsgList&&) = delete;
   ObjectMsgList() { this->__Init__(); }
   ~ObjectMsgList() { this->Clear(); }
 };

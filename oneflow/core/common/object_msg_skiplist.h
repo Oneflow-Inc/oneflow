@@ -14,6 +14,9 @@ namespace oneflow {
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(DSS_GET_FIELD_COUNTER(), field_type, field_name);
 
+#define OBJECT_MSG_SKIPLIST(obj_msg_type, obj_msg_field) \
+  ObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
+
 // details
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, field_type, field_name)   \
@@ -61,9 +64,6 @@ namespace oneflow {
                                                                                                    \
  private:                                                                                          \
   EmbeddedSkipListKey<key_type, max_level> OF_PP_CAT(field_name, _);
-
-#define OBJECT_MSG_SKIPLIST(obj_msg_type, obj_msg_field) \
-  ObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
 
 #define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(field_type, field_name)                        \
   StructField<OBJECT_MSG_TYPE(field_type),                                                   \
@@ -142,6 +142,9 @@ class TrivialObjectMsgSkipList {
 template<typename ItemField>
 class ObjectMsgSkipList final : public TrivialObjectMsgSkipList<ItemField> {
  public:
+  ObjectMsgSkipList(const ObjectMsgSkipList&) = delete;
+  ObjectMsgSkipList(ObjectMsgSkipList&&) = delete;
+
   ObjectMsgSkipList() { this->__Init__(); }
   ~ObjectMsgSkipList() { this->Clear(); }
 };
