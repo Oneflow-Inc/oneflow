@@ -1638,6 +1638,11 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message SquareSumOpConf {
+  required string x = 1;
+  required string y = 2;
+}
+
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1854,6 +1859,7 @@ message OperatorConf {
     ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
     ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
     ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
+    SquareSumOpConf square_sum_conf = 522;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
