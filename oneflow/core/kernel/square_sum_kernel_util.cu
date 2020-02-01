@@ -12,8 +12,8 @@ __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  T sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { gpu_atomic_add<T>(y, sum); }
+  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
+  if (threadIdx.x == 0) { gpu_atomic_add<T>(y, b_sum); }
 }
 
 }  // namespace
