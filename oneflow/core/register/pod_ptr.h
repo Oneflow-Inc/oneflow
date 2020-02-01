@@ -55,13 +55,13 @@ class PodPtr final {
 template<typename T>
 const T* PodPtr::TensorPtr(FieldKey field_key, const T* default_ptr) const {
   if (!HasField(field_key)) { return default_ptr; }
-  return Field(field_key).TensorPtr<T>();
+  return Field(field_key).template TensorPtr<T>();
 }
 
 template<typename T>
 T* PodPtr::MutTensorPtr(FieldKey field_key, T* default_ptr) {
   if (!HasField(field_key)) { return default_ptr; }
-  return MutField(field_key).MutTensorPtr<T>();
+  return MutField(field_key).template MutTensorPtr<T>();
 }
 
 template<typename T>

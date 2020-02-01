@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 #define ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 
+#include <functional>
 #include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
