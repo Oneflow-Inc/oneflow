@@ -105,7 +105,7 @@ class TrivialObjectMsgList {
     if (list_head_.empty()) { return begin->Reset(); }
     begin->Reset(list_head_.begin_item());
   }
-  void MoveToNext(ObjectMsgPtr<item_type>* ptr) {
+  void ResetToNext(ObjectMsgPtr<item_type>* ptr) {
     if (!*ptr) { return; }
     auto* next_item = list_head_.next_item(ptr->Mutable());
     if (next_item == list_head_.end_item()) { next_item = nullptr; }
@@ -118,7 +118,7 @@ class TrivialObjectMsgList {
   }
   ObjectMsgPtr<item_type> Next(const ObjectMsgPtr<item_type>& ptr) {
     ObjectMsgPtr<item_type> ret(ptr);
-    MoveToNext(&ret);
+    ResetToNext(&ret);
     return ret;
   }
 
@@ -129,48 +129,44 @@ class TrivialObjectMsgList {
   void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
     GetBegin(begin);
     GetBegin(next);
-    MoveToNext(next);
+    ResetToNext(next);
   }
-  void MoveToNext(ObjectMsgPtr<item_type>* ptr, ObjectMsgPtr<item_type>* next) {
+  void ResetToNext(ObjectMsgPtr<item_type>* ptr, ObjectMsgPtr<item_type>* next) {
     *ptr = *next;
-    MoveToNext(next);
+    ResetToNext(next);
   }
 
   bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return !ptr; }
 
-  void PushBack(ObjectMsgPtr<item_type>* ptr) {
-    list_head_.PushBack(ptr->Mutable());
-    ObjectMsgPtrUtil::Ref(ptr->Mutable());
+  void PushBack(item_type* ptr) {
+    list_head_.PushBack(ptr);
+    ObjectMsgPtrUtil::Ref(ptr);
   }
 
-  void PushFront(ObjectMsgPtr<item_type>* ptr) {
-    list_head_.PushFront(ptr->Mutable());
-    ObjectMsgPtrUtil::Ref(ptr->Mutable());
+  void PushFront(item_type* ptr) {
+    list_head_.PushFront(ptr);
+    ObjectMsgPtrUtil::Ref(ptr);
   }
 
-  void Erase(ObjectMsgPtr<item_type>* ptr) {
-    list_head_.Erase(ptr->Mutable());
-    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
+  void Erase(item_type* ptr) {
+    list_head_.Erase(ptr);
+    ObjectMsgPtrUtil::ReleaseRef(ptr);
   }
 
-  void PopBack(ObjectMsgPtr<item_type>* ptr) {
-    if (list_head_.empty()) { ptr->Reset(); }
-    ptr->Reset(list_head_.PopBack());
-    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
-  }
-  void PopBack() {
+  ObjectMsgPtr<item_type> PopBack() {
     ObjectMsgPtr<item_type> ptr;
-    PopBack(&ptr);
+    if (list_head_.empty()) { return ptr; }
+    ptr.Reset(list_head_.PopBack());
+    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
+    return ptr;
   }
 
-  void PopFront(ObjectMsgPtr<item_type>* ptr) {
-    if (list_head_.empty()) { ptr->Reset(); }
-    ptr->Reset(list_head_.PopFront());
-    ObjectMsgPtrUtil::ReleaseRef(ptr->Mutable());
-  }
-  void PopFront() {
+  ObjectMsgPtr<item_type> PopFront() {
     ObjectMsgPtr<item_type> ptr;
-    PopFront(&ptr);
+    if (list_head_.empty()) { return ptr; }
+    ptr.Reset(list_head_.PopFront());
+    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
+    return ptr;
   }
 
   void MoveTo(TrivialObjectMsgList* list) { list_head_.MoveTo(&list->list_head_); }
