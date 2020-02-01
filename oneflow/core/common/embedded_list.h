@@ -10,14 +10,19 @@ struct EmbeddedListItem {
  public:
   EmbeddedListItem* prev() const { return prev_; }
   EmbeddedListItem* next() const { return next_; }
+  EmbeddedListItem* head() const { return head_; }
+
+  void set_head(EmbeddedListItem* head) { head_ = head; }
 
   void AppendTo(EmbeddedListItem* prev) {
     prev->set_next(this);
     this->set_prev(prev);
   }
-  void __Init__() {
+  void __Init__() { Clear(); }
+  void Clear() {
     prev_ = this;
     next_ = this;
+    head_ = nullptr;
   }
   bool empty() const { return prev_ == this || next_ == this; }
 
@@ -27,6 +32,7 @@ struct EmbeddedListItem {
 
   EmbeddedListItem* prev_;
   EmbeddedListItem* next_;
+  EmbeddedListItem* head_;
 };
 
 template<typename ItemField>
@@ -71,8 +77,9 @@ class EmbeddedListHead {
     CHECK_GT(size_, 0);
     CHECK_NE(item, end_item());
     EmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
+    CHECK_EQ(&container_, list_item->head());
     list_item->next()->AppendTo(list_item->prev());
-    list_item->__Init__();
+    list_item->Clear();
     --size_;
   }
   void PushBack(item_type* item) { InsertAfter(last_item(), item); }
@@ -89,6 +96,20 @@ class EmbeddedListHead {
     Erase(first);
     return first;
   }
+  void MoveTo(EmbeddedListHead* list) {
+    if (container_.empty()) { return; }
+    auto* list_last = list->container_.prev();
+    auto* list_end = &list->container_;
+    auto* this_first = container_.next();
+    auto* this_last = container_.prev();
+    this_first->AppendTo(list_last);
+    list_end->AppendTo(this_last);
+    for (auto* iter = this_first; iter != &container_; iter = iter->next()) {
+      iter->set_head(&list->container_);
+    }
+    container_.Clear();
+    list->size_ += size();
+  }
 
  private:
   void InsertAfter(item_type* prev_item, item_type* new_item) {
@@ -97,6 +118,7 @@ class EmbeddedListHead {
     EmbeddedListItem* new_list_item = ItemField::FieldPtr4StructPtr(new_item);
     new_list_item->AppendTo(prev_list_item);
     next_list_item->AppendTo(new_list_item);
+    new_list_item->set_head(&container_);
     ++size_;
   }
   const EmbeddedListItem& container() const { return container_; }

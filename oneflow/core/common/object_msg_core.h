@@ -403,6 +403,10 @@ class ObjectMsgPtr final {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
   }
+  ObjectMsgPtr(ObjectMsgPtr&& obj_ptr) {
+    ptr_ = obj_ptr.ptr_;
+    obj_ptr.ptr_ = nullptr;
+  }
   ~ObjectMsgPtr() { Clear(); }
 
   operator bool() const { return ptr_ != nullptr; }
