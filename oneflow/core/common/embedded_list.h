@@ -68,7 +68,9 @@ class EmbeddedListHead {
   item_type* prev_item(item_type* current) {
     return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->prev());
   }
-  void __Init__() {
+  void __Init__() { Clear(); }
+
+  void Clear() {
     container_.__Init__();
     size_ = 0;
   }
@@ -98,17 +100,17 @@ class EmbeddedListHead {
   }
   void MoveTo(EmbeddedListHead* list) {
     if (container_.empty()) { return; }
+    for (auto* iter = container_.next(); iter != &container_; iter = iter->next()) {
+      iter->set_head(&list->container_);
+    }
     auto* list_last = list->container_.prev();
     auto* list_end = &list->container_;
     auto* this_first = container_.next();
     auto* this_last = container_.prev();
     this_first->AppendTo(list_last);
     list_end->AppendTo(this_last);
-    for (auto* iter = this_first; iter != &container_; iter = iter->next()) {
-      iter->set_head(&list->container_);
-    }
-    container_.Clear();
     list->size_ += size();
+    this->Clear();
   }
 
  private:
