@@ -12,6 +12,7 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
 #include "oneflow/core/actor/register_slot.h"
+#include <set>
 
 namespace oneflow {
 
@@ -59,7 +60,12 @@ class Actor {
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
-  void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
+  template<typename T>
+  void ForEachCurNaiveReadableDataRegst(T func) const {
+    naive_consumed_rs_.ForEachFrontRegst([func](Regst* regst) {
+      if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
+    });
+  }
 
   int64_t act_id() const { return act_id_; }
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
@@ -90,20 +96,60 @@ class Actor {
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor);
+  template<typename P1, typename P2>
+  void HandleProducedNaiveDataRegstToConsumer(P1 RegstPreProcess, P2 IsAllowedActor) {
+    tmp_regst_desc_id_vec_.clear();
+    naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+      if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+        if (RegstPreProcess(regst) == false) { return; }
+        int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+        if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+      }
+    });
+    naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+  }
+
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
+  template<typename P1, typename P2>
+  void HandleProducedInplaceDataRegstToConsumer(P1 RegstPreProcess, P2 IsAllowedActor) {
+    tmp_regst_desc_id_vec_.clear();
+    inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+      CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+      if (RegstPreProcess(regst) == false) { return; }
+      int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
+    });
+    inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+  }
+
   void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer();
-  void AsyncSendRegstMsgToConsumer(Regst* regst);
-  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
-  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
+  void AsyncSendRegstMsgToConsumer(Regst* regst);
+  template<typename P>
+  void AsyncSendRegstMsgToConsumer(Regst* regst, P IsAllowedActor) {
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+    if (real_consumer_cnt > 0) { naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()); }
+  }
+
+  template<typename P>
+  void HandleConsumedNaiveDataRegstToProducer(P IsAllowedRegst) {
+    tmp_regst_desc_id_vec_.clear();
+    naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
+      if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+        if (IsAllowedRegst(regst) == false) { return; }
+        // must access regst before sending it to producer
+        tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+        EnqueueAsyncMsg(
+            ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      }
+    });
+    naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+  }
+
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -127,8 +173,29 @@ class Actor {
     return GetNaiveOrInplaceCurWriteable(Name2SoleRegstDescId(name));
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
-  void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  template<typename T>
+  void ForEachProducedRegst(T Handler) const {
+    for (const auto& pair : produced_regsts_) {
+      for (const auto& regst : pair.second) { Handler(regst.get()); }
+    }
+  }
+
+  template<typename P>
+  int64_t HandleRegstToConsumer(Regst* regst, P IsAllowedActor) {
+    auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+    CHECK_EQ(regst_reading_cnt_it->second, 0);
+    regst->set_act_id(act_id_);
+
+    int64_t real_consumer_cnt = 0;
+    for (int64_t consumer : regst->consumers_actor_id()) {
+      if (!IsAllowedActor(consumer)) { continue; }
+      EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+      real_consumer_cnt += 1;
+    }
+    total_reading_cnt_ += real_consumer_cnt;
+    regst_reading_cnt_it->second += real_consumer_cnt;
+    return real_consumer_cnt;
+  }
 
  private:
   int64_t GetGlobalWorkStreamId() const;
@@ -178,6 +245,13 @@ class Actor {
   void AsyncSendProducedCtrlRegstMsgToConsumer();
 
   // Customized Consumed virtual func
+
+  void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
+    naive_consumed_rs_.ForEachFrontRegst([func](Regst* regst) {
+      if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
+    });
+  }
+
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
   virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
@@ -210,29 +284,31 @@ class Actor {
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
   int64_t remaining_eord_cnt_;
+  int64_t max_regst_num_;
 
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
-  HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
-  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  std::map<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
+  std::map<int64_t, int64_t> produced_regst2expected_act_id_;
+  std::map<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
 
   RegstSlot naive_produced_rs_;
   RegstSlot naive_consumed_rs_;
   bool is_naive_consumed_eord_;
 
-  HashSet<int64_t> produced_ctrl_regst_desc_ids_;
-  HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
+  std::set<int64_t> produced_ctrl_regst_desc_ids_;
+  std::set<int64_t> consumed_ctrl_regst_desc_ids_;
 
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
   bool is_inplace_consumed_eord_;
-  HashSet<int64_t> inplace_in_ids_with_no_out_consumed_;
-  HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
-  HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
+  std::set<int64_t> inplace_in_ids_with_no_out_consumed_;
+  std::map<int64_t, int64_t> inplace_regst_desc_id_in2out_;
+  std::map<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+  HashMap<std::string, Blob*> bn_in_op2blob_cache_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
