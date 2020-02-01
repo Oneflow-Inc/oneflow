@@ -126,6 +126,11 @@ class TrivialObjectMsgList {
     if (list_head_.empty()) { return last->Reset(); }
     last->Reset(list_head_.last_item());
   }
+  ObjectMsgPtr<item_type> Last() {
+    ObjectMsgPtr<item_type> begin;
+    GetLast(&begin);
+    return begin;
+  }
   void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
     GetBegin(begin);
     GetBegin(next);
