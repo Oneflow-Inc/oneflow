@@ -6,24 +6,20 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-__global__ void SquareSumOneBlockGpu(int64_t n, const T* x, T* y) {
-  T t_sum = 0;
-  CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { *y = b_sum; }
-}
-
-template<typename T>
+template<typename T, bool ONE_BLOCK>
 __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { gpu_atomic_add<T>(y, b_sum); }
+  if (threadIdx.x == 0) {
+    if (ONE_BLOCK) {
+      *y = b_sum;
+    } else {
+      gpu_atomic_add<T>(y, b_sum);
+    }
+  }
 }
 
 }  // namespace
@@ -36,10 +32,11 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
     if (num_blocks == 0) {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
     } else if (num_blocks == 1) {
-      SquareSumOneBlockGpu<T><<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+      SquareSumGpu<T, true><<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
     } else {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
-      SquareSumGpu<T><<<num_blocks, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+      SquareSumGpu<T, false>
+          <<<num_blocks, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
     }
   }
 };
