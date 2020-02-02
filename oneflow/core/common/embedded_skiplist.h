@@ -93,8 +93,7 @@ class EmbeddedSkipListVisitor final {
     CHECK(!(elem_key->key() < key()));
     std::mt19937 rand{std::random_device{}()};
     int num_level = 1;
-    for (; (rand() % 2 == 0) && num_level <= max_level; ++num_level)
-      ;
+    for (int i = 1; (rand() % 2 == 0) && i < max_level; ++i) { ++num_level; }
     elem_key->mut_skiplist_iter()->InsertAfter(links_pointers_, num_level);
   }
 
@@ -225,8 +224,8 @@ class EmbeddedSkipListHead {
       auto* first = visitor.Next();
       if (first == nullptr) { break; }
       elem_type* searched = ElemKeyField::StructPtr4FieldPtr(first);
-      cb(searched);
       visitor.EraseNextIterator();
+      cb(searched);
       --size_;
     }
     CHECK(empty_debug());

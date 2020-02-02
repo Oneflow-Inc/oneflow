@@ -6,27 +6,49 @@
 
 namespace oneflow {
 
-struct EmbeddedListItem {
+struct EmbeddedListIterator {
  public:
-  EmbeddedListItem* prev() const { return prev_; }
-  EmbeddedListItem* next() const { return next_; }
+  EmbeddedListIterator* prev() const { return prev_; }
+  EmbeddedListIterator* next() const { return next_; }
 
-  void AppendTo(EmbeddedListItem* prev) {
+  void AppendTo(EmbeddedListIterator* prev) {
     prev->set_next(this);
     this->set_prev(prev);
   }
-  void __Init__() {
+  void __Init__() { Clear(); }
+  void Clear() {
     prev_ = this;
     next_ = this;
   }
   bool empty() const { return prev_ == this || next_ == this; }
 
  private:
-  void set_prev(EmbeddedListItem* prev) { prev_ = prev; }
-  void set_next(EmbeddedListItem* next) { next_ = next; }
+  void set_prev(EmbeddedListIterator* prev) { prev_ = prev; }
+  void set_next(EmbeddedListIterator* next) { next_ = next; }
 
-  EmbeddedListItem* prev_;
-  EmbeddedListItem* next_;
+  EmbeddedListIterator* prev_;
+  EmbeddedListIterator* next_;
+};
+
+struct EmbeddedListItem {
+ public:
+  EmbeddedListItem* prev() const { return (EmbeddedListItem*)list_iter_.prev(); }
+  EmbeddedListItem* next() const { return (EmbeddedListItem*)list_iter_.next(); }
+  EmbeddedListItem* head() const { return head_; }
+
+  void set_head(EmbeddedListItem* head) { head_ = head; }
+
+  void AppendTo(EmbeddedListItem* prev) { list_iter_.AppendTo(&prev->list_iter_); }
+  void __Init__() { Clear(); }
+  void Clear() {
+    list_iter_.Clear();
+    head_ = nullptr;
+  }
+  bool empty() const { return list_iter_.empty() && head_ == nullptr; }
+
+ private:
+  EmbeddedListIterator list_iter_;
+  EmbeddedListItem* head_;
 };
 
 template<typename ItemField>
@@ -62,7 +84,9 @@ class EmbeddedListHead {
   item_type* prev_item(item_type* current) {
     return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->prev());
   }
-  void __Init__() {
+  void __Init__() { Clear(); }
+
+  void Clear() {
     container_.__Init__();
     size_ = 0;
   }
@@ -71,8 +95,9 @@ class EmbeddedListHead {
     CHECK_GT(size_, 0);
     CHECK_NE(item, end_item());
     EmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
+    CHECK_EQ(&container_, list_item->head());
     list_item->next()->AppendTo(list_item->prev());
-    list_item->__Init__();
+    list_item->Clear();
     --size_;
   }
   void PushBack(item_type* item) { InsertAfter(last_item(), item); }
@@ -89,6 +114,20 @@ class EmbeddedListHead {
     Erase(first);
     return first;
   }
+  void MoveTo(EmbeddedListHead* list) {
+    if (container_.empty()) { return; }
+    for (auto* iter = container_.next(); iter != &container_; iter = iter->next()) {
+      iter->set_head(&list->container_);
+    }
+    auto* list_last = list->container_.prev();
+    auto* list_end = &list->container_;
+    auto* this_first = container_.next();
+    auto* this_last = container_.prev();
+    this_first->AppendTo(list_last);
+    list_end->AppendTo(this_last);
+    list->size_ += size();
+    this->Clear();
+  }
 
  private:
   void InsertAfter(item_type* prev_item, item_type* new_item) {
@@ -97,6 +136,7 @@ class EmbeddedListHead {
     EmbeddedListItem* new_list_item = ItemField::FieldPtr4StructPtr(new_item);
     new_list_item->AppendTo(prev_list_item);
     next_list_item->AppendTo(new_list_item);
+    new_list_item->set_head(&container_);
     ++size_;
   }
   const EmbeddedListItem& container() const { return container_; }
