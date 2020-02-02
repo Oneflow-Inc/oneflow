@@ -39,8 +39,7 @@ char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate(std ::mutex* mutex) {
 
 char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate() {
   if (free_chunk_list().empty()) { Prefetch(); }
-  auto chunk = mut_free_chunk_list()->PopFront();
-  mut_occupied_chunk_list()->PushBack(chunk.Mutable());
+  auto chunk = mut_free_chunk_list()->MoveFrontToDstBack(mut_occupied_chunk_list());
   return chunk->mutable_mem_block()->mem_ptr();
 }
 
@@ -54,17 +53,16 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Deallocate(char* ptr) {
   auto* chunk =
       StructField<ObjMsgMemBlock, char, ObjMsgMemBlock::MemPtrOffset()>::StructPtr4FieldPtr(ptr)
           ->mut_chunk();
-  mut_free_chunk_list()->PushFront(chunk);
-  mut_occupied_chunk_list()->Erase(chunk);
+  mut_occupied_chunk_list()->MoveToDstBack(chunk, mut_free_chunk_list());
 }
 
 void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch() {
-  FreeObjMsgChunkList free_list;
+  ObjMsgChunkList free_list;
   Prefetch(&free_list);
   AppendToFreeList(&free_list);
 }
 
-void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(FreeObjMsgChunkList* free_list) {
+void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(ObjMsgChunkList* free_list) {
   for (int64_t i = 0; i < prefetch_cnt(); ++i) {
     auto chunk = OBJECT_MSG_PTR(ObjMsgChunk)::New(mut_allocator());
     chunk->__Init__(this, mem_block_size());
@@ -72,7 +70,7 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(FreeObjMsgChunkList* free_lis
   }
 }
 
-void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::AppendToFreeList(FreeObjMsgChunkList* free_list) {
+void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::AppendToFreeList(ObjMsgChunkList* free_list) {
   free_list->MoveTo(mut_free_chunk_list());
 }
 

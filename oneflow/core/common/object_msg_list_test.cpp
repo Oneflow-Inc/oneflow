@@ -203,7 +203,7 @@ TEST(ObjectMsgList, FOR_EACH) {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestObjectMsgListHead);
-  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
 END_OBJECT_MSG(TestObjectMsgListHead);
 // clang-format on
 

@@ -10,9 +10,9 @@ namespace oneflow {
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_LIST_ITEM(DSS_GET_FIELD_COUNTER(), field_name);
 
-#define OBJECT_MSG_DEFINE_LIST_HEAD(field_type, field_name)                         \
+#define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), field_type, field_name);
+  _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, field_name);
 
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, item)                                \
   for (auto item = (list_ptr)->Begin(), __next_item__ = (list_ptr)->Next(item); \
@@ -24,28 +24,28 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, field_type, field_name)   \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListHeadInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete); \
+#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name) \
+  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListHeadInit);                   \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);               \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(field_type, field_name)                         \
- public:                                                                                   \
-  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                  \
-      StructField<OBJECT_MSG_TYPE(field_type), EmbeddedListItem,                           \
-                  OBJECT_MSG_TYPE(field_type)::OF_PP_CAT(field_name, _DssFieldOffset)()>>; \
-  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
-    return OF_PP_CAT(field_name, _);                                                       \
-  }                                                                                        \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {              \
-    return &OF_PP_CAT(field_name, _);                                                      \
-  }                                                                                        \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {          \
-    return &OF_PP_CAT(field_name, _);                                                      \
-  }                                                                                        \
-                                                                                           \
- private:                                                                                  \
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
+ public:                                                                                       \
+  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                      \
+      StructField<OBJECT_MSG_TYPE(elem_type), EmbeddedListItem,                                \
+                  OBJECT_MSG_TYPE(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>>; \
+  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                       \
+    return OF_PP_CAT(field_name, _);                                                           \
+  }                                                                                            \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {                  \
+    return &OF_PP_CAT(field_name, _);                                                          \
+  }                                                                                            \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {              \
+    return &OF_PP_CAT(field_name, _);                                                          \
+  }                                                                                            \
+                                                                                               \
+ private:                                                                                      \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_ITEM(field_counter, field_name)               \
@@ -143,6 +143,18 @@ class TrivialObjectMsgList {
 
   bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return !ptr; }
 
+  void MoveToDstBack(item_type* ptr, TrivialObjectMsgList* dst) {
+    list_head_.MoveToDstBack(ptr, &dst->list_head_);
+  }
+  void MoveToDstFront(item_type* ptr, TrivialObjectMsgList* dst) {
+    list_head_.MoveToDstFront(ptr, &dst->list_head_);
+  }
+  item_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
+    item_type* begin = list_head_.begin_item();
+    MoveToDstBack(begin, dst);
+    return begin;
+  }
+
   void PushBack(item_type* ptr) {
     list_head_.PushBack(ptr);
     ObjectMsgPtrUtil::Ref(ptr);
@@ -174,7 +186,8 @@ class TrivialObjectMsgList {
     return ptr;
   }
 
-  void MoveTo(TrivialObjectMsgList* list) { list_head_.MoveTo(&list->list_head_); }
+  void MoveTo(TrivialObjectMsgList* list) { MoveToDstBack(list); }
+  void MoveToDstBack(TrivialObjectMsgList* list) { list_head_.MoveToDstBack(&list->list_head_); }
 
   void Clear() {
     while (!empty()) { ObjectMsgPtrUtil::ReleaseRef(list_head_.PopFront()); }
