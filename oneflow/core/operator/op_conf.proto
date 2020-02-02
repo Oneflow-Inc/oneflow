@@ -1643,6 +1643,20 @@ message SquareSumOpConf {
   required string y = 2;
 }
 
+message BroadcastMaximumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMinimumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1860,6 +1874,8 @@ message OperatorConf {
     ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
     ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
     SquareSumOpConf square_sum_conf = 522;
+    BroadcastMaximumOpConf broadcast_maximum_conf = 523;
+    BroadcastMinimumOpConf broadcast_minimum_conf = 524;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
