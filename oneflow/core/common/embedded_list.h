@@ -6,15 +6,12 @@
 
 namespace oneflow {
 
-struct EmbeddedListItem {
+struct EmbeddedListIterator {
  public:
-  EmbeddedListItem* prev() const { return prev_; }
-  EmbeddedListItem* next() const { return next_; }
-  EmbeddedListItem* head() const { return head_; }
+  EmbeddedListIterator* prev() const { return prev_; }
+  EmbeddedListIterator* next() const { return next_; }
 
-  void set_head(EmbeddedListItem* head) { head_ = head; }
-
-  void AppendTo(EmbeddedListItem* prev) {
+  void AppendTo(EmbeddedListIterator* prev) {
     prev->set_next(this);
     this->set_prev(prev);
   }
@@ -22,16 +19,35 @@ struct EmbeddedListItem {
   void Clear() {
     prev_ = this;
     next_ = this;
-    head_ = nullptr;
   }
   bool empty() const { return prev_ == this || next_ == this; }
 
  private:
-  void set_prev(EmbeddedListItem* prev) { prev_ = prev; }
-  void set_next(EmbeddedListItem* next) { next_ = next; }
+  void set_prev(EmbeddedListIterator* prev) { prev_ = prev; }
+  void set_next(EmbeddedListIterator* next) { next_ = next; }
 
-  EmbeddedListItem* prev_;
-  EmbeddedListItem* next_;
+  EmbeddedListIterator* prev_;
+  EmbeddedListIterator* next_;
+};
+
+struct EmbeddedListItem {
+ public:
+  EmbeddedListItem* prev() const { return (EmbeddedListItem*)list_iter_.prev(); }
+  EmbeddedListItem* next() const { return (EmbeddedListItem*)list_iter_.next(); }
+  EmbeddedListItem* head() const { return head_; }
+
+  void set_head(EmbeddedListItem* head) { head_ = head; }
+
+  void AppendTo(EmbeddedListItem* prev) { list_iter_.AppendTo(&prev->list_iter_); }
+  void __Init__() { Clear(); }
+  void Clear() {
+    list_iter_.Clear();
+    head_ = nullptr;
+  }
+  bool empty() const { return list_iter_.empty() && head_ == nullptr; }
+
+ private:
+  EmbeddedListIterator list_iter_;
   EmbeddedListItem* head_;
 };
 
