@@ -14,13 +14,15 @@ namespace oneflow {
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, field_name);
 
-#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem)                                \
-  for (auto elem = (list_ptr)->Begin(), __next_elem__ = (list_ptr)->Next(elem); \
-       !(list_ptr)->EqualsEnd(elem);                                            \
-       elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__))
+#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem)                            \
+  for (ObjectMsgPtr<std::remove_pointer<decltype((list_ptr)->End())>::type> \
+           elem = (list_ptr)->Begin(),                                      \
+           __next_elem__ = (list_ptr)->Next(elem.Mutable());                \
+       elem.Mutable() != (list_ptr)->End();                                 \
+       elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__.Mutable()))
 
 #define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, elem) \
-  for (auto elem = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(elem); elem = (list_ptr)->Next(elem))
+  for (auto* elem = (list_ptr)->Begin(); elem != (list_ptr)->End(); elem = (list_ptr)->Next(elem))
 
 // details
 
@@ -101,47 +103,21 @@ class TrivialObjectMsgList {
 
   void __Init__() { list_head_.__Init__(); }
 
-  void GetBegin(ObjectMsgPtr<value_type>* begin) {
-    if (list_head_.empty()) { return begin->Reset(); }
-    begin->Reset(list_head_.Begin());
+  value_type* Begin() {
+    if (list_head_.empty()) { return nullptr; }
+    return list_head_.Begin();
   }
-  void ResetToNext(ObjectMsgPtr<value_type>* ptr) {
-    if (!*ptr) { return; }
-    auto* next_elem = list_head_.Next(ptr->Mutable());
-    if (next_elem == list_head_.End()) { next_elem = nullptr; }
-    ptr->Reset(next_elem);
+  value_type* Next(value_type* ptr) {
+    if (ptr == nullptr) { return nullptr; }
+    value_type* next = list_head_.Next(ptr);
+    if (next == list_head_.End()) { return nullptr; }
+    return next;
   }
-  ObjectMsgPtr<value_type> Begin() {
-    ObjectMsgPtr<value_type> begin;
-    GetBegin(&begin);
-    return begin;
+  value_type* Last() {
+    if (list_head_.empty()) { return nullptr; }
+    return list_head_.Last();
   }
-  ObjectMsgPtr<value_type> Next(const ObjectMsgPtr<value_type>& ptr) {
-    ObjectMsgPtr<value_type> ret(ptr);
-    ResetToNext(&ret);
-    return ret;
-  }
-
-  void GetLast(ObjectMsgPtr<value_type>* last) {
-    if (list_head_.empty()) { return last->Reset(); }
-    last->Reset(list_head_.Last());
-  }
-  ObjectMsgPtr<value_type> Last() {
-    ObjectMsgPtr<value_type> begin;
-    GetLast(&begin);
-    return begin;
-  }
-  void GetBegin(ObjectMsgPtr<value_type>* begin, ObjectMsgPtr<value_type>* next) {
-    GetBegin(begin);
-    GetBegin(next);
-    ResetToNext(next);
-  }
-  void ResetToNext(ObjectMsgPtr<value_type>* ptr, ObjectMsgPtr<value_type>* next) {
-    *ptr = *next;
-    ResetToNext(next);
-  }
-
-  bool EqualsEnd(const ObjectMsgPtr<value_type>& ptr) const { return !ptr; }
+  constexpr value_type* End() { return nullptr; }
 
   void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);

@@ -400,7 +400,7 @@ template<typename T>
 class ObjectMsgPtr final {
  public:
   ObjectMsgPtr() : ptr_(nullptr) {}
-  ObjectMsgPtr(T* ptr) { Reset(ptr); }
+  ObjectMsgPtr(T* ptr) : ptr_(nullptr) { Reset(ptr); }
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
