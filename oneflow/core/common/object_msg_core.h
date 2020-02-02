@@ -233,6 +233,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 class ObjectMsgAllocator {
  public:
+  virtual ~ObjectMsgAllocator() = default;
   virtual char* Allocate(std::size_t size) = 0;
   virtual void Deallocate(char* ptr, std::size_t size) = 0;
 

@@ -31,11 +31,23 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::__Init__(int64_t fixed_mem_size, int64
 
 void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::__Delete__() { CHECK(occupied_chunk_list().empty()); }
 
+char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate(std ::mutex* mutex) {
+  if (mutex == nullptr) { return Allocate(); }
+  std::unique_lock<std::mutex> lock(*mutex);
+  return Allocate();
+}
+
 char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate() {
   if (free_chunk_list().empty()) { Prefetch(); }
   auto chunk = mut_free_chunk_list()->PopFront();
   mut_occupied_chunk_list()->PushBack(chunk.Mutable());
   return chunk->mutable_mem_block()->mem_ptr();
+}
+
+void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Deallocate(std ::mutex* mutex, char* ptr) {
+  if (mutex == nullptr) { return Deallocate(ptr); }
+  std::unique_lock<std::mutex> lock(*mutex);
+  return Deallocate(ptr);
 }
 
 void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Deallocate(char* ptr) {
@@ -64,22 +76,23 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::AppendToFreeList(FreeObjMsgChunkList* 
   free_list->MoveTo(mut_free_chunk_list());
 }
 
-char* CachedObjectMsgAllocator::Allocate(std::size_t size) {
+char* CachedObjectMsgAllocatorBase::RoundUpAllocate(std::mutex* mutex, std::size_t size) {
   size = RoundUpSize(size);
   auto allocator = allocators_.Find(size);
   CHECK(!allocators_.EqualsEnd(allocator));
-  return allocator->Allocate();
+  return allocator->Allocate(mutex);
 }
 
-void CachedObjectMsgAllocator::Deallocate(char* ptr, std::size_t size) {
+void CachedObjectMsgAllocatorBase::RoundUpDeallocate(std::mutex* mutex, char* ptr,
+                                                     std::size_t size) {
   auto* chunk =
       StructField<ObjMsgMemBlock, char, ObjMsgMemBlock::MemPtrOffset()>::StructPtr4FieldPtr(ptr)
           ->mut_chunk();
   CHECK_LE(size, chunk->mem_size());
-  chunk->mutable_mem_pool()->Deallocate(ptr);
+  chunk->mutable_mem_pool()->Deallocate(mutex, ptr);
 }
 
-void CachedObjectMsgAllocator::Prefetch() {
+void CachedObjectMsgAllocatorBase::Prefetch() {
   CHECK_LE(mem_size_shift_max_, 32);
   CHECK_LT(kMemSizeShiftMin, mem_size_shift_max_);
   for (int i = kMemSizeShiftMin; i <= mem_size_shift_max_; ++i) {
@@ -89,10 +102,17 @@ void CachedObjectMsgAllocator::Prefetch() {
   }
 }
 
-std::size_t CachedObjectMsgAllocator::RoundUpSize(std::size_t size) {
+std::size_t CachedObjectMsgAllocatorBase::RoundUpSize(std::size_t size) {
   return 1 << (static_cast<int>(std::log2(size)) + 1);
 }
 
-CachedObjectMsgAllocator::~CachedObjectMsgAllocator() { allocators_.Clear(); }
+char* ThreadUnsafeObjectMsgAllocator::Allocate(std::size_t size) {
+  CHECK(thread_id_ == std::this_thread::get_id());
+  return RoundUpAllocate(nullptr, size);
+}
+void ThreadUnsafeObjectMsgAllocator::Deallocate(char* ptr, std::size_t size) {
+  CHECK(thread_id_ == std::this_thread::get_id());
+  return RoundUpDeallocate(nullptr, ptr, size);
+}
 
 }  // namespace oneflow
