@@ -40,7 +40,7 @@ BEGIN_OBJECT_MSG(ObjMsgChunk);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(ObjMsgSizedMemPool)*, mem_pool);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_ITEM(list);
+  OBJECT_MSG_DEFINE_LIST_LINK(list);
 
 END_OBJECT_MSG(ObjMsgChunk);
 // clang-format on

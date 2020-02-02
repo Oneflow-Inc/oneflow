@@ -6,21 +6,21 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_LIST_ITEM(field_name)                                     \
+#define OBJECT_MSG_DEFINE_LIST_LINK(field_name)                                     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_LIST_ITEM(DSS_GET_FIELD_COUNTER(), field_name);
+  _OBJECT_MSG_DEFINE_LIST_LINK(DSS_GET_FIELD_COUNTER(), field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, field_name);
 
-#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, item)                                \
-  for (auto item = (list_ptr)->Begin(), __next_item__ = (list_ptr)->Next(item); \
-       !(list_ptr)->EqualsEnd(item);                                            \
-       item = __next_item__, __next_item__ = (list_ptr)->Next(__next_item__))
+#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem)                                \
+  for (auto elem = (list_ptr)->Begin(), __next_elem__ = (list_ptr)->Next(elem); \
+       !(list_ptr)->EqualsEnd(elem);                                            \
+       elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__))
 
-#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, item) \
-  for (auto item = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(item); item = (list_ptr)->Next(item))
+#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, elem) \
+  for (auto elem = (list_ptr)->Begin(); !(list_ptr)->EqualsEnd(elem); elem = (list_ptr)->Next(elem))
 
 // details
 
@@ -33,7 +33,7 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
  public:                                                                                       \
   using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                      \
-      StructField<OBJECT_MSG_TYPE(elem_type), EmbeddedListItem,                                \
+      StructField<OBJECT_MSG_TYPE(elem_type), EmbeddedListLink,                                \
                   OBJECT_MSG_TYPE(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>>; \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                       \
     return OF_PP_CAT(field_name, _);                                                           \
@@ -48,19 +48,19 @@ namespace oneflow {
  private:                                                                                      \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_DEFINE_LIST_ITEM(field_counter, field_name)               \
-  _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name)                              \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListItemInit);     \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListItemDelete); \
+#define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)               \
+  _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                              \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListLinkInit);     \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListLinkDelete); \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_LIST_ITEM_FIELD(field_name) \
+#define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name) \
  private:                                              \
-  EmbeddedListItem OF_PP_CAT(field_name, _);
+  EmbeddedListLink OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)               \
   ObjectMsgList<                                                   \
-      StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListItem, \
+      StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListLink, \
                   OBJECT_MSG_TYPE(obj_msg_type)::OF_PP_CAT(obj_msg_field, _DssFieldOffset)()>>
 
 template<typename WalkCtxType, typename PtrFieldType>
@@ -78,108 +78,108 @@ struct ObjectMsgEmbeddedListHeadDelete {
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListItemInit {
-  static void Call(WalkCtxType* ctx, EmbeddedListItem* field, const char* field_name) {
+struct ObjectMsgEmbeddedListLinkInit {
+  static void Call(WalkCtxType* ctx, EmbeddedListLink* field, const char* field_name) {
     field->__Init__();
   }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
-struct ObjectMsgEmbeddedListItemDelete {
-  static void Call(WalkCtxType* ctx, EmbeddedListItem* field, const char* field_name) {
+struct ObjectMsgEmbeddedListLinkDelete {
+  static void Call(WalkCtxType* ctx, EmbeddedListLink* field, const char* field_name) {
     CHECK(field->empty());
   }
 };
 
-template<typename ItemField>
+template<typename LinkField>
 class TrivialObjectMsgList {
  public:
-  using item_type = typename ItemField::struct_type;
+  using value_type = typename LinkField::struct_type;
 
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
 
   void __Init__() { list_head_.__Init__(); }
 
-  void GetBegin(ObjectMsgPtr<item_type>* begin) {
+  void GetBegin(ObjectMsgPtr<value_type>* begin) {
     if (list_head_.empty()) { return begin->Reset(); }
-    begin->Reset(list_head_.begin_item());
+    begin->Reset(list_head_.Begin());
   }
-  void ResetToNext(ObjectMsgPtr<item_type>* ptr) {
+  void ResetToNext(ObjectMsgPtr<value_type>* ptr) {
     if (!*ptr) { return; }
-    auto* next_item = list_head_.next_item(ptr->Mutable());
-    if (next_item == list_head_.end_item()) { next_item = nullptr; }
-    ptr->Reset(next_item);
+    auto* next_elem = list_head_.Next(ptr->Mutable());
+    if (next_elem == list_head_.End()) { next_elem = nullptr; }
+    ptr->Reset(next_elem);
   }
-  ObjectMsgPtr<item_type> Begin() {
-    ObjectMsgPtr<item_type> begin;
+  ObjectMsgPtr<value_type> Begin() {
+    ObjectMsgPtr<value_type> begin;
     GetBegin(&begin);
     return begin;
   }
-  ObjectMsgPtr<item_type> Next(const ObjectMsgPtr<item_type>& ptr) {
-    ObjectMsgPtr<item_type> ret(ptr);
+  ObjectMsgPtr<value_type> Next(const ObjectMsgPtr<value_type>& ptr) {
+    ObjectMsgPtr<value_type> ret(ptr);
     ResetToNext(&ret);
     return ret;
   }
 
-  void GetLast(ObjectMsgPtr<item_type>* last) {
+  void GetLast(ObjectMsgPtr<value_type>* last) {
     if (list_head_.empty()) { return last->Reset(); }
-    last->Reset(list_head_.last_item());
+    last->Reset(list_head_.Last());
   }
-  ObjectMsgPtr<item_type> Last() {
-    ObjectMsgPtr<item_type> begin;
+  ObjectMsgPtr<value_type> Last() {
+    ObjectMsgPtr<value_type> begin;
     GetLast(&begin);
     return begin;
   }
-  void GetBegin(ObjectMsgPtr<item_type>* begin, ObjectMsgPtr<item_type>* next) {
+  void GetBegin(ObjectMsgPtr<value_type>* begin, ObjectMsgPtr<value_type>* next) {
     GetBegin(begin);
     GetBegin(next);
     ResetToNext(next);
   }
-  void ResetToNext(ObjectMsgPtr<item_type>* ptr, ObjectMsgPtr<item_type>* next) {
+  void ResetToNext(ObjectMsgPtr<value_type>* ptr, ObjectMsgPtr<value_type>* next) {
     *ptr = *next;
     ResetToNext(next);
   }
 
-  bool EqualsEnd(const ObjectMsgPtr<item_type>& ptr) const { return !ptr; }
+  bool EqualsEnd(const ObjectMsgPtr<value_type>& ptr) const { return !ptr; }
 
-  void MoveToDstBack(item_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
   }
-  void MoveToDstFront(item_type* ptr, TrivialObjectMsgList* dst) {
+  void MoveToDstFront(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstFront(ptr, &dst->list_head_);
   }
-  item_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
-    item_type* begin = list_head_.begin_item();
+  value_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
+    value_type* begin = list_head_.Begin();
     MoveToDstBack(begin, dst);
     return begin;
   }
 
-  void PushBack(item_type* ptr) {
+  void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
     ObjectMsgPtrUtil::Ref(ptr);
   }
 
-  void PushFront(item_type* ptr) {
+  void PushFront(value_type* ptr) {
     list_head_.PushFront(ptr);
     ObjectMsgPtrUtil::Ref(ptr);
   }
 
-  void Erase(item_type* ptr) {
+  void Erase(value_type* ptr) {
     list_head_.Erase(ptr);
     ObjectMsgPtrUtil::ReleaseRef(ptr);
   }
 
-  ObjectMsgPtr<item_type> PopBack() {
-    ObjectMsgPtr<item_type> ptr;
+  ObjectMsgPtr<value_type> PopBack() {
+    ObjectMsgPtr<value_type> ptr;
     if (list_head_.empty()) { return ptr; }
     ptr.Reset(list_head_.PopBack());
     ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
     return ptr;
   }
 
-  ObjectMsgPtr<item_type> PopFront() {
-    ObjectMsgPtr<item_type> ptr;
+  ObjectMsgPtr<value_type> PopFront() {
+    ObjectMsgPtr<value_type> ptr;
     if (list_head_.empty()) { return ptr; }
     ptr.Reset(list_head_.PopFront());
     ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
@@ -194,11 +194,11 @@ class TrivialObjectMsgList {
   }
 
  private:
-  EmbeddedListHead<ItemField> list_head_;
+  EmbeddedListHead<LinkField> list_head_;
 };
 
-template<typename ItemField>
-class ObjectMsgList : public TrivialObjectMsgList<ItemField> {
+template<typename LinkField>
+class ObjectMsgList : public TrivialObjectMsgList<LinkField> {
  public:
   ObjectMsgList(const ObjectMsgList&) = delete;
   ObjectMsgList(ObjectMsgList&&) = delete;

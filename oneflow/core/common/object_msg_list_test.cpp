@@ -7,7 +7,7 @@ namespace test {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestListItem)
-  OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
   OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
 
  public:
