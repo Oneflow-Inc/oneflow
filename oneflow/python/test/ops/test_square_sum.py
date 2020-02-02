@@ -21,5 +21,10 @@ def _run_test(test_case, x, dtype, device):
 
 
 def test_square_sum_random_gpu(test_case):
-    x = np.random.uniform(-0.01, 0.01, (32, 32)).astype(np.float32)
+    x = np.random.uniform(-0.01, 0.01, (64, 64)).astype(np.float32)
+    _run_test(test_case, x, flow.float32, 'gpu')
+
+
+def test_square_sum_small_blob_gpu(test_case):
+    x = np.random.uniform(-0.01, 0.01, (64,)).astype(np.float32)
     _run_test(test_case, x, flow.float32, 'gpu')
