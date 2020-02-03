@@ -58,7 +58,7 @@ def plot_by_legend(df):
 
 
 def plot_many_by_legend(df_dict):
-    legend_set_unsored = []
+    legend_set_unsorted = []
     legend_set_sorted = [
         "elapsed_time",
         "loss_rpn_box_reg",
@@ -76,15 +76,15 @@ def plot_many_by_legend(df_dict):
         if (legend not in legend_set_sorted) and (
             "note" in df and df[df["legend"] == legend]["note"].isnull().all()
         ):
-            legend_set_unsored.append(legend)
+            legend_set_unsorted.append(legend)
         else:
             if legend not in legend_set_sorted:
                 print("skipping legend: {}".format(legend))
-
+    legend_set_unsorted.sort()
     limit, rate = get_limit_and_rate(list(df_dict.values()))
     print(limit, rate)
     # limit, rate = 520, 1
-    for legend in legend_set_sorted + legend_set_unsored:
+    for legend in legend_set_sorted + legend_set_unsorted:
         df_by_legend = pd.concat(
             [
                 update_legend(df[df["legend"] == legend].copy(), k)
@@ -182,6 +182,7 @@ def post_process_flow(df):
     print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
     if "primary_lr" in df["legend"].unique():
         df["legend"].replace("primary_lr", "lr", inplace=True)
+    df = df[df.legend.str.contains("lr2") == False]
     df = df.groupby(["iter", "legend"], as_index=False).mean()
     return df
 
