@@ -22,6 +22,15 @@ Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> KeepHeaderOnlyOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
+  for (size_t i = 0; i < in_num; ++i) {
+    *BatchAxis4BnInOp(GenRepeatedBn("out", i)) = *BatchAxis4BnInOp(GenRepeatedBn("in", i));
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
