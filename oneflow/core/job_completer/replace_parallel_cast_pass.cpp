@@ -8,35 +8,57 @@ namespace {
 class ReplaceParallelCastPass final : public OpGraphPass {
  public:
   ReplaceParallelCastPass() = default;
-  ~ReplaceParallelCastPass() = default;
+  ~ReplaceParallelCastPass() override = default;
   bool IsEnabled() const override { return true; }
   void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 void ReplaceParallelCastPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  HashMap<std::string, OperatorConf> op_name2op_conf;
+  HashMap<std::string, SbpSignature> op_name2sbp_signature;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_parallel_cast_conf()) { return; }
-    const ParallelCastOpConf& parallel_cast_conf = op_conf.parallel_cast_conf();
-    if (!parallel_cast_conf.has_split_axis()) { return; }
-    if (op_node->out_edges().size() != 1) { return; }
-    const OpNode* dst_node = op_node->SoleOutEdge()->dst_node();
-    if (dst_node->in_edges().size() != 1) { return; }
-    OperatorConf dst_op_conf = dst_node->op().op_conf();
+    if (op_node->in_edges().size() != 1) { return; }
+    const OpNode* producer = op_node->SoleInEdge()->src_node();
     const LogicalBlobId& parallel_cast_in_lbi = op_node->op().BnInOp2Lbi("in");
     const LogicalBlobId& parallel_cast_out_lbi = op_node->op().BnInOp2Lbi("out");
-    const SbpParallel& sbp_parallel = op_node->SbpParallel4Lbi(parallel_cast_in_lbi);
-    if (dst_node->SbpParallel4Lbi(parallel_cast_out_lbi) != sbp_parallel) { return; }
-    PbMessage* conf = MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-    ReplaceStrValInPbFdOrPbRpf(conf, dst_node->op().SoleIbn(),
-                               GenLogicalBlobName(parallel_cast_out_lbi),
-                               GenLogicalBlobName(parallel_cast_in_lbi));
-    job_builder->MutOpsOnlyOnce({dst_op_conf});
+    const SbpParallel& parallel_cast_sbp_parallel = op_node->SbpParallel4Lbi(parallel_cast_in_lbi);
+    const SbpParallel& producer_sbp_parallel = producer->SbpParallel4Lbi(parallel_cast_in_lbi);
+    if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
+    if (parallel_cast_sbp_parallel != producer_sbp_parallel) { return; }
+    for (const OpEdge* out_edge : op_node->out_edges()) {
+      const OpNode* consumer = out_edge->dst_node();
+      if (consumer->op().op_conf().has_parallel_cast_conf()) { return; }
+      if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
+      if (consumer->SbpParallel4Lbi(parallel_cast_out_lbi) != parallel_cast_sbp_parallel) {
+        return;
+      }
+    }
+    op_name2sbp_signature[producer->op().op_name()] = producer->sbp_signature();
+    for (const OpEdge* out_edge : op_node->out_edges()) {
+      const OpNode* consumer = out_edge->dst_node();
+      const std::string& consumer_op_name = consumer->op().op_name();
+      op_name2sbp_signature[consumer_op_name] = consumer->sbp_signature();
+      if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
+        op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
+      }
+      OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
+      PbMessage* conf =
+          MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
+      for (const std::string& ibn : consumer->op().input_bns()) {
+        if (consumer->op().BnInOp2Lbi(ibn) == parallel_cast_out_lbi) {
+          ReplaceStrValInPbFdOrPbRpf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
+                                     GenLogicalBlobName(parallel_cast_in_lbi));
+        }
+      }
+    }
     job_builder->DelOps({op_conf});
-    SbpSignature sbp_signature{};
-    (*sbp_signature.mutable_bn_in_op2sbp_parallel())[dst_node->op().SoleIbn()] = sbp_parallel;
-    job_builder->AddSbpSignature4OpName(dst_node->op().op_name(), sbp_signature);
   });
+  for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  for (const auto& pair : op_name2sbp_signature) {
+    job_builder->AddSbpSignature4OpName(pair.first, pair.second);
+  }
 }
 
 }  // namespace

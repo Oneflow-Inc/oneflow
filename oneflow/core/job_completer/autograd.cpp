@@ -616,7 +616,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     OperatorConf parallel_cast_op_conf{};
-    parallel_cast_op_conf.set_name("System-ClipGradient-ParallelCast-" + NewUniqueId());
+    parallel_cast_op_conf.set_name("System-AutoGrad-ParallelCast-" + NewUniqueId());
     ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
     parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
     parallel_cast_conf->set_out("out");
