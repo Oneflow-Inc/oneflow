@@ -6,9 +6,14 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                    \
+#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                          \
+  static_assert(__is_object_message_type__, "this struct is not a object message");       \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, OBJECT_MSG_TYPE(T), \
+                                  field_name);
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MAP_KEY(max_level, T, field_name)           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, T, field_name);
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, FLAT_MSG_TYPE(T), field_name);
 
 #define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \

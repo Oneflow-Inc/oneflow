@@ -11,6 +11,7 @@ namespace oneflow {
 
 #define BEGIN_FLAT_MSG(struct_name)                                    \
   struct FLAT_MSG_TYPE(struct_name) final {                            \
+    using self_type = FLAT_MSG_TYPE(struct_name);                      \
     static const bool __is_flat_message_type__ = true;                 \
     BEGIN_DSS(DSS_GET_FIELD_COUNTER(), FLAT_MSG_TYPE(struct_name), 0); \
     FLAT_MSG_DEFINE_BASIC_METHODS(FLAT_MSG_TYPE(struct_name));         \
