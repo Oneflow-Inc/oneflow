@@ -88,7 +88,7 @@ END_FLAT_MSG(VpuInstructionDesc);
 
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionOprand);
-  FLAT_MSG_DEFINE_ONEOF(op_rand_type,
+  FLAT_MSG_DEFINE_ONEOF(oprand_type,
     FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, const_oprand)
     FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, mutable_oprand));
 END_FLAT_MSG(VpuInstructionOprand);
