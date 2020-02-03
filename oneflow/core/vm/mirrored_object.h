@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_MIRROR_OBJECT_H_
-#define ONEFLOW_CORE_VM_MIRROR_OBJECT_H_
+#ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_H_
+#define ONEFLOW_CORE_VM_MIRRORED_OBJECT_H_
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
@@ -55,29 +55,29 @@ BEGIN_OBJECT_MSG(DeviceMemoryBuffer);
 END_OBJECT_MSG(DeviceMemoryBuffer);
 // clang-format on
 
-class OBJECT_MSG_TYPE(MirrorObject);
+class OBJECT_MSG_TYPE(MirroredObject);
 
-enum OBJECT_MSG_TYPE(MirrorObjectAccessType) {
-  kInvalidMirrorObjectAccessType = 0,
-  kMirrorObjectRead,
-  kMirrorObjectWrite,
+enum OBJECT_MSG_TYPE(MirroredObjectAccessType) {
+  kInvalidMirroredObjectAccessType = 0,
+  kMirroredObjectRead,
+  kMirroredObjectWrite,
 };
 
 // clang-format off
-BEGIN_OBJECT_MSG(MirrorObjectAccess);
+BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(MirrorObjectAccessType, access_type);
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirrorObject)*, mirror_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(MirroredObjectAccessType, access_type);
+  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObject)*, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(pending_list);
   OBJECT_MSG_DEFINE_LIST_LINK(free_list);
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, vpu_operand_index);
-END_OBJECT_MSG(MirrorObjectAccess);
+END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(MirrorObject);
+BEGIN_OBJECT_MSG(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_ONEOF(type,
     OBJECT_MSG_ONEOF_FIELD(LogicalBlobId, logical_blob_id)
@@ -88,11 +88,11 @@ BEGIN_OBJECT_MSG(MirrorObject);
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirrorObjectAccess, pending_list, pending_access_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, pending_list, pending_access_list);
   OBJECT_MSG_DEFINE_MAP_FLAT_MAP_KEY(LogicalObjectPtrValue, logical_ptr_val);
-END_OBJECT_MSG(MirrorObject);
+END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MIRROR_OBJECT_H_
+#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_H_
