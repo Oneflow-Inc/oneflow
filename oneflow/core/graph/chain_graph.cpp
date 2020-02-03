@@ -229,7 +229,7 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
           && dynamic_cast<CompTaskNode*>(node) != nullptr
           && IsAllProducedBlobHasNoBatchAxis(in_node) && !IsAllConsumedBlobHasNoBatchAxis(node)) {
-        LOG(ERROR)
+        LOG(INFO)
             << "failed to include node in chain, in_node: "
             << (dynamic_cast<CompTaskNode*>(in_node)->logical_node()->op_vec().size() > 0
                     ? dynamic_cast<CompTaskNode*>(in_node)->logical_node()->SoleOp()->op_name()
