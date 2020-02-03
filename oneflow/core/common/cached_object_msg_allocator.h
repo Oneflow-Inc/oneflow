@@ -60,9 +60,7 @@ BEGIN_OBJECT_MSG(ObjMsgSizedMemPool);
   OBJECT_MSG_DEFINE_LIST_HEAD(ObjMsgChunk, list, occupied_chunk_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ObjMsgChunk, list, free_chunk_list);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, prefetch_cnt);
-
-  // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(5, int64_t, mem_block_size);
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, mem_block_size);
 
  private:
   char* Allocate();
@@ -84,7 +82,6 @@ class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
         prefetch_cnt_(prefetch_cnt) {
     Prefetch();
   }
-  virtual ~CachedObjectMsgAllocatorBase() override { allocators_.Clear(); }
 
   char* RoundUpAllocate(std::mutex* mutex, std::size_t size);
   void RoundUpDeallocate(std::mutex* mutex, char* ptr, std::size_t size);
@@ -92,12 +89,11 @@ class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
  private:
   static const std::size_t kMemSizeShiftMin = 6;
   void Prefetch();
-  static std::size_t RoundUpSize(std::size_t size);
 
   ObjectMsgAllocator* backend_allocator_;
   std::size_t mem_size_shift_max_;
   int64_t prefetch_cnt_;
-  OBJECT_MSG_SKIPLIST(ObjMsgSizedMemPool, mem_block_size) allocators_;
+  std::vector<OBJECT_MSG_PTR(ObjMsgSizedMemPool)> allocators_;
 };
 
 class CachedObjectMsgAllocator : public CachedObjectMsgAllocatorBase {
