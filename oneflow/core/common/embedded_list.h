@@ -11,19 +11,32 @@ struct EmbeddedListLink {
   EmbeddedListLink* prev() const { return prev_; }
   EmbeddedListLink* next() const { return next_; }
 
-  void AppendTo(EmbeddedListLink* prev) {
-    prev->set_next(this);
-    this->set_prev(prev);
-  }
   void __Init__() { Clear(); }
   void Clear() {
     prev_ = this;
     next_ = this;
   }
+
   bool empty() const { return prev_ == this || next_ == this; }
+  void AppendTo(EmbeddedListLink* prev) {
+    prev->set_next(this);
+    this->set_prev(prev);
+  }
+  void InsertAfter(EmbeddedListLink* prev) {
+    auto* next = prev->next();
+    this->AppendTo(prev);
+    next->AppendTo(this);
+  }
   void Erase() {
     next_->AppendTo(prev_);
     Clear();
+  }
+
+  bool nullptr_empty() const { return prev_ == nullptr && next_ == nullptr; }
+
+  void NullptrClear() {
+    prev_ = nullptr;
+    next_ = nullptr;
   }
 
  private:
