@@ -56,10 +56,10 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     DoPass("AutoLearningRate");
     DoPass("GenerateBackwardAndOptimizerOpConfs");
     DoPass("SequentializeNcclTupleBroadcastReducePass");
-    DoPass("ReplaceParallelCastPass");
     DoPass("AddAllReduceGroupPass");
     DoPass("AddLbiDiffWatcherOpConfs");
     DoPass("SequentializeAllReduceGroupPass");
+    DoPass("ReplaceParallelCastPass");
   }
   DoPass("DumpTimeShapeAndBlobParallelConfPass");
   return Maybe<void>::Ok();
