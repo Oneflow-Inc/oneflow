@@ -3,6 +3,12 @@
 
 namespace oneflow {
 
+namespace {
+
+int RoundUpShift(std::size_t size) { return (static_cast<int>(std::log2(size)) + 1); }
+
+}  // namespace
+
 ObjMsgMemBlock* ObjMsgMemBlock::PlacementNew(char* mem_ptr,
                                              OBJECT_MSG_TYPE(ObjMsgChunk) * obj_msg_chunk) {
   ObjMsgMemBlock* ret = new (mem_ptr) ObjMsgMemBlock();
@@ -39,8 +45,7 @@ char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate(std ::mutex* mutex) {
 
 char* OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Allocate() {
   if (free_chunk_list().empty()) { Prefetch(); }
-  auto chunk = mut_free_chunk_list()->PopFront();
-  mut_occupied_chunk_list()->PushBack(chunk.Mutable());
+  auto chunk = mut_free_chunk_list()->MoveFrontToDstBack(mut_occupied_chunk_list());
   return chunk->mutable_mem_block()->mem_ptr();
 }
 
@@ -54,17 +59,16 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Deallocate(char* ptr) {
   auto* chunk =
       StructField<ObjMsgMemBlock, char, ObjMsgMemBlock::MemPtrOffset()>::StructPtr4FieldPtr(ptr)
           ->mut_chunk();
-  mut_free_chunk_list()->PushFront(chunk);
-  mut_occupied_chunk_list()->Erase(chunk);
+  mut_occupied_chunk_list()->MoveToDstBack(chunk, mut_free_chunk_list());
 }
 
 void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch() {
-  FreeObjMsgChunkList free_list;
+  ObjMsgChunkList free_list;
   Prefetch(&free_list);
   AppendToFreeList(&free_list);
 }
 
-void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(FreeObjMsgChunkList* free_list) {
+void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(ObjMsgChunkList* free_list) {
   for (int64_t i = 0; i < prefetch_cnt(); ++i) {
     auto chunk = OBJECT_MSG_PTR(ObjMsgChunk)::New(mut_allocator());
     chunk->__Init__(this, mem_block_size());
@@ -72,15 +76,12 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(FreeObjMsgChunkList* free_lis
   }
 }
 
-void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::AppendToFreeList(FreeObjMsgChunkList* free_list) {
+void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::AppendToFreeList(ObjMsgChunkList* free_list) {
   free_list->MoveTo(mut_free_chunk_list());
 }
 
 char* CachedObjectMsgAllocatorBase::RoundUpAllocate(std::mutex* mutex, std::size_t size) {
-  size = RoundUpSize(size);
-  auto allocator = allocators_.Find(size);
-  CHECK(!allocators_.EqualsEnd(allocator));
-  return allocator->Allocate(mutex);
+  return allocators_.at(RoundUpShift(size) - kMemSizeShiftMin)->Allocate(mutex);
 }
 
 void CachedObjectMsgAllocatorBase::RoundUpDeallocate(std::mutex* mutex, char* ptr,
@@ -95,15 +96,12 @@ void CachedObjectMsgAllocatorBase::RoundUpDeallocate(std::mutex* mutex, char* pt
 void CachedObjectMsgAllocatorBase::Prefetch() {
   CHECK_LE(mem_size_shift_max_, 32);
   CHECK_LT(kMemSizeShiftMin, mem_size_shift_max_);
+  allocators_.resize(mem_size_shift_max_ - kMemSizeShiftMin + 1);
   for (int i = kMemSizeShiftMin; i <= mem_size_shift_max_; ++i) {
     auto mem_pool = OBJECT_MSG_PTR(ObjMsgSizedMemPool)::New(backend_allocator_);
     mem_pool->__Init__(1 << i, prefetch_cnt_);
-    CHECK(allocators_.Insert(mem_pool.Mutable()).second);
+    allocators_.at(i - kMemSizeShiftMin) = mem_pool;
   }
-}
-
-std::size_t CachedObjectMsgAllocatorBase::RoundUpSize(std::size_t size) {
-  return 1 << (static_cast<int>(std::log2(size)) + 1);
 }
 
 char* ThreadUnsafeObjectMsgAllocator::Allocate(std::size_t size) {

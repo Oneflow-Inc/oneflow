@@ -6,83 +6,79 @@
 
 namespace oneflow {
 
-struct EmbeddedListIterator {
+struct EmbeddedListLink {
  public:
-  EmbeddedListIterator* prev() const { return prev_; }
-  EmbeddedListIterator* next() const { return next_; }
+  EmbeddedListLink* prev() const { return prev_; }
+  EmbeddedListLink* next() const { return next_; }
 
-  void AppendTo(EmbeddedListIterator* prev) {
-    prev->set_next(this);
-    this->set_prev(prev);
-  }
   void __Init__() { Clear(); }
   void Clear() {
     prev_ = this;
     next_ = this;
   }
+
   bool empty() const { return prev_ == this || next_ == this; }
-
- private:
-  void set_prev(EmbeddedListIterator* prev) { prev_ = prev; }
-  void set_next(EmbeddedListIterator* next) { next_ = next; }
-
-  EmbeddedListIterator* prev_;
-  EmbeddedListIterator* next_;
-};
-
-struct EmbeddedListItem {
- public:
-  EmbeddedListItem* prev() const { return (EmbeddedListItem*)list_iter_.prev(); }
-  EmbeddedListItem* next() const { return (EmbeddedListItem*)list_iter_.next(); }
-  EmbeddedListItem* head() const { return head_; }
-
-  void set_head(EmbeddedListItem* head) { head_ = head; }
-
-  void AppendTo(EmbeddedListItem* prev) { list_iter_.AppendTo(&prev->list_iter_); }
-  void __Init__() { Clear(); }
-  void Clear() {
-    list_iter_.Clear();
-    head_ = nullptr;
+  void AppendTo(EmbeddedListLink* prev) {
+    prev->set_next(this);
+    this->set_prev(prev);
   }
-  bool empty() const { return list_iter_.empty() && head_ == nullptr; }
+  void InsertAfter(EmbeddedListLink* prev) {
+    auto* next = prev->next();
+    this->AppendTo(prev);
+    next->AppendTo(this);
+  }
+  void Erase() {
+    next_->AppendTo(prev_);
+    Clear();
+  }
+
+  bool nullptr_empty() const { return prev_ == nullptr && next_ == nullptr; }
+
+  void NullptrClear() {
+    prev_ = nullptr;
+    next_ = nullptr;
+  }
 
  private:
-  EmbeddedListIterator list_iter_;
-  EmbeddedListItem* head_;
+  void set_prev(EmbeddedListLink* prev) { prev_ = prev; }
+  void set_next(EmbeddedListLink* next) { next_ = next; }
+
+  EmbeddedListLink* prev_;
+  EmbeddedListLink* next_;
 };
 
-template<typename ItemField>
+template<typename LinkField>
 class EmbeddedListHead {
  public:
-  using item_type = typename ItemField::struct_type;
-  static_assert(std::is_same<typename ItemField::field_type, EmbeddedListItem>::value,
-                "no EmbeddedListItem found in item");
+  using value_type = typename LinkField::struct_type;
+  static_assert(std::is_same<typename LinkField::field_type, EmbeddedListLink>::value,
+                "no EmbeddedListLink found");
 
   std::size_t size() const { return size_; }
   bool empty() const {
-    bool list_empty = (&begin_item() == &end_item());
+    bool list_empty = (&Begin() == &End());
     bool size_empty = (size_ == 0);
     CHECK_EQ(list_empty, size_empty);
     return size_empty;
   }
-  const item_type& begin_item() const { return next_item(end_item()); }
-  const item_type& last_item() const { return prev_item(end_item()); }
-  const item_type& end_item() const { return *ItemField::StructPtr4FieldPtr(&container()); }
-  const item_type& next_item(const item_type& current) const {
-    return *ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(&current)->next());
+  const value_type& Begin() const { return Next(End()); }
+  const value_type& ReverseBegin() const { return Prev(End()); }
+  const value_type& End() const { return *LinkField::StructPtr4FieldPtr(&container()); }
+  const value_type& Next(const value_type& current) const {
+    return *LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(&current)->next());
   }
-  const item_type& prev_item(const item_type& current) const {
-    return *ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(&current)->prev());
+  const value_type& Prev(const value_type& current) const {
+    return *LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(&current)->prev());
   }
 
-  item_type* begin_item() { return next_item(end_item()); }
-  item_type* last_item() { return prev_item(end_item()); }
-  item_type* end_item() { return ItemField::StructPtr4FieldPtr(mut_container()); }
-  item_type* next_item(item_type* current) {
-    return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->next());
+  value_type* Begin() { return Next(End()); }
+  value_type* Last() { return Prev(End()); }
+  value_type* End() { return LinkField::StructPtr4FieldPtr(mut_container()); }
+  value_type* Next(value_type* current) {
+    return LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(current)->next());
   }
-  item_type* prev_item(item_type* current) {
-    return ItemField::StructPtr4FieldPtr(ItemField::FieldPtr4StructPtr(current)->prev());
+  value_type* Prev(value_type* current) {
+    return LinkField::StructPtr4FieldPtr(LinkField::FieldPtr4StructPtr(current)->prev());
   }
   void __Init__() { Clear(); }
 
@@ -91,59 +87,75 @@ class EmbeddedListHead {
     size_ = 0;
   }
 
-  void Erase(item_type* item) {
+  void Erase(value_type* elem) {
     CHECK_GT(size_, 0);
-    CHECK_NE(item, end_item());
-    EmbeddedListItem* list_item = ItemField::FieldPtr4StructPtr(item);
-    CHECK_EQ(&container_, list_item->head());
-    list_item->next()->AppendTo(list_item->prev());
-    list_item->Clear();
+    CHECK_NE(elem, End());
+    EmbeddedListLink* list_link = LinkField::FieldPtr4StructPtr(elem);
+    list_link->Erase();
     --size_;
   }
-  void PushBack(item_type* item) { InsertAfter(last_item(), item); }
-  void PushFront(item_type* item) { InsertAfter(end_item(), item); }
-  item_type* PopBack() {
+  void MoveToDstBack(value_type* elem, EmbeddedListHead* dst) {
+    CHECK(!container_.empty());
+    auto* dst_rbegin = dst->container_.prev();
+    auto* dst_end = &dst->container_;
+    EmbeddedListLink* elem_link = LinkField::FieldPtr4StructPtr(elem);
+    elem_link->next()->AppendTo(elem_link->prev());
+    elem_link->AppendTo(dst_rbegin);
+    dst_end->AppendTo(elem_link);
+    --size_;
+    ++dst->size_;
+  }
+  void MoveToDstFront(value_type* elem, EmbeddedListHead* dst) {
+    CHECK(!container_.empty());
+    auto* dst_end = &dst->container_;
+    auto* dst_begin = dst->container_.next();
+    EmbeddedListLink* elem_link = LinkField::FieldPtr4StructPtr(elem);
+    elem_link->next()->AppendTo(elem_link->prev());
+    elem_link->AppendTo(dst_end);
+    dst_begin->AppendTo(elem_link);
+    --size_;
+    ++dst->size_;
+  }
+  void PushBack(value_type* elem) { InsertAfter(Last(), elem); }
+  void PushFront(value_type* elem) { InsertAfter(End(), elem); }
+  value_type* PopBack() {
     CHECK(!empty());
-    item_type* last = last_item();
+    value_type* last = Last();
     Erase(last);
     return last;
   }
-  item_type* PopFront() {
+  value_type* PopFront() {
     CHECK(!empty());
-    item_type* first = begin_item();
+    value_type* first = Begin();
     Erase(first);
     return first;
   }
-  void MoveTo(EmbeddedListHead* list) {
+  void MoveToDstBack(EmbeddedListHead* dst) {
     if (container_.empty()) { return; }
-    for (auto* iter = container_.next(); iter != &container_; iter = iter->next()) {
-      iter->set_head(&list->container_);
-    }
-    auto* list_last = list->container_.prev();
-    auto* list_end = &list->container_;
+    auto* dst_last = dst->container_.prev();
+    auto* dst_end = &dst->container_;
     auto* this_first = container_.next();
     auto* this_last = container_.prev();
-    this_first->AppendTo(list_last);
-    list_end->AppendTo(this_last);
-    list->size_ += size();
+    this_first->AppendTo(dst_last);
+    dst_end->AppendTo(this_last);
+    dst->size_ += size();
     this->Clear();
   }
 
  private:
-  void InsertAfter(item_type* prev_item, item_type* new_item) {
-    EmbeddedListItem* prev_list_item = ItemField::FieldPtr4StructPtr(prev_item);
-    EmbeddedListItem* next_list_item = prev_list_item->next();
-    EmbeddedListItem* new_list_item = ItemField::FieldPtr4StructPtr(new_item);
-    new_list_item->AppendTo(prev_list_item);
-    next_list_item->AppendTo(new_list_item);
-    new_list_item->set_head(&container_);
+  void InsertAfter(value_type* prev_elem, value_type* new_elem) {
+    EmbeddedListLink* prev_list_link = LinkField::FieldPtr4StructPtr(prev_elem);
+    EmbeddedListLink* next_list_link = prev_list_link->next();
+    EmbeddedListLink* new_list_link = LinkField::FieldPtr4StructPtr(new_elem);
+    new_list_link->AppendTo(prev_list_link);
+    next_list_link->AppendTo(new_list_link);
     ++size_;
   }
-  const EmbeddedListItem& container() const { return container_; }
-  EmbeddedListItem* mut_container() { return &container_; }
+  const EmbeddedListLink& container() const { return container_; }
+  EmbeddedListLink* mut_container() { return &container_; }
 
  private:
-  EmbeddedListItem container_;
+  EmbeddedListLink container_;
   std::size_t size_;
 };
 

@@ -233,7 +233,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 class ObjectMsgAllocator {
  public:
-  virtual ~ObjectMsgAllocator() = default;
+  virtual ~ObjectMsgAllocator() {}
   virtual char* Allocate(std::size_t size) = 0;
   virtual void Deallocate(char* ptr, std::size_t size) = 0;
 
@@ -400,7 +400,7 @@ template<typename T>
 class ObjectMsgPtr final {
  public:
   ObjectMsgPtr() : ptr_(nullptr) {}
-  explicit ObjectMsgPtr(T* ptr) { Reset(ptr); }
+  ObjectMsgPtr(T* ptr) : ptr_(nullptr) { Reset(ptr); }
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);

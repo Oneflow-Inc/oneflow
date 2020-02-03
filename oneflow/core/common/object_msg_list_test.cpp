@@ -7,7 +7,7 @@ namespace test {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestListItem)
-  OBJECT_MSG_DEFINE_LIST_ITEM(foo_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
   OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
 
  public:
@@ -23,28 +23,31 @@ TEST(ObjectMsgList, empty) {
   ASSERT_EQ(foo_list.size(), 0);
 }
 
-TEST(ObjectMsgList, empty_GetBegin) {
+TEST(ObjectMsgList, empty_Begin) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  foo_list.GetBegin(&obj_ptr);
-  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  obj_ptr = foo_list.Begin();
+  ASSERT_TRUE(!obj_ptr);
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
-  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
+  ASSERT_TRUE(!obj_ptr);
 }
 
-TEST(ObjectMsgList, empty_ResetToNext) {
+TEST(ObjectMsgList, empty_Next) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
-  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
-  ASSERT_TRUE(foo_list.EqualsEnd(next));
-  foo_list.ResetToNext(&obj_ptr);
-  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
-  foo_list.ResetToNext(&obj_ptr, &next);
-  ASSERT_TRUE(foo_list.EqualsEnd(obj_ptr));
-  ASSERT_TRUE(foo_list.EqualsEnd(next));
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
+  ASSERT_TRUE(!obj_ptr);
+  ASSERT_TRUE(!next);
+  obj_ptr = foo_list.Next(obj_ptr.Mutable());
+  ASSERT_TRUE(!obj_ptr);
+  obj_ptr = next;
+  next = foo_list.Next(next.Mutable());
+  ASSERT_TRUE(!obj_ptr);
+  ASSERT_TRUE(!next);
 }
 
 TEST(ObjectMsgList, PushFront) {
@@ -55,7 +58,8 @@ TEST(ObjectMsgList, PushFront) {
   foo_list.PushFront(item1.Mutable());
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item1);
   ASSERT_TRUE(next == item0);
 }
@@ -93,7 +97,8 @@ TEST(ObjectMsgList, PushBack) {
   foo_list.PushBack(item1.Mutable());
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
   ASSERT_TRUE(next == item1);
 }
@@ -109,9 +114,10 @@ TEST(ObjectMsgList, Erase) {
   ASSERT_EQ(item1->ref_cnt(), 1);
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
-  ASSERT_TRUE(foo_list.EqualsEnd(next));
+  ASSERT_TRUE(!next);
 }
 
 TEST(ObjectMsgList, PopBack) {
@@ -125,9 +131,10 @@ TEST(ObjectMsgList, PopBack) {
   ASSERT_EQ(item1->ref_cnt(), 1);
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
-  ASSERT_TRUE(foo_list.EqualsEnd(next));
+  ASSERT_TRUE(!next);
 }
 
 TEST(ObjectMsgList, PopFront) {
@@ -141,9 +148,9 @@ TEST(ObjectMsgList, PopFront) {
   ASSERT_EQ(item0->ref_cnt(), 1);
   OBJECT_MSG_PTR(TestListItem) obj_ptr;
   OBJECT_MSG_PTR(TestListItem) next;
-  foo_list.GetBegin(&obj_ptr, &next);
-  ASSERT_TRUE(obj_ptr == item1);
-  ASSERT_TRUE(foo_list.EqualsEnd(next));
+  obj_ptr = foo_list.Begin();
+  next = foo_list.Next(obj_ptr.Mutable());
+  ASSERT_TRUE(!next);
 }
 
 TEST(ObjectMsgList, Clear) {
@@ -169,9 +176,9 @@ TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
   int i = 0;
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
     if (i == 0) {
-      ASSERT_TRUE(item == item0);
+      ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
-      ASSERT_TRUE(item == item1);
+      ASSERT_TRUE(item == item1.Mutable());
     }
     ++i;
   }
@@ -203,7 +210,7 @@ TEST(ObjectMsgList, FOR_EACH) {
 
 // clang-format off
 BEGIN_OBJECT_MSG(TestObjectMsgListHead);
-  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
 END_OBJECT_MSG(TestObjectMsgListHead);
 // clang-format on
 
@@ -251,9 +258,9 @@ TEST(ObjectMsg, nested_list_delete) {
   int i = 0;
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
     if (i == 0) {
-      ASSERT_TRUE(item == item0);
+      ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
-      ASSERT_TRUE(item == item1);
+      ASSERT_TRUE(item == item1.Mutable());
     }
     ++i;
   }
@@ -277,8 +284,8 @@ TEST(ObjectMsg, MoveTo) {
   foo_list.MoveTo(&foo_list0);
   ASSERT_EQ(foo_list0.size(), 2);
   ASSERT_EQ(foo_list.empty(), true);
-  ASSERT_TRUE(foo_list0.Begin() == item0);
-  ASSERT_TRUE(foo_list0.Last() == item1);
+  ASSERT_TRUE(foo_list0.Begin() == item0.Mutable());
+  ASSERT_TRUE(foo_list0.Last() == item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
 }

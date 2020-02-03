@@ -17,7 +17,7 @@ END_OBJECT_MSG(ObjectMsgSkipListFoo);
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgSkipListFooContainer);
-  OBJECT_MSG_DEFINE_MAP_HEAD(ObjectMsgSkipListFoo, foo_map_key);
+  OBJECT_MSG_DEFINE_MAP_HEAD(ObjectMsgSkipListFoo, foo_map_key, foo_map);
 END_OBJECT_MSG(ObjectMsgSkipListFooContainer);
 // clang-format on
 
@@ -144,7 +144,7 @@ TEST(ObjectMsgSkipList, MAP_HEAD) {
   int elem_cnt = 0;
   {
     auto foo_map_container = OBJECT_MSG_PTR(ObjectMsgSkipListFooContainer)::New();
-    auto& foo_map = *foo_map_container->mutable_foo_map_key();
+    auto& foo_map = *foo_map_container->mutable_foo_map();
     OBJECT_MSG_PTR(ObjectMsgSkipListFoo) exists[100];
     for (int i = 0; i < 100; ++i) {
       exists[i] = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();

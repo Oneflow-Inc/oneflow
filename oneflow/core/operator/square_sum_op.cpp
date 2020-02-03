@@ -51,7 +51,7 @@ Maybe<void> SquareSumOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   const int64_t num_x_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, num_x_axes) {
-    SbpSignatureBuilder().Split("x", 0).PartialSum("y").Build(
+    SbpSignatureBuilder().Split("x", i).PartialSum("y").Build(
         sbp_sig_list->mutable_sbp_signature()->Add());
   }
   return Maybe<void>::Ok();
