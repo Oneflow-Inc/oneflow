@@ -13,18 +13,18 @@ namespace oneflow {
 namespace user_op {
 
 Maybe<void> ShapeInferFnUtil::Unchanged(InferContext* ctx) {
-  const Shape* shape = nullptr;
+  const MutShapeView* shape = nullptr;
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (shape) {
-      CHECK_EQ_OR_RETURN(*shape, *ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second));
+      OF_CHECK(*shape == *ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second));
     } else {
       shape = ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
     }
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second) = *shape;
+    ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second)->set_shape(*shape);
   }
   return Maybe<void>::Ok();
 }
@@ -34,8 +34,8 @@ Maybe<void> ShapeInferFnUtil::InOutCorrespond(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
-    *ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second) =
-        *ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
+    ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second)
+        ->set_shape(*ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second));
   }
   return Maybe<void>::Ok();
 }

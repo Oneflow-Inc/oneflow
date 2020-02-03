@@ -110,33 +110,30 @@ class UserOpInferContext : public user_op::InferContext {
   UserOpInferContext(const OperatorConf& op_conf,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
-    const auto& user_op_conf = op_conf.user_conf();
-    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        inputs_.emplace_back(std::make_pair(arg_name, i));
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          Shape& shape = blob->mut_shape();
+          arg2shape_view_.emplace(key, MutShapeView(shape.mut_dim_vec()->data(), shape.NumAxes()));
+          arg2dtype_.emplace(key, blob->data_type());
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
       }
-    }
-    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        outputs_.emplace_back(std::make_pair(arg_name, i));
-      }
-    }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
   }
   ~UserOpInferContext() = default;
 
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_shape();
+  MutShapeView* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return &(arg2shape_view_.at(std::make_pair(arg_name, index)));
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
+    return &(arg2dtype_.at(std::make_pair(arg_name, index)));
   }
   const ArgVec& inputs() const { return inputs_; }
   const ArgVec& outputs() const { return outputs_; }
@@ -144,7 +141,8 @@ class UserOpInferContext : public user_op::InferContext {
  private:
   ArgVec inputs_;
   ArgVec outputs_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, MutShapeView> arg2shape_view_;
+  HashMap<std::pair<std::string, int32_t>, DataType> arg2dtype_;
 };
 
 class UserOpSbpContext : public user_op::SbpContext {
@@ -218,9 +216,9 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   JUST(val->shape_infer_fn(&infer_ctx));
   JUST(val->dtype_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-    out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
-    out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+    GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second))
+        ->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
+    // no need to update shape cuz it is MutShapeView
   }
 
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(

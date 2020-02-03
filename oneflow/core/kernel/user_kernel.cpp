@@ -46,8 +46,7 @@ class UserKernelContext final : public user_op::KernelContext {
       if (blob == nullptr) {
         pair.second.reset();
       } else {
-        pair.second.reset(new user_op::Tensor(blob->static_shape(), blob->data_type(),
-                                              static_cast<char*>(blob->mut_dptr())));
+        pair.second.reset(new user_op::Tensor(blob));
       }
     }
   }
