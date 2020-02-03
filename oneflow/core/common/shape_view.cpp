@@ -85,4 +85,9 @@ void MutShapeView::set_shape(const ShapeView& shape) {
   std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), dim_ptr());
 }
 
+void MutShapeView::set_shape(const MutShapeView& shape) {
+  CHECK_EQ(NumAxes(), shape.NumAxes());
+  std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), dim_ptr());
+}
+
 }  // namespace oneflow
