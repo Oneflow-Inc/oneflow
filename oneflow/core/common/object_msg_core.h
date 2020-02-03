@@ -177,6 +177,9 @@ namespace oneflow {
 #define OBJECT_MSG_STRUCT_MEMBER(class_name) \
   std::conditional<ObjectMsgIsScalar<class_name>::value, class_name, class_name*>::type
 
+typedef short OBJECT_MSG_TYPE(short);
+typedef int OBJECT_MSG_TYPE(int);
+typedef long OBJECT_MSG_TYPE(long);
 typedef char OBJECT_MSG_TYPE(char);
 typedef int8_t OBJECT_MSG_TYPE(int8_t);
 typedef uint8_t OBJECT_MSG_TYPE(uint8_t);

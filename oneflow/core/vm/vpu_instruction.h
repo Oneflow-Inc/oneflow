@@ -1,15 +1,10 @@
-#ifndef ONEFLOW_CORE_VPU_VPU_H_
-#define ONEFLOW_CORE_VPU_VPU_H_
+#ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
+#define ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
 
 #include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/vm/mirror_object.h"
 
 namespace oneflow {
-
-// clang-format off
-BEGIN_FLAT_MSG(SymbolValue);
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, value);
-END_FLAT_MSG(SymbolValue);
-// clang-format on
 
 // clang-format off
 BEGIN_FLAT_MSG(AllVpuEnabledMask);
@@ -20,7 +15,7 @@ END_FLAT_MSG(AllVpuEnabledMask);
 BEGIN_FLAT_MSG(VpuMask);
   FLAT_MSG_DEFINE_ONEOF(mask_type,
       FLAT_MSG_ONEOF_FIELD(AllVpuEnabledMask, all_vpu_enabled)
-      FLAT_MSG_ONEOF_FIELD(SymbolValue, enabled_parallel_desc_symbol));
+      FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, enabled_parallel_desc_symbol));
 END_FLAT_MSG(VpuMask);
 // clang-format on
 
@@ -75,7 +70,7 @@ END_FLAT_MSG(R2LTransportVpu);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(VpuInstruction);
+BEGIN_FLAT_MSG(VpuInstructionDesc);
   FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
   FLAT_MSG_DEFINE_ONEOF(vpu_type,
     FLAT_MSG_ONEOF_FIELD(LocalVpu, local)
@@ -88,9 +83,28 @@ BEGIN_FLAT_MSG(VpuInstruction);
     FLAT_MSG_ONEOF_FIELD(D2HTransportVpu, d2h_transport)
     FLAT_MSG_ONEOF_FIELD(L2RTransportVpu, l2r_transport)
     FLAT_MSG_ONEOF_FIELD(R2LTransportVpu, r2l_transport));
-END_FLAT_MSG(VpuInstruction);
+END_FLAT_MSG(VpuInstructionDesc);
+// clang-format on
+
+static const int kVpuOprandLimit = 64;
+
+// clang-format off
+BEGIN_FLAT_MSG(VpuInstructionProto);
+  FLAT_MSG_DEFINE_OPTIONAL(VpuInstructionDesc, vpu_instruction_desc);
+  FLAT_MSG_DEFINE_REPEATED(LogicalObjectPtrValue, operand, kVpuOprandLimit);
+END_FLAT_MSG(VpuInstructionProto);
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(VpuInstruction);
+  // fields
+  OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc, vpu_instruction_desc);
+
+  // links
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirrorObjectAccess, vpu_operand_index, index2mirror_obj_access);
+END_OBJECT_MSG(VpuInstruction);
 // clang-format on
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VPU_VPU_H_
+#endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
