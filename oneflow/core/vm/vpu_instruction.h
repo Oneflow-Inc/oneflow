@@ -86,12 +86,20 @@ BEGIN_FLAT_MSG(VpuInstructionDesc);
 END_FLAT_MSG(VpuInstructionDesc);
 // clang-format on
 
-static const int kVpuOprandLimit = 64;
+// clang-format off
+BEGIN_FLAT_MSG(VpuInstructionOprand);
+  FLAT_MSG_DEFINE_ONEOF(op_rand_type,
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, const_oprand)
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, mutable_oprand));
+END_FLAT_MSG(VpuInstructionOprand);
+// clang-format on
+
+static const int kVpuInstructionOprandLimit = 64;
 
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(VpuInstructionDesc, vpu_instruction_desc);
-  FLAT_MSG_DEFINE_REPEATED(LogicalObjectPtrValue, operand, kVpuOprandLimit);
+  FLAT_MSG_DEFINE_REPEATED(VpuInstructionOprand, operand, kVpuInstructionOprandLimit);
 END_FLAT_MSG(VpuInstructionProto);
 // clang-format on
 
