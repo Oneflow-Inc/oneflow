@@ -1,5 +1,6 @@
 #include "oneflow/core/common/fixed_vector.h"
 #include "gtest/gtest.h"
+#include <functional>
 
 namespace oneflow {
 
