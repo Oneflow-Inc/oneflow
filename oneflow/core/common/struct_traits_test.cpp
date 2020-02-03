@@ -11,9 +11,6 @@ struct OneflowTestNamespaceFoo {
   const int const_bar;
 };
 
-DEFINE_STRUCT_FIELD(OneflowTestNamespaceFoo, bar);
-DEFINE_STRUCT_FIELD(OneflowTestNamespaceFoo, const_bar);
-
 TEST(StructField, mutable_struct_mutable_field) {
   OneflowTestNamespaceFoo foo;
   auto* bar = &foo.bar;

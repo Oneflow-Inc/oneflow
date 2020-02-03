@@ -1,19 +1,19 @@
 #ifndef ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 
+#include <cstddef>
+#include "oneflow/core/common/preprocessor.h"
+
 namespace oneflow {
 
-#define STRUCT_FIELD(T, field) StructField<T, STRUCT_FIELD_OFFSET(T, field)>
-#define DEFINE_STRUCT_FIELD(T, field)                        \
-  template<>                                                 \
-  struct StructField<T, STRUCT_FIELD_OFFSET(T, field)> final \
-      : public StructFieldImpl<T, STRUCT_FIELD_TYPE(T, field), STRUCT_FIELD_OFFSET(T, field)> {};
+#define STRUCT_FIELD(T, field) \
+  StructField<T, STRUCT_FIELD_TYPE(T, field), STRUCT_FIELD_OFFSET(T, field)>
+#define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
+#define STRUCT_FIELD_OFFSET(T, field) offsetof(T, field)
 
-template<typename T, int offset>
-struct StructField {};
-
+// details
 template<typename T, typename F, int offset>
-struct StructFieldImpl {
+struct StructField {
   using struct_type = T;
   using field_type = F;
   static const int offset_value = offset;
@@ -25,9 +25,6 @@ struct StructFieldImpl {
     return (F*)(((char*)struct_ptr) + offset_value);
   }
 };
-
-#define STRUCT_FIELD_TYPE(T, field) decltype(((T*)nullptr)->field)
-#define STRUCT_FIELD_OFFSET(T, field) ((int)(long long)&((T*)nullptr)->field)
 }
 
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_

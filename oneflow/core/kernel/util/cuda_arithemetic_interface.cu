@@ -133,6 +133,35 @@ __global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half 
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
+template<typename T>
+__global__ void MulByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y_value; }
+}
+
+template<typename T>
+__global__ void AddByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y_value; }
+}
+
+template<typename T>
+__global__ void SubByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] - y_value; }
+}
+
+template<typename T>
+__global__ void DivByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y_value; }
+}
+
+template<typename T>
+__global__ void FillGpu(const int64_t n, const T value, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = value; }
+}
+
 }  // namespace
 
 #define MUL_BY_SCALAR(T)                                                                           \
@@ -154,5 +183,80 @@ void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t 
   MulByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
 }
+
+#define MUL_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::MulByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    MulByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+MUL_BY_SCALAR_PTR(float)
+MUL_BY_SCALAR_PTR(double)
+MUL_BY_SCALAR_PTR(int8_t)
+MUL_BY_SCALAR_PTR(int32_t)
+MUL_BY_SCALAR_PTR(int64_t)
+
+#undef MUL_BY_SCALAR_PTR
+
+#define ADD_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::AddByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    AddByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+ADD_BY_SCALAR_PTR(float)
+ADD_BY_SCALAR_PTR(double)
+ADD_BY_SCALAR_PTR(int8_t)
+ADD_BY_SCALAR_PTR(int32_t)
+ADD_BY_SCALAR_PTR(int64_t)
+
+#undef ADD_BY_SCALAR_PTR
+
+#define SUB_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::SubByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    SubByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+SUB_BY_SCALAR_PTR(float)
+SUB_BY_SCALAR_PTR(double)
+SUB_BY_SCALAR_PTR(int8_t)
+SUB_BY_SCALAR_PTR(int32_t)
+SUB_BY_SCALAR_PTR(int64_t)
+
+#undef SUB_BY_SCALAR_PTR
+
+#define DIV_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::DivByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    DivByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+DIV_BY_SCALAR_PTR(float)
+DIV_BY_SCALAR_PTR(double)
+DIV_BY_SCALAR_PTR(int8_t)
+DIV_BY_SCALAR_PTR(int32_t)
+DIV_BY_SCALAR_PTR(int64_t)
+
+#undef DIV_BY_SCALAR_PTR
+
+#define FILL(T)                                                                              \
+  void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
+                                             T* y) {                                         \
+    FillGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>( \
+        n, value, y);                                                                        \
+  }
+
+FILL(float)
+FILL(double)
+FILL(int8_t)
+FILL(int32_t)
+FILL(int64_t)
+
+#undef FILL
 
 }  // namespace oneflow
