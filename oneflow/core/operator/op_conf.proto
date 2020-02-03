@@ -1606,6 +1606,21 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message DynamicBinarySplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 base_shift = 3;
+}
+
+message DynamicBinaryConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required DataType out_data_type = 3;
+  required ShapeProto out_shape = 4;
+  required OptInt64 out_batch_axis = 5;
+  required SbpParallel out_sbp = 6;
+}
+
 message UniqueWithCountsOpConf {
   required string x = 1;
   required string y = 2;
@@ -1623,6 +1638,25 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message SquareSumOpConf {
+  required string x = 1;
+  required string y = 2;
+}
+
+message BroadcastMaximumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMinimumOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1631,6 +1665,30 @@ message ConstantLikeOpConf {
     int64 int_operand = 4;
     double float_operand = 5;
   }
+}
+
+message ScalarAddByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarMulByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarSubByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
+}
+
+message ScalarDivByTensorOpConf {
+  required string in = 1;
+  required string scalar = 2;
+  required string out = 3;
 }
 
 message OperatorConf {
@@ -1697,6 +1755,8 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
+    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
+    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     UserOpConf user_conf = 199;
     
     // domain op
@@ -1787,6 +1847,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
+    ConstantLikeOpConf constant_like_conf = 339;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -1808,7 +1869,13 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
-    ConstantLikeOpConf constant_like_conf = 518;
+    ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
+    ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
+    ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
+    ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
+    SquareSumOpConf square_sum_conf = 522;
+    BroadcastMaximumOpConf broadcast_maximum_conf = 523;
+    BroadcastMinimumOpConf broadcast_minimum_conf = 524;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;

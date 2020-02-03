@@ -158,9 +158,7 @@ bool NormalInplaceLbiNode::IsMutRef(
 
 bool InplaceLbiEdge::IsMutRef() const {
   CHECK_NOTNULL(dynamic_cast<const NormalInplaceLbiNode*>(dst_node()));
-  const OutputBlobModifier& obn_modifier = op().OutputBlobModifier4Obn(obn());
-  CHECK(obn_modifier.has_mutable_inplace_ibn() || obn_modifier.has_const_inplace_ibn());
-  return obn_modifier.has_mutable_inplace_ibn();
+  return is_mut_ref_;
 }
 
 std::function<InplaceLbiNode*(const LogicalBlobId&)> InplaceLbiGraph::MakeMutFindOrCreateNode(
@@ -177,54 +175,67 @@ std::function<InplaceLbiNode*(const LogicalBlobId&)> InplaceLbiGraph::MakeMutFin
   };
 }
 
-void InplaceLbiGraph::Init(const OpBlobArgList& obas,
+void InplaceLbiGraph::Init(const InplaceObasInfo& obas_info,
                            const std::function<const Operator*(const std::string&)>& Op4OpName) {
   auto FindOrCreateNode = MakeMutFindOrCreateNode(Op4OpName);
-  for (const auto& oba : obas.oba()) {
-    const Operator& op = *Op4OpName(oba.op_name());
-    LogicalBlobId lbi;
-    std::string ibn;
-    std::string obn;
-    if (std::find(op.input_bns().begin(), op.input_bns().end(), oba.bn_in_op())
-        != op.input_bns().end()) {
-      ibn = oba.bn_in_op();
-      obn = ibn + "_updated";
-      lbi.set_op_name(op.op_name());
-      lbi.set_blob_name(obn);
-      CHECK(std::find_if(op.output_bns().begin(), op.output_bns().end(),
-                         [&](const std::string& obn) { return op.BnInOp2Lbi(obn) == lbi; })
-            == op.output_bns().end());
-    } else if (std::find(op.output_bns().begin(), op.output_bns().end(), oba.bn_in_op())
-               != op.output_bns().end()) {
-      const auto& obn_modifier = op.OutputBlobModifier4Obn(oba.bn_in_op());
-      if (obn_modifier.has_const_inplace_ibn()) {
-        ibn = obn_modifier.const_inplace_ibn();
-      } else if (obn_modifier.has_mutable_inplace_ibn()) {
-        ibn = obn_modifier.mutable_inplace_ibn();
-      } else {
-        UNIMPLEMENTED();
-      }
-      obn = oba.bn_in_op();
-      lbi = op.BnInOp2Lbi(oba.bn_in_op());
-    } else {
-      UNIMPLEMENTED();
-    }
-    auto* edge = new InplaceLbiEdge(&op, ibn, obn);
+  auto AddEdge = [&](const Operator& op, const LogicalBlobId& lbi, const std::string& ibn,
+                     const std::string& obn, bool is_mut) {
+    auto* edge = new InplaceLbiEdge(&op, ibn, obn, is_mut);
     AddAllocatedEdge(edge);
     Connect<InplaceLbiNode, InplaceLbiEdge>(FindOrCreateNode(op.BnInOp2Lbi(ibn)), edge,
                                             FindOrCreateNode(lbi));
+  };
+
+  auto BuildNodeAndEdge4InplacePairs = [&](const OpBlobArgPairs& pairs, bool is_mut) {
+    for (const auto& pair : pairs.pair()) {
+      CHECK_EQ(pair.first().op_name(), pair.second().op_name());
+      const Operator& op = *Op4OpName(pair.first().op_name());
+      std::string ibn = pair.first().bn_in_op();
+      std::string obn = pair.second().bn_in_op();
+      LogicalBlobId lbi = op.BnInOp2Lbi(obn);
+      CHECK(std::find(op.input_bns().begin(), op.input_bns().end(), ibn) != op.input_bns().end());
+      CHECK(std::find(op.output_bns().begin(), op.output_bns().end(), obn)
+            != op.output_bns().end());
+      AddEdge(op, lbi, ibn, obn, is_mut);
+    }
+  };
+
+  for (const auto& oba : obas_info.mut_in_obas.oba()) {
+    const Operator& op = *Op4OpName(oba.op_name());
+    std::string ibn = oba.bn_in_op();
+    std::string obn = ibn + "_updated";
+    LogicalBlobId lbi;
+    lbi.set_op_name(op.op_name());
+    lbi.set_blob_name(obn);
+    CHECK(std::find(op.input_bns().begin(), op.input_bns().end(), ibn) != op.input_bns().end());
+    CHECK(std::find_if(op.output_bns().begin(), op.output_bns().end(),
+                       [&](const std::string& obn) { return op.BnInOp2Lbi(obn) == lbi; })
+          == op.output_bns().end());
+    AddEdge(op, lbi, ibn, obn, true);
   }
+
+  BuildNodeAndEdge4InplacePairs(obas_info.mut_inplace_oba_pairs, true);
+  BuildNodeAndEdge4InplacePairs(obas_info.con_inplace_oba_pairs, false);
+
   ForEachNode([](const InplaceLbiNode* node) { CHECK_LE(node->in_edges().size(), 1); });
   CHECK(!FindFirstNontrivialSCC());
 }
 
 void InplaceLbiGraph::ComputeSafeInplaceObns(
-    OpBlobArgList* obas,
+    InplaceObasInfo* obas_info,
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName)
     const {
   ComputeSafeInplaceEdges(IsReachableFromLbiToOpName, [&](const InplaceLbiEdge* edge) {
     CHECK_NOTNULL(dynamic_cast<const NormalInplaceLbiNode*>(edge->dst_node()));
-    *obas->mutable_oba()->Add() = GenOpBlobArg(edge->op().op_name(), edge->obn());
+    if (edge->IsMutRef()) {
+      auto* pair = obas_info->mut_inplace_oba_pairs.mutable_pair()->Add();
+      *pair->mutable_first() = GenOpBlobArg(edge->op().op_name(), edge->ibn());
+      *pair->mutable_second() = GenOpBlobArg(edge->op().op_name(), edge->obn());
+    } else {
+      auto* pair = obas_info->con_inplace_oba_pairs.mutable_pair()->Add();
+      *pair->mutable_first() = GenOpBlobArg(edge->op().op_name(), edge->ibn());
+      *pair->mutable_second() = GenOpBlobArg(edge->op().op_name(), edge->obn());
+    }
   });
 }
 

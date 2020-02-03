@@ -22,7 +22,7 @@ class EitherPtr final {
   }
   template<typename T>
   const std::shared_ptr<T>& Get() const {
-    CHECK(Has<T>());
+    CHECK(this->template Has<T>());
     return Cast<T>();
   }
   void Reset(const std::shared_ptr<X>& ptr) {
@@ -63,10 +63,10 @@ class EitherPtr final {
     static const int8_t value = 2;
   };
   void CopyFrom(const EitherPtr<X, Y>& either_ptr) {
-    if (either_ptr.Has<X>()) {
-      Set(either_ptr.Get<X>());
-    } else if (either_ptr.Has<Y>()) {
-      Set(either_ptr.Get<Y>());
+    if (either_ptr.template Has<X>()) {
+      Set(either_ptr.template Get<X>());
+    } else if (either_ptr.template Has<Y>()) {
+      Set(either_ptr.template Get<Y>());
     } else {
       // do nothin
     }
