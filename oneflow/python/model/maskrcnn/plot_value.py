@@ -190,6 +190,7 @@ def post_process_torch(df):
     print_perf_summary(df, skip_iter_before=2)
     if df[df["value"].notnull()]["iter"].min() == 0:
         df.loc[:]["iter"] += 1
+    df = df[df.legend.str.contains("data_time|eta_seconds") == False]
     return df
 
 
