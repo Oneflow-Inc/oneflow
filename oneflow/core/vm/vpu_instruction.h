@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
 
 #include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/vm/mirror_object.h"
+#include "oneflow/core/vm/mirrored_object.h"
 
 namespace oneflow {
 
@@ -101,7 +101,7 @@ BEGIN_OBJECT_MSG(VpuInstruction);
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc, vpu_instruction_desc);
 
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirrorObjectAccess, vpu_operand_index, index2mirror_obj_access);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObjectAccess, vpu_operand_index, index2mirrored_obj_access);
 END_OBJECT_MSG(VpuInstruction);
 // clang-format on
 
