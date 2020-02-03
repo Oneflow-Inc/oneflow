@@ -4,10 +4,10 @@
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
+class Shape;
 enum DataType;
 
 namespace user_op {
@@ -18,7 +18,7 @@ class InferContext {
  public:
   virtual ~InferContext() = default;
 
-  virtual MutShapeView* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
