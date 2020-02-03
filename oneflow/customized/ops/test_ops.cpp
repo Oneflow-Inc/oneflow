@@ -9,10 +9,16 @@ REGISTER_USER_OP("ccrelu")
       MutShapeView* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       LOG(WARNING) << "ccrelu in_shape: " << in_shape->NumAxes() << " " << in_shape->At(0) << " "
                    << in_shape->At(1);
+      MutShapeView* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      LOG(WARNING) << "ccrelu out_shape: " << out_shape->NumAxes() << " " << out_shape->At(0) << " "
+                   << out_shape->At(1);
+      out_shape->set_shape(*in_shape);
+      LOG(WARNING) << "ccrelu out_shape after: " << out_shape->NumAxes() << " " << out_shape->At(0)
+                   << " " << out_shape->At(1);
       // Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       // *out_shape = *in_shape;
-      // // int32_t last_axis = in_shape->NumAxes() - 1;
-      // out_shape->Set(last_axis, in_shape->At(last_axis) * 2);
+      int32_t last_axis = in_shape->NumAxes() - 1;
+      out_shape->Set(last_axis, in_shape->At(last_axis) * 2);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

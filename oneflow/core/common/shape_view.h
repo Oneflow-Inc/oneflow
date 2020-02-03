@@ -63,6 +63,7 @@ class MutShapeView final : public ShapeViewBase<int64_t> {
 
   void set_shape(const Shape& val);
   void set_shape(const ShapeView& shape);
+  void set_shape(const MutShapeView& shape);
 };
 
 template<typename DimT>
