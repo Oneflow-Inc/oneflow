@@ -46,6 +46,10 @@ Maybe<void> SliceGradOp::GetSbpSignatures(
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().PartialSum("dy").Broadcast("like").PartialSum("dx").Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Broadcast("dy").PartialSum("like").Broadcast("dx").Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
