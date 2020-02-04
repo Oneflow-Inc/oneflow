@@ -21,6 +21,7 @@ def roi_align(
     name=None,
     spatial_scale=0.0625,
     sampling_ratio=2,
+    aligned=True
 ):
     assert isinstance(pooled_h, int)
     assert isinstance(pooled_w, int)
@@ -38,6 +39,7 @@ def roi_align(
     op_conf.roi_align_conf.roi_align_args.spatial_scale = float(spatial_scale)
     op_conf.roi_align_conf.roi_align_args.sampling_ratio = int(sampling_ratio)
     op_conf.roi_align_conf.roi_align_args.data_format = "channels_first"
+    op_conf.roi_align_conf.roi_align_args.aligned = aligned
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
