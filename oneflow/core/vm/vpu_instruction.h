@@ -15,7 +15,7 @@ END_FLAT_MSG(AllVpuEnabledMask);
 BEGIN_FLAT_MSG(VpuMask);
   FLAT_MSG_DEFINE_ONEOF(mask_type,
       FLAT_MSG_ONEOF_FIELD(AllVpuEnabledMask, all_vpu_enabled)
-      FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, enabled_parallel_desc_symbol));
+      FLAT_MSG_ONEOF_FIELD(LogicalObjectId, enabled_parallel_desc_symbol));
 END_FLAT_MSG(VpuMask);
 // clang-format on
 
@@ -89,8 +89,8 @@ END_FLAT_MSG(VpuInstructionDesc);
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionOprand);
   FLAT_MSG_DEFINE_ONEOF(oprand_type,
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, const_oprand)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectPtrValue, mutable_oprand));
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, const_oprand)
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_oprand));
 END_FLAT_MSG(VpuInstructionOprand);
 // clang-format on
 

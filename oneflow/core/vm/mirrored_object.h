@@ -14,7 +14,7 @@ END_FLAT_MSG(ObjectPtrValue);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(LogicalObjectPtrValue);
+BEGIN_FLAT_MSG(LogicalObjectId);
  public:
   bool operator<(const self_type& rhs) const;
   bool operator==(const self_type& rhs) const;
@@ -22,7 +22,7 @@ BEGIN_FLAT_MSG(LogicalObjectPtrValue);
   FLAT_MSG_DEFINE_ONEOF(ptr_type,
     FLAT_MSG_ONEOF_FIELD(ObjectPtrValue, remote)
     FLAT_MSG_ONEOF_FIELD(ObjectPtrValue, local));
-END_FLAT_MSG(LogicalObjectPtrValue);
+END_FLAT_MSG(LogicalObjectId);
 // clang-format on
 
 // clang-format off
@@ -91,7 +91,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MAP_KEY(LogicalObjectPtrValue, logical_ptr_val);
+  OBJECT_MSG_DEFINE_MAP_FLAT_MAP_KEY(LogicalObjectId, logical_ptr_val);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
