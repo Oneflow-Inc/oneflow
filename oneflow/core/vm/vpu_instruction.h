@@ -109,8 +109,28 @@ BEGIN_OBJECT_MSG(VpuInstruction);
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc, vpu_instruction_desc);
 
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObjectAccess, vpu_operand_index, index2mirrored_obj_access);
+  OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_link);
+
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_index,
+                                  oprand_index2object_access);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_ready_link,
+                              ready_oprand_list);
 END_OBJECT_MSG(VpuInstruction);
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(VpuInstructionResultStatus);
+END_OBJECT_MSG(VpuInstructionResultStatus);
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(VpuInstructionReadyPackage);
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionResultStatus, result_status); 
+  // links
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstruction, vpu_instruction_link, vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_package_link);
+END_OBJECT_MSG(VpuInstructionReadyPackage);
 // clang-format on
 
 }  // namespace oneflow

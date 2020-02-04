@@ -219,7 +219,7 @@ class EmbeddedSkipListHead {
   int size_shift() const { return std::log2(size_ + 1); }
 
   EmbeddedSkipListLink<max_level> skiplist_head_;
-  std::size_t size_;
+  volatile std::size_t size_;
 };
 
 }  // namespace oneflow
