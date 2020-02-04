@@ -16,9 +16,17 @@ class PruneParallelCastOpsPass final : public OpGraphPass {
 void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, SbpSignature> op_name2sbp_signature;
+  HashSet<std::string> ctrl_in_op_names;
+  op_graph.ForEachNode([&](const OpNode* op_node) {
+    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+      ctrl_in_op_names.insert(ctrl_in_op_name);
+    }
+  });
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_parallel_cast_conf()) { return; }
+    if (!op_conf.ctrl_in_op_name().empty()) { return; }
+    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
     const OpNode* producer = op_node->SoleInEdge()->src_node();
     const LogicalBlobId& parallel_cast_in_lbi = op_node->op().BnInOp2Lbi("in");
