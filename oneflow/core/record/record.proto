@@ -27,6 +27,7 @@ message Feature {
     FloatList float_list = 2;
     DoubleList double_list = 3;
     Int32List int32_list = 4;
+    Int64List int64_list = 5;
   }
 }
 
