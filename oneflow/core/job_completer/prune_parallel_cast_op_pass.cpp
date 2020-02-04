@@ -5,15 +5,15 @@ namespace oneflow {
 
 namespace {
 
-class ReplaceParallelCastPass final : public OpGraphPass {
+class PruneParallelCastOpsPass final : public OpGraphPass {
  public:
-  ReplaceParallelCastPass() = default;
-  ~ReplaceParallelCastPass() override = default;
-  bool IsEnabled() const override { return true; }
+  PruneParallelCastOpsPass() = default;
+  ~PruneParallelCastOpsPass() override = default;
+  bool IsEnabled() const override { return GlobalJobDesc().prune_parallel_cast_ops(); }
   void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void ReplaceParallelCastPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, SbpSignature> op_name2sbp_signature;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -63,6 +63,6 @@ void ReplaceParallelCastPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("ReplaceParallelCastPass", ReplaceParallelCastPass);
+REGISTER_FUNCTION_PASS("PruneParallelCastOpsPass", PruneParallelCastOpsPass);
 
 }  // namespace oneflow

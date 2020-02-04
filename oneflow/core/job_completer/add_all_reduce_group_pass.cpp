@@ -189,8 +189,8 @@ void AddReduceSplitOpConf(
   auto MutModelUpdateOpConf = [&](const LogicalBlobId& lbi, const LogicalBlobId& new_lbi) {
     const auto* op_node = SoleConsumerOpNode4Lbi(lbi);
     OperatorConf md_updt_op_conf(op_node->op().op_conf());
-//    const std::string& prev_op_name = GetLastTouchedOpName(op_node->op().op_name());
-//    if (prev_op_name != "") { md_updt_op_conf.add_ctrl_in_op_name(prev_op_name); }
+    //    const std::string& prev_op_name = GetLastTouchedOpName(op_node->op().op_name());
+    //    if (prev_op_name != "") { md_updt_op_conf.add_ctrl_in_op_name(prev_op_name); }
     std::string ibn = "";
     for (const auto& bn : op_node->op().input_bns()) {
       if (op_node->op().BnInOp2Lbi(bn) == lbi) {
