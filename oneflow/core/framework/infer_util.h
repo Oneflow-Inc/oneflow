@@ -7,8 +7,8 @@
 
 namespace oneflow {
 
-enum DataType;
 class Shape;
+enum DataType;
 
 namespace user_op {
 
