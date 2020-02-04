@@ -9,8 +9,23 @@ from oneflow.python.oneflow_export import oneflow_export
 import collections
 import oneflow as flow
 
+
 @oneflow_export("math.reduce_mean")
 def reduce_mean(input_blob, axis=None, keepdims=False, name=None):
     reduce_sum = flow.math.reduce_sum(input_blob, axis=axis, keepdims=keepdims, name=name)
-    reduce_count = flow.math.reduced_shape_elem_cnt(input_blob, axis=axis, dtype=input_blob.dtype)
-    return reduce_sum / reduce_count
+    if input_blob.is_dynamic:
+        reduce_count = flow.math.reduced_shape_elem_cnt(input_blob, axis=axis, dtype=input_blob.dtype)
+        return reduce_sum / reduce_count
+    else:
+        if axis is None:
+            axes = []
+        else:
+            axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
+        reduce_count = 1
+        if len(axes) == 0:
+            for dim in input_blob.static_shape:
+                reduce_count *= dim
+        else:
+            for i in axes:
+                reduce_count *= input_blob.static_shape[i]
+        return flow.math.multiply(reduce_sum, 1.0 / reduce_count)
