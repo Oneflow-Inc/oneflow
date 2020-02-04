@@ -4,11 +4,11 @@
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
 enum DataType;
+class Shape;
 
 namespace user_op {
 
