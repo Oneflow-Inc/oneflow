@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
-using LogicalObjPtrFlatMsg = FLAT_MSG_TYPE(LogicalObjectPtrValue);
+using LogicalObjIdFlatMsg = FLAT_MSG_TYPE(LogicalObjectId);
 
-bool LogicalObjPtrFlatMsg::operator<(const LogicalObjPtrFlatMsg& rhs) const {
+bool LogicalObjIdFlatMsg::operator<(const LogicalObjIdFlatMsg& rhs) const {
   return std::memcmp(static_cast<const void*>(this), static_cast<const void*>(&rhs),
                      sizeof(self_type))
          < 0;
 }
 
-bool LogicalObjPtrFlatMsg::operator==(const LogicalObjPtrFlatMsg& rhs) const {
+bool LogicalObjIdFlatMsg::operator==(const LogicalObjIdFlatMsg& rhs) const {
   return std::memcmp(static_cast<const void*>(this), static_cast<const void*>(&rhs),
                      sizeof(self_type))
          == 0;
