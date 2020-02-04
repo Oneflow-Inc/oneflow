@@ -13,6 +13,7 @@ namespace oneflow {
 #define BEGIN_OBJECT_MSG(class_name)                                                          \
   struct OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                         \
    public:                                                                                    \
+    using self_type = OBJECT_MSG_TYPE(class_name) *;                                          \
     static const bool __is_object_message_type__ = true;                                      \
     BEGIN_DSS(DSS_GET_FIELD_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
     OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));                                   \
@@ -266,6 +267,7 @@ class ObjectMsgPtr;
 
 class ObjectMsgStruct {
  public:
+  void __Init__() {}
   void __Delete__() {}
 
   int32_t ref_cnt() const { return ref_cnt_; }
@@ -438,10 +440,16 @@ class ObjectMsgPtr final {
     return *this;
   }
 
-  static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
-  static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
+  template<typename... Args>
+  static ObjectMsgPtr New(Args&&... args) {
+    return NewFrom(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator(),
+                   std::forward<Args>(args)...);
+  }
+  template<typename... Args>
+  static ObjectMsgPtr NewFrom(ObjectMsgAllocator* allocator, Args&&... args) {
     ObjectMsgPtr ret;
     ObjectMsgNaiveInit<ObjectMsgAllocator, T*>::Call(allocator, &ret.ptr_, nullptr);
+    ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }
 

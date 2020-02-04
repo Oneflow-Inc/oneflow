@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/object_msg_core.h"
 #include "oneflow/core/common/object_msg_raw_ptr.h"
+#include "oneflow/core/common/object_msg_wrapper.h"
 #include "oneflow/core/common/object_msg_flat.h"
 #include "oneflow/core/common/object_msg_list.h"
 #include "oneflow/core/common/object_msg_map.h"

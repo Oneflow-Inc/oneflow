@@ -118,19 +118,29 @@ BEGIN_OBJECT_MSG(VpuInstruction);
 END_OBJECT_MSG(VpuInstruction);
 // clang-format on
 
-// clang-format off
-BEGIN_OBJECT_MSG(VpuInstructionResultStatus);
-END_OBJECT_MSG(VpuInstructionResultStatus);
-// clang-format on
+class VpuInstructionStatusQuerier {
+ public:
+  virtual ~VpuInstructionStatusQuerier() = default;
+  virtual bool Done() const;
+
+ protected:
+  VpuInstructionStatusQuerier() = default;
+};
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuInstructionReadyPackage);
+BEGIN_OBJECT_MSG(VpuInstructionExecutePackage);
+ public:
+  template<typename NewQuerierT>
+  void __Init__(const NewQuerierT& NewQuerier) { mutable_status_querier()->__Init__(NewQuerier); }
+
+  bool Done() const { return status_querier()->Done(); }
+
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionResultStatus, result_status); 
+  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstruction, vpu_instruction_link, vpu_instruction_list);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_package_link);
-END_OBJECT_MSG(VpuInstructionReadyPackage);
+END_OBJECT_MSG(VpuInstructionExecutePackage);
 // clang-format on
 
 }  // namespace oneflow

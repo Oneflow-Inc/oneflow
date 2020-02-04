@@ -70,8 +70,7 @@ void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch() {
 
 void OBJECT_MSG_TYPE(ObjMsgSizedMemPool)::Prefetch(ObjMsgChunkList* free_list) {
   for (int64_t i = 0; i < prefetch_cnt(); ++i) {
-    auto chunk = OBJECT_MSG_PTR(ObjMsgChunk)::New(mut_allocator());
-    chunk->__Init__(this, mem_block_size());
+    auto chunk = OBJECT_MSG_PTR(ObjMsgChunk)::NewFrom(mut_allocator(), this, mem_block_size());
     free_list->PushBack(chunk.Mutable());
   }
 }
@@ -98,8 +97,8 @@ void CachedObjectMsgAllocatorBase::Prefetch() {
   CHECK_LT(kMemSizeShiftMin, mem_size_shift_max_);
   allocators_.resize(mem_size_shift_max_ - kMemSizeShiftMin + 1);
   for (int i = kMemSizeShiftMin; i <= mem_size_shift_max_; ++i) {
-    auto mem_pool = OBJECT_MSG_PTR(ObjMsgSizedMemPool)::New(backend_allocator_);
-    mem_pool->__Init__(1 << i, prefetch_cnt_);
+    auto mem_pool =
+        OBJECT_MSG_PTR(ObjMsgSizedMemPool)::NewFrom(backend_allocator_, 1 << i, prefetch_cnt_);
     allocators_.at(i - kMemSizeShiftMin) = mem_pool;
   }
 }
