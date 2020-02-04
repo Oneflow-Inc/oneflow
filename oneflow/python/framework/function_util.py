@@ -218,6 +218,10 @@ def set_enable_non_distributed_optimizer(func_desc, value = True):
 def set_disable_all_reduce_sequence(func_desc, value = True):
     func_desc.job_config_proto.disable_all_reduce_sequence = value
 
+@oneflow_function_config('prune_parallel_cast_ops')
+def set_prune_parallel_cast_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_parallel_cast_ops = value
+
 @oneflow_function_config('non_distributed_optimizer_group_size_mbyte')
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
