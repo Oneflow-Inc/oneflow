@@ -607,7 +607,7 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     CHECK(model_op_node->op().op_conf().has_variable_conf());
     const VariableOpConf& variable_conf = model_op_node->op().op_conf().variable_conf();
-    if (!variable_conf.has_regularizer()) { return; }
+    if (!variable_conf.has_regularizer()) { continue; }
     const RegularizerConf& regularizer_conf = variable_conf.regularizer();
     if (regularizer_conf.has_l1_l2_conf()) {
       OperatorConf regularize_gradient_op_conf{};
