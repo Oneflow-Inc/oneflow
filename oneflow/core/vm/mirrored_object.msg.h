@@ -62,17 +62,6 @@ END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(MirroredObjectId);
-  // fields
-  FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, logical_object_id);
-  FLAT_MSG_DEFINE_OPTIONAL(VpuId, vpu_id);
-
-  // methods
-  FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
-END_FLAT_MSG(MirroredObjectId);
-// clang-format on
-
-// clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_ONEOF(type,
@@ -85,8 +74,16 @@ BEGIN_OBJECT_MSG(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(MirroredObjectId, mirrored_object_id);
+  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(VpuId, vpu_id);
 END_OBJECT_MSG(MirroredObject);
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(LogicalObject);
+  // links
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, vpu_id, vpu_id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
+END_OBJECT_MSG(LogicalObject);
 // clang-format on
 
 }  // namespace oneflow

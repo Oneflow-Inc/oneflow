@@ -97,7 +97,7 @@ BEGIN_OBJECT_MSG(VpuScheduler);
   //links
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, vpu_instruction_msg_pending_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(Vpu, vpu_id, vpu_id2vpu);
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, mirrored_object_id, id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
 END_OBJECT_MSG(VpuScheduler);
 // clang-format on
 
