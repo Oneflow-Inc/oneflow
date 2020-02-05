@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_WRAPPER_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_WRAPPER_H_
 
+#include <glog/logging.h>
 #include "oneflow/core/common/object_msg_core.h"
 
 namespace oneflow {
@@ -12,8 +13,10 @@ BEGIN_OBJECT_MSG(Wrapper4CppObject);
   template<typename NewQuerierT>
   void __Init__(const NewQuerierT& NewQuerier) {
     set_obj(NewQuerier(mut_allocator(), mutable_obj_size()));
+    CHECK_GE(obj_size(), 0);
   }
   void __Delete__() {
+    if (obj_size() == 0) { return; }
     mut_allocator()->Deallocate(reinterpret_cast<char*>(mutable_obj()), obj_size());
   }
 
