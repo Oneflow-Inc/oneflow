@@ -612,7 +612,7 @@ class IterationProcessor(object):
             def process_one_rank(outputs_dict):
                 assert isinstance(outputs_dict, dict)
                 if "image_id" in outputs_dict:
-                    outputs.pop("image_id")
+                    outputs_dict.pop("image_id")
                 if self.collect_accuracy_metrics:
                     mask_incorrect = outputs.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
                     gt_masks_bool = outputs.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
