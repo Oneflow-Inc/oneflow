@@ -42,14 +42,16 @@ namespace oneflow {
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "flat message", OF_PP_CAT(field_name, _));
 
+#define FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP() _FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP()
+
 #define FLAT_MSG_ONEOF_FIELD(field_type, field_name) \
   OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
 
-#define FLAT_MSG_ONEOF_ENUM_TYPE(field_type, oneof_name) \
-  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
+#define FLAT_MSG_ONEOF_ENUM_TYPE(flat_msg_type, oneof_name) \
+  FLAT_MSG_TYPE(flat_msg_type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
 
-#define FLAT_MSG_ONEOF_ENUM_VALUE(field_type, field) \
-  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_ENUM_VALUE(field)
+#define FLAT_MSG_ONEOF_ENUM_VALUE(flat_msg_type, field) \
+  FLAT_MSG_TYPE(flat_msg_type)::_FLAT_MSG_ONEOF_ENUM_VALUE(field)
 
 #define FLAT_MSG_ONEOF_NOT_SET_VALUE(field_type, oneof_name) \
   FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
@@ -219,6 +221,39 @@ DEFINE_FLAT_MSG_TYPE(double);
                                                                                                   \
  private:                                                                                         \
   FlatMsgRepeatedField<T, N> OF_PP_CAT(field_name, _)
+
+#define _FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP()                                           \
+ public:                                                                                         \
+  bool operator<(const self_type& rhs) const {                                                   \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           < 0;                                                                                  \
+  }                                                                                              \
+  bool operator<=(const self_type& rhs) const {                                                  \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           <= 0;                                                                                 \
+  }                                                                                              \
+  bool operator==(const self_type& rhs) const {                                                  \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           == 0;                                                                                 \
+  }                                                                                              \
+  bool operator!=(const self_type& rhs) const {                                                  \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           != 0;                                                                                 \
+  }                                                                                              \
+  bool operator>(const self_type& rhs) const {                                                   \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           > 0;                                                                                  \
+  }                                                                                              \
+  bool operator>=(const self_type& rhs) const {                                                  \
+    return std::memcmp(reinterpret_cast<const void*>(this), reinterpret_cast<const void*>(&rhs), \
+                       sizeof(self_type))                                                        \
+           >= 0;                                                                                 \
+  }
 
 template<typename T, std::size_t N>
 class FlatMsgRepeatedField final {

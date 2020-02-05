@@ -15,10 +15,8 @@ END_FLAT_MSG(ObjectPtrValue);
 
 // clang-format off
 BEGIN_FLAT_MSG(LogicalObjectId);
- public:
-  bool operator<(const self_type& rhs) const;
-  bool operator==(const self_type& rhs) const;
-   
+  FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+
   FLAT_MSG_DEFINE_ONEOF(ptr_type,
     FLAT_MSG_ONEOF_FIELD(ObjectPtrValue, remote)
     FLAT_MSG_ONEOF_FIELD(ObjectPtrValue, local));
@@ -91,7 +89,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MAP_KEY(LogicalObjectId, logical_ptr_val);
+  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
