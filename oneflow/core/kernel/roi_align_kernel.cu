@@ -12,8 +12,10 @@ __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, co
                                  T y, T x) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) { return 0; }
 
-  int32_t y_low = (y <= 0) ? 0 : y;
-  int32_t x_low = (x <= 0) ? 0 : x;
+  if (y <= 0) { y = 0; }
+  if (x <= 0) { x = 0; }
+  int32_t y_low = static_cast<int32_t>(y);
+  int32_t x_low = static_cast<int32_t>(x);
   int32_t y_high = 0;
   int32_t x_high = 0;
 
