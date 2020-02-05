@@ -244,28 +244,6 @@ class PolygonInstance(object):
         self.polygons = polygons
         self.size = tuple(size)
 
-    def transpose(self, method):
-        if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
-            )
-
-        flipped_polygons = []
-        width, height = self.size
-        if method == FLIP_LEFT_RIGHT:
-            dim = width
-            idx = 0
-        elif method == FLIP_TOP_BOTTOM:
-            dim = height
-            idx = 1
-
-        for poly in self.polygons:
-            p = poly.clone()
-            p[idx::2] = dim - poly[idx::2]
-            flipped_polygons.append(p)
-
-        return PolygonInstance(flipped_polygons, size=self.size)
-
     def crop(self, box):
         assert isinstance(box, (list, tuple, np.ndarray)), str(type(box))
 
@@ -396,6 +374,18 @@ class PolygonList(object):
                 self.polygons.append(p)
 
         self.size = tuple(size)
+    
+    def transpose(self, method):
+        if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
+            raise NotImplementedError(
+                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
+            )
+
+        flipped_polygons = []
+        for polygon in self.polygons:
+            flipped_polygons.append(polygon.transpose(method))
+
+        return PolygonList(flipped_polygons, size=self.size)
 
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
