@@ -57,8 +57,11 @@ __device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t heig
                                         int32_t& y_low, int32_t& y_high) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) { return false; }
 
-  if (y > 0) { y_low = y; }
-  if (x > 0) { x_low = x; }
+  if (y <= 0) { y = 0; }
+  if (x <= 0) { x = 0; }
+
+  y_low = static_cast<int32_t>(y);
+  x_low = static_cast<int32_t>(x);
 
   if (y_low >= height - 1) {
     y_low = height - 1;
