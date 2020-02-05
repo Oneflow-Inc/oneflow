@@ -343,7 +343,7 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
 void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const ClipByGlobalNormConf& conf) {
-  if (lbi2diff_lbi->size() <= 0) { return; }
+  if (lbi2diff_lbi->empty()) { return; }
   HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
@@ -598,6 +598,9 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
     diff_lbi.set_blob_name(conf->out());
   }
 }
+
+void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+                        HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {}
 
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {

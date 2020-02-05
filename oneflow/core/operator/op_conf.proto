@@ -1643,12 +1643,12 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message RegularizeGradientOpConf {
+message L1L2RegularizeGradientOpConf {
   required string model = 1;
   required string model_diff = 2;
   required string out = 3;
-  required float l1_scale = 4;
-  required float l2_scale = 5;
+  required float l1 = 4;
+  required float l2 = 5;
 }
 
 message SquareSumOpConf {
@@ -1770,7 +1770,7 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
-    RegularizeGradientOpConf regularize_gradient_conf = 162;
+    L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
     UserOpConf user_conf = 199;
     
     // domain op

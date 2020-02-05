@@ -104,6 +104,7 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   ScaleModelDiffByLossScale(op_graph, job_builder, &model_lbi2model_diff_lbi);
   const NormalModelUpdateOpUserConf& model_update_conf =
       job_builder->job().job_conf().train_conf().model_update_conf();
+  RegularizeGradient(op_graph, job_builder, &model_lbi2model_diff_lbi);
   if (model_update_conf.has_clip_conf()) {
     ClipGradient(op_graph, job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
   }
