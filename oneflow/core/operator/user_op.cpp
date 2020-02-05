@@ -133,8 +133,8 @@ class UserOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
   ArgVec inputs_;

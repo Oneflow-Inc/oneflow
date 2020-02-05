@@ -1,9 +1,11 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/kernel_context.h"
+#include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 
@@ -15,19 +17,16 @@ class UserKernelContext final : public user_op::KernelContext {
       : user_op::KernelContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
         arg2tensor_() {
-    const auto& user_op_conf = op_conf.user_conf();
-    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
+        }
       }
-    }
-    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
-      }
-    }
+    };
+    InitInOrOut(op_conf.user_conf().input());
+    InitInOrOut(op_conf.user_conf().output());
     arg2tensor_.emplace(std::make_pair("tmp_buffer", 0), std::unique_ptr<user_op::Tensor>());
   }
   ~UserKernelContext() = default;
@@ -90,6 +89,58 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
+class UserKernelInferContext : public user_op::InferContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserKernelInferContext(const OperatorConf& op_conf)
+      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          arg2shape_.emplace(std::make_pair(arg_name, i), std::unique_ptr<Shape>());
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
+      }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
+  }
+  ~UserKernelInferContext() = default;
+
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2shape_.find(std::make_pair(arg_name, index));
+    if (it == arg2shape_.end()) { return nullptr; }
+    return it->second.get();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return nullptr;
+  }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
+
+  void UpdateShapeWithCorrBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    for (auto& pair : arg2shape_) {
+      std::string bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
+      Blob* blob = BnInOp2Blob(bn_in_op);
+      if (blob == nullptr) {
+        pair.second.reset();
+      } else {
+        Shape* shape = new Shape();
+        blob->shape().ToShape(shape);
+        pair.second.reset(shape);
+      }
+    }
+  }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<Shape>> arg2shape_;
+};
+
 class UserKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserKernel);
@@ -100,22 +151,47 @@ class UserKernel final : public Kernel {
   std::unique_ptr<user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelContext> ctx_;
 
-  void VirtualKernelInit(DeviceCtx* device_ctx) override {
-    auto kernel_reg_val = user_op::LookUpInKernelRegistry(
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
-        UserKernelRegContext(kernel_conf(),
-                             user_op::UserOpConfWrapper(kernel_conf().op_attribute().op_conf())));
-    CHECK_NOTNULL(kernel_reg_val);
+  user_op::ShapeInferFn shape_infer_fn_;
+  std::unique_ptr<UserKernelInferContext> infer_ctx_;
 
-    user_op::KernelInitContext init_ctx;
-    kernel_.reset(kernel_reg_val->create_fn(init_ctx));
+  void VirtualKernelInit(DeviceCtx* device_ctx) override {
     ctx_.reset(new UserKernelContext(device_ctx, op_conf()));
+
+    const std::string& op_type_name =
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
+    {
+      auto kernel_reg_val = user_op::LookUpInKernelRegistry(
+          op_type_name,
+          UserKernelRegContext(kernel_conf(),
+                               user_op::UserOpConfWrapper(kernel_conf().op_attribute().op_conf())));
+      CHECK_NOTNULL(kernel_reg_val);
+
+      user_op::KernelInitContext init_ctx;
+      kernel_.reset(kernel_reg_val->create_fn(init_ctx));
+    }
+
+    {
+      const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(op_type_name);
+      CHECK(val != nullptr) << "cannot find op_type: " << op_type_name << " in op registry!";
+      shape_infer_fn_ = val->shape_infer_fn;
+      infer_ctx_.reset(new UserKernelInferContext(op_conf()));
+    }
   }
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
     kernel_->Compute(ctx_.get());
+  }
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    infer_ctx_->UpdateShapeWithCorrBlob(BnInOp2Blob);
+    shape_infer_fn_(infer_ctx_.get());
+    for (const auto& pair : infer_ctx_->outputs()) {
+      Blob* blob = BnInOp2Blob(GenRepeatedBn(pair.first, pair.second));
+      blob->mut_shape_view()->set_shape(
+          *infer_ctx_->Shape4ArgNameAndIndex(pair.first, pair.second));
+    }
   }
 };
 
