@@ -24,10 +24,9 @@ template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx*, const int64_t n, const float* learning_rate, T l1, T l2,
-                          const T* model_diff, T* model) {
+                          T weight_decay, const T* model_diff, T* model) {
     for (int64_t i = 0; i != n; ++i) {
-      T reg_diff = RegularizeDiff(model_diff[i], l1, l2, model[i]);
-      model[i] = model[i] - *learning_rate * reg_diff;
+      model[i] = model[i] - *learning_rate * (model_diff[i] + weight_decay * model[i]);
     }
   }
 };

@@ -8,10 +8,10 @@ namespace {
 
 template<typename T>
 __global__ void UpdateModelGpu(const int64_t n, const float* learning_rate, T l1, T l2,
-                               const T* model_diff, T* model) {
+                               T weight_decay, const T* model_diff, T* model) {
+  const float lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], l1, l2, model[i]);
-    model[i] = model[i] - *learning_rate * reg_diff;
+    model[i] = model[i] - lr * (model_diff[i] + weight_decay * model[i]);
   }
 }
 
@@ -21,9 +21,9 @@ template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, const int64_t n, const float* learning_rate, T l1, T l2,
-                          const T* model_diff, T* model) {
+                          T weight_decay, const T* model_diff, T* model) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, learning_rate, l1, l2, model_diff, model);
+        n, learning_rate, l1, l2, weight_decay, model_diff, model);
   }
 };
 

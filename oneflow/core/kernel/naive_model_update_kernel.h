@@ -23,7 +23,7 @@ template<DeviceType device_type, typename T>
 class NaiveMdUpdateKernelUtil final {
  public:
   static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T l1, T l2,
-                          const T* model_diff, T* model);
+                          T weight_decay, const T* model_diff, T* model);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Naive);
