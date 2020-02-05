@@ -164,28 +164,6 @@ class BoxList(object):
     def __len__(self):
         return self.bbox.shape[0]
 
-    def clip_to_image(self, remove_empty=True):
-        self.bbox[:, 0] = self.bbox[:, 0].clip(min=0, max=self.size[0])
-        self.bbox[:, 1] = self.bbox[:, 1].clip(min=0, max=self.size[1])
-        self.bbox[:, 2] = self.bbox[:, 2].clip(min=0, max=self.size[0])
-        self.bbox[:, 3] = self.bbox[:, 3].clip(min=0, max=self.size[1])
-        if remove_empty:
-            box = self.bbox
-            keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])
-            return self[keep]
-        return self
-
-    def area(self):
-        box = self.bbox
-        if self.mode == "xyxy":
-            area = (box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])
-        elif self.mode == "xywh":
-            area = box[:, 2] * box[:, 3]
-        else:
-            raise RuntimeError("Should not be here")
-
-        return area
-
     def copy_with_fields(self, fields, skip_missing=False):
         bbox = BoxList(self.bbox, self.size, self.mode)
         if not isinstance(fields, (list, tuple)):
