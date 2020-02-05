@@ -2,16 +2,21 @@
 
 XRT是一个同时支持多个计算引擎的运行时加速库，目前已经集成了TensorFlow XLA和Nvidia TensorRT两个后端引擎。其中XLA全面支持训练和预测，TensorRT支持预测以及部分算子支持训练。对于同一个计算图，XRT允许多个计算引擎联合使用，以获得更好的加速效果。
 
+不同的后端引擎支持不同的后端硬件，比如XLA支持CPU和Nvidia GPU，但TensorRT仅支持Nvidia GPU。
+
 对于任意后端引擎，XRT的执行过程均分成以下四个步骤：
 
 1. 计算图的转换
-2. 引擎无关优化
-3. 生成引擎相关Executable
-4. 执行Executable
+2. 划分计算子图
+3. 引擎无关优化
+4. 生成引擎相关Executable
+5. 执行Executable
 
-### 引擎无关优化
+### 计算图的转换
 
-- 划分子图
+  将OneFlow Job转换成XRT的计算流图 (XrtGraph)，该计算流图经过一序列变换后，最终被编译成后端引擎相关的Executable。
+
+### 划分计算子图
 
   根据计算图中每个计算节点是否可编译、device、sbp policy等一系列属性，对节点进行聚合，被聚合的节点被新的节点（Launch节点）折叠后并在节点内进行子图重建，同时确定子图的后端执行引擎。
 
@@ -43,11 +48,13 @@ XRT是一个同时支持多个计算引擎的运行时加速库，目前已经�
 
     同时FLAGS_strict_clustering=true时会导致合并的子图变小，可能导致后端引擎丧失一些优化机会。FLAGS_strict_clustering默认设为true。
 
-- ...
+### 引擎无关优化
+
+暂未提供，后续可以加入一些图优化相关的pass。
 
 ### Executable的生成
 
-在runtime阶段，每个子图都可以被编译成一个与引擎相关的Executable。
+在runtime阶段，每个计算子图都可以被编译成一个与引擎相关的Executable。
 
 对于静态shape的子图，由于缓存机制，每个子图只需要在运行时编译一次。对于包含动态shape的子图，则可能每次运行时都需要编译一次，因此如果计算图中包含动态shape的节点，暂时不建议使用XRT。
 
@@ -86,13 +93,13 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   ```python
   import oneflow as flow
 
+  config = flow.function_config()
+
   # 配置使用XLA
-  # True开启XLA，False关闭XLA，默认为未定义状态
-  flow.config.use_xla_jit(True)
+  config.use_xla_jit()
 
   # 配置使用TensorRT
-  # True开启TensorRT，False关闭TensorRT，默认为未定义状态
-  flow.config.use_tensorrt(True)
+  config.use_tensorrt()
   ```
 
 - 从环境变量配置
@@ -101,6 +108,19 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   # 只在Python前端未定义状态下生效
   export FLAGS_use_xla_jit=true # true为开启，false为关闭
   export FLAGS_use_tensorrt=true # true为开启，false为关闭
+  ```
+
+- 低精度配置
+
+  ```python
+  # XLA自动混合精度(float16)
+  config.enable_auto_mixed_precision()
+
+  # TensorRT float16
+  config.tensorrt.use_fp16()
+
+  # TensorRT int8 (目前尚未支持)
+  config.tensorrt.use_int8()
   ```
 
 ### BenchMark
