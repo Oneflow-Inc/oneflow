@@ -18,8 +18,8 @@ const PbMessage& RMSPropMdUpdateKernel<device_type, T>::GetCustomizedOpConf() co
 
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, T l1, T l2, const int64_t* train_step, const float* learning_rate,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, T l1, T l2, T weight_decay, const int64_t* train_step,
+    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");

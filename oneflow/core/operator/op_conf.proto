@@ -622,6 +622,7 @@ message NormalModelUpdateOpConf {
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
+  optional float weight_decay = 9 [default = 0.0];
 }
 
 message NaiveModelUpdateOpConf {
@@ -632,6 +633,7 @@ message NaiveModelUpdateOpConf {
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
+  optional float weight_decay = 9 [default = 0.0];
 }
 
 message MomentumModelUpdateOpConf {
@@ -643,6 +645,7 @@ message MomentumModelUpdateOpConf {
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
+  optional float weight_decay = 10 [default = 0.0];
 }
 
 message RMSPropModelUpdateOpConf {
@@ -653,6 +656,7 @@ message RMSPropModelUpdateOpConf {
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
+  optional float weight_decay = 9 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
@@ -664,6 +668,7 @@ message LARSModelUpdateOpConf {
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
+  optional float weight_decay = 10 [default = 0.0];
 }
 
 message AdamModelUpdateOpConf {
@@ -678,6 +683,7 @@ message AdamModelUpdateOpConf {
   required string learning_rate = 10;
   required float l1 = 11;
   required float l2 = 12;
+  optional float weight_decay = 13 [default = 0.0];
 }
 
 message LazyAdamModelUpdateOpConf {
@@ -692,6 +698,7 @@ message LazyAdamModelUpdateOpConf {
   required string learning_rate = 10;
   required float l1 = 11;
   required float l2 = 12;
+  optional float weight_decay = 13 [default = 0.0];
 }
 
 message AccumulateOpConf {
