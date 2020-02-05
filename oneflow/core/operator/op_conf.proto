@@ -1639,6 +1639,7 @@ message RoiAlignArgs {
   optional float spatial_scale = 6 [default = 0.0625]; // 1/16
   optional int32 sampling_ratio = 7 [default = 2]; // adaptive if negative
   optional string data_format = 8 [default = "channels_first"];
+  optional bool aligned = 9 [default = true];
 }
 
 message RoiAlignOpConf {
