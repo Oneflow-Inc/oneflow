@@ -603,7 +603,7 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
-    const LogicalBlobId& diff_lbi = pair.second;
+    LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     CHECK(model_op_node->op().op_conf().has_variable_conf());
     const VariableOpConf& variable_conf = model_op_node->op().op_conf().variable_conf();
@@ -621,6 +621,8 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
       l1_l2_regularize_gradient_conf->set_l2(regularizer_conf.l1_l2_conf().l2());
       job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
                           {regularize_gradient_op_conf});
+      diff_lbi.set_op_name(regularize_gradient_op_conf.name());
+      diff_lbi.set_blob_name(l1_l2_regularize_gradient_conf->out());
     } else {
       UNIMPLEMENTED();
     }
