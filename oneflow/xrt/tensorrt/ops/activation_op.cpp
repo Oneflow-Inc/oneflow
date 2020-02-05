@@ -28,6 +28,22 @@ REGISTER_TRT_OP_KERNEL(Sigmoid, ActivationOp<nvinfer1::ActivationType::kSIGMOID>
     .EnableTrainPhase()
     .Finalize();
 
+template<>
+class ActivationOp<nvinfer1::ActivationType::kLEAKY_RELU> : public TrtOpKernel {
+ public:
+  void Compile(TrtOpContext *ctx) override {
+    nvinfer1::ITensor *in = ctx->Input("in");
+    auto *layer = ctx->builder()->addActivation(*in, nvinfer1::ActivationType::kLEAKY_RELU);
+    layer->setAlpha(ctx->GetAttr<float>("alpha"));
+    layer->setName(ctx->op_name().c_str());
+    ctx->SetOutput("out", layer->getOutput(0));
+  }
+};
+
+REGISTER_TRT_OP_KERNEL(LeakyRelu, ActivationOp<nvinfer1::ActivationType::kLEAKY_RELU>)
+    .EnableTrainPhase()
+    .Finalize();
+
 }  // namespace tensorrt
 }  // namespace xrt
 }  // namespace oneflow
