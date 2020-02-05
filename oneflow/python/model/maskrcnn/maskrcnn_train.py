@@ -614,15 +614,15 @@ class IterationProcessor(object):
                 if "image_id" in outputs_dict:
                     outputs_dict.pop("image_id")
                 if self.collect_accuracy_metrics:
-                    mask_incorrect = outputs.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
-                    gt_masks_bool = outputs.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
-                    num_positive = outputs.pop("mask_rcnn/num_positive").ndarray().item()
+                    mask_incorrect = outputs_dict.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
+                    gt_masks_bool = outputs_dict.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
+                    num_positive = outputs_dict.pop("mask_rcnn/num_positive").ndarray().item()
                     false_positive = (mask_incorrect & ~gt_masks_bool).sum() / max(
                         gt_masks_bool.size - num_positive, 1.0
                     )
                     false_negative = (mask_incorrect & gt_masks_bool).sum() / max(num_positive, 1.0)
-                    outputs["mask_rcnn/false_positive"] = false_positive
-                    outputs["mask_rcnn/false_negative"] = false_negative
+                    outputs_dict["mask_rcnn/false_positive"] = false_positive
+                    outputs_dict["mask_rcnn/false_negative"] = false_negative
             if isinstance(outputs, (list, tuple)):
                 for outputs_per_rank in outputs:
                     process_one_rank(outputs_per_rank)
