@@ -375,12 +375,10 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip> 
           bbox_ptr[3] = image_height - ymin;
         }
         if (flip_code != 0) {
-          // why x axis coordinate removes 1 but y axis does not? (follow fb maskrcnn)
-          const BBoxT TO_REMOVE = 1;
           BBoxT xmin = bbox_ptr[0];
           BBoxT xmax = bbox_ptr[2];
-          bbox_ptr[0] = image_width - xmax - TO_REMOVE;
-          bbox_ptr[2] = image_width - xmin - TO_REMOVE;
+          bbox_ptr[0] = image_width - xmax;
+          bbox_ptr[2] = image_width - xmin;
         }
         bbox_ptr += 4;
       }

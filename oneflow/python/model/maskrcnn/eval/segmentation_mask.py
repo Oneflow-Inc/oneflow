@@ -261,8 +261,7 @@ class PolygonInstance(object):
 
         for poly in self.polygons:
             p = poly.clone()
-            TO_REMOVE = 1
-            p[idx::2] = dim - poly[idx::2] - TO_REMOVE
+            p[idx::2] = dim - poly[idx::2]
             flipped_polygons.append(p)
 
         return PolygonInstance(flipped_polygons, size=self.size)
