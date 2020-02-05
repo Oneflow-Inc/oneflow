@@ -6,13 +6,13 @@
 
 Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
-```
+```shell
     export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 ```
 
 Or you can install OpenBLAS and other tools through:
 
-```
+```shell
     sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
 ```
 
@@ -20,26 +20,26 @@ Or you can install OpenBLAS and other tools through:
 
 > note: with `--recursive` flag to clone third_party submodules
 
-```
+```shell
     git clone https://github.com/Oneflow-Inc/oneflow --recursive
 ```
 
 or you can just clone source code and submodules step by step
 
-```
+```shell
     git clone https://github.com/Oneflow-Inc/oneflow
     git submodule update --init --recursive
 ```
 
 #### build third party from source
 
-```
+```shell
   cmake -DTHIRD_PARTY=ON .. && make -j
 ```
 
 #### build oneflow
 
-```
+```shell
     cmake -DTHIRD_PARTY=OFF .. && make -j
 ```
 
@@ -55,7 +55,7 @@ or you can just clone source code and submodules step by step
 
 - Update cmake
 
-  It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
+  It is needed only if cmake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall cmake if you encountered a downloading error while building the third-parties.
 
   Download cmake(>=3.7) from [here](https://cmake.org/download/) , configure and install it by the following command:
 
@@ -90,18 +90,14 @@ or you can just clone source code and submodules step by step
   make -j$(nproc)
   ```
 
-- XLA documents
-
-  You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA.
-
 ### Build with TensorRT
 
 - Build third-parties
 
-  Run the following command to build third-parties.
+  Download TensorRT(>=6.0) .tgz and unzip the package, then run the following command to build third-parties.
 
   ```shell
-  cd build && cmake -DWITH_TENSORRT=ON -DTHIRD_PARTY=ON ..
+  cd build && cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
   make -j$(nproc)
   ```
 - Build OneFlow
@@ -109,9 +105,17 @@ or you can just clone source code and submodules step by step
   ```shell
   cmake .. \
   -DWITH_TENSORRT=ON \
+  -DTENSORRT_ROOT=your_tensorrt_path \
   -DPYTHON_LIBRARY=your_python_lib_path \
   -DPYTHON_INCLUDE_DIR=your_python_include_dir \
   -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
 
   make -j$(nproc)
   ```
+
+### Documents
+
+ - XRT documents
+
+   You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+
