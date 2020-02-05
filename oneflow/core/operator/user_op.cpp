@@ -38,6 +38,7 @@ class UserOp final : public Operator {
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   Maybe<void> InferBatchAxis(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -286,6 +287,7 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 }
 
 Maybe<void> UserOp::InferBatchAxis(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   // TODO(ChengCheng): customized define infer batch axis by user
   OptInt64* batch_axis = nullptr;
