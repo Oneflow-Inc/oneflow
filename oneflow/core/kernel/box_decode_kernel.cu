@@ -37,8 +37,8 @@ __global__ void DecodeGpu(const int32_t num_boxes_delta, const int32_t num_ref_b
 
     boxes_ptr[delta_idx * 4 + 0] = pred_box_ctr_x - 0.5 * pred_box_w;
     boxes_ptr[delta_idx * 4 + 1] = pred_box_ctr_y - 0.5 * pred_box_h;
-    boxes_ptr[delta_idx * 4 + 2] = pred_box_ctr_x + 0.5 * pred_box_w - 1.0;
-    boxes_ptr[delta_idx * 4 + 3] = pred_box_ctr_y + 0.5 * pred_box_h - 1.0;
+    boxes_ptr[delta_idx * 4 + 2] = pred_box_ctr_x + 0.5 * pred_box_w;
+    boxes_ptr[delta_idx * 4 + 3] = pred_box_ctr_y + 0.5 * pred_box_h;
   }
 }
 
