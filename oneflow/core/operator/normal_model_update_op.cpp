@@ -8,23 +8,12 @@ void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model", false)->set_is_mutable(true);
   EnrollInputBn("learning_rate", false);
   EnrollInputBn("train_step", false);
-  const PbMessage& conf = this->GetCustomizedConf();
-  const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
-  if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
-    EnrollTmpBn("data_tmp");
-  }
   MdUpdtVirtualInitFromOpConf();
 }
 
 Maybe<void> NormalModelUpdtOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const PbMessage& conf = this->GetCustomizedConf();
-  const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
-  if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
-    *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
-    GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
-  }
   return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
