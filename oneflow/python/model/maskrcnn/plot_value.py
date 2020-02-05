@@ -183,7 +183,7 @@ def post_process_flow(df):
     if "primary_lr" in df["legend"].unique():
         df["legend"].replace("primary_lr", "lr", inplace=True)
     df = df[df.legend.str.contains("lr2") == False]
-    df = df.groupby(["iter", "legend"], as_index=False).mean()
+    df = df.groupby(["iter", "legend"], as_index=False).sum()
     return df
 
 
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     plot_many_by_legend(
         {
             "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
-            # "flow2": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
+            # "flow1": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
             # "flow1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
@@ -239,31 +239,9 @@ if __name__ == "__main__":
             # "torch1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
-            #         "torch-520-batch_size-8-image_dir-coco_instances_val2017_subsample_8_repeated-2019-12-29--06-25-23.csv",
+            #         "csv-archive/torch-50000-batch_size-8-image_dir-coco_2017_train-2019-12-31--23-57-42.csv",
             #     ),
             #     post_process=post_process_torch,
             # ),
         }
     )
-    # plot_many_by_legend(
-    #     {
-    #         "flow1": get_df(
-    #             flow_metrics_path, "loss*.csv", -1, post_process_flow
-    #         ),
-    #         # "flow2": get_df(
-    #         #     flow_metrics_path, "loss*.csv", -2, post_process_flow
-    #         # ),
-    #     }
-    # )
-    # plot_many_by_legend(
-    #     {
-    #         "torch1": get_df(
-    #             flow_metrics_path, "torch*.csv", -2, post_process_torch
-    #         ),
-    #         "torch2": get_df(
-    #             flow_metrics_path, "torch*.csv", -3, post_process_torch
-    #         ),
-    #     }
-    # )
-
-    # plot_by_legend(flow_df)
