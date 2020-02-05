@@ -600,7 +600,32 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
-                        HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {}
+                        HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    const LogicalBlobId& diff_lbi = pair.second;
+    const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    CHECK(model_op_node->op().op_conf().has_variable_conf());
+    const VariableOpConf& variable_conf = model_op_node->op().op_conf().variable_conf();
+    if (!variable_conf.has_regularizer()) { return; }
+    const RegularizerConf& regularizer_conf = variable_conf.regularizer();
+    if (regularizer_conf.has_l1_l2_conf()) {
+      OperatorConf regularize_gradient_op_conf{};
+      regularize_gradient_op_conf.set_name("System-RegularizeGradient-L1L2-" + NewUniqueId());
+      L1L2RegularizeGradientOpConf* l1_l2_regularize_gradient_conf =
+          regularize_gradient_op_conf.mutable_l1_l2_regularize_gradient_conf();
+      l1_l2_regularize_gradient_conf->set_model(GenLogicalBlobName(lbi));
+      l1_l2_regularize_gradient_conf->set_model_diff(GenLogicalBlobName(diff_lbi));
+      l1_l2_regularize_gradient_conf->set_out("out");
+      l1_l2_regularize_gradient_conf->set_l1(regularizer_conf.l1_l2_conf().l1());
+      l1_l2_regularize_gradient_conf->set_l2(regularizer_conf.l1_l2_conf().l2());
+      job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
+                          {regularize_gradient_op_conf});
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+}
 
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
