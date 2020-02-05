@@ -374,7 +374,7 @@ class PolygonList(object):
                 self.polygons.append(p)
 
         self.size = tuple(size)
-    
+
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
             raise NotImplementedError(
