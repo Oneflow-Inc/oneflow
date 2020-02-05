@@ -17,6 +17,22 @@ void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::st
   ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
 }
 
+void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
+  op_conf->set_name(new_op_name);
+  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(op_type_conf);
+  if (user_conf) {
+    for (const auto& pair : user_conf->output()) {
+      for (const std::string& old_lbn : pair.second.s()) {
+        LogicalBlobId old_lbi = GenLogicalBlobId(old_lbn);
+        auto blob_name_id_pair = GenUnRepeatedBn(old_lbi.blob_name());
+        std::string new_lbn = GenLogicalBlobName(new_op_name, old_lbi.blob_name());
+        (*(user_conf->mutable_output()))[pair.first].set_s(blob_name_id_pair.second, new_lbn);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
@@ -397,12 +413,15 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
   OperatorConf sub_op_conf(op_conf);
   FOR_RANGE(int32_t, i, 0, parallel_num) {
-    sub_op_conf.set_name(GetSubOpName(i));
+    // sub_op_conf.set_name(GetSubOpName(i));
+    ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
       ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
     }
+    LOG(INFO) << "cclog: infer sub_op: " << sub_op_conf.name();
     AddAndInferConsistentOp(sub_op_conf, parallel_desc.GetParallelIdOnlyParallelConf(i));
+    LOG(INFO) << "cclog: infer sub_op: " << sub_op_conf.name() << " Done.";
   }
   bool is_broadcast = JUST(AllInputsBroadcastParallel(*op));
   for (const auto& obn : op->output_bns()) {
@@ -444,6 +463,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_
   CHECK_NE_OR_RETURN(op_conf.device_type(), DeviceType::kInvalidDevice)
       << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
       << " not set device type";
+  LOG(INFO) << "cclog: infer op: " << op_name << " Ing.";
 
   op_name2op_.emplace(op_name, ConstructOp(op_conf, &GlobalJobDesc()));
   Operator* op = op_name2op_.at(op_name).get();
@@ -476,6 +496,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
+    LOG(INFO) << "cclog: init lbn: " << GenLogicalBlobName(lbi);
     if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
       return lbi2logical_blob_desc_.at(lbi).get();
     }
