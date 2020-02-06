@@ -11,9 +11,9 @@ __global__ void UpdateModelGpu(int64_t n, T beta, const int64_t* train_step,
                                T* model, T* momentum) {
   const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T new_momentum = beta * momentum[i] - lr * model_diff[i];
-    momentum[i] = new_momentum;
-    model[i] = model[i] + new_momentum - lr * weight_decay * model[i];
+    T next_momentum = beta * momentum[i] - lr * model_diff[i];
+    momentum[i] = next_momentum;
+    model[i] = model[i] + next_momentum - lr * weight_decay * model[i];
   }
 }
 
