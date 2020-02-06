@@ -603,35 +603,35 @@ class IterationProcessor(object):
         self.start_iter = start_iter
         self.collect_accuracy_metrics = cfg.MODEL.COLLECT_ACCURACY_METRICS
 
+    def process_one_rank(self, outputs_dict):
+        assert isinstance(outputs_dict, dict)
+        if "image_id" in outputs_dict:
+            outputs_dict.pop("image_id")
+        if self.collect_accuracy_metrics:
+            mask_incorrect = outputs_dict.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
+            gt_masks_bool = outputs_dict.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
+            num_positive = outputs_dict.pop("mask_rcnn/num_positive").ndarray().item()
+            false_positive = (mask_incorrect & ~gt_masks_bool).sum() / max(
+                gt_masks_bool.size - num_positive, 1.0
+            )
+            false_negative = (mask_incorrect & gt_masks_bool).sum() / max(num_positive, 1.0)
+            outputs_dict["mask_rcnn/false_positive"] = false_positive
+            outputs_dict["mask_rcnn/false_negative"] = false_negative
+
+    def outputs_postprocess(self, outputs):
+        if isinstance(outputs, (list, tuple)):
+            for outputs_per_rank in outputs:
+                self.process_one_rank(outputs_per_rank)
+        elif isinstance(outputs, dict):
+            self.process_one_rank(outputs)
+        else:
+            raise ValueError("outputs has error type")
+
     def step(self, iter, outputs):
         now_time = time.perf_counter()
         elapsed_time = now_time - self.start_time
         self.elapsed_times.append(elapsed_time)
-
-        def outputs_postprocess(outputs):
-            def process_one_rank(outputs_dict):
-                assert isinstance(outputs_dict, dict)
-                if "image_id" in outputs_dict:
-                    outputs_dict.pop("image_id")
-                if self.collect_accuracy_metrics:
-                    mask_incorrect = outputs_dict.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
-                    gt_masks_bool = outputs_dict.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
-                    num_positive = outputs_dict.pop("mask_rcnn/num_positive").ndarray().item()
-                    false_positive = (mask_incorrect & ~gt_masks_bool).sum() / max(
-                        gt_masks_bool.size - num_positive, 1.0
-                    )
-                    false_negative = (mask_incorrect & gt_masks_bool).sum() / max(num_positive, 1.0)
-                    outputs_dict["mask_rcnn/false_positive"] = false_positive
-                    outputs_dict["mask_rcnn/false_negative"] = false_negative
-            if isinstance(outputs, (list, tuple)):
-                for outputs_per_rank in outputs:
-                    process_one_rank(outputs_per_rank)
-            elif isinstance(outputs, dict):
-                process_one_rank(outputs)
-            else:
-                raise ValueError("outputs has error type")
-
-        outputs_postprocess(outputs)
+        self.outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
@@ -666,13 +666,13 @@ class IterationProcessor(object):
 
         # save_blob_watched(iter)
 
-        self.start_time = time.perf_counter()
-
         if iter == self.max_iter:
             print(
                 "median of elapsed time per batch:",
                 statistics.median(self.elapsed_times),
             )
+
+        self.start_time = time.perf_counter()
 
 
 def load_fake_images(path):
