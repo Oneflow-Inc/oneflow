@@ -131,12 +131,9 @@ DEFINE_FLAT_MSG_TYPE(double);
 
 #define FLAT_MSG_DEFINE_BASIC_METHODS(T) _FLAT_MSG_DEFINE_BASIC_METHODS(T)
 
-#define _FLAT_MSG_DEFINE_BASIC_METHODS(T)                                                       \
- public:                                                                                        \
-  void clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); }                    \
-  void operator=(const T& rhs) {                                                                \
-    std::memcpy(reinterpret_cast<void*>(this), reinterpret_cast<const void*>(&rhs), sizeof(T)); \
-  }
+#define _FLAT_MSG_DEFINE_BASIC_METHODS(T) \
+ public:                                  \
+  void clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); }
 
 #define FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq)     \
  public:                                                                         \

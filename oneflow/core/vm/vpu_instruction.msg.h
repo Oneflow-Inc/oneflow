@@ -106,7 +106,7 @@ END_OBJECT_MSG(Vpu);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSet);
   // fields
-  // OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc::_FLAT_MSG_ONEOF_ENUM_TYPE(vpu_type), vpu_type);
+  OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc::_FLAT_MSG_ONEOF_ENUM_TYPE(vpu_type), vpu_type);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_link);

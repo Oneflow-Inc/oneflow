@@ -32,6 +32,7 @@ END_FLAT_MSG(TestOptional)
 // clang-format on
 
 TEST(FlatMsg, optional) {
+  static_assert(std::is_trivial<FLAT_MSG_TYPE(TestOptional)>::value, "TestOptional is not trivial");
   FLAT_MSG(TestOptional) foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
