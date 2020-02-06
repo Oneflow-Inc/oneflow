@@ -40,19 +40,6 @@ struct IsScalar {
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
 };
 
-struct FooBar {
-  DSS_DEFINE_GETTER(int, x);
-  DSS_DEFINE_MUTABLE(int, x);
-  DSS_DEFINE_SETTER(IsScalar, int, x);
-
-  DSS_DEFINE_GETTER(Foo*, foo);
-  DSS_DEFINE_MUTABLE(Foo*, foo);
-  DSS_DEFINE_SETTER(IsScalar, Foo*, foo);
-
-  int x_;
-  Foo* foo_;
-};
-
 template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
