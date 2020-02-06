@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import argparse
 import time
-import statistics
 import glob
 import oneflow as flow
 
@@ -630,7 +629,6 @@ class IterationProcessor(object):
     def step(self, iter, outputs):
         now_time = time.perf_counter()
         elapsed_time = now_time - self.start_time
-        self.elapsed_times.append(elapsed_time)
         self.outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
@@ -669,7 +667,7 @@ class IterationProcessor(object):
         if iter == self.max_iter:
             print(
                 "median of elapsed time per batch:",
-                statistics.median(self.elapsed_times),
+                self.metrics[self.metrics.legend == "elapsed_time"].value.median(),
             )
 
         self.start_time = time.perf_counter()
