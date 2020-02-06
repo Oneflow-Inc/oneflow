@@ -42,6 +42,10 @@ namespace oneflow {
 
 #define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(__object_message_type__, class_name)
 
+#define OBJECT_MSG_ONEOF_CASE(oneof_name) _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name)
+#define OBJECT_MSG_ONEOF_CASE_VALUE(field_name) _OBJECT_MSG_ONEOF_ENUM_VALUE(field_name)
+#define OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name) _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
+
 // details
 
 #define _OBJECT_MSG_DEFINE_ONEOF_FIELD(field_counter, oneof_name, type_and_field_name_seq) \

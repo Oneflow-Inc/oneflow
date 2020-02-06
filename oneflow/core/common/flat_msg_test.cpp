@@ -64,8 +64,8 @@ TEST(FlatMsg, oneof) {
   foo.mutable_case_0();
   CheckSoleFieldName(&foo, "case_0_");
   ASSERT_TRUE(foo.has_case_0());
-  FLAT_MSG_ONEOF_ENUM_TYPE(FooOneof, type) x = foo.type_case();
-  ASSERT_TRUE(x == FLAT_MSG_ONEOF_ENUM_VALUE(FooOneof, case_0));
+  FLAT_MSG_TYPE(FooOneof)::FLAT_MSG_ONEOF_CASE(type) x = foo.type_case();
+  ASSERT_TRUE(x == FLAT_MSG_TYPE(FooOneof)::FLAT_MSG_ONEOF_CASE_VALUE(case_0));
   *foo.mutable_case_1() = 9527;
   CheckSoleFieldName(&foo, "case_1_");
   ASSERT_TRUE(foo.has_case_1());

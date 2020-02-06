@@ -47,11 +47,9 @@ namespace oneflow {
 #define FLAT_MSG_ONEOF_FIELD(field_type, field_name) \
   OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
 
-#define FLAT_MSG_ONEOF_ENUM_TYPE(flat_msg_type, oneof_name) \
-  FLAT_MSG_TYPE(flat_msg_type)::_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
+#define FLAT_MSG_ONEOF_CASE(oneof_name) _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
 
-#define FLAT_MSG_ONEOF_ENUM_VALUE(flat_msg_type, field) \
-  FLAT_MSG_TYPE(flat_msg_type)::_FLAT_MSG_ONEOF_ENUM_VALUE(field)
+#define FLAT_MSG_ONEOF_CASE_VALUE(field) _FLAT_MSG_ONEOF_ENUM_VALUE(field)
 
 #define FLAT_MSG_ONEOF_NOT_SET_VALUE(field_type, oneof_name) \
   FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
@@ -121,7 +119,7 @@ DEFINE_FLAT_MSG_TYPE(uint64_t);
 DEFINE_FLAT_MSG_TYPE(float);
 DEFINE_FLAT_MSG_TYPE(double);
 
-#define _FLAT_MSG_ONEOF_CASE(oneof_name) OF_PP_CAT(oneof_name, _case)
+#define _FLAT_MSG_ONEOF_CASE_NAME(oneof_name) OF_PP_CAT(oneof_name, _case)
 
 #define _FLAT_MSG_ONEOF_ENUM_VALUE(field) SNAKE_TO_CAMEL(field)
 
@@ -150,34 +148,34 @@ DEFINE_FLAT_MSG_TYPE(double);
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_ACCESSOR, (_FLAT_MSG_ONEOF_ENUM_VALUE), \
                                    (oneof_name), type_and_field_name_seq)
 
-#define MAKE_FLAT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                    \
- public:                                                                                  \
-  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                        \
-    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                     \
-      return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);              \
-    }                                                                                     \
-    return FlatMsgGetDefault<FlatMsgIsScalar<OF_PP_PAIR_FIRST(pair)>::value>::Call(       \
-        &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));                 \
-  }                                                                                       \
-  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                                 \
-    return _FLAT_MSG_ONEOF_CASE(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair)); \
-  }                                                                                       \
-  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                     \
-    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) { return; }                          \
-    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
-    (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                          \
-  }                                                                                       \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                   \
-    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                    \
-    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);               \
-  }                                                                                       \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {               \
-    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE(oneof_name))                                     \
-    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                            \
-    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);               \
-  }                                                                                       \
-  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {     \
-    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                \
+#define MAKE_FLAT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                         \
+ public:                                                                                       \
+  const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                             \
+    if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                          \
+      return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                   \
+    }                                                                                          \
+    return FlatMsgGetDefault<FlatMsgIsScalar<OF_PP_PAIR_FIRST(pair)>::value>::Call(            \
+        &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));                      \
+  }                                                                                            \
+  bool OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))() const {                                      \
+    return _FLAT_MSG_ONEOF_CASE_NAME(oneof_name)() == get_enum_value(OF_PP_PAIR_SECOND(pair)); \
+  }                                                                                            \
+  void OF_PP_CAT(clear_, OF_PP_PAIR_SECOND(pair))() {                                          \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) { return; }                               \
+    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE_NAME(oneof_name))                                     \
+    (_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                               \
+  }                                                                                            \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                        \
+    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                         \
+    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                    \
+  }                                                                                            \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                    \
+    OF_PP_CAT(set_, _FLAT_MSG_ONEOF_CASE_NAME(oneof_name))                                     \
+    (get_enum_value(OF_PP_PAIR_SECOND(pair)));                                                 \
+    return &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                    \
+  }                                                                                            \
+  void OF_PP_CAT(set_, OF_PP_PAIR_SECOND(pair))(const OF_PP_PAIR_FIRST(pair) & val) {          \
+    *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                     \
   }
 
 #define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \
