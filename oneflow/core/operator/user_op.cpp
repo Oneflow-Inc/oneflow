@@ -333,7 +333,10 @@ LogicalBlobId UserOp::ibn2lbi(const std::string& input_bn) const {
 
 LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
   auto pair = GenUnRepeatedBn(output_bn);
-  return GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
+  auto ret = GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
+  CHECK_EQ(ret.op_name(), op_conf().name());
+  CHECK_EQ(ret.blob_name(), output_bn);
+  return ret;
 }
 
 Maybe<void> UserOp::InferBatchAxis(
