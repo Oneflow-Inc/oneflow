@@ -186,7 +186,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(0.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="beta",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
@@ -197,7 +197,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(1.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="gamma",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
