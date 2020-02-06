@@ -125,8 +125,9 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     box = expand_boxes(box[None], scale)[0]
     box = box.astype(np.int32)
 
-    w = int(box[2] - box[0])
-    h = int(box[3] - box[1])
+    TO_REMOVE = 1
+    w = int(box[2] - box[0] + TO_REMOVE)
+    h = int(box[3] - box[1] + TO_REMOVE)
     w = max(w, 1)
     h = max(h, 1)
 
@@ -155,9 +156,9 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     im_mask = np.zeros((im_h, im_w), dtype=np.uint8)
     x_0 = max(box[0], 0)
-    x_1 = min(box[2], im_w)
+    x_1 = min(box[2] + 1, im_w)
     y_0 = max(box[1], 0)
-    y_1 = min(box[3], im_h)
+    y_1 = min(box[3] + 1, im_h)
 
     im_mask[y_0:y_1, x_0:x_1] = mask[(y_0 - box[1]):(y_1 - box[1]), (x_0 - box[0]):(x_1 - box[0])]
     return im_mask
