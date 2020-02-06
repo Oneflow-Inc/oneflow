@@ -155,9 +155,9 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     im_mask = np.zeros((im_h, im_w), dtype=np.uint8)
     x_0 = max(box[0], 0)
-    x_1 = min(box[2] + 1, im_w)
+    x_1 = min(box[2], im_w)
     y_0 = max(box[1], 0)
-    y_1 = min(box[3] + 1, im_h)
+    y_1 = min(box[3], im_h)
 
     im_mask[y_0:y_1, x_0:x_1] = mask[(y_0 - box[1]):(y_1 - box[1]), (x_0 - box[0]):(x_1 - box[0])]
     return im_mask
