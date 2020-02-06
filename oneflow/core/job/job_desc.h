@@ -57,6 +57,7 @@ class JobDesc final {
     return job_conf_.non_distributed_optimizer_group_size_mbyte();
   }
   bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
+  bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
