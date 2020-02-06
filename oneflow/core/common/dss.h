@@ -16,12 +16,6 @@ namespace oneflow {
   _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq)
 #define DSS_GET_FIELD_COUNTER() __COUNTER__
 
-#define DSS_DEFINE_GETTER(field_type, field_name) _DSS_DEFINE_GETTER(field_type, field_name)
-
-#define DSS_DEFINE_MUTABLE(field_type, field_name) _DSS_DEFINE_MUTABLE(field_type, field_name)
-#define DSS_DEFINE_SETTER(is_scalar, field_type, field_name) \
-  _DSS_DEFINE_SETTER(is_scalar, field_type, field_name)
-
 // details
 
 #define _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq) \
@@ -180,32 +174,6 @@ namespace oneflow {
                          alignof(type)>();                                            \
     static_assert((kSize == 0 && sizeof(type) == 1) || (kSize == sizeof(type)),       \
                   DSS_ASSERT_VERBOSE(dss_type));                                      \
-  }
-
-#define _DSS_DEFINE_GETTER(field_type, field_name)                                          \
-  const typename std::conditional<std::is_pointer<field_type>::value,                       \
-                                  std::remove_pointer<field_type>::type, field_type>::type& \
-  field_name() const {                                                                      \
-    return GetterTrait<std::is_pointer<field_type>::value>::Call(this->field_name##_);      \
-  }
-
-#define _DSS_DEFINE_MUTABLE(field_type, field_name)                                      \
-  typename std::conditional<std::is_pointer<field_type>::value,                          \
-                            std::remove_pointer<field_type>::type, field_type>::type*    \
-      mut_##field_name() {                                                               \
-    return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
-  }                                                                                      \
-  typename std::conditional<std::is_pointer<field_type>::value,                          \
-                            std::remove_pointer<field_type>::type, field_type>::type*    \
-      mutable_##field_name() {                                                           \
-    return MutableTrait<std::is_pointer<field_type>::value>::Call(&this->field_name##_); \
-  }
-
-#define _DSS_DEFINE_SETTER(is_scalar, field_type, field_name)                      \
-  template<typename T>                                                             \
-  void set_##field_name(const T& val) {                                            \
-    static_assert(is_scalar<T>::value, "setter doesn't support non-scalar field"); \
-    *this->mutable_##field_name() = val;                                           \
   }
 
 template<int x, int y>

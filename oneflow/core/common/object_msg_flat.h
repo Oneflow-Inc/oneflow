@@ -18,16 +18,17 @@ namespace oneflow {
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFlatMsgDelete);       \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(field_type, field_name)            \
- public:                                                                     \
-  static_assert(field_type::__is_flat_message_type__,                        \
-                OF_PP_STRINGIZE(field_type) "is not a flat message type");   \
-  bool OF_PP_CAT(has_, field_name)() { return true; }                        \
-  DSS_DEFINE_GETTER(field_type, field_name);                                 \
-  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); } \
-  DSS_DEFINE_MUTABLE(field_type, field_name);                                \
-                                                                             \
- private:                                                                    \
+#define _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(field_type, field_name)                     \
+ public:                                                                              \
+  static_assert(field_type::__is_flat_message_type__,                                 \
+                OF_PP_STRINGIZE(field_type) "is not a flat message type");            \
+  bool OF_PP_CAT(has_, field_name)() { return true; }                                 \
+  const field_type& field_name() const { return OF_PP_CAT(field_name, _); }           \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }          \
+  field_type* OF_PP_CAT(mut_, field_name)() { return &OF_PP_CAT(field_name, _); }     \
+  field_type* OF_PP_CAT(mutable_, field_name)() { return &OF_PP_CAT(field_name, _); } \
+                                                                                      \
+ private:                                                                             \
   field_type OF_PP_CAT(field_name, _);
 
 template<typename WalkCtxType, typename PtrFieldType>

@@ -12,10 +12,20 @@
 namespace oneflow {
 
 // clang-format off
+BEGIN_FLAT_MSG(VpuInstructionImmediateOprand);
+  FLAT_MSG_DEFINE_ONEOF(immediate_oprand_type,
+    FLAT_MSG_ONEOF_FIELD(float, float_value)
+    FLAT_MSG_ONEOF_FIELD(double, double_value)
+    FLAT_MSG_ONEOF_FIELD(int64_t, int64_value));
+END_FLAT_MSG(VpuInstructionImmediateOprand);
+// clang-format on
+
+// clang-format off
 BEGIN_FLAT_MSG(VpuInstructionOprand);
   FLAT_MSG_DEFINE_ONEOF(oprand_type,
     FLAT_MSG_ONEOF_FIELD(LogicalObjectId, const_oprand)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_oprand));
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_oprand)
+    FLAT_MSG_ONEOF_FIELD(VpuInstructionImmediateOprand, immediate_oprand));
 END_FLAT_MSG(VpuInstructionOprand);
 // clang-format on
 
@@ -95,9 +105,14 @@ END_OBJECT_MSG(Vpu);
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSet);
+  // fields
+  // OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc::_FLAT_MSG_ONEOF_ENUM_TYPE(vpu_type), vpu_type);
+
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(Vpu, vpu_link, vpu_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_vpu_instruction_package_link,
+                              launched_vpu_instruction_package_list);
 END_OBJECT_MSG(VpuSet);
 // clang-format on
 
@@ -109,7 +124,7 @@ BEGIN_OBJECT_MSG(VpuScheduler);
   //links
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, vpu_instruction_msg_pending_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(Vpu, vpu_id, vpu_id2vpu);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuSet, vpu_set_list, vpu_set_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuSet, vpu_set_link, vpu_set_list);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
 END_OBJECT_MSG(VpuScheduler);
 // clang-format on
