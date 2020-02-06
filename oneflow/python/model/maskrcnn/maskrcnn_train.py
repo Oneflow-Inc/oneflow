@@ -18,6 +18,7 @@ from data_load import make_data_loader
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 import accuracy
 
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -176,16 +177,8 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
     # ):
     # Box Head
     # flow.nvtx.range_start(flatlist([proposals, gt_bbox_list, gt_label_list, features]), "box_head")
-    (
-        box_loss,
-        cls_loss,
-        pos_proposal_list,
-        pos_gt_indices_list,
-    ) = box_head.build_train(
-        proposals,
-        gt_bbox_list,
-        gt_label_list,
-        features,
+    (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
+        proposals, gt_bbox_list, gt_label_list, features
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
     zero_ctrl_mask = None
@@ -447,7 +440,12 @@ def make_train(config, fake_images=None):
         step_lr = None
         if config.SOLVER.MAKE_LR:
             model_update_conf = set_train_config(config)
-            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            step_lr = make_lr(
+                "System-Train-TrainStep-train",
+                model_update_conf,
+                flow.config.train.get_primary_lr(),
+                flow.config.train.get_secondary_lr(),
+            )
         else:
             set_train_config(config)
         outputs = train_net(config, fake_images)
@@ -462,6 +460,7 @@ def make_train(config, fake_images=None):
         assert len(list(fake_images.values())[0]) == config.ENV.NUM_GPUS
 
         if config.ENV.NUM_GPUS == 1:
+
             @flow.function
             def train(
                 image_blob=flow.input_blob_def(
@@ -469,7 +468,9 @@ def make_train(config, fake_images=None):
                 )
             ):
                 return do_train(image_blob)
+
         elif config.ENV.NUM_GPUS == 4:
+
             @flow.function
             def train(
                 image_blob_0=flow.input_blob_def(
@@ -485,15 +486,20 @@ def make_train(config, fake_images=None):
                     shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
                 ),
             ):
-                return do_train([image_blob_0, image_blob_1, image_blob_2, image_blob_3])
+                return do_train(
+                    [image_blob_0, image_blob_1, image_blob_2, image_blob_3]
+                )
+
         else:
             raise NotImplementedError
         return train
 
     else:
+
         @flow.function
         def train():
             return do_train()
+
         return train
 
 
@@ -527,7 +533,7 @@ def print_metrics(m):
         # "total_pos_inds_elem_cnt",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
-    print(m[to_print_with_order].to_string(index=False, float_format='%11.6f'))
+    print(m[to_print_with_order].to_string(index=False, float_format="%11.6f"))
 
 
 def add_metrics(metrics_df, iter=None, **kwargs):
@@ -607,13 +613,19 @@ class IterationProcessor(object):
         if "image_id" in outputs_dict:
             outputs_dict.pop("image_id")
         if self.collect_accuracy_metrics:
-            mask_incorrect = outputs_dict.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
-            gt_masks_bool = outputs_dict.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
+            mask_incorrect = (
+                outputs_dict.pop("mask_rcnn/mask_incorrect").ndarray().astype(np.bool)
+            )
+            gt_masks_bool = (
+                outputs_dict.pop("mask_rcnn/gt_masks_bool").ndarray().astype(np.bool)
+            )
             num_positive = outputs_dict.pop("mask_rcnn/num_positive").ndarray().item()
             false_positive = (mask_incorrect & ~gt_masks_bool).sum() / max(
                 gt_masks_bool.size - num_positive, 1.0
             )
-            false_negative = (mask_incorrect & gt_masks_bool).sum() / max(num_positive, 1.0)
+            false_negative = (mask_incorrect & gt_masks_bool).sum() / max(
+                num_positive, 1.0
+            )
             outputs_dict["mask_rcnn/false_positive"] = false_positive
             outputs_dict["mask_rcnn/false_negative"] = false_negative
 
@@ -625,6 +637,19 @@ class IterationProcessor(object):
             self.process_one_rank(outputs)
         else:
             raise ValueError("outputs has error type")
+
+    def save_csv(self):
+        npy_file_name = "loss-{}-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+            self.start_iter,
+            iter,
+            self.img_per_batch,
+            self.ngpus,
+            self.image_dir,
+            str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
+        )
+        npy_file_name = npy_file_name.replace("/", "-")
+        self.metrics.to_csv(npy_file_name, index=False)
+        print("saved: {}".format(npy_file_name))
 
     def step(self, iter, outputs):
         # save_blob_watched(iter)
@@ -641,21 +666,6 @@ class IterationProcessor(object):
 
         self.metrics = pd.concat([self.metrics, metrics_df], axis=0, sort=False)
 
-        if self.save_metrics_period > 0 and (
-            iter % self.save_metrics_period == 0 or iter == self.max_iter
-        ):
-            npy_file_name = "loss-{}-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
-                self.start_iter,
-                iter,
-                self.img_per_batch,
-                self.ngpus,
-                self.image_dir,
-                str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
-            )
-            npy_file_name = npy_file_name.replace("/", "-")
-            self.metrics.to_csv(npy_file_name, index=False)
-            print("saved: {}".format(npy_file_name))
-
         if terminal_args.print_loss_each_rank and rank_size > 1:
             for rank_i in range(rank_size):
                 tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
@@ -665,24 +675,38 @@ class IterationProcessor(object):
             tansposed = transpose_metrics(metrics_df)
             print_metrics(tansposed)
 
+        if self.save_metrics_period > 0 and (
+            iter % self.save_metrics_period == 0 or iter == self.max_iter
+        ):
+            self.save_csv()
+
+        gross_time_df = pd.DataFrame()
+        gross_time_df = add_metrics(
+            metrics_df, iter=iter, gross_time=time.perf_counter() - self.start_time
+        )
+        self.metrics = pd.concat([self.metrics, gross_time_df], axis=0, sort=False)
+
         if iter == self.max_iter:
-            print(
-                "median of elapsed time per batch:",
-                self.metrics[self.metrics.legend == "elapsed_time"].value.median(),
-            )
-        
+            elapsed = self.metrics[self.metrics.legend == "elapsed_time"].value.median()
+            gross = self.metrics[self.metrics.legend == "gross_time"].value.median()
+            print("per batch elapsed time (median):", elapsed)
+            print("per batch gross time (median):", gross)
+            print("per batch overhead (gross - elapsed):", gross - elapsed)
+
         self.start_time = time.perf_counter()
 
 
 def load_fake_images(path):
     iter_dirs = glob.glob("{}/iter_*".format(path))
-    iters = [int(iter_dir.split("/")[-1][len("iter_"):]) for iter_dir in iter_dirs]
+    iters = [int(iter_dir.split("/")[-1][len("iter_") :]) for iter_dir in iter_dirs]
     image_paths = []
     for iter_dir in iter_dirs:
         image_paths_per_iter = glob.glob("{}/image*.npy".format(iter_dir))
-        if (len(image_paths_per_iter) > 1):
+        if len(image_paths_per_iter) > 1:
             image_paths_per_iter.sort(
-                key=lambda x: int(os.path.splitext(os.path.basename(x))[0][len("image_"):])
+                key=lambda x: int(
+                    os.path.splitext(os.path.basename(x))[0][len("image_") :]
+                )
             )
         image_paths.append(image_paths_per_iter)
     return dict(zip(iters, image_paths))
@@ -727,7 +751,9 @@ def run():
 
         if fake_images is not None:
             assert i in fake_images, "there is not iter {} fake images".format(i)
-            fake_images_for_iter = [np.load(fake_images_path) for fake_images_path in fake_images[i]]
+            fake_images_for_iter = [
+                np.load(fake_images_path) for fake_images_path in fake_images[i]
+            ]
             if config.ASYNC_GET:
                 train_func(*fake_images_for_iter).async_get(lambda x, i=i: p.step(i, x))
             else:
@@ -740,7 +766,9 @@ def run():
                 outputs = train_func().get()
                 p.step(i, outputs)
 
-        if (p.checkpoint_period > 0 and i % p.checkpoint_period == 0) or i == p.max_iter:
+        if (
+            p.checkpoint_period > 0 and i % p.checkpoint_period == 0
+        ) or i == p.max_iter:
             save_model(p.check_point, i)
 
 
