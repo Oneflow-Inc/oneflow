@@ -19,6 +19,7 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
   void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
                    const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  bool IsWeightDecaySupported() override { return true; }
 };
 
 template<DeviceType device_type, typename T>

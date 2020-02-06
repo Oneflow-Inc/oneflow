@@ -6,6 +6,7 @@ template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::VirtualKernelInit() {
   const PbMessage& op_conf = this->GetCustomizedOpConf();
   weight_decay_ = static_cast<T>(GetValFromPbMessage<float>(op_conf, "weight_decay"));
+  if (!IsWeightDecaySupported()) { CHECK_EQ(weight_decay_, static_cast<T>(0)); }
 }
 
 template<DeviceType device_type, typename T>

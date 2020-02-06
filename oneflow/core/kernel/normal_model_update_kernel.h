@@ -19,6 +19,7 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
   virtual void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
                            const float* learning_rate,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual bool IsWeightDecaySupported() { return false; }
 
  private:
   void VirtualKernelInit() override;

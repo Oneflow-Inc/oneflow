@@ -9,11 +9,11 @@ template<typename T>
 __global__ void UpdateModelGpu(int64_t n, T beta, const int64_t* train_step,
                                const float* learning_rate, T weight_decay, const T* model_diff,
                                T* model, T* momentum) {
-  T cur_beta = *train_step == 0 ? 0 : beta;
   const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    momentum[i] = cur_beta * momentum[i] - lr * (model_diff[i] + weight_decay * model[i]);
-    model[i] = model[i] + momentum[i];
+    T new_momentum = beta * momentum[i] - lr * model_diff[i];
+    momentum[i] = new_momentum;
+    model[i] = model[i] + new_momentum - lr * weight_decay * model[i];
   }
 }
 

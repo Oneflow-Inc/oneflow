@@ -36,11 +36,10 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   static void UpdateModel(DeviceCtx*, int64_t n, T beta, const int64_t* train_step,
                           const float* learning_rate, T weight_decay, const T* model_diff, T* model,
                           T* momentum) {
-    T cur_beta = *train_step == 0 ? 0 : beta;
     for (int64_t i = 0; i != n; ++i) {
-      momentum[i] =
-          cur_beta * momentum[i] - *learning_rate * (model_diff[i] + weight_decay * model[i]);
-      model[i] = model[i] + momentum[i];
+      T new_momentum = momentum[i] = beta * momentum[i] - *learning_rate * model_diff[i];
+      momentum[i] = new_momentum;
+      model[i] = model[i] + new_momentum - *learning_rate * weight_decay * model[i];
     }
   }
 };
