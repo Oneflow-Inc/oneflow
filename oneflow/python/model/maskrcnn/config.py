@@ -115,6 +115,8 @@ _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
 _C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
 # Target fraction of foreground (positive) examples per RPN minibatch
 _C.MODEL.RPN.POSITIVE_FRACTION = 0.5
+# # The transition point from L1 to L2 loss. Set to 0.0 to make the loss simply L1.
+_C.MODEL.RPN.SMOOTH_L1_BETA = 0.0
 # Number of top scoring RPN proposals to keep before applying NMS
 # When FPN is used, this is *per FPN level* (not total)
 _C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 2000
@@ -164,6 +166,8 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (0.25, 0.125, 0.0625, 0.03125)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 81
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+# The transition point from L1 to L2 loss. Set to 0.0 to make the loss simply L1.
+_C.MODEL.ROI_BOX_HEAD.SMOOTH_L1_BETA = 0.0
 
 # ---------------------------------------------------------------------------- #
 #  Mask
