@@ -638,7 +638,7 @@ class IterationProcessor(object):
         else:
             raise ValueError("outputs has error type")
 
-    def save_csv(self):
+    def save_csv(self, iter):
         npy_file_name = "loss-{}-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
             self.start_iter,
             iter,
@@ -678,7 +678,7 @@ class IterationProcessor(object):
         if self.save_metrics_period > 0 and (
             iter % self.save_metrics_period == 0 or iter == self.max_iter
         ):
-            self.save_csv()
+            self.save_csv(iter)
 
         gross_time_df = pd.DataFrame()
         gross_time_df = add_metrics(
