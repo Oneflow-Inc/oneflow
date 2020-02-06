@@ -175,21 +175,20 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, const nlohmann::json&
   if (!bbox_field) { return; }
   // COCO bounding box format is [left, top, width, height]
   // we need format xyxy
-  const float to_remove = 1.0f;
   const float min_size = 0.0f;
   float left = bbox_json[0].get<float>();
   float top = bbox_json[1].get<float>();
   float width = bbox_json[2].get<float>();
   float height = bbox_json[3].get<float>();
-  float right = left + std::max(width - to_remove, min_size);
-  float bottom = top + std::max(height - to_remove, min_size);
+  float right = left + std::max(width, min_size);
+  float bottom = top + std::max(height, min_size);
   // clip to image
   const float image_width = image_json["width"].get<float>();
   const float image_height = image_json["height"].get<float>();
-  left = std::min(std::max(left, min_size), image_width - to_remove);
-  top = std::min(std::max(top, min_size), image_height - to_remove);
-  right = std::min(std::max(right, min_size), image_width - to_remove);
-  bottom = std::min(std::max(bottom, min_size), image_height - to_remove);
+  left = std::min(std::max(left, min_size), image_width);
+  top = std::min(std::max(top, min_size), image_height);
+  right = std::min(std::max(right, min_size), image_width);
+  bottom = std::min(std::max(bottom, min_size), image_height);
 
   auto& bbox_vec = bbox_field->data();
   // remove empty

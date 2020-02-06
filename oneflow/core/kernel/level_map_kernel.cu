@@ -8,10 +8,9 @@ template<typename T>
 __global__ void GpuForward(const int64_t num_boxes, const T* in_ptr, const int32_t canonical_level,
                            const int32_t canonical_scale, const int32_t min_level,
                            const int32_t max_level, const float epsilon, int32_t* out_ptr) {
-  const T TO_REMOVE = 1.0;
   CUDA_1D_KERNEL_LOOP(i, num_boxes) {
-    const T scale = sqrt((in_ptr[i * 4 + 2] - in_ptr[i * 4] + TO_REMOVE)
-                         * (in_ptr[i * 4 + 3] - in_ptr[i * 4 + 1] + TO_REMOVE));
+    const T scale = sqrt((in_ptr[i * 4 + 2] - in_ptr[i * 4])
+                         * (in_ptr[i * 4 + 3] - in_ptr[i * 4 + 1]));
     const int32_t target_level = floor(canonical_level + log2(scale / canonical_scale + epsilon));
     out_ptr[i] = min(max(target_level, min_level), max_level) - min_level;
   }
