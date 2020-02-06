@@ -566,7 +566,7 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             else:
                 raise ValueError("not supported")
             metrics_df = pd.concat([metrics_df] + dfs, axis=0, sort=False)
-        elif k is in ["elapsed_time", "gross_time"]:
+        elif k in ["elapsed_time", "gross_time"]:
             metrics_df = pd.concat(
                 [
                     metrics_df,
