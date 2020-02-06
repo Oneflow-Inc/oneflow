@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/optimizer.h"
+#include <re2/re2.h>
 
 namespace oneflow {
 
@@ -43,16 +44,34 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
   const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
   if (op.op_conf().variable_conf().model_name() == "weight") {
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.weight_l1());
-    mdupdt_op_conf->set_l2(train_conf.weight_l2());
   } else if (op.op_conf().variable_conf().model_name() == "bias") {
     mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.bias_l1());
-    mdupdt_op_conf->set_l2(train_conf.bias_l2());
   } else {
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-    mdupdt_op_conf->set_l1(0);
-    mdupdt_op_conf->set_l2(0);
+  }
+  if (train_conf.model_update_conf().has_weight_decay_conf()) {
+    const WeightDecayConf& weight_decay_conf = train_conf.model_update_conf().weight_decay_conf();
+    std::function<bool(const std::string& op_name)> WeightDecayFilter;
+    if (weight_decay_conf.has_includes()) {
+      WeightDecayFilter = [&](const std::string& op_name) {
+        return std::any_of(
+            weight_decay_conf.includes().pattern().cbegin(),
+            weight_decay_conf.includes().pattern().cend(),
+            [&](const std::string& pattern) { return RE2::PartialMatch(op_name, pattern); });
+      };
+    } else if (weight_decay_conf.has_excludes()) {
+      WeightDecayFilter = [&](const std::string& op_name) {
+        return !std::any_of(
+            weight_decay_conf.excludes().pattern().cbegin(),
+            weight_decay_conf.excludes().pattern().cend(),
+            [&](const std::string& pattern) { return RE2::PartialMatch(op_name, pattern); });
+      };
+    } else {
+      WeightDecayFilter = [&](const std::string& op_name) { return true; };
+    }
+    if (WeightDecayFilter(op.op_name())) {
+      mdupdt_op_conf->set_weight_decay(weight_decay_conf.weight_decay_rate());
+    }
   }
 }
 

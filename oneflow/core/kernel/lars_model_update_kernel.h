@@ -1,5 +1,5 @@
 #ifndef ONEFLOW_CORE_KERNEL_LARS_MODEL_UPDATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_LARS_MODEL_UDPATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_LARS_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/normal_model_update_kernel.h"
 
@@ -14,7 +14,7 @@ class LARSMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void UpdateModel(DeviceCtx* ctx, T l1, T l2, T weight_decay, const int64_t* train_step,
+  void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
                    const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
@@ -22,7 +22,7 @@ class LARSMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 template<DeviceType device_type, typename T>
 class LARSMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T l1, T l2,
+  static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T weight_decay,
                           T momentum_beta, T epsilon, T lars_coefficient, const int64_t* train_step,
                           const T* model_diff, T* model, T* momentum, T* data_tmp);
 };

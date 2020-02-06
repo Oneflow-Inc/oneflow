@@ -1,6 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -8,13 +7,13 @@ namespace {
 
 template<typename T>
 __global__ void UpdateModelGpu(int64_t n, T beta, const int64_t* train_step,
-                               const float* learning_rate, T l1, T l2, const T* model_diff,
+                               const float* learning_rate, T weight_decay, const T* model_diff,
                                T* model, T* momentum) {
   T cur_beta = *train_step == 0 ? 0 : beta;
+  const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], l1, l2, model[i]);
-    momentum[i] = cur_beta * momentum[i] + reg_diff;
-    model[i] = model[i] - *learning_rate * momentum[i];
+    momentum[i] = cur_beta * momentum[i] - lr * (model_diff[i] + weight_decay * model[i]);
+    model[i] = model[i] + momentum[i];
   }
 }
 
@@ -24,10 +23,10 @@ template<typename T>
 class MomentumMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, T beta, const int64_t* train_step,
-                          const float* learning_rate, const T l1, const T l2, const T* model_diff,
+                          const float* learning_rate, const T weight_decay, const T* model_diff,
                           T* model, T* momentum) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, beta, train_step, learning_rate, l1, l2, model_diff, model, momentum);
+        n, beta, train_step, learning_rate, weight_decay, model_diff, model, momentum);
   }
 };
 

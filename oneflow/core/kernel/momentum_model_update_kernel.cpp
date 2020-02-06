@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -18,28 +17,29 @@ const PbMessage& MomentumMdUpdateKernel<device_type, T>::GetCustomizedOpConf() c
 
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, T l1, T l2, T weight_decay, const int64_t* train_step,
-    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, T weight_decay, const int64_t* train_step, const float* learning_rate,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   float beta = GetMomentumModelUpdateConf(this->op_conf()).beta();
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), static_cast<T>(beta), train_step, learning_rate, l1, l2,
-      model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>(), momentum_blob->mut_dptr<T>());
+      ctx, model_blob->shape().elem_cnt(), static_cast<T>(beta), train_step, learning_rate,
+      weight_decay, model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>(),
+      momentum_blob->mut_dptr<T>());
 }
 
 template<typename T>
 class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx*, int64_t n, T beta, const int64_t* train_step,
-                          const float* learning_rate, T l1, T l2, const T* model_diff, T* model,
+                          const float* learning_rate, T weight_decay, const T* model_diff, T* model,
                           T* momentum) {
     T cur_beta = *train_step == 0 ? 0 : beta;
     for (int64_t i = 0; i != n; ++i) {
-      T reg_diff = RegularizeDiff(model_diff[i], l1, l2, model[i]);
-      momentum[i] = cur_beta * momentum[i] - *learning_rate * reg_diff;
+      momentum[i] =
+          cur_beta * momentum[i] - *learning_rate * (model_diff[i] + weight_decay * model[i]);
       model[i] = model[i] + momentum[i];
     }
   }

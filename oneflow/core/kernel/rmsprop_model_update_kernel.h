@@ -14,7 +14,7 @@ class RMSPropMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> 
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void UpdateModel(DeviceCtx* ctx, T l1, T l2, T weight_decay, const int64_t* train_step,
+  void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
                    const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
@@ -25,7 +25,7 @@ class RMSPropMdUpdateKernelUtil final {
   // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
   // model = model - learning_rate * model_diff / sqrt(mean_square + epsilon)
   static void UpdateModel(DeviceCtx*, int64_t n, const int64_t* train_step,
-                          const float* learning_rate, T decay_rate, T epsilon, T l1, T l2,
+                          const float* learning_rate, T decay_rate, T epsilon, T weight_decay,
                           const T* model_diff, T* model, T* mean_square);
 };
 

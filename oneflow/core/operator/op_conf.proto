@@ -600,10 +600,23 @@ message ClipConf {
   }
 }
 
+message WeightDecayFilterPatternSet {
+  repeated string pattern = 1;
+}
+
+message WeightDecayConf {
+  required float weight_decay_rate = 1;
+  oneof weight_decay_filter_type {
+    WeightDecayFilterPatternSet includes = 2;
+    WeightDecayFilterPatternSet excludes = 3;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
   optional ClipConf clip_conf = 3;
+  optional WeightDecayConf weight_decay_conf = 4;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -620,9 +633,7 @@ message NormalModelUpdateOpConf {
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
-  optional float weight_decay = 9 [default = 0.0];
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message NaiveModelUpdateOpConf {
@@ -631,9 +642,7 @@ message NaiveModelUpdateOpConf {
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
-  optional float weight_decay = 9 [default = 0.0];
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message MomentumModelUpdateOpConf {
@@ -643,9 +652,7 @@ message MomentumModelUpdateOpConf {
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
-  optional float weight_decay = 10 [default = 0.0];
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message RMSPropModelUpdateOpConf {
@@ -654,9 +661,7 @@ message RMSPropModelUpdateOpConf {
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
-  optional float weight_decay = 9 [default = 0.0];
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
@@ -666,9 +671,7 @@ message LARSModelUpdateOpConf {
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
-  optional float weight_decay = 10 [default = 0.0];
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message AdamModelUpdateOpConf {
@@ -681,9 +684,7 @@ message AdamModelUpdateOpConf {
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
-  optional float weight_decay = 13 [default = 0.0];
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message LazyAdamModelUpdateOpConf {
@@ -696,9 +697,7 @@ message LazyAdamModelUpdateOpConf {
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
-  optional float weight_decay = 13 [default = 0.0];
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message AccumulateOpConf {
