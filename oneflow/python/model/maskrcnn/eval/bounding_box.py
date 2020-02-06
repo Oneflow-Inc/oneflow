@@ -65,8 +65,9 @@ class BoxList(object):
             bbox = np.concatenate((xmin, ymin, xmax, ymax), dim=-1)
             bbox = BoxList(bbox, self.size, mode=mode)
         else:
+            TO_REMOVE = 1
             bbox = np.concatenate(
-                (xmin, ymin, xmax - xmin, ymax - ymin), axis=-1
+                (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), axis=-1
             )
             bbox = BoxList(bbox, self.size, mode=mode)
         bbox._copy_extra_fields(self)
@@ -77,12 +78,13 @@ class BoxList(object):
             xmin, ymin, xmax, ymax = np.split(self.bbox, 4, axis=-1)
             return xmin, ymin, xmax, ymax
         elif self.mode == "xywh":
+            TO_REMOVE = 1
             xmin, ymin, w, h = np.split(self.bbox, 4, axis=-1)
             return (
                 xmin,
                 ymin,
-                xmin + w.clip(min=0),
-                ymin + h.clip(min=0),
+                xmin + (w - TO_REMOVE).clip(min=0),
+                ymin + (h - TO_REMOVE).clip(min=0),
             )
         else:
             raise RuntimeError("Should not be here")
@@ -125,6 +127,44 @@ class BoxList(object):
 
         return bbox.convert(self.mode)
 
+    #def transpose(self, method):
+    #    """
+    #    Transpose bounding box (flip or rotate in 90 degree steps)
+    #    :param method: One of :py:attr:`PIL.Image.FLIP_LEFT_RIGHT`,
+    #      :py:attr:`PIL.Image.FLIP_TOP_BOTTOM`, :py:attr:`PIL.Image.ROTATE_90`,
+    #      :py:attr:`PIL.Image.ROTATE_180`, :py:attr:`PIL.Image.ROTATE_270`,
+    #      :py:attr:`PIL.Image.TRANSPOSE` or :py:attr:`PIL.Image.TRANSVERSE`.
+    #    """
+    #    if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
+    #        raise NotImplementedError(
+    #            "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
+    #        )
+
+    #    image_width, image_height = self.size
+    #    xmin, ymin, xmax, ymax = self._split_into_xyxy()
+    #    if method == FLIP_LEFT_RIGHT:
+    #        TO_REMOVE = 1
+    #        transposed_xmin = image_width - xmax - TO_REMOVE
+    #        transposed_xmax = image_width - xmin - TO_REMOVE
+    #        transposed_ymin = ymin
+    #        transposed_ymax = ymax
+    #    elif method == FLIP_TOP_BOTTOM:
+    #        transposed_xmin = xmin
+    #        transposed_xmax = xmax
+    #        transposed_ymin = image_height - ymax
+    #        transposed_ymax = image_height - ymin
+
+    #    transposed_boxes = np.concatenate(
+    #        (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1
+    #    )
+    #    bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
+    #    # bbox._copy_extra_fields(self)
+    #    for k, v in self.extra_fields.items():
+    #        if not isinstance(v, np.ndarray):
+    #            v = v.transpose(method)
+    #        bbox.add_field(k, v)
+    #    return bbox.convert(self.mode)
+
     def crop(self, box):
         """
         Crops a rectangular region from this bounding box. The box is a
@@ -163,6 +203,30 @@ class BoxList(object):
 
     def __len__(self):
         return self.bbox.shape[0]
+
+    def clip_to_image(self, remove_empty=True):
+        TO_REMOVE = 1
+        self.bbox[:, 0] = self.bbox[:, 0].clip(min=0, max=self.size[0] - TO_REMOVE)
+        self.bbox[:, 1] = self.bbox[:, 1].clip(min=0, max=self.size[1] - TO_REMOVE)
+        self.bbox[:, 2] = self.bbox[:, 2].clip(min=0, max=self.size[0] - TO_REMOVE)
+        self.bbox[:, 3] = self.bbox[:, 3].clip(min=0, max=self.size[1] - TO_REMOVE)
+        if remove_empty:
+            box = self.bbox
+            keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])
+            return self[keep]
+        return self
+
+    def area(self):
+        box = self.bbox
+        if self.mode == "xyxy":
+            TO_REMOVE = 1
+            area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
+        elif self.mode == "xywh":
+            area = box[:, 2] * box[:, 3]
+        else:
+            raise RuntimeError("Should not be here")
+
+        return area
 
     def copy_with_fields(self, fields, skip_missing=False):
         bbox = BoxList(self.bbox, self.size, self.mode)
