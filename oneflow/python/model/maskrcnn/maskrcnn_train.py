@@ -594,7 +594,6 @@ def add_metrics(metrics_df, iter=None, **kwargs):
 class IterationProcessor(object):
     def __init__(self, start_iter, check_point, cfg):
         self.start_time = time.perf_counter()
-        self.elapsed_times = []
         self.checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
         self.save_metrics_period = cfg.SOLVER.METRICS_PERIOD
         self.max_iter = cfg.SOLVER.MAX_ITER
