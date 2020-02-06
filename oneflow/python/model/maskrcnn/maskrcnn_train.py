@@ -536,7 +536,7 @@ def print_metrics(m):
     print(m[to_print_with_order].to_string(index=False, float_format="%11.6f"))
 
 
-def add_metrics(metrics_df, iter=None, **kwargs):
+def add_metrics(metrics_df, iter, **kwargs):
     assert iter is not None
     for k, v in kwargs.items():
         if k is "outputs":
