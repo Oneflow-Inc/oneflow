@@ -653,12 +653,9 @@ class IterationProcessor(object):
 
     def step(self, iter, outputs):
         # save_blob_watched(iter)
-
-        now_time = time.perf_counter()
-        elapsed_time = now_time - self.start_time
         self.outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
-        metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
+        metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=time.perf_counter() - self.start_time)
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
         rank_size = (
             metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
