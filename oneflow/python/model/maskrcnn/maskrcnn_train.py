@@ -627,6 +627,8 @@ class IterationProcessor(object):
             raise ValueError("outputs has error type")
 
     def step(self, iter, outputs):
+        # save_blob_watched(iter)
+
         now_time = time.perf_counter()
         elapsed_time = now_time - self.start_time
         self.outputs_postprocess(outputs)
@@ -636,14 +638,6 @@ class IterationProcessor(object):
         rank_size = (
             metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
         )
-        if terminal_args.print_loss_each_rank and rank_size > 1:
-            for rank_i in range(rank_size):
-                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
-                tansposed["rank"] = rank_i
-                print_metrics(tansposed)
-        else:
-            tansposed = transpose_metrics(metrics_df)
-            print_metrics(tansposed)
 
         self.metrics = pd.concat([self.metrics, metrics_df], axis=0, sort=False)
 
@@ -662,14 +656,21 @@ class IterationProcessor(object):
             self.metrics.to_csv(npy_file_name, index=False)
             print("saved: {}".format(npy_file_name))
 
-        # save_blob_watched(iter)
+        if terminal_args.print_loss_each_rank and rank_size > 1:
+            for rank_i in range(rank_size):
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
+                tansposed["rank"] = rank_i
+                print_metrics(tansposed)
+        else:
+            tansposed = transpose_metrics(metrics_df)
+            print_metrics(tansposed)
 
         if iter == self.max_iter:
             print(
                 "median of elapsed time per batch:",
                 self.metrics[self.metrics.legend == "elapsed_time"].value.median(),
             )
-
+        
         self.start_time = time.perf_counter()
 
 
