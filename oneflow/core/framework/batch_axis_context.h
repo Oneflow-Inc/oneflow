@@ -14,11 +14,11 @@ class BatchAxisContext {
   virtual ~BatchAxisContext() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) = 0;
+      const std::string& input_arg_name, int32_t index) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  BatchAxisSignatureList* sbp_sig_list() { return sbp_sig_list_; }
+  virtual OptInt64* BatchAxis4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
@@ -26,17 +26,15 @@ class BatchAxisContext {
   }
 
  protected:
-  BatchAxisContext(UserOpConfWrapper&& conf, BatchAxisSignatureList* sbp_sig_list)
-      : user_op_conf_(conf), sbp_sig_list_(sbp_sig_list) {}
+  BatchAxisContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
   BatchAxisContext(const BatchAxisContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
-  BatchAxisSignatureList* sbp_sig_list_;
 };
 
-struct GetBatchAxisFnUtil {
-  static Maybe<void> MirrorSplitAtDim0(BatchAxisContext*);
+struct BatchAxisInferFnUtil {
+  static Maybe<void> DefaultAsFirstHasValueInput(BatchAxisContext*);
 };
 
 }  // namespace user_op

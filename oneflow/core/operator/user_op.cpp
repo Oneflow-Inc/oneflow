@@ -5,6 +5,7 @@
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/framework/batch_axis_context.h"
 
 namespace oneflow {
 
@@ -139,8 +140,8 @@ class UserOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
   ArgVec inputs_;
@@ -175,16 +176,65 @@ class UserOpSbpContext : public user_op::SbpContext {
   ~UserOpSbpContext() = default;
 
   const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) override {
+      const std::string& input_arg_name, int32_t index) const override {
     return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
   }
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+};
+
+class UserOpBatchAxisContext : public user_op::BatchAxisContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpBatchAxisContext(const OperatorConf& op_conf,
+                         std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp,
+                         std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4Ibn)
+      : user_op::BatchAxisContext(user_op::UserOpConfWrapper(op_conf)) {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        std::string ibn = GenRepeatedBn(arg_name, i);
+        const BlobDesc& blob = LogicalBlobDesc4Ibn(ibn);
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 user_op::TensorDesc(blob.shape(), blob.data_type()));
+        arg2batch_axis_.emplace(std::make_pair(arg_name, i), BatchAxis4BnInOp(ibn));
+        inputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        arg2batch_axis_.emplace(std::make_pair(arg_name, i),
+                                BatchAxis4BnInOp(GenRepeatedBn(arg_name, i)));
+        outputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+  }
+  ~UserOpBatchAxisContext() = default;
+
+  const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const override {
+    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+  }
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
+
+  OptInt64* BatchAxis4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2batch_axis_.at(std::make_pair(arg_name, index));
+  }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, OptInt64*> arg2batch_axis_;
 };
 
 void UserOp::InitFromOpConf() {
@@ -289,7 +339,15 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> UserOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  // TODO(ChengCheng): customized define infer batch axis by user
+  // init batch_axis
+  // for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn); }
+  const user_op::OpRegistrationVal* val =
+      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
+                                  << " in op registry!";
+  UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
+  JUST(val->batch_axis_infer_fn(&batch_axis_ctx));
+  /*
   OptInt64* batch_axis = nullptr;
   for (const std::string& ibn : input_bns()) {
     if (BatchAxis4BnInOp(ibn)->has_value()) {
@@ -299,9 +357,8 @@ Maybe<void> UserOp::InferBatchAxis(
   }
   if (batch_axis) {
     for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
-  } else {
-    for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn); }
   }
+  */
   return Maybe<void>::Ok();
 }
 
