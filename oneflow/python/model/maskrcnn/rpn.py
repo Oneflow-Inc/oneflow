@@ -251,7 +251,7 @@ class RPNLoss(object):
                     flow.concat(
                         sampled_bbox_target_list, axis=0, name="bbox_target"
                     ),  # CHECK_POINT: bbox_target
-                    beta=cfg.MODEL.RPN.SMOOTH_L1_BETA,
+                    beta=self.cfg.MODEL.RPN.SMOOTH_L1_BETA,
                     name="box_reg_loss",
                 ),
                 name="box_reg_loss_sum",

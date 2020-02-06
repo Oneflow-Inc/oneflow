@@ -177,7 +177,7 @@ class BoxHead(object):
             box_head_box_loss = flow.math.divide(
                 flow.math.reduce_sum(
                     flow.detection.smooth_l1(
-                        bbox_pred, bbox_target, beta=cfg.MODEL.ROI_BOX_HEAD.SMOOTH_L1_BETA
+                        bbox_pred, bbox_target, beta=self.cfg.MODEL.ROI_BOX_HEAD.SMOOTH_L1_BETA
                     )
                 ),
                 total_elem_cnt,
