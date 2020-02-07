@@ -11,9 +11,10 @@ __global__ void UpdateModelGpu(int64_t n, const int64_t* train_step, const float
                                T* model, T* mean_square) {
   const T cur_decay_rate = *train_step == 0 ? 0 : decay_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = model_diff[i] + weight_decay * model[i];
-    mean_square[i] = (1 - cur_decay_rate) * reg_diff * reg_diff + cur_decay_rate * mean_square[i];
-    model[i] = model[i] - *learning_rate * reg_diff / std::sqrt(mean_square[i] + epsilon);
+    T model_diff_val = model_diff[i];
+    mean_square[i] =
+        (1 - cur_decay_rate) * model_diff_val * model_diff_val + cur_decay_rate * mean_square[i];
+    model[i] = model[i] - *learning_rate * model_diff_val / std::sqrt(mean_square[i] + epsilon);
   }
 }
 

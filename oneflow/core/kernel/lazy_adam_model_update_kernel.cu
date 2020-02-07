@@ -11,8 +11,8 @@ __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T weight_d
                                T* model_diff, T* model, T* m, T* v) {
   const float local_learning_rate = *learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (abs(model_diff[i]) < 1e-12) { continue; }
-    T model_diff_val = model_diff[i] + weight_decay * model[i];
+    T model_diff_val = model_diff[i];
+    if (abs(model_diff_val) < 1e-12) { continue; }
     m[i] = beta1 * m[i] + (1 - beta1) * model_diff_val;
     v[i] = beta2 * v[i] + (1 - beta2) * model_diff_val * model_diff_val;
     model[i] = model[i] - local_learning_rate * m[i] / (sqrt(v[i]) + epsilon);
