@@ -128,7 +128,7 @@ def get_limit_and_rate(dfs):
     limit = min(maxs)
     rate = 1
     if limit * len(dfs) > 5000:
-        rate = int(limit / (5000 // len(dfs)) + 1)
+        rate = int(limit / (5000 // len(dfs)) + 1) * 2
     return limit, rate
 
 
@@ -178,12 +178,16 @@ def post_process_flow(df):
     get_with_path_print(cfg, "MODEL.RPN.ZERO_CTRL")
     get_with_path_print(cfg, "MODEL.ROI_MASK_HEAD.ZERO_CTRL")
     print_perf_summary(df, skip_iter_before=1)
-    df.drop(["rank", "note"], axis=1)
+    is_multi_rank = False
+    if "rank" in df:
+        is_multi_rank = df["rank"].dropna().unique().size > 1
+    df.drop(["rank", "note"], axis=1, inplace=True)
     print("min iter: {}, max iter: {}".format(df["iter"].min(), df["iter"].max()))
     if "primary_lr" in df["legend"].unique():
         df["legend"].replace("primary_lr", "lr", inplace=True)
     df = df[df.legend.str.contains("lr2") == False]
-    df = df.groupby(["iter", "legend"], as_index=False).sum()
+    if is_multi_rank:
+        df = df.groupby(["legend", "iter"], as_index=False).sum()
     return df
 
 
@@ -220,28 +224,6 @@ if __name__ == "__main__":
     plot_many_by_legend(
         {
             "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
-            # "flow1": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
-            # "flow1": get_df(
-            #     os.path.join(
-            #         args.metrics_dir,
-            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--21-27-34.csv",
-            #     ),
-            #     post_process=post_process_flow,
-            # ),
-            # "flow2": get_df(
-            #     os.path.join(
-            #         args.metrics_dir,
-            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-31--10-37-45-500-520.csv",
-            #     ),
-            #     post_process=post_process_flow,
-            # ),
             "torch": get_df(torch_metrics_path, "torch*.csv", -1, post_process_torch),
-            # "torch1": get_df(
-            #     os.path.join(
-            #         args.metrics_dir,
-            #         "csv-archive/torch-50000-batch_size-8-image_dir-coco_2017_train-2019-12-31--23-57-42.csv",
-            #     ),
-            #     post_process=post_process_torch,
-            # ),
         }
     )
