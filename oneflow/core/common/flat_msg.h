@@ -228,40 +228,55 @@ DEFINE_FLAT_MSG_TYPE(double);
     return &OF_PP_CAT(oneof_name, _);                                                      \
   }
 
-#define _MAKE_FLAT_MSG_ONEOF_TEMPLATE_ACCESSOR(field_type, field_name)                         \
- public:                                                                                       \
-  template<typename Enabled>                                                                   \
-  struct FieldType4FieldValueStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {         \
-    using type = field_type;                                                                   \
-  };                                                                                           \
-  template<typename Enabled>                                                                   \
-  struct HasStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                          \
-    static bool Call(const self_oneof_type& self) {                                            \
-      return self.case_ == _FLAT_MSG_ONEOF_ENUM_VALUE(field_name);                             \
-    }                                                                                          \
-  };                                                                                           \
-  template<typename Enabled>                                                                   \
-  struct GetStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                          \
-    static const field_type& Call(const self_oneof_type& self) {                               \
-      return self.OF_PP_CAT(field_name, _);                                                    \
-    }                                                                                          \
-  };                                                                                           \
-  template<typename Enabled>                                                                   \
-  struct MutableStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                      \
-    static field_type* Call(self_oneof_type* self) { return &self->OF_PP_CAT(field_name, _); } \
+#define _MAKE_FLAT_MSG_ONEOF_TEMPLATE_ACCESSOR(field_type, field_name)                 \
+ public:                                                                               \
+  template<typename Enabled>                                                           \
+  struct FieldType4FieldValueStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> { \
+    using type = field_type;                                                           \
+  };                                                                                   \
+  template<typename Enabled>                                                           \
+  struct HasStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                  \
+    static bool Call(const self_oneof_type& self) {                                    \
+      return self.case_ == _FLAT_MSG_ONEOF_ENUM_VALUE(field_name);                     \
+    }                                                                                  \
+  };                                                                                   \
+  template<typename Enabled>                                                           \
+  struct GetStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                  \
+    static const field_type& Call(const self_oneof_type& self) {                       \
+      return self.OF_PP_CAT(field_name, _);                                            \
+    }                                                                                  \
+  };                                                                                   \
+  template<typename Enabled>                                                           \
+  struct MutableStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {              \
+    static field_type* Call(self_oneof_type* self) {                                   \
+      self->case_ = _FLAT_MSG_ONEOF_ENUM_VALUE(field_name);                            \
+      return &self->OF_PP_CAT(field_name, _);                                          \
+    }                                                                                  \
   };
 
 #define _FLAT_MSG_DEFINE_NOTHING(type_and_field_name_seq)
 
-#define _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(type_and_field_name_seq) \
- public:                                                           \
-  template<typename T, typename Enabled = void>                    \
-  struct FieldValue4FieldTypeStruct {};                            \
-  OF_PP_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_VALUE4TYPE, type_and_field_name_seq)
+#define _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(type_and_field_name_seq)                \
+ public:                                                                          \
+  template<typename T, typename Enabled = void>                                   \
+  struct FieldValue4FieldType {};                                                 \
+  OF_PP_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_VALUE4TYPE, type_and_field_name_seq); \
+  template<typename T>                                                            \
+  bool HasField() const {                                                         \
+    return Has<FieldValue4FieldType<T>::value>();                                 \
+  }                                                                               \
+  template<typename T>                                                            \
+  const T& GetField() const {                                                     \
+    return Get<FieldValue4FieldType<T>::value>();                                 \
+  }                                                                               \
+  template<typename T>                                                            \
+  T* MutableField() {                                                             \
+    return Mutable<FieldValue4FieldType<T>::value>();                             \
+  }
 
 #define _MAKE_FLAT_MSG_ONEOF_VALUE4TYPE(field_type, field_name)                       \
   template<typename Enabled>                                                          \
-  struct FieldValue4FieldTypeStruct<field_type, Enabled> {                            \
+  struct FieldValue4FieldType<field_type, Enabled> {                                  \
     static const self_oneof_case_type value = _FLAT_MSG_ONEOF_ENUM_VALUE(field_name); \
   };
 

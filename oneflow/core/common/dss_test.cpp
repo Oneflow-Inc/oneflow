@@ -109,7 +109,7 @@ TEST(DSS, filter_field) {
 TEST(DSS, filter_field_until) {
   Foo foo;
   std::vector<std::string> field_names;
-  foo.__WalkFieldUntil__<FilterPointerFieldNameUntil>(&field_names);
+  ASSERT_TRUE(foo.__WalkFieldUntil__<FilterPointerFieldNameUntil>(&field_names));
   ASSERT_TRUE(field_names.empty());
 }
 

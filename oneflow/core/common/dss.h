@@ -57,8 +57,8 @@ namespace oneflow {
     __DSS__FieldIter<field_counter, F, WalkCtxType>::Call(ctx, this);                             \
   }                                                                                               \
   template<template<int, class, class> class F, typename WalkCtxType>                             \
-  void __WalkFieldUntil__(WalkCtxType* ctx) {                                                     \
-    __DSS__FieldIterUntil<field_counter, F, WalkCtxType>::Call(ctx, this);                        \
+  bool __WalkFieldUntil__(WalkCtxType* ctx) {                                                     \
+    return __DSS__FieldIterUntil<field_counter, F, WalkCtxType>::Call(ctx, this);                 \
   }                                                                                               \
                                                                                                   \
  private:                                                                                         \
@@ -87,8 +87,8 @@ namespace oneflow {
   template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
            typename fake = void>                                                                  \
   struct __DSS__FieldIterUntil {                                                                  \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                   \
-      __DSS__FieldIterUntil<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);                \
+    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                                   \
+      return __DSS__FieldIterUntil<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);         \
     }                                                                                             \
   };                                                                                              \
   template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
@@ -172,13 +172,13 @@ namespace oneflow {
   };                                                                                          \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
   struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                         \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
+    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
       const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
       bool end =                                                                              \
           __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, decltype(self->field)>::Call( \
               ctx, &self->field, __field_name__);                                             \
-      if (end) { return; }                                                                    \
-      __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);              \
+      if (end) { return true; }                                                               \
+      return __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);       \
     }                                                                                         \
   };                                                                                          \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
@@ -231,7 +231,7 @@ namespace oneflow {
   };                                                                                  \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>  \
   struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                 \
-    static void Call(WalkCtxType* ctx, type* self) {}                                 \
+    static bool Call(WalkCtxType* ctx, type* self) { return false; }                  \
   };                                                                                  \
   static void __DSS__StaticAssertStructSize() {                                       \
     static const int kSize =                                                          \
