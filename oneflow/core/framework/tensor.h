@@ -2,24 +2,24 @@
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
-class Shape;
+class Blob;
 
 namespace user_op {
 
 class Tensor final {
  public:
-  Tensor(const TensorDesc&, char*);
-  Tensor(const Shape&, DataType, char*);
+  Tensor(Blob*);
   ~Tensor() = default;
 
   Tensor(const Tensor&);
 
-  const Shape& shape() const { return desc_.shape(); }
-  DataType data_type() const { return desc_.data_type(); }
+  const ShapeView& shape() const { return shape_; }
+  MutShapeView* mut_shape() { return mut_shape_.get(); }
+  DataType data_type() const { return data_type_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -36,14 +36,15 @@ class Tensor final {
  private:
   template<typename T>
   void CheckDataType() const {
-    LOG_IF(FATAL,
-           (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-            && desc_.data_type() != DataType::kChar && desc_.data_type() != GetDataType<T>::value))
-        << desc_.data_type() << " " << GetDataType<T>::value;
+    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
+                   && data_type_ != DataType::kChar && data_type_ != GetDataType<T>::value))
+        << data_type_ << " " << GetDataType<T>::value;
   }
 
-  TensorDesc desc_;
   void* dptr_;
+  ShapeView shape_;
+  std::unique_ptr<MutShapeView> mut_shape_;
+  DataType data_type_;
 };
 
 }  // namespace user_op
