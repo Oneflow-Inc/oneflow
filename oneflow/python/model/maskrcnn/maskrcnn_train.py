@@ -506,7 +506,7 @@ def make_train(config, fake_images=None):
 def transpose_metrics(metrics):
     legends = metrics["legend"].unique()
     transposed = metrics.pivot_table(
-        values="value", columns=["legend"], aggfunc="mean", dropna=False
+        values="value", columns=["legend"], aggfunc="sum", dropna=False
     )
     assert metrics["iter"].unique().size == 1, "can only transpose metrics in one iter"
     transposed["iter"] = metrics["iter"].unique()
@@ -654,7 +654,9 @@ class IterationProcessor(object):
         # save_blob_watched(iter)
         self.outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
-        metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=time.perf_counter() - self.start_time)
+        metrics_df = add_metrics(
+            metrics_df, iter=iter, elapsed_time=time.perf_counter() - self.start_time
+        )
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
         rank_size = (
             metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
