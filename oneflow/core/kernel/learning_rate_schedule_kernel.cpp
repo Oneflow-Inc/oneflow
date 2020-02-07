@@ -15,48 +15,47 @@ class LearningRateScheduleKernel final : public KernelIf<DeviceType::kCPU> {
 
 namespace {
 
-double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr,
-                                  int64_t next_batch_num) {
-  CHECK_GT(conf.warmup_batches(), 0);
+double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr, int64_t train_step) {
+  CHECK_GE(conf.warmup_batches(), 0);
   CHECK_GT(conf.multiplier(), 0);
   CHECK_LT(conf.multiplier(), 1);
-  if (next_batch_num <= conf.warmup_batches()) {
+  if (train_step < conf.warmup_batches()) {
     return lr * conf.multiplier();
   } else {
     return lr;
   }
 }
 
-double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t next_batch_num) {
-  CHECK_GT(conf.warmup_batches(), 0);
+double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t train_step) {
+  CHECK_GE(conf.warmup_batches(), 0);
   CHECK_GE(conf.start_multiplier(), 0);
   CHECK_LT(conf.start_multiplier(), 1);
   double start_multiplier = conf.start_multiplier();
   double multiplier = 1.0;
-  if (next_batch_num <= conf.warmup_batches()) {
-    multiplier = start_multiplier
-                 + (1.0 - start_multiplier) * (next_batch_num * 1.0 / conf.warmup_batches());
+  if (train_step < conf.warmup_batches()) {
+    multiplier =
+        start_multiplier + (1.0 - start_multiplier) * (train_step * 1.0 / conf.warmup_batches());
   }
   return lr * multiplier;
 }
 
-bool TriggerWarmup(const LearningRateScheduleOpConf& conf, double lr, int64_t next_batch_num) {
+bool TriggerWarmup(const LearningRateScheduleOpConf& conf, double lr, int64_t train_step) {
   if (!conf.has_warmup_conf()) { return false; }
   const WarmupConf& warmup_conf = conf.warmup_conf();
   if (warmup_conf.has_constant_conf()) {
-    return (next_batch_num <= warmup_conf.constant_conf().warmup_batches());
+    return (train_step < warmup_conf.constant_conf().warmup_batches());
   } else if (warmup_conf.has_linear_conf()) {
-    return (next_batch_num <= warmup_conf.linear_conf().warmup_batches());
+    return (train_step < warmup_conf.linear_conf().warmup_batches());
   } else {
     UNIMPLEMENTED();
   }
 }
 
-double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t next_batch_num) {
+double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t train_step) {
   if (conf.has_constant_conf()) {
-    return ConstantWarmupLearningRate(conf.constant_conf(), lr, next_batch_num);
+    return ConstantWarmupLearningRate(conf.constant_conf(), lr, train_step);
   } else if (conf.has_linear_conf()) {
-    return LinearWarmupLearningRate(conf.linear_conf(), lr, next_batch_num);
+    return LinearWarmupLearningRate(conf.linear_conf(), lr, train_step);
   } else {
     UNIMPLEMENTED();
   }
@@ -178,10 +177,9 @@ void LearningRateScheduleKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *BnInOp2Blob("train_step")->dptr<int64_t>();
-  const int64_t next_model_vid = train_step + 1;
   float learning_rate = conf.learning_rate();
-  if (TriggerWarmup(conf, learning_rate, next_model_vid)) {
-    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, next_model_vid);
+  if (TriggerWarmup(conf, learning_rate, train_step)) {
+    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, train_step);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
