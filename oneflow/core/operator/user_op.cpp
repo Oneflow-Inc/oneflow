@@ -47,6 +47,8 @@ class UserOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
+
+  const user_op::OpRegistrationVal* val_;
 };
 
 class UserOpKernelRegContext final : public user_op::KernelRegContext {
@@ -246,16 +248,15 @@ void UserOp::InitFromOpConf() {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
+  val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx,
                                    const SbpSignature* sbp_signature,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
-  const user_op::OpRegistrationVal* val =
-      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in op registry!";
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
   // set out blob desc other attr as first input blob desc (if has)
   // TODO(ChengCheng): infer other attribute in blob desc
@@ -266,8 +267,8 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
   UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);
 
-  JUST(val->shape_infer_fn(&infer_ctx));
-  JUST(val->dtype_infer_fn(&infer_ctx));
+  JUST(val_->shape_infer_fn(&infer_ctx));
+  JUST(val_->dtype_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
@@ -342,24 +343,20 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> UserOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  const user_op::OpRegistrationVal* val =
-      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in op registry!";
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
-  JUST(val->batch_axis_infer_fn(&batch_axis_ctx));
+  JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const user_op::OpRegistrationVal* val =
-      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in op registry!";
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   UserOpSbpContext sbp_ctx(op_conf(), sbp_sig_list, LogicalBlobDesc4Ibn);
-  JUST(val->get_sbp_fn(&sbp_ctx));
+  JUST(val_->get_sbp_fn(&sbp_ctx));
   return Maybe<void>::Ok();
 }
 
