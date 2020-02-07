@@ -39,7 +39,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
 
-#define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(class_name, __object_message_type__)
+#define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(__object_message_type__, class_name)
 
 // details
 
@@ -233,6 +233,7 @@ typedef std::string OBJECT_MSG_TYPE(string);
 
 class ObjectMsgAllocator {
  public:
+  virtual ~ObjectMsgAllocator() {}
   virtual char* Allocate(std::size_t size) = 0;
   virtual void Deallocate(char* ptr, std::size_t size) = 0;
 
@@ -399,9 +400,14 @@ template<typename T>
 class ObjectMsgPtr final {
  public:
   ObjectMsgPtr() : ptr_(nullptr) {}
+  ObjectMsgPtr(T* ptr) : ptr_(nullptr) { Reset(ptr); }
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
+  }
+  ObjectMsgPtr(ObjectMsgPtr&& obj_ptr) {
+    ptr_ = obj_ptr.ptr_;
+    obj_ptr.ptr_ = nullptr;
   }
   ~ObjectMsgPtr() { Clear(); }
 

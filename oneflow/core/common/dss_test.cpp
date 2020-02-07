@@ -133,6 +133,7 @@ struct TestDssUnion {
 
 TEST(DSS, union_field) {
   TestDssUnion foo;
+  foo.union_field.union_case = 0;
   {
     std::vector<std::string> field_names;
     foo.__WalkField__<DumpFieldName>(&field_names);

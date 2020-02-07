@@ -2,62 +2,52 @@
 #define ONEFLOW_CORE_COMMON_EMBEDDED_SKIPLIST_H_
 
 #include <array>
+#include <tuple>
 #include <random>
 #include <glog/logging.h>
 #include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/common/embedded_list.h"
 
 namespace oneflow {
 
-struct EmbeddedSingleListIterator final {
- public:
-  void __Init__() { Clear(); }
-
-  void Clear() { next_ = nullptr; }
-
-  bool empty() const { return next_ == nullptr; }
-
-  EmbeddedSingleListIterator* next() const { return next_; }
-
-  void InsertNextIterator(EmbeddedSingleListIterator* next) {
-    CHECK(next->empty());
-    next->next_ = next_;
-    next_ = next;
-  }
-
-  void EraseNextIterator() {
-    if (next_ == nullptr) { return; }
-    EmbeddedSingleListIterator* next = next_;
-    next_ = next_->next_;
-    next->next_ = nullptr;
-  }
-
- private:
-  EmbeddedSingleListIterator* next_;
-};
-
 template<int max_level>
-struct EmbeddedSkipListIterator final {
+struct EmbeddedSkipListLink final {
  public:
-  using self_type = EmbeddedSkipListIterator<max_level>;
+  using self_type = EmbeddedSkipListLink<max_level>;
   void __Init__() { Clear(); }
   void Clear() {
     for (auto& link : links_) { link.Clear(); }
   }
-  void InsertAfter(const std::array<EmbeddedSingleListIterator*, max_level>& prev_links,
-                   int levels) {
-    for (int i = 0; i < levels; ++i) { prev_links[i]->InsertNextIterator(&links_[i]); }
+  void NullptrClear() {
+    for (auto& link : links_) { link.NullptrClear(); }
   }
-  void GetSelfLinksPointers(std::array<EmbeddedSingleListIterator*, max_level>* links_pointers) {
-    for (int i = 0; i < max_level; ++i) { (*links_pointers)[i] = &links_[i]; }
+  void InsertAfter(EmbeddedSkipListLink* prev_skiplist_link, int levels) {
+    EmbeddedListLink* prev_link = &prev_skiplist_link->links_[0];
+    int i = 0;
+    for (; i < levels; ++i, ++prev_link) {
+      while (prev_link->nullptr_empty()) { prev_link = (prev_link - 1)->prev() + 1; }
+      links_[i].InsertAfter(prev_link);
+    }
   }
-  static EmbeddedSkipListIterator* ThisPtr4SingleListPtr(EmbeddedSingleListIterator* slist_ptr,
-                                                         int level) {
-    auto* links_ptr = (std::array<EmbeddedSingleListIterator, max_level>*)(slist_ptr - level);
+  void Erase() {
+    for (int i = 0; i < max_level; ++i) {
+      if (links_[i].nullptr_empty()) { return; }
+      links_[i].next()->AppendTo(links_[i].prev());
+      links_[i].NullptrClear();
+    }
+  }
+  static EmbeddedSkipListLink* ThisPtr4LinkPtr(EmbeddedListLink* slist_ptr, int level) {
+    auto* links_ptr = (std::array<EmbeddedListLink, max_level>*)(slist_ptr - level);
     return StructField<self_type, decltype(links_), LinksOffset()>::StructPtr4FieldPtr(links_ptr);
   }
   void CheckEmpty() const {
-    for (const auto& link : links_) { CHECK(link.next() == nullptr); }
+    for (const auto& link : links_) { CHECK(link.empty()); }
   }
+  void CheckNullptrEmpty() const {
+    for (const auto& link : links_) { CHECK(link.nullptr_empty()); }
+  }
+
+  EmbeddedListLink* mutable_link(int i) { return &links_[i]; }
 
  private:
   template<typename Enabled = void>
@@ -65,107 +55,110 @@ struct EmbeddedSkipListIterator final {
     return offsetof(self_type, links_);
   }
 
-  std::array<EmbeddedSingleListIterator, max_level> links_;
-};
-
-template<typename SkipListKey>
-class EmbeddedSkipListVisitor final {
- public:
-  using key_type = typename SkipListKey::key_type;
-  static const int max_level = SkipListKey::max_level;
-
-  EmbeddedSkipListVisitor(const key_type* key, EmbeddedSkipListIterator<max_level>* head)
-      : key_(key) {
-    head->GetSelfLinksPointers(&links_pointers_);
-  }
-  const key_type& key() const { return *key_; }
-
-  SkipListKey* Next() { return SkipListKey::ThisPtr4SingleListPtr(links_pointers_[0]->next(), 0); }
-
-  void SearchLastIteratorLessThanMe() {
-    for (int level = max_level - 1; level >= 0; --level) {
-      SearchLastIteratorLessThanMe(&links_pointers_[level], level);
-      if (level > 0) { links_pointers_[level - 1] = links_pointers_[level] - 1; }
-    }
-  }
-
-  void InsertNextIterator(SkipListKey* elem_key) {
-    CHECK(!(elem_key->key() < key()));
-    std::mt19937 rand{std::random_device{}()};
-    int num_level = 1;
-    for (; (rand() % 2 == 0) && num_level <= max_level; ++num_level)
-      ;
-    elem_key->mut_skiplist_iter()->InsertAfter(links_pointers_, num_level);
-  }
-
-  void EraseNextIterator() {
-    EmbeddedSingleListIterator* bottom_slist_iter = links_pointers_[0]->next();
-    for (int level = 0; level < max_level; ++level) {
-      if (links_pointers_[level]->next() == bottom_slist_iter + level) {
-        links_pointers_[level]->EraseNextIterator();
-      } else {
-        CHECK(bottom_slist_iter[level].next() == nullptr);
-      }
-    }
-  }
-
- private:
-  void SearchLastIteratorLessThanMe(EmbeddedSingleListIterator** link_ptr, int level) {
-    for (;; *link_ptr = (*link_ptr)->next()) {
-      if ((*link_ptr)->next() == nullptr) { return; }
-      auto* elem_key = SkipListKey::ThisPtr4SingleListPtr((*link_ptr)->next(), level);
-      if (!(elem_key->key() < this->key())) { return; }
-    }
-  }
-
-  const key_type* key_;
-  std::array<EmbeddedSingleListIterator*, max_level> links_pointers_;
+  std::array<EmbeddedListLink, max_level> links_;
 };
 
 template<typename T, int N = 20>
 struct EmbeddedSkipListKey {
  public:
   using self_type = EmbeddedSkipListKey<T, N>;
-  using iter_type = EmbeddedSkipListIterator<N>;
+  using link_type = EmbeddedSkipListLink<N>;
   using key_type = T;
   static const int max_level = N;
+  static_assert(N > 0, "invalid number of levels");
 
-  void __Init__() { skiplist_iter_.__Init__(); }
+  void __Init__() { link_.NullptrClear(); }
 
   const T& key() const { return key_; }
   T* mut_key() { return &key_; }
 
-  void CheckEmpty() const { return skiplist_iter_.CheckEmpty(); }
+  void CheckEmpty() const { return link_.CheckNullptrEmpty(); }
 
-  void Clear() { skiplist_iter_.Clear(); }
+  void Clear() { link_.NullptrClear(); }
 
-  const EmbeddedSkipListIterator<N>& skiplist_iter() const { return skiplist_iter_; }
-  EmbeddedSkipListIterator<N>* mut_skiplist_iter() { return &skiplist_iter_; }
-
-  static EmbeddedSkipListKey* ThisPtr4SingleListPtr(EmbeddedSingleListIterator* slist_ptr,
-                                                    int level) {
-    using FieldUtil = StructField<self_type, EmbeddedSkipListIterator<N>, SkipListIteratorOffset()>;
-    auto* skip_list_ptr = EmbeddedSkipListIterator<N>::ThisPtr4SingleListPtr(slist_ptr, level);
+  static self_type* Find(const key_type& key, link_type* head, int size_shift) {
+    EmbeddedListLink* last_link_less_than_key = SearchLastBottomLinkLessThan(key, head, size_shift);
+    if (last_link_less_than_key->next() == head->mutable_link(0)) { return nullptr; }
+    self_type* searched = ThisPtr4LinkPtr(last_link_less_than_key->next(), 0);
+    if (searched->key() == key) { return searched; }
+    return nullptr;
+  }
+  static self_type* Erase(const key_type& key, link_type* head, int size_shift) {
+    self_type* searched = Find(key, head, size_shift);
+    CHECK_NOTNULL(searched);
+    Erase(searched);
+    return searched;
+  }
+  static void Erase(self_type* elem) { elem->link_.Erase(); }
+  // return true if success
+  static std::pair<self_type*, bool> Insert(self_type* elem, link_type* head, int size_shift) {
+    self_type* searched = SearchLastElemLessThan(elem->key(), head, size_shift);
+    self_type* ret_elem = nullptr;
+    bool success = false;
+    if (searched == nullptr) {
+      ret_elem = elem;
+      elem->link_.InsertAfter(head, RandomNumLevels(size_shift));
+      success = true;
+    } else if (!(searched->key() == elem->key())) {
+      ret_elem = elem;
+      elem->link_.InsertAfter(&searched->link_, RandomNumLevels(size_shift));
+      success = true;
+    } else {
+      ret_elem = searched;
+      success = false;
+    }
+    // CHECK_EQ(Find(ret_elem->key(), head), ret_elem, GetMaxVal<int32_t>() / 2);
+    return std::make_pair(ret_elem, success);
+  }
+  static EmbeddedSkipListKey* ThisPtr4LinkPtr(EmbeddedListLink* list_link_ptr, int level) {
+    auto* skip_list_ptr = link_type::ThisPtr4LinkPtr(list_link_ptr, level);
+    using FieldUtil = StructField<self_type, link_type, SkipListIteratorOffset()>;
     return FieldUtil::StructPtr4FieldPtr(skip_list_ptr);
   }
 
  private:
   template<typename Enabled = void>
   static constexpr int SkipListIteratorOffset() {
-    return offsetof(self_type, skiplist_iter_);
+    return offsetof(self_type, link_);
+  }
+  static int32_t RandomNumLevels(int size_shift) {
+    std::mt19937 rand{std::random_device{}()};
+    int32_t max_num_levels = std::min(size_shift, N);
+    int32_t num_levels = 1;
+    for (int i = 1; (rand() % 2 == 0) && i < max_num_levels; ++i) { ++num_levels; }
+    return num_levels;
+  }
+  static self_type* SearchLastElemLessThan(const key_type& key, link_type* head, int size_shift) {
+    EmbeddedListLink* list_link = SearchLastBottomLinkLessThan(key, head, size_shift);
+    if (list_link == head->mutable_link(0)) { return nullptr; }
+    return ThisPtr4LinkPtr(list_link, 0);
   }
 
-  EmbeddedSkipListIterator<N> skiplist_iter_;
+  static EmbeddedListLink* SearchLastBottomLinkLessThan(const key_type& key, link_type* head,
+                                                        int size_shift) {
+    int max_num_level = std::min(size_shift, N);
+    EmbeddedListLink* list_link = head->mutable_link(max_num_level);
+    for (int level = max_num_level - 1; level >= 0; --level) {
+      --list_link;
+      while (list_link->next() != head->mutable_link(level)
+             && ThisPtr4LinkPtr(list_link->next(), level)->key() < key) {
+        list_link = list_link->next();
+      }
+    }
+    return list_link;
+  }
+
+  link_type link_;
   T key_;
 };
 
-template<typename ElemKeyField>
+template<typename ValueLinkField>
 class EmbeddedSkipListHead {
  public:
-  using elem_type = typename ElemKeyField::struct_type;
-  using elem_key_type = typename ElemKeyField::field_type;
-  using key_type = typename elem_key_type::key_type;
-  static const int max_level = elem_key_type::max_level;
+  using value_type = typename ValueLinkField::struct_type;
+  using key_link_type = typename ValueLinkField::field_type;
+  using key_type = typename key_link_type::key_type;
+  static const int max_level = key_link_type::max_level;
 
   void __Init__() {
     skiplist_head_.__Init__();
@@ -175,64 +168,45 @@ class EmbeddedSkipListHead {
   std::size_t size() const { return size_; }
   bool empty() const { return size_ == 0; }
 
-  elem_type* Find(const key_type& key) {
-    EmbeddedSkipListVisitor<elem_key_type> visitor(&key, &skiplist_head_);
-    visitor.SearchLastIteratorLessThanMe();
-    elem_key_type* elem_key = visitor.Next();
-    if (elem_key == nullptr || !(elem_key->key() == key)) { return nullptr; }
-    return ElemKeyField::StructPtr4FieldPtr(elem_key);
+  value_type* Find(const key_type& key) {
+    auto* key_link_ptr = key_link_type::Find(key, &skiplist_head_, size_shift());
+    if (key_link_ptr == nullptr) { return nullptr; }
+    return ValueLinkField::StructPtr4FieldPtr(key_link_ptr);
   }
-  elem_type* Erase(const key_type& key) {
-    EmbeddedSkipListVisitor<elem_key_type> visitor(&key, &skiplist_head_);
-    visitor.SearchLastIteratorLessThanMe();
-    elem_key_type* searched = visitor.Next();
-    CHECK_NOTNULL(searched);
-    CHECK(searched->key() == key);
-    visitor.EraseNextIterator();
+  value_type* Erase(const key_type& key) {
+    key_link_type* erased = key_link_type::Erase(key, &skiplist_head_, size_shift());
     --size_;
-    return ElemKeyField::StructPtr4FieldPtr(searched);
+    return ValueLinkField::StructPtr4FieldPtr(erased);
   }
-  void Erase(elem_type* elem) {
-    elem_key_type* elem_iter = ElemKeyField::FieldPtr4StructPtr(elem);
-    EmbeddedSkipListVisitor<elem_key_type> visitor(&elem_iter->key(), &skiplist_head_);
-    visitor.SearchLastIteratorLessThanMe();
-    elem_key_type* searched = visitor.Next();
-    CHECK_NOTNULL(searched);
-    CHECK(searched == elem_iter);
-    visitor.EraseNextIterator();
+  void Erase(value_type* elem) {
+    key_link_type::Erase(ValueLinkField::FieldPtr4StructPtr(elem));
     --size_;
   }
   // return true if success
-  std::pair<elem_type*, bool> Insert(elem_type* elem_ptr) {
-    elem_key_type* new_elem_key = ElemKeyField::FieldPtr4StructPtr(elem_ptr);
-    EmbeddedSkipListVisitor<elem_key_type> visitor(&new_elem_key->key(), &skiplist_head_);
-    visitor.SearchLastIteratorLessThanMe();
-    elem_key_type* searched = visitor.Next();
-    visitor.InsertNextIterator(new_elem_key);
-    bool success = ((searched == nullptr) || !(searched->key() == new_elem_key->key()));
-    elem_type* ret_elem = ElemKeyField::StructPtr4FieldPtr(searched);
-    if (success) {
-      ++size_;
-      ret_elem = elem_ptr;
-    }
-    return std::make_pair(ret_elem, success);
+  std::pair<value_type*, bool> Insert(value_type* elem) {
+    key_link_type* elem_key_link = ValueLinkField::FieldPtr4StructPtr(elem);
+    key_link_type* ret_key_link = nullptr;
+    bool success = false;
+    std::tie(ret_key_link, success) =
+        key_link_type::Insert(elem_key_link, &skiplist_head_, size_shift());
+    if (success) { ++size_; }
+    return std::make_pair(ValueLinkField::StructPtr4FieldPtr(ret_key_link), success);
   }
 
   template<typename Callback>
   void Clear(const Callback& cb) {
-    EmbeddedSkipListVisitor<elem_key_type> visitor(nullptr, &skiplist_head_);
-    while (true) {
-      auto* first = visitor.Next();
-      if (first == nullptr) { break; }
-      elem_type* searched = ElemKeyField::StructPtr4FieldPtr(first);
-      cb(searched);
-      visitor.EraseNextIterator();
-      --size_;
+    using link_type = EmbeddedSkipListLink<max_level>;
+    for (; size_ > 0; --size_) {
+      EmbeddedListLink* begin_list_link = skiplist_head_.mutable_link(0)->next();
+      auto* begin = link_type::ThisPtr4LinkPtr(begin_list_link, 0);
+      if (begin == &skiplist_head_) { break; }
+      begin->Erase();
+      cb(ValueLinkField::StructPtr4FieldPtr(key_link_type::ThisPtr4LinkPtr(begin_list_link, 0)));
     }
     CHECK(empty_debug());
   }
   void Clear() {
-    Clear([](elem_type*) {});
+    Clear([](value_type*) {});
   }
 
   bool empty_debug() const {
@@ -242,7 +216,9 @@ class EmbeddedSkipListHead {
   }
 
  private:
-  EmbeddedSkipListIterator<max_level> skiplist_head_;
+  int size_shift() const { return std::log2(size_ + 1); }
+
+  EmbeddedSkipListLink<max_level> skiplist_head_;
   std::size_t size_;
 };
 
