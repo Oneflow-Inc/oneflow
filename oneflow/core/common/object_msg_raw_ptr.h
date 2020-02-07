@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_
 
+#include "oneflow/core/common/struct_traits.h"
 #include "oneflow/core/common/object_msg_core.h"
 
 namespace oneflow {
@@ -20,7 +21,7 @@ namespace oneflow {
  public:                                                                                   \
   static_assert(std::is_pointer<field_type>::value,                                        \
                 OF_PP_STRINGIZE(field_type) "is not a pointer");                           \
-  const field_type field_name() const { return OF_PP_CAT(field_name, _); }                 \
+  ConstType<field_type> field_name() const { return OF_PP_CAT(field_name, _); }            \
   bool OF_PP_CAT(has_, field_name)() const { return OF_PP_CAT(field_name, _) != nullptr; } \
   void OF_PP_CAT(set_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; }     \
   void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }           \

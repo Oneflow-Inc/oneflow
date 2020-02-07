@@ -27,4 +27,16 @@ struct StructField {
 };
 }
 
+template<typename T>
+struct ConstStruct {
+  using type = const T;
+};
+template<typename T>
+struct ConstStruct<const T> {
+  using type = const T;
+};
+
+template<typename T>
+using ConstType = typename ConstStruct<T>::type;
+
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
