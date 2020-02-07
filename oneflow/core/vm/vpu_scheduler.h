@@ -21,7 +21,6 @@ class VpuScheduler final {
   void Schedule();
 
   OBJECT_MSG_PTR(VpuSchedulerCtx) ctx_;
-  std::mutex mutex_;
 };
 
 }  // namespace oneflow
