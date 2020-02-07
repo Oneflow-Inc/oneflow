@@ -4,7 +4,7 @@
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
-#include "oneflow/core/vm/vpu_id.msg.h"
+#include "oneflow/core/vm/global_device_id.msg.h"
 
 namespace oneflow {
 

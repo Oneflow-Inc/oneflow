@@ -4,38 +4,23 @@
 #include <cstring>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/vpu_instruction_desc.msg.h"
+#include "oneflow/core/vm/vpu_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
+#include "oneflow/core/vm/vpu_instruction.h"
 #include "oneflow/core/vm/vpu_instruction_msg_observer.h"
 #include "oneflow/core/vm/vpu_instruction_status_querier.h"
 
 namespace oneflow {
-
-// clang-format off
-BEGIN_FLAT_MSG(VpuInstructionImmediateOprand);
-  FLAT_MSG_DEFINE_ONEOF(immediate_oprand_type,
-    FLAT_MSG_ONEOF_FIELD(float, float_value)
-    FLAT_MSG_ONEOF_FIELD(double, double_value)
-    FLAT_MSG_ONEOF_FIELD(int64_t, int64_value));
-END_FLAT_MSG(VpuInstructionImmediateOprand);
-// clang-format on
-
-// clang-format off
-BEGIN_FLAT_MSG(VpuInstructionOprand);
-  FLAT_MSG_DEFINE_ONEOF(oprand_type,
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, const_oprand)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_oprand)
-    FLAT_MSG_ONEOF_FIELD(VpuInstructionImmediateOprand, immediate_oprand));
-END_FLAT_MSG(VpuInstructionOprand);
-// clang-format on
 
 static const int kVpuInstructionOprandLimit = 64;
 
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, vpu_instruction_id);
-  FLAT_MSG_DEFINE_OPTIONAL(VpuInstructionDesc, vpu_instruction_desc);
+  FLAT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(VpuInstructionOpcode, opcode);
   FLAT_MSG_DEFINE_REPEATED(VpuInstructionOprand, operand, kVpuInstructionOprandLimit);
+  FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
 END_FLAT_MSG(VpuInstructionProto);
 // clang-format on
 
@@ -56,10 +41,11 @@ END_OBJECT_MSG(VpuInstructionMsg);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuInstruction);
+BEGIN_OBJECT_MSG(MirroredVpuInstruction);
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionMsg, vpu_instruction_msg);
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction*, vpu_instruction); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_link);
@@ -68,7 +54,7 @@ BEGIN_OBJECT_MSG(VpuInstruction);
                                   oprand_index2object_access);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_ready_link,
                               ready_oprand_list);
-END_OBJECT_MSG(VpuInstruction);
+END_OBJECT_MSG(MirroredVpuInstruction);
 // clang-format on
 
 class OBJECT_MSG_TYPE(Vpu);
@@ -87,17 +73,20 @@ BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(Vpu)*, vpu);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstruction, vpu_instruction_link, vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredVpuInstruction, vpu_instruction_link, vpu_instruction_list);
   OBJECT_MSG_DEFINE_LIST_LINK(running_vpu_instruction_package_link);
 END_OBJECT_MSG(RunningVpuInstructionPackage);
 // clang-format on
 
 // clang-format off
 BEGIN_OBJECT_MSG(Vpu);
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
+  
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_link);
   OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(7, VpuId, vpu_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstruction, vpu_instruction_link, pending_vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredVpuInstruction, vpu_instruction_link, pending_vpu_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_vpu_instruction_package_link,
                               running_vpu_instruction_package_list);
 END_OBJECT_MSG(Vpu);
@@ -106,7 +95,7 @@ END_OBJECT_MSG(Vpu);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSet);
   // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(VpuInstructionDesc::FLAT_MSG_ONEOF_CASE(vpu_type), vpu_type);
+  OBJECT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_link);
