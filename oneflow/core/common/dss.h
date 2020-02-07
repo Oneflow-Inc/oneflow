@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/struct_traits.h"
 
 namespace oneflow {
 

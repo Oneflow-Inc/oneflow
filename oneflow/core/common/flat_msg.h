@@ -186,10 +186,10 @@ DEFINE_FLAT_MSG_TYPE(double);
 
 #define FLAT_MSG_DEFINE_ONEOF_UNION(define_field_value4field_type, oneof_name,             \
                                     type_and_field_name_seq)                               \
- private:                                                                                  \
-  struct OF_PP_CAT(oneof_name, _OneofStruct) {                                             \
+ public:                                                                                   \
+  struct OF_PP_CAT(oneof_name, _OneofType) {                                               \
    public:                                                                                 \
-    using self_oneof_type = OF_PP_CAT(oneof_name, _OneofStruct);                           \
+    using self_oneof_type = OF_PP_CAT(oneof_name, _OneofType);                             \
     using self_oneof_case_type = _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name);                    \
     template<self_oneof_case_type oneof_case, typename Enabled = void>                     \
     struct FieldType4FieldValueStruct {};                                                  \
@@ -218,13 +218,16 @@ DEFINE_FLAT_MSG_TYPE(double);
       OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq)       \
     };                                                                                     \
     self_oneof_case_type case_;                                                            \
-  } OF_PP_CAT(oneof_name, _);                                                              \
+  };                                                                                       \
+                                                                                           \
+ private:                                                                                  \
+  OF_PP_CAT(oneof_name, _OneofType) OF_PP_CAT(oneof_name, _);                              \
                                                                                            \
  public:                                                                                   \
-  const OF_PP_CAT(oneof_name, _OneofStruct) & oneof_name() const {                         \
+  const OF_PP_CAT(oneof_name, _OneofType) & oneof_name() const {                           \
     return OF_PP_CAT(oneof_name, _);                                                       \
   }                                                                                        \
-  OF_PP_CAT(oneof_name, _OneofStruct) * OF_PP_CAT(mutable_, oneof_name)() {                \
+  OF_PP_CAT(oneof_name, _OneofType) * OF_PP_CAT(mutable_, oneof_name)() {                  \
     return &OF_PP_CAT(oneof_name, _);                                                      \
   }
 
