@@ -1,8 +1,7 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_SBP_CONTEXT_H_
-#define ONEFLOW_CORE_FRAMEWORK_SBP_CONTEXT_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_BATCH_AXIS_CONTEXT_H_
+#define ONEFLOW_CORE_FRAMEWORK_BATCH_AXIS_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 
@@ -10,16 +9,16 @@ namespace user_op {
 
 class TensorDesc;
 
-class SbpContext {
+class BatchAxisContext {
  public:
-  virtual ~SbpContext() = default;
+  virtual ~BatchAxisContext() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  SbpSignatureList* sbp_sig_list() { return sbp_sig_list_; }
+  virtual OptInt64* BatchAxis4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
@@ -27,21 +26,19 @@ class SbpContext {
   }
 
  protected:
-  SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list)
-      : user_op_conf_(conf), sbp_sig_list_(sbp_sig_list) {}
-  SbpContext(const SbpContext&) = delete;
+  BatchAxisContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  BatchAxisContext(const BatchAxisContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
-  SbpSignatureList* sbp_sig_list_;
 };
 
-struct GetSbpFnUtil {
-  static Maybe<void> MirrorSplitAtDim0(SbpContext*);
+struct BatchAxisInferFnUtil {
+  static Maybe<void> DefaultAsFirstHasValueInput(BatchAxisContext*);
 };
 
 }  // namespace user_op
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SBP_CONTEXT_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_BATCH_AXIS_CONTEXT_H_

@@ -19,10 +19,12 @@ class UserOpDefWrapper;
 class UserOpConfWrapper;
 class InferContext;
 class SbpContext;
+class BatchAxisContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
+using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 
 struct OpRegistrationVal {
@@ -30,6 +32,7 @@ struct OpRegistrationVal {
   CheckAttrFn check_fn;
   ShapeInferFn shape_infer_fn;
   DtypeInferFn dtype_infer_fn;
+  BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
 };
 
@@ -63,6 +66,7 @@ class OpRegistryWrapperBuilder final {
 
   OpRegistryWrapperBuilder& SetShapeInferFn(ShapeInferFn fn);
   OpRegistryWrapperBuilder& SetDataTypeInferFn(DtypeInferFn fn);
+  OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
   OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
