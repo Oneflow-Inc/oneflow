@@ -678,9 +678,8 @@ class IterationProcessor(object):
         ):
             self.save_csv(iter)
 
-        gross_time_df = pd.DataFrame()
         gross_time_df = add_metrics(
-            metrics_df, iter=iter, gross_time=time.perf_counter() - self.start_time
+            pd.DataFrame(), iter=iter, gross_time=time.perf_counter() - self.start_time
         )
         self.metrics = pd.concat([self.metrics, gross_time_df], axis=0, sort=False)
 
