@@ -94,6 +94,17 @@ namespace oneflow {
   };                                                                                          \
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__AccFieldCount4Counter {                                                       \
+    constexpr static int Get() {                                                              \
+      return __DSS__AccFieldCount4Counter<tpl_fld_counter - 1, fake>::Get();                  \
+    }                                                                                         \
+  };                                                                                          \
+  template<typename fake>                                                                     \
+  struct __DSS__AccFieldCount4Counter<field_counter, fake> {                                  \
+    constexpr static int Get() { return 0; }                                                  \
+  };                                                                                          \
+                                                                                              \
+  template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__AccumulatedAlignedSize4Counter {                                              \
     constexpr static int Get() {                                                              \
       return ConstExprRoundUp<                                                                \
@@ -154,13 +165,22 @@ namespace oneflow {
     static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get(); \
     static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),              \
                   DSS_ASSERT_VERBOSE(dss_type));                                             \
-  }
+  }                                                                                          \
+  template<typename fake>                                                                    \
+  struct __DSS__AccFieldCount4Counter<field_counter, fake> {                                 \
+    constexpr static int Get() {                                                             \
+      return __DSS__AccFieldCount4Counter<field_counter - 1, fake>::Get() + 1;               \
+    }                                                                                        \
+  };
 
 #define _END_DSS(field_counter, dss_type, type)                                       \
  public:                                                                              \
   template<template<int, class, class> class F, typename WalkCtxType>                 \
   void __ReverseWalkField__(WalkCtxType* ctx) {                                       \
     __DSS__FieldReverseIter<field_counter, F, WalkCtxType>::Call(ctx, this);          \
+  }                                                                                   \
+  constexpr static int __DSS__FieldCount() {                                          \
+    return __DSS__AccFieldCount4Counter<field_counter>::Get();                        \
   }                                                                                   \
                                                                                       \
  private:                                                                             \
