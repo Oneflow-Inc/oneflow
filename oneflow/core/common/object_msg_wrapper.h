@@ -10,10 +10,17 @@ namespace oneflow {
 template<typename CppObjectT>
 BEGIN_OBJECT_MSG(Wrapper4CppObject);
  public:
-  template<typename NewQuerierT>
-  void __Init__(const NewQuerierT& NewQuerier) {
-    set_obj(NewQuerier(mut_allocator(), mutable_obj_size()));
+  template<typename NewCppObjectT>
+  void __Init__(const NewCppObjectT& NewCppObject) {
+    set_obj(NewCppObject(mut_allocator(), mutable_obj_size()));
     CHECK_GE(obj_size(), 0);
+  }
+  void __Init__() {
+    __Init__([](ObjectMsgAllocator* allocator, int32_t* obj_size){
+        *obj_size = sizeof(CppObjectT);
+        char* mem_ptr = allocator->Allocate(sizeof(CppObjectT));
+        return new (mem_ptr) CppObjectT();
+    });
   }
   void __Delete__() {
     if (obj_size() == 0) { return; }
