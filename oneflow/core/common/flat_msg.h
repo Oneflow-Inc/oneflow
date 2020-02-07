@@ -30,16 +30,18 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF(OF_PP_CAT(__flat_msg_optional__, field_name),           \
                         FLAT_MSG_ONEOF_FIELD(field_type, field_name))
 
-#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)              \
-  static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
-  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);         \
-  FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq);             \
-  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)           \
-  FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq);
+#define FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq) \
+  _FLAT_MSG_DEFINE_ONEOF(_FLAT_MSG_DEFINE_NOTHING, oneof_name, type_and_field_name_seq);
 
 #define FLAT_MSG_DEFINE_STRICT_ONEOF(oneof_name, type_and_field_name_seq) \
-  FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)              \
-  _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(oneof_name, type_and_field_name_seq)
+  _FLAT_MSG_DEFINE_ONEOF(_FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE, oneof_name, type_and_field_name_seq);
+
+#define _FLAT_MSG_DEFINE_ONEOF(define_field_value4field_type, oneof_name, type_and_field_name_seq) \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");                    \
+  FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                            \
+  FLAT_MSG_DEFINE_ONEOF_UNION(define_field_value4field_type, oneof_name, type_and_field_name_seq); \
+  FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                              \
+  FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq);
 
 #define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                  \
   static_assert(__is_flat_message_type__, "this struct is not a flat message");     \
@@ -154,24 +156,6 @@ DEFINE_FLAT_MSG_TYPE(double);
 
 #define MAKE_FLAT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                         \
  public:                                                                                       \
-  template<typename Enabled>                                                                   \
-  struct OF_PP_CAT(Has_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {       \
-    static bool Call(const self_type& self) {                                                  \
-      return self.OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))();                                  \
-    }                                                                                          \
-  };                                                                                           \
-  template<typename Enabled>                                                                   \
-  struct OF_PP_CAT(Get_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {       \
-    static const OF_PP_PAIR_FIRST(pair) & Call(const self_type& self) {                        \
-      return self.OF_PP_PAIR_SECOND(pair)();                                                   \
-    }                                                                                          \
-  };                                                                                           \
-  template<typename Enabled>                                                                   \
-  struct OF_PP_CAT(Mutable_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {   \
-    static OF_PP_PAIR_FIRST(pair) * Call(self_type* self) {                                    \
-      return self->OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))();                             \
-    }                                                                                          \
-  };                                                                                           \
   const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                             \
     if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                          \
       return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                   \
@@ -200,35 +184,85 @@ DEFINE_FLAT_MSG_TYPE(double);
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                     \
   }
 
-#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)              \
- public:                                                                              \
-  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
-  struct OF_PP_CAT(Has_, oneof_name) {};                                              \
-  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
-  struct OF_PP_CAT(Get_, oneof_name) {};                                              \
-  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
-  struct OF_PP_CAT(Mutable_, oneof_name) {};                                          \
-                                                                                      \
- private:                                                                             \
-  struct {                                                                            \
-    union {                                                                           \
-      OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq)  \
-    };                                                                                \
-    _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                      \
-  } OF_PP_CAT(oneof_name, _);
+#define FLAT_MSG_DEFINE_ONEOF_UNION(define_field_value4field_type, oneof_name,             \
+                                    type_and_field_name_seq)                               \
+ private:                                                                                  \
+  struct OF_PP_CAT(oneof_name, _OneofStruct) {                                             \
+   public:                                                                                 \
+    using self_oneof_type = OF_PP_CAT(oneof_name, _OneofStruct);                           \
+    using self_oneof_case_type = _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name);                    \
+    template<self_oneof_case_type oneof_case, typename Enabled = void>                     \
+    struct FieldType4FieldValueStruct {};                                                  \
+    template<self_oneof_case_type oneof_case, typename Enabled = void>                     \
+    struct HasStruct {};                                                                   \
+    template<self_oneof_case_type oneof_case, typename Enabled = void>                     \
+    struct GetStruct {};                                                                   \
+    template<self_oneof_case_type oneof_case, typename Enabled = void>                     \
+    struct MutableStruct {};                                                               \
+    OF_PP_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_TEMPLATE_ACCESSOR, type_and_field_name_seq); \
+    define_field_value4field_type(type_and_field_name_seq);                                \
+    template<self_oneof_case_type oneof_case>                                              \
+    bool Has() const {                                                                     \
+      return HasStruct<oneof_case>::Call(*this);                                           \
+    }                                                                                      \
+    template<self_oneof_case_type oneof_case>                                              \
+    const typename FieldType4FieldValueStruct<oneof_case>::type& Get() const {             \
+      return GetStruct<oneof_case>::Call(*this);                                           \
+    }                                                                                      \
+    template<self_oneof_case_type oneof_case>                                              \
+    typename FieldType4FieldValueStruct<oneof_case>::type* Mutable() {                     \
+      return MutableStruct<oneof_case>::Call(this);                                        \
+    }                                                                                      \
+                                                                                           \
+    union {                                                                                \
+      OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq)       \
+    };                                                                                     \
+    self_oneof_case_type case_;                                                            \
+  } OF_PP_CAT(oneof_name, _);                                                              \
+                                                                                           \
+ public:                                                                                   \
+  const OF_PP_CAT(oneof_name, _OneofStruct) & oneof_name() const {                         \
+    return OF_PP_CAT(oneof_name, _);                                                       \
+  }                                                                                        \
+  OF_PP_CAT(oneof_name, _OneofStruct) * OF_PP_CAT(mutable_, oneof_name)() {                \
+    return &OF_PP_CAT(oneof_name, _);                                                      \
+  }
 
-#define _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(oneof_name, type_and_field_name_seq)    \
- public:                                                                          \
-  template<typename T, typename Enabled = void>                                   \
-  struct OF_PP_CAT(OneofCase4OneofType_, oneof_name) {};                          \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_VALUE4TYPE, (oneof_name), \
-                                   type_and_field_name_seq)
+#define _MAKE_FLAT_MSG_ONEOF_TEMPLATE_ACCESSOR(field_type, field_name)                         \
+ public:                                                                                       \
+  template<typename Enabled>                                                                   \
+  struct FieldType4FieldValueStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {         \
+    using type = field_type;                                                                   \
+  };                                                                                           \
+  template<typename Enabled>                                                                   \
+  struct HasStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                          \
+    static bool Call(const self_oneof_type& self) {                                            \
+      return self.case_ == _FLAT_MSG_ONEOF_ENUM_VALUE(field_name);                             \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename Enabled>                                                                   \
+  struct GetStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                          \
+    static const field_type& Call(const self_oneof_type& self) {                               \
+      return self.OF_PP_CAT(field_name, _);                                                    \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename Enabled>                                                                   \
+  struct MutableStruct<_FLAT_MSG_ONEOF_ENUM_VALUE(field_name), Enabled> {                      \
+    static field_type* Call(self_oneof_type* self) { return &self->OF_PP_CAT(field_name, _); } \
+  };
 
-#define _MAKE_FLAT_MSG_ONEOF_VALUE4TYPE(oneof_name, pair)                               \
-  template<typename Enabled>                                                            \
-  struct OF_PP_CAT(OneofCase4OneofType_, oneof_name)<OF_PP_PAIR_FIRST(pair), Enabled> { \
-    static const _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) value =                          \
-        _FLAT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair));                            \
+#define _FLAT_MSG_DEFINE_NOTHING(type_and_field_name_seq)
+
+#define _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(type_and_field_name_seq) \
+ public:                                                           \
+  template<typename T, typename Enabled = void>                    \
+  struct FieldValue4FieldTypeStruct {};                            \
+  OF_PP_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_VALUE4TYPE, type_and_field_name_seq)
+
+#define _MAKE_FLAT_MSG_ONEOF_VALUE4TYPE(field_type, field_name)                       \
+  template<typename Enabled>                                                          \
+  struct FieldValue4FieldTypeStruct<field_type, Enabled> {                            \
+    static const self_oneof_case_type value = _FLAT_MSG_ONEOF_ENUM_VALUE(field_name); \
   };
 
 #define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(field_type, field_name) field_type OF_PP_CAT(field_name, _);
@@ -297,6 +331,9 @@ DEFINE_FLAT_MSG_TYPE(double);
 template<typename T, std::size_t N>
 class FlatMsgRepeatedField final {
  public:
+  using value_type = T;
+  static const int capacity = N;
+
   bool empty() const { return size_ == 0; }
 
   std::size_t size() const { return size_; }
