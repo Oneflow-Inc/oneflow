@@ -654,7 +654,9 @@ class IterationProcessor(object):
         # save_blob_watched(iter)
         self.outputs_postprocess(outputs)
         metrics_df = pd.DataFrame()
-        metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=time.perf_counter() - self.start_time)
+        metrics_df = add_metrics(
+            metrics_df, iter=iter, elapsed_time=time.perf_counter() - self.start_time
+        )
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
         rank_size = (
             metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
@@ -676,9 +678,8 @@ class IterationProcessor(object):
         ):
             self.save_csv(iter)
 
-        gross_time_df = pd.DataFrame()
         gross_time_df = add_metrics(
-            metrics_df, iter=iter, gross_time=time.perf_counter() - self.start_time
+            pd.DataFrame(), iter=iter, gross_time=time.perf_counter() - self.start_time
         )
         self.metrics = pd.concat([self.metrics, gross_time_df], axis=0, sort=False)
 
