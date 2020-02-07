@@ -228,11 +228,13 @@ def _FullyConnected(input_blob, input_size, units, activation=None, name=None,
     name=name + '-weight',
     shape=[input_size, units],
     dtype=input_blob.dtype,
+    model_name="weight",
     initializer=weight_initializer)
   bias_blob = flow.get_variable(
     name=name + '-bias',
     shape=[units],
     dtype=input_blob.dtype,
+    model_name="bias",
     initializer=flow.constant_initializer(0.0))
   output_blob = flow.matmul(input_blob, weight_blob)
   output_blob = flow.nn.bias_add(output_blob, bias_blob)

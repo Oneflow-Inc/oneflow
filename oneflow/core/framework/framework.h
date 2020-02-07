@@ -8,6 +8,7 @@
 #include "oneflow/core/framework/grad_registration.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/framework/batch_axis_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 #include "oneflow/core/framework/tensor_desc.h"
