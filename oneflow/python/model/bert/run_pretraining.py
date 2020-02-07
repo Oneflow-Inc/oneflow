@@ -126,7 +126,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
   ),
   weight_decay_conf=dict(
     weight_decay_rate=args.weight_decay_rate,
-    exludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
+    excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
   )
 )
 

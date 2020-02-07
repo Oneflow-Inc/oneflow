@@ -106,7 +106,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
     weight_decay_conf=dict(
-        weight_decay_rate=FLAGS.weight_decay_rate, exludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm']))
+        weight_decay_rate=FLAGS.weight_decay_rate, excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm']))
 )
 
 def PretrainJob():
