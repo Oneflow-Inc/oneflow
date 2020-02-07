@@ -73,7 +73,7 @@ END_FLAT_MSG(R2LTransportVpu);
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionDesc);
   FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
-  FLAT_MSG_DEFINE_ONEOF(vpu_type,
+  FLAT_MSG_DEFINE_STRICT_ONEOF(vpu_type,
     FLAT_MSG_ONEOF_FIELD(LocalVpu, local)
     FLAT_MSG_ONEOF_FIELD(ControlVpu, control)
     FLAT_MSG_ONEOF_FIELD(HostMemoryVpu, host_memory)

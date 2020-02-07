@@ -37,6 +37,10 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)           \
   FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq);
 
+#define FLAT_MSG_DEFINE_STRICT_ONEOF(oneof_name, type_and_field_name_seq) \
+  FLAT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)              \
+  _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(oneof_name, type_and_field_name_seq)
+
 #define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                  \
   static_assert(__is_flat_message_type__, "this struct is not a flat message");     \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
@@ -150,6 +154,24 @@ DEFINE_FLAT_MSG_TYPE(double);
 
 #define MAKE_FLAT_MSG_ONEOF_ACCESSOR(get_enum_value, oneof_name, pair)                         \
  public:                                                                                       \
+  template<typename Enabled>                                                                   \
+  struct OF_PP_CAT(Has_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {       \
+    static bool Call(const self_type& self) {                                                  \
+      return self.OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))();                                  \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename Enabled>                                                                   \
+  struct OF_PP_CAT(Get_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {       \
+    static const OF_PP_PAIR_FIRST(pair) & Call(const self_type& self) {                        \
+      return self.OF_PP_PAIR_SECOND(pair)();                                                   \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename Enabled>                                                                   \
+  struct OF_PP_CAT(Mutable_, oneof_name)<get_enum_value(OF_PP_PAIR_SECOND(pair)), Enabled> {   \
+    static OF_PP_PAIR_FIRST(pair) * Call(self_type* self) {                                    \
+      return self->OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))();                             \
+    }                                                                                          \
+  };                                                                                           \
   const OF_PP_PAIR_FIRST(pair) & OF_PP_PAIR_SECOND(pair)() const {                             \
     if (OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                          \
       return OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                   \
@@ -178,14 +200,36 @@ DEFINE_FLAT_MSG_TYPE(double);
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;                                     \
   }
 
-#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \
- private:                                                                            \
-  struct {                                                                           \
-    union {                                                                          \
-      OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq) \
-    };                                                                               \
-    _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                     \
+#define FLAT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)              \
+ public:                                                                              \
+  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
+  struct OF_PP_CAT(Has_, oneof_name) {};                                              \
+  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
+  struct OF_PP_CAT(Get_, oneof_name) {};                                              \
+  template<_FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) oneof_case, typename Enabled = void> \
+  struct OF_PP_CAT(Mutable_, oneof_name) {};                                          \
+                                                                                      \
+ private:                                                                             \
+  struct {                                                                            \
+    union {                                                                           \
+      OF_PP_FOR_EACH_TUPLE(MAKE_FLAT_MSG_ONEOF_UNION_FIELD, type_and_field_name_seq)  \
+    };                                                                                \
+    _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) case_;                                      \
   } OF_PP_CAT(oneof_name, _);
+
+#define _FLAT_MSG_DEFINE_ONEOF_VALUE4TYPE(oneof_name, type_and_field_name_seq)    \
+ public:                                                                          \
+  template<typename T, typename Enabled = void>                                   \
+  struct OF_PP_CAT(OneofCase4OneofType_, oneof_name) {};                          \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(_MAKE_FLAT_MSG_ONEOF_VALUE4TYPE, (oneof_name), \
+                                   type_and_field_name_seq)
+
+#define _MAKE_FLAT_MSG_ONEOF_VALUE4TYPE(oneof_name, pair)                               \
+  template<typename Enabled>                                                            \
+  struct OF_PP_CAT(OneofCase4OneofType_, oneof_name)<OF_PP_PAIR_FIRST(pair), Enabled> { \
+    static const _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name) value =                          \
+        _FLAT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair));                            \
+  };
 
 #define MAKE_FLAT_MSG_ONEOF_UNION_FIELD(field_type, field_name) field_type OF_PP_CAT(field_name, _);
 
