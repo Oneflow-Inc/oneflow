@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
+using VpuSchedulerCtx = OBJECT_MSG_PTR(VpuSchedulerCtx);
+
+namespace {}
+
 VpuScheduler::VpuScheduler() { TODO(); }
 
-void VpuScheduler::Receive(OBJECT_MSG_PTR(VpuInstructionMsg) && vpu_instr_msg) {
+void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
   std::unique_lock<std::mutex> lck(*ctx_->mut_pending_list_mutex()->Mutable());
-  ctx_->mut_vpu_instruction_msg_pending_list()->PushBack(vpu_instr_msg.Mutable());
-}
-
-void VpuScheduler::MainLoop() {
-  while (true) { Schedule(); }
+  vpu_instr_list->MoveTo(ctx_->mut_vpu_instruction_msg_pending_list());
 }
 
 void VpuScheduler::Schedule() {

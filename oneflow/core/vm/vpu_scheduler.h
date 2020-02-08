@@ -2,9 +2,12 @@
 #define ONEFLOW_CORE_COMMON_VPU_SCHEDULER_H_
 
 #include <mutex>
+#include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/vpu_instruction.msg.h"
 
 namespace oneflow {
+
+using VpuInstructionMsgList = OBJECT_MSG_LIST(VpuInstructionMsg, vpu_instruction_msg_link);
 
 class VpuScheduler final {
  public:
@@ -13,13 +16,11 @@ class VpuScheduler final {
   VpuScheduler();
   ~VpuScheduler() = default;
 
-  void Receive(OBJECT_MSG_PTR(VpuInstructionMsg) && vpu_instr_msg);
+  void Receive(VpuInstructionMsgList* vpu_instr_list);
 
-  void MainLoop();
-
- private:
   void Schedule();
 
+ private:
   OBJECT_MSG_PTR(VpuSchedulerCtx) ctx_;
 };
 
