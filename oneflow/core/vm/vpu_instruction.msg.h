@@ -52,7 +52,7 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuCtx)*, vpu_ctx); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
 
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_index,
                                   oprand_index2object_access);
@@ -63,6 +63,16 @@ END_OBJECT_MSG(VpuInstructionCtx);
 
 // clang-format off
 BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuCtx)*, vpu);
+  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
+
+  // links
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(running_pkg_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(launched_pkg_link);
+
+  // methods
  public:
   template<typename NewQuerierT>
   void __Init__(OBJECT_MSG_TYPE(VpuCtx)* vpu, const NewQuerierT& NewQuerier) {
@@ -71,22 +81,16 @@ BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   }
   bool Done() const { return status_querier()->Done(); }
 
-  // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuCtx)*, vpu);
-  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
-  // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_link, vpu_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_LINK(running_vpu_instruction_pkg_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(launched_vpu_instruction_pkg_link);
 END_OBJECT_MSG(RunningVpuInstructionPackage);
 // clang-format on
 
+class OBJECT_MSG_TYPE(VpuSetCtx);
+
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
-  // methods
-  void __Init__() { mutable_pending_list_mutex()->__Init__(); }
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
+  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuSetCtx)*, vpu_set_ctx); 
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
@@ -94,9 +98,17 @@ BEGIN_OBJECT_MSG(VpuCtx);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_link);
   OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(7, VpuId, vpu_id);
   // collect_vpu_instruction_list used by VpuScheduler
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_link, collect_vpu_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_vpu_instruction_pkg_link,
-                              pending_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link,
+                              collect_vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link, pending_pkg_list);
+
+  // methods
+ public:
+  void __Init__(const VpuInstructionBuilder* builder, OBJECT_MSG_TYPE(VpuSetCtx)* vpu_set_ctx) {
+    set_vpu_instruction_builder(builder);
+    set_vpu_set_ctx(vpu_set_ctx);
+    mutable_pending_list_mutex()->__Init__();
+  }
 END_OBJECT_MSG(VpuCtx);
 // clang-format on
 
@@ -106,34 +118,30 @@ BEGIN_OBJECT_MSG(VpuSetCtx);
   OBJECT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_ctx_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuCtx, vpu_link, vpu_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, launched_vpu_instruction_pkg_link,
-                              launched_vpu_instruction_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, launched_pkg_link, launched_pkg_list);
 END_OBJECT_MSG(VpuSetCtx);
 // clang-format on
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSchedulerCtx);
   // methods
-  void __Init__() { mutable_pending_list_mutex()->__Init__(); }
+  void __Init__() { mutable_pending_msg_list_mutex()->__Init__(); }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, machine_id);
-  // for vpu_instruction_msg_pending_list only
-  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);
+  // for pending_msg_list only
+  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_msg_list_mutex);
 
   //links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link,
-                              vpu_instruction_msg_pending_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link,
-                              tmp_pending_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_link,
-                              new_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_link,
-                              waiting_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, pending_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, tmp_pending_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, new_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, waiting_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, ready_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuCtx, vpu_id, vpu_id2vpu);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuSetCtx, vpu_set_link, vpu_set_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuSetCtx, vpu_set_ctx_link, vpu_set_ctx_list);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
 END_OBJECT_MSG(VpuSchedulerCtx);
 // clang-format on
