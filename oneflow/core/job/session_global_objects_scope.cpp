@@ -17,6 +17,7 @@
 #include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
+#include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
@@ -73,6 +74,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
+  for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
