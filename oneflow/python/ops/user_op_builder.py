@@ -15,15 +15,21 @@ class UserOpConfWrapper(object):
     def __init__(self, op_name):
         self.op_conf_ = op_conf_util.OperatorConf()
         self.op_conf_.name = op_name
+        self.output_arg_key_list_ = []
 
     def RemoteBlobList(self):
         remote_blob_list = []
         compile_context.CurJobAddOp(self.op_conf_)
         for k in self.op_conf_.user_conf.output:
-            for i in range(len(self.op_conf_.user_conf.output[k].s)):
+            if k not in self.output_arg_key_list_:
+                raise ValueError("Error: In op_name: \"" + self.op_conf_.name
+                        + "\" output_arg_name: \"" + k + "\" is not set in python op builder")
+        for output_arg_name in self.output_arg_key_list_:
+            assert(output_arg_name in self.op_conf_.user_conf.output)
+            for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
-                lbi.blob_name = k + '_' + str(i)
+                lbi.blob_name = output_arg_name + '_' + str(i)
                 remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
         return tuple(remote_blob_list)
 
@@ -56,6 +62,7 @@ class UserOpConfWrapperBuilder(object):
             lbn = self.user_op_.op_conf_.name + '/' + output_name + '_' + str(i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
+        self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
     def SetAttr(self, attr_name, attr_value, attr_type):
