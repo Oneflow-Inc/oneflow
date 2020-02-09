@@ -6,17 +6,11 @@
 namespace oneflow {
 
 // clang-format off
-BEGIN_FLAT_MSG(ObjectId);
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, value);
-END_FLAT_MSG(ObjectId);
-// clang-format on
-
-// clang-format off
 BEGIN_FLAT_MSG(LogicalObjectId);
   // fields
   FLAT_MSG_DEFINE_ONEOF(ptr_type,
-    FLAT_MSG_ONEOF_FIELD(ObjectId, remote)
-    FLAT_MSG_ONEOF_FIELD(ObjectId, local));
+    FLAT_MSG_ONEOF_FIELD(uint64_t, remote_value)
+    FLAT_MSG_ONEOF_FIELD(uint64_t, local_value));
 
   // methods
   FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();

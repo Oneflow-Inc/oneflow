@@ -13,12 +13,12 @@ class VpuScheduler final {
  public:
   VpuScheduler(const VpuScheduler&) = default;
   VpuScheduler(VpuScheduler&&) = default;
-  VpuScheduler();
+  explicit VpuScheduler(OBJECT_MSG_PTR(VpuSchedulerCtx) && ctx) : ctx_(std::move(ctx)) {}
   ~VpuScheduler() = default;
 
   void Receive(VpuInstructionMsgList* vpu_instr_list);
 
-  void Schedule();
+  void Dispatch();
 
  private:
   OBJECT_MSG_PTR(VpuSchedulerCtx) ctx_;
