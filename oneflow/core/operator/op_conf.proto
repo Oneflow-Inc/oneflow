@@ -1710,13 +1710,11 @@ message ScalarDivByTensorOpConf {
   required string out = 3;
 }
 
-message IndexedSlicesSGDUpdateOpConf {
-  required string indices = 1;
-  required string updates = 2;
-  required string ref = 3;
-  optional string momentum = 4;
-  required string learning_rate = 5;
-  required float beta = 6 [default = 0.0];
+message IndexedSlicesNaiveMdUpdateOpConf {
+  required string model_diff_indices = 1;
+  required string model_diff_values = 2;
+  required string model = 3;
+  required string learning_rate = 4;
 }
 
 message OperatorConf {
@@ -1786,7 +1784,7 @@ message OperatorConf {
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
-    IndexedSlicesSGDUpdateOpConf indexed_slices_sgd_update_conf = 163;
+    IndexedSlicesNaiveMdUpdateOpConf indexed_slices_naive_model_update_conf = 163;
     UserOpConf user_conf = 199;
     
     // domain op
