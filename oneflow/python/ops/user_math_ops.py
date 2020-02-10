@@ -40,7 +40,7 @@ def acosh(x, name=None):
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.asin")
-def acosh(x, name=None):
+def asin(x, name=None):
     if name is None:
         name = id_util.UniqueStr("Asin_")
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
@@ -48,4 +48,15 @@ def acosh(x, name=None):
             .Output("y")\
             .SetAttr("unary_math_type", "Asin", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.asinh")
+def asinh(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Asinh_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Asinh", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 
