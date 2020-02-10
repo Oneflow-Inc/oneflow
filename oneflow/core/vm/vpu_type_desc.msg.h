@@ -23,13 +23,13 @@ END_FLAT_MSG(ConstLogicalObjectId);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(VpuInstructionOprand);
+BEGIN_FLAT_MSG(VpuInstructionOperand);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
-    FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_oprand)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_oprand)
-    FLAT_MSG_ONEOF_FIELD(double, double_i_oprand) // i is short for immediate
-    FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_oprand));
-END_FLAT_MSG(VpuInstructionOprand);
+    FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_operand)
+    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
+    FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand));
+END_FLAT_MSG(VpuInstructionOperand);
 // clang-format on
 
 // clang-format off

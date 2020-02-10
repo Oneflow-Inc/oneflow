@@ -13,14 +13,14 @@
 
 namespace oneflow {
 
-static const int kVpuInstructionOprandLimit = 64;
+static const int kVpuInstructionOperandLimit = 64;
 
 // clang-format off
 BEGIN_FLAT_MSG(VpuInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, vpu_instruction_id);
   FLAT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VpuInstructionOpcode, opcode);
-  FLAT_MSG_DEFINE_REPEATED(VpuInstructionOprand, operand, kVpuInstructionOprandLimit);
+  FLAT_MSG_DEFINE_REPEATED(VpuInstructionOperand, operand, kVpuInstructionOperandLimit);
   FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
 END_FLAT_MSG(VpuInstructionProto);
 // clang-format on
@@ -54,10 +54,10 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
 
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_index,
-                                  oprand_index2object_access);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instruction_oprand_ready_link,
-                              ready_oprand_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, vpu_instr_operand_link, waiting_operand_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, vpu_instr_operand_link, holding_operand_list);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuInstrOperandAccess, logical_object_id,
+                                  logical_object_id2operand_access);
 END_OBJECT_MSG(VpuInstructionCtx);
 // clang-format on
 
