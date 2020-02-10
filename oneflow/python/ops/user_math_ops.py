@@ -59,4 +59,25 @@ def asinh(x, name=None):
             .SetAttr("unary_math_type", "Asinh", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.atan")
+def atan(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Atan_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Atan", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.atanh")
+def atanh(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Atanh_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Atanh", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+
 

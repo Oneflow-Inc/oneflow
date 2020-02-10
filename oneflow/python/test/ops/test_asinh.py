@@ -14,7 +14,7 @@ def test_asinh(test_case):
     y = AsinhJob(x).get().ndarray()
     # output: [-inf -1.4436355 -0.4812118 0.8813736 1.0159732 5.991471 9.903487 inf]
     test_case.assertTrue(np.allclose(y, np.arcsinh(x), equal_nan=True))
-    print("asinh y = ", y)
+    # print("asinh y = ", y)
 
     x = np.random.uniform(size=(8,)).astype(np.float32)
     y = AsinhJob(x).get().ndarray()
