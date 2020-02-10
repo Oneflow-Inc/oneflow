@@ -50,7 +50,7 @@ class OBJECT_MSG_TYPE(MirroredObject);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuInstrOperandAccess);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuInstructionCtx)*, vpu_instruction);
+  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuInstructionCtx)*, vpu_instruction_ctx);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObjectAccess)*, mirrored_object_access);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObject)*, mirrored_object);
 
@@ -85,8 +85,9 @@ BEGIN_OBJECT_MSG(MirroredObject);
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
+  OBJECT_MSG_DEFINE_LIST_LINK(released_link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
