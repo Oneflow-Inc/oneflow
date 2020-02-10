@@ -8,9 +8,9 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename K, typename IDX>
-__global__ void UpdateGpu(const IDX data_elem_cnt, const K* indices, const float* learning_rate,
-                          const T* values, const IDX num_features, const IDX feature_size, T* model,
-                          const IDX feature_id_offset) {
+__global__ void UpdateGpu(const IDX data_elem_cnt, const K* indices, const T* values,
+                          const float* learning_rate, const IDX num_features,
+                          const IDX feature_size, T* model, const IDX feature_id_offset) {
   const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const T val = values[i];
@@ -36,7 +36,8 @@ struct IndexedSlicesNaiveMdUpdateKernelUtil<DeviceType::kGPU, T, K> final {
     const int64_t values_elem_cnt = num_indices * feature_size;
     UpdateGpu<T, K, int64_t>
         <<<BlocksNum4ThreadsNum(values_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            values_elem_cnt, indices, values, num_features, feature_size, model, feature_id_offset);
+            values_elem_cnt, indices, values, learning_rate, num_features, feature_size, model,
+            feature_id_offset);
   }
 };
 
