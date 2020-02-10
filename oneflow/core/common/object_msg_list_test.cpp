@@ -275,8 +275,12 @@ TEST(ObjectMsg, MoveTo) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list0;
   auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
   auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  ASSERT_EQ(item0->is_foo_list_empty(), true);
+  ASSERT_EQ(item1->is_foo_list_empty(), true);
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
+  ASSERT_EQ(item0->is_foo_list_empty(), false);
+  ASSERT_EQ(item1->is_foo_list_empty(), false);
   ASSERT_EQ(foo_list.size(), 2);
   ASSERT_EQ(foo_list0.empty(), true);
   ASSERT_EQ(item0->ref_cnt(), 2);
