@@ -29,7 +29,7 @@ BEGIN_OBJECT_MSG(MemZoneTypeDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_device);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, MemZoneTypeId, mem_zone_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(4, MemZoneTypeId, mem_zone_type_id);
 END_OBJECT_MSG(MemZoneTypeDesc);
 // clang-format on
 
