@@ -1710,6 +1710,15 @@ message ScalarDivByTensorOpConf {
   required string out = 3;
 }
 
+message IndexedSlicesSGDUpdateOpConf {
+  required string indices = 1;
+  required string updates = 2;
+  required string ref = 3;
+  optional string momentum = 4;
+  required string learning_rate = 5;
+  required float beta = 6 [default = 0.0];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1777,6 +1786,7 @@ message OperatorConf {
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
+    IndexedSlicesSGDUpdateOpConf indexed_slices_sgd_update_conf = 163;
     UserOpConf user_conf = 199;
     
     // domain op

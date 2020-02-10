@@ -183,6 +183,12 @@ message UnsortedSegmentSumKernelConf {
   required DataType indices_data_type = 1;
 }
 
+message IndexedSlicesSGDUpdateKernelConf {
+  required DataType indices_data_type = 1;
+  required int64 lower_bound = 2;
+  required int64 upper_bound = 3;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -210,6 +216,7 @@ message KernelConf {
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
     UnsortedSegmentSumKernelConf unsorted_segment_sum_conf = 356;
+    IndexedSlicesSGDUpdateKernelConf indexed_slices_sgd_update_conf = 357;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
