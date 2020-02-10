@@ -1,4 +1,4 @@
-#include "oneflow/core/vm/vpu_scheduler.h"
+#include "oneflow/core/vm/scheduler.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -34,18 +34,17 @@ void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
 }
 
 void VpuScheduler::Dispatch() {
-  auto* ctx = ctx_.Mutable();
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(ctx->mut_vpu_set_ctx_list(), vpu_set_ctx) {
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(ctx_->mut_vpu_set_ctx_list(), vpu_set_ctx) {
     auto* begin = vpu_set_ctx->mut_launched_pkg_list()->Begin();
     if (begin == nullptr || !begin->Done()) { continue; }
-    HandleFinishedVpuInstructionCtx(ctx, begin);
+    HandleFinishedVpuInstructionCtx(ctx_, begin);
   };
-  if (ctx->pending_msg_list().size() > 0) {
-    MoveToTmpPendingMsgList(ctx);
-    MakeVpuInstructionCtx(ctx);
-    MoveNewCtxToWaitingListOrReadyList(ctx);
+  if (ctx_->pending_msg_list().size() > 0) {
+    MoveToTmpPendingMsgList(ctx_);
+    MakeVpuInstructionCtx(ctx_);
+    MoveNewCtxToWaitingListOrReadyList(ctx_);
   }
-  if (ctx->ready_ctx_list().size() > 0) { DispatchVpuInstructionCtx(ctx); }
+  if (ctx_->ready_ctx_list().size() > 0) { DispatchVpuInstructionCtx(ctx_); }
 }
 
 }  // namespace oneflow

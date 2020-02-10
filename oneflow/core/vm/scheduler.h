@@ -1,9 +1,7 @@
-#ifndef ONEFLOW_CORE_COMMON_VPU_SCHEDULER_H_
-#define ONEFLOW_CORE_COMMON_VPU_SCHEDULER_H_
+#ifndef ONEFLOW_CORE_COMMON_SCHEDULER_H_
+#define ONEFLOW_CORE_COMMON_SCHEDULER_H_
 
-#include <mutex>
-#include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/vpu_instruction.msg.h"
+#include "oneflow/core/vm/scheduler.msg.h"
 
 namespace oneflow {
 
@@ -13,7 +11,7 @@ class VpuScheduler final {
  public:
   VpuScheduler(const VpuScheduler&) = default;
   VpuScheduler(VpuScheduler&&) = default;
-  explicit VpuScheduler(OBJECT_MSG_PTR(VpuSchedulerCtx) && ctx) : ctx_(std::move(ctx)) {}
+  explicit VpuScheduler(OBJECT_MSG_TYPE(VpuSchedulerCtx) * ctx) : ctx_(ctx) {}
   ~VpuScheduler() = default;
 
   void Receive(VpuInstructionMsgList* vpu_instr_list);
@@ -21,9 +19,9 @@ class VpuScheduler final {
   void Dispatch();
 
  private:
-  OBJECT_MSG_PTR(VpuSchedulerCtx) ctx_;
+  OBJECT_MSG_TYPE(VpuSchedulerCtx) * ctx_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_VPU_SCHEDULER_H_
+#endif  // ONEFLOW_CORE_COMMON_SCHEDULER_H_
