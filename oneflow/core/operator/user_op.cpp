@@ -114,25 +114,20 @@ class UserOpInferContext : public user_op::InferContext {
   UserOpInferContext(const OperatorConf& op_conf,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
-    const auto& user_op_conf = op_conf.user_conf();
-    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        inputs_.emplace_back(std::make_pair(arg_name, i));
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          arg2tensor_desc_.emplace(key, user_op::TensorDesc(blob->shape(), blob->data_type()));
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
       }
-    }
-    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        outputs_.emplace_back(std::make_pair(arg_name, i));
-      }
-    }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
   }
   ~UserOpInferContext() = default;
 
