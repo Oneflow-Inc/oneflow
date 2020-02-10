@@ -24,16 +24,15 @@ REGISTER_USER_OP("unary")
 
 REGISTER_USER_OP("unary_grad")
     .Input("x")
-    .Input("y")
     .Input("dy")
     .Output("dx")
     .Attr("unary_math_type", UserOpAttrType::kAtString)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *y_shape);
-      *dx_shape = *y_shape;
+      CHECK(*dy_shape == *x_shape);
+      *dx_shape = *x_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -53,7 +52,6 @@ REGISTER_USER_OP_GRAD("unary").SetGenBackwardOpConfFn([](const user_op::UserOpWr
     user_op::UserOpConfWrapper unary_grad_op =
         builder.Op("unary_grad")
             .Input("x", op.input("x", 0))
-            .Input("y", op.output("y", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
             .Output("dx")
             .Attr<std::string>("unary_math_type", op.attr<std::string>("unary_math_type"))

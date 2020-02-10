@@ -8,48 +8,41 @@ namespace user_op {
 #ifdef WITH_CUDA
 
 template<typename T>
-__device__ T AbsCalInDiff4Gpu(T x, T y, T dy) {
+__device__ T AbsCalInDiff4Gpu(T x, T dy) {
   return x < 0 ? -dy : dy;
 }
 
-__device__ float AcosCalInDiff4GpuFloat(float x, float y, float dy) {
-  return dy * (-rsqrtf(1 - x * x));
-}
+__device__ float AcosCalInDiff4GpuFloat(float x, float dy) { return dy * (-rsqrtf(1 - x * x)); }
 
-__device__ float AcoshCalInDiff4GpuFloat(float x, float y, float dy) {
-  return dy * (rsqrtf(x * x - 1));
-}
+__device__ float AcoshCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(x * x - 1)); }
 
-__device__ float AsinCalInDiff4GpuFloat(float x, float y, float dy) {
-  return dy * (rsqrtf(1 - x * x));
-}
+__device__ float AsinCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1 - x * x)); }
 
-#define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                 \
-  __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {           \
-    CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                    \
-  }                                                                                        \
-  void func_name##Forward(DeviceCtx* ctx, const Tensor* tensor_x, Tensor* tensor_y) {      \
-    const dtype* x = tensor_x->dptr<dtype>();                                              \
-    dtype* y = tensor_y->mut_dptr<dtype>();                                                \
-    int64_t n = tensor_x->shape().elem_cnt();                                              \
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                 \
-    func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,           \
-                            ctx->cuda_stream()>>>(n, x, y);                                \
-  }                                                                                        \
-  __global__ void func_name##BackwardGpu(const int n, const dtype* x, const dtype* y,      \
-                                         const dtype* dy, dtype* dx) {                     \
-    CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = bw_func(x[i], y[i], dy[i]); }                      \
-  }                                                                                        \
-  void func_name##Backward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y, \
-                           const Tensor* tensor_dy, Tensor* tensor_dx) {                   \
-    const dtype* x = tensor_x->dptr<dtype>();                                              \
-    const dtype* y = tensor_y->dptr<dtype>();                                              \
-    const dtype* dy = tensor_dy->dptr<dtype>();                                            \
-    dtype* dx = tensor_dx->mut_dptr<dtype>();                                              \
-    int64_t n = tensor_x->shape().elem_cnt();                                              \
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                 \
-    func_name##BackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,          \
-                             ctx->cuda_stream()>>>(n, x, y, dy, dx);                       \
+#define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
+  __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
+    CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
+  }                                                                                         \
+  void func_name##Forward(DeviceCtx* ctx, const Tensor* tensor_x, Tensor* tensor_y) {       \
+    const dtype* x = tensor_x->dptr<dtype>();                                               \
+    dtype* y = tensor_y->mut_dptr<dtype>();                                                 \
+    int64_t n = tensor_x->shape().elem_cnt();                                               \
+    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                  \
+    func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,            \
+                            ctx->cuda_stream()>>>(n, x, y);                                 \
+  }                                                                                         \
+  __global__ void func_name##BackwardGpu(const int n, const dtype* x, const dtype* dy,      \
+                                         dtype* dx) {                                       \
+    CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = bw_func(x[i], dy[i]); }                             \
+  }                                                                                         \
+  void func_name##Backward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_dy, \
+                           Tensor* tensor_dx) {                                             \
+    const dtype* x = tensor_x->dptr<dtype>();                                               \
+    const dtype* dy = tensor_dy->dptr<dtype>();                                             \
+    dtype* dx = tensor_dx->mut_dptr<dtype>();                                               \
+    int64_t n = tensor_x->shape().elem_cnt();                                               \
+    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                  \
+    func_name##BackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,           \
+                             ctx->cuda_stream()>>>(n, x, dy, dx);                           \
   }
 
 #define MATH_UNARY_GPU_FLOAT_SEQ       \
@@ -108,14 +101,13 @@ class MathUnaryGradGpuFloatKernel final : public OpKernel {
  private:
   void Compute(KernelContext* ctx) override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
 
-#define MATH_UNARY_BACKWARD(unary_math_type_str, func_name_prefix)                           \
-  if (unary_math_type == unary_math_type_str) {                                              \
-    func_name_prefix##Backward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dy, tensor_dx); \
+#define MATH_UNARY_BACKWARD(unary_math_type_str, func_name_prefix)                 \
+  if (unary_math_type == unary_math_type_str) {                                    \
+    func_name_prefix##Backward(ctx->device_ctx(), tensor_x, tensor_dy, tensor_dx); \
   }
 
     OF_PP_FOR_EACH_TUPLE(MATH_UNARY_BACKWARD, MATH_UNARY_GPU_FLOAT_SEQ);
