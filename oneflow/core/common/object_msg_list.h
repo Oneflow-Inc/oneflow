@@ -56,8 +56,13 @@ namespace oneflow {
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListLinkDelete); \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name) \
- private:                                              \
+#define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)         \
+ public:                                                       \
+  bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _empty))() const { \
+    return OF_PP_CAT(field_name, _).empty();                   \
+  }                                                            \
+                                                               \
+ private:                                                      \
   EmbeddedListLink OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)               \
