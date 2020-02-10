@@ -4,7 +4,7 @@
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
-#include "oneflow/core/vm/global_device_id.msg.h"
+#include "oneflow/core/vm/mem_zone_type_desc.msg.h"
 
 namespace oneflow {
 
@@ -74,14 +74,16 @@ BEGIN_OBJECT_MSG(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(GlobalDeviceId, global_device_id);
+  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(const OBJECT_MSG_TYPE(MemZoneTypeDesc)*, mem_desc);
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, global_device_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
 END_OBJECT_MSG(LogicalObject);
 // clang-format on

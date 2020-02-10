@@ -4,7 +4,6 @@
 #include <cstring>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/global_device_id.msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 
 namespace oneflow {
@@ -48,10 +47,26 @@ END_FLAT_MSG(VpuMask);
 
 // clang-format off
 BEGIN_FLAT_MSG(VpuId);
+  // fields
   FLAT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
-  FLAT_MSG_DEFINE_OPTIONAL(GlobalDeviceId, global_device_id);
+  FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
+
+  // methods
+  FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 END_FLAT_MSG(VpuId);
 // clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(VpuTypeDesc);
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machine);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_device);
+
+  // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
+END_OBJECT_MSG(VpuTypeDesc);
+// clang-format on
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
