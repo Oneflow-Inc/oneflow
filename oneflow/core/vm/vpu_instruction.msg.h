@@ -5,7 +5,7 @@
 #include <mutex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/vpu_desc.msg.h"
+#include "oneflow/core/vm/vpu_type_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vpu_instruction.h"
 #include "oneflow/core/vm/vpu_instruction_msg_observer.h"
@@ -90,7 +90,8 @@ class OBJECT_MSG_TYPE(VpuSetCtx);
 BEGIN_OBJECT_MSG(VpuCtx);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuSetCtx)*, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuTypeDesc)*, vpu_type_desc); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const OBJECT_MSG_TYPE(VpuSetCtx)*, vpu_set_ctx); 
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
