@@ -99,3 +99,13 @@ def cos(x, name=None):
             .SetAttr("unary_math_type", "Cos", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.cosh")
+def cosh(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Cosh_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Cosh", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+

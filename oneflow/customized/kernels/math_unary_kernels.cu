@@ -12,21 +12,25 @@ __device__ T AbsCalInDiff4Gpu(T x, T dy) {
   return x < 0 ? -dy : dy;
 }
 
-__device__ float AcosCalInDiff4GpuFloat(float x, float dy) { return dy * (-rsqrtf(1 - x * x)); }
+__device__ float AcosCalInDiff4GpuFloat(float x, float dy) { return dy * (-rsqrtf(1.0 - x * x)); }
 
-__device__ float AcoshCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(x * x - 1)); }
+__device__ float AcoshCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(x * x - 1.0)); }
 
-__device__ float AsinCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1 - x * x)); }
+__device__ float AsinCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 - x * x)); }
 
-__device__ float AsinhCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1 + x * x)); }
+__device__ float AsinhCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 + x * x)); }
 
-__device__ float AtanCalInDiff4GpuFloat(float x, float dy) { return dy * (1 / (1 + x * x)); }
+__device__ float AtanCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 + x * x)); }
 
-__device__ float AtanhCalInDiff4GpuFloat(float x, float dy) { return dy * (1 / (1 - x * x)); }
+__device__ float AtanhCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 - x * x)); }
 
 __device__ float CeilCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
 __device__ float CosCalInDiff4GpuFloat(float x, float dy) { return dy * (-sinf(x)); }
+
+__device__ float CoshCalInDiff4GpuFloat(float x, float dy) {
+  return dy * (expf(x) + expf(-x)) / 2.0;
+}
 
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
@@ -64,7 +68,8 @@ __device__ float CosCalInDiff4GpuFloat(float x, float dy) { return dy * (-sinf(x
   OF_PP_MAKE_TUPLE_SEQ("Atan", Atan)   \
   OF_PP_MAKE_TUPLE_SEQ("Atanh", Atanh) \
   OF_PP_MAKE_TUPLE_SEQ("Ceil", Ceil)   \
-  OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)
+  OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)     \
+  OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -75,6 +80,7 @@ MATH_UNARY_GPU(Atan, atanf, AtanCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Atanh, atanhf, AtanhCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Ceil, ceilf, CeilCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Cos, cosf, CosCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Cosh, coshf, CoshCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
