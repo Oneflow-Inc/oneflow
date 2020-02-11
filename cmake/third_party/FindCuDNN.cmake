@@ -21,11 +21,11 @@ else()
 endif()
 
 find_path(CUDNN_INCLUDE_DIR cudnn.h
-    PATHS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+    HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
     PATH_SUFFIXES cuda/include include)
 
 find_library(CUDNN_LIBRARY ${__cudnn_libname}
-    PATHS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+	HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
     PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
 
 find_package_handle_standard_args(

@@ -102,6 +102,7 @@ ExternalProject_Add(opencv
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
         -DWITH_ITT:BOOL=ON
+        # -DLIB_SUFFIX:STRING=64
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'

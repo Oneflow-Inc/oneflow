@@ -17,6 +17,10 @@ def add(x, y, name=None):
         return scalar_add(x, y, name)
     elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
+    elif x.static_shape == (1,):
+        return scalar_add_by_tensor(y, x, name)
+    elif y.static_shape == (1,):
+        return scalar_add_by_tensor(x, y, name)
     else:
         return broadcast_add(x, y, name)
 
@@ -47,6 +51,10 @@ def subtract(x, y, name=None):
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
+    elif x.static_shape == (1, ):
+        return scalar_sub_by_tensor(y, x, name)
+    elif y.static_shape == (1, ):
+        return scalar_sub_by_tensor(x, y, name)
     else:
         return broadcast_sub(x, y, name)
 
@@ -59,6 +67,10 @@ def multiply(x, y, name=None):
         return scalar_mul(x, y, name)
     elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
         return element_wise_mul(x, y, name)
+    elif x.static_shape == (1, ):
+        return scalar_mul_by_tensor(y, x, name)
+    elif y.static_shape == (1, ):
+        return scalar_mul_by_tensor(x, y, name)
     else:
         return broadcast_mul(x, y, name)
 
@@ -72,6 +84,10 @@ def divide(x, y, name=None):
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
+    elif x.static_shape == (1, ):
+        return scalar_div_by_tensor(y, x, name)
+    elif y.static_shape == (1, ):
+        return scalar_div_by_tensor(x, y, name)
     else:
         return broadcast_div(x, y, name)
 
@@ -106,6 +122,19 @@ def scalar_add(x, operand, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def scalar_add_by_tensor(x, scalar, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarAddByTensor_")
+    )
+    setattr(op_conf.scalar_add_by_tensor_conf, "in", x.logical_blob_name)
+    setattr(op_conf.scalar_add_by_tensor_conf, "scalar", scalar.logical_blob_name)
+    op_conf.scalar_add_by_tensor_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def element_wise_add(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -157,6 +186,19 @@ def broadcast_sub(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def scalar_sub_by_tensor(x, scalar, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarSubByTensor_")
+    )
+    setattr(op_conf.scalar_sub_by_tensor_conf, "in", x.logical_blob_name)
+    setattr(op_conf.scalar_sub_by_tensor_conf, "scalar", scalar.logical_blob_name)
+    op_conf.scalar_sub_by_tensor_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def element_wise_mul(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -209,6 +251,19 @@ def scalar_mul(x, operand, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def scalar_mul_by_tensor(x, scalar, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMulByTensor_")
+    )
+    setattr(op_conf.scalar_mul_by_tensor_conf, "in", x.logical_blob_name)
+    setattr(op_conf.scalar_mul_by_tensor_conf, "scalar", scalar.logical_blob_name)
+    op_conf.scalar_mul_by_tensor_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def broadcast_div(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -220,6 +275,20 @@ def broadcast_div(x, y, name=None):
     op_conf.broadcast_div_conf.a = x.logical_blob_name
     op_conf.broadcast_div_conf.b = y.logical_blob_name
     op_conf.broadcast_div_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+def scalar_div_by_tensor(x, scalar, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarDivByTensor_")
+    )
+    setattr(op_conf.scalar_div_by_tensor_conf, "in", x.logical_blob_name)
+    setattr(op_conf.scalar_div_by_tensor_conf, "scalar", scalar.logical_blob_name)
+    op_conf.scalar_div_by_tensor_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

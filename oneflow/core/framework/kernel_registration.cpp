@@ -70,6 +70,12 @@ KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInferTmpSizeFn(In
   return *this;
 }
 
+KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInplaceProposalFn(
+    InplaceProposalFn fn) {
+  wrapper_.reg_val.inplace_proposal_fn = std::move(fn);
+  return *this;
+}
+
 KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
   CHECK(wrapper_.reg_val.create_fn != nullptr)
       << "No Create function for " << wrapper_.op_type_name;
@@ -77,6 +83,11 @@ KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
       << "No IsMatched function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.infer_tmp_size_fn == nullptr) {
     wrapper_.reg_val.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
+  }
+  if (wrapper_.reg_val.inplace_proposal_fn == nullptr) {
+    wrapper_.reg_val.inplace_proposal_fn = [](const InferContext&, AddInplaceArgPair) {
+      return Maybe<void>::Ok();
+    };
   }
   return wrapper_;
 }
