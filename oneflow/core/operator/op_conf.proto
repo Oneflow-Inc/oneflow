@@ -1717,6 +1717,16 @@ message IndexedSlicesNaiveModelUpdateOpConf {
   required string learning_rate = 4;
 }
 
+message IndexedSlicesMomentumModelUpdateOpConf {
+  required string momentum = 1;
+  required string model_diff_indices = 2;
+  required string model_diff_values = 3;
+  required string model = 4;
+  required string train_step = 5;
+  required string learning_rate = 6;
+  optional float beta = 7 [default = 0.9];
+}
+
 message IndexedSlicesLazyAdamModelUpdateOpConf {
   required string m = 1;
   required string v = 2;
@@ -1798,7 +1808,8 @@ message OperatorConf {
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
     IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
-    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 164;
+    IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
+    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     UserOpConf user_conf = 199;
     
     // domain op
