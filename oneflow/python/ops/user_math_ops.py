@@ -159,4 +159,15 @@ def floor(x, name=None):
             .SetAttr("unary_math_type", "Floor", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.lgamma")
+def lgamma(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Lgamma_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Lgamma", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+
 
