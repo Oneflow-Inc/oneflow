@@ -15,6 +15,10 @@ class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
 
 void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
                                               JobBuilder* job_builder) const {
+  const PbRpf<std::string>& include_op_names =
+      GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
+  const std::set<std::string> include_op_name_set(
+      {include_op_names.cbegin(), include_op_names.cend()});
   op_graph.ForEachNode([&](const OpNode* src_node) {
     const OperatorConf& src_op_conf = src_node->op().op_conf();
     if (src_node->out_edges().size() != 1) { return; }
@@ -95,9 +99,10 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       return;
     }
     if (!BuildOptimizer) { return; }
+    CHECK(!model_op_name.empty());
     CHECK(!indices_lbn.empty());
     CHECK(!values_lbn.empty());
-    CHECK(!model_op_name.empty());
+    if (include_op_name_set.find(model_op_name) == include_op_name_set.end()) { return; }
     OperatorConf new_optimizer_op_conf{};
     new_optimizer_op_conf.set_name("System-Optimizer-IndexedSlices-" + model_op_name);
     BuildOptimizer(&new_optimizer_op_conf, indices_lbn, values_lbn);
