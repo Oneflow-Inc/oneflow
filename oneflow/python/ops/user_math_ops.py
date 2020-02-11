@@ -129,4 +129,24 @@ def erfc(x, name=None):
             .SetAttr("unary_math_type", "Erfc", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.exp")
+def exp(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Exp_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Exp", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.expm1")
+def expm1(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Expm1_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Expm1", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 

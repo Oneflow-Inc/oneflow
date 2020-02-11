@@ -41,6 +41,10 @@ __device__ float ErfcCalInDiff4GpuFloat(float x, float dy) {
   return dy * -2.0 * rsqrtf(M_PI) * expf(-x * x);
 }
 
+__device__ float ExpCalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
+
+__device__ float Expm1CalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
@@ -80,7 +84,9 @@ __device__ float ErfcCalInDiff4GpuFloat(float x, float dy) {
   OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)     \
   OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)   \
   OF_PP_MAKE_TUPLE_SEQ("Erf", Erf)     \
-  OF_PP_MAKE_TUPLE_SEQ("Erfc", Erfc)
+  OF_PP_MAKE_TUPLE_SEQ("Erfc", Erfc)   \
+  OF_PP_MAKE_TUPLE_SEQ("Exp", Exp)     \
+  OF_PP_MAKE_TUPLE_SEQ("Expm1", Expm1)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -94,6 +100,8 @@ MATH_UNARY_GPU(Cos, cosf, CosCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Cosh, coshf, CoshCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Erf, erff, ErfCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Erfc, erfcf, ErfcCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Exp, expf, ExpCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Expm1, expm1f, Expm1CalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
