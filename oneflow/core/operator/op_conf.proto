@@ -1283,69 +1283,6 @@ message BroadcastDivGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
-message BroadcastEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastNotEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLogicalAndOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastMinOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastMaxOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
 message BiasAddOpConf {
   // inputs
   required string a = 1;
@@ -1363,12 +1300,6 @@ message DimSliceConf {
 }
 
 message SliceOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated DimSliceConf dim_slice_conf = 3;
-}
-
-message SliceV2OpConf {
   required string in = 1;
   required string out = 2;
   repeated DimSliceConf dim_slice_conf = 3;
@@ -1700,12 +1631,6 @@ message ClipByValueOpConf {
   required string out = 4;
 }
 
-message ConstantLikeOpConf {
-  required string in = 1;
-  required float scalar = 2;
-  required string out = 3;
-}
-
 message LocalNonzeroOpConf {
   required string in = 1;
   required string out = 2;
@@ -1901,51 +1826,6 @@ message LocalGatherNdOpConf {
   required string out = 3;
 }
 
-message XrtLaunchOpConf {
-  message Argument {
-    required string name = 1;
-    required string value = 2;
-    required DeviceType device_type = 3;
-  }
-  message Function {
-    repeated Argument argument = 1;
-    repeated OperatorConf node = 2;
-  }
-  repeated string in = 1;
-  repeated string out = 2;
-  required Function function = 3;
-  // Function executing engine.
-  // Only "XLA" and "TensorRT" are supported currently.
-  required string engine = 4;
-  // Input mutability.
-  map<string, bool> input_mutability = 5;
-  // Mapping launch op's input and output names into function.
-  map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
-  // Sbp signatures of each function node.
-  map<string, SbpSignature> sbp_signatures = 8;
-  optional bool model_update = 9 [default = false];
-}
-
-message NcclBoxingReduceScatterOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllGatherOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllReduceOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message SyncDynamicResizeOpConf {
-  required string in = 1;
-  required string size = 2;
-  required string out = 3;
-  required int64 axis = 4;
-}
-
 message LocalGatherGradOpConf {
   required string data = 1;
   required string segment_ids = 2;
@@ -2014,6 +1894,58 @@ message MasksCropAndResizeOpConf {
   required int32 mask_width = 5;
 }
 
+message RandomLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional int64 random_seed = 3;
+}
+
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+}
+
+
+message XrtLaunchOpConf {
+  message Argument {
+    required string name = 1;
+    required string value = 2;
+    required DeviceType device_type = 3;
+  }
+  message Function {
+    repeated Argument argument = 1;
+    repeated OperatorConf node = 2;
+  }
+  repeated string in = 1;
+  repeated string out = 2;
+  required Function function = 3;
+  // Function executing engine.
+  // Only "XLA" and "TensorRT" are supported currently.
+  required string engine = 4;
+  // Input mutability.
+  map<string, bool> input_mutability = 5;
+  // Mapping launch op's input and output names into function.
+  map<string, string> input_output_mapping = 6;
+  map<string, OptInt64> batch_axis = 7;
+  // Sbp signatures of each function node.
+  map<string, SbpSignature> sbp_signatures = 8;
+  optional bool model_update = 9 [default = false];
+}
+
+message NcclBoxingReduceScatterOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllGatherOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
@@ -2021,10 +1953,19 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
-message RandomLikeOpConf {
-  required string like = 1;
+message DynamicBinarySplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 base_shift = 3;
+}
+
+message DynamicBinaryConcatOpConf {
+  repeated string in = 1;
   required string out = 2;
-  optional int64 random_seed = 3;
+  required DataType out_data_type = 3;
+  required ShapeProto out_shape = 4;
+  required OptInt64 out_batch_axis = 5;
+  required SbpParallel out_sbp = 6;
 }
 
 message UniqueWithCountsOpConf {
@@ -2208,6 +2149,7 @@ message OperatorConf {
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
+    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     OneHotOpConf one_hot_conf = 258;
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
@@ -2251,7 +2193,6 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     PieceSliceOpConf piece_slice_conf = 304;
-    // LogicalAndOpConf logical_and_conf = 305;
     WhereOpConf where_conf = 306;
     ClipByValueOpConf clip_by_value_conf = 307;
     ConstantLikeOpConf constant_like_conf = 309;
@@ -2262,9 +2203,9 @@ message OperatorConf {
     LocalGatherOpConf local_gather_conf = 314;
     LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
     DynamicReshapeOpConf dynamic_reshape_conf = 316;
+    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
-    // ElementCountOpConf element_count_conf = 320;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
     SmoothL1GradOpConf smooth_l1_grad_conf = 323;
@@ -2275,15 +2216,12 @@ message OperatorConf {
     StackGradOpConf stack_grad_conf = 328;
     SortOpConf sort_conf = 329;
     ArgSortOpConf arg_sort_conf = 330;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 331;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 332;
     SleepOpConf sleep_conf = 333;
     Dim0DynamicToFixedOpConf dim0_dynamic_to_fixed_conf = 335;
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
-    SliceV2OpConf slice_v2_conf = 340;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -2300,13 +2238,11 @@ message OperatorConf {
     BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
     BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
     BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
-    BroadcastMinOpConf broadcast_min_conf = 512;
-    BroadcastMaxOpConf broadcast_max_conf = 513;
-    SquareOpConf square_conf = 514;
-    SqrtOpConf sqrt_conf = 515;
-    RsqrtOpConf rsqrt_conf = 516;
-    ScalarAddOpConf scalar_add_conf = 517;
-    ScalarMulOpConf scalar_mul_conf = 518;
+    SquareOpConf square_conf = 513;
+    SqrtOpConf sqrt_conf = 514;
+    RsqrtOpConf rsqrt_conf = 515;
+    ScalarAddOpConf scalar_add_conf = 516;
+    ScalarMulOpConf scalar_mul_conf = 517;
     ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
     ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
     ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
@@ -2317,7 +2253,6 @@ message OperatorConf {
     ReduceMaxOpConf reduce_max_conf = 519;
     ArgmaxOpConf argmax_conf = 520;
     RandomLikeOpConf random_like_conf = 521;
-    BroadcastFloorModOpConf broadcast_floor_mod_conf = 522;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
