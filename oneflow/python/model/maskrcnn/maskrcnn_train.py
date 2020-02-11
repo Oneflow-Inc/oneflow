@@ -57,7 +57,7 @@ parser.add_argument(
     default=None,
     nargs=argparse.REMAINDER,
 )
-terminal_args = parser.parse_args()
+ARGS = parser.parse_args()
 
 
 def MakeWatcherCallback(prompt):
@@ -72,7 +72,7 @@ def MakeWatcherCallback(prompt):
     return Callback
 
 
-def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=None):
+def maskrcnn_train(config, image, image_size, gt_bbox, gt_segm, gt_label, image_id=None):
     """Mask-RCNN
     Args:
         image: (N, H, W, C)
@@ -82,16 +82,16 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         gt_label: (N, M), num_lod_lvl == 2
     """
     assert image.shape[3] == 3
-    assert gt_bbox.num_of_lod_levels == 2
-    assert gt_segm.num_of_lod_levels == 2
-    assert gt_label.num_of_lod_levels == 2
+    assert gt_bbox.is_tensor_list
+    assert gt_segm.is_tensor_list
+    assert gt_label.is_tensor_list
 
-    backbone = Backbone(cfg)
-    rpn_head = RPNHead(cfg)
-    rpn_loss = RPNLoss(cfg)
-    rpn_proposal = RPNProposal(cfg, True)
-    box_head = BoxHead(cfg)
-    mask_head = MaskHead(cfg)
+    backbone = Backbone(config)
+    rpn_head = RPNHead(config)
+    rpn_loss = RPNLoss(config)
+    rpn_proposal = RPNProposal(config, True)
+    box_head = BoxHead(config)
+    mask_head = MaskHead(config)
 
     image_size_list = [
         flow.squeeze(
@@ -112,9 +112,9 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
 
     anchors = gen_anchors(
         image,
-        cfg.MODEL.RPN.ANCHOR_STRIDE,
-        cfg.MODEL.RPN.ANCHOR_SIZES,
-        cfg.MODEL.RPN.ASPECT_RATIOS,
+        config.MODEL.RPN.ANCHOR_STRIDE,
+        config.MODEL.RPN.ANCHOR_SIZES,
+        config.MODEL.RPN.ASPECT_RATIOS,
     )
 
     # Backbone
@@ -157,7 +157,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
     # flow.nvtx.range_start(flatlist([anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list]), "rpn_post_processor")
 
     zero_ctrl_rpn = None
-    if cfg.MODEL.RPN.ZERO_CTRL:
+    if config.MODEL.RPN.ZERO_CTRL:
         zero_ctrl_rpn = (rpn_bbox_loss + rpn_objectness_loss) * 0
     proposals = rpn_proposal.build(
         anchors,
@@ -188,11 +188,11 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         gt_bbox_list,
         gt_label_list,
         features,
-        return_total_pos_inds_elem_cnt=cfg.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT,
+        return_total_pos_inds_elem_cnt=config.MODEL.ROI_BOX_HEAD.RETURN_TOTAL_POS_INDS_ELEM_CNT,
     )
     # flow.nvtx.range_end(flatlist([box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list]), "box_head")
     zero_ctrl_mask = None
-    if cfg.MODEL.ROI_MASK_HEAD.ZERO_CTRL:
+    if config.MODEL.ROI_MASK_HEAD.ZERO_CTRL:
         zero_ctrl_mask = (box_loss + cls_loss) * 0
 
     # Mask Head
@@ -207,10 +207,10 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
     )
     # flow.nvtx.range_end(mask_loss, "mask_head")
 
-    if cfg.MODEL.RPN.ZERO_CTRL:
+    if config.MODEL.RPN.ZERO_CTRL:
         rpn_bbox_loss += 0
         rpn_objectness_loss += 0
-    if cfg.MODEL.ROI_MASK_HEAD.ZERO_CTRL:
+    if config.MODEL.ROI_MASK_HEAD.ZERO_CTRL:
         box_loss += 0
         cls_loss += 0
 
@@ -226,7 +226,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label, image_id=
         ret["total_pos_inds_elem_cnt"] = total_pos_inds_elem_cnt
     for k, v in ret.items():
         if "loss" in k:
-            ret[k] = v * (1.0 / cfg.ENV.NUM_GPUS)
+            ret[k] = v * (1.0 / config.ENV.NUM_GPUS)
     return ret
 
 
@@ -252,66 +252,77 @@ def merge_and_compare_config(args):
     return config
 
 
-def set_train_config(cfg):
+def make_train_config(config):
+    flow.config.machine_num(1)
+    flow.config.gpu_device_num(config.ENV.NUM_GPUS)
     flow.config.persistence_buf_byte(1024 * 1024)
-    flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
-    flow.config.cudnn_conv_heuristic_search_algo(
-        cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO
-    )
-    flow.config.cudnn_conv_use_deterministic_algo_only(
-        cfg.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
-    )
-    assert cfg.MODEL.WEIGHT
-    flow.config.default_initialize_with_snapshot_path(cfg.MODEL.WEIGHT)
-    flow.config.train.primary_lr(cfg.SOLVER.BASE_LR)
-    flow.config.train.secondary_lr(cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR)
-    flow.config.train.weight_l2(cfg.SOLVER.WEIGHT_DECAY)
-    flow.config.train.bias_l2(cfg.SOLVER.WEIGHT_DECAY_BIAS)
+    flow.config.enable_debug_mode(True)
 
-    if cfg.SOLVER.OPTIMIZER == "momentum":
-        optimizer = dict(momentum_conf={"beta": cfg.SOLVER.MOMENTUM})
-    elif cfg.SOLVER.OPTIMIZER == "sgd":
+    cfg = flow.FunctionConfig()
+    cfg.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    # cfg.default_data_type(config.DTYPE)
+    cfg.default_data_type(flow.float32)
+    cfg.enable_inplace(config.ENV.ENABLE_INPLACE)
+    cfg.cudnn_buf_limit_mbyte(config.ENV.CUDNN_BUFFER_SIZE_LIMIT)
+
+    cfg.cudnn_conv_heuristic_search_algo(
+        config.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO
+    )
+    cfg.cudnn_conv_use_deterministic_algo_only(
+        config.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
+    )
+
+    assert os.path.isdir(config.MODEL.WEIGHT)
+    cfg.default_initialize_with_snapshot_path(config.MODEL.WEIGHT)
+    cfg.train.primary_lr(config.SOLVER.BASE_LR)
+    cfg.train.secondary_lr(config.SOLVER.BASE_LR * config.SOLVER.BIAS_LR_FACTOR)
+    cfg.train.weight_l2(config.SOLVER.WEIGHT_DECAY)
+    cfg.train.bias_l2(config.SOLVER.WEIGHT_DECAY_BIAS)
+
+    if config.SOLVER.OPTIMIZER == "momentum":
+        optimizer = dict(momentum_conf={"beta": config.SOLVER.MOMENTUM})
+    elif config.SOLVER.OPTIMIZER == "sgd":
         optimizer = dict(naive_conf={})
     else:
         raise ValueError("optimizer must be 'momentum' or 'sgd'")
 
-    if cfg.SOLVER.ENABLE_LR_DECAY:
+    if config.SOLVER.ENABLE_LR_DECAY:
         optimizer.update(
             dict(
                 learning_rate_decay=dict(
                     piecewise_scaling_conf={
-                        "boundaries": cfg.SOLVER.STEPS,
-                        "scales": cfg.SOLVER.LR_DECAY_VALUES,
+                        "boundaries": config.SOLVER.STEPS,
+                        "scales": config.SOLVER.LR_DECAY_VALUES,
                     }
                 )
             )
         )
 
-    if cfg.SOLVER.ENABLE_WARMUP:
-        if cfg.SOLVER.WARMUP_METHOD == "linear":
+    if config.SOLVER.ENABLE_WARMUP:
+        if config.SOLVER.WARMUP_METHOD == "linear":
             optimizer.update(
                 {
                     "warmup_conf": {
                         "linear_conf": {
-                            "warmup_batches": cfg.SOLVER.WARMUP_ITERS,
-                            "start_multiplier": cfg.SOLVER.WARMUP_FACTOR,
+                            "warmup_batches": config.SOLVER.WARMUP_ITERS,
+                            "start_multiplier": config.SOLVER.WARMUP_FACTOR,
                         }
                     }
                 }
             )
-        elif cfg.SOLVER.WARMUP_METHOD == "constant":
+        elif config.SOLVER.WARMUP_METHOD == "constant":
             raise NotImplementedError
         else:
             raise ValueError("warmup method must be 'linear' or 'constant'")
 
-    flow.config.train.model_update_conf(optimizer)
-    return flow.config.train.get_model_update_conf()
+    cfg.train.model_update_conf(optimizer)
+    return cfg
 
 
 def save_model(check_point, i):
-    if not os.path.exists(terminal_args.model_save_dir):
-        os.makedirs(terminal_args.model_save_dir)
-    model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
+    if not os.path.exists(ARGS.model_save_dir):
+        os.makedirs(ARGS.model_save_dir)
+    model_dst = os.path.join(ARGS.model_save_dir, "iter-" + str(i))
     print("saving models to {}".format(model_dst))
     check_point.save(model_dst)
 
@@ -441,31 +452,34 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
 
 
 def make_train(config, fake_images=None):
-    flow.env.ctrl_port(terminal_args.ctrl_port)
-    flow.config.enable_inplace(config.ENV.ENABLE_INPLACE)
-    flow.config.gpu_device_num(config.ENV.NUM_GPUS)
-    flow.config.default_data_type(get_flow_dtype(config.DTYPE))
+    # flow.env.log_dir("./output/log")
+    flow.env.ctrl_port(ARGS.ctrl_port)
+
+    cfg = make_train_config(config)
 
     def do_train(fake_images=None):
-        step_lr = None
-        if config.SOLVER.MAKE_LR:
-            model_update_conf = set_train_config(config)
-            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
-        else:
-            set_train_config(config)
         outputs = train_net(config, fake_images)
-        if step_lr is not None:
-            if isinstance(outputs, (list, tuple)):
-                outputs[0].update(step_lr)
-            else:
-                outputs.update(step_lr)
         return outputs
+    # def do_train(fake_images=None):
+    #     step_lr = None
+    #     if config.SOLVER.MAKE_LR:
+    #         model_update_conf = set_train_config(config)
+    #         step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+    #     else:
+    #         set_train_config(config)
+    #     outputs = train_net(config, fake_images)
+    #     if step_lr is not None:
+    #         if isinstance(outputs, (list, tuple)):
+    #             outputs[0].update(step_lr)
+    #         else:
+    #             outputs.update(step_lr)
+    #     return outputs
 
     if fake_images is not None:
         assert len(list(fake_images.values())[0]) == config.ENV.NUM_GPUS
-        
+
         if config.ENV.NUM_GPUS == 1:
-            @flow.function
+            @flow.function(cfg)
             def train(
                 image_blob=flow.input_blob_def(
                     shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
@@ -473,7 +487,7 @@ def make_train(config, fake_images=None):
             ):
                 return do_train(image_blob)
         elif config.ENV.NUM_GPUS == 4:
-            @flow.function
+            @flow.function(cfg)
             def train(
                 image_blob_0=flow.input_blob_def(
                     shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
@@ -492,9 +506,8 @@ def make_train(config, fake_images=None):
         else:
             raise NotImplementedError
         return train
-
     else:
-        @flow.function
+        @flow.function(cfg)
         def train():
             return do_train()
         return train
@@ -585,17 +598,17 @@ def add_metrics(metrics_df, iter=None, **kwargs):
 
 
 class IterationProcessor(object):
-    def __init__(self, start_iter, check_point, cfg):
+    def __init__(self, start_iter, check_point, config):
         self.start_time = time.perf_counter()
         self.elapsed_times = []
-        self.checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
-        self.save_metrics_period = cfg.SOLVER.METRICS_PERIOD
-        self.max_iter = cfg.SOLVER.MAX_ITER
-        self.img_per_batch = cfg.SOLVER.IMS_PER_BATCH
-        self.ngpus = cfg.ENV.NUM_GPUS
-        self.image_dir = (cfg.DATASETS.IMAGE_DIR_TRAIN,)
+        self.checkpoint_period = config.SOLVER.CHECKPOINT_PERIOD
+        self.save_metrics_period = config.SOLVER.METRICS_PERIOD
+        self.max_iter = config.SOLVER.MAX_ITER
+        self.img_per_batch = config.SOLVER.IMS_PER_BATCH
+        self.ngpus = config.ENV.NUM_GPUS
+        self.image_dir = (config.DATASETS.IMAGE_DIR_TRAIN,)
         self.metrics = pd.DataFrame(
-            {"iter": start_iter, "legend": "cfg", "note": str(cfg)}, index=[0]
+            {"iter": start_iter, "legend": "cfg", "note": str(config)}, index=[0]
         )
         self.check_point = check_point
         self.start_iter = start_iter
@@ -621,7 +634,7 @@ class IterationProcessor(object):
         rank_size = (
             metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
         )
-        if terminal_args.print_loss_each_rank and rank_size > 1:
+        if ARGS.print_loss_each_rank and rank_size > 1:
             for rank_i in range(rank_size):
                 tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
                 tansposed["rank"] = rank_i
@@ -674,10 +687,10 @@ def load_fake_images(path):
 
 def run():
     # Get mrcn train function
-    config = merge_and_compare_config(terminal_args)
+    config = merge_and_compare_config(ARGS)
     fake_images = None
-    if hasattr(terminal_args, "fake_image_path"):
-        fake_images = load_fake_images(terminal_args.fake_image_path)
+    if hasattr(ARGS, "fake_image_path"):
+        fake_images = load_fake_images(ARGS.fake_image_path)
         train_func = make_train(config, fake_images=fake_images)
     else:
         train_func = make_train(config)
@@ -685,7 +698,7 @@ def run():
     # model init
     check_point = flow.train.CheckPoint()
     check_point.init()
-    # check_point.load(terminal_args.model_load_dir)
+    # check_point.load(ARGS.model_load_dir)
 
     iter_file = os.path.join(
         config.MODEL.WEIGHT,
