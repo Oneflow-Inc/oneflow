@@ -7,7 +7,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-#import oneflow.core.data.data_pb2 as data_util
+import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -431,6 +431,7 @@ class DataLoader(object):
         op_conf.data_load_conf.transforms.extend(
             [transform.to_proto() for transform in self._transforms]
         )
+        lbis_dict = {}
         for blob in self._blobs:
             blob_conf = op_conf_util.BlobConf()
             blob_conf.name = blob["name"]
@@ -449,6 +450,8 @@ class DataLoader(object):
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_conf.name
             lbi.blob_name = blob_conf.name
-            self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
+            lbis_dict[blob_conf.name] = lbi
 
         compile_context.CurJobAddConsistentOp(op_conf)
+        for name, lbi in lbis_dict.items():
+            self._outputs[name] = remote_blob_util.RemoteBlob(lbi)
