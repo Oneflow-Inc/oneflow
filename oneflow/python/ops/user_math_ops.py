@@ -229,4 +229,34 @@ def reciprocal_no_nan(x, name=None):
             .SetAttr("unary_math_type", "ReciprocalNoNan", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.rint")
+def rint(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Rint_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Rint", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.round")
+def round(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Round_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Round", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.rsqrt_v2")
+def rsqrt(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Rsqrt_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Rsqrt", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 
