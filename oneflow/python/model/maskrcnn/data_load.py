@@ -37,7 +37,7 @@ def make_data_loader(cfg, is_train):
             data_util.kObjectBoundingBox,
             shape=(cfg.INPUT.MAX_BOXES_PER_IMAGE, 4),
             dtype=flow.float,
-            variable_length_axes=(0,),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
         data_loader.add_blob(
@@ -45,28 +45,28 @@ def make_data_loader(cfg, is_train):
             data_util.kObjectLabel,
             shape=(cfg.INPUT.MAX_BOXES_PER_IMAGE,),
             dtype=flow.int32,
-            variable_length_axes=(0,),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
-        data_loader.add_blob(
-            "gt_segm_poly",
-            data_util.kObjectSegmentation,
-            shape=(
-                cfg.INPUT.MAX_BOXES_PER_IMAGE,
-                cfg.INPUT.MAX_POLYGONS_PER_OBJECT,
-                cfg.INPUT.MAX_POINTS_PER_POLYGON,
-                2,
-            ),
-            dtype=flow.double,
-            variable_length_axes=(0, 1, 2),
-            is_dynamic=True,
-        )
+        # data_loader.add_blob(
+        #     "gt_segm_poly",
+        #     data_util.kObjectSegmentation,
+        #     shape=(
+        #         cfg.INPUT.MAX_BOXES_PER_IMAGE,
+        #         cfg.INPUT.MAX_POLYGONS_PER_OBJECT,
+        #         cfg.INPUT.MAX_POINTS_PER_POLYGON,
+        #         2,
+        #     ),
+        #     dtype=flow.double,
+        #     variable_length_axes=(0, 1, 2),
+        #     is_dynamic=True,
+        # )
         data_loader.add_blob(
             "gt_segm",
             data_util.kObjectSegmentationAlignedMask,
             shape=(cfg.INPUT.MAX_BOXES_PER_IMAGE, aligned_max_size, aligned_min_size),
             dtype=flow.int8,
-            variable_length_axes=(0,),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
         data_loader.add_blob(
