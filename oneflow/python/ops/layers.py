@@ -159,6 +159,7 @@ def layer_norm(
     trainable=True,
     begin_norm_axis=1,
     begin_params_axis=-1,
+    epsilon=1e-5,
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
@@ -178,7 +179,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(0.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="beta",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
@@ -189,7 +190,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(1.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="gamma",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
@@ -201,6 +202,7 @@ def layer_norm(
     setattr(op_conf.layer_norm_conf, "scale", scale)
     setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)

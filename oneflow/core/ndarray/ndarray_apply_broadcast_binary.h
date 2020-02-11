@@ -16,13 +16,13 @@ struct NdarrayApplyBroadcastBinary<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Apply(DeviceCtx* ctx,
-                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
-                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+  using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
+  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
+                    const XpuVarNdarray<const T>& b) {
     if (a.shape() == b.shape()) {
       return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
     }
-    if (y.shape() == a.shape() && y.ptr() == a.ptr()) { return InplaceApply(ctx, y, b); }
+    if (TryInplaceApply<std::is_same<RetT, T>::value>(ctx, y, a, b)) { return; }
     CheckBroadcastable(y, a, b);
     DimVector simplified_y_dim;
     DimVector simplified_a_dim;
@@ -30,9 +30,25 @@ struct NdarrayApplyBroadcastBinary<
     SimplifyBroadcastShapes(y.shape(), a.shape(), b.shape(), &simplified_y_dim, &simplified_a_dim,
                             &simplified_b_dim);
     return SwitchApply(SwitchCase(simplified_y_dim.size()), ctx,
-                       XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
+                       XpuVarNdarray<RetT>(Shape(simplified_y_dim), y.ptr()),
                        XpuVarNdarray<const T>(Shape(simplified_a_dim), a.ptr()),
                        XpuVarNdarray<const T>(Shape(simplified_b_dim), b.ptr()));
+  }
+
+  template<bool enabled>
+  static typename std::enable_if<enabled, bool>::type TryInplaceApply(
+      DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
+      const XpuVarNdarray<const T>& b) {
+    bool is_inplace = (y.shape() == a.shape() && y.ptr() == a.ptr());
+    if (is_inplace) { InplaceApply(ctx, y, b); }
+    return is_inplace;
+  }
+
+  template<bool enabled>
+  static typename std::enable_if<!enabled, bool>::type TryInplaceApply(
+      DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
+      const XpuVarNdarray<const T>& b) {
+    return false;
   }
 
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,

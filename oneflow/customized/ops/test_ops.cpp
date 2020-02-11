@@ -63,6 +63,28 @@ REGISTER_USER_OP("TestReshape")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("TestSource")
+    .Output("out")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = Shape({5});
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split(ctx->outputs(), 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {

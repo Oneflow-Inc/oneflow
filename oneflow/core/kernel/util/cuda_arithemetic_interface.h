@@ -34,6 +34,56 @@ struct ArithemeticIf<DeviceType::kGPU> {
                           int32_t* z);
   static void MulByScalar(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t y,
                           int64_t* z);
+
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                             float* z);
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                             double* z);
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+                             int8_t* z);
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
+                             int32_t* z);
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
+                             int64_t* z);
+
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                             float* z);
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                             double* z);
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+                             int8_t* z);
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
+                             int32_t* z);
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
+                             int64_t* z);
+
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                             float* z);
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                             double* z);
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+                             int8_t* z);
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
+                             int32_t* z);
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
+                             int64_t* z);
+
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                             float* z);
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                             double* z);
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+                             int8_t* z);
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
+                             int32_t* z);
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
+                             int64_t* z);
+
+  static void Fill(DeviceCtx* ctx, const int64_t n, const float value, float* y);
+  static void Fill(DeviceCtx* ctx, const int64_t n, const double value, double* y);
+  static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
+  static void Fill(DeviceCtx* ctx, const int64_t n, const int32_t value, int32_t* y);
+  static void Fill(DeviceCtx* ctx, const int64_t n, const int64_t value, int64_t* y);
 };
 
 }  // namespace oneflow

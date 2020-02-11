@@ -112,4 +112,74 @@ MUL_BY_SCALAR(int64_t);
 
 #undef MUL_BY_SCALAR
 
+#define MUL_BY_SCALAR_PTR(T)                                                            \
+  void ArithemeticIf<DeviceType::kCPU>::MulByScalarPtr(DeviceCtx* ctx, const int64_t n, \
+                                                       const T* x, const T* y, T* z) {  \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }                             \
+  }
+
+MUL_BY_SCALAR_PTR(float);
+MUL_BY_SCALAR_PTR(double);
+MUL_BY_SCALAR_PTR(int8_t);
+MUL_BY_SCALAR_PTR(int32_t);
+MUL_BY_SCALAR_PTR(int64_t);
+
+#undef MUL_BY_SCALAR_PTR
+
+#define ADD_BY_SCALAR_PTR(T)                                                            \
+  void ArithemeticIf<DeviceType::kCPU>::AddByScalarPtr(DeviceCtx* ctx, const int64_t n, \
+                                                       const T* x, const T* y, T* z) {  \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y[0]; }                             \
+  }
+
+ADD_BY_SCALAR_PTR(float);
+ADD_BY_SCALAR_PTR(double);
+ADD_BY_SCALAR_PTR(int8_t);
+ADD_BY_SCALAR_PTR(int32_t);
+ADD_BY_SCALAR_PTR(int64_t);
+
+#undef ADD_BY_SCALAR_PTR
+
+#define SUB_BY_SCALAR_PTR(T)                                                            \
+  void ArithemeticIf<DeviceType::kCPU>::SubByScalarPtr(DeviceCtx* ctx, const int64_t n, \
+                                                       const T* x, const T* y, T* z) {  \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] - y[0]; }                             \
+  }
+
+SUB_BY_SCALAR_PTR(float);
+SUB_BY_SCALAR_PTR(double);
+SUB_BY_SCALAR_PTR(int8_t);
+SUB_BY_SCALAR_PTR(int32_t);
+SUB_BY_SCALAR_PTR(int64_t);
+
+#undef SUB_BY_SCALAR_PTR
+
+#define DIV_BY_SCALAR_PTR(T)                                                            \
+  void ArithemeticIf<DeviceType::kCPU>::DivByScalarPtr(DeviceCtx* ctx, const int64_t n, \
+                                                       const T* x, const T* y, T* z) {  \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[0]; }                             \
+  }
+
+DIV_BY_SCALAR_PTR(float);
+DIV_BY_SCALAR_PTR(double);
+DIV_BY_SCALAR_PTR(int8_t);
+DIV_BY_SCALAR_PTR(int32_t);
+DIV_BY_SCALAR_PTR(int64_t);
+
+#undef DIV_BY_SCALAR_PTR
+
+#define FILL(T)                                                                              \
+  void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
+                                             T* y) {                                         \
+    std::fill_n(y, n, value);                                                                \
+  }
+
+FILL(float);
+FILL(double);
+FILL(int8_t);
+FILL(int32_t);
+FILL(int64_t);
+
+#undef FILL
+
 }  // namespace oneflow

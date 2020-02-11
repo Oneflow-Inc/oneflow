@@ -152,6 +152,7 @@ message GatherMs0KernelConf {
 
 message GatherMs0GradKernelConf {
   required int64 offset = 1;
+  required DataType indices_data_type = 2;
 }
 
 message NcclTupleReduceConf {
@@ -174,6 +175,18 @@ message UserKernelConf {
 
 message XrtLaunchKernelConf {
   required ParallelContext parallel_ctx = 1;
+}
+
+message UniqueWithCountsKernelConf {
+  required DataType indices_data_type = 1;
+}
+
+message IndexedSlicesReduceSumKernelConf {
+  required DataType indices_data_type = 1;
+}
+
+message UnsortedSegmentSumKernelConf {
+  required DataType indices_data_type = 1;
 }
 
 message KernelConf {
@@ -200,6 +213,9 @@ message KernelConf {
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
+    UniqueWithCountsKernelConf unique_with_counts_conf = 354;
+    IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
+    UnsortedSegmentSumKernelConf unsorted_segment_sum_conf = 356;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;

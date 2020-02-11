@@ -12,7 +12,7 @@ namespace oneflow {
 namespace {
 
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  const auto& job_name = *JUST(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
+  const auto job_name = *JUST(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
   return Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name);
 }
 

@@ -17,6 +17,10 @@ class BroadcastDivGradOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
  private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
 };
 
 }  // namespace oneflow
