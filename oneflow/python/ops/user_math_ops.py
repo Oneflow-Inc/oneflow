@@ -149,4 +149,14 @@ def expm1(x, name=None):
             .SetAttr("unary_math_type", "Expm1", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.floor")
+def floor(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Floor_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Floor", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 
