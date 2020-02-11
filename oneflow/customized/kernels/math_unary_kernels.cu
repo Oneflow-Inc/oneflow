@@ -53,6 +53,16 @@ __device__ float LgammaCalInDiff4GpuFloat(float x, float dy) {
   return 0.0;
 }
 
+__device__ float LogCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / x); }
+
+__device__ float Log1pCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (x + 1.0)); }
+
+__device__ float LogSigmoid4GpuFloat(float x) { return logf(1.0 / (1.0 + expf(-x))); }
+
+__device__ float LogSigmoidCalInDiff4GpuFloat(float x, float dy) {
+  return dy * (1.0 / (expf(x) + 1.0));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
@@ -80,23 +90,26 @@ __device__ float LgammaCalInDiff4GpuFloat(float x, float dy) {
                              ctx->cuda_stream()>>>(n, x, dy, dx);                           \
   }
 
-#define MATH_UNARY_GPU_FLOAT_SEQ       \
-  OF_PP_MAKE_TUPLE_SEQ("Abs", Abs)     \
-  OF_PP_MAKE_TUPLE_SEQ("Acos", Acos)   \
-  OF_PP_MAKE_TUPLE_SEQ("Acosh", Acosh) \
-  OF_PP_MAKE_TUPLE_SEQ("Asin", Asin)   \
-  OF_PP_MAKE_TUPLE_SEQ("Asinh", Asinh) \
-  OF_PP_MAKE_TUPLE_SEQ("Atan", Atan)   \
-  OF_PP_MAKE_TUPLE_SEQ("Atanh", Atanh) \
-  OF_PP_MAKE_TUPLE_SEQ("Ceil", Ceil)   \
-  OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)     \
-  OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)   \
-  OF_PP_MAKE_TUPLE_SEQ("Erf", Erf)     \
-  OF_PP_MAKE_TUPLE_SEQ("Erfc", Erfc)   \
-  OF_PP_MAKE_TUPLE_SEQ("Exp", Exp)     \
-  OF_PP_MAKE_TUPLE_SEQ("Expm1", Expm1) \
-  OF_PP_MAKE_TUPLE_SEQ("Floor", Floor) \
-  OF_PP_MAKE_TUPLE_SEQ("Lgamma", Lgamma)
+#define MATH_UNARY_GPU_FLOAT_SEQ         \
+  OF_PP_MAKE_TUPLE_SEQ("Abs", Abs)       \
+  OF_PP_MAKE_TUPLE_SEQ("Acos", Acos)     \
+  OF_PP_MAKE_TUPLE_SEQ("Acosh", Acosh)   \
+  OF_PP_MAKE_TUPLE_SEQ("Asin", Asin)     \
+  OF_PP_MAKE_TUPLE_SEQ("Asinh", Asinh)   \
+  OF_PP_MAKE_TUPLE_SEQ("Atan", Atan)     \
+  OF_PP_MAKE_TUPLE_SEQ("Atanh", Atanh)   \
+  OF_PP_MAKE_TUPLE_SEQ("Ceil", Ceil)     \
+  OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)       \
+  OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)     \
+  OF_PP_MAKE_TUPLE_SEQ("Erf", Erf)       \
+  OF_PP_MAKE_TUPLE_SEQ("Erfc", Erfc)     \
+  OF_PP_MAKE_TUPLE_SEQ("Exp", Exp)       \
+  OF_PP_MAKE_TUPLE_SEQ("Expm1", Expm1)   \
+  OF_PP_MAKE_TUPLE_SEQ("Floor", Floor)   \
+  OF_PP_MAKE_TUPLE_SEQ("Lgamma", Lgamma) \
+  OF_PP_MAKE_TUPLE_SEQ("Log", Log)       \
+  OF_PP_MAKE_TUPLE_SEQ("Log1p", Log1p)   \
+  OF_PP_MAKE_TUPLE_SEQ("LogSigmoid", LogSigmoid)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -114,6 +127,9 @@ MATH_UNARY_GPU(Exp, expf, ExpCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Expm1, expm1f, Expm1CalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Floor, floorf, FloorCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Lgamma, lgammaf, LgammaCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Log, logf, LogCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Log1p, log1pf, Log1pCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(LogSigmoid, LogSigmoid4GpuFloat, LogSigmoidCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:

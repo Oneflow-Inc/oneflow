@@ -169,5 +169,33 @@ def lgamma(x, name=None):
             .SetAttr("unary_math_type", "Lgamma", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.log")
+def log(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Log_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Log", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.log1p")
+def log1p(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Log1p_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Log1p", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.log_sigmoid")
+def log_sigmoid(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("LogSigmoid_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "LogSigmoid", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
 
