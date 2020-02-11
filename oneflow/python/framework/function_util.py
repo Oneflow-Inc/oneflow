@@ -303,3 +303,16 @@ def set_default_distribute_strategy(func_desc, value):
 @oneflow_function_config('allow_cpu_return_op')
 def allow_cpu_return_op(func_desc, value):
     func_desc.function_attribute.allow_cpu_return_op = value
+
+@oneflow_function_config("cudnn_conv_heuristic_search_algo")
+def set_cudnn_conv_heuristic_search_algo(func_desc, value=True):
+    func_desc.job_config_proto.cudnn_conv_heuristic_search_algo = value
+
+@oneflow_function_config("cudnn_conv_use_deterministic_algo_only")
+def set_cudnn_conv_use_deterministic_algo_only(func_desc, value=True):
+    func_desc.job_config_proto.cudnn_conv_use_deterministic_algo_only = value
+
+@oneflow_function_config("default_initialize_with_snapshot_path")
+def set_default_initialize_with_snapshot_path(func_desc, value=True):
+    assert isinstance(value, str)
+    func_desc.job_config_proto.default_initialize_with_snapshot_path = value
