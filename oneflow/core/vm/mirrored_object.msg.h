@@ -67,7 +67,8 @@ BEGIN_OBJECT_MSG(MirroredObjectAccess);
   OBJECT_MSG_DEFINE_OPTIONAL(MirroredObjectAccessType, access_type);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(access_pending_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(available_access_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, mirrored_object_access_link,
                               vpu_instr_operand_list);
 END_OBJECT_MSG(MirroredObjectAccess);
@@ -86,8 +87,10 @@ BEGIN_OBJECT_MSG(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
-  OBJECT_MSG_DEFINE_LIST_LINK(released_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, access_pending_link, access_pending_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
+                              waiting_access_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
+                              holding_access_list);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
