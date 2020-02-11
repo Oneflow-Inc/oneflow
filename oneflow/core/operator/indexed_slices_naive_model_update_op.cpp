@@ -97,7 +97,7 @@ void IndexedSlicesNaiveMdUpdateOp::VirtualGenKernelConf(
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   const BlobDesc* indices_blob = GetBlobDesc4BnInOp("model_diff_indices");
   const int64_t num_model_instances = model_logical_blob_desc.shape().At(0);
-  IndexedSlicesNaiveMdUpdateKernelConf* indexed_slices_naive_model_update_conf =
+  IndexedSlicesNaiveModelUpdateKernelConf* indexed_slices_naive_model_update_conf =
       kernel_conf->mutable_indexed_slices_naive_model_update_conf();
   indexed_slices_naive_model_update_conf->set_indices_data_type(indices_blob->data_type());
   if (model_blob_desc->shape().At(0) == num_model_instances) {

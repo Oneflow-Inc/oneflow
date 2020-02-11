@@ -107,7 +107,7 @@ void IndexedSlicesLazyAdamMdUpdateOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("model")->data_type());
-  IndexedSlicesLazyAdamMdUpdateKernelConf* conf =
+  IndexedSlicesLazyAdamModelUpdateKernelConf* conf =
       kernel_conf->mutable_indexed_slices_lazy_adam_model_update_conf();
   conf->set_indices_data_type(GetBlobDesc4BnInOp("model_diff_indices")->data_type());
   BalancedSplitter bs(LogicalBlobDesc4BnInOp("model").shape().At(0), parallel_ctx->parallel_num());
