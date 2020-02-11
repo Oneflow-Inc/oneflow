@@ -246,8 +246,14 @@ def round(x, name=None):
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
             .Input("x",[x])\
             .Output("y")\
-            .SetAttr("unary_math_type", "Round", "AttrTypeString")\
+            .SetAttr("unary_math_type", "Rint", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
+            # TODO(chengcheng)
+            # using rint() instead of round().
+            # because in c++ round() NOT rounds to the nearest even value:
+            # such as: round(1.5) != round(2.5)
+            #     BUT: rint(1.5) == rint(2.5) == 2.0
+            # AND in numpy: round(1.5) == round(2.5) == 2.0
 
 @oneflow_export("math.rsqrt_v2")
 def rsqrt(x, name=None):
