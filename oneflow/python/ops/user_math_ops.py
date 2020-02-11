@@ -209,3 +209,24 @@ def negative(x, name=None):
             .SetAttr("unary_math_type", "Negative", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.reciprocal")
+def reciprocal(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Reciprocal_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Reciprocal", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.reciprocal_no_nan")
+def reciprocal_no_nan(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ReciprocalNoNan_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "ReciprocalNoNan", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+

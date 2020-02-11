@@ -67,6 +67,20 @@ __device__ float Negative4GpuFloat(float x) { return -x; }
 
 __device__ float NegativeCalInDiff4GpuFloat(float x, float dy) { return -dy; }
 
+__device__ float Reciprocal4GpuFloat(float x) { return 1.0 / x; }
+
+__device__ float ReciprocalCalInDiff4GpuFloat(float x, float dy) { return dy * (-1.0 / (x * x)); }
+
+__device__ float ReciprocalNoNan4GpuFloat(float x) {
+  if (fabsf(x) <= 0.0) { return 0.0; }
+  return 1.0 / x;
+}
+
+__device__ float ReciprocalNoNanCalInDiff4GpuFloat(float x, float dy) {
+  if (fabsf(x) <= 0.0) { return 0.0; }
+  return dy * (-1.0 / (x * x));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
@@ -114,7 +128,9 @@ __device__ float NegativeCalInDiff4GpuFloat(float x, float dy) { return -dy; }
   OF_PP_MAKE_TUPLE_SEQ("Log", Log)               \
   OF_PP_MAKE_TUPLE_SEQ("Log1p", Log1p)           \
   OF_PP_MAKE_TUPLE_SEQ("LogSigmoid", LogSigmoid) \
-  OF_PP_MAKE_TUPLE_SEQ("Negative", Negative)
+  OF_PP_MAKE_TUPLE_SEQ("Negative", Negative)     \
+  OF_PP_MAKE_TUPLE_SEQ("Reciprocal", Reciprocal) \
+  OF_PP_MAKE_TUPLE_SEQ("ReciprocalNoNan", ReciprocalNoNan)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -136,6 +152,8 @@ MATH_UNARY_GPU(Log, logf, LogCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Log1p, log1pf, Log1pCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(LogSigmoid, LogSigmoid4GpuFloat, LogSigmoidCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Negative, Negative4GpuFloat, NegativeCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Reciprocal, Reciprocal4GpuFloat, ReciprocalCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(ReciprocalNoNan, ReciprocalNoNan4GpuFloat, ReciprocalNoNanCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
