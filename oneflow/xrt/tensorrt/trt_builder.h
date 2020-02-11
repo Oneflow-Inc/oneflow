@@ -87,6 +87,8 @@ class TrtBuilder {
     network_.reset(builder_->createNetworkV2(flags));
   }
 
+  const std::string &name() const { return builder_name_; }
+
   nvinfer1::ITensor *GetTensor(int64_t handle);
 
   nvinfer1::Weights &GetWeight(int64_t handle);

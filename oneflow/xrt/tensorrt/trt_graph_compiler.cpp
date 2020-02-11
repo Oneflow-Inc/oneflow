@@ -78,9 +78,9 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     builder_->MarkOutput(value.handle());
   }
 
-  // return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
-  return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(), builder_->ReleaseNetwork(),
-                                         builder_->host_weights());
+  // return std::make_shared<TrtExecutable>(builder_->name(), builder_->BuildCudaEngine());
+  return std::make_shared<TrtExecutable>(builder_->name(), builder_->ReleaseBuilder(),
+                                         builder_->ReleaseNetwork(), builder_->host_weights());
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TENSORRT, TrtGraphCompiler);

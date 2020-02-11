@@ -32,6 +32,25 @@ int GetDeviceId(const XrtDevice &device) {
   return 0;  // Compiler warning free
 }
 
+void SetDeviceId(const XrtDevice &device, const int device_id) {
+  switch (device) {
+    case XrtDevice::CPU_X86: return;
+    case XrtDevice::GPU_CUDA: {
+#ifdef WITH_CUDA
+      CHECK_EQ(cudaSuccess, cudaSetDevice(device_id));
+      return;
+#endif
+    }
+    case XrtDevice::GPU_CL:
+    // TODO(hjchen2)
+    case XrtDevice::CPU_ARM:
+    // TODO(hjchen2)
+    case XrtDevice::GPU_ARM:
+      // TODO(hjchen2)
+      return;
+  }
+}
+
 }  // namespace platform
 
 }  // namespace xrt
