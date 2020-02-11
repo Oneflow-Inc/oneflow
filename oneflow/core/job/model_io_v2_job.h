@@ -6,7 +6,8 @@
 
 namespace oneflow {
 
-void MakeModelIoV2Jobs(const std::vector<Job>& jobs, const HashMap<std::string, ParallelBlobConf>&,
+void MakeModelIoV2Jobs(const std::vector<std::shared_ptr<Job>>& jobs,
+                       const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
                        const std::function<void(Job*)>& Handler);
 
 }  // namespace oneflow
