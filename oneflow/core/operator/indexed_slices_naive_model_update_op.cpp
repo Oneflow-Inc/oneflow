@@ -48,17 +48,17 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::InferBlobDescs(
   const BlobDesc* values = GetBlobDesc4BnInOp("model_diff_values");
   OF_CHECK(IsIndexDataType(indices->data_type()));
   const int64_t num_indices_axes = indices->shape().NumAxes();
-  const int64_t num_updates_axes = values->shape().NumAxes();
-  OF_CHECK_GE(num_updates_axes, num_indices_axes);
+  const int64_t num_values_axes = values->shape().NumAxes();
+  OF_CHECK_GE(num_values_axes, num_indices_axes);
   FOR_RANGE(int64_t, i, 0, num_indices_axes) {
     OF_CHECK_EQ(values->shape().At(i), indices->shape().At(i));
   }
   const BlobDesc* model = GetBlobDesc4BnInOp("model");
   OF_CHECK_EQ(model->data_type(), values->data_type());
-  const int64_t num_ref_axes = model->shape().NumAxes();
-  OF_CHECK_EQ(num_ref_axes, num_updates_axes - num_indices_axes + 1);
-  FOR_RANGE(int64_t, i, 1, num_ref_axes) {
-    OF_CHECK_EQ(model->shape().At(i), values->shape().At(num_indices_axes + i));
+  const int64_t num_model_axes = model->shape().NumAxes();
+  OF_CHECK_EQ(num_model_axes, num_values_axes - num_indices_axes + 1);
+  FOR_RANGE(int64_t, i, 1, num_model_axes) {
+    OF_CHECK_EQ(model->shape().At(i), values->shape().At(num_indices_axes + i - 1));
   }
   const BlobDesc* learning_rate = GetBlobDesc4BnInOp("learning_rate");
   OF_CHECK_EQ(learning_rate->data_type(), DataType::kFloat);
@@ -71,14 +71,14 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   const int64_t num_indices_axes =
       JUST(LogicalBlobDesc4Ibn("model_diff_indices"))->shape().NumAxes();
-  const int64_t num_ref_axes = JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes();
+  const int64_t num_model_axes = JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes();
   SbpSignatureBuilder()
       .Broadcast("learning_rate")
       .Broadcast("model_diff_indices")
       .Broadcast("model_diff_values")
       .Split("model", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  FOR_RANGE(int64_t, i, 1, num_ref_axes) {
+  FOR_RANGE(int64_t, i, 1, num_model_axes) {
     SbpSignatureBuilder()
         .Broadcast("learning_rate")
         .Broadcast("model_diff_indices")
@@ -96,6 +96,7 @@ void IndexedSlicesNaiveMdUpdateOp::VirtualGenKernelConf(
   const BlobDesc& model_logical_blob_desc = LogicalBlobDesc4BnInOp("model");
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   const BlobDesc* indices_blob = GetBlobDesc4BnInOp("model_diff_indices");
+  kernel_conf->set_data_type(model_blob_desc->data_type());
   const int64_t num_model_instances = model_logical_blob_desc.shape().At(0);
   IndexedSlicesNaiveModelUpdateKernelConf* indexed_slices_naive_model_update_conf =
       kernel_conf->mutable_indexed_slices_naive_model_update_conf();
