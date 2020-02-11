@@ -45,24 +45,24 @@ void IndexedSlicesMomentumMdUpdateKernel<device_type, T, K>::ForwardDataContent(
                             diff_values->dptr<T>(), num_unique_diff_indices->mut_dptr<int32_t>(),
                             unique_diff_indices->mut_dptr<K>(), unique_diff_values->mut_dptr<T>(),
                             unique_workspace->mut_dptr(), unique_workspace->ByteSizeOfBlobBody());
-  MdUpdateUtilT::Update(ctx.device_ctx, beta, num_indices, feature_size,
-                        lower_bound, upper_bound, num_unique_diff_indices->mut_dptr<int32_t>(),
-                        train_step_ptr, learning_rate_ptr, unique_diff_indices->dptr<K>(),
+  MdUpdateUtilT::Update(ctx.device_ctx, beta, num_indices, feature_size, lower_bound, upper_bound,
+                        num_unique_diff_indices->mut_dptr<int32_t>(), train_step_ptr,
+                        learning_rate_ptr, unique_diff_indices->dptr<K>(),
                         unique_diff_values->dptr<T>(), BnInOp2Blob("model")->mut_dptr<T>(),
                         BnInOp2Blob("momentum")->mut_dptr<T>());
 }
 
 #define MAKE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_ENTRY(device_type_v, data_type_pair,     \
-                                                                indices_type_pair)                 \
-  NEW_REGISTER_KERNEL(                                                                             \
-      OperatorConf::kIndexedSlicesMomentumModelUpdateConf,                                         \
-      IndexedSlicesMomentumMdUpdateKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),         \
-                                          OF_PP_PAIR_FIRST(indices_type_pair)>)                    \
-      .SetIsMatchedPred([](const KernelConf& kernel_conf) -> bool {                                \
-        return (                                                                                   \
-            (kernel_conf.op_attribute().op_conf().device_type() == device_type_v)                  \
-            && ((OF_PP_PAIR_SECOND(data_type_pair)) == kernel_conf.data_type())                    \
-            && (OF_PP_PAIR_SECOND(indices_type_pair)                                               \
+                                                               indices_type_pair)                 \
+  NEW_REGISTER_KERNEL(                                                                            \
+      OperatorConf::kIndexedSlicesMomentumModelUpdateConf,                                        \
+      IndexedSlicesMomentumMdUpdateKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
+                                          OF_PP_PAIR_FIRST(indices_type_pair)>)                   \
+      .SetIsMatchedPred([](const KernelConf& kernel_conf) -> bool {                               \
+        return (                                                                                  \
+            (kernel_conf.op_attribute().op_conf().device_type() == device_type_v)                 \
+            && ((OF_PP_PAIR_SECOND(data_type_pair)) == kernel_conf.data_type())                   \
+            && (OF_PP_PAIR_SECOND(indices_type_pair)                                              \
                 == kernel_conf.indexed_slices_momentum_model_update_conf().indices_data_type())); \
       });
 
