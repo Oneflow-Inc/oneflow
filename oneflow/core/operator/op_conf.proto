@@ -1710,14 +1710,14 @@ message ScalarDivByTensorOpConf {
   required string out = 3;
 }
 
-message IndexedSlicesNaiveMdUpdateOpConf {
+message IndexedSlicesNaiveModelUpdateOpConf {
   required string model_diff_indices = 1;
   required string model_diff_values = 2;
   required string model = 3;
   required string learning_rate = 4;
 }
 
-message IndexedSlicesLazyAdamMdUpdateOpConf {
+message IndexedSlicesLazyAdamModelUpdateOpConf {
   required string m = 1;
   required string v = 2;
   required string model_diff_indices = 3;
@@ -1797,8 +1797,8 @@ message OperatorConf {
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
-    IndexedSlicesNaiveMdUpdateOpConf indexed_slices_naive_model_update_conf = 163;
-    IndexedSlicesLazyAdamMdUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 164;
+    IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
+    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 164;
     UserOpConf user_conf = 199;
     
     // domain op

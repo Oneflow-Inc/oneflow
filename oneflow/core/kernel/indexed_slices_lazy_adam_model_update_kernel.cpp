@@ -2,7 +2,6 @@
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/kernel/indexed_slices_lazy_adam_model_update_kernel_util.h"
-#include "oneflow/core/kernel/unique_kernel_util.h"
 
 namespace oneflow {
 
@@ -23,7 +22,7 @@ class IndexedSlicesLazyAdamMdUpdateKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T, typename K>
 void IndexedSlicesLazyAdamMdUpdateKernel<device_type, T, K>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const IndexedSlicesLazyAdamMdUpdateOpConf& conf =
+  const IndexedSlicesLazyAdamModelUpdateOpConf& conf =
       this->op_conf().indexed_slices_lazy_adam_model_update_conf();
   const T beta1 = static_cast<T>(conf.beta1());
   const T beta2 = static_cast<T>(conf.beta2());
