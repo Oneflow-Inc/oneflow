@@ -119,4 +119,14 @@ def erf(x, name=None):
             .SetAttr("unary_math_type", "Erf", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.erfc")
+def erfc(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Erfc_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Erfc", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 
