@@ -5,8 +5,8 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 
 from oneflow.python.framework.remote_blob import RemoteBlob
-from oneflow.python.advanced.distribute_split import distribute_split
-from oneflow.python.advanced.distribute_clone import distribute_clone
+from oneflow.python.advanced.distribute_ops import distribute_split
+from oneflow.python.advanced.distribute_ops import distribute_clone
 from oneflow.python.deprecated.variable_scope import distribution_name_scope
 from oneflow.python.oneflow_export import oneflow_export
 
