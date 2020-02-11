@@ -109,3 +109,14 @@ def cosh(x, name=None):
             .SetAttr("unary_math_type", "Cosh", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.erf")
+def erf(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Erf_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Erf", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+

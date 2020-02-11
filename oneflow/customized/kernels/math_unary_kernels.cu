@@ -1,5 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include <math.h>
 
 namespace oneflow {
 
@@ -30,6 +31,10 @@ __device__ float CosCalInDiff4GpuFloat(float x, float dy) { return dy * (-sinf(x
 
 __device__ float CoshCalInDiff4GpuFloat(float x, float dy) {
   return dy * (expf(x) + expf(-x)) / 2.0;
+}
+
+__device__ float ErfCalInDiff4GpuFloat(float x, float dy) {
+  return dy * 2.0 * rsqrtf(M_PI) * expf(-x * x);
 }
 
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
@@ -69,7 +74,8 @@ __device__ float CoshCalInDiff4GpuFloat(float x, float dy) {
   OF_PP_MAKE_TUPLE_SEQ("Atanh", Atanh) \
   OF_PP_MAKE_TUPLE_SEQ("Ceil", Ceil)   \
   OF_PP_MAKE_TUPLE_SEQ("Cos", Cos)     \
-  OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)
+  OF_PP_MAKE_TUPLE_SEQ("Cosh", Cosh)   \
+  OF_PP_MAKE_TUPLE_SEQ("Erf", Erf)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -81,6 +87,7 @@ MATH_UNARY_GPU(Atanh, atanhf, AtanhCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Ceil, ceilf, CeilCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Cos, cosf, CosCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Cosh, coshf, CoshCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Erf, erff, ErfCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
