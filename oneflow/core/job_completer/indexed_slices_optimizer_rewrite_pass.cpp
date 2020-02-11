@@ -42,7 +42,18 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     } else {
       return;
     }
+    std::vector<const OpNode*> op_nodes_to_remove;
     const OpNode* dst_node = src_node->SoleOutEdge()->dst_node();
+    do {
+      if (dst_node->op().output_bns().empty()) { break; }
+      const OperatorConf& dst_op_conf = dst_node->op().op_conf();
+      if (dst_op_conf.has_parallel_cast_conf()) {
+        op_nodes_to_remove.push_back(dst_node);
+        continue;
+      } else {
+        return;
+      }
+    } while (true);
     const OperatorConf& dst_op_conf = dst_node->op().op_conf();
     if (dst_op_conf.has_naive_model_update_conf()) {
       const NaiveModelUpdateOpConf& old_optimizer_conf = dst_op_conf.naive_model_update_conf();
@@ -103,6 +114,7 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     CHECK(!indices_lbn.empty());
     CHECK(!values_lbn.empty());
     if (include_op_name_set.find(model_op_name) == include_op_name_set.end()) { return; }
+    for (const OpNode* node : op_nodes_to_remove) { job_builder->DelOps({node->op().op_conf()}); }
     OperatorConf new_optimizer_op_conf{};
     new_optimizer_op_conf.set_name("System-Optimizer-IndexedSlices-" + model_op_name);
     BuildOptimizer(&new_optimizer_op_conf, indices_lbn, values_lbn);
