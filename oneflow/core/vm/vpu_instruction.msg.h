@@ -63,23 +63,18 @@ END_OBJECT_MSG(VpuInstructionCtx);
 
 // clang-format off
 BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
+  // methods
+  PUBLIC void __Init__(VpuCtx* vpu_ctx);
+  PUBLIC bool Done() const { return status_querier()->Done(); }
+
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx, vpu);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx, vpu_ctx);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, vpu_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, vpu_instruction_ctx_list);
   OBJECT_MSG_DEFINE_LIST_LINK(running_pkg_link);
   OBJECT_MSG_DEFINE_LIST_LINK(launched_pkg_link);
-
-  // methods
-  PUBLIC template<typename NewQuerierT>
-  void __Init__(VpuCtx* vpu, const NewQuerierT& NewQuerier) {
-    set_vpu(vpu);
-    mutable_status_querier()->__Init__(NewQuerier);
-  }
-  PUBLIC bool Done() const { return status_querier()->Done(); }
-
 END_OBJECT_MSG(RunningVpuInstructionPackage);
 // clang-format on
 
@@ -87,13 +82,19 @@ class VpuSetCtx;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
+  // methods
+  PUBLIC void __Init__(VpuSetCtx* vpu_set_ctx) {
+    set_vpu_set_ctx(vpu_set_ctx);
+    mutable_pending_list_mutex()->__Init__();
+  }
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuSetCtx, vpu_set_ctx); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
   // links
+  OBJECT_MSG_DEFINE_LIST_LINK(active_vpu_ctx_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_ctx_link_of_vpu_set);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_ctx_link_of_vpu_type);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
@@ -101,12 +102,6 @@ BEGIN_OBJECT_MSG(VpuCtx);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link,
                               collect_vpu_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link, pending_pkg_list);
-
-  // methods
-  PUBLIC void __Init__(const VpuSetCtx* vpu_set_ctx) {
-    set_vpu_set_ctx(vpu_set_ctx);
-    mutable_pending_list_mutex()->__Init__();
-  }
 END_OBJECT_MSG(VpuCtx);
 // clang-format on
 

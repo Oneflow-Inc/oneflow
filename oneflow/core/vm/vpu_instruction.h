@@ -15,11 +15,18 @@ class VpuInstruction {
   VpuInstruction() = default;
 };
 
+class VpuCtx;
+class ObjectMsgAllocator;
+class VpuInstructionStatusQuerier;
+
 class VpuInstructionFactory {
  public:
   virtual ~VpuInstructionFactory() = default;
 
   virtual const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const = 0;
+  virtual VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
+                                                        int* allocated_size,
+                                                        const VpuCtx* vpu_ctx) const = 0;
 
  protected:
   VpuInstructionFactory() = default;

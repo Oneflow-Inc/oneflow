@@ -167,14 +167,14 @@ TEST(ObjectMsgList, Clear) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
+TEST(ObjectMsgList, FOR_EACH_UNSAFE_PTR) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -256,7 +256,7 @@ TEST(ObjectMsg, nested_list_delete) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
