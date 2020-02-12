@@ -13,7 +13,13 @@ BEGIN_FLAT_MSG(LogicalObjectId);
     FLAT_MSG_ONEOF_FIELD(uint64_t, local_value));
 
   // methods
+ public:
   FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  uint64_t value() const {
+    if (has_remote_value()) { return remote_value(); }
+    if (has_local_value()) { return local_value(); }
+    return 0;
+  }
 END_FLAT_MSG(LogicalObjectId);
 // clang-format on
 

@@ -269,8 +269,6 @@ class ObjectMsgStruct {
   void __Delete__() {}
 
   int32_t ref_cnt() const { return ref_cnt_; }
-
- protected:
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
  private:
