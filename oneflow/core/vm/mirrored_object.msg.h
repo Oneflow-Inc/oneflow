@@ -10,23 +10,23 @@
 namespace oneflow {
 
 // clang-format off
-BEGIN_OBJECT_MSG(LogicalBlobId);
-END_OBJECT_MSG(LogicalBlobId);
+BEGIN_OBJECT_MSG(LogicalBlobIdObj);
+END_OBJECT_MSG(LogicalBlobIdObj);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(BlobDesc);
-END_OBJECT_MSG(BlobDesc);
+BEGIN_OBJECT_MSG(BlobDescObj);
+END_OBJECT_MSG(BlobDescObj);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(Blob);
-END_OBJECT_MSG(Blob);
+BEGIN_OBJECT_MSG(BlobObj);
+END_OBJECT_MSG(BlobObj);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(Operator);
-END_OBJECT_MSG(Operator);
+BEGIN_OBJECT_MSG(OperatorObj);
+END_OBJECT_MSG(OperatorObj);
 // clang-format on
 
 // clang-format off
@@ -39,20 +39,30 @@ BEGIN_OBJECT_MSG(DeviceMemoryBuffer);
 END_OBJECT_MSG(DeviceMemoryBuffer);
 // clang-format on
 
-class OBJECT_MSG_TYPE(VpuInstructionCtx);
-class OBJECT_MSG_TYPE(MirroredObject);
+class VpuInstructionCtx;
+class MirroredObject;
 
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuInstructionCtx)*, vpu_instruction_ctx);
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObject)*, mirrored_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuInstructionCtx*, vpu_instruction_ctx);
+  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject*, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instr_operand_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(available_access_link);
   OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, LogicalObjectId, logical_object_id);
+  
+  // methods
+ public:
+  void __Init__(VpuInstructionCtx* vpu_instruction_ctx,
+                MirroredObject* mirrored_object,
+                const LogicalObjectId& logical_object_id) {
+    set_vpu_instruction_ctx(vpu_instruction_ctx);
+    set_mirrored_object(mirrored_object);
+    mut_logical_object_id()->CopyFrom(logical_object_id);
+  }
 END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
@@ -69,19 +79,22 @@ BEGIN_FLAT_MSG(MirroredObjectAccessType);
 END_FLAT_MSG(MirroredObjectAccessType);
 // clang-format on
 
+class LogicalObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_ONEOF(type,
-    OBJECT_MSG_ONEOF_FIELD(LogicalBlobId, logical_blob_id)
-    OBJECT_MSG_ONEOF_FIELD(BlobDesc, blob_desc)
-    OBJECT_MSG_ONEOF_FIELD(Blob, blob)
-    OBJECT_MSG_ONEOF_FIELD(Operator, op)
+    OBJECT_MSG_ONEOF_FIELD(LogicalBlobIdObj, logical_blob_id)
+    OBJECT_MSG_ONEOF_FIELD(BlobDescObj, blob_desc)
+    OBJECT_MSG_ONEOF_FIELD(BlobObj, blob)
+    OBJECT_MSG_ONEOF_FIELD(OperatorObj, op)
     OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
+  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject*, logical_object);
 
   // links
+  OBJECT_MSG_DEFINE_LIST_LINK(available_access_link);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
                               waiting_access_list);
@@ -93,9 +106,9 @@ END_OBJECT_MSG(MirroredObject);
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const OBJECT_MSG_TYPE(MemZoneTypeDesc)*, mem_desc);
+  OBJECT_MSG_DEFINE_RAW_PTR(const MemZoneTypeDesc*, mem_desc);
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, global_device_id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
 END_OBJECT_MSG(LogicalObject);
 // clang-format on

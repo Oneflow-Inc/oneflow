@@ -9,21 +9,19 @@
 
 namespace oneflow {
 
-#define BEGIN_FLAT_MSG(struct_name)                                    \
-  struct FLAT_MSG_TYPE(struct_name) final {                            \
-    using self_type = FLAT_MSG_TYPE(struct_name);                      \
-    static const bool __is_flat_message_type__ = true;                 \
-    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), FLAT_MSG_TYPE(struct_name), 0); \
-    FLAT_MSG_DEFINE_BASIC_METHODS(FLAT_MSG_TYPE(struct_name));         \
-    FLAT_MSG_DEFINE_DEFAULT(FLAT_MSG_TYPE(struct_name));
+#define BEGIN_FLAT_MSG(struct_name)                     \
+  struct struct_name final {                            \
+    using self_type = struct_name;                      \
+    static const bool __is_flat_message_type__ = true;  \
+    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), struct_name, 0); \
+    FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);         \
+    FLAT_MSG_DEFINE_DEFAULT(struct_name);
 
 #define END_FLAT_MSG(struct_name)                                               \
   static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
-  END_DSS(DSS_GET_FIELD_COUNTER(), "flat message", FLAT_MSG_TYPE(struct_name)); \
+  END_DSS(DSS_GET_FIELD_COUNTER(), "flat message", struct_name);                \
   }                                                                             \
   ;
-
-#define FLAT_MSG(struct_name) FlatMsg<FLAT_MSG_TYPE(struct_name)>
 
 #define FLAT_MSG_DEFINE_OPTIONAL(field_type, field_name)                        \
   static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
@@ -43,24 +41,24 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                              \
   FLAT_MSG_DSS_DEFINE_UION_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq);
 
-#define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                  \
-  static_assert(__is_flat_message_type__, "this struct is not a flat message");     \
-  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE(field_type), field_name, max_size); \
+#define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                        \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");           \
+  _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE_CHECK(field_type), field_name, max_size); \
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "flat message", OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP() _FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP()
 
 #define FLAT_MSG_ONEOF_FIELD(field_type, field_name) \
-  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE(field_type), field_name)
+  OF_PP_MAKE_TUPLE_SEQ(FLAT_MSG_TYPE_CHECK(field_type), field_name)
 
 #define FLAT_MSG_ONEOF_CASE(oneof_name) _FLAT_MSG_ONEOF_ENUM_TYPE(oneof_name)
 
 #define FLAT_MSG_ONEOF_CASE_VALUE(field) _FLAT_MSG_ONEOF_ENUM_VALUE(field)
 
 #define FLAT_MSG_ONEOF_NOT_SET_VALUE(field_type, oneof_name) \
-  FLAT_MSG_TYPE(field_type)::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
+  field_type::_FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
 
-#define FLAT_MSG_TYPE(type_name) OF_PP_CAT(__flat_message_type__, type_name)
+#define FLAT_MSG_TYPE_CHECK(type_name) FlatMsgSelfType<type_name>::type
 
 // details
 
@@ -73,16 +71,29 @@ namespace oneflow {
 #define FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE(field_type, field_name) \
   OF_PP_MAKE_TUPLE_SEQ(field_type, OF_PP_CAT(field_name, _), _FLAT_MSG_ONEOF_ENUM_VALUE(field_name))
 
+template<typename T, typename Enabled = void>
+struct FlatMsgSelfType {
+  static_assert(T::__is_flat_message_type__, "T is not a flat message type");
+  using type = T;
+};
+
+template<typename T>
+struct FlatMsgSelfType<
+    T, typename std::enable_if<std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
+  using type = T;
+};
+
 template<typename T>
 struct FlatMsg final {
+  using value_type = typename FLAT_MSG_TYPE_CHECK(T);
   FlatMsg() { msg_.clear(); }
 
-  const T& Get() const { return msg_; }
-  T* Mutable() { return &msg_; }
+  const value_type& Get() const { return msg_; }
+  value_type* Mutable() { return &msg_; }
 
  private:
   union {
-    T msg_;
+    value_type msg_;
   };
 };
 
@@ -112,19 +123,6 @@ struct FlatMsgGetDefault<true> final {
   }
 };
 
-#define DEFINE_FLAT_MSG_TYPE(type_name) typedef type_name FLAT_MSG_TYPE(type_name)
-DEFINE_FLAT_MSG_TYPE(char);
-DEFINE_FLAT_MSG_TYPE(int8_t);
-DEFINE_FLAT_MSG_TYPE(uint8_t);
-DEFINE_FLAT_MSG_TYPE(int16_t);
-DEFINE_FLAT_MSG_TYPE(uint16_t);
-DEFINE_FLAT_MSG_TYPE(int32_t);
-DEFINE_FLAT_MSG_TYPE(uint32_t);
-DEFINE_FLAT_MSG_TYPE(int64_t);
-DEFINE_FLAT_MSG_TYPE(uint64_t);
-DEFINE_FLAT_MSG_TYPE(float);
-DEFINE_FLAT_MSG_TYPE(double);
-
 #define _FLAT_MSG_ONEOF_CASE_NAME(oneof_name) OF_PP_CAT(oneof_name, _case)
 
 #define _FLAT_MSG_ONEOF_ENUM_VALUE(field) SNAKE_TO_CAMEL(field)
@@ -135,9 +133,13 @@ DEFINE_FLAT_MSG_TYPE(double);
 
 #define FLAT_MSG_DEFINE_BASIC_METHODS(T) _FLAT_MSG_DEFINE_BASIC_METHODS(T)
 
-#define _FLAT_MSG_DEFINE_BASIC_METHODS(T) \
- public:                                  \
-  void clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); }
+#define _FLAT_MSG_DEFINE_BASIC_METHODS(T)                                           \
+ public:                                                                            \
+  void clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); }        \
+  void CopyFrom(const self_type& rhs) {                                             \
+    std::memcpy(reinterpret_cast<void*>(this), reinterpret_cast<const void*>(&rhs), \
+                sizeof(self_type));                                                 \
+  }
 
 #define FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq)     \
  public:                                                                         \

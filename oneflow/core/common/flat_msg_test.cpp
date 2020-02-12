@@ -32,8 +32,8 @@ END_FLAT_MSG(TestOptional)
 // clang-format on
 
 TEST(FlatMsg, optional) {
-  static_assert(std::is_trivial<FLAT_MSG_TYPE(TestOptional)>::value, "TestOptional is not trivial");
-  FLAT_MSG(TestOptional) foo_box;
+  static_assert(std::is_trivial<TestOptional>::value, "TestOptional is not trivial");
+  FlatMsg<TestOptional> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
   ASSERT_EQ(foo.bar(), 0);
@@ -56,7 +56,7 @@ END_FLAT_MSG(FooOneof)
 // clang-format on
 
 TEST(FlatMsg, oneof) {
-  FLAT_MSG(FooOneof) foo_box;
+  FlatMsg<FooOneof> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(GetFieldNames(&foo).empty());
   ASSERT_TRUE(!foo.has_bar());
@@ -64,8 +64,8 @@ TEST(FlatMsg, oneof) {
   foo.mutable_case_0();
   CheckSoleFieldName(&foo, "case_0_");
   ASSERT_TRUE(foo.has_case_0());
-  FLAT_MSG_TYPE(FooOneof)::FLAT_MSG_ONEOF_CASE(type) x = foo.type_case();
-  ASSERT_TRUE(x == FLAT_MSG_TYPE(FooOneof)::FLAT_MSG_ONEOF_CASE_VALUE(case_0));
+  FooOneof::FLAT_MSG_ONEOF_CASE(type) x = foo.type_case();
+  ASSERT_TRUE(x == FooOneof::FLAT_MSG_ONEOF_CASE_VALUE(case_0));
   *foo.mutable_case_1() = 9527;
   CheckSoleFieldName(&foo, "case_1_");
   ASSERT_TRUE(foo.has_case_1());
@@ -80,7 +80,7 @@ END_FLAT_MSG(FooRepeated)
 // clang-format on
 
 TEST(FlatMsg, repeated) {
-  FLAT_MSG(FooRepeated) foo_box;
+  FlatMsg<FooRepeated> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_EQ(foo.bar_size(), 0);
   ASSERT_EQ(foo.bar().size(), 0);
@@ -109,7 +109,7 @@ END_FLAT_MSG(TestTemplateFlatMsg);
 // clang-format on
 
 TEST(FlatMsg, flat_msg_template) {
-  FLAT_MSG(TestTemplateFlatMsg<1024>) foo;
+  FlatMsg<TestTemplateFlatMsg<1024>> foo;
   ASSERT_TRUE(foo.Get().char_field().empty());
 }
 

@@ -28,8 +28,7 @@ END_FLAT_MSG(DefaultOneofNameVariantFoo);
 // clang-format on
 
 using TestOneofField =
-    StructField<FLAT_MSG_TYPE(VariantFoo), FLAT_MSG_TYPE(VariantFoo)::__OneofType,
-                FLAT_MSG_TYPE(VariantFoo)::__DssFieldOffset()>;
+    StructField<VariantFoo, VariantFoo::__OneofType, VariantFoo::__DssFieldOffset()>;
 
 // clang-format off
 BEGIN_FLAT_MSG(VariantList);
@@ -52,7 +51,7 @@ END_FLAT_MSG_VIEW(ViewFoo);
 // clang-format on
 
 TEST(FlatMsgView, match_success) {
-  FLAT_MSG(VariantList) variant_list;
+  FlatMsg<VariantList> variant_list;
   variant_list.Mutable()->mutable_foo()->Add()->set_int32_value(30);
   variant_list.Mutable()->mutable_foo()->Add()->set_int16_value(40);
   variant_list.Mutable()->mutable_foo()->Add()->set_float_value(50.0);
@@ -64,7 +63,7 @@ TEST(FlatMsgView, match_success) {
 }
 
 TEST(FlatMsgView, match_failed) {
-  FLAT_MSG(VariantList) variant_list;
+  FlatMsg<VariantList> variant_list;
   variant_list.Mutable()->mutable_foo()->Add()->set_int16_value(40);
   variant_list.Mutable()->mutable_foo()->Add()->set_int32_value(30);
   variant_list.Mutable()->mutable_foo()->Add()->set_float_value(50.0);
@@ -73,7 +72,7 @@ TEST(FlatMsgView, match_failed) {
 }
 
 TEST(FlatMsgView, init) {
-  FLAT_MSG(DefaultOneofNameVariantFooList) variant_list;
+  FlatMsg<DefaultOneofNameVariantFooList> variant_list;
   {
     FLAT_MSG_VIEW(ViewFoo) mut_view(variant_list.Mutable()->mutable_foo());
     mut_view->set_int32_value(30);

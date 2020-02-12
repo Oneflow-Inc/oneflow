@@ -6,8 +6,6 @@
 namespace oneflow {
 
 using MemZoneTypeId = int32_t;
-using FLAT_MSG_TYPE(MemZoneTypeId) = MemZoneTypeId;
-using OBJECT_MSG_TYPE(MemZoneTypeId) = MemZoneTypeId;
 
 static const MemZoneTypeId kHostMemTypeId = 0;
 static const MemZoneTypeId kGpuMemTypeId = 1;

@@ -5,15 +5,15 @@
 
 namespace oneflow {
 
-class OBJECT_MSG_TYPE(VpuId);
+class VpuId;
 
 class VpuInstructionMsgObserver {
  public:
   virtual ~VpuInstructionMsgObserver() = default;
 
-  virtual void OnDispatched(const OBJECT_MSG_TYPE(VpuId) &) = 0;
-  virtual void OnReady(const OBJECT_MSG_TYPE(VpuId) &) = 0;
-  virtual void OnDone(const OBJECT_MSG_TYPE(VpuId) &) = 0;
+  virtual void OnDispatched(const VpuId &) = 0;
+  virtual void OnReady(const VpuId &) = 0;
+  virtual void OnDone(const VpuId &) = 0;
 
  protected:
   VpuInstructionMsgObserver();
@@ -26,9 +26,9 @@ class VpuInstructionMsgNoneObserver : public VpuInstructionMsgObserver {
   VpuInstructionMsgNoneObserver() : VpuInstructionMsgObserver() {}
   ~VpuInstructionMsgNoneObserver() override = default;
 
-  void OnDispatched(const OBJECT_MSG_TYPE(VpuId) &) override{};
-  void OnReady(const OBJECT_MSG_TYPE(VpuId) &) override{};
-  void OnDone(const OBJECT_MSG_TYPE(VpuId) &) override{};
+  void OnDispatched(const VpuId &) override{};
+  void OnReady(const VpuId &) override{};
+  void OnDone(const VpuId &) override{};
 
   static VpuInstructionMsgNoneObserver *Singleton() {
     static VpuInstructionMsgNoneObserver observer;

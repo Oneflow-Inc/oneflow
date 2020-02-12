@@ -9,12 +9,7 @@
 namespace oneflow {
 
 using VpuTypeId = int32_t;
-using FLAT_MSG_TYPE(VpuTypeId) = VpuTypeId;
-using OBJECT_MSG_TYPE(VpuTypeId) = VpuTypeId;
-
 using VpuInstructionOpcode = int32_t;
-using FLAT_MSG_TYPE(VpuInstructionOpcode) = VpuInstructionOpcode;
-using OBJECT_MSG_TYPE(VpuInstructionOpcode) = VpuInstructionOpcode;
 
 // clang-format off
 BEGIN_FLAT_MSG(ConstLogicalObjectId);
@@ -23,10 +18,16 @@ END_FLAT_MSG(ConstLogicalObjectId);
 // clang-format on
 
 // clang-format off
+BEGIN_FLAT_MSG(MutableLogicalObjectId);
+  FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
+END_FLAT_MSG(MutableLogicalObjectId);
+// clang-format on
+
+// clang-format off
 BEGIN_FLAT_MSG(VpuInstructionOperand);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_operand)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(MutableLogicalObjectId, mutable_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand));
 END_FLAT_MSG(VpuInstructionOperand);

@@ -25,10 +25,10 @@ TEST(ObjectMsgList, empty) {
 
 TEST(ObjectMsgList, empty_Begin) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  ObjectMsgPtr<TestListItem> obj_ptr;
   obj_ptr = foo_list.Begin();
   ASSERT_TRUE(!obj_ptr);
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -36,8 +36,8 @@ TEST(ObjectMsgList, empty_Begin) {
 
 TEST(ObjectMsgList, empty_Next) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -52,12 +52,12 @@ TEST(ObjectMsgList, empty_Next) {
 
 TEST(ObjectMsgList, PushFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushFront(item0.Mutable());
   foo_list.PushFront(item1.Mutable());
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item1);
@@ -68,20 +68,20 @@ TEST(ObjectMsgList, destructor) {
   int elem_cnt = 2;
   {
     OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-    auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item0 = ObjectMsgPtr<TestListItem>::New();
     item0->set_cnt(&elem_cnt);
-    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item1 = ObjectMsgPtr<TestListItem>::New();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
   }
   ASSERT_EQ(elem_cnt, 0);
   elem_cnt = 2;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
   {
     OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
     item0->set_cnt(&elem_cnt);
-    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item1 = ObjectMsgPtr<TestListItem>::New();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
@@ -91,12 +91,12 @@ TEST(ObjectMsgList, destructor) {
 
 TEST(ObjectMsgList, PushBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -105,15 +105,15 @@ TEST(ObjectMsgList, PushBack) {
 
 TEST(ObjectMsgList, Erase) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.Erase(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -122,15 +122,15 @@ TEST(ObjectMsgList, Erase) {
 
 TEST(ObjectMsgList, PopBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.PopBack();
   ASSERT_EQ(item1->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -139,15 +139,15 @@ TEST(ObjectMsgList, PopBack) {
 
 TEST(ObjectMsgList, PopFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
   foo_list.PopFront();
   ASSERT_EQ(item0->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!next);
@@ -155,8 +155,8 @@ TEST(ObjectMsgList, PopFront) {
 
 TEST(ObjectMsgList, Clear) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -169,8 +169,8 @@ TEST(ObjectMsgList, Clear) {
 
 TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
@@ -187,8 +187,8 @@ TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
 
 TEST(ObjectMsgList, FOR_EACH) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
@@ -215,10 +215,10 @@ END_OBJECT_MSG(TestObjectMsgListHead);
 // clang-format on
 
 TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
-  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHead)::New();
+  auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHead>::New();
   auto& foo_list = *foo_list_head->mutable_foo_list();
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -247,10 +247,10 @@ END_OBJECT_MSG(TestObjectMsgListHeadWrapper);
 // clang-format on
 
 TEST(ObjectMsg, nested_list_delete) {
-  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHeadWrapper)::New();
+  auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHeadWrapper>::New();
   auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -273,8 +273,8 @@ TEST(ObjectMsg, nested_list_delete) {
 TEST(ObjectMsg, MoveTo) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list0;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   ASSERT_EQ(item0->is_foo_list_empty(), true);
   ASSERT_EQ(item1->is_foo_list_empty(), true);
   foo_list.PushBack(item0.Mutable());
