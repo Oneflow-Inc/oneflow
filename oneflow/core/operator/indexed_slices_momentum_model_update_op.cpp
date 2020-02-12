@@ -97,13 +97,24 @@ void IndexedSlicesMomentumMdUpdateOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("model")->data_type());
-  IndexedSlicesMomentumModelUpdateKernelConf* conf =
+  const BlobDesc& model_logical_blob_desc = LogicalBlobDesc4BnInOp("model");
+  const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
+  const BlobDesc* indices_blob = GetBlobDesc4BnInOp("model_diff_indices");
+  kernel_conf->set_data_type(model_blob_desc->data_type());
+  const int64_t num_model_instances = model_logical_blob_desc.shape().At(0);
+  IndexedSlicesMomentumModelUpdateKernelConf* indexed_slices_momentum_model_update_conf =
       kernel_conf->mutable_indexed_slices_momentum_model_update_conf();
-  conf->set_indices_data_type(GetBlobDesc4BnInOp("model_diff_indices")->data_type());
-  BalancedSplitter bs(LogicalBlobDesc4BnInOp("model").shape().At(0), parallel_ctx->parallel_num());
-  conf->set_lower_bound(bs.At(parallel_ctx->parallel_id()).begin());
-  conf->set_upper_bound(bs.At(parallel_ctx->parallel_id()).end());
+  indexed_slices_momentum_model_update_conf->set_indices_data_type(indices_blob->data_type());
+  if (model_blob_desc->shape().At(0) == num_model_instances) {
+    indexed_slices_momentum_model_update_conf->set_lower_bound(0);
+    indexed_slices_momentum_model_update_conf->set_upper_bound(num_model_instances);
+  } else {
+    BalancedSplitter bs(num_model_instances, parallel_ctx->parallel_num());
+    indexed_slices_momentum_model_update_conf->set_lower_bound(
+        bs.At(parallel_ctx->parallel_id()).begin());
+    indexed_slices_momentum_model_update_conf->set_upper_bound(
+        bs.At(parallel_ctx->parallel_id()).end());
+  }
 }
 
 REGISTER_OP(OperatorConf::kIndexedSlicesMomentumModelUpdateConf, IndexedSlicesMomentumMdUpdateOp);
