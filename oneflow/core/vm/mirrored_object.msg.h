@@ -50,8 +50,8 @@ BEGIN_OBJECT_MSG(MirroredObjectAccess);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuInstructionCtx*, vpu_instruction_ctx);
-  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject*, mirrored_object);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuInstructionCtx, vpu_instruction_ctx);
+  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
@@ -89,7 +89,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
     OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
-  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject*, logical_object);
+  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
@@ -106,7 +106,7 @@ END_OBJECT_MSG(MirroredObject);
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const MemZoneTypeDesc*, mem_desc);
+  OBJECT_MSG_DEFINE_RAW_PTR(const MemZoneTypeDesc, mem_desc);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
