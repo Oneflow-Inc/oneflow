@@ -5,6 +5,7 @@
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/mem_zone_type_desc.msg.h"
+#include "oneflow/core/vm/vpu_type_desc.msg.h"
 
 namespace oneflow {
 
@@ -56,6 +57,19 @@ END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
+BEGIN_FLAT_MSG(ReadOnlyAccessType);
+END_FLAT_MSG(ReadOnlyAccessType);
+// clang-format on
+
+// clang-format off
+BEGIN_FLAT_MSG(MirroredObjectAccessType);
+  FLAT_MSG_DEFINE_ONEOF(access_type,
+    FLAT_MSG_ONEOF_FIELD(ReadOnlyAccessType, read_only)
+    FLAT_MSG_ONEOF_FIELD(VpuId, vpu_only));
+END_FLAT_MSG(MirroredObjectAccessType);
+// clang-format on
+
+// clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_ONEOF(type,
@@ -65,6 +79,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
     OBJECT_MSG_ONEOF_FIELD(Operator, op)
     OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
+  OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
 
   // links
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
