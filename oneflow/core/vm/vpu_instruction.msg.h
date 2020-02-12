@@ -27,9 +27,8 @@ END_FLAT_MSG(VpuInstructionProto);
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuInstructionMsg);
- public:
-  void __Init__() { __Init__(&VpuInstructionMsgNoneObserver::NewObserver); }
-  template<typename NewObserverT>
+  PUBLIC void __Init__() { __Init__(&VpuInstructionMsgNoneObserver::NewObserver); }
+  PUBLIC template<typename NewObserverT>
   void __Init__(const NewObserverT& NewObserver) { mutable_observer()->__Init__(NewObserver); }
 
   // fields
@@ -53,7 +52,6 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
-
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instr_operand_link, waiting_operand_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instr_operand_link, holding_operand_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, logical_object_id_value,
@@ -73,13 +71,12 @@ BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   OBJECT_MSG_DEFINE_LIST_LINK(launched_pkg_link);
 
   // methods
- public:
-  template<typename NewQuerierT>
+  PUBLIC template<typename NewQuerierT>
   void __Init__(VpuCtx* vpu, const NewQuerierT& NewQuerier) {
     set_vpu(vpu);
     mutable_status_querier()->__Init__(NewQuerier);
   }
-  bool Done() const { return status_querier()->Done(); }
+  PUBLIC bool Done() const { return status_querier()->Done(); }
 
 END_OBJECT_MSG(RunningVpuInstructionPackage);
 // clang-format on
@@ -92,20 +89,20 @@ BEGIN_OBJECT_MSG(VpuCtx);
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
   OBJECT_MSG_DEFINE_RAW_PTR(VpuTypeDesc*, vpu_type_desc); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx*, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(7, VpuId, vpu_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   // collect_vpu_instruction_list used by VpuScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link,
                               collect_vpu_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link, pending_pkg_list);
 
   // methods
- public:
-  void __Init__(const VpuInstructionBuilder* builder, VpuSetCtx* vpu_set_ctx) {
+  PUBLIC void __Init__(const VpuInstructionBuilder* builder, VpuSetCtx* vpu_set_ctx) {
     set_vpu_instruction_builder(builder);
     set_vpu_set_ctx(vpu_set_ctx);
     mutable_pending_list_mutex()->__Init__();
@@ -115,14 +112,19 @@ END_OBJECT_MSG(VpuCtx);
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSetCtx);
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
-
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_ctx_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuCtx, vpu_link, vpu_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, launched_pkg_link, launched_pkg_list);
 END_OBJECT_MSG(VpuSetCtx);
+// clang-format on
+
+// clang-format off
+BEGIN_OBJECT_MSG(VpuTypeCtx);
+  // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
+  OBJECT_MSG_DEFINE_MAP_HEAD(VpuCtx, parallel_id, parallel_id2vpu_ctx);
+END_OBJECT_MSG(VpuTypeCtx);
 // clang-format on
 
 }  // namespace oneflow

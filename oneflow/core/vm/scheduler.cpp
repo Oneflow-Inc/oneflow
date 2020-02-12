@@ -69,8 +69,6 @@ void FilterReadyVpuInstrCtx(MaybeAvailableAccessList* maybe_available_access_lis
   maybe_available_access_list->Clear();
 }
 
-// fill new_ctx_list with VpuInstructionCtx which created by VpuInstructionMsg in
-// tmp_pending_msg_list
 void MakeVpuInstructionCtx(TmpPendingVpuInstrMsgList* vpu_instr_msg_list,
                            /*out*/ NewVpuInstrCtxList* ret_vpu_instr_ctx_list) {
   TODO();
