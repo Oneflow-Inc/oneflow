@@ -72,10 +72,11 @@ namespace oneflow {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ACCESSOR, (oneof_name),               \
                                    type_and_field_name_seq)
 
-#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(oneof_name, pair) \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_GETTER(oneof_name, pair);  \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_CLEARER(oneof_name, pair); \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair); \
+#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(oneof_name, pair)  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_GETTER(oneof_name, pair);   \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_CLEARER(oneof_name, pair);  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair);  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair); \
   OBJECT_MSG_MAKE_ONEOF_FIELD_SETTER(oneof_name, pair);
 
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_SETTER(oneof_name, pair)    \
@@ -107,6 +108,19 @@ namespace oneflow {
       (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                                   \
     }                                                                                            \
     return MutableTrait<is_ptr>::Call(ptr);                                                      \
+  }
+
+#define OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair)                     \
+ public:                                                                           \
+  template<typename T>                                                             \
+  void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(T * rhs) {                       \
+    static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
+    static_assert(T::__is_object_message_type__, "object message supported only"); \
+    OF_PP_CAT(clear_, oneof_name)();                                               \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                  \
+    (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                       \
+    OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _) = rhs;          \
+    ObjectMsgPtrUtil::Ref<T>(rhs);                                                 \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                \
