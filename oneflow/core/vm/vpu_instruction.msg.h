@@ -54,9 +54,9 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
 
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, vpu_instr_operand_link, waiting_operand_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, vpu_instr_operand_link, holding_operand_list);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuInstrOperandAccess, logical_object_id,
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instr_operand_link, waiting_operand_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vpu_instr_operand_link, holding_operand_list);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, logical_object_id,
                                   logical_object_id2operand_access);
 END_OBJECT_MSG(VpuInstructionCtx);
 // clang-format on
