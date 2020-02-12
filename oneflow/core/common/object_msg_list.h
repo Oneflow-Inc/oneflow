@@ -21,6 +21,11 @@ namespace oneflow {
        elem.Mutable() != (list_ptr)->End();                                 \
        elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__.Mutable()))
 
+#define OBJECT_MSG_LIST_FOR_EACH_MOVE_PTR(list_ptr, elem)                  \
+  for (decltype((list_ptr)->End()) elem = (list_ptr)->Begin(),             \
+                                   __next_elem__ = (list_ptr)->Next(elem); \
+       elem != nullptr; elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__))
+
 #define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, elem) \
   for (auto* elem = (list_ptr)->Begin(); elem != (list_ptr)->End(); elem = (list_ptr)->Next(elem))
 
@@ -32,22 +37,23 @@ namespace oneflow {
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);               \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
- public:                                                                                       \
-  using OF_PP_CAT(field_name, _ObjectMsgListType) = TrivialObjectMsgList<                      \
-      StructField<OBJECT_MSG_TYPE(elem_type), EmbeddedListLink,                                \
-                  OBJECT_MSG_TYPE(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>>; \
-  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                       \
-    return OF_PP_CAT(field_name, _);                                                           \
-  }                                                                                            \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {                  \
-    return &OF_PP_CAT(field_name, _);                                                          \
-  }                                                                                            \
-  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {              \
-    return &OF_PP_CAT(field_name, _);                                                          \
-  }                                                                                            \
-                                                                                               \
- private:                                                                                      \
+#define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)         \
+ public:                                                                                   \
+  using OF_PP_CAT(field_name, _ObjectMsgListType) =                                        \
+      TrivialObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
+                                       OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(        \
+                                           elem_field_name, _DssFieldOffset)()>>;          \
+  const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
+    return OF_PP_CAT(field_name, _);                                                       \
+  }                                                                                        \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mut_, field_name)() {              \
+    return &OF_PP_CAT(field_name, _);                                                      \
+  }                                                                                        \
+  OF_PP_CAT(field_name, _ObjectMsgListType) * OF_PP_CAT(mutable_, field_name)() {          \
+    return &OF_PP_CAT(field_name, _);                                                      \
+  }                                                                                        \
+                                                                                           \
+ private:                                                                                  \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
 #define _OBJECT_MSG_DEFINE_LIST_LINK(field_counter, field_name)               \
@@ -65,10 +71,10 @@ namespace oneflow {
  private:                                                      \
   EmbeddedListLink OF_PP_CAT(field_name, _);
 
-#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)               \
-  ObjectMsgList<                                                   \
-      StructField<OBJECT_MSG_TYPE(obj_msg_type), EmbeddedListLink, \
-                  OBJECT_MSG_TYPE(obj_msg_type)::OF_PP_CAT(obj_msg_field, _DssFieldOffset)()>>
+#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)                                      \
+  ObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink,        \
+                            OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
+                                                                           _DssFieldOffset)()>>
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {

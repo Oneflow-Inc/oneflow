@@ -16,7 +16,7 @@ END_OBJECT_MSG(ObjectMsgFunctionPtrFoo);
 // clang-format on
 
 TEST(object_msg_raw_ptr, function_pointer) {
-  auto obj = OBJECT_MSG_PTR(ObjectMsgFunctionPtrFoo)::New();
+  auto obj = ObjectMsgPtr<ObjectMsgFunctionPtrFoo>::New();
   obj->set_ok(&TestOk);
   ASSERT_TRUE((*obj->ok())());
 }

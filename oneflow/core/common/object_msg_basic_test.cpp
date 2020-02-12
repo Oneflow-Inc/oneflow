@@ -21,6 +21,8 @@ TEST(ObjectMsgStruct, ref_cnt) {
 }
 
 class TestNew final : public ObjectMsgStruct {
+ public:
+  static const bool __is_object_message_type__ = true;
   BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestNew, sizeof(ObjectMsgStruct));
   OBJECT_MSG_DEFINE_INIT();
   OBJECT_MSG_DEFINE_DELETE();

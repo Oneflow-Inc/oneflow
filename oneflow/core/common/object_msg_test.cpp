@@ -20,12 +20,12 @@ BEGIN_OBJECT_MSG(ObjectMsgFoo)
 END_OBJECT_MSG(ObjectMsgFoo)
 // clang-format on
 
-void OBJECT_MSG_TYPE(ObjectMsgFoo)::__Delete__() {
+void ObjectMsgFoo::__Delete__() {
   if (mutable_is_deleted()) { *mutable_is_deleted() = "deleted"; }
 }
 
 TEST(OBJECT_MSG, naive) {
-  auto foo = OBJECT_MSG_PTR(ObjectMsgFoo)::New();
+  auto foo = ObjectMsgPtr<ObjectMsgFoo>::New();
   foo->set_bar(9527);
   ASSERT_TRUE(foo->bar() == 9527);
 }
@@ -33,7 +33,7 @@ TEST(OBJECT_MSG, naive) {
 TEST(OBJECT_MSG, __delete__) {
   std::string is_deleted;
   {
-    auto foo = OBJECT_MSG_PTR(ObjectMsgFoo)::New();
+    auto foo = ObjectMsgPtr<ObjectMsgFoo>::New();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -54,7 +54,7 @@ END_OBJECT_MSG(ObjectMsgBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
-  auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
+  auto bar = ObjectMsgPtr<ObjectMsgBar>::New();
   bar->mutable_foo()->set_bar(9527);
   ASSERT_TRUE(bar->foo().bar() == 9527);
 }
@@ -63,7 +63,7 @@ TEST(OBJECT_MSG, nested_delete) {
   std::string bar_is_deleted;
   std::string is_deleted;
   {
-    auto bar = OBJECT_MSG_PTR(ObjectMsgBar)::New();
+    auto bar = ObjectMsgPtr<ObjectMsgBar>::New();
     bar->set_is_deleted(&bar_is_deleted);
     auto* foo = bar->mutable_foo();
     foo->set_bar(9527);
@@ -93,7 +93,7 @@ END_OBJECT_MSG(TestPtrOneof)
 // clang-format on
 
 TEST(OBJECT_MSG, oneof_get) {
-  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
   auto& obj = *test_oneof;
   const auto* default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -105,7 +105,7 @@ TEST(OBJECT_MSG, oneof_get) {
 };
 
 TEST(OBJECT_MSG, oneof_release) {
-  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
   auto& obj = *test_oneof;
   const auto* default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -127,7 +127,7 @@ TEST(OBJECT_MSG, oneof_release) {
 };
 
 TEST(OBJECT_MSG, oneof_clear) {
-  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
   auto& obj = *test_oneof;
   const auto* default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -148,7 +148,7 @@ TEST(OBJECT_MSG, oneof_clear) {
 };
 
 TEST(OBJECT_MSG, oneof_set) {
-  auto test_oneof = OBJECT_MSG_PTR(TestPtrOneof)::New();
+  auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
   auto& obj = *test_oneof;
   const auto* default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -183,7 +183,7 @@ END_OBJECT_MSG(ObjectMsgContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {
-  auto obj = OBJECT_MSG_PTR(ObjectMsgContainerDemo)::New();
+  auto obj = ObjectMsgPtr<ObjectMsgContainerDemo>::New();
   ASSERT_TRUE(obj->has_flat_field());
   ASSERT_TRUE(!obj->flat_field().has_int32_field());
   obj->mutable_flat_field()->set_int32_field(33);

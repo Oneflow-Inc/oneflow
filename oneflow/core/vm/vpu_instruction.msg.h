@@ -41,7 +41,7 @@ BEGIN_OBJECT_MSG(VpuInstructionMsg);
 END_OBJECT_MSG(VpuInstructionMsg);
 // clang-format on
 
-class OBJECT_MSG_TYPE(VpuCtx);
+class VpuCtx;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuInstructionCtx);
@@ -49,7 +49,7 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionMsg, vpu_instruction_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction*, vpu_instruction); 
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuCtx)*, vpu_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx*, vpu_ctx); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
@@ -64,7 +64,7 @@ END_OBJECT_MSG(VpuInstructionCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuCtx)*, vpu);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx*, vpu);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
 
   // links
@@ -75,7 +75,7 @@ BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   // methods
  public:
   template<typename NewQuerierT>
-  void __Init__(OBJECT_MSG_TYPE(VpuCtx)* vpu, const NewQuerierT& NewQuerier) {
+  void __Init__(VpuCtx* vpu, const NewQuerierT& NewQuerier) {
     set_vpu(vpu);
     mutable_status_querier()->__Init__(NewQuerier);
   }
@@ -84,14 +84,14 @@ BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
 END_OBJECT_MSG(RunningVpuInstructionPackage);
 // clang-format on
 
-class OBJECT_MSG_TYPE(VpuSetCtx);
+class VpuSetCtx;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuTypeDesc)*, vpu_type_desc); 
-  OBJECT_MSG_DEFINE_RAW_PTR(const OBJECT_MSG_TYPE(VpuSetCtx)*, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuTypeDesc*, vpu_type_desc); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx*, vpu_set_ctx); 
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
@@ -105,7 +105,7 @@ BEGIN_OBJECT_MSG(VpuCtx);
 
   // methods
  public:
-  void __Init__(const VpuInstructionBuilder* builder, OBJECT_MSG_TYPE(VpuSetCtx)* vpu_set_ctx) {
+  void __Init__(const VpuInstructionBuilder* builder, VpuSetCtx* vpu_set_ctx) {
     set_vpu_instruction_builder(builder);
     set_vpu_set_ctx(vpu_set_ctx);
     mutable_pending_list_mutex()->__Init__();

@@ -11,7 +11,7 @@ class VpuScheduler final {
  public:
   VpuScheduler(const VpuScheduler&) = default;
   VpuScheduler(VpuScheduler&&) = default;
-  explicit VpuScheduler(OBJECT_MSG_TYPE(VpuSchedulerCtx) * ctx) : ctx_(ctx) {}
+  explicit VpuScheduler(VpuSchedulerCtx* ctx) : ctx_(ctx) {}
   ~VpuScheduler() = default;
 
   void Receive(VpuInstructionMsgList* vpu_instr_list);
@@ -19,7 +19,7 @@ class VpuScheduler final {
   void Dispatch();
 
  private:
-  OBJECT_MSG_TYPE(VpuSchedulerCtx) * ctx_;
+  VpuSchedulerCtx* ctx_;
 };
 
 }  // namespace oneflow

@@ -21,7 +21,7 @@ namespace oneflow {
 
 #define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                     \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE(flat_msg_field_type), field_name);          \
+  _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);    \
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "flat message view", OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_VIEW_TYPE(type_name) OF_PP_CAT(__flat_message_view_type__, type_name)
