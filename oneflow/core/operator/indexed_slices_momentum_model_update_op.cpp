@@ -79,13 +79,27 @@ Maybe<void> IndexedSlicesMomentumMdUpdateOp::InferBlobDescs(
 Maybe<void> IndexedSlicesMomentumMdUpdateOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
+  const int64_t num_indices_axes =
+      JUST(LogicalBlobDesc4Ibn("model_diff_indices"))->shape().NumAxes();
+  const int64_t num_model_axes = JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes();
   SbpSignatureBuilder()
-      .Split("momentum", 0)
-      .Split("model", 0)
+      .Broadcast("learning_rate")
+      .Broadcast("train_step")
       .Broadcast("model_diff_indices")
       .Broadcast("model_diff_values")
-      .Broadcast("train_step")
+      .Split("model", 0)
+      .Split("momentum", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  FOR_RANGE(int64_t, i, 1, num_model_axes) {
+    SbpSignatureBuilder()
+        .Broadcast("learning_rate")
+        .Broadcast("train_step")
+        .Broadcast("model_diff_indices")
+        .Split("model_diff_values", num_indices_axes + i - 1)
+        .Split("model", i)
+        .Split("momentum", i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 
