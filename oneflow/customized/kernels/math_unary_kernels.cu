@@ -115,6 +115,10 @@ __device__ float SoftplusCalInDiff4GpuFloat(float x, float dy) {
 
 __device__ float SqrtCalInDiff4GpuFloat(float x, float dy) { return dy * 0.5 * rsqrtf(x); }
 
+__device__ float Square4GpuFloat(float x) { return x * x; }
+
+__device__ float SquareCalInDiff4GpuFloat(float x, float dy) { return dy * 2.0 * x; }
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
@@ -173,7 +177,8 @@ __device__ float SqrtCalInDiff4GpuFloat(float x, float dy) { return dy * 0.5 * r
   OF_PP_MAKE_TUPLE_SEQ("Sin", Sin)                         \
   OF_PP_MAKE_TUPLE_SEQ("Sinh", Sinh)                       \
   OF_PP_MAKE_TUPLE_SEQ("Softplus", Softplus)               \
-  OF_PP_MAKE_TUPLE_SEQ("Sqrt", Sqrt)
+  OF_PP_MAKE_TUPLE_SEQ("Sqrt", Sqrt)                       \
+  OF_PP_MAKE_TUPLE_SEQ("Square", Square)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -206,6 +211,7 @@ MATH_UNARY_GPU(Sin, sinf, SinCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Sinh, sinhf, SinCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Softplus, Softplus4GpuFloat, SoftplusCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Sqrt, sqrtf, SqrtCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Square, Square4GpuFloat, SquareCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
