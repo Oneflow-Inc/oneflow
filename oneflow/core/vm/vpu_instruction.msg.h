@@ -44,6 +44,9 @@ class VpuCtx;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuInstructionCtx);
+  // methods
+  PUBLIC void __Init__(VpuInstructionMsg* vpu_instruction_msg, VpuCtx* vpu_ctx);
+
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionMsg, vpu_instruction_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction*, vpu_instruction); 
@@ -109,7 +112,7 @@ END_OBJECT_MSG(VpuCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuTypeCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionFactory*, vpu_instruction_factory); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc*, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);

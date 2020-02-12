@@ -15,14 +15,14 @@ class VpuInstruction {
   VpuInstruction() = default;
 };
 
-class VpuInstructionBuilder {
+class VpuInstructionFactory {
  public:
-  virtual ~VpuInstructionBuilder() = default;
+  virtual ~VpuInstructionFactory() = default;
 
-  virtual const VpuInstruction* Build(VpuInstructionOpcode vpu_instr_opcode) const = 0;
+  virtual const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const = 0;
 
  protected:
-  VpuInstructionBuilder() = default;
+  VpuInstructionFactory() = default;
 };
 
 }  // namespace oneflow
