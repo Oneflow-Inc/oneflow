@@ -88,6 +88,13 @@ __device__ float RsqrtCalInDiff4GpuFloat(float x, float dy) {
   return dy * (-1.0 / (2.0 * sqrtf(x * x * x)));
 }
 
+__device__ float Sigmoid4GpuFloat(float x) { return 1.0 / (1.0 + expf(-x)); }
+
+__device__ float SigmoidCalInDiff4GpuFloat(float x, float dy) {
+  float y = Sigmoid4GpuFloat(x);
+  return dy * (y * (1 - y));
+}
+
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
     CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
@@ -140,7 +147,8 @@ __device__ float RsqrtCalInDiff4GpuFloat(float x, float dy) {
   OF_PP_MAKE_TUPLE_SEQ("ReciprocalNoNan", ReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ("Rint", Rint)                       \
   OF_PP_MAKE_TUPLE_SEQ("Round", Round)                     \
-  OF_PP_MAKE_TUPLE_SEQ("Rsqrt", Rsqrt)
+  OF_PP_MAKE_TUPLE_SEQ("Rsqrt", Rsqrt)                     \
+  OF_PP_MAKE_TUPLE_SEQ("Sigmoid", Sigmoid)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -167,6 +175,7 @@ MATH_UNARY_GPU(ReciprocalNoNan, ReciprocalNoNan4GpuFloat, ReciprocalNoNanCalInDi
 MATH_UNARY_GPU(Rint, rintf, RintCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Round, nearbyintf, RoundCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Rsqrt, rsqrtf, RsqrtCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Sigmoid, Sigmoid4GpuFloat, SigmoidCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
