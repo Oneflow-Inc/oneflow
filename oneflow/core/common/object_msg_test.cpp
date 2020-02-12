@@ -126,6 +126,32 @@ TEST(OBJECT_MSG, oneof_release) {
   }
 };
 
+TEST(OBJECT_MSG, oneof_reset) {
+  auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
+  auto& obj = *test_oneof;
+  const auto* default_foo_ptr = &obj.foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  obj.mutable_foo();
+  ASSERT_EQ(obj.foo().x(), 0);
+  ASSERT_NE(default_foo_ptr, &obj.foo());
+  {
+    auto another_oneof = ObjectMsgPtr<TestPtrOneof>::New();
+    std::string is_delete;
+    obj.mutable_foo()->set_is_deleted(&is_delete);
+    another_oneof->reset_foo(obj.mut_foo());
+    obj.mutable_int_field();
+    ASSERT_EQ(is_delete, "");
+    another_oneof->mutable_int_field();
+    ASSERT_EQ(is_delete, "deleted");
+  }
+  {
+    std::string is_delete;
+    obj.mutable_foo()->set_is_deleted(&is_delete);
+    obj.mutable_int_field();
+    ASSERT_EQ(is_delete, "deleted");
+  }
+};
+
 TEST(OBJECT_MSG, oneof_clear) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
   auto& obj = *test_oneof;
