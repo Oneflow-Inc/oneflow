@@ -165,7 +165,7 @@ MATH_UNARY_GPU(Negative, Negative4GpuFloat, NegativeCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Reciprocal, Reciprocal4GpuFloat, ReciprocalCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(ReciprocalNoNan, ReciprocalNoNan4GpuFloat, ReciprocalNoNanCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Rint, rintf, RintCalInDiff4GpuFloat, float);
-MATH_UNARY_GPU(Round, roundf, RoundCalInDiff4GpuFloat, float);
+MATH_UNARY_GPU(Round, nearbyintf, RoundCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Rsqrt, rsqrtf, RsqrtCalInDiff4GpuFloat, float);
 
 class MathUnaryGpuFloatKernel final : public OpKernel {

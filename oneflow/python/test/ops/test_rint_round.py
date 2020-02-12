@@ -53,9 +53,6 @@ def test_round_special_value(test_case):
     x = np.array([0.9, 2.5, 2.3, 1.5, -4.5], dtype=np.float32)
     out = np.array([1.0, 2.0, 2.0, 2.0, -4.0], dtype=np.float32)
     y = RoundJob(x).get().ndarray()
-    # CUDA::roundf NOT equal with Numpy::round
-    # print(y)           # [ 1.  3.  2.  2. -5.]
-    # print(np.round(x)) # [ 1.  2.  2.  2. -4.]
     test_case.assertTrue(np.allclose(y, out, equal_nan=True))
 
 
