@@ -21,12 +21,12 @@ namespace oneflow {
        elem.Mutable() != (list_ptr)->End();                                 \
        elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__.Mutable()))
 
-#define OBJECT_MSG_LIST_FOR_EACH_MOVE_PTR(list_ptr, elem)                  \
+#define OBJECT_MSG_LIST_FOR_EACH_PTR(list_ptr, elem)                       \
   for (decltype((list_ptr)->End()) elem = (list_ptr)->Begin(),             \
                                    __next_elem__ = (list_ptr)->Next(elem); \
        elem != nullptr; elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__))
 
-#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE(list_ptr, elem) \
+#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(list_ptr, elem) \
   for (auto* elem = (list_ptr)->Begin(); elem != (list_ptr)->End(); elem = (list_ptr)->Next(elem))
 
 // details
