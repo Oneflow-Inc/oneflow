@@ -269,3 +269,14 @@ def sigmoid(x, name=None):
             .SetAttr("unary_math_type", "Sigmoid", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.sign")
+def sign(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Sign_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Sign", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+
