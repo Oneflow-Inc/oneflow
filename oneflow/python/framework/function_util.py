@@ -249,7 +249,7 @@ def set_model_update_conf(func_desc, value):
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
 @oneflow_function_config('indexed_slices_optimizer_conf')
-def set_model_update_conf(func_desc, value):
+def set_indexed_slices_optimizer_conf(func_desc, value):
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.indexed_slices_optimizer_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
