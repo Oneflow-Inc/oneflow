@@ -299,4 +299,14 @@ def sinh(x, name=None):
             .SetAttr("unary_math_type", "Sinh", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.softplus")
+def softplus(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Softplus_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Softplus", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 
