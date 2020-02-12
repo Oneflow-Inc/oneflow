@@ -45,7 +45,6 @@ class VpuCtx;
 // clang-format off
 BEGIN_OBJECT_MSG(VpuInstructionCtx);
   // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionMsg, vpu_instruction_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction*, vpu_instruction); 
   OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx*, vpu_ctx); 
@@ -86,8 +85,6 @@ class VpuSetCtx;
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuTypeDesc*, vpu_type_desc); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx*, vpu_set_ctx); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   // for pending_pkg_list only
@@ -102,8 +99,7 @@ BEGIN_OBJECT_MSG(VpuCtx);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link, pending_pkg_list);
 
   // methods
-  PUBLIC void __Init__(const VpuInstructionBuilder* builder, VpuSetCtx* vpu_set_ctx) {
-    set_vpu_instruction_builder(builder);
+  PUBLIC void __Init__(const VpuSetCtx* vpu_set_ctx) {
     set_vpu_set_ctx(vpu_set_ctx);
     mutable_pending_list_mutex()->__Init__();
   }
@@ -111,20 +107,26 @@ END_OBJECT_MSG(VpuCtx);
 // clang-format on
 
 // clang-format off
+BEGIN_OBJECT_MSG(VpuTypeCtx);
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionBuilder*, vpu_instruction_builder); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc*, vpu_type_desc); 
+  // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
+  OBJECT_MSG_DEFINE_MAP_HEAD(VpuCtx, parallel_id, parallel_id2vpu_ctx);
+END_OBJECT_MSG(VpuTypeCtx);
+// clang-format on
+
+// clang-format off
 BEGIN_OBJECT_MSG(VpuSetCtx);
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeCtx*, vpu_type_ctx); 
+
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_ctx_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuCtx, vpu_link, vpu_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, launched_pkg_link, launched_pkg_list);
 END_OBJECT_MSG(VpuSetCtx);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(VpuTypeCtx);
-  // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
-  OBJECT_MSG_DEFINE_MAP_HEAD(VpuCtx, parallel_id, parallel_id2vpu_ctx);
-END_OBJECT_MSG(VpuTypeCtx);
 // clang-format on
 
 }  // namespace oneflow
