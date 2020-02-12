@@ -17,7 +17,7 @@ __global__ void UpdateGpu(T beta, int64_t feature_size, int64_t lower_bound, int
       const T diff = values[i];
       const K model_idx = (instance_id - lower_bound) * feature_size + i % feature_size;
       const T next_momentum = beta * momentum[model_idx] - lr * diff;
-      momentum[i] = next_momentum;
+      momentum[model_idx] = next_momentum;
       model[model_idx] = model[model_idx] + next_momentum;
     }
   }
