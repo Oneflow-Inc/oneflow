@@ -44,6 +44,16 @@ class MirroredObject;
 
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
+  // methods
+ public:
+  void __Init__(VpuInstructionCtx* vpu_instruction_ctx,
+                MirroredObject* mirrored_object,
+                uint64_t logical_object_id_value) {
+    set_vpu_instruction_ctx(vpu_instruction_ctx);
+    set_mirrored_object(mirrored_object);
+    set_logical_object_id_value(logical_object_id_value);
+  }
+
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
   OBJECT_MSG_DEFINE_RAW_PTR(VpuInstructionCtx*, vpu_instruction_ctx);
@@ -52,17 +62,8 @@ BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instr_operand_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, LogicalObjectId, logical_object_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, uint64_t, logical_object_id_value);
   
-  // methods
- public:
-  void __Init__(VpuInstructionCtx* vpu_instruction_ctx,
-                MirroredObject* mirrored_object,
-                const LogicalObjectId& logical_object_id) {
-    set_vpu_instruction_ctx(vpu_instruction_ctx);
-    set_mirrored_object(mirrored_object);
-    mut_logical_object_id()->CopyFrom(logical_object_id);
-  }
 END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 

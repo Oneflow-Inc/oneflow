@@ -88,7 +88,14 @@ MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
 static const bool kConstOperandAccess = true;
 static const bool kMutableOperandAccess = false;
 template<bool is_const_operand>
-void ConsumeMirroredObject(MirroredObject* mirrored_object, VpuInstructionCtx* vpu_instr_ctx) {}
+void ConsumeMirroredObject(MirroredObject* mirrored_object, VpuInstructionCtx* vpu_instr_ctx) {
+  uint64_t id_value = mirrored_object->logical_object()->logical_object_id().value();
+  auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
+      vpu_instr_ctx->mut_allocator(), vpu_instr_ctx, mirrored_object, id_value);
+  mirrored_object->mut_waiting_access_list()->PushBack(mirrored_object_access.Mutable());
+  vpu_instr_ctx->mut_waiting_operand_list()->PushBack(mirrored_object_access.Mutable());
+  vpu_instr_ctx->mut_logical_object_id2operand_access()->Insert(mirrored_object_access.Mutable());
+}
 
 inline void TryPushBack(AvailableAccessList* available_access_list,
                         MirroredObject* mirrored_object) {
