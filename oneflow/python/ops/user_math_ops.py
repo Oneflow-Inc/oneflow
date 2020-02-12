@@ -329,3 +329,24 @@ def square(x, name=None):
             .SetAttr("unary_math_type", "Square", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.tan")
+def tan(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Tan_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Tan", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.tanh_v2")
+def tanh(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Tanh_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Tanh", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+
