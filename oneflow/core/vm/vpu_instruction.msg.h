@@ -49,8 +49,8 @@ BEGIN_OBJECT_MSG(VpuInstructionCtx);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VpuInstructionMsg, vpu_instruction_msg);
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction*, vpu_instruction); 
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx*, vpu_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstruction, vpu_instruction); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx, vpu_ctx); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instruction_ctx_link);
@@ -64,7 +64,7 @@ END_OBJECT_MSG(VpuInstructionCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(RunningVpuInstructionPackage);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx*, vpu);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuCtx, vpu);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VpuInstructionStatusQuerier>, status_querier); 
 
   // links
@@ -88,7 +88,7 @@ class VpuSetCtx;
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx*, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuSetCtx, vpu_set_ctx); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   // for pending_pkg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
@@ -112,8 +112,8 @@ END_OBJECT_MSG(VpuCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuTypeCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionFactory*, vpu_instruction_factory); 
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc*, vpu_type_desc); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionFactory, vpu_instruction_factory); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
   OBJECT_MSG_DEFINE_MAP_HEAD(VpuCtx, parallel_id, parallel_id2vpu_ctx);
@@ -123,7 +123,7 @@ END_OBJECT_MSG(VpuTypeCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSetCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeCtx*, vpu_type_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeCtx, vpu_type_ctx); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_ctx_link);

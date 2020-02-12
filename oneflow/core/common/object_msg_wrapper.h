@@ -27,16 +27,16 @@ BEGIN_OBJECT_MSG(Wrapper4CppObject);
     mut_allocator()->Deallocate(reinterpret_cast<char*>(mutable_obj()), obj_size());
   }
 
-  const CppObjectT& operator*() const { return *obj(); }
+  const CppObjectT& operator*() const { return obj(); }
   CppObjectT& operator*() { return *mutable_obj(); }
 
-  const CppObjectT* operator->() const { return obj(); }
+  const CppObjectT* operator->() const { return &obj(); }
   CppObjectT* operator->() { return mutable_obj(); }
 
-  const CppObjectT& Get() const { return *obj(); }
+  const CppObjectT& Get() const { return obj(); }
   CppObjectT* Mutable() { return mutable_obj(); }
 
-  OBJECT_MSG_DEFINE_RAW_PTR(CppObjectT*, obj);
+  OBJECT_MSG_DEFINE_RAW_PTR(CppObjectT, obj);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, obj_size);
 END_OBJECT_MSG(Wrapper4CppObject);
 // clang-format on

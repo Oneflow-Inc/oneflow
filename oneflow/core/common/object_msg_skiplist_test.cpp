@@ -8,7 +8,7 @@ namespace test {
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgSkipListFoo);
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
-  OBJECT_MSG_DEFINE_RAW_PTR(int*, is_deleted);
+  OBJECT_MSG_DEFINE_RAW_PTR(int, is_deleted);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }

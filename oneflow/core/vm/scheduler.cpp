@@ -87,7 +87,7 @@ static const bool kConstOperandAccess = true;
 static const bool kMutableOperandAccess = false;
 template<bool is_const_operand>
 void ConsumeMirroredObject(MirroredObject* mirrored_object, VpuInstructionCtx* vpu_instr_ctx) {
-  uint64_t id_value = mirrored_object->logical_object()->logical_object_id().value();
+  uint64_t id_value = mirrored_object->logical_object().logical_object_id().value();
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
       vpu_instr_ctx->mut_allocator(), vpu_instr_ctx, mirrored_object, id_value, is_const_operand);
   mirrored_object->mut_waiting_access_list()->PushBack(mirrored_object_access.Mutable());
@@ -106,7 +106,7 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             NewVpuInstrCtxList* new_vpu_instr_ctx_list,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(new_vpu_instr_ctx_list, vpu_instr_ctx) {
-    int64_t parallel_id = vpu_instr_ctx->vpu_ctx()->vpu_id().parallel_id();
+    int64_t parallel_id = vpu_instr_ctx->vpu_ctx().vpu_id().parallel_id();
     const auto& operands = vpu_instr_ctx->vpu_instruction_msg().vpu_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (operand.has_const_operand()) {

@@ -36,8 +36,8 @@ BEGIN_OBJECT_MSG(ObjMsgChunk);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, mem_size);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgMemBlock*, mem_block);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgSizedMemPool*, mem_pool);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgMemBlock, mem_block);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgSizedMemPool, mem_pool);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(list);

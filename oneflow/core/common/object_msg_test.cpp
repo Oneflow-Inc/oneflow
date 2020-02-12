@@ -12,7 +12,7 @@ BEGIN_OBJECT_MSG(ObjectMsgFoo)
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, foo);
   OBJECT_MSG_DEFINE_OPTIONAL(int16_t, bar);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, foobar);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
+  OBJECT_MSG_DEFINE_RAW_PTR(std::string, is_deleted);
 
  public:
   void __Delete__();
@@ -44,7 +44,7 @@ TEST(OBJECT_MSG, __delete__) {
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgBar)
   OBJECT_MSG_DEFINE_OPTIONAL(ObjectMsgFoo, foo);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::string*, is_deleted);
+  OBJECT_MSG_DEFINE_RAW_PTR(std::string, is_deleted);
 
  public:
   void __Delete__(){
