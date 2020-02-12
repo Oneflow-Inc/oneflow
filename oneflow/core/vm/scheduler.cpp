@@ -10,8 +10,6 @@ using RunningVpuInstructionPackage = OBJECT_MSG_TYPE(RunningVpuInstructionPackag
 using WaitingVpuInstrCtxList = VpuSchedulerCtx::waiting_vpu_instr_ctx_list_ObjectMsgListType;
 using ReadyVpuInstrCtxList = VpuSchedulerCtx::ready_vpu_instr_ctx_list_ObjectMsgListType;
 using AvailableAccessList = VpuSchedulerCtx::available_access_list_ObjectMsgListType;
-using VpuInstrOperandAccessList =
-    OBJECT_MSG_TYPE(MirroredObjectAccess)::vpu_instr_operand_list_ObjectMsgListType;
 using TmpPendingVpuInstrMsgList = VpuSchedulerCtx::tmp_pending_msg_list_ObjectMsgListType;
 using NewVpuInstrCtxList = VpuSchedulerCtx::new_vpu_instr_ctx_list_ObjectMsgListType;
 
@@ -20,20 +18,12 @@ namespace {
 void ReleaseVpuInstructionCtx(VpuInstructionCtx* vpu_instr_ctx,
                               /* out */ AvailableAccessList* available_access_list) {
   auto* holding_operand_list = vpu_instr_ctx->mut_holding_operand_list();
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(holding_operand_list, vpu_instr_operand) {
-    auto* mirrored_object_access = vpu_instr_operand->mut_mirrored_object_access();
-    auto* vpu_instr_operand_list = mirrored_object_access->mut_vpu_instr_operand_list();
-    vpu_instr_operand_list->Erase(vpu_instr_operand);
-    if (!vpu_instr_operand_list->empty()) { continue; }
-    auto* mirrored_object = vpu_instr_operand->mut_mirrored_object();
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(holding_operand_list, mirrored_object_access) {
+    auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
     auto* holding_access_list = mirrored_object->mut_holding_access_list();
     holding_access_list->Erase(mirrored_object_access);
     if (!holding_access_list->empty()) { continue; }
-    auto* waiting_access_list = mirrored_object->mut_waiting_access_list();
-    auto* waiting_access = waiting_access_list->Begin();
-    if (waiting_access == nullptr) { continue; }
-    waiting_access_list->MoveToDstBack(waiting_access, holding_access_list);
-    available_access_list->PushBack(waiting_access);
+    TODO();
   }
   holding_operand_list->Clear();
 }
@@ -59,27 +49,17 @@ void TryReleaseFinishedVpuInstructionPackages(
   }
 }
 
-void AllowVpuInstrOperandAccesses(VpuInstrOperandAccessList* vpu_instr_operand_list,
-                                  WaitingVpuInstrCtxList* waiting_vpu_instr_ctx_list,
-                                  /* out */ ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(vpu_instr_operand_list, vpu_instr_operand) {
-    auto* vpu_instruction_ctx = vpu_instr_operand->mut_vpu_instruction_ctx();
-    auto* waiting_operand_list = vpu_instruction_ctx->mut_waiting_operand_list();
-    auto* holding_operand_list = vpu_instruction_ctx->mut_holding_operand_list();
-    waiting_operand_list->MoveToDstBack(vpu_instr_operand, holding_operand_list);
-    if (waiting_operand_list->empty()) {
-      waiting_vpu_instr_ctx_list->MoveToDstBack(vpu_instruction_ctx, ready_vpu_instr_ctx_list);
-    }
-  }
-  vpu_instr_operand_list->Clear();
-}
-
 void FilterReadyVpuInstrCtx(AvailableAccessList* available_access_list,
                             WaitingVpuInstrCtxList* waiting_vpu_instr_ctx_list,
                             /* out */ ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(available_access_list, mirrored_object_access) {
-    AllowVpuInstrOperandAccesses(mirrored_object_access->mut_vpu_instr_operand_list(),
-                                 waiting_vpu_instr_ctx_list, ready_vpu_instr_ctx_list);
+    auto* vpu_instruction_ctx = mirrored_object_access->mut_vpu_instruction_ctx();
+    auto* waiting_operand_list = vpu_instruction_ctx->mut_waiting_operand_list();
+    auto* holding_operand_list = vpu_instruction_ctx->mut_holding_operand_list();
+    waiting_operand_list->MoveToDstBack(mirrored_object_access, holding_operand_list);
+    if (waiting_operand_list->empty()) {
+      waiting_vpu_instr_ctx_list->MoveToDstBack(vpu_instruction_ctx, ready_vpu_instr_ctx_list);
+    }
   }
   available_access_list->Clear();
 }

@@ -38,39 +38,20 @@ BEGIN_OBJECT_MSG(DeviceMemoryBuffer);
 END_OBJECT_MSG(DeviceMemoryBuffer);
 // clang-format on
 
-enum OBJECT_MSG_TYPE(MirroredObjectAccessType) {
-  kInvalidMirroredObjectAccessType = 0,
-  kMirroredObjectRead,
-  kMirroredObjectWrite,
-};
-
 class OBJECT_MSG_TYPE(VpuInstructionCtx);
-class OBJECT_MSG_TYPE(MirroredObjectAccess);
 class OBJECT_MSG_TYPE(MirroredObject);
+
 // clang-format off
-BEGIN_OBJECT_MSG(VpuInstrOperandAccess);
+BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(VpuInstructionCtx)*, vpu_instruction_ctx);
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObjectAccess)*, mirrored_object_access);
   OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(MirroredObject)*, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vpu_instr_operand_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, LogicalObjectId, logical_object_id);
-END_OBJECT_MSG(VpuInstrOperandAccess);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(MirroredObjectAccess);
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(MirroredObjectAccessType, access_type);
-
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
   OBJECT_MSG_DEFINE_LIST_LINK(available_access_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstrOperandAccess, mirrored_object_access_link,
-                              vpu_instr_operand_list);
+  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, LogicalObjectId, logical_object_id);
 END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
