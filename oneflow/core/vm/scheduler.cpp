@@ -12,11 +12,6 @@ using Id2LogicalObject = VpuSchedulerCtx::id2logical_object_ObjectMsgSkipListTyp
 
 namespace {
 
-void TryAllowMirroredObjectAccesses(MirroredObject* mirrored_object,
-                                    /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  TODO();
-}
-
 void ReleaseVpuInstructionCtx(VpuInstructionCtx* vpu_instr_ctx,
                               /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   auto* holding_operand_list = vpu_instr_ctx->mut_holding_operand_list();
@@ -57,16 +52,19 @@ void FilterReadyVpuInstrCtx(MaybeAvailableAccessList* maybe_available_access_lis
                             WaitingVpuInstrCtxList* waiting_vpu_instr_ctx_list,
                             /*out*/ ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(maybe_available_access_list, mirrored_object) {
-    TODO();
-    /*
-    auto* vpu_instruction_ctx = mirrored_object_access->mut_vpu_instruction_ctx();
-    auto* waiting_operand_list = vpu_instruction_ctx->mut_waiting_operand_list();
-    auto* holding_operand_list = vpu_instruction_ctx->mut_holding_operand_list();
-    waiting_operand_list->MoveToDstBack(mirrored_object_access, holding_operand_list);
-    if (waiting_operand_list->empty()) {
-      waiting_vpu_instr_ctx_list->MoveToDstBack(vpu_instruction_ctx, ready_vpu_instr_ctx_list);
+    mirrored_object->TryResetCurrentAccessType();
+    auto* waiting_access_list = mirrored_object->mut_waiting_access_list();
+    auto* holding_access_list = mirrored_object->mut_holding_access_list();
+    while (auto* mirrored_object_access = mirrored_object->GetFirstAllowedAccess()) {
+      waiting_access_list->MoveToDstBack(mirrored_object_access, holding_access_list);
+      auto* vpu_instruction_ctx = mirrored_object_access->mut_vpu_instruction_ctx();
+      auto* waiting_operand_list = vpu_instruction_ctx->mut_waiting_operand_list();
+      auto* holding_operand_list = vpu_instruction_ctx->mut_holding_operand_list();
+      waiting_operand_list->MoveToDstBack(mirrored_object_access, holding_operand_list);
+      if (waiting_operand_list->empty()) {
+        waiting_vpu_instr_ctx_list->MoveToDstBack(vpu_instruction_ctx, ready_vpu_instr_ctx_list);
+      }
     }
-    */
   }
   maybe_available_access_list->Clear();
 }
@@ -93,7 +91,7 @@ template<bool is_const_operand>
 void ConsumeMirroredObject(MirroredObject* mirrored_object, VpuInstructionCtx* vpu_instr_ctx) {
   uint64_t id_value = mirrored_object->logical_object()->logical_object_id().value();
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      vpu_instr_ctx->mut_allocator(), vpu_instr_ctx, mirrored_object, id_value);
+      vpu_instr_ctx->mut_allocator(), vpu_instr_ctx, mirrored_object, id_value, is_const_operand);
   mirrored_object->mut_waiting_access_list()->PushBack(mirrored_object_access.Mutable());
   vpu_instr_ctx->mut_waiting_operand_list()->PushBack(mirrored_object_access.Mutable());
   vpu_instr_ctx->mut_logical_object_id2operand_access()->Insert(mirrored_object_access.Mutable());

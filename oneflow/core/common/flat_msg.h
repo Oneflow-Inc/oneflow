@@ -289,13 +289,16 @@ struct FlatMsgGetDefault<true> final {
 
 #define SNAKE_TO_CAMEL(name) OF_PP_CAT(__FlatMsgSnakeToCamel__, name)
 
-#define _FLAT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                         \
- public:                                                                            \
-  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; } \
-                                                                                    \
- private:                                                                           \
-  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                       \
-    OF_PP_CAT(oneof_name, _).case_ = val;                                           \
+#define _FLAT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                             \
+ public:                                                                                \
+  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; }     \
+  bool OF_PP_CAT(has_, oneof_name)() const {                                            \
+    return OF_PP_CAT(oneof_name, _).case_ != _FLAT_MSG_ONEOF_NOT_SET_VALUE(oneof_name); \
+  }                                                                                     \
+                                                                                        \
+ private:                                                                               \
+  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                           \
+    OF_PP_CAT(oneof_name, _).case_ = val;                                               \
   }
 
 #define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                         \

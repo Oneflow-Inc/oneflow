@@ -1,0 +1,50 @@
+#include "oneflow/core/vm/mirrored_object.msg.h"
+#include "oneflow/core/vm/vpu_instruction.msg.h"
+#include "oneflow/core/common/util.h"
+
+namespace oneflow {
+
+void MirroredObjectAccess::__Init__(VpuInstructionCtx* vpu_instruction_ctx,
+                                    MirroredObject* mirrored_object,
+                                    uint64_t logical_object_id_value, bool is_const_operand) {
+  set_vpu_instruction_ctx(vpu_instruction_ctx);
+  set_mirrored_object(mirrored_object);
+  set_logical_object_id_value(logical_object_id_value);
+  set_is_const_operand(is_const_operand);
+}
+
+bool MirroredObject::IsFirstTwoConsumersReadOnly() {
+  auto* waiting_access_list = mut_waiting_access_list();
+  if (waiting_access_list->size() < 2) { return false; }
+  auto* first = waiting_access_list->Begin();
+  auto* second = waiting_access_list->Next(first);
+  return first->is_const_operand() && second->is_const_operand();
+}
+
+void MirroredObject::TryResetCurrentAccessType() {
+  if (current_access_type().has_access_type()) { return; }
+  if (waiting_access_list().empty()) { return; }
+  if (IsFirstTwoConsumersReadOnly()) {
+    mut_current_access_type()->mutable_read_only();
+    return;
+  }
+  auto* vpu_ctx = mut_waiting_access_list()->Begin()->vpu_instruction_ctx()->vpu_ctx();
+  mut_current_access_type()->mut_vpu_id_only()->CopyFrom(vpu_ctx->vpu_id());
+}
+
+MirroredObjectAccess* MirroredObject::GetFirstAllowedAccess() {
+  if (waiting_access_list().empty()) { return nullptr; }
+  if (current_access_type().has_read_only()) {
+    auto* first = mut_waiting_access_list()->Begin();
+    if (first->is_const_operand()) { return first; }
+  } else if (current_access_type().has_vpu_id_only()) {
+    auto* first = mut_waiting_access_list()->Begin();
+    const auto& vpu_id = first->vpu_instruction_ctx()->vpu_ctx()->vpu_id();
+    if (current_access_type().vpu_id_only() == vpu_id) { return first; }
+  } else {
+    UNIMPLEMENTED();
+  }
+  return nullptr;
+}
+
+}  // namespace oneflow

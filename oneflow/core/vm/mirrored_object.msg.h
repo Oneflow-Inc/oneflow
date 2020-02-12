@@ -45,14 +45,8 @@ class MirroredObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // methods
- public:
-  void __Init__(VpuInstructionCtx* vpu_instruction_ctx,
-                MirroredObject* mirrored_object,
-                uint64_t logical_object_id_value) {
-    set_vpu_instruction_ctx(vpu_instruction_ctx);
-    set_mirrored_object(mirrored_object);
-    set_logical_object_id_value(logical_object_id_value);
-  }
+  PUBLIC void __Init__(VpuInstructionCtx* vpu_instruction_ctx, MirroredObject* mirrored_object,
+                       uint64_t logical_object_id_value, bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
@@ -76,13 +70,16 @@ END_FLAT_MSG(ReadOnlyAccessType);
 BEGIN_FLAT_MSG(MirroredObjectAccessType);
   FLAT_MSG_DEFINE_ONEOF(access_type,
     FLAT_MSG_ONEOF_FIELD(ReadOnlyAccessType, read_only)
-    FLAT_MSG_ONEOF_FIELD(VpuId, vpu_only));
+    FLAT_MSG_ONEOF_FIELD(VpuId, vpu_id_only));
 END_FLAT_MSG(MirroredObjectAccessType);
 // clang-format on
 
 class LogicalObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
+  // methods
+  PUBLIC void TryResetCurrentAccessType(); 
+  PUBLIC MirroredObjectAccess* GetFirstAllowedAccess();
   //fields
   OBJECT_MSG_DEFINE_ONEOF(type,
     OBJECT_MSG_ONEOF_FIELD(LogicalBlobIdObj, logical_blob_id)
@@ -101,6 +98,8 @@ BEGIN_OBJECT_MSG(MirroredObject);
                               waiting_access_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
                               holding_access_list);
+  // methods
+  PRIVATE bool IsFirstTwoConsumersReadOnly(); 
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
