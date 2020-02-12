@@ -95,7 +95,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject*, logical_object);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(available_access_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
                               waiting_access_list);

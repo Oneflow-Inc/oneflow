@@ -142,13 +142,16 @@ namespace oneflow {
            == _OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair));                              \
   }
 
-#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                       \
- public:                                                                            \
-  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; } \
-                                                                                    \
- private:                                                                           \
-  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                       \
-    OF_PP_CAT(oneof_name, _).case_ = val;                                           \
+#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                             \
+ public:                                                                                  \
+  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; }       \
+  bool OF_PP_CAT(has_, oneof_name)() const {                                              \
+    return OF_PP_CAT(oneof_name, _).case_ != _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name); \
+  }                                                                                       \
+                                                                                          \
+ private:                                                                                 \
+  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                             \
+    OF_PP_CAT(oneof_name, _).case_ = val;                                                 \
   }
 
 #define OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \

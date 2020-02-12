@@ -5,7 +5,7 @@ namespace oneflow {
 
 using WaitingVpuInstrCtxList = VpuSchedulerCtx::waiting_vpu_instr_ctx_list_ObjectMsgListType;
 using ReadyVpuInstrCtxList = VpuSchedulerCtx::ready_vpu_instr_ctx_list_ObjectMsgListType;
-using AvailableAccessList = VpuSchedulerCtx::available_access_list_ObjectMsgListType;
+using MaybeAvailableAccessList = VpuSchedulerCtx::maybe_available_access_list_ObjectMsgListType;
 using TmpPendingVpuInstrMsgList = VpuSchedulerCtx::tmp_pending_msg_list_ObjectMsgListType;
 using NewVpuInstrCtxList = VpuSchedulerCtx::new_vpu_instr_ctx_list_ObjectMsgListType;
 using Id2LogicalObject = VpuSchedulerCtx::id2logical_object_ObjectMsgSkipListType;
@@ -13,12 +13,12 @@ using Id2LogicalObject = VpuSchedulerCtx::id2logical_object_ObjectMsgSkipListTyp
 namespace {
 
 void TryAllowMirroredObjectAccesses(MirroredObject* mirrored_object,
-                                    /*out*/ AvailableAccessList* available_access_list) {
+                                    /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   TODO();
 }
 
 void ReleaseVpuInstructionCtx(VpuInstructionCtx* vpu_instr_ctx,
-                              /*out*/ AvailableAccessList* available_access_list) {
+                              /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   auto* holding_operand_list = vpu_instr_ctx->mut_holding_operand_list();
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(holding_operand_list, mirrored_object_access) {
     auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
@@ -26,35 +26,37 @@ void ReleaseVpuInstructionCtx(VpuInstructionCtx* vpu_instr_ctx,
     holding_access_list->Erase(mirrored_object_access);
     if (!holding_access_list->empty()) { continue; }
     mirrored_object->clear_current_access_type();
-    available_access_list->PushBack(mirrored_object);
+    if (mirrored_object->waiting_access_list().empty()) { continue; }
+    maybe_available_access_list->PushBack(mirrored_object);
   }
   holding_operand_list->Clear();
 }
 
 void ReleaseVpuInstructionPackage(RunningVpuInstructionPackage* pkg,
-                                  /*out*/ AvailableAccessList* available_access_list) {
+                                  /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   auto* vpu_instr_ctx_list = pkg->mut_vpu_instruction_list();
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(vpu_instr_ctx_list, vpu_instr_ctx) {
-    ReleaseVpuInstructionCtx(vpu_instr_ctx, /*out*/ available_access_list);
+    ReleaseVpuInstructionCtx(vpu_instr_ctx, /*out*/ maybe_available_access_list);
   }
   vpu_instr_ctx_list->Clear();
 }
 
-void TryReleaseFinishedVpuInstructionPackages(VpuSetCtx* vpu_set_ctx,
-                                              /*out*/ AvailableAccessList* available_access_list) {
+void TryReleaseFinishedVpuInstructionPackages(
+    VpuSetCtx* vpu_set_ctx,
+    /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   auto* pkg_list = vpu_set_ctx->mut_launched_pkg_list();
   while (true) {
     auto* begin = pkg_list->Begin();
     if (begin == nullptr || !begin->Done()) { break; }
-    ReleaseVpuInstructionPackage(begin, /*out*/ available_access_list);
+    ReleaseVpuInstructionPackage(begin, /*out*/ maybe_available_access_list);
     pkg_list->Erase(begin);
   }
 }
 
-void FilterReadyVpuInstrCtx(AvailableAccessList* available_access_list,
+void FilterReadyVpuInstrCtx(MaybeAvailableAccessList* maybe_available_access_list,
                             WaitingVpuInstrCtxList* waiting_vpu_instr_ctx_list,
                             /*out*/ ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(available_access_list, mirrored_object) {
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(maybe_available_access_list, mirrored_object) {
     TODO();
     /*
     auto* vpu_instruction_ctx = mirrored_object_access->mut_vpu_instruction_ctx();
@@ -66,7 +68,7 @@ void FilterReadyVpuInstrCtx(AvailableAccessList* available_access_list,
     }
     */
   }
-  available_access_list->Clear();
+  maybe_available_access_list->Clear();
 }
 
 // fill new_ctx_list with VpuInstructionCtx which created by VpuInstructionMsg in
@@ -97,16 +99,16 @@ void ConsumeMirroredObject(MirroredObject* mirrored_object, VpuInstructionCtx* v
   vpu_instr_ctx->mut_logical_object_id2operand_access()->Insert(mirrored_object_access.Mutable());
 }
 
-inline void TryPushBack(AvailableAccessList* available_access_list,
+inline void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
                         MirroredObject* mirrored_object) {
-  if (mirrored_object->is_available_access_link_empty()) {
-    available_access_list->PushBack(mirrored_object);
+  if (mirrored_object->is_maybe_available_access_link_empty()) {
+    maybe_available_access_list->PushBack(mirrored_object);
   }
 }
 
 void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             NewVpuInstrCtxList* new_vpu_instr_ctx_list,
-                            /*out*/ AvailableAccessList* available_access_list) {
+                            /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(new_vpu_instr_ctx_list, vpu_instr_ctx) {
     int64_t parallel_id = vpu_instr_ctx->vpu_ctx()->vpu_id().parallel_id();
     const auto& operands = vpu_instr_ctx->vpu_instruction_msg().vpu_instruction_proto().operand();
@@ -115,12 +117,12 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         auto* mirrored_object =
             FindMirroredObject(id2logical_object, operand.const_operand().value(), parallel_id);
         ConsumeMirroredObject<kConstOperandAccess>(mirrored_object, vpu_instr_ctx);
-        TryPushBack(available_access_list, mirrored_object);
+        TryPushBack(maybe_available_access_list, mirrored_object);
       } else if (operand.has_mutable_operand()) {
         auto* mirrored_object =
             FindMirroredObject(id2logical_object, operand.mutable_operand().value(), parallel_id);
         ConsumeMirroredObject<kMutableOperandAccess>(mirrored_object, vpu_instr_ctx);
-        TryPushBack(available_access_list, mirrored_object);
+        TryPushBack(maybe_available_access_list, mirrored_object);
       } else if (operand.has_double_i_operand() || operand.has_int64_i_operand()) {
         // do nothing
       } else {
@@ -150,9 +152,9 @@ void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
 
 void VpuScheduler::Dispatch() {
   auto* vpu_set_ctx_list = ctx_->mut_vpu_set_ctx_list();
-  auto* available_access_list = ctx_->mut_available_access_list();
+  auto* maybe_available_access_list = ctx_->mut_maybe_available_access_list();
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE(vpu_set_ctx_list, vpu_set_ctx) {
-    TryReleaseFinishedVpuInstructionPackages(vpu_set_ctx, /*out*/ available_access_list);
+    TryReleaseFinishedVpuInstructionPackages(vpu_set_ctx, /*out*/ maybe_available_access_list);
   };
   auto* waiting_vpu_instr_ctx_list = ctx_->mut_waiting_vpu_instr_ctx_list();
   auto* ready_vpu_instr_ctx_list = ctx_->mut_ready_vpu_instr_ctx_list();
@@ -165,11 +167,11 @@ void VpuScheduler::Dispatch() {
     auto* new_vpu_instr_ctx_list = ctx_->mut_new_vpu_instr_ctx_list();
     MakeVpuInstructionCtx(tmp_pending_msg_list, /*out*/ new_vpu_instr_ctx_list);
     ConsumeMirroredObjects(ctx_->mut_id2logical_object(), new_vpu_instr_ctx_list,
-                           /*out*/ available_access_list);
+                           /*out*/ maybe_available_access_list);
     MoveToReadyCtxListIfNoObjectOperand(new_vpu_instr_ctx_list, /*out*/ ready_vpu_instr_ctx_list);
     new_vpu_instr_ctx_list->MoveTo(waiting_vpu_instr_ctx_list);
   }
-  FilterReadyVpuInstrCtx(available_access_list, waiting_vpu_instr_ctx_list,
+  FilterReadyVpuInstrCtx(maybe_available_access_list, waiting_vpu_instr_ctx_list,
                          /*out*/ ready_vpu_instr_ctx_list);
   DispatchVpuInstructionCtx(ready_vpu_instr_ctx_list);
 }
