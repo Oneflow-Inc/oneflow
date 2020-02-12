@@ -309,4 +309,13 @@ def softplus(x, name=None):
             .SetAttr("unary_math_type", "Softplus", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.sqrt_v2")
+def sqrt(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Sqrt_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary")\
+            .Input("x",[x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "Sqrt", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
 
