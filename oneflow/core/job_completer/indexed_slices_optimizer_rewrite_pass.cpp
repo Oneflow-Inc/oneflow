@@ -43,6 +43,7 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       return;
     }
     std::vector<const OpNode*> op_nodes_to_remove;
+    std::vector<const OpNode*> op_nodes_apply_to_diff;
     const OpNode* dst_node = src_node->SoleOutEdge()->dst_node();
     do {
       if (dst_node->op().output_bns().empty()) { break; }
@@ -50,6 +51,11 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       if (dst_op_conf.has_parallel_cast_conf()) {
         if (dst_node->out_edges().size() != 1) { return; }
         op_nodes_to_remove.push_back(dst_node);
+        dst_node = dst_node->SoleOutEdge()->dst_node();
+        continue;
+      } else if (dst_op_conf.has_scalar_mul_conf()) {
+        if (dst_node->out_edges().size() != 1) { return; }
+        op_nodes_apply_to_diff.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
         continue;
       } else {
@@ -117,6 +123,16 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     CHECK(!values_lbn.empty());
     if (include_op_name_set.find(model_op_name) == include_op_name_set.end()) { return; }
     for (const OpNode* node : op_nodes_to_remove) { job_builder->DelOps({node->op().op_conf()}); }
+    for (const OpNode* node : op_nodes_apply_to_diff) {
+      OperatorConf new_conf = node->op().op_conf();
+      if (new_conf.has_scalar_mul_conf()) {
+        new_conf.mutable_scalar_mul_conf()->set_in(values_lbn);
+        values_lbn = GenLogicalBlobName(new_conf.name(), new_conf.scalar_mul_conf().out());
+        job_builder->MutOpsOnlyOnce({new_conf});
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
     OperatorConf new_optimizer_op_conf{};
     new_optimizer_op_conf.set_name("System-Optimizer-IndexedSlices-" + model_op_name);
     BuildOptimizer(&new_optimizer_op_conf, indices_lbn, values_lbn);
