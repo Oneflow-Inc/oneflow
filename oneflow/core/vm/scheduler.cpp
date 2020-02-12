@@ -69,9 +69,19 @@ void FilterReadyVpuInstrCtx(MaybeAvailableAccessList* maybe_available_access_lis
   maybe_available_access_list->Clear();
 }
 
-void MakeVpuInstructionCtx(TmpPendingVpuInstrMsgList* vpu_instr_msg_list,
+void MakeVpuInstructionCtx(VpuSchedulerCtx* scheduler,
+                           TmpPendingVpuInstrMsgList* vpu_instr_msg_list,
                            /*out*/ NewVpuInstrCtxList* ret_vpu_instr_ctx_list) {
-  TODO();
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(vpu_instr_msg_list, vpu_instr_msg) {
+    VpuTypeId vpu_type_id = vpu_instr_msg->vpu_instruction_proto().vpu_type_id();
+    auto* vpu_type_ctx = scheduler->mut_vpu_type_id2vpu_type_ctx()->FindPtr(vpu_type_id);
+    OBJECT_MSG_LIST_FOR_EACH_UNSAFE(vpu_type_ctx->mut_vpu_ctx_list(), vpu_ctx) {
+      auto vpu_instr_ctx = ObjectMsgPtr<VpuInstructionCtx>::NewFrom(
+          scheduler->mut_default_allocator(), vpu_instr_msg, vpu_ctx);
+      ret_vpu_instr_ctx_list->PushBack(vpu_instr_ctx.Mutable());
+    }
+  }
+  vpu_instr_msg_list->Clear();
 }
 
 MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
@@ -161,7 +171,7 @@ void VpuScheduler::Dispatch() {
       ctx_->mut_pending_msg_list()->MoveTo(tmp_pending_msg_list);
     }
     auto* new_vpu_instr_ctx_list = ctx_->mut_new_vpu_instr_ctx_list();
-    MakeVpuInstructionCtx(tmp_pending_msg_list, /*out*/ new_vpu_instr_ctx_list);
+    MakeVpuInstructionCtx(ctx_, tmp_pending_msg_list, /*out*/ new_vpu_instr_ctx_list);
     ConsumeMirroredObjects(ctx_->mut_id2logical_object(), new_vpu_instr_ctx_list,
                            /*out*/ maybe_available_access_list);
     MoveToReadyCtxListIfNoObjectOperand(new_vpu_instr_ctx_list, /*out*/ ready_vpu_instr_ctx_list);

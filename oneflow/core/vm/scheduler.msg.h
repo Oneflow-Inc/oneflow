@@ -9,10 +9,14 @@ namespace oneflow {
 // clang-format off
 BEGIN_OBJECT_MSG(VpuSchedulerCtx);
   // methods
-  void __Init__() { mutable_pending_msg_list_mutex()->__Init__(); }
+  void __Init__() {
+    mutable_pending_msg_list_mutex()->__Init__();
+    set_default_allocator(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator());
+  }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, machine_id);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
   // for pending_msg_list only
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_msg_list_mutex);
 
