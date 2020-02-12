@@ -18,6 +18,8 @@ def dense(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
     model_distribute=distribute_util.broadcast(),
@@ -51,6 +53,7 @@ def dense(
             if kernel_initializer is not None
             else flow.constant_initializer(0)
         ),
+        regularizer=kernel_regularizer,
         trainable=trainable,
         model_name="weight",
         distribute=model_distribute,
@@ -73,6 +76,7 @@ def dense(
                 if bias_initializer is not None
                 else flow.constant_initializer(0)
             ),
+            regularizer=bias_regularizer,
             trainable=trainable,
             model_name="bias",
             distribute=model_distribute,
@@ -106,6 +110,8 @@ def conv2d(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
     weight_name=None,
@@ -125,6 +131,7 @@ def conv2d(
         initializer=kernel_initializer
         if kernel_initializer is not None
         else flow.constant_initializer(0),
+        regularizer=kernel_regularizer,
         trainable=trainable,
         model_name="weight",
     )
@@ -139,6 +146,7 @@ def conv2d(
             initializer=bias_initializer
             if bias_initializer is not None
             else flow.constant_initializer(0),
+            regularizer=bias_regularizer,
             trainable=trainable,
             model_name="bias",
         )
@@ -280,6 +288,8 @@ def batch_normalization(
     scale=True,
     beta_initializer=None,
     gamma_initializer=None,
+    beta_regularizer=None,
+    gamma_regularizer=None,
     moving_mean_initializer=None,
     moving_variance_initializer=None,
     trainable=True,
@@ -298,6 +308,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=beta_initializer or flow.zeros_initializer(),
+            regularizer=beta_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
@@ -308,6 +319,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=gamma_initializer or flow.ones_initializer(),
+            regularizer=gamma_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )

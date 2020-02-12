@@ -24,7 +24,7 @@ parser.add_argument("--node_list", type=str, default=NODE_LIST)
 
 # train
 parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
-parser.add_argument("--weight_l2", type=float, default=0.01, help="weight l2 decay parameter")
+parser.add_argument("--weight_decay_rate", type=float, default=0.01, help="weight decay rate")
 parser.add_argument("--batch_size_per_device", type=int, default=24)
 parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
 parser.add_argument("--log_every_n_iter", type=int, default=1, help="print loss every n iteration")
@@ -124,6 +124,10 @@ _BERT_MODEL_UPDATE_CONF = dict(
   adam_conf = dict(
     epsilon = 1e-6
   ),
+  weight_decay_conf=dict(
+    weight_decay_rate=args.weight_decay_rate,
+    excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
+  )
 )
 
 @flow.function
@@ -133,7 +137,6 @@ def PretrainJob():
 
   flow.config.train.primary_lr(args.learning_rate)
   flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
-  flow.config.train.weight_l2(args.weight_l2)
 
   loss = BuildPreTrainNet(batch_size, args.data_part_num,
                           seq_length=args.seq_length,

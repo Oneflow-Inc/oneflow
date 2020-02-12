@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/adam_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -31,8 +30,8 @@ const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const
 
 template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* train_step,
-    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, T weight_decay, const int64_t* train_step, const float* learning_rate,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* m_blob = BnInOp2Blob("m");
   Blob* v_blob = BnInOp2Blob("v");
@@ -44,12 +43,10 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
         ctx, train_step, static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
         beta1_t_blob->mut_dptr<T>(), beta2_t_blob->mut_dptr<T>());
   }
-  KernelUtil<device_type, T>::Div(ctx, model_blob->shape().elem_cnt(),
-                                  BnInOp2Blob("model_diff")->mut_dptr<T>(), batch_instance_num_ptr);
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), learning_rate, l1, l2, static_cast<T>(adam_conf.beta1()),
-      static_cast<T>(adam_conf.beta2()), static_cast<T>(adam_conf.epsilon()),
-      adam_conf.do_bias_correction(), train_step,
+      ctx, model_blob->shape().elem_cnt(), learning_rate, weight_decay,
+      static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
+      static_cast<T>(adam_conf.epsilon()), adam_conf.do_bias_correction(), train_step,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
       (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
       model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
@@ -58,7 +55,7 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
 template<typename T>
 class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
                           const int64_t* train_step, const T* beta1_t, const T* beta2_t,
                           T* model_diff, T* model, T* m, T* v) {
@@ -68,8 +65,7 @@ class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     UpdateMomentEstimate<T>(n, do_bias_correction, beta2, 2, model_diff, beta2_t, v);
     FOR_RANGE(int64_t, i, 0, n) {
       model_diff[i] = m[i] / (std::sqrt(v[i]) + epsilon);
-      T reg_diff = RegDiff(model_diff[i], l1, l2, model[i]);
-      model[i] = model[i] - *learning_rate * reg_diff;
+      model[i] = model[i] - *learning_rate * (model_diff[i] + weight_decay * model[i]);
     }
   }
   static void DoBiasCorrection(DeviceCtx*, const int64_t* train_step, const T beta1, const T beta2,

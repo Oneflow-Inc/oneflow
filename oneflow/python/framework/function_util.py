@@ -260,22 +260,6 @@ def set_primary_lr(func_desc, value):
 def set_secondary_lr(func_desc, value):
     func_desc.job_config_proto.train_conf.secondary_lr = value
 
-@oneflow_function_config('train.weight_l1')
-def set_weight_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l1 = value
-
-@oneflow_function_config('train.bias_l1')
-def set_bias_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l1 = value
-
-@oneflow_function_config('train.weight_l2')
-def set_weight_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l2 = value
-
-@oneflow_function_config('train.bias_l2')
-def set_bias_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l2 = value
-
 @oneflow_function_config('default_placement_scope')
 def set_default_placement(func_desc, value):
     assert isinstance(value, placement_ctx.PlacementScope)

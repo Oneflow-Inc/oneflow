@@ -14,6 +14,7 @@ include(eigen)
 include(cocoapi)
 include(half)
 include(json)
+include(re2)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -89,6 +90,7 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
+    ${RE2_LIBRARIES}
 )
 
 if(WIN32)
@@ -120,6 +122,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   json_copy_headers_to_destination
+  re2
 )
 
 include_directories(
@@ -136,6 +139,7 @@ include_directories(
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
+    ${RE2_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
