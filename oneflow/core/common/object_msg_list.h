@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
 
+#include <mutex>
 #include "oneflow/core/common/object_msg_core.h"
 #include "oneflow/core/common/embedded_list.h"
 
@@ -13,6 +14,11 @@ namespace oneflow {
 #define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)         \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   _OBJECT_MSG_DEFINE_LIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, field_name);
+
+#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)                                      \
+  ObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink,        \
+                            OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
+                                                                           _DssFieldOffset)()>>
 
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem)                            \
   for (ObjectMsgPtr<std::remove_pointer<decltype((list_ptr)->End())>::type> \
@@ -70,11 +76,6 @@ namespace oneflow {
                                                                \
  private:                                                      \
   EmbeddedListLink OF_PP_CAT(field_name, _);
-
-#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)                                      \
-  ObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink,        \
-                            OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
-                                                                           _DssFieldOffset)()>>
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {
@@ -152,6 +153,22 @@ class TrivialObjectMsgList {
     ObjectMsgPtrUtil::Ref(ptr);
   }
 
+  void PushBack(std::mutex* mutex, value_type* ptr) {
+    {
+      std::unique_lock<std::mutex> lock(*mutex);
+      list_head_.PushBack(ptr);
+    }
+    ObjectMsgPtrUtil::Ref(ptr);
+  }
+
+  void PushFront(std::mutex* mutex, value_type* ptr) {
+    {
+      std::unique_lock<std::mutex> lock(*mutex);
+      list_head_.PushFront(ptr);
+    }
+    ObjectMsgPtrUtil::Ref(ptr);
+  }
+
   void Erase(value_type* ptr) {
     list_head_.Erase(ptr);
     ObjectMsgPtrUtil::ReleaseRef(ptr);
@@ -169,6 +186,32 @@ class TrivialObjectMsgList {
     ObjectMsgPtr<value_type> ptr;
     if (list_head_.empty()) { return ptr; }
     ptr.Reset(list_head_.PopFront());
+    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
+    return ptr;
+  }
+
+  ObjectMsgPtr<value_type> PopBack(std::mutex* mutex) {
+    ObjectMsgPtr<value_type> ptr;
+    if (list_head_.empty()) { return ptr; }
+    value_type* raw_ptr = nullptr;
+    {
+      std::unique_lock<std::mutex> lock(*mutex);
+      raw_ptr = list_head_.PopBack();
+    }
+    ptr.Reset(raw_ptr);
+    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
+    return ptr;
+  }
+
+  ObjectMsgPtr<value_type> PopFront(std::mutex* mutex) {
+    ObjectMsgPtr<value_type> ptr;
+    if (list_head_.empty()) { return ptr; }
+    value_type* raw_ptr = nullptr;
+    {
+      std::unique_lock<std::mutex> lock(*mutex);
+      raw_ptr = list_head_.PopFront();
+    }
+    ptr.Reset(raw_ptr);
     ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
     return ptr;
   }
