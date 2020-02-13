@@ -65,24 +65,32 @@ class TrivialObjectMsgMutexedList {
 
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
-  std::mutex* mut_mutex() { return &mutex_; }
 
   void __Init__() { list_head_.__Init__(); }
 
-  void PushBack(value_type* ptr) { return list_head_.PushBack(&mutex_, ptr); }
-  void PushFront(value_type* ptr) { return list_head_.PushFront(&mutex_, ptr); }
-  ObjectMsgPtr<value_type> PopBack() { return list_head_.PopBack(&mutex_); }
+  void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.EmplaceBack(std::move(ptr));
+  }
+  void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.EmplaceFront(std::move(ptr));
+  }
+  ObjectMsgPtr<value_type> PopBack() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.PopBack();
+  }
+  ObjectMsgPtr<value_type> PopFront() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.PopFront();
+  }
 
-  ObjectMsgPtr<value_type> PopFront() { return list_head_.PopFront(&mutex_); }
-
-  void MoveFrom(TrivialObjectMsgList<LinkField>* src) { MoveFromSrcBack(src); }
-  void MoveFromSrcBack(TrivialObjectMsgList<LinkField>* src) {
+  void MoveFrom(TrivialObjectMsgList<LinkField>* src) {
     std::unique_lock<std::mutex> lock(mutex_);
     src->MoveToDstBack(&list_head_);
   }
 
-  void MoveTo(TrivialObjectMsgList<LinkField>* dst) { MoveToDstBack(dst); }
-  void MoveToDstBack(TrivialObjectMsgList<LinkField>* dst) {
+  void MoveTo(TrivialObjectMsgList<LinkField>* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }

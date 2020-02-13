@@ -467,6 +467,16 @@ class ObjectMsgPtr final {
     return ret;
   }
 
+  static ObjectMsgPtr __UnsafeMove__(value_type* ptr) {
+    ObjectMsgPtr ret;
+    ret.ptr_ = ptr;
+    return ret;
+  }
+  void __UnsafeMoveTo__(value_type** ptr) {
+    *ptr = ptr_;
+    ptr_ = nullptr;
+  }
+
  private:
   void Clear() {
     if (ptr_ == nullptr) { return; }
