@@ -100,7 +100,7 @@ BEGIN_OBJECT_MSG(VpuCtx);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link,
                               collect_vpu_instruction_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link,
-                                        pending_pkg_list);
+                                        waiting_pkg_list);
 END_OBJECT_MSG(VpuCtx);
 // clang-format on
 

@@ -16,8 +16,8 @@ BEGIN_OBJECT_MSG(VpuSchedulerCtx);
   OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
 
   //links
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, pending_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, tmp_pending_msg_list);
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, waiting_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, tmp_waiting_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, new_vpu_instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, waiting_vpu_instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, ready_vpu_instr_ctx_list);
