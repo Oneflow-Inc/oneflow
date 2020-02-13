@@ -8,18 +8,12 @@ namespace oneflow {
 class VpuSchedulerCtx;
 class VpuInstructionMsg;
 
-class ControlVpu final : public Vpu {
+class ControlVpu final {
  public:
-  ControlVpu() : Vpu() {}
-  ~ControlVpu() override = default;
+  ControlVpu() = default;
+  ~ControlVpu() = default;
 
   void Run(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
-
-  // UNIMPLEMENTED methods
-  const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const override;
-  VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
-                                                const VpuCtx* vpu_ctx) const override;
-  void Run(VpuCtx* vpu_ctx, RunningVpuInstructionPackage* vpu_instr_pkg) const override;
 };
 
 }  // namespace oneflow
