@@ -171,8 +171,7 @@ void DispatchVpuInstructionCtx(VpuSchedulerCtx* ctx,
 }  // namespace
 
 void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
-  std::unique_lock<std::mutex> lck(*ctx_->mut_pending_msg_list_mutex()->Mutable());
-  vpu_instr_list->MoveTo(ctx_->mut_pending_msg_list());
+  ctx_->mut_pending_msg_list()->MoveFrom(vpu_instr_list);
 }
 
 void VpuScheduler::Dispatch() {
@@ -185,10 +184,7 @@ void VpuScheduler::Dispatch() {
   auto* ready_vpu_instr_ctx_list = ctx_->mut_ready_vpu_instr_ctx_list();
   if (ctx_->pending_msg_list().size() > 0) {
     auto* tmp_pending_msg_list = ctx_->mut_tmp_pending_msg_list();
-    {
-      std::unique_lock<std::mutex> lck(*ctx_->mut_pending_msg_list_mutex()->Mutable());
-      ctx_->mut_pending_msg_list()->MoveTo(tmp_pending_msg_list);
-    }
+    ctx_->mut_pending_msg_list()->MoveTo(tmp_pending_msg_list);
     auto* new_vpu_instr_ctx_list = ctx_->mut_new_vpu_instr_ctx_list();
     MakeVpuInstructionCtx(ctx_, tmp_pending_msg_list, /*out*/ new_vpu_instr_ctx_list);
     ConsumeMirroredObjects(ctx_->mut_id2logical_object(), new_vpu_instr_ctx_list,
