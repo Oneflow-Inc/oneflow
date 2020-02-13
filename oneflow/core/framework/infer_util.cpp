@@ -72,7 +72,7 @@ Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConfWr
   return Maybe<void>::Ok();
 }
 
-size_t TmpSizeInferFnUtil::ZeroTmpSize(const InferContext&) { return 0; }
+size_t TmpSizeInferFnUtil::ZeroTmpSize(InferContext*) { return 0; }
 
 }  // namespace user_op
 

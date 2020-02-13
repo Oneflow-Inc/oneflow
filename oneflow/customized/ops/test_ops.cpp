@@ -50,6 +50,21 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                          user_op::AddOpFn AddOp) {
+  if (op.NeedGenGradTensor4OpInput("in", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper ccrelu_grad_op =
+        builder.Op("ccrelu_grad")
+            .Input("y", op.output("out", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("dx")
+            .Build();
+    op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
+    AddOp(ccrelu_grad_op);
+  }
+});
+
 REGISTER_USER_OP("TestReshape")
     .Input("in")
     .Output("out")
@@ -85,19 +100,25 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper ccrelu_grad_op =
-        builder.Op("ccrelu_grad")
-            .Input("y", op.output("out", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("dx")
-            .Build();
-    op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
-    AddOp(ccrelu_grad_op);
-  }
-});
+REGISTER_USER_OP("TestMultiOutputOrder")
+    .Input("in")
+    .Output("out1")
+    .Output("out2")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
+      Shape* out2_shape = ctx->Shape4ArgNameAndIndex("out2", 0);
+      *out1_shape = *in_shape;
+      *out2_shape = *in_shape;
+      int32_t last_axis = in_shape->NumAxes() - 1;
+      out2_shape->Set(last_axis, in_shape->At(last_axis) * 2);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split(ctx->outputs(), 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
