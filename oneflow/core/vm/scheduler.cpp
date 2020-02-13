@@ -6,7 +6,7 @@ namespace oneflow {
 using WaitingVpuInstrCtxList = VpuSchedulerCtx::waiting_vpu_instr_ctx_list_ObjectMsgListType;
 using ReadyVpuInstrCtxList = VpuSchedulerCtx::ready_vpu_instr_ctx_list_ObjectMsgListType;
 using MaybeAvailableAccessList = VpuSchedulerCtx::maybe_available_access_list_ObjectMsgListType;
-using TmpPendingVpuInstrMsgList = VpuSchedulerCtx::tmp_pending_msg_list_ObjectMsgListType;
+using TmpWaitingVpuInstrMsgList = VpuSchedulerCtx::tmp_waiting_msg_list_ObjectMsgListType;
 using NewVpuInstrCtxList = VpuSchedulerCtx::new_vpu_instr_ctx_list_ObjectMsgListType;
 using Id2LogicalObject = VpuSchedulerCtx::id2logical_object_ObjectMsgSkipListType;
 using ActiveVpuCtxList = VpuSchedulerCtx::active_vpu_ctx_list_ObjectMsgListType;
@@ -70,7 +70,7 @@ void FilterReadyVpuInstrCtx(MaybeAvailableAccessList* maybe_available_access_lis
 }
 
 void MakeVpuInstructionCtx(VpuSchedulerCtx* scheduler,
-                           TmpPendingVpuInstrMsgList* vpu_instr_msg_list,
+                           TmpWaitingVpuInstrMsgList* vpu_instr_msg_list,
                            /*out*/ NewVpuInstrCtxList* ret_vpu_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vpu_instr_msg_list, vpu_instr_msg) {
     VpuTypeId vpu_type_id = vpu_instr_msg->vpu_instruction_proto().vpu_type_id();
@@ -160,7 +160,7 @@ void DispatchVpuInstructionCtx(VpuSchedulerCtx* ctx,
     auto pkg = ObjectMsgPtr<RunningVpuInstructionPackage>::NewFrom(allocator, vpu_ctx);
     vpu_ctx->mut_collect_vpu_instruction_list()->MoveTo(pkg->mut_vpu_instruction_ctx_list());
     vpu_ctx->mut_vpu_set_ctx()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
-    vpu_ctx->mut_pending_pkg_list()->EmplaceBack(std::move(pkg));
+    vpu_ctx->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
     active_vpu_ctx_list->Erase(vpu_ctx);
   }
 }
@@ -168,7 +168,7 @@ void DispatchVpuInstructionCtx(VpuSchedulerCtx* ctx,
 }  // namespace
 
 void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
-  ctx_->mut_pending_msg_list()->MoveFrom(vpu_instr_list);
+  ctx_->mut_waiting_msg_list()->MoveFrom(vpu_instr_list);
 }
 
 void VpuScheduler::Dispatch() {
@@ -179,11 +179,11 @@ void VpuScheduler::Dispatch() {
   };
   auto* waiting_vpu_instr_ctx_list = ctx_->mut_waiting_vpu_instr_ctx_list();
   auto* ready_vpu_instr_ctx_list = ctx_->mut_ready_vpu_instr_ctx_list();
-  if (ctx_->pending_msg_list().size() > 0) {
-    auto* tmp_pending_msg_list = ctx_->mut_tmp_pending_msg_list();
-    ctx_->mut_pending_msg_list()->MoveTo(tmp_pending_msg_list);
+  if (ctx_->waiting_msg_list().size() > 0) {
+    auto* tmp_waiting_msg_list = ctx_->mut_tmp_waiting_msg_list();
+    ctx_->mut_waiting_msg_list()->MoveTo(tmp_waiting_msg_list);
     auto* new_vpu_instr_ctx_list = ctx_->mut_new_vpu_instr_ctx_list();
-    MakeVpuInstructionCtx(ctx_, tmp_pending_msg_list, /*out*/ new_vpu_instr_ctx_list);
+    MakeVpuInstructionCtx(ctx_, tmp_waiting_msg_list, /*out*/ new_vpu_instr_ctx_list);
     ConsumeMirroredObjects(ctx_->mut_id2logical_object(), new_vpu_instr_ctx_list,
                            /*out*/ maybe_available_access_list);
     MoveToReadyCtxListIfNoObjectOperand(new_vpu_instr_ctx_list, /*out*/ ready_vpu_instr_ctx_list);
