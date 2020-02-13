@@ -160,10 +160,7 @@ void DispatchVpuInstructionCtx(VpuSchedulerCtx* ctx,
     auto pkg = ObjectMsgPtr<RunningVpuInstructionPackage>::NewFrom(allocator, vpu_ctx);
     vpu_ctx->mut_collect_vpu_instruction_list()->MoveTo(pkg->mut_vpu_instruction_ctx_list());
     vpu_ctx->mut_vpu_set_ctx()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
-    {
-      std::unique_lock<std::mutex> lock(*vpu_ctx->mut_pending_list_mutex()->Mutable());
-      vpu_ctx->mut_pending_pkg_list()->PushBack(pkg.Mutable());
-    }
+    vpu_ctx->mut_pending_pkg_list()->EmplaceBack(std::move(pkg));
     active_vpu_ctx_list->Erase(vpu_ctx);
   }
 }
