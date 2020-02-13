@@ -107,7 +107,7 @@ END_OBJECT_MSG(VpuCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuTypeCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuInstructionFactory, vpu_instruction_factory); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const Vpu, vpu); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);

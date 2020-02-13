@@ -18,18 +18,21 @@ class VpuInstruction {
 class VpuCtx;
 class ObjectMsgAllocator;
 class VpuInstructionStatusQuerier;
+class RunningVpuInstructionPackage;
 
-class VpuInstructionFactory {
+class Vpu {
  public:
-  virtual ~VpuInstructionFactory() = default;
+  virtual ~Vpu() = default;
 
   virtual const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const = 0;
   virtual VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
                                                         int* allocated_size,
                                                         const VpuCtx* vpu_ctx) const = 0;
 
+  virtual void Run(VpuCtx* vpu_ctx, RunningVpuInstructionPackage* vpu_instr_pkg) const = 0;
+
  protected:
-  VpuInstructionFactory() = default;
+  Vpu() = default;
 };
 
 }  // namespace oneflow
