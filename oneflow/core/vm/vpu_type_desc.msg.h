@@ -29,7 +29,9 @@ BEGIN_FLAT_MSG(VpuInstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableLogicalObjectId, mutable_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
-    FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand));
+    FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
+    FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
+    FLAT_MSG_ONEOF_FIELD(bool, bool_i_operand));
 END_FLAT_MSG(VpuInstructionOperand);
 // clang-format on
 

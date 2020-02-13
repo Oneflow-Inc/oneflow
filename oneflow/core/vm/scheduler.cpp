@@ -141,10 +141,8 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
             FindMirroredObject(id2logical_object, operand.mutable_operand().value(), parallel_id);
         ConsumeMirroredObject<kMutableOperandAccess>(mirrored_object, vpu_instr_ctx);
         TryPushBack(maybe_available_access_list, mirrored_object);
-      } else if (operand.has_double_i_operand() || operand.has_int64_i_operand()) {
-        // do nothing
       } else {
-        UNIMPLEMENTED();
+        // do nothing
       }
     }
   }

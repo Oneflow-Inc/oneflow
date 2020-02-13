@@ -78,6 +78,10 @@ class LogicalObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   // methods
+  PUBLIC void __Init__(const LogicalObject& logical_object, int64_t parallel_id) {
+    set_logical_object(&logical_object);
+    set_parallel_id(parallel_id);
+  }
   PUBLIC void TryResetCurrentAccessType(); 
   PUBLIC MirroredObjectAccess* GetFirstAllowedAccess();
   //fields
@@ -89,7 +93,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
     OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
-  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_RAW_PTR(const LogicalObject, logical_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
@@ -105,8 +109,10 @@ END_OBJECT_MSG(MirroredObject);
 
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
-  // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const MemZoneTypeDesc, mem_desc);
+  // methods
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id) {
+    mut_logical_object_id()->CopyFrom(logical_object_id);
+  }
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);

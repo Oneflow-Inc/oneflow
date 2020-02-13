@@ -16,7 +16,7 @@ class VpuInstructionMsgObserver {
   virtual void OnDone(const VpuId &) = 0;
 
  protected:
-  VpuInstructionMsgObserver();
+  VpuInstructionMsgObserver() = default;
 };
 
 class ObjectMsgAllocator;
