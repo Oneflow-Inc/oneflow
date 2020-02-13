@@ -11,6 +11,15 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.session_context as session_ctx
 
+@oneflow_export('config.load_library')
+def load_libray(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is str
+    sess.config_proto.load_lib_path.append(val)
+
 @oneflow_export('config.machine_num')
 def machine_num(val):
     sess = session_ctx.GetDefaultSession()
