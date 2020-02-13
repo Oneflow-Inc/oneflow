@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
 
 #include <cstddef>
+#include <type_traits>
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
@@ -28,7 +29,14 @@ struct StructField {
     return (F*)(((char*)struct_ptr) + offset_value);
   }
 };
-}
+
+template<typename X, typename Y>
+struct ComposeStructField {
+  static_assert(std::is_same<typename X::field_type, typename Y::struct_type>::value,
+                "invalid type");
+  using type = StructField<typename X::struct_type, typename Y::field_type,
+                           X::offset_value + Y::offset_value>;
+};
 
 template<typename T>
 struct ConstStruct {
@@ -41,5 +49,6 @@ struct ConstStruct<const T> {
 
 template<typename T>
 using ConstType = typename ConstStruct<T>::type;
+}
 
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
