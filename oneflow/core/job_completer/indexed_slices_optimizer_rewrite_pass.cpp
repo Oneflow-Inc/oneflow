@@ -66,7 +66,6 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     if (dst_op_conf.has_naive_model_update_conf()) {
       const NaiveModelUpdateOpConf& old_optimizer_conf = dst_op_conf.naive_model_update_conf();
       const LogicalBlobId& model_lbi = dst_node->op().BnInOp2Lbi("model");
-
       model_op_name = model_lbi.op_name();
       BuildOptimizer = [&](OperatorConf* new_optimizer_op_conf, const std::string& indices,
                            const std::string& values) {
