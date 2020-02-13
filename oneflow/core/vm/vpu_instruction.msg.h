@@ -83,15 +83,13 @@ class VpuSetCtx;
 // clang-format off
 BEGIN_OBJECT_MSG(VpuCtx);
   // methods
-  PUBLIC void __Init__(VpuSetCtx* vpu_set_ctx) {
+  PUBLIC void __Init__(VpuSetCtx* vpu_set_ctx, const VpuId& vpu_id) {
     set_vpu_set_ctx(vpu_set_ctx);
-    mutable_pending_list_mutex()->__Init__();
+    mut_vpu_id()->CopyFrom(vpu_id);
   }
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(VpuSetCtx, vpu_set_ctx); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
-  // for pending_pkg_list only
-  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<std::mutex>, pending_list_mutex);  
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_vpu_ctx_link);
@@ -101,7 +99,8 @@ BEGIN_OBJECT_MSG(VpuCtx);
   // collect_vpu_instruction_list used by VpuScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link,
                               collect_vpu_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link, pending_pkg_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(RunningVpuInstructionPackage, running_pkg_link,
+                                        pending_pkg_list);
 END_OBJECT_MSG(VpuCtx);
 // clang-format on
 
