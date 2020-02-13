@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
 
-#include <mutex>
 #include "oneflow/core/common/object_msg_core.h"
 #include "oneflow/core/common/embedded_list.h"
 
@@ -142,6 +141,11 @@ class TrivialObjectMsgList {
     MoveToDstBack(begin, dst);
     return begin;
   }
+  value_type* MoveBackToDstBack(TrivialObjectMsgList* dst) {
+    value_type* begin = list_head_.Last();
+    MoveToDstBack(begin, dst);
+    return begin;
+  }
 
   void PushBack(value_type* ptr) {
     list_head_.PushBack(ptr);
@@ -153,67 +157,33 @@ class TrivialObjectMsgList {
     ObjectMsgPtrUtil::Ref(ptr);
   }
 
-  void PushBack(std::mutex* mutex, value_type* ptr) {
-    {
-      std::unique_lock<std::mutex> lock(*mutex);
-      list_head_.PushBack(ptr);
-    }
-    ObjectMsgPtrUtil::Ref(ptr);
+  void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
+    value_type* raw_ptr = nullptr;
+    ptr.__UnsafeMoveTo__(&raw_ptr);
+    list_head_.PushBack(raw_ptr);
   }
 
-  void PushFront(std::mutex* mutex, value_type* ptr) {
-    {
-      std::unique_lock<std::mutex> lock(*mutex);
-      list_head_.PushFront(ptr);
-    }
-    ObjectMsgPtrUtil::Ref(ptr);
+  void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
+    value_type* raw_ptr = nullptr;
+    ptr.__UnsafeMoveTo__(&raw_ptr);
+    list_head_.PushFront(ptr);
   }
 
-  void Erase(value_type* ptr) {
+  ObjectMsgPtr<value_type> Erase(value_type* ptr) {
     list_head_.Erase(ptr);
-    ObjectMsgPtrUtil::ReleaseRef(ptr);
+    return ObjectMsgPtr<value_type>::__UnsafeMove__(ptr);
   }
 
   ObjectMsgPtr<value_type> PopBack() {
-    ObjectMsgPtr<value_type> ptr;
-    if (list_head_.empty()) { return ptr; }
-    ptr.Reset(list_head_.PopBack());
-    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
-    return ptr;
+    value_type* raw_ptr = nullptr;
+    if (!list_head_.empty()) { raw_ptr = list_head_.PopBack(); }
+    return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
   ObjectMsgPtr<value_type> PopFront() {
-    ObjectMsgPtr<value_type> ptr;
-    if (list_head_.empty()) { return ptr; }
-    ptr.Reset(list_head_.PopFront());
-    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
-    return ptr;
-  }
-
-  ObjectMsgPtr<value_type> PopBack(std::mutex* mutex) {
-    ObjectMsgPtr<value_type> ptr;
-    if (list_head_.empty()) { return ptr; }
     value_type* raw_ptr = nullptr;
-    {
-      std::unique_lock<std::mutex> lock(*mutex);
-      raw_ptr = list_head_.PopBack();
-    }
-    ptr.Reset(raw_ptr);
-    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
-    return ptr;
-  }
-
-  ObjectMsgPtr<value_type> PopFront(std::mutex* mutex) {
-    ObjectMsgPtr<value_type> ptr;
-    if (list_head_.empty()) { return ptr; }
-    value_type* raw_ptr = nullptr;
-    {
-      std::unique_lock<std::mutex> lock(*mutex);
-      raw_ptr = list_head_.PopFront();
-    }
-    ptr.Reset(raw_ptr);
-    ObjectMsgPtrUtil::ReleaseRef(ptr.Mutable());
-    return ptr;
+    if (!list_head_.empty()) { raw_ptr = list_head_.PopFront(); }
+    return ObjectMsgPtr<value_type>::__UnsafeMove__(raw_ptr);
   }
 
   void MoveTo(TrivialObjectMsgList* list) { MoveToDstBack(list); }
