@@ -54,7 +54,7 @@ struct ObjectMsgEmbeddedConditionListHeadInit {
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedConditionListHeadDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->Clear();
+    field->__Delete__();
   }
 };
 
@@ -71,51 +71,69 @@ class TrivialObjectMsgConditionList {
   void __Init__() {
     list_head_.__Init__();
     is_closed_ = false;
+    new (mutex_buff_) std::mutex();
+    new (cond_buff_) std::condition_variable();
   }
 
   ObjectMsgConditionListStatus EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kObjectMsgConditionListStatusErrorClosed; }
     list_head_.EmplaceBack(std::move(ptr));
-    cond_.notify_one();
+    mut_cond()->notify_one();
     return kObjectMsgConditionListStatusSuccess;
   }
   ObjectMsgConditionListStatus PopFront(ObjectMsgPtr<value_type>* ptr) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
+    std::unique_lock<std::mutex> lock(*mut_mutex());
+    mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kObjectMsgConditionListStatusErrorClosed; }
     *ptr = list_head_.PopFront();
     return kObjectMsgConditionListStatusSuccess;
   }
 
   ObjectMsgConditionListStatus MoveFrom(TrivialObjectMsgList<LinkField>* src) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kObjectMsgConditionListStatusErrorClosed; }
     src->MoveToDstBack(&list_head_);
-    cond_.notify_one();
+    mut_cond()->notify_one();
     return kObjectMsgConditionListStatusSuccess;
   }
 
   ObjectMsgConditionListStatus MoveTo(TrivialObjectMsgList<LinkField>* dst) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
+    std::unique_lock<std::mutex> lock(*mut_mutex());
+    mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kObjectMsgConditionListStatusErrorClosed; }
     list_head_.MoveToDstBack(dst);
     return kObjectMsgConditionListStatusSuccess;
   }
 
   void Close() {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(*mut_mutex());
     is_closed_ = true;
-    cond_.notify_all();
+    mut_cond()->notify_all();
   }
 
-  void Clear() { list_head_.Clear(); }
+  void __Delete__() {
+    list_head_.Clear();
+    using namespace std;
+    mut_mutex()->mutex::~mutex();
+    mut_cond()->condition_variable::~condition_variable();
+  }
 
  private:
+  std::mutex* mut_mutex() { return reinterpret_cast<std::mutex*>(&mutex_buff_[0]); }
+  std::condition_variable* mut_cond() {
+    return reinterpret_cast<std::condition_variable*>(&cond_buff_[0]);
+  }
+
   TrivialObjectMsgList<LinkField> list_head_;
-  std::mutex mutex_;
-  std::condition_variable cond_;
+  union {
+    char mutex_buff_[sizeof(std::mutex)];
+    int64_t mutex_buff_align_;
+  };
+  union {
+    char cond_buff_[sizeof(std::condition_variable)];
+    int64_t cond_buff_align_;
+  };
   bool is_closed_;
 };
 
@@ -125,7 +143,7 @@ class ObjectMsgConditionList : public TrivialObjectMsgConditionList<LinkField> {
   ObjectMsgConditionList(const ObjectMsgConditionList&) = delete;
   ObjectMsgConditionList(ObjectMsgConditionList&&) = delete;
   ObjectMsgConditionList() { this->__Init__(); }
-  ~ObjectMsgConditionList() { this->Clear(); }
+  ~ObjectMsgConditionList() { this->__Delete__(); }
 };
 }
 

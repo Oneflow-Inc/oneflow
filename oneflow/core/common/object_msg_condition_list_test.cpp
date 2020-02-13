@@ -18,6 +18,13 @@ BEGIN_OBJECT_MSG(Foo);
 END_OBJECT_MSG(Foo);
 // clang-format on
 
+// clang-format off
+BEGIN_OBJECT_MSG(FooList);
+  // links
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, link, list);
+END_OBJECT_MSG(FooList);
+// clang-format on
+
 using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, link);
 
 void CallFromSenderThread(ConditionListFoo* condition_list, Range range) {
