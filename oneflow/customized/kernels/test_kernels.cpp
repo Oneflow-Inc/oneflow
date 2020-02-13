@@ -95,4 +95,31 @@ REGISTER_USER_KERNEL("TestSource")
     })
     .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 0; });
 
+class TestMultiOutputOrderKernel final : public user_op::OpKernel {
+ public:
+  TestMultiOutputOrderKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TestMultiOutputOrderKernel() = default;
+  ~TestMultiOutputOrderKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out1_blob = ctx->Tensor4ArgNameAndIndex("out1", 0);
+    user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out1_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+                             in_blob->shape().elem_cnt() * sizeof(float));
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out2_blob->shape().elem_cnt(), 0.0,
+                                          out2_blob->mut_dptr<float>());
+  }
+};
+
+REGISTER_USER_KERNEL("TestMultiOutputOrder")
+    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
+      return new TestMultiOutputOrderKernel(ctx);
+    })
+    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
+      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      return false;
+    });
+
 }  // namespace oneflow
