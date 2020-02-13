@@ -1,4 +1,5 @@
 #include "oneflow/core/vm/scheduler.h"
+#include "oneflow/core/vm/control_vpu.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

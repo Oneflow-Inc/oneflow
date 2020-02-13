@@ -7,7 +7,7 @@
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
-#include "oneflow/core/vm/vpu_instruction.h"
+#include "oneflow/core/vm/vpu.h"
 #include "oneflow/core/vm/vpu_instruction_msg_observer.h"
 #include "oneflow/core/vm/vpu_instruction_status_querier.h"
 

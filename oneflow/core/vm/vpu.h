@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
-#define ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
+#ifndef ONEFLOW_CORE_VM_VPU_H_
+#define ONEFLOW_CORE_VM_VPU_H_
 
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
 
@@ -28,7 +28,6 @@ class Vpu {
   virtual VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
                                                         int* allocated_size,
                                                         const VpuCtx* vpu_ctx) const = 0;
-
   virtual void Run(VpuCtx* vpu_ctx, RunningVpuInstructionPackage* vpu_instr_pkg) const = 0;
 
  protected:
@@ -37,4 +36,4 @@ class Vpu {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_H_
+#endif  // ONEFLOW_CORE_VM_VPU_H_
