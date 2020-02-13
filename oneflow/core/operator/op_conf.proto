@@ -103,6 +103,17 @@ message InitializerConf {
   }
 }
 
+message L1L2RegularizerConf {
+  optional float l1 = 1 [default = 0.0];
+  optional float l2 = 2 [default = 0.0];
+}
+
+message RegularizerConf {
+  oneof type {
+    L1L2RegularizerConf l1_l2_conf = 1;
+  }
+}
+
 message Conv1DOpConf {
   required string in = 1;
   required string out = 2;
@@ -589,10 +600,23 @@ message ClipConf {
   }
 }
 
+message WeightDecayFilterPatternSet {
+  repeated string pattern = 1;
+}
+
+message WeightDecayConf {
+  required float weight_decay_rate = 1;
+  oneof weight_decay_filter_type {
+    WeightDecayFilterPatternSet includes = 2;
+    WeightDecayFilterPatternSet excludes = 3;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
   optional ClipConf clip_conf = 3;
+  optional WeightDecayConf weight_decay_conf = 4;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -606,58 +630,48 @@ message NormalModelUpdateOpUserConf {
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message NaiveModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message MomentumModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message AdamModelUpdateOpConf {
@@ -667,12 +681,10 @@ message AdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message LazyAdamModelUpdateOpConf {
@@ -682,12 +694,10 @@ message LazyAdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message AccumulateOpConf {
@@ -838,6 +848,7 @@ message VariableOpConf {
   optional string model_name = 7 [default = "weight"];
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
+  optional RegularizerConf regularizer = 10;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -1638,6 +1649,14 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message L1L2RegularizeGradientOpConf {
+  required string model = 1;
+  required string model_diff = 2;
+  required string out = 3;
+  required float l1 = 4;
+  required float l2 = 5;
+}
+
 message SquareSumOpConf {
   required string x = 1;
   required string y = 2;
@@ -1757,6 +1776,7 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
+    L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
     UserOpConf user_conf = 199;
     
     // domain op

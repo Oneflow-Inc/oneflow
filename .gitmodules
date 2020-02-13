@@ -31,3 +31,6 @@
 [submodule "zlib"]
 	path = build/third_party/zlib/src/zlib
 	url = https://github.com/madler/zlib
+[submodule "build/third_party/re2/src/re2"]
+	path = build/third_party/re2/src/re2
+	url = https://github.com/google/re2.git

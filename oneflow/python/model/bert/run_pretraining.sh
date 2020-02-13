@@ -3,7 +3,7 @@ python run_pretraining.py                                                       
   --node_num=1                                                                                \
   --node_list='192.168.1.15,192.168.1.16'                                                     \
   --learning_rate=1e-4                                                                        \
-  --weight_l2=0.01                                                                            \
+  --weight_decay_rate=0.01                                                                    \
   --batch_size_per_device=24                                                                  \
   --iter_num=10                                                                               \
   --log_every_n_iter=10                                                                       \

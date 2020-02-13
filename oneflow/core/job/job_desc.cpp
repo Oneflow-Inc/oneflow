@@ -61,10 +61,6 @@ bool JobDesc::enable_experiment_run() const {
 
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
 int64_t JobDesc::NumOfPiecesInBatch() const { return 1; }
-float JobDesc::weight_l1() const { return job_conf_.train_conf().weight_l1(); }
-float JobDesc::bias_l1() const { return job_conf_.train_conf().bias_l1(); }
-float JobDesc::weight_l2() const { return job_conf_.train_conf().weight_l2(); }
-float JobDesc::bias_l2() const { return job_conf_.train_conf().bias_l2(); }
 int32_t JobDesc::loss_scale_factor() const {
   int32_t loss_scale_factor = job_conf_.train_conf().loss_scale_factor();
   CHECK_GE(loss_scale_factor, 1);

@@ -22,10 +22,6 @@ message TrainConf {
 
   required float primary_lr = 101;
   optional float secondary_lr = 102;
-  optional float weight_l1 = 103 [default = 0];
-  optional float bias_l1 = 104 [default = 0];
-  optional float weight_l2 = 105 [default = 0];
-  optional float bias_l2 = 106 [default = 0];
 }
 
 message PredictConf {
