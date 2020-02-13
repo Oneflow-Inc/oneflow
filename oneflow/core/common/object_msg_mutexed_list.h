@@ -78,7 +78,7 @@ class TrivialObjectMsgMutexedList {
   void MoveFrom(TrivialObjectMsgList<LinkField>* src) { MoveFromSrcBack(src); }
   void MoveFromSrcBack(TrivialObjectMsgList<LinkField>* src) {
     std::unique_lock<std::mutex> lock(mutex_);
-    src.MoveToDstBack(&list_head_);
+    src->MoveToDstBack(&list_head_);
   }
 
   void MoveTo(TrivialObjectMsgList<LinkField>* dst) { MoveToDstBack(dst); }
