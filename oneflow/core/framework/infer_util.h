@@ -52,7 +52,7 @@ struct CheckAttrFnUtil {
 };
 
 struct TmpSizeInferFnUtil {
-  static size_t ZeroTmpSize(const InferContext&);
+  static size_t ZeroTmpSize(InferContext*);
 };
 
 }  // namespace user_op
