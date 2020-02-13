@@ -248,6 +248,12 @@ def set_model_update_conf(func_desc, value):
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
+@oneflow_function_config('indexed_slices_optimizer_conf')
+def set_indexed_slices_optimizer_conf(func_desc, value):
+    assert type(value) is dict
+    pb_msg = func_desc.job_config_proto.indexed_slices_optimizer_conf
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+
 @oneflow_function_config('train.loss_scale_factor')
 def set_loss_scale_factor(func_desc, value):
     func_desc.job_config_proto.train_conf.loss_scale_factor = value
