@@ -431,7 +431,7 @@ class ObjectMsgPtr final {
   ~ObjectMsgPtr() { Clear(); }
 
   operator bool() const { return ptr_ != nullptr; }
-  const value_type* Get() const { return ptr_; }
+  const value_type& Get() const { return *ptr_; }
   const value_type* operator->() const { return ptr_; }
   const value_type& operator*() const { return *ptr_; }
   bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }

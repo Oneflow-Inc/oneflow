@@ -6,16 +6,16 @@
 
 namespace oneflow {
 
-#define BEGIN_FLAT_MSG_VIEW(struct_name)                                 \
-  struct FLAT_MSG_VIEW_TYPE(struct_name) final {                         \
-    using self_type = FLAT_MSG_VIEW_TYPE(struct_name);                   \
-    static const bool __is_flat_message_view_type__ = true;              \
-    FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(FLAT_MSG_VIEW_TYPE(struct_name)); \
-    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), FLAT_MSG_VIEW_TYPE(struct_name), 0);
+#define BEGIN_FLAT_MSG_VIEW(struct_name)                    \
+  struct struct_name final {                                \
+    using self_type = struct_name;                          \
+    static const bool __is_flat_message_view_type__ = true; \
+    FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(struct_name);        \
+    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), struct_name, 0);
 
 #define END_FLAT_MSG_VIEW(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  END_DSS(DSS_GET_FIELD_COUNTER(), "flat message view", FLAT_MSG_VIEW_TYPE(struct_name)); \
+  END_DSS(DSS_GET_FIELD_COUNTER(), "flat message view", struct_name);                     \
   }                                                                                       \
   ;
 
@@ -23,10 +23,6 @@ namespace oneflow {
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
   _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);    \
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "flat message view", OF_PP_CAT(field_name, _));
-
-#define FLAT_MSG_VIEW_TYPE(type_name) OF_PP_CAT(__flat_message_view_type__, type_name)
-
-#define FLAT_MSG_VIEW(type_name) FlatMsgView<FLAT_MSG_VIEW_TYPE(type_name)>
 
 // details
 
@@ -162,6 +158,7 @@ struct FlatMsgViewUtil {
 
 template<typename T>
 struct FlatMsgView final {
+  static_assert(T::__is_flat_message_view_type__, "T is not a flat message view type");
   FlatMsgView() { view_.Clear(); }
   ~FlatMsgView() = default;
   template<typename RepeatedT>
