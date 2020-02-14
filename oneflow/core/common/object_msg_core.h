@@ -10,18 +10,19 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                                                          \
-  struct OBJECT_MSG_TYPE(class_name) final : public ObjectMsgStruct {                         \
-   public:                                                                                    \
-    static const bool __is_object_message_type__ = true;                                      \
-    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), OBJECT_MSG_TYPE(class_name), sizeof(ObjectMsgStruct)); \
-    OBJECT_MSG_DEFINE_DEFAULT(OBJECT_MSG_TYPE(class_name));                                   \
-    OBJECT_MSG_DEFINE_INIT();                                                                 \
+#define BEGIN_OBJECT_MSG(class_name)                                         \
+  struct class_name final : public ObjectMsgStruct {                         \
+   public:                                                                   \
+    using self_type = class_name;                                            \
+    static const bool __is_object_message_type__ = true;                     \
+    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), class_name, sizeof(ObjectMsgStruct)); \
+    OBJECT_MSG_DEFINE_DEFAULT(class_name);                                   \
+    OBJECT_MSG_DEFINE_INIT();                                                \
     OBJECT_MSG_DEFINE_DELETE();
 
 #define END_OBJECT_MSG(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  END_DSS(DSS_GET_FIELD_COUNTER(), "object message", OBJECT_MSG_TYPE(class_name));  \
+  END_DSS(DSS_GET_FIELD_COUNTER(), "object message", class_name);                   \
   }                                                                                 \
   ;
 
@@ -35,11 +36,13 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_ONEOF_FIELD(DSS_GET_FIELD_COUNTER(), oneof_name, type_and_field_name_seq)
 
 #define OBJECT_MSG_ONEOF_FIELD(field_type, field_name) \
-  OF_PP_MAKE_TUPLE_SEQ(OBJECT_MSG_TYPE(field_type), field_name)
+  OF_PP_MAKE_TUPLE_SEQ(OBJECT_MSG_TYPE_CHECK(field_type), field_name)
 
-#define OBJECT_MSG_PTR(class_name) ObjectMsgPtr<OBJECT_MSG_TYPE(class_name)>
+#define OBJECT_MSG_TYPE_CHECK(class_name) ObjectMsgSelfType<class_name>::type
 
-#define OBJECT_MSG_TYPE(class_name) OF_PP_CAT(__object_message_type__, class_name)
+#define OBJECT_MSG_ONEOF_CASE(oneof_name) _OBJECT_MSG_ONEOF_ENUM_TYPE(oneof_name)
+#define OBJECT_MSG_ONEOF_CASE_VALUE(field_name) _OBJECT_MSG_ONEOF_ENUM_VALUE(field_name)
+#define OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name) _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name)
 
 // details
 
@@ -69,10 +72,11 @@ namespace oneflow {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OBJECT_MSG_ONEOF_ACCESSOR, (oneof_name),               \
                                    type_and_field_name_seq)
 
-#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(oneof_name, pair) \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_GETTER(oneof_name, pair);  \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_CLEARER(oneof_name, pair); \
-  OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair); \
+#define MAKE_OBJECT_MSG_ONEOF_ACCESSOR(oneof_name, pair)  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_GETTER(oneof_name, pair);   \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_CLEARER(oneof_name, pair);  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair);  \
+  OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair); \
   OBJECT_MSG_MAKE_ONEOF_FIELD_SETTER(oneof_name, pair);
 
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_SETTER(oneof_name, pair)    \
@@ -104,6 +108,19 @@ namespace oneflow {
       (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                                   \
     }                                                                                            \
     return MutableTrait<is_ptr>::Call(ptr);                                                      \
+  }
+
+#define OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair)                     \
+ public:                                                                           \
+  template<typename T>                                                             \
+  void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(T * rhs) {                       \
+    static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
+    static_assert(T::__is_object_message_type__, "object message supported only"); \
+    OF_PP_CAT(clear_, oneof_name)();                                               \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                  \
+    (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                       \
+    OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _) = rhs;          \
+    ObjectMsgPtrUtil::Ref<T>(rhs);                                                 \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                \
@@ -139,13 +156,16 @@ namespace oneflow {
            == _OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair));                              \
   }
 
-#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                       \
- public:                                                                            \
-  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; } \
-                                                                                    \
- private:                                                                           \
-  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                       \
-    OF_PP_CAT(oneof_name, _).case_ = val;                                           \
+#define _OBJECT_MSG_DEFINE_ONEOF_CASE_ACCESSOR(oneof_name, T)                             \
+ public:                                                                                  \
+  T OF_PP_CAT(oneof_name, _case)() const { return OF_PP_CAT(oneof_name, _).case_; }       \
+  bool OF_PP_CAT(has_, oneof_name)() const {                                              \
+    return OF_PP_CAT(oneof_name, _).case_ != _OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name); \
+  }                                                                                       \
+                                                                                          \
+ private:                                                                                 \
+  void OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))(T val) {                             \
+    OF_PP_CAT(oneof_name, _).case_ = val;                                                 \
   }
 
 #define OBJECT_MSG_DEFINE_ONEOF_UNION(oneof_name, type_and_field_name_seq)             \
@@ -176,19 +196,6 @@ namespace oneflow {
 
 #define OBJECT_MSG_STRUCT_MEMBER(class_name) \
   std::conditional<ObjectMsgIsScalar<class_name>::value, class_name, class_name*>::type
-
-typedef char OBJECT_MSG_TYPE(char);
-typedef int8_t OBJECT_MSG_TYPE(int8_t);
-typedef uint8_t OBJECT_MSG_TYPE(uint8_t);
-typedef int16_t OBJECT_MSG_TYPE(int16_t);
-typedef uint16_t OBJECT_MSG_TYPE(uint16_t);
-typedef int32_t OBJECT_MSG_TYPE(int32_t);
-typedef uint32_t OBJECT_MSG_TYPE(uint32_t);
-typedef int64_t OBJECT_MSG_TYPE(int64_t);
-typedef uint64_t OBJECT_MSG_TYPE(uint64_t);
-typedef float OBJECT_MSG_TYPE(float);
-typedef double OBJECT_MSG_TYPE(double);
-typedef std::string OBJECT_MSG_TYPE(string);
 
 #define OBJECT_MSG_DEFINE_DEFAULT(object_message_type_name)                           \
  public:                                                                              \
@@ -231,6 +238,18 @@ typedef std::string OBJECT_MSG_TYPE(string);
   struct ObjectMsgField__Delete__<field_counter, WalkCtxType, PtrFieldType> \
       : public delete_template<WalkCtxType, PtrFieldType> {};
 
+template<typename T, typename Enabled = void>
+struct ObjectMsgSelfType {
+  static_assert(T::__is_object_message_type__, "T is not a object message type");
+  using type = T;
+};
+
+template<typename T>
+struct ObjectMsgSelfType<
+    T, typename std::enable_if<std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
+  using type = T;
+};
+
 class ObjectMsgAllocator {
  public:
   virtual ~ObjectMsgAllocator() {}
@@ -263,11 +282,10 @@ class ObjectMsgPtr;
 
 class ObjectMsgStruct {
  public:
+  void __Init__() {}
   void __Delete__() {}
 
   int32_t ref_cnt() const { return ref_cnt_; }
-
- protected:
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
  private:
@@ -399,8 +417,9 @@ struct _ObjectMsgNaiveDelete<true> {
 template<typename T>
 class ObjectMsgPtr final {
  public:
+  using value_type = typename OBJECT_MSG_TYPE_CHECK(T);
   ObjectMsgPtr() : ptr_(nullptr) {}
-  ObjectMsgPtr(T* ptr) : ptr_(nullptr) { Reset(ptr); }
+  ObjectMsgPtr(value_type* ptr) : ptr_(nullptr) { Reset(ptr); }
   ObjectMsgPtr(const ObjectMsgPtr& obj_ptr) {
     ptr_ = nullptr;
     Reset(obj_ptr.ptr_);
@@ -412,22 +431,22 @@ class ObjectMsgPtr final {
   ~ObjectMsgPtr() { Clear(); }
 
   operator bool() const { return ptr_ != nullptr; }
-  const T* Get() const { return ptr_; }
-  const T* operator->() const { return ptr_; }
-  const T& operator*() const { return *ptr_; }
+  const value_type& Get() const { return *ptr_; }
+  const value_type* operator->() const { return ptr_; }
+  const value_type& operator*() const { return *ptr_; }
   bool operator==(const ObjectMsgPtr& rhs) const { return this->ptr_ == rhs.ptr_; }
 
-  T* Mutable() { return ptr_; }
-  T* operator->() { return ptr_; }
-  T& operator*() { return *ptr_; }
+  value_type* Mutable() { return ptr_; }
+  value_type* operator->() { return ptr_; }
+  value_type& operator*() { return *ptr_; }
 
   void Reset() { Reset(nullptr); }
 
-  void Reset(T* ptr) {
+  void Reset(value_type* ptr) {
     Clear();
     if (ptr == nullptr) { return; }
     ptr_ = ptr;
-    ObjectMsgPtrUtil::Ref<T>(ptr_);
+    ObjectMsgPtrUtil::Ref<value_type>(ptr_);
   }
 
   ObjectMsgPtr& operator=(const ObjectMsgPtr& rhs) {
@@ -435,20 +454,36 @@ class ObjectMsgPtr final {
     return *this;
   }
 
-  static ObjectMsgPtr New() { return New(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
-  static ObjectMsgPtr New(ObjectMsgAllocator* allocator) {
+  template<typename... Args>
+  static ObjectMsgPtr New(Args&&... args) {
+    return NewFrom(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator(),
+                   std::forward<Args>(args)...);
+  }
+  template<typename... Args>
+  static ObjectMsgPtr NewFrom(ObjectMsgAllocator* allocator, Args&&... args) {
     ObjectMsgPtr ret;
-    ObjectMsgNaiveInit<ObjectMsgAllocator, T*>::Call(allocator, &ret.ptr_, nullptr);
+    ObjectMsgNaiveInit<ObjectMsgAllocator, value_type*>::Call(allocator, &ret.ptr_, nullptr);
+    ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
+  }
+
+  static ObjectMsgPtr __UnsafeMove__(value_type* ptr) {
+    ObjectMsgPtr ret;
+    ret.ptr_ = ptr;
+    return ret;
+  }
+  void __UnsafeMoveTo__(value_type** ptr) {
+    *ptr = ptr_;
+    ptr_ = nullptr;
   }
 
  private:
   void Clear() {
     if (ptr_ == nullptr) { return; }
-    ObjectMsgPtrUtil::ReleaseRef<T>(ptr_);
+    ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
-  T* ptr_;
+  value_type* ptr_;
 };
 
 template<typename T>

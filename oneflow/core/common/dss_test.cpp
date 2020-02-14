@@ -18,6 +18,8 @@ struct Foo {
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
 };
 
+static_assert(Foo::__DSS__FieldCount() == 3, "field count error in dss");
+
 struct Bar {
   BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
 
@@ -38,19 +40,6 @@ template<typename T>
 struct IsScalar {
   static const bool value =
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
-};
-
-struct FooBar {
-  DSS_DEFINE_GETTER(int, x);
-  DSS_DEFINE_MUTABLE(int, x);
-  DSS_DEFINE_SETTER(IsScalar, int, x);
-
-  DSS_DEFINE_GETTER(Foo*, foo);
-  DSS_DEFINE_MUTABLE(Foo*, foo);
-  DSS_DEFINE_SETTER(IsScalar, Foo*, foo);
-
-  int x_;
-  Foo* foo_;
 };
 
 template<int field_counter, typename WalkCtxType, typename FieldType>
@@ -101,12 +90,27 @@ struct FilterPointerFieldName {
   }
 };
 
+template<int field_counter, typename WalkCtxType, typename FieldType>
+struct FilterPointerFieldNameUntil {
+  static bool Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
+    return true;
+    PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, field_name);
+  }
+};
+
 TEST(DSS, filter_field) {
   Foo foo;
   std::vector<std::string> field_names;
   foo.__WalkField__<FilterPointerFieldName>(&field_names);
   ASSERT_EQ(field_names.size(), 1);
   ASSERT_TRUE(field_names[0] == "z");
+}
+
+TEST(DSS, filter_field_until) {
+  Foo foo;
+  std::vector<std::string> field_names;
+  ASSERT_TRUE(foo.__WalkFieldUntil__<FilterPointerFieldNameUntil>(&field_names));
+  ASSERT_TRUE(field_names.empty());
 }
 
 #define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                   \

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_
 #define ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_
 
+#include "oneflow/core/common/struct_traits.h"
 #include "oneflow/core/common/object_msg_core.h"
 
 namespace oneflow {
@@ -16,18 +17,17 @@ namespace oneflow {
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgRawPtrDelete);       \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                       \
- public:                                                                               \
-  static_assert(std::is_pointer<field_type>::value,                                    \
-                OF_PP_STRINGIZE(field_type) "is not a pointer");                       \
-  bool OF_PP_CAT(has_, field_name)() { return OF_PP_CAT(field_name, _) != nullptr; }   \
-  void OF_PP_CAT(set_, field_name)(field_type val) { OF_PP_CAT(field_name, _) = val; } \
-  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }       \
-  DSS_DEFINE_GETTER(field_type, field_name);                                           \
-  DSS_DEFINE_MUTABLE(field_type, field_name);                                          \
-                                                                                       \
- private:                                                                              \
-  field_type OF_PP_CAT(field_name, _);
+#define _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                           \
+ public:                                                                                   \
+  ConstType<field_type>& field_name() const { return *OF_PP_CAT(field_name, _); }          \
+  bool OF_PP_CAT(has_, field_name)() const { return OF_PP_CAT(field_name, _) != nullptr; } \
+  void OF_PP_CAT(set_, field_name)(field_type * val) { OF_PP_CAT(field_name, _) = val; }   \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(set_, field_name)(nullptr); }           \
+  field_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _); }           \
+  field_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _); }       \
+                                                                                           \
+ private:                                                                                  \
+  field_type* OF_PP_CAT(field_name, _);
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgRawPtrInit {
