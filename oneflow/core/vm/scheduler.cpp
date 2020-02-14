@@ -184,7 +184,7 @@ void VpuScheduler::Receive(VpuInstructionMsgList* vpu_instr_list) {
   mut_waiting_msg_list()->MoveFrom(vpu_instr_list);
 }
 
-void VpuScheduler::Dispatch() {
+void VpuScheduler::Schedule() {
   auto* vpu_set_ctx_list = mut_vpu_set_ctx_list();
   auto* maybe_available_access_list = mut_maybe_available_access_list();
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_set_ctx_list, vpu_set_ctx) {
