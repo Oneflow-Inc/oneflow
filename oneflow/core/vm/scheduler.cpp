@@ -79,7 +79,7 @@ void FilterAndRunControlVpuInstructions(VpuSchedulerCtx* scheduler,
   ControlVpu control_vpu;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vpu_instr_msg_list, vpu_instr_msg) {
     const VpuTypeId vpu_type_id = vpu_instr_msg->vpu_instruction_proto().vpu_type_id();
-    if (vpu_type_id != 0) { continue; }
+    if (vpu_type_id != kControlVpuTypeId) { continue; }
     control_vpu.Run(scheduler, vpu_instr_msg);
     vpu_instr_msg_list->Erase(vpu_instr_msg);
   }
