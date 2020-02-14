@@ -13,12 +13,13 @@ namespace oneflow {
     using self_type = struct_name;                          \
     static const bool __is_flat_message_view_type__ = true; \
     FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(struct_name);        \
-    PUBLIC DEFINE_STATIC_COUNTER(field_counter);            \
+    PRIVATE DEFINE_STATIC_COUNTER(field_counter);           \
     BEGIN_DSS(STATIC_COUNTER(field_counter), struct_name, 0);
 
 #define END_FLAT_MSG_VIEW(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                          \
+  PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);             \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
   END_DSS(STATIC_COUNTER(field_counter), "flat message view", struct_name);               \
   }                                                                                       \
   ;
@@ -26,7 +27,7 @@ namespace oneflow {
 #define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                     \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
   _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);    \
-  PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                          \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view", OF_PP_CAT(field_name, _));
 
 // details
@@ -146,10 +147,9 @@ struct FlatMsgViewUtil {
   static_assert(std::is_same<typename RepeatedFlatMsgT::value_type,
                              typename FlatMsgOneofField::struct_type>::value,
                 "invalid view match");
-  static_assert(FlatMsgViewT::__DSS__FieldCount() <= RepeatedFlatMsgT::capacity,
-                "invalid capacity");
+  static_assert(FlatMsgViewT::__NumberOfFields__ <= RepeatedFlatMsgT::capacity, "invalid capacity");
   static bool Match(FlatMsgViewT* flat_msg_view, RepeatedFlatMsgT* repeated_flat_msg) {
-    if (repeated_flat_msg->size() != FlatMsgViewT::__DSS__FieldCount()) { return false; }
+    if (repeated_flat_msg->size() != FlatMsgViewT::__NumberOfFields__) { return false; }
     FlatMsgViewFieldMatchCtx<FlatMsgOneofField, RepeatedFlatMsgT> ctx(repeated_flat_msg);
     return !flat_msg_view->template __WalkFieldUntil__<FlatMsgViewFieldMatcher>(&ctx);
   }
@@ -157,7 +157,7 @@ struct FlatMsgViewUtil {
     CHECK(repeated_flat_msg->empty());
     FlatMsgViewFieldInitCtx<FlatMsgOneofField, RepeatedFlatMsgT> ctx(repeated_flat_msg);
     flat_msg_view->template __WalkField__<FlatMsgViewFieldIniter>(&ctx);
-    CHECK_EQ(repeated_flat_msg->size(), FlatMsgViewT::__DSS__FieldCount());
+    CHECK_EQ(repeated_flat_msg->size(), FlatMsgViewT::__NumberOfFields__);
   }
 };
 
