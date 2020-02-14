@@ -1,6 +1,7 @@
-#include "oneflow/core/vm/scheduler.msg.h"
-#include "oneflow/core/vm/control_vpu.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/control_vpu.h"
+#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
 
@@ -9,7 +10,8 @@ namespace test {
 namespace {
 
 TEST(ControlVpu, new_symbol) {
-  auto scheduler = ObjectMsgPtr<VpuScheduler>::New();
+  CachedObjectMsgAllocator allocator(20, 100);
+  auto scheduler = ObjectMsgPtr<VpuScheduler>::NewFrom(&allocator);
   VpuInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
