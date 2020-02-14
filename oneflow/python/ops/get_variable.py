@@ -15,13 +15,14 @@ def get_variable(
     shape=None,
     dtype=None,
     initializer=None,
+    regularizer=None,
     trainable=None,
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
     op_conf = _GenerateVariableOpConf(
-        name=name, shape=shape, dtype=dtype, initializer=initializer, trainable=trainable,
+        name=name, shape=shape, dtype=dtype, initializer=initializer, regularizer=regularizer, trainable=trainable,
         model_name=model_name, random_seed=random_seed,distribute=distribute)
     op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
     return _CreateVariableBlob(op_conf, parallel_conf)
@@ -30,6 +31,7 @@ def _GenerateVariableOpConf(name,
                            shape=None,
                            dtype=None,
                            initializer=None,
+                           regularizer=None,
                            trainable=None,
                            model_name=None,
                            random_seed=None,
@@ -56,6 +58,9 @@ def _GenerateVariableOpConf(name,
             print("{} not found, will be initialized".format(file_path))
         if initializer is not None:
             op_conf.variable_conf.initializer.CopyFrom(initializer)
+
+    if regularizer is not None:
+        op_conf.variable_conf.regularizer.CopyFrom(regularizer)
 
     if trainable is not None:
         op_conf.trainable = trainable

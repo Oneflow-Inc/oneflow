@@ -133,10 +133,20 @@ def _GatherIndexes(sequence_blob, positions_blob, seq_length, hidden_size):
 
 def _AddNextSentenceOutput(input_blob, label_blob, hidden_size, initializer_range):
   with flow.deprecated.variable_scope("cls-seq_relationship"):
-    output_weight_blob = flow.get_variable(name="output_weights", shape=[2, hidden_size],
-        dtype=input_blob.dtype, initializer=bert_util.CreateInitializer(initializer_range))
-    output_bias_blob = flow.get_variable( name="output_bias", shape=[2],
-        dtype=input_blob.dtype, initializer=flow.constant_initializer(0.0))
+    output_weight_blob = flow.get_variable(
+        name="output_weights",
+        shape=[2, hidden_size],
+        dtype=input_blob.dtype,
+        model_name="weight",
+        initializer=bert_util.CreateInitializer(initializer_range),
+    )
+    output_bias_blob = flow.get_variable(
+        name="output_bias",
+        shape=[2],
+        dtype=input_blob.dtype,
+        model_name="bias",
+        initializer=flow.constant_initializer(0.0),
+    )
     logit_blob = flow.matmul(input_blob, output_weight_blob, transpose_b=True)
     logit_blob = flow.nn.bias_add(logit_blob, output_bias_blob)
     pre_example_loss = flow.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_blob,

@@ -82,10 +82,6 @@ class JobDesc final {
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
-  float weight_l1() const;
-  float bias_l1() const;
-  float weight_l2() const;
-  float bias_l2() const;
   int32_t loss_scale_factor() const;
 
  private:

@@ -1,6 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/adam_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -44,18 +43,18 @@ __device__ void UpdateMomentEstimate(T beta, const T model_diff, const T* beta_t
 }
 
 template<typename T>
-__device__ void UpdateModel(const float* learning_rate, T l1, T l2, T epsilon, T* model, const T m,
-                            const T v) {
+__device__ void UpdateModel(const float learning_rate, T weight_decay, T epsilon, T* model,
+                            const T m, const T v) {
   T model_val = *model;
   T model_diff = m / (sqrt(v) + epsilon);
-  T reg_diff = RegDiff(model_diff, l1, l2, model_val);
-  *model = model_val - *learning_rate * reg_diff;
+  *model = model_val - learning_rate * (model_diff + weight_decay * model_val);
 }
 
 template<bool do_bias_correction, typename T>
-__global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2, T beta1, T beta2,
-                               T epsilon, const T* beta1_t, const T* beta2_t, const T* model_diff,
-                               T* model, T* m, T* v) {
+__global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T weight_decay, T beta1,
+                               T beta2, T epsilon, const T* beta1_t, const T* beta2_t,
+                               const T* model_diff, T* model, T* m, T* v) {
+  const float lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T model_diff_val = model_diff[i];
     T m_val = m[i];
@@ -64,7 +63,7 @@ __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2
     T v_val = v[i];
     UpdateMomentEstimate<2, do_bias_correction>(beta2, model_diff_val, beta2_t, &v_val);
     v[i] = v_val;
-    UpdateModel(learning_rate, l1, l2, epsilon, model + i, m_val, v_val);
+    UpdateModel(lr, weight_decay, epsilon, model + i, m_val, v_val);
   }
 }
 
@@ -82,20 +81,20 @@ __global__ void DoBiasCorrectionGpu(const int64_t* train_step, const T beta1, co
 template<typename T>
 class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
                           const int64_t* train_step, const T* beta1_t, const T* beta2_t,
                           T* model_diff, T* model, T* m, T* v) {
     if (do_bias_correction) {
       UpdateModelGpu<true, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, learning_rate, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model,
-              m, v);
+              n, learning_rate, weight_decay, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff,
+              model, m, v);
     } else {
       UpdateModelGpu<false, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, learning_rate, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model,
-              m, v);
+              n, learning_rate, weight_decay, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff,
+              model, m, v);
     }
   }
 
