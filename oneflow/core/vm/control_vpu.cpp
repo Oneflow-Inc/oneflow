@@ -2,11 +2,48 @@
 #include "oneflow/core/vm/control_vpu.h"
 #include "oneflow/core/vm/vpu_instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/free_mirrored_object_handler.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/static_counter.h"
 #include "oneflow/core/common/flat_msg_view.h"
 
 namespace oneflow {
+
+namespace {
+
+class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
+ public:
+  ~FreeMirroredObjectTryDeleter() override = default;
+
+  void Call(LogicalObject* logical_object) const override {
+    CHECK(!logical_object->is_zombie_link_empty());
+    auto* scheduler = logical_object->mut_vpu_scheduler_ctx();
+    auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+    std::size_t size = parallel_id2mirrored_object->size();
+    for (int i = 0; i < size; ++i) {
+      auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
+      CHECK_NOTNULL(mirrored_object);
+      if (!mirrored_object->is_maybe_available_access_link_empty()) { return; }
+      if (!mirrored_object->waiting_access_list().empty()) { return; }
+      if (!mirrored_object->holding_access_list().empty()) { return; }
+    }
+    for (int i = 0; i < size; ++i) {
+      auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
+      parallel_id2mirrored_object->Erase(mirrored_object);
+    }
+    scheduler->mut_zombie_logical_object_list()->Erase(logical_object);
+  }
+
+  static const FreeMirroredObjectTryDeleter* Singleton() {
+    static const FreeMirroredObjectTryDeleter singleton;
+    return &singleton;
+  }
+
+ private:
+  FreeMirroredObjectTryDeleter() : FreeMirroredObjectHandler() {}
+};
+
+}  // namespace
 
 static const VpuTypeId kControlVpuTypeId = 0;
 typedef void (*CtrlInstrFunc)(VpuSchedulerCtx*, VpuInstructionMsg*);
@@ -44,12 +81,12 @@ void NewMirroredObjectSymbol(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_
   FlatMsg<LogicalObjectId> logical_object_id;
   MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_default_allocator(),
-                                                             logical_object_id.Get());
+                                                             logical_object_id.Get(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
     auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_default_allocator(),
-                                                                 logical_object.Get(), i);
+                                                                 logical_object.Mutable(), i);
     CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
   }
 }
@@ -86,17 +123,11 @@ void DeleteMirroredObjectSymbol(VpuSchedulerCtx* scheduler, VpuInstructionMsg* v
   const auto& logical_objectId = view->mutable_logical_object_id().value();
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
   CHECK_NOTNULL(logical_object);
-  auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-  std::size_t size = parallel_id2mirrored_object->size();
-  for (int i = 0; i < size; ++i) {
-    auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
-    CHECK_NOTNULL(mirrored_object);
-    CHECK(mirrored_object->is_maybe_available_access_link_empty());
-    CHECK(mirrored_object->waiting_access_list().empty());
-    CHECK(mirrored_object->holding_access_list().empty());
-    parallel_id2mirrored_object->Erase(mirrored_object);
-  }
+  CHECK(logical_object->is_zombie_link_empty());
+  scheduler->mut_zombie_logical_object_list()->PushBack(logical_object);
   scheduler->mut_id2logical_object()->Erase(logical_object);
+  logical_object->set_free_mirrored_object_handler(FreeMirroredObjectTryDeleter::Singleton());
+  logical_object->free_mirrored_object_handler().Call(logical_object);
 }
 REGISTER_CTRL_INSTRUCTION(kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 

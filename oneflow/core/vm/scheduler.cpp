@@ -23,7 +23,11 @@ void ReleaseVpuInstructionCtx(VpuInstructionCtx* vpu_instr_ctx,
     holding_access_list->Erase(mirrored_object_access);
     if (!holding_access_list->empty()) { continue; }
     mirrored_object->clear_current_access_type();
-    if (mirrored_object->waiting_access_list().empty()) { continue; }
+    if (mirrored_object->waiting_access_list().empty()) {
+      mirrored_object->logical_object().free_mirrored_object_handler().Call(
+          mirrored_object->mut_logical_object());
+      continue;
+    }
     maybe_available_access_list->PushBack(mirrored_object);
   }
 }
