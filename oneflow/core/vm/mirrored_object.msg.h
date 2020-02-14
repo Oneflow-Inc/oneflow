@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/mem_zone_type_desc.msg.h"
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
+#include "oneflow/core/vm/free_mirrored_object_handler.h"
 
 namespace oneflow {
 
@@ -78,8 +79,8 @@ class LogicalObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   // methods
-  PUBLIC void __Init__(const LogicalObject& logical_object, int64_t parallel_id) {
-    set_logical_object(&logical_object);
+  PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id) {
+    set_logical_object(logical_object);
     set_parallel_id(parallel_id);
   }
   PUBLIC void TryResetCurrentAccessType(); 
@@ -93,7 +94,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
     OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
     OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
-  OBJECT_MSG_DEFINE_RAW_PTR(const LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
@@ -107,15 +108,23 @@ BEGIN_OBJECT_MSG(MirroredObject);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
+class VpuSchedulerCtx;
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
   // methods
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id) {
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
+                       VpuSchedulerCtx* vpu_scheduler_ctx) {
     mut_logical_object_id()->CopyFrom(logical_object_id);
+    set_free_mirrored_object_handler(FreeMirroredObjectIgnoreHandler::Singleton());
+    set_vpu_scheduler_ctx(vpu_scheduler_ctx);
   }
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(const FreeMirroredObjectHandler, free_mirrored_object_handler);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuSchedulerCtx, vpu_scheduler_ctx);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
+  OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
 END_OBJECT_MSG(LogicalObject);
 // clang-format on
 
