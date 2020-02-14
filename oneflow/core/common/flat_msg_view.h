@@ -3,6 +3,8 @@
 
 #include "oneflow/core/common/dss.h"
 #include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/common/static_counter.h"
 
 namespace oneflow {
 
@@ -11,18 +13,21 @@ namespace oneflow {
     using self_type = struct_name;                          \
     static const bool __is_flat_message_view_type__ = true; \
     FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(struct_name);        \
-    BEGIN_DSS(DSS_GET_FIELD_COUNTER(), struct_name, 0);
+    PUBLIC DEFINE_STATIC_COUNTER(field_counter);            \
+    BEGIN_DSS(STATIC_COUNTER(field_counter), struct_name, 0);
 
 #define END_FLAT_MSG_VIEW(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  END_DSS(DSS_GET_FIELD_COUNTER(), "flat message view", struct_name);                     \
+  PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                          \
+  END_DSS(STATIC_COUNTER(field_counter), "flat message view", struct_name);               \
   }                                                                                       \
   ;
 
 #define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                     \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
   _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);    \
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "flat message view", OF_PP_CAT(field_name, _));
+  PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                          \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view", OF_PP_CAT(field_name, _));
 
 // details
 

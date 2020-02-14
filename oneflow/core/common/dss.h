@@ -123,6 +123,8 @@ namespace oneflow {
   struct __DSS__FieldOffset4Counter<field_counter, fake> {                                        \
     constexpr static int Get() { return base_byte_size; }                                         \
   };                                                                                              \
+  template<int tpl_fld_counter, typename fake = void>                                             \
+  struct __DSS__StaticAssertFieldCounter {};                                                      \
                                                                                                   \
   template<int tpl_fld_counter, typename fake = void>                                             \
   struct __DSS__AccFieldCount4Counter {                                                           \
@@ -154,65 +156,68 @@ namespace oneflow {
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
-#define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                     \
- public:                                                                                      \
-  template<typename Enabled = void>                                                           \
-  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                   \
-    return offsetof(__DssSelfType__, field);                                                  \
-  }                                                                                           \
-                                                                                              \
- private:                                                                                     \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
-  struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                              \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
-      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(          \
-          ctx, &self->field, __field_name__);                                                 \
-      __DSS__FieldIter<field_counter + 1, F, WalkCtxType>::Call(ctx, self);                   \
-    }                                                                                         \
-  };                                                                                          \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
-  struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                         \
-    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
-      bool end =                                                                              \
-          __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, decltype(self->field)>::Call( \
-              ctx, &self->field, __field_name__);                                             \
-      if (end) { return true; }                                                               \
-      return __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);       \
-    }                                                                                         \
-  };                                                                                          \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
-  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                       \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                    \
-      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(          \
-          ctx, &self->field, __field_name__);                                                 \
-      __DSS__FieldReverseIter<field_counter - 1, F, WalkCtxType>::Call(ctx, self);            \
-    }                                                                                         \
-  };                                                                                          \
-  template<typename fake>                                                                     \
-  struct __DSS__FieldAlign4Counter<field_counter, fake> {                                     \
-    constexpr static int Get() { return alignof(((__DssSelfType__*)nullptr)->field); }        \
-  };                                                                                          \
-  template<typename fake>                                                                     \
-  struct __DSS__FieldSize4Counter<field_counter, fake> {                                      \
-    constexpr static int Get() { return sizeof(((__DssSelfType__*)nullptr)->field); }         \
-  };                                                                                          \
-  template<typename fake>                                                                     \
-  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                    \
-    constexpr static int Get() { return offsetof(__DssSelfType__, field); }                   \
-  };                                                                                          \
-  static void OF_PP_CAT(__DSS__StaticAssertFieldCounter, field_counter)() {                   \
-    static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get();  \
-    static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),               \
-                  DSS_ASSERT_VERBOSE(dss_type));                                              \
-  }                                                                                           \
-  template<typename fake>                                                                     \
-  struct __DSS__AccFieldCount4Counter<field_counter, fake> {                                  \
-    constexpr static int Get() {                                                              \
-      return __DSS__AccFieldCount4Counter<field_counter - 1, fake>::Get() + 1;                \
-    }                                                                                         \
+#define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                      \
+ public:                                                                                       \
+  template<typename Enabled = void>                                                            \
+  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                    \
+    return offsetof(__DssSelfType__, field);                                                   \
+  }                                                                                            \
+                                                                                               \
+ private:                                                                                      \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
+  struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                               \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
+      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(           \
+          ctx, &self->field, __field_name__);                                                  \
+      __DSS__FieldIter<field_counter + 1, F, WalkCtxType>::Call(ctx, self);                    \
+    }                                                                                          \
+  };                                                                                           \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
+  struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                          \
+    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
+      bool end =                                                                               \
+          __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, decltype(self->field)>::Call(  \
+              ctx, &self->field, __field_name__);                                              \
+      if (end) { return true; }                                                                \
+      return __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);        \
+    }                                                                                          \
+  };                                                                                           \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
+  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                        \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
+      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(           \
+          ctx, &self->field, __field_name__);                                                  \
+      __DSS__FieldReverseIter<field_counter - 1, F, WalkCtxType>::Call(ctx, self);             \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename fake>                                                                      \
+  struct __DSS__FieldAlign4Counter<field_counter, fake> {                                      \
+    constexpr static int Get() { return alignof(((__DssSelfType__*)nullptr)->field); }         \
+  };                                                                                           \
+  template<typename fake>                                                                      \
+  struct __DSS__FieldSize4Counter<field_counter, fake> {                                       \
+    constexpr static int Get() { return sizeof(((__DssSelfType__*)nullptr)->field); }          \
+  };                                                                                           \
+  template<typename fake>                                                                      \
+  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                     \
+    constexpr static int Get() { return offsetof(__DssSelfType__, field); }                    \
+  };                                                                                           \
+  template<typename fake>                                                                      \
+  struct __DSS__StaticAssertFieldCounter<field_counter, fake> {                                \
+    static void StaticAssert() {                                                               \
+      static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get(); \
+      static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),              \
+                    DSS_ASSERT_VERBOSE(dss_type));                                             \
+    }                                                                                          \
+  };                                                                                           \
+  template<typename fake>                                                                      \
+  struct __DSS__AccFieldCount4Counter<field_counter, fake> {                                   \
+    constexpr static int Get() {                                                               \
+      return __DSS__AccFieldCount4Counter<field_counter - 1, fake>::Get() + 1;                 \
+    }                                                                                          \
   };
 
 #define _END_DSS(field_counter, dss_type, type)                                       \
