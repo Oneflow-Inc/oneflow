@@ -88,6 +88,11 @@ struct FlatMsg final {
   using value_type = typename FLAT_MSG_TYPE_CHECK(T);
   FlatMsg() { msg_.clear(); }
 
+  const value_type& operator*() const { return msg_; }
+  value_type& operator*() { return msg_; }
+  const value_type* operator->() const { return &msg_; }
+  value_type* operator->() { return &msg_; }
+
   const value_type& Get() const { return msg_; }
   value_type* Mutable() { return &msg_; }
 

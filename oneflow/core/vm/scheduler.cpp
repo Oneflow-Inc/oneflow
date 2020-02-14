@@ -91,8 +91,8 @@ void MakeVpuInstructionCtx(VpuScheduler* scheduler, TmpWaitingVpuInstrMsgList* v
     VpuTypeId vpu_type_id = vpu_instr_msg->vpu_instruction_proto().vpu_type_id();
     auto* vpu_type_ctx = scheduler->mut_vpu_type_id2vpu_type_ctx()->FindPtr(vpu_type_id);
     OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_type_ctx->mut_vpu_ctx_list(), vpu_ctx) {
-      auto vpu_instr_ctx = ObjectMsgPtr<VpuInstructionCtx>::NewFrom(scheduler->mut_allocator(),
-                                                                    vpu_instr_msg, vpu_ctx);
+      auto vpu_instr_ctx = ObjectMsgPtr<VpuInstructionCtx>::NewFrom(
+          scheduler->mut_default_allocator(), vpu_instr_msg, vpu_ctx);
       ret_vpu_instr_ctx_list->PushBack(vpu_instr_ctx.Mutable());
     }
     vpu_instr_msg_list->Erase(vpu_instr_msg);
@@ -160,9 +160,10 @@ void MoveToReadyCtxListIfNoObjectOperand(NewVpuInstrCtxList* new_vpu_instr_ctx_l
   }
 }
 
-void DispatchVpuInstructionCtx(VpuScheduler* ctx, ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
-  auto* allocator = ctx->mut_allocator();
-  auto* active_vpu_ctx_list = ctx->mut_active_vpu_ctx_list();
+void DispatchVpuInstructionCtx(VpuScheduler* scheduler,
+                               ReadyVpuInstrCtxList* ready_vpu_instr_ctx_list) {
+  auto* allocator = scheduler->mut_default_allocator();
+  auto* active_vpu_ctx_list = scheduler->mut_active_vpu_ctx_list();
   while (auto* first = ready_vpu_instr_ctx_list->Begin()) {
     auto* vpu_ctx = first->mut_vpu_ctx();
     ready_vpu_instr_ctx_list->MoveToDstBack(first, vpu_ctx->mut_collect_vpu_instruction_list());

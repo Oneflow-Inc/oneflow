@@ -11,8 +11,13 @@ using VpuInstructionMsgList = OBJECT_MSG_LIST(VpuInstructionMsg, vpu_instruction
 // clang-format off
 BEGIN_OBJECT_MSG(VpuScheduler);
   // methods
+  PUBLIC void __Init__() { __Init__(mut_allocator()); }
+  PUBLIC void __Init__(ObjectMsgAllocator* allocator) { set_default_allocator(allocator); }
   PUBLIC void Receive(VpuInstructionMsgList* vpu_instr_list);
   PUBLIC void Dispatch();
+
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, waiting_msg_list);
