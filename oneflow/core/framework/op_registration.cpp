@@ -3,6 +3,7 @@
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/framework/batch_axis_context.h"
 
 namespace oneflow {
 
@@ -142,6 +143,12 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
   return *this;
 }
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetBatchAxisInferFn(
+    BatchAxisInferFn batch_axis_infer_fn) {
+  wrapper_.reg_val.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetCheckAttrFn(CheckAttrFn fn) {
   wrapper_.reg_val.check_fn = std::move(fn);
   return *this;
@@ -160,6 +167,9 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
   }
   if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
     wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
+  }
+  if (wrapper_.reg_val.batch_axis_infer_fn == nullptr) {
+    wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
     wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;

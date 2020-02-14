@@ -79,14 +79,36 @@ class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
   void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
+void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
+                            const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+                            HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
+  for (const auto& pair : lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    const LogicalBlobId& diff_lbi = pair.second;
+    const OpNode* producer = op_graph.OpNode4OpName(lbi.op_name());
+    if (producer->op().op_conf().has_variable_conf()) {
+      (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
+    }
+  }
+}
+
 void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
                                                 JobBuilder* job_builder) const {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
-  std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
-  AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
-  AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
+  HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
+  FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
+  AddDiffParallelCast(op_graph, job_builder, &model_lbi2model_diff_lbi);
+  ScaleModelDiffByLossInstanceNum(op_graph, job_builder, &model_lbi2model_diff_lbi);
+  ScaleModelDiffByLossScale(op_graph, job_builder, &model_lbi2model_diff_lbi);
+  const NormalModelUpdateOpUserConf& model_update_conf =
+      job_builder->job().job_conf().train_conf().model_update_conf();
+  RegularizeGradient(op_graph, job_builder, &model_lbi2model_diff_lbi);
+  if (model_update_conf.has_clip_conf()) {
+    ClipGradient(op_graph, job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
+  }
+  AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
