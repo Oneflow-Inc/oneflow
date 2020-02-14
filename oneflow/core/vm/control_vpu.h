@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-class VpuSchedulerCtx;
+class VpuScheduler;
 class VpuInstructionMsg;
 
 class ControlVpu final {
@@ -19,7 +19,7 @@ class ControlVpu final {
   ObjectMsgPtr<VpuInstructionMsg> DeleteMirroredObjectSymbol(
       const LogicalObjectId& logical_object_id) const;
 
-  void Run(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
+  void Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
 };
 
 static const VpuTypeId kControlVpuTypeId = 0;

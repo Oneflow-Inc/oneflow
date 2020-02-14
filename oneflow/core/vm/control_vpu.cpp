@@ -17,7 +17,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
   void Call(LogicalObject* logical_object) const override {
     CHECK(!logical_object->is_zombie_link_empty());
-    auto* scheduler = logical_object->mut_vpu_scheduler_ctx();
+    auto* scheduler = logical_object->mut_vpu_scheduler();
     auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
     std::size_t size = parallel_id2mirrored_object->size();
     for (int i = 0; i < size; ++i) {
@@ -45,7 +45,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
 }  // namespace
 
-typedef void (*CtrlInstrFunc)(VpuSchedulerCtx*, VpuInstructionMsg*);
+typedef void (*CtrlInstrFunc)(VpuScheduler*, VpuInstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
 template<int opcode>
 struct CtrlInstruction;
@@ -74,17 +74,17 @@ void MakeLogicalObjectId(LogicalObjectId* logical_object_id, uint64_t symbol, bo
   }
 }
 
-void NewMirroredObjectSymbol(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) {
+void NewMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) {
   FlatMsgView<CtrlInstruction<kNewMirroredObjectSymbol>> view;
   CHECK(view->Match(vpu_instr_msg->mut_vpu_instruction_proto()->mut_operand()));
   FlatMsg<LogicalObjectId> logical_object_id;
   MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
-  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_default_allocator(),
+  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_allocator(),
                                                              logical_object_id.Get(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
-    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_default_allocator(),
+    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
                                                                  logical_object.Mutable(), i);
     CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
   }
@@ -116,7 +116,7 @@ BEGIN_FLAT_MSG_VIEW(CtrlInstruction<kDeleteMirroredObjectSymbol>);
 END_FLAT_MSG_VIEW(CtrlInstruction<kDeleteMirroredObjectSymbol>);
 // clang-format on
 
-void DeleteMirroredObjectSymbol(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) {
+void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) {
   FlatMsgView<CtrlInstruction<kDeleteMirroredObjectSymbol>> view;
   CHECK(view->Match(vpu_instr_msg->mut_vpu_instruction_proto()->mut_operand()));
   const auto& logical_objectId = view->mutable_logical_object_id().value();
@@ -144,7 +144,7 @@ ObjectMsgPtr<VpuInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
   return vpu_instr_msg;
 }
 
-void ControlVpu::Run(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) const {
+void ControlVpu::Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const {
   VpuInstructionOpcode opcode = vpu_instr_msg->vpu_instruction_proto().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, vpu_instr_msg);
 }
