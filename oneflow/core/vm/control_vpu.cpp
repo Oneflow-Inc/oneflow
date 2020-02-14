@@ -45,7 +45,6 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
 }  // namespace
 
-static const VpuTypeId kControlVpuTypeId = 0;
 typedef void (*CtrlInstrFunc)(VpuSchedulerCtx*, VpuInstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
 template<int opcode>

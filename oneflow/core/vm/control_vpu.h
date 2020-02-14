@@ -22,6 +22,8 @@ class ControlVpu final {
   void Run(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
 };
 
+static const VpuTypeId kControlVpuTypeId = 0;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_CONTROL_VPU_H_
