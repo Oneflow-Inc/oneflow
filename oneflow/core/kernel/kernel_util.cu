@@ -346,11 +346,6 @@ void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_le
 
 }  // namespace
 
-template<>
-void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
-}
-
 #define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) cub::DeviceReduce::func_name<T*, T*>
 DEFINE_STATIC_SWITCH_FUNC(cudaError_t, Sum, MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
