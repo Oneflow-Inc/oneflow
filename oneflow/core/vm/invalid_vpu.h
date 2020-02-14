@@ -11,7 +11,7 @@ class InvalidVpu final : public Vpu {
   InvalidVpu() : Vpu() {}
   ~InvalidVpu() override = default;
 
-  void Run(VpuSchedulerCtx* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
+  void Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
 
   // UNIMPLEMENTED methods
   const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const override {

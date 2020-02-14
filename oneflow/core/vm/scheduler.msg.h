@@ -6,14 +6,13 @@
 
 namespace oneflow {
 
-// clang-format off
-BEGIN_OBJECT_MSG(VpuSchedulerCtx);
-  // methods
-  void __Init__() { set_default_allocator(ObjectMsgDefaultAllocator::GlobalObjectMsgAllocator()); }
+using VpuInstructionMsgList = OBJECT_MSG_LIST(VpuInstructionMsg, vpu_instruction_msg_link);
 
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, machine_id);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
+// clang-format off
+BEGIN_OBJECT_MSG(VpuScheduler);
+  // methods
+  PUBLIC void Receive(VpuInstructionMsgList* vpu_instr_list);
+  PUBLIC void Dispatch();
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, waiting_msg_list);
@@ -27,7 +26,7 @@ BEGIN_OBJECT_MSG(VpuSchedulerCtx);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeCtx, vpu_type_id, vpu_type_id2vpu_type_ctx);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, zombie_link, zombie_logical_object_list);
-END_OBJECT_MSG(VpuSchedulerCtx);
+END_OBJECT_MSG(VpuScheduler);
 // clang-format on
 
 }  // namespace oneflow

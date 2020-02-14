@@ -108,19 +108,19 @@ BEGIN_OBJECT_MSG(MirroredObject);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
-class VpuSchedulerCtx;
+class VpuScheduler;
 // clang-format off
 BEGIN_OBJECT_MSG(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
-                       VpuSchedulerCtx* vpu_scheduler_ctx) {
+                       VpuScheduler* vpu_scheduler) {
     mut_logical_object_id()->CopyFrom(logical_object_id);
     set_free_mirrored_object_handler(FreeMirroredObjectIgnoreHandler::Singleton());
-    set_vpu_scheduler_ctx(vpu_scheduler_ctx);
+    set_vpu_scheduler(vpu_scheduler);
   }
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const FreeMirroredObjectHandler, free_mirrored_object_handler);
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuSchedulerCtx, vpu_scheduler_ctx);
+  OBJECT_MSG_DEFINE_RAW_PTR(VpuScheduler, vpu_scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
