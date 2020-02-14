@@ -6,9 +6,15 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                    \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, T, field_name);
+#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                                \
+  static_assert(__is_object_message_type__, "this struct is not a object message");             \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, OBJECT_MSG_TYPE_CHECK(T), \
+                                  field_name);
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(max_level, T, field_name)                     \
+  static_assert(__is_object_message_type__, "this struct is not a object message");           \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, FLAT_MSG_TYPE_CHECK(T), \
+                                  field_name);
 
 #define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
@@ -64,10 +70,11 @@ namespace oneflow {
  private:                                                                                          \
   EmbeddedSkipListKey<key_type, max_level> OF_PP_CAT(field_name, _);
 
-#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)                        \
-  StructField<OBJECT_MSG_TYPE(elem_type),                                                        \
-              OBJECT_MSG_TYPE(elem_type)::OF_PP_CAT(elem_field_name, _ObjectMsgSkipListKeyType), \
-              OBJECT_MSG_TYPE(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>
+#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)             \
+  StructField<OBJECT_MSG_TYPE_CHECK(elem_type),                                       \
+              OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name,            \
+                                                          _ObjectMsgSkipListKeyType), \
+              OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadInit {
@@ -113,6 +120,7 @@ class TrivialObjectMsgSkipList {
     ret.Reset(skiplist_head_.Find(key));
     return ret;
   }
+  elem_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
   bool EqualsEnd(const ObjectMsgPtr<elem_type>& ptr) { return !ptr; }
   void Erase(const key_type& key) { ObjectMsgPtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
   void Erase(elem_type* elem_ptr) {
