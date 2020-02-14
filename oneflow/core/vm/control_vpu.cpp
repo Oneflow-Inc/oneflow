@@ -79,12 +79,12 @@ void NewMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_ins
   CHECK(view->Match(vpu_instr_msg->mut_vpu_instruction_proto()->mut_operand()));
   FlatMsg<LogicalObjectId> logical_object_id;
   MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
-  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_allocator(),
+  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_default_allocator(),
                                                              logical_object_id.Get(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
-    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
+    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_default_allocator(),
                                                                  logical_object.Mutable(), i);
     CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
   }
@@ -93,16 +93,16 @@ REGISTER_CTRL_INSTRUCTION(kNewMirroredObjectSymbol, NewMirroredObjectSymbol);
 ObjectMsgPtr<VpuInstructionMsg> ControlVpu::NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
                                                                     int64_t parallel_num) const {
   auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
-  auto* vpu_instr_proto = vpu_instr_msg->mut_vpu_instruction_proto();
+  auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
   vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
   vpu_instr_proto->set_opcode(kNewMirroredObjectSymbol);
   {
-    FlatMsgView<CtrlInstruction<kNewMirroredObjectSymbol>> view(vpu_instr_proto->mut_operand());
+    FlatMsgView<CtrlInstruction<kNewMirroredObjectSymbol>> view(vpu_instr_proto->mutable_operand());
     view->set_symbol(symbol);
     view->set_is_remote(is_remote);
     view->set_parallel_num(parallel_num);
   }
-  vpu_instr_proto->mut_vpu_mask()->mut_all_vpu_enabled();
+  vpu_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
   return vpu_instr_msg;
 }
 
@@ -133,14 +133,15 @@ REGISTER_CTRL_INSTRUCTION(kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbo
 ObjectMsgPtr<VpuInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
-  auto* vpu_instr_proto = vpu_instr_msg->mut_vpu_instruction_proto();
+  auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
   vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
   vpu_instr_proto->set_opcode(kDeleteMirroredObjectSymbol);
   {
-    FlatMsgView<CtrlInstruction<kDeleteMirroredObjectSymbol>> view(vpu_instr_proto->mut_operand());
-    view->mut_mutable_logical_object_id()->mut_value()->CopyFrom(logical_object_id);
+    FlatMsgView<CtrlInstruction<kDeleteMirroredObjectSymbol>> view(
+        vpu_instr_proto->mutable_operand());
+    view->mutable_mutable_logical_object_id()->mutable_value()->CopyFrom(logical_object_id);
   }
-  vpu_instr_proto->mut_vpu_mask()->mut_all_vpu_enabled();
+  vpu_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
   return vpu_instr_msg;
 }
 
