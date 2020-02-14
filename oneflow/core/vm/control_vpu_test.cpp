@@ -21,7 +21,7 @@ TEST(ControlVpu, new_symbol) {
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 1);
-  scheduler->Dispatch();
+  scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->tmp_waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->new_vpu_instr_ctx_list().empty());
@@ -50,7 +50,7 @@ TEST(ControlVpu, delete_symbol) {
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 2);
-  scheduler->Dispatch();
+  scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->tmp_waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->new_vpu_instr_ctx_list().empty());

@@ -14,7 +14,7 @@ BEGIN_OBJECT_MSG(VpuScheduler);
   PUBLIC void __Init__() { __Init__(mut_allocator()); }
   PUBLIC void __Init__(ObjectMsgAllocator* allocator) { set_default_allocator(allocator); }
   PUBLIC void Receive(VpuInstructionMsgList* vpu_instr_list);
-  PUBLIC void Dispatch();
+  PUBLIC void Schedule();
 
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
