@@ -19,6 +19,14 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
   return op_conf().total_loss_instance_num_conf();
 }
 
+Maybe<void> TotalLossInstanceNumOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(ibn) == *BatchAxis4BnInOp(input_bns().Get(0)));
+  }
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
+}
+
 REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);
 
 }  // namespace oneflow
