@@ -123,6 +123,14 @@ struct TestDssUnion {
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
 };
 
+template<int field_counter, typename WalkCtxType, typename FieldType>
+struct StaticDumpFieldName {
+  static void Call(WalkCtxType* ctx, const char* field_name, const char* oneof_name) {
+    ctx->push_back(field_name);
+    ctx->push_back(oneof_name);
+  }
+};
+
 TEST(DSS, union_field) {
   TestDssUnion foo;
   foo.union_field.union_case = 0;
@@ -145,6 +153,16 @@ TEST(DSS, union_field) {
     ASSERT_EQ(field_names.size(), 1);
     ASSERT_EQ(field_names.at(0), "y");
   }
+}
+
+TEST(DSS, static_verbose_field) {
+  std::vector<std::string> field_names;
+  TestDssUnion::__WalkStaticVerboseField__<StaticDumpFieldName>(&field_names);
+  ASSERT_EQ(field_names.size(), 4);
+  ASSERT_EQ(field_names.at(0), "x");
+  ASSERT_EQ(field_names.at(1), "union_field");
+  ASSERT_EQ(field_names.at(2), "y");
+  ASSERT_EQ(field_names.at(3), "union_field");
 }
 
 }  // namespace
