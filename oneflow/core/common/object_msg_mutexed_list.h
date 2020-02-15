@@ -47,16 +47,12 @@ namespace oneflow {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedMutexedListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedMutexedListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->Clear();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
 template<typename LinkField>

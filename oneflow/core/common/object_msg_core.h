@@ -94,27 +94,26 @@ namespace oneflow {
     *OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() = val;      \
   }
 
-#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                                    \
- public:                                                                                         \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {                          \
-    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                 \
-    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;                         \
-    static const bool is_ptr = std::is_pointer<FieldType>::value;                                \
-    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                                           \
-    return MutableTrait<is_ptr>::Call(ptr);                                                      \
-  }                                                                                              \
-  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {                      \
-    static const char* field_name = OF_PP_STRINGIZE(OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _));      \
-    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);                 \
-    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;                         \
-    static const bool is_ptr = std::is_pointer<FieldType>::value;                                \
-    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                                           \
-      OF_PP_CAT(clear_, oneof_name)();                                                           \
-      ObjectMsgNaiveInit<ObjectMsgAllocator, FieldType>::Call(mut_allocator(), ptr, field_name); \
-      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                              \
-      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                                   \
-    }                                                                                            \
-    return MutableTrait<is_ptr>::Call(ptr);                                                      \
+#define OBJECT_MSG_MAKE_ONEOF_FIELD_MUTABLE(oneof_name, pair)                        \
+ public:                                                                             \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mut_, OF_PP_PAIR_SECOND(pair))() {              \
+    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);     \
+    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;             \
+    static const bool is_ptr = std::is_pointer<FieldType>::value;                    \
+    CHECK(OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))());                               \
+    return MutableTrait<is_ptr>::Call(ptr);                                          \
+  }                                                                                  \
+  OF_PP_PAIR_FIRST(pair) * OF_PP_CAT(mutable_, OF_PP_PAIR_SECOND(pair))() {          \
+    auto* ptr = &OF_PP_CAT(oneof_name, _).OF_PP_CAT(OF_PP_PAIR_SECOND(pair), _);     \
+    using FieldType = typename std::remove_pointer<decltype(ptr)>::type;             \
+    static const bool is_ptr = std::is_pointer<FieldType>::value;                    \
+    if (!OF_PP_CAT(has_, OF_PP_PAIR_SECOND(pair))()) {                               \
+      OF_PP_CAT(clear_, oneof_name)();                                               \
+      ObjectMsgNaiveInit<ObjectMsgAllocator, FieldType>::Call(mut_allocator(), ptr); \
+      OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                  \
+      (_OBJECT_MSG_ONEOF_ENUM_VALUE(OF_PP_PAIR_SECOND(pair)));                       \
+    }                                                                                \
+    return MutableTrait<is_ptr>::Call(ptr);                                          \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair)                     \
@@ -130,16 +129,14 @@ namespace oneflow {
     ObjectMsgPtrUtil::Ref<T>(rhs);                                                 \
   }
 
-#define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                \
- public:                                                                                        \
-  void OF_PP_CAT(clear_, oneof_name)() {                                                        \
-    const char* oneof_name_field = OF_PP_STRINGIZE(OF_PP_CAT(oneof_name, _));                   \
-    __DSS__VisitField<field_counter, ObjectMsgField__Delete__, void,                            \
-                      OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                   \
-                                                                     &OF_PP_CAT(oneof_name, _), \
-                                                                     oneof_name_field);         \
-    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                               \
-    (_OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                              \
+#define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                 \
+ public:                                                                                         \
+  void OF_PP_CAT(clear_, oneof_name)() {                                                         \
+    __DSS__VisitField<field_counter, ObjectMsgField__Delete__, void,                             \
+                      OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                    \
+                                                                     &OF_PP_CAT(oneof_name, _)); \
+    OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                                \
+    (_OBJECT_MSG_ONEOF_NOT_SET_VALUE(oneof_name));                                               \
   }
 
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_CLEARER(oneof_name, pair)                            \
@@ -368,7 +365,7 @@ struct _ObjectMsgNaiveInit {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgNaiveInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
     _ObjectMsgNaiveInit<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
   }
@@ -401,7 +398,7 @@ struct _ObjectMsgNaiveDelete {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgNaiveDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     static const bool is_ptr = std::is_pointer<PtrFieldType>::value;
     _ObjectMsgNaiveDelete<is_ptr>::template Call<WalkCtxType, PtrFieldType>(ctx, field);
   }
@@ -469,7 +466,7 @@ class ObjectMsgPtr final {
   template<typename... Args>
   static ObjectMsgPtr NewFrom(ObjectMsgAllocator* allocator, Args&&... args) {
     ObjectMsgPtr ret;
-    ObjectMsgNaiveInit<ObjectMsgAllocator, value_type*>::Call(allocator, &ret.ptr_, nullptr);
+    ObjectMsgNaiveInit<ObjectMsgAllocator, value_type*>::Call(allocator, &ret.ptr_);
     ret.Mutable()->__Init__(std::forward<Args>(args)...);
     return ret;
   }

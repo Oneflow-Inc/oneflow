@@ -32,7 +32,7 @@ namespace oneflow {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgRawPtrInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
     *field = nullptr;
   }
@@ -40,7 +40,7 @@ struct ObjectMsgRawPtrInit {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgRawPtrDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {
     static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
   }
 };

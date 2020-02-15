@@ -81,30 +81,22 @@ namespace oneflow {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->Clear();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListLinkInit {
-  static void Call(WalkCtxType* ctx, EmbeddedListLink* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListLinkDelete {
-  static void Call(WalkCtxType* ctx, EmbeddedListLink* field, const char* field_name) {
-    CHECK(field->empty());
-  }
+  static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { CHECK(field->empty()); }
 };
 
 template<typename LinkField>

@@ -60,12 +60,12 @@ struct ObjectMsgFlatMsgClear<true, T> {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgFlatMsgInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {}
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgFlatMsgDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {}
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
 }
 
