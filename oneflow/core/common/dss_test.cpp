@@ -18,8 +18,6 @@ struct Foo {
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
 };
 
-static_assert(Foo::__DSS__FieldCount() == 3, "field count error in dss");
-
 struct Bar {
   BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
 

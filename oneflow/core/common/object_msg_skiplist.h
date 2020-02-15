@@ -6,19 +6,23 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                                \
-  static_assert(__is_object_message_type__, "this struct is not a object message");             \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, OBJECT_MSG_TYPE_CHECK(T), \
-                                  field_name);
-
-#define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(max_level, T, field_name)                     \
-  static_assert(__is_object_message_type__, "this struct is not a object message");           \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(DSS_GET_FIELD_COUNTER(), max_level, FLAT_MSG_TYPE_CHECK(T), \
-                                  field_name);
-
-#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)     \
+#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                    \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, field_name);
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
+                                  OBJECT_MSG_TYPE_CHECK(T), field_name);
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(max_level, T, field_name)           \
+  static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
+                                  FLAT_MSG_TYPE_CHECK(T), field_name);
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)               \
+  static_assert(__is_object_message_type__, "this struct is not a object message");           \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                             \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
+                                   field_name);
 
 #define OBJECT_MSG_SKIPLIST(elem_type, elem_field_name) \
   ObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)>

@@ -7,10 +7,11 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(elem_type, elem_field_name, field_name)         \
-  static_assert(__is_object_message_type__, "this struct is not a object message");           \
-  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(DSS_GET_FIELD_COUNTER(), elem_type, elem_field_name, \
-                                         field_name);
+#define OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(elem_type, elem_field_name, field_name) \
+  static_assert(__is_object_message_type__, "this struct is not a object message");   \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                     \
+  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type,    \
+                                         elem_field_name, field_name);
 
 #define OBJECT_MSG_CONDITION_LIST(obj_msg_type, obj_msg_field)                              \
   ObjectMsgConditionList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink, \

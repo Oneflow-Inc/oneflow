@@ -8,7 +8,8 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_RAW_PTR(field_type, field_name)                           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  _OBJECT_MSG_DEFINE_RAW_PTR(DSS_GET_FIELD_COUNTER(), field_type, field_name);
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  _OBJECT_MSG_DEFINE_RAW_PTR(STATIC_COUNTER(field_counter), field_type, field_name);
 
 // details
 #define _OBJECT_MSG_DEFINE_RAW_PTR(field_counter, field_type, field_name) \
