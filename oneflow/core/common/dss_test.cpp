@@ -50,21 +50,11 @@ struct DumpFieldName {
 TEST(DSS, walk_field) {
   Foo foo;
   std::vector<std::string> field_names;
-  foo.__WalkField__<DumpFieldName>(&field_names);
+  foo.__WalkVerboseField__<DumpFieldName>(&field_names);
   ASSERT_EQ(field_names.size(), 3);
   ASSERT_TRUE(field_names[0] == "x");
   ASSERT_TRUE(field_names[1] == "y");
   ASSERT_TRUE(field_names[2] == "z");
-}
-
-TEST(DSS, reverse_walk_field) {
-  Foo foo;
-  std::vector<std::string> field_names;
-  foo.__ReverseWalkField__<DumpFieldName>(&field_names);
-  ASSERT_EQ(field_names.size(), 3);
-  ASSERT_TRUE(field_names[0] == "z");
-  ASSERT_TRUE(field_names[1] == "y");
-  ASSERT_TRUE(field_names[2] == "x");
 }
 
 template<bool is_pointer>
@@ -90,16 +80,16 @@ struct FilterPointerFieldName {
 
 template<int field_counter, typename WalkCtxType, typename FieldType>
 struct FilterPointerFieldNameUntil {
-  static bool Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
+  static bool Call(WalkCtxType* ctx, FieldType* field) {
     return true;
-    PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, field_name);
+    PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, "");
   }
 };
 
 TEST(DSS, filter_field) {
   Foo foo;
   std::vector<std::string> field_names;
-  foo.__WalkField__<FilterPointerFieldName>(&field_names);
+  foo.__WalkVerboseField__<FilterPointerFieldName>(&field_names);
   ASSERT_EQ(field_names.size(), 1);
   ASSERT_TRUE(field_names[0] == "z");
 }
@@ -138,20 +128,20 @@ TEST(DSS, union_field) {
   foo.union_field.union_case = 0;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 0);
   }
   foo.union_field.union_case = 1;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 1);
     ASSERT_EQ(field_names.at(0), "x");
   }
   foo.union_field.union_case = 2;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 1);
     ASSERT_EQ(field_names.at(0), "y");
   }

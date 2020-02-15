@@ -25,9 +25,22 @@ namespace oneflow {
   struct __DSS__VisitField<field_counter, F, WalkCtxType, DssFieldType, fake> {               \
     template<typename __DssFieldType>                                                         \
     using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                           \
-    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) { \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                             \
       switch (field_ptr->field_case) {                                                        \
         OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY, type7field7case_tuple_seq)  \
+        default:;                                                                             \
+      }                                                                                       \
+    }                                                                                         \
+  };                                                                                          \
+  template<template<int, class, class> class F, typename WalkCtxType, typename DssFieldType,  \
+           typename fake>                                                                     \
+  struct __DSS__VisitVerboseField<field_counter, F, WalkCtxType, DssFieldType, fake> {        \
+    template<typename __DssFieldType>                                                         \
+    using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                           \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) { \
+      switch (field_ptr->field_case) {                                                        \
+        OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_VERBOSE,                     \
+                             type7field7case_tuple_seq)                                       \
         default:;                                                                             \
       }                                                                                       \
     }                                                                                         \
@@ -37,7 +50,7 @@ namespace oneflow {
   struct __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, DssFieldType, fake> {          \
     template<typename __DssFieldType>                                                         \
     using PartialF = F<field_counter, WalkCtxType, __DssFieldType>;                           \
-    static bool Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) { \
+    static bool Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                             \
       switch (field_ptr->field_case) {                                                        \
         OF_PP_FOR_EACH_TUPLE(_DSS_MAKE_UNION_FIELD_VISITOR_ENTRY, type7field7case_tuple_seq)  \
         default:;                                                                             \
@@ -47,97 +60,120 @@ namespace oneflow {
 
 #define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY(field_type, field_name, field_case_value) \
   case field_case_value: {                                                            \
-    const char* case_field_name = OF_PP_STRINGIZE(field_name);                        \
-    return PartialF<field_type>::Call(ctx, &field_ptr->field_name, case_field_name);  \
+    return PartialF<field_type>::Call(ctx, &field_ptr->field_name);                   \
   }
 
-#define _BEGIN_DSS(field_counter, type, base_byte_size)                                           \
- public:                                                                                          \
-  template<template<int, class, class> class F, typename WalkCtxType>                             \
-  void __WalkField__(WalkCtxType* ctx) {                                                          \
-    __DSS__FieldIter<field_counter, F, WalkCtxType>::Call(ctx, this);                             \
-  }                                                                                               \
-  template<template<int, class, class> class F, typename WalkCtxType>                             \
-  bool __WalkFieldUntil__(WalkCtxType* ctx) {                                                     \
-    return __DSS__FieldIterUntil<field_counter, F, WalkCtxType>::Call(ctx, this);                 \
-  }                                                                                               \
-                                                                                                  \
- private:                                                                                         \
-  using __DssSelfType__ = type;                                                                   \
-  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
-           typename DssFieldType, typename fake = void>                                           \
-  struct __DSS__VisitField {                                                                      \
-    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) {     \
-      F<tpl_fld_counter, WalkCtxType, DssFieldType>::Call(ctx, field_ptr, __field_name__);        \
-    }                                                                                             \
-  };                                                                                              \
-  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
-           typename DssFieldType, typename fake = void>                                           \
-  struct __DSS__VisitFieldUntil {                                                                 \
-    static bool Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) {     \
-      return F<tpl_fld_counter, WalkCtxType, DssFieldType>::Call(ctx, field_ptr, __field_name__); \
-    }                                                                                             \
-  };                                                                                              \
-  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
-           typename fake = void>                                                                  \
-  struct __DSS__FieldIter {                                                                       \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                   \
-      __DSS__FieldIter<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);                     \
-    }                                                                                             \
-  };                                                                                              \
-  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
-           typename fake = void>                                                                  \
-  struct __DSS__FieldIterUntil {                                                                  \
-    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                                   \
-      return __DSS__FieldIterUntil<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);         \
-    }                                                                                             \
-  };                                                                                              \
-  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,        \
-           typename fake = void>                                                                  \
-  struct __DSS__FieldReverseIter {                                                                \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                   \
-      __DSS__FieldReverseIter<tpl_fld_counter - 1, F, WalkCtxType>::Call(ctx, self);              \
-    }                                                                                             \
-  };                                                                                              \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>              \
-  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                           \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {}                                  \
-  };                                                                                              \
-  template<int tpl_fld_counter, typename fake = void>                                             \
-  struct __DSS__FieldAlign4Counter {                                                              \
-    constexpr static int Get() { return 1; }                                                      \
-  };                                                                                              \
-                                                                                                  \
-  template<int tpl_fld_counter, typename fake = void>                                             \
-  struct __DSS__FieldSize4Counter {                                                               \
-    constexpr static int Get() { return base_byte_size; }                                         \
-  };                                                                                              \
-                                                                                                  \
-  template<int tpl_fld_counter, typename fake = void>                                             \
-  struct __DSS__FieldOffset4Counter {                                                             \
-    constexpr static int Get() {                                                                  \
-      return __DSS__FieldOffset4Counter<tpl_fld_counter - 1, fake>::Get();                        \
-    }                                                                                             \
-  };                                                                                              \
-  template<typename fake>                                                                         \
-  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                        \
-    constexpr static int Get() { return base_byte_size; }                                         \
-  };                                                                                              \
-  template<int tpl_fld_counter, typename fake = void>                                             \
-  struct __DSS__StaticAssertFieldCounter {};                                                      \
-                                                                                                  \
-  template<int tpl_fld_counter, typename fake = void>                                             \
-  struct __DSS__AccumulatedAlignedSize4Counter {                                                  \
-    constexpr static int Get() {                                                                  \
-      return ConstExprRoundUp<                                                                    \
-          __DSS__AccumulatedAlignedSize4Counter<tpl_fld_counter - 1, fake>::Get()                 \
-              + __DSS__FieldSize4Counter<tpl_fld_counter - 1, fake>::Get(),                       \
-          __DSS__FieldAlign4Counter<tpl_fld_counter, fake>::Get()>();                             \
-    }                                                                                             \
-  };                                                                                              \
-  template<typename fake>                                                                         \
-  struct __DSS__AccumulatedAlignedSize4Counter<field_counter, fake> {                             \
-    constexpr static int Get() { return 0; }                                                      \
+#define _DSS_MAKE_UNION_FIELD_VISITOR_ENTRY_VERBOSE(field_type, field_name, field_case_value) \
+  case field_case_value: {                                                                    \
+    const char* case_field_name = OF_PP_STRINGIZE(field_name);                                \
+    return PartialF<field_type>::Call(ctx, &field_ptr->field_name, case_field_name);          \
+  }
+
+#define _BEGIN_DSS(field_counter, type, base_byte_size)                                       \
+ public:                                                                                      \
+  template<template<int, class, class> class F, typename WalkCtxType>                         \
+  void __WalkField__(WalkCtxType* ctx) {                                                      \
+    __DSS__FieldIter<field_counter, F, WalkCtxType>::Call(ctx, this);                         \
+  }                                                                                           \
+  template<template<int, class, class> class F, typename WalkCtxType>                         \
+  void __WalkVerboseField__(WalkCtxType* ctx) {                                               \
+    __DSS__VerboseFieldIter<field_counter, F, WalkCtxType>::Call(ctx, this);                  \
+  }                                                                                           \
+  template<template<int, class, class> class F, typename WalkCtxType>                         \
+  bool __WalkFieldUntil__(WalkCtxType* ctx) {                                                 \
+    return __DSS__FieldIterUntil<field_counter, F, WalkCtxType>::Call(ctx, this);             \
+  }                                                                                           \
+                                                                                              \
+ private:                                                                                     \
+  using __DssSelfType__ = type;                                                               \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename DssFieldType, typename fake = void>                                       \
+  struct __DSS__VisitField {                                                                  \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                             \
+      F<tpl_fld_counter, WalkCtxType, DssFieldType>::Call(ctx, field_ptr);                    \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename DssFieldType, typename fake = void>                                       \
+  struct __DSS__VisitVerboseField {                                                           \
+    static void Call(WalkCtxType* ctx, DssFieldType* field_ptr, const char* __field_name__) { \
+      F<tpl_fld_counter, WalkCtxType, DssFieldType>::Call(ctx, field_ptr, __field_name__);    \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename DssFieldType, typename fake = void>                                       \
+  struct __DSS__VisitFieldUntil {                                                             \
+    static bool Call(WalkCtxType* ctx, DssFieldType* field_ptr) {                             \
+      return F<tpl_fld_counter, WalkCtxType, DssFieldType>::Call(ctx, field_ptr);             \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename fake = void>                                                              \
+  struct __DSS__FieldIter {                                                                   \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
+      __DSS__FieldIter<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);                 \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename fake = void>                                                              \
+  struct __DSS__VerboseFieldIter {                                                            \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
+      __DSS__VerboseFieldIter<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);          \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename fake = void>                                                              \
+  struct __DSS__FieldIterUntil {                                                              \
+    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
+      return __DSS__FieldIterUntil<tpl_fld_counter + 1, F, WalkCtxType>::Call(ctx, self);     \
+    }                                                                                         \
+  };                                                                                          \
+  template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \
+           typename fake = void>                                                              \
+  struct __DSS__FieldReverseIter {                                                            \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                               \
+      __DSS__FieldReverseIter<tpl_fld_counter - 1, F, WalkCtxType>::Call(ctx, self);          \
+    }                                                                                         \
+  };                                                                                          \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>          \
+  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                       \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {}                              \
+  };                                                                                          \
+  template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__FieldAlign4Counter {                                                          \
+    constexpr static int Get() { return 1; }                                                  \
+  };                                                                                          \
+                                                                                              \
+  template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__FieldSize4Counter {                                                           \
+    constexpr static int Get() { return base_byte_size; }                                     \
+  };                                                                                          \
+                                                                                              \
+  template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__FieldOffset4Counter {                                                         \
+    constexpr static int Get() {                                                              \
+      return __DSS__FieldOffset4Counter<tpl_fld_counter - 1, fake>::Get();                    \
+    }                                                                                         \
+  };                                                                                          \
+  template<typename fake>                                                                     \
+  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                    \
+    constexpr static int Get() { return base_byte_size; }                                     \
+  };                                                                                          \
+  template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__StaticAssertFieldCounter {};                                                  \
+                                                                                              \
+  template<int tpl_fld_counter, typename fake = void>                                         \
+  struct __DSS__AccumulatedAlignedSize4Counter {                                              \
+    constexpr static int Get() {                                                              \
+      return ConstExprRoundUp<                                                                \
+          __DSS__AccumulatedAlignedSize4Counter<tpl_fld_counter - 1, fake>::Get()             \
+              + __DSS__FieldSize4Counter<tpl_fld_counter - 1, fake>::Get(),                   \
+          __DSS__FieldAlign4Counter<tpl_fld_counter, fake>::Get()>();                         \
+    }                                                                                         \
+  };                                                                                          \
+  template<typename fake>                                                                     \
+  struct __DSS__AccumulatedAlignedSize4Counter<field_counter, fake> {                         \
+    constexpr static int Get() { return 0; }                                                  \
   };
 
 #define DSS_ASSERT_VERBOSE(dss_type)                                        \
@@ -145,62 +181,68 @@ namespace oneflow {
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
-#define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                      \
- public:                                                                                       \
-  template<typename Enabled = void>                                                            \
-  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                    \
-    return offsetof(__DssSelfType__, field);                                                   \
-  }                                                                                            \
-                                                                                               \
- private:                                                                                      \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
-  struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                               \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
-      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(           \
-          ctx, &self->field, __field_name__);                                                  \
-      __DSS__FieldIter<field_counter + 1, F, WalkCtxType>::Call(ctx, self);                    \
-    }                                                                                          \
-  };                                                                                           \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
-  struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                          \
-    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
-      bool end =                                                                               \
-          __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, decltype(self->field)>::Call(  \
-              ctx, &self->field, __field_name__);                                              \
-      if (end) { return true; }                                                                \
-      return __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);        \
-    }                                                                                          \
-  };                                                                                           \
-  template<template<int, class, class> class F, typename WalkCtxType, typename fake>           \
-  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                        \
-    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                \
-      const char* __field_name__ = OF_PP_STRINGIZE(field);                                     \
-      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(           \
-          ctx, &self->field, __field_name__);                                                  \
-      __DSS__FieldReverseIter<field_counter - 1, F, WalkCtxType>::Call(ctx, self);             \
-    }                                                                                          \
-  };                                                                                           \
-  template<typename fake>                                                                      \
-  struct __DSS__FieldAlign4Counter<field_counter, fake> {                                      \
-    constexpr static int Get() { return alignof(((__DssSelfType__*)nullptr)->field); }         \
-  };                                                                                           \
-  template<typename fake>                                                                      \
-  struct __DSS__FieldSize4Counter<field_counter, fake> {                                       \
-    constexpr static int Get() { return sizeof(((__DssSelfType__*)nullptr)->field); }          \
-  };                                                                                           \
-  template<typename fake>                                                                      \
-  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                     \
-    constexpr static int Get() { return offsetof(__DssSelfType__, field); }                    \
-  };                                                                                           \
-  template<typename fake>                                                                      \
-  struct __DSS__StaticAssertFieldCounter<field_counter, fake> {                                \
-    static void StaticAssert() {                                                               \
-      static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get(); \
-      static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),              \
-                    DSS_ASSERT_VERBOSE(dss_type));                                             \
-    }                                                                                          \
+#define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                          \
+ public:                                                                                           \
+  template<typename Enabled = void>                                                                \
+  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                        \
+    return offsetof(__DssSelfType__, field);                                                       \
+  }                                                                                                \
+                                                                                                   \
+ private:                                                                                          \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>               \
+  struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                                   \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                    \
+      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(ctx,           \
+                                                                                    &self->field); \
+      __DSS__FieldIter<field_counter + 1, F, WalkCtxType>::Call(ctx, self);                        \
+    }                                                                                              \
+  };                                                                                               \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>               \
+  struct __DSS__VerboseFieldIter<field_counter, F, WalkCtxType, fake> {                            \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                    \
+      const char* __field_name__ = OF_PP_STRINGIZE(field);                                         \
+      __DSS__VisitVerboseField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(        \
+          ctx, &self->field, __field_name__);                                                      \
+      __DSS__VerboseFieldIter<field_counter + 1, F, WalkCtxType>::Call(ctx, self);                 \
+    }                                                                                              \
+  };                                                                                               \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>               \
+  struct __DSS__FieldIterUntil<field_counter, F, WalkCtxType, fake> {                              \
+    static bool Call(WalkCtxType* ctx, __DssSelfType__* self) {                                    \
+      bool end =                                                                                   \
+          __DSS__VisitFieldUntil<field_counter, F, WalkCtxType, decltype(self->field)>::Call(      \
+              ctx, &self->field);                                                                  \
+      if (end) { return true; }                                                                    \
+      return __DSS__FieldIterUntil<field_counter + 1, F, WalkCtxType>::Call(ctx, self);            \
+    }                                                                                              \
+  };                                                                                               \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>               \
+  struct __DSS__FieldReverseIter<field_counter, F, WalkCtxType, fake> {                            \
+    static void Call(WalkCtxType* ctx, __DssSelfType__* self) {                                    \
+      __DSS__VisitField<field_counter, F, WalkCtxType, decltype(self->field)>::Call(ctx,           \
+                                                                                    &self->field); \
+      __DSS__FieldReverseIter<field_counter - 1, F, WalkCtxType>::Call(ctx, self);                 \
+    }                                                                                              \
+  };                                                                                               \
+  template<typename fake>                                                                          \
+  struct __DSS__FieldAlign4Counter<field_counter, fake> {                                          \
+    constexpr static int Get() { return alignof(((__DssSelfType__*)nullptr)->field); }             \
+  };                                                                                               \
+  template<typename fake>                                                                          \
+  struct __DSS__FieldSize4Counter<field_counter, fake> {                                           \
+    constexpr static int Get() { return sizeof(((__DssSelfType__*)nullptr)->field); }              \
+  };                                                                                               \
+  template<typename fake>                                                                          \
+  struct __DSS__FieldOffset4Counter<field_counter, fake> {                                         \
+    constexpr static int Get() { return offsetof(__DssSelfType__, field); }                        \
+  };                                                                                               \
+  template<typename fake>                                                                          \
+  struct __DSS__StaticAssertFieldCounter<field_counter, fake> {                                    \
+    static void StaticAssert() {                                                                   \
+      static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get();     \
+      static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),                  \
+                    DSS_ASSERT_VERBOSE(dss_type));                                                 \
+    }                                                                                              \
   };
 
 #define _END_DSS(field_counter, dss_type, type)                                       \
@@ -213,6 +255,10 @@ namespace oneflow {
  private:                                                                             \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>  \
   struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                      \
+    static void Call(WalkCtxType* ctx, type* self) {}                                 \
+  };                                                                                  \
+  template<template<int, class, class> class F, typename WalkCtxType, typename fake>  \
+  struct __DSS__VerboseFieldIter<field_counter, F, WalkCtxType, fake> {               \
     static void Call(WalkCtxType* ctx, type* self) {}                                 \
   };                                                                                  \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>  \

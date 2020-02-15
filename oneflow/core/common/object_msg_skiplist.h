@@ -82,30 +82,22 @@ namespace oneflow {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->Clear();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListIteratorInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListIteratorDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->CheckEmpty();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->CheckEmpty(); }
 };
 
 template<typename ElemKeyField>
