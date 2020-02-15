@@ -1,8 +1,8 @@
-#include "cuda_runtime.h"
-
 #include "oneflow/xrt/tensorrt/trt_executable.h"
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
 #include "oneflow/xrt/platform.h"
+
+#include "cuda_runtime.h"
 
 namespace oneflow {
 namespace xrt {
@@ -10,8 +10,8 @@ namespace xrt {
 namespace tensorrt {
 
 nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
-    const ExecutableRunOptions &run_options, const int batch_size /* = 1 */,
-    TRTInt8Calibrator *calibrator /* = nullptr */) {
+    const ExecutableRunOptions &run_options, const int batch_size /*= 1*/,
+    TRTInt8Calibrator *calibrator /*= nullptr*/) {
   CHECK(builder_ && network_) << "Builder and network should be setup before.";
 
   auto build_config =  // NOLINT
@@ -26,9 +26,6 @@ nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
   if (run_options.tensorrt_fp16) {
     if (builder_->platformHasFastFp16()) {
       flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
-      // It does not guarantee using half precision if only set kFP16 flag,
-      // but you can set kSTRICT_TYPES to force using half precision.
-      // flags |= (1U << int(nvinfer1::BuilderFlag::kSTRICT_TYPES));
     } else {
       LOG(INFO) << "TensorRT couldn't use fp16 precision since the GPU "
                    "hardware does not support.";
@@ -38,6 +35,9 @@ nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
     if (builder_->platformHasFastInt8()) {
       if (calibrator) {
         flags |= (1U << int(nvinfer1::BuilderFlag::kINT8));
+        if (builder_->platformHasFastFp16()) {  // NOLINT
+          flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
+        }
         build_config->setInt8Calibrator(calibrator);
       }
     } else {
@@ -45,6 +45,9 @@ nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
                    "hardware does not support.";
     }
   }
+  // It does not guarantee to use low precision if just set kFP16 or kint8 flag,
+  // but you can set kSTRICT_TYPES to enforce using half or int8 precision.
+  // flags |= (1U << int(nvinfer1::BuilderFlag::kSTRICT_TYPES));
 
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
   build_config->setFlags(flags);
@@ -64,7 +67,9 @@ bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
   bool status =
       // execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
       execution_context_->enqueueV2(buffers, cu_stream, nullptr);
-  if (block_until_done) { CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream)); }
+  if (block_until_done) {  // NOLINT
+    CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream));
+  }
   return status;
 }
 
@@ -76,10 +81,11 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
     calibrator_.reset(new TRTInt8Calibrator(run_options.tensorrt_calibration));
   }
   if (!execution_context_ && !engine_) {
-    engine_.reset(CreateExecutableEngine(run_options, 1 /* batch size */,  // NOLINT
+    engine_.reset(CreateExecutableEngine(run_options, 1 /*batch size*/,  // NOLINT
                                          calibrator_.get()));
     CHECK(engine_) << "Cannot create TensorRT executable engine.";
   }
+
   // All return params are the results of the executable.
   this->results_ = run_options.return_params;
 
@@ -114,18 +120,32 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
 
   if (run_options.tensorrt_int8 && !calibrator_) {
     auto *res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
-    if (!res->calibrator_) {
-      res->calibrator_.reset(new TRTInt8Calibrator());
-      int ordinal = platform::GetDeviceId(XrtDevice::GPU_CUDA);
-      res->thread_.reset(new std::thread([&, this]() {
-        platform::SetDeviceId(XrtDevice::GPU_CUDA, ordinal);
-        res->calibrator_->setBatchSize(batch_size);
-        res->engine_.reset(                                  // NOLINT
-            CreateExecutableEngine(run_options, batch_size,  // NOLINT
-                                   res->calibrator_.get()));
-      }));
+    {
+      std::lock_guard<std::mutex> lock(res->mutex_);
+      if (!res->calibrator_) {
+        res->calibrator_.reset(new TRTInt8Calibrator());
+        int ordinal = platform::GetDeviceId(XrtDevice::GPU_CUDA);
+        res->thread_.reset(new std::thread([this, ordinal, batch_size, res,  // NOLINT
+                                            run_options]() {
+          platform::SetDeviceId(XrtDevice::GPU_CUDA, ordinal);
+          // TODO(hjchen2): TensorRT maybe crash if calibrator batch size > 1
+          res->calibrator_->setBatchSize(1 /*batch_size*/);
+          res->engine_.reset(                                        // NOLINT
+              this->CreateExecutableEngine(run_options, batch_size,  // NOLINT
+                                           res->calibrator_.get()));
+        }));
+      }
     }
-    res->calibrator_->setBatch(binding_params);
+
+    if (res->calibrator_->isDone()) {
+      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(  // NOLINT
+                                reinterpret_cast<cudaStream_t>(run_options.stream)));
+      calibrator_ = res->calibrator_;
+      // engine_ = std::move(res->engine_);
+      execution_context_.reset(res->engine_->createExecutionContext());
+    } else {
+      res->calibrator_->setBatch(binding_params);
+    }
   }
 
   return ExecuteEngine(batch_size, buffers.data(), run_options.stream,  // NOLINT

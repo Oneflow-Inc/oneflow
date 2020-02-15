@@ -1,10 +1,18 @@
 #include "oneflow/xrt/api.h"
 
+#include "absl/strings/str_cat.h"
 #include "glog/logging.h"
 
 #include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
 #include "oneflow/xrt/build_graph.h"
 #include "oneflow/xrt/utility/env.h"
+
+#include <fstream>
+#include <mutex>
+
+#ifdef WITH_TENSORRT
+#include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
+#endif  // WITH_TENSORRT
 
 DEFINE_int32(clustering_minimum_nodes, EnvToInt(FLAGS_clustering_minimum_nodes, 1),
              "Minium nodes of a cluster after clustering.");
@@ -178,6 +186,36 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
   // Rebuild Job
   RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
 }
+
+#ifdef WITH_TENSORRT
+namespace tensorrt {
+void WriteInt8Calibration(const std::string &path) {
+  const auto &calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto &res : calib_resources) {
+    {
+      std::lock_guard<std::mutex> lock(res.second->mutex_);
+      if (!res.second->calibrator_->isDone()) {
+        res.second->calibrator_->waitAndSetDone();
+        res.second->thread_->join();
+      }
+    }
+
+    const std::string &calibration_table_data =
+        res.second->calibrator_->getCalibrationTableAsString();
+    CHECK(calibration_table_data.size()) << "Calibration table data is empty.";
+
+    std::string calib_restore_path =  // NOLINT
+        absl::StrCat(path, "/", res.first /*calibrator name*/);
+    std::ofstream ofile(calib_restore_path, std::ios::out);
+    CHECK(ofile.good()) << "Could not open calibration file: " << calib_restore_path;
+    ofile << calibration_table_data;
+    ofile.close();
+
+    res.second->calibrator_->ReleaseDevBuffers();
+  }
+}
+}  // namespace tensorrt
+#endif  // WITH_TENSORRT
 
 }  // namespace xrt
 }  // namespace oneflow

@@ -66,6 +66,12 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOp
 
 void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_phase);
 
+#ifdef WITH_TENSORRT
+namespace tensorrt {
+void WriteInt8Calibration(const std::string &path);
+}  // namespace tensorrt
+#endif  // WITH_TENSORRT
+
 }  // namespace xrt
 }  // namespace oneflow
 

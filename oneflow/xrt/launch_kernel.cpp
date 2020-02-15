@@ -165,6 +165,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
     CHECK_EQ(device_type, DeviceType::kGPU);
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
+    run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";

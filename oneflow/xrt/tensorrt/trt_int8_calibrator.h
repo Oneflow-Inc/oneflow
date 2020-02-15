@@ -17,6 +17,7 @@ namespace tensorrt {
 
 // Refered from tensorflow
 class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
+  // class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator {
  public:
   // Construct a calibrator for future calibration.
   TRTInt8Calibrator();
@@ -45,6 +46,12 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   // will be ignored.
   void setDone();
 
+  bool isDone() const;
+
+  void* createDevBuffer(const size_t buffer_size);
+
+  void ReleaseDevBuffers();
+
   // If not null, calibration is skipped.
   const void* readCalibrationCache(std::size_t& length) override;
 
@@ -58,7 +65,7 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   int batch_size_;
 
   // mutex for condition_variable
-  std::mutex cond_mtx_;
+  mutable std::mutex cond_mtx_;
 
   // condition variable to implement producer-consumer queue for calibration
   std::condition_variable cond_;
@@ -78,8 +85,13 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
 struct TRTInt8CalibratorResource {
  public:
   static TRTInt8CalibratorResource* LookupOrCreate(const std::string& name);
+
+  static const std::unordered_map<std::string,  // NOLINT
+                                  TRTInt8CalibratorResource*>&
+  All();
+
   // Individual mutex
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 
   std::shared_ptr<TRTInt8Calibrator> calibrator_;
   std::shared_ptr<std::thread> thread_;

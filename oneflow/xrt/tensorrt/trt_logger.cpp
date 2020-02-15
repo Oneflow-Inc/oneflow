@@ -21,7 +21,7 @@ void Logger::log(ILogger::Severity severity, const char* msg) {
       break;
     }
     case ILogger::Severity::kERROR: {
-      LOG(ERROR) << name_ << ": " << msg;
+      LOG(FATAL) << name_ << ": " << msg;
       break;
     }
     case ILogger::Severity::kINTERNAL_ERROR: {
