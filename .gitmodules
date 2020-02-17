@@ -34,3 +34,9 @@
 [submodule "build/third_party/re2/src/re2"]
 	path = build/third_party/re2/src/re2
 	url = https://github.com/google/re2.git
+[submodule "build/third_party/flatbuffers/src/flatbuffers"]
+	path = build/third_party/flatbuffers/src/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+[submodule "build/third_party/onerec/src/onerec"]
+	path = build/third_party/onerec/src/onerec
+	url = https://github.com/Oneflow-Inc/onerec.git
