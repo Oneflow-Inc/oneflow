@@ -1,0 +1,18 @@
+syntax = "proto2";
+package oneflow;
+
+message ObjectMsgUnionFieldList {
+  required string union_name = 1;
+  repeated string union_field_name = 2;
+}
+
+message ObjectMsgField {
+  oneof field_type {
+    ObjectMsgUnionFieldList union_field_list = 1;
+    string struct_field_name = 2;
+  }
+}
+
+message ObjectMsgFieldList {
+  repeated ObjectMsgField object_msg_field = 1;
+}
