@@ -16,10 +16,10 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
 
-  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
+  const bool pseudo_half = this->job_desc().job_conf().cudnn_conv_use_pseudo_half();
   this->conv_desc_.reset(
-      new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value, enable_true_half),
-                        in_shape, this->GetCustomizedOpConf()));
+      new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value, pseudo_half), in_shape,
+                        this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = ShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -57,26 +57,14 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->EnableCudnn());
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
-                     weight_blob, fw_cudnn_buf,
-                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
-                     this->job_desc().cudnn_conv_enable_true_half());
-  cudnnConvolutionFwdAlgo_t algo;
-  size_t work_space_size = 0;
-  if (job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
-    algo =
-        static_cast<cudnnConvolutionFwdAlgo_t>(job_desc().job_conf().cudnn_conv_force_fwd_algo());
-    CudaCheck(GetConvWorkspaceSize(args, algo, &work_space_size));
-  } else {
-    auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
-    algo = algo_perf->algo;
-    work_space_size = algo_perf->memory;
-  }
-  CHECK_LE(work_space_size, fw_cudnn_buf->ByteSizeOfBlobBody());
+  CudnnConvArgs args(this->job_desc().job_conf(), this->GetCustomizedOpConf(),
+                     device_ctx->cudnn_handle(), in_blob, out_blob, weight_blob, fw_cudnn_buf);
+  auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(&args);
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
   CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<float16>(), args.xdesc.Get(),
                                     args.x_dptr, args.wdesc.Get(), args.w_dptr, args.cdesc.Get(),
-                                    algo, args.work_space, work_space_size,
+                                    algo_perf.algo, args.ws_dptr, args.params.max_ws_size,
                                     CudnnSPZeroPtr<float16>(), args.ydesc.Get(), args.y_dptr));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
@@ -147,10 +135,9 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
 
-  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
-  this->conv_desc_.reset(
-      new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value, enable_true_half), in_shape,
-                        this->GetCustomizedOpConf()));
+  const bool pseudo_half = this->job_desc().job_conf().cudnn_conv_use_pseudo_half();
+  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value, pseudo_half),
+                                           in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = ShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -187,26 +174,14 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
-                     weight_blob, fw_cudnn_buf,
-                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
-                     this->job_desc().cudnn_conv_enable_true_half());
-  cudnnConvolutionFwdAlgo_t algo;
-  size_t work_space_size = 0;
-  if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
-    algo = static_cast<cudnnConvolutionFwdAlgo_t>(
-        this->job_desc().job_conf().cudnn_conv_force_fwd_algo());
-    CudaCheck(GetConvWorkspaceSize(args, algo, &work_space_size));
-  } else {
-    auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
-    algo = algo_perf->algo;
-    work_space_size = algo_perf->memory;
-  }
-  CHECK_LE(work_space_size, fw_cudnn_buf->ByteSizeOfBlobBody());
+  CudnnConvArgs args(this->job_desc().job_conf(), this->GetCustomizedOpConf(),
+                     device_ctx->cudnn_handle(), in_blob, out_blob, weight_blob, fw_cudnn_buf);
+  auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(&args);
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
   CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr,
-                                    args.wdesc.Get(), args.w_dptr, args.cdesc.Get(), algo,
-                                    args.work_space, work_space_size, CudnnSPZeroPtr<T>(),
+                                    args.wdesc.Get(), args.w_dptr, args.cdesc.Get(), algo_perf.algo,
+                                    args.ws_dptr, args.params.max_ws_size, CudnnSPZeroPtr<T>(),
                                     args.ydesc.Get(), args.y_dptr));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {

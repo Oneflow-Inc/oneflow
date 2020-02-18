@@ -1,7 +1,6 @@
-#include "oneflow/core/operator/conv_filter_grad_op.h"
-#include "oneflow/core/operator/conv_op.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/conv_filter_grad_op.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -89,22 +88,19 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
 
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
-    size_t bwd_filter_cudnn_buf_size = cudnn_buf_limit_byte();
+    size_t workspace_size = cudnn_buf_limit_byte();
     if (!x->is_dynamic()) {
-      CudnnConvAlgoCtx cudnn_conv_algo_ctx;
-      CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-          *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(),
-          this->job_desc().cudnn_conv_enable_true_half(), &cudnn_conv_algo_ctx));
-      CHECK_OR_RETURN(cudnn_conv_algo_ctx.bwd_filter_algo_found)
-          << "cudnn conv data grad algo: " << cudnn_conv_algo_ctx.bwd_filter_algo
-          << " alog_workspace_size: " << cudnn_conv_algo_ctx.bwd_filter_algo_found
-          << " max_workspace_size: " << bwd_filter_cudnn_buf_size;
-      bwd_filter_cudnn_buf_size = cudnn_conv_algo_ctx.bwd_filter_ws_size;
+      CudnnConvArgs args(this->job_desc().job_conf(), conv_conf, x, dy, filter_diff,
+                         workspace_size);
+      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(&args);
+      CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS);
+      CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size);
+      workspace_size = algo_perf.memory;
     }
-    bwd_filter_cudnn_buf_size = std::max(size_t(1), bwd_filter_cudnn_buf_size);
+    workspace_size = std::max(size_t(1), workspace_size);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(bwd_filter_cudnn_buf_size)});
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(workspace_size)});
 #else
     UNIMPLEMENTED_THEN_RETURN();
 #endif

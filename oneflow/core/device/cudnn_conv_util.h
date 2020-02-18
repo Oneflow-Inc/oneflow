@@ -6,53 +6,77 @@
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
 
-struct CudnnConvParams {
-  static constexpr size_t max_dim = 3;
+class CudnnConvDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
+  CudnnConvDesc() = delete;
+  ~CudnnConvDesc();
 
+  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
+                const PbMessage& conv_conf);
+
+  const cudnnConvolutionDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnConvolutionDescriptor_t val_;
+};
+
+struct CudnnConvParams {
+  static constexpr size_t kTensorMaxDims = 5;
+  static constexpr size_t kConvMaxDims = 3;
+
+  cudnnDataType_t x_data_type;
+  cudnnDataType_t w_data_type;
+  cudnnDataType_t y_data_type;
   cudnnDataType_t data_type;
-  int x_dim[2 + max_dim];
-  int x_stride[2 + max_dim];
-  int weight_dim[2 + max_dim];
-  int padding[max_dim];
-  int stride[max_dim];
-  int dilation[max_dim];
-  bool deterministic;
-  bool heuristic;
+  cudnnTensorFormat_t w_format;
+  int x_ndim;
+  int w_ndim;
+  int y_ndim;
+  int x_dims[kTensorMaxDims];
+  int x_strides[kTensorMaxDims];
+  int y_dims[kTensorMaxDims];
+  int y_strides[kTensorMaxDims];
+  int w_dims[kTensorMaxDims];
+  int padding[kConvMaxDims];
+  int stride[kConvMaxDims];
+  int dilation[kConvMaxDims];
+  size_t max_ws_size;
 };
 
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
 
 struct CudnnConvArgs final {
-  cudnnHandle_t handle;
   CudnnConvParams params;
   CudnnTensorDesc xdesc;
   CudnnTensorDesc ydesc;
   CudnnFilterDesc wdesc;
   CudnnConvDesc cdesc;
-  int x_ndims;
-  int y_ndims;
-  int w_ndims;
+  cudnnHandle_t handle;
   void* x_dptr;
   void* y_dptr;
   void* w_dptr;
-  void* work_space;
-  size_t ws_size;
-  bool need_destroy_handle;
+  void* ws_dptr;
+  size_t max_ws_size;
+  bool need_create_handle;
   bool need_free_memory;
+  const JobConfigProto& conf;
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
-  CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const BlobDesc* y, const BlobDesc* w,
-                size_t max_ws_size, bool deterministic, bool heuristic,
-                const bool enable_true_half);
-  CudnnConvArgs(const PbMessage& conf, cudnnHandle_t handle, const Blob* x, const Blob* y,
-                const Blob* w, Blob* buf, bool deterministic, bool heuristic,
-                const bool enable_true_half);
+  CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf, const BlobDesc* x,
+                const BlobDesc* y, const BlobDesc* w, size_t max_ws_size);
+  CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf, cudnnHandle_t handle,
+                const Blob* x, const Blob* y, const Blob* w, Blob* buf);
   ~CudnnConvArgs();
+  void AllocateIfNeed();
 };
+
+DataType GetConvDescDataType(DataType data_type, bool pseudo_half);
+size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type);
 
 template<typename perf_t>
 struct CudnnConvAlgorithmSearch;
@@ -65,7 +89,7 @@ cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, cudnnConvolutionBw
                                    size_t* sz);
 
 template<typename perf_t>
-std::shared_ptr<perf_t> FindCudnnConvAlgorithm(const CudnnConvArgs& args);
+perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);
 
 }  // namespace oneflow
 
