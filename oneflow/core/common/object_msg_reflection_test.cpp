@@ -1,4 +1,5 @@
 #include "oneflow/core/common/dss.h"
+#include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/common/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 
@@ -39,6 +40,33 @@ TEST(ObjectMsgReflection, ReflectObjectMsgFields) {
   ASSERT_EQ(union_field_list.union_name(), "union_field");
   ASSERT_EQ(union_field_list.union_field_name(0), "x");
   ASSERT_EQ(union_field_list.union_field_name(1), "y");
+}
+
+// clang-format off
+BEGIN_OBJECT_MSG(Foo);
+  OBJECT_MSG_DEFINE_OPTIONAL(int, x);
+END_OBJECT_MSG(Foo);
+
+BEGIN_OBJECT_MSG(Bar);
+  OBJECT_MSG_DEFINE_OPTIONAL(int, x);
+END_OBJECT_MSG(Bar);
+
+BEGIN_OBJECT_MSG(FooBar);
+  OBJECT_MSG_DEFINE_OPTIONAL(Foo, foo);
+  OBJECT_MSG_DEFINE_OPTIONAL(Bar, bar);
+  OBJECT_MSG_DEFINE_ONEOF(type,
+    OBJECT_MSG_ONEOF_FIELD(Foo, oneof_foo)
+    OBJECT_MSG_ONEOF_FIELD(Bar, oneof_bar));
+END_OBJECT_MSG(FooBar);
+// clang-format on
+
+TEST(ObjectMsgReflection, RecursivelyReflectObjectMsgFields) {
+  std::unordered_map<std::string, ObjectMsgFieldList> name2field_list;
+  ObjectMsgReflection<FooBar>().RecursivelyReflectObjectMsgFields(&name2field_list);
+  ASSERT_EQ(name2field_list.size(), 3);
+  ASSERT_TRUE(name2field_list.find(typeid(FooBar).name()) != name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(Foo).name()) != name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(Bar).name()) != name2field_list.end());
 }
 }
 

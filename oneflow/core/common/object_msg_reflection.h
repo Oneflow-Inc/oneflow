@@ -68,8 +68,8 @@ struct _StaticRecursivelyDumpObjectMsgFieldName<FieldType, true> {
   static void Call(
       std::unordered_map<std::string, ObjectMsgFieldList>* mangled_type_name2obj_msg_field_list) {
     const auto& map = *mangled_type_name2obj_msg_field_list;
-    using ObjectMsgFieldType = typename std::remove_pointer<FieldType>::value;
-    if (map.find(typeid(ObjectMsgFieldType).name()) == map.end()) { return; }
+    using ObjectMsgFieldType = typename std::remove_pointer<FieldType>::type;
+    if (map.find(typeid(ObjectMsgFieldType).name()) != map.end()) { return; }
     ObjectMsgReflection<ObjectMsgFieldType>().RecursivelyReflectObjectMsgFields(
         mangled_type_name2obj_msg_field_list);
   }
