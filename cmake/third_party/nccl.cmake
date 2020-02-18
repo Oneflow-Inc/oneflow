@@ -34,7 +34,7 @@ ExternalProject_Add(nccl
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j src.build
+    BUILD_COMMAND make -j$(nproc) src.build
     INSTALL_COMMAND ""
 )
 
