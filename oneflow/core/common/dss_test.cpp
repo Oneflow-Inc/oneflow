@@ -123,7 +123,8 @@ struct TestDssUnion {
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
 };
 
-template<int field_counter, typename WalkCtxType, typename FieldType, bool is_oneof_field>
+template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType,
+         bool is_oneof_field>
 struct StaticDumpFieldName {
   static void Call(WalkCtxType* ctx, const char* field_name, const char* oneof_name) {
     ctx->push_back(field_name);
