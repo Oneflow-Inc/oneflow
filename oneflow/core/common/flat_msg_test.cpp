@@ -15,7 +15,7 @@ struct DumpFieldName {
 template<typename T>
 std::vector<std::string> GetFieldNames(T* flat_msg) {
   std::vector<std::string> field_names;
-  flat_msg->template __WalkField__<DumpFieldName>(&field_names);
+  flat_msg->template __WalkVerboseField__<DumpFieldName>(&field_names);
   return field_names;
 }
 
