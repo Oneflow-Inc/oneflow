@@ -7,13 +7,13 @@
 Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
 ```
-    export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 ```
 
 Or you can install OpenBLAS and other tools through:
 
 ```
-    sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
+sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
 ```
 
 #### clone source code
@@ -21,20 +21,20 @@ Or you can install OpenBLAS and other tools through:
 > note: with `--recursive` flag to clone third_party submodules
 
 ```
-    git clone https://github.com/Oneflow-Inc/oneflow --recursive
+git clone https://github.com/Oneflow-Inc/oneflow --recursive
 ```
 
 or you can just clone source code and submodules step by step
 
 ```
-    git clone https://github.com/Oneflow-Inc/oneflow
-    git submodule update --init --recursive
+git clone https://github.com/Oneflow-Inc/oneflow
+git submodule update --init --recursive
 ```
 
 #### build third party from source
 
 ```
-  cmake -DTHIRD_PARTY=ON .. && make -j
+cmake -DTHIRD_PARTY=ON .. && make -j
 ```
 
 #### build oneflow
@@ -89,9 +89,10 @@ make -j$(nproc)
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
-  -DPYTHON_LIBRARY=your_python_lib_path \
-  -DPYTHON_INCLUDE_DIR=your_python_include_dir \
-  -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
+  -DTHIRD_PARTY=OFF \
+  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
   
   make -j$(nproc)
   ```
@@ -115,9 +116,10 @@ make -j$(nproc)
   ```shell
   cmake .. \
   -DWITH_TENSORRT=ON \
-  -DPYTHON_LIBRARY=your_python_lib_path \
-  -DPYTHON_INCLUDE_DIR=your_python_include_dir \
-  -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
+  -DTHIRD_PARTY=OFF \
+  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
 
   make -j$(nproc)
   ```
