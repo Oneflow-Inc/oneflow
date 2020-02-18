@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/common/object_msg_field_list.pb.h"
+#include "oneflow/core/common/object_msg_field_list.h"
 
 namespace oneflow {
 
@@ -15,6 +15,8 @@ class ObjectMsgReflection final {
       std::unordered_map<std::string, ObjectMsgFieldList>* mangled_type_name2obj_msg_field_list);
 };
 
+// details
+
 ObjectMsgUnionFieldList* FindExistedUnionFieldList(ObjectMsgFieldList* obj_msg_field_list,
                                                    const std::string& oneof_name) {
   std::size_t size = obj_msg_field_list->object_msg_field().size();
@@ -25,13 +27,17 @@ ObjectMsgUnionFieldList* FindExistedUnionFieldList(ObjectMsgFieldList* obj_msg_f
   return last->mutable_union_field_list();
 }
 
-template<int field_counter, typename WalkCtxType, typename FieldType, bool is_oneof_field>
+template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType,
+         bool is_oneof_field>
 struct StaticDumpObjectMsgFieldName {
   static void Call(ObjectMsgFieldList* obj_msg_field_list, const char* field_name,
                    const char* oneof_name) {
     std::string field_name_str(field_name);
     if (!is_oneof_field) {
-      obj_msg_field_list->mutable_object_msg_field()->Add()->set_struct_field_name(field_name_str);
+      auto* struct_field =
+          obj_msg_field_list->mutable_object_msg_field()->Add()->mutable_struct_field();
+      struct_field->set_field_type(typeid(FieldType).name());
+      struct_field->set_field_name(field_name_str);
       return;
     }
     std::string oneof_name_str(oneof_name);
@@ -42,11 +48,15 @@ struct StaticDumpObjectMsgFieldName {
           obj_msg_field_list->mutable_object_msg_field()->Add()->mutable_union_field_list();
       union_field_list->set_union_name(oneof_name_str);
     }
-    union_field_list->add_union_field_name(field_name_str);
+    auto* union_field = union_field_list->mutable_union_field()->Add();
+    union_field->set_field_type(typeid(FieldType).name());
+    union_field->set_field_name(field_name_str);
+    ObjectMsgFieldListUtil::SetPointerRemovedFieldType<FieldType>(union_field);
   }
 };
 
-template<int field_counter, typename WalkCtxType, typename FieldType, bool is_oneof_field>
+template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType,
+         bool is_oneof_field>
 struct StaticRecursivelyDumpObjectMsgFieldName {
   static void Call(
       std::unordered_map<std::string, ObjectMsgFieldList>* mangled_type_name2obj_msg_field_list,
@@ -75,8 +85,9 @@ struct _StaticRecursivelyDumpObjectMsgFieldName<FieldType, true> {
   }
 };
 
-template<int field_counter, typename WalkCtxType, typename FieldType>
-struct StaticRecursivelyDumpObjectMsgFieldName<field_counter, WalkCtxType, FieldType, true> {
+template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType>
+struct StaticRecursivelyDumpObjectMsgFieldName<StructT, field_counter, WalkCtxType, FieldType,
+                                               true> {
   static void Call(
       std::unordered_map<std::string, ObjectMsgFieldList>* mangled_type_name2obj_msg_field_list,
       const char* field_name, const char* oneof_name) {

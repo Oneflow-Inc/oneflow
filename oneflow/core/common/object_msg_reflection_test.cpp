@@ -1,3 +1,5 @@
+#include <sstream>
+#include <iostream>
 #include "oneflow/core/common/dss.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/common/object_msg_reflection.h"
@@ -38,8 +40,8 @@ TEST(ObjectMsgReflection, ReflectObjectMsgFields) {
   ASSERT_TRUE(obj_msg_field_list.object_msg_field(0).has_union_field_list());
   const auto& union_field_list = obj_msg_field_list.object_msg_field(0).union_field_list();
   ASSERT_EQ(union_field_list.union_name(), "union_field");
-  ASSERT_EQ(union_field_list.union_field_name(0), "x");
-  ASSERT_EQ(union_field_list.union_field_name(1), "y");
+  ASSERT_EQ(union_field_list.union_field(0).field_name(), "x");
+  ASSERT_EQ(union_field_list.union_field(1).field_name(), "y");
 }
 
 // clang-format off
@@ -67,6 +69,25 @@ TEST(ObjectMsgReflection, RecursivelyReflectObjectMsgFields) {
   ASSERT_TRUE(name2field_list.find(typeid(FooBar).name()) != name2field_list.end());
   ASSERT_TRUE(name2field_list.find(typeid(Foo).name()) != name2field_list.end());
   ASSERT_TRUE(name2field_list.find(typeid(Bar).name()) != name2field_list.end());
+}
+
+TEST(ObjectMsgFieldListUtil, ToDot) {
+  std::unordered_map<std::string, ObjectMsgFieldList> name2field_list;
+  ObjectMsgReflection<FooBar>().RecursivelyReflectObjectMsgFields(&name2field_list);
+  std::stringstream ss;
+  ss << "digraph {\n";
+  ss << "node[shape=record];\n";
+  for (const auto& pair : name2field_list) {
+    ss << ObjectMsgFieldListUtil::ToDotNode(pair.first, pair.second) << "\n";
+  }
+  for (const auto& pair : name2field_list) {
+    ss << ObjectMsgFieldListUtil::ToDotEdges(pair.first, pair.second) << "\n";
+  }
+  ss << "}\n";
+
+  //  std::cout << std::endl;
+  //  std::cout << ss.str() << std::endl;
+  //  std::cout << std::endl;
 }
 }
 
