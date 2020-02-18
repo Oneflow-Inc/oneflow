@@ -40,17 +40,13 @@ or you can just clone source code and submodules step by step
 #### build oneflow
 
 ```
-    cmake -DTHIRD_PARTY=OFF .. && make -j
-```
-
-
-#### Python Dependency Issues
-
-  If you have difficulty building OneFlow due to outdated cmake failed to find numpy or correct version of python installation, try add these cmake flags:
-```
+cmake .. \
+-DTHIRD_PARTY=OFF \
 -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
 -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
 -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+
+make -j$(nproc)
 ```
 
 ### Build with XLA
