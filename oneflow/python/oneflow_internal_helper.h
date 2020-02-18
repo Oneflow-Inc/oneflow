@@ -21,6 +21,10 @@
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
+#ifdef WITH_TENSORRT
+#include "oneflow/xrt/api.h"
+#endif  // WITH_TENSORRT
+
 namespace oneflow {
 
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
@@ -152,6 +156,25 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   ParallelConf parallel_conf;
   OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
+Maybe<void> CacheInt8Calibration() {
+#ifdef WITH_TENSORRT
+  xrt::tensorrt::CacheInt8Calibration();
+#else
+  OF_CHECK(0) << "Please recompile with TensorRT.";
+#endif  // WITH_TENSORRT
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> WriteInt8Calibration(const std::string& path) {
+#ifdef WITH_TENSORRT
+  xrt::tensorrt::CacheInt8Calibration();
+  xrt::tensorrt::WriteInt8Calibration(path);
+#else
+  OF_CHECK(0) << "Please recompile with TensorRT.";
+#endif  // WITH_TENSORRT
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

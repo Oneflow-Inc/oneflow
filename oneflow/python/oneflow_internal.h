@@ -176,3 +176,11 @@ void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int siz
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurMutTensorCopyShapeFrom(array, size);
 }
+
+void CacheInt8Calibration(std::string* error_str) {
+  oneflow::CacheInt8Calibration().GetDataAndSerializedErrorProto(error_str);
+}
+
+void WriteInt8Calibration(const std::string& path, std::string* error_str) {
+  oneflow::WriteInt8Calibration(path).GetDataAndSerializedErrorProto(error_str);
+}

@@ -119,8 +119,64 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   # TensorRT float16
   config.tensorrt.use_fp16()
 
-  # TensorRT int8 (目前尚未支持)
+  # TensorRT int8 (离线加载Calibration的方式)
   config.tensorrt.use_int8()
+  # Set int8 calibration table path
+  int8_calibration_path = "./int8_calibration"
+  config.tensorrt.int8_calibration(int8_calibration_path)
+  ```
+
+#### 使用Int8量化计算
+
+XRT支持离线加载和在线生成量化校准表两种方式来启动Int8的量化计算。离线加载的方式需要提前生成一个TensorRT格式的量化校准表，而且该量化校准表通常可以被重复使用，而在线生成的方式则在同一份脚本中，同时进行正常精度的计算和量化校准表的生成，一旦校准表生成后，则会在下一个迭代中自动切换到Int8精度的计算。
+
+- 生成Int8量化校准表(Int8 Calibration Table)
+
+  首先你需要为生成量化校准表准备一个校准数据集，通常可以是训练集或验证集的一个子集。然后按照正常的网络配置，开启TensorRT Int8。比如：
+
+  ```python
+  import oneflow as flow
+
+  config = flow.function_config()
+
+  config.use_tensorrt()
+  config.tensorrt.use_int8()
+
+  @flow.function(config)
+  def Job(input):
+      # define your network
+      pass
+  ```
+  当开启Int8，但又没有指定对应的量化校准表时，XRT会自动进入量化表生成模式，之后feed的数据都会按照正常的精度（fp32或fp16）进行计算，计算的结果会被用于生成对应的Int8量化校准表。最后将生成的量化校准表保存到指定的目录，在该目录下，每一个子图都会生成一个对应的量化校准表文件。
+  
+  ```python
+  # 使用10个batch的数据生成Int8量化校准表
+  for _ in range(10):
+      input = next_calibration_batch() # 加载校准数据集
+      Job(input).get()
+
+  # 保存量化校准表
+  flow.tensorrt.write_int8_calibration("./int8_calibration") # int8_calibration目录需要手动创建
+  ```
+  当Int8量化校准表生成完成后，你就可以按照上面介绍的离线加载Calibration的方式启动TensorRT Int8的量化计算。
+
+- 在线生成量化校准表并进行int8计算
+
+  在线方式分成两个步骤，首先利用校准数据集生成量化校准表，然后直接利用生成的量化校准表进行Int8的构图和计算。同样以上面的Job为例，
+
+  ```python
+  # 使用10个batch的数据生成Int8量化校准表
+  for _ in range(10):
+    input = next_calibration_batch() # 加载校准数据集
+    Job(input).get()
+
+  # 缓存量化校准表
+  flow.tensorrt.cache_int8_calibration()
+
+  # 当量化校准表cache完成后，XRT会自动切换到int8的计算
+  for _ in range(100):
+    input = next_batch() # 加载数据
+    Job(input).get()
   ```
 
 ### BenchMark
