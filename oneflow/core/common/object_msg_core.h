@@ -5,6 +5,7 @@
 #include <atomic>
 #include <memory>
 #include <type_traits>
+#include <set>
 #include <glog/logging.h>
 #include "oneflow/core/common/dss.h"
 #include "oneflow/core/common/static_counter.h"
@@ -20,6 +21,8 @@ namespace oneflow {
     PRIVATE DEFINE_STATIC_COUNTER(field_counter);                                  \
     BEGIN_DSS(STATIC_COUNTER(field_counter), class_name, sizeof(ObjectMsgStruct)); \
     OBJECT_MSG_DEFINE_DEFAULT(class_name);                                         \
+    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                                         \
+    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();                                     \
     OBJECT_MSG_DEFINE_INIT();                                                      \
     OBJECT_MSG_DEFINE_DELETE();
 
@@ -208,6 +211,20 @@ namespace oneflow {
     return default_object_msg.Get();                                                  \
   }
 
+#define OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT()     \
+ public:                                              \
+  template<int field_counter, typename Enable = void> \
+  struct ContainerElemStruct final {                  \
+    using type = void;                                \
+  };
+
+#define OBJECT_MSG_DEFINE_LINK_EDGES_GETTER()                        \
+ public:                                                             \
+  template<int field_counter, typename Enable = void>                \
+  struct LinkEdgesGetter final {                                     \
+    static void Call(std::set<ObjectMsgContainerLinkEdge>* edges) {} \
+  };
+
 #define OBJECT_MSG_DEFINE_INIT()                                            \
  public:                                                                    \
   template<typename WalkCtxType>                                            \
@@ -218,6 +235,11 @@ namespace oneflow {
  private:                                                                   \
   template<int field_counter, typename WalkCtxType, typename PtrFieldType>  \
   struct ObjectMsgField__Init__ : public ObjectMsgNaiveInit<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_OVERLOAD_LINK_EDGES_GETTER(field_counter, link_edges_getter) \
+ public:                                                                        \
+  template<typename Enabled>                                                    \
+  struct LinkEdgesGetter<field_counter, Enabled> final : public link_edges_getter {};
 
 #define OBJECT_MSG_OVERLOAD_INIT(field_counter, init_template)            \
  private:                                                                 \
@@ -494,6 +516,29 @@ template<typename T>
 struct ObjectMsgIsScalar {
   const static bool value =
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
+};
+
+struct ObjectMsgContainerLinkEdge {
+  std::string container_type_name;
+  std::string container_field_name;
+  std::string elem_type_name;
+  std::string elem_link_name;
+
+  bool operator<(const ObjectMsgContainerLinkEdge& rhs) const {
+    if (this->container_type_name != rhs.container_type_name) {
+      return this->container_type_name < rhs.container_type_name;
+    }
+    if (this->container_field_name != rhs.container_field_name) {
+      return this->container_field_name < rhs.container_field_name;
+    }
+    if (this->elem_type_name != rhs.elem_type_name) {
+      return this->elem_type_name < rhs.elem_type_name;
+    }
+    if (this->elem_link_name != rhs.elem_link_name) {
+      return this->elem_link_name < rhs.elem_link_name;
+    }
+    return false;
+  }
 };
 }
 
