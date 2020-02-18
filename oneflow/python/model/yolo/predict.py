@@ -31,11 +31,14 @@ flow.config.load_library("predict_decoder_op.so")
 func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
+func_config.use_tensorrt(True)
+func_config.tensorrt.use_fp16()
 
 
 @flow.function(func_config)
 def yolo_user_op_eval_job():
     images, origin_image_info = yolo_decode("yolo")
+    images = flow.identity(images, name="yolo-layer1-start")
     yolo_pos_result, yolo_prob_result = YoloPredictNet(images, origin_image_info, trainable=False)
     yolo_pos_result = flow.identity(yolo_pos_result, name="yolo_pos_result_end")
     yolo_prob_result = flow.identity(yolo_prob_result, name="yolo_prob_result_end")

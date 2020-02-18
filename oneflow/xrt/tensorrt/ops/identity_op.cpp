@@ -15,7 +15,7 @@ class IdentityOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(Identity, IdentityOp).EnableTrainPhase().Finalize();
+//REGISTER_TRT_OP_KERNEL(Identity, IdentityOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt
