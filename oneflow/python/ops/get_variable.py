@@ -19,7 +19,6 @@ def get_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    tick=None,
     distribute=distribute_util.broadcast(),
 ):
     op_conf = _GenerateVariableOpConf(
@@ -60,8 +59,6 @@ def _GenerateVariableOpConf(name,
         if initializer is not None:
             op_conf.variable_conf.initializer.CopyFrom(initializer)
 
-    if tick is not None:
-        op_conf.variable_conf.tick = tick.logical_blob_name
     if regularizer is not None:
         op_conf.variable_conf.regularizer.CopyFrom(regularizer)
 

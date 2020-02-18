@@ -62,6 +62,6 @@ class YoloDecoderKernel final : public oneflow::user_op::OpKernel {
 REGISTER_USER_KERNEL("yolo_decoder")
     .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) { return new YoloDecoderKernel(ctx); })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { return true; })
-    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 0; });
+    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext*) { return 0; });
 
 }  // namespace oneflow

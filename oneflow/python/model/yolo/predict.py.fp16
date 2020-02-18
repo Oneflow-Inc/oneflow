@@ -32,8 +32,7 @@ func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
 func_config.use_tensorrt(True)
-#func_config.tensorrt.use_fp16()
-func_config.tensorrt.use_int8()
+func_config.tensorrt.use_fp16()
 
 
 @flow.function(func_config)
@@ -77,14 +76,6 @@ if __name__ == "__main__":
             return callback
         else:
             return nop
-
-
-
-    for step in range(args.total_batch_num):
-        yolo_user_op_eval_job().async_get(create_callback(step))
-
-    #flow.tensorrt.write_int8_calibration("./int8_calibration")
-    flow.tensorrt.cache_int8_calibration()
 
     for step in range(args.total_batch_num):
         yolo_user_op_eval_job().async_get(create_callback(step))
