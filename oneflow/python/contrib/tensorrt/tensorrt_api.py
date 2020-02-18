@@ -6,3 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export('tensorrt.write_int8_calibration')
 def write_int8_calibration(path):
     oneflow_internal.WriteInt8Calibration(path)
+
+@oneflow_export('tensorrt.cache_int8_calibration')
+def cache_int8_calibration():
+    oneflow_internal.CacheInt8Calibration()

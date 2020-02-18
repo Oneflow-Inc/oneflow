@@ -177,10 +177,10 @@ void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int siz
   return of_blob->CurMutTensorCopyShapeFrom(array, size);
 }
 
+void CacheInt8Calibration(std::string* error_str) {
+  oneflow::CacheInt8Calibration().GetDataAndSerializedErrorProto(error_str);
+}
+
 void WriteInt8Calibration(const std::string& path, std::string* error_str) {
-#ifdef WITH_TENSORRT
   oneflow::WriteInt8Calibration(path).GetDataAndSerializedErrorProto(error_str);
-#else
-  (CHECK(0) << "TensorRT is not enabled.").GetDataAndSerializedErrorProto(error_str);
-#endif  // USE_TENSORRT
 }

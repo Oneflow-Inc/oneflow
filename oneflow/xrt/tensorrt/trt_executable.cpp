@@ -2,7 +2,10 @@
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
 #include "oneflow/xrt/platform.h"
 
+#include <iostream>
+#include <sstream>
 #include "cuda_runtime.h"
+#include "absl/strings/str_cat.h"
 
 namespace oneflow {
 namespace xrt {
@@ -73,12 +76,27 @@ bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
   return status;
 }
 
+std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
+    const std::string &calibration_path) {
+  std::string calib_restore_path(absl::StrCat(calibration_path, "/", this->name()));
+  std::ifstream infile(calib_restore_path, std::ios::in);
+  CHECK(infile.good()) << "Could not open calibration file: "  // NOLINT
+                       << calib_restore_path;
+  std::stringstream buffer;
+  buffer << infile.rdbuf();
+  return std::move(buffer.str());
+}
+
 bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
                         const ExecutableRunOptions &run_options,  // NOLINT
                         bool block_until_done) {
   // TODO(hjchen2): Refactor
-  if (run_options.tensorrt_int8 && run_options.tensorrt_calibration.size()) {
-    calibrator_.reset(new TRTInt8Calibrator(run_options.tensorrt_calibration));
+  if (run_options.tensorrt_int8 && !calibrator_ &&  // NOLINT
+      run_options.tensorrt_int8_calibration.size()) {
+    std::string calibration_data =  // NOLINT
+        LoadCalibrationTable(run_options.tensorrt_int8_calibration);
+    CHECK(calibration_data.size()) << "Calibration data is empty.";
+    calibrator_.reset(new TRTInt8Calibrator(calibration_data));
   }
   if (!execution_context_ && !engine_) {
     engine_.reset(CreateExecutableEngine(run_options, 1 /*batch size*/,  // NOLINT
@@ -113,7 +131,8 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
     LOG(WARNING) << "Rebuild engine since the maximum batch size "  // NOLINT
                  << engine_->getMaxBatchSize()                      // NOLINT
                  << " is less than the input batch size " << batch_size;
-    engine_.reset(CreateExecutableEngine(run_options, batch_size));
+    engine_.reset(CreateExecutableEngine(run_options, batch_size,  // NOLINT
+                                         calibrator_.get()));
     CHECK(engine_) << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
   }
@@ -138,8 +157,8 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
     }
 
     if (res->calibrator_->isDone()) {
-      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(  // NOLINT
-                                reinterpret_cast<cudaStream_t>(run_options.stream)));
+      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(                                     // NOLINT
+                                reinterpret_cast<cudaStream_t>(run_options.stream)));  // NOLINT
       calibrator_ = res->calibrator_;
       // engine_ = std::move(res->engine_);
       execution_context_.reset(res->engine_->createExecutionContext());

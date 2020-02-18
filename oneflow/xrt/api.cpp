@@ -32,6 +32,11 @@ DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
 DEFINE_bool(tensorrt_int8, EnvToBool(FLAGS_tensorrt_int8, false),
             "Enable int8 precision for TENSORRT engine.");
 
+DEFINE_string(int8_calibration, EnvToString(FLAGS_int8_calibration, ""),
+              "TensorRT int8 calibration table directory. "
+              "Default is empty, and this means the calibration table will be "
+              "implictly generated if tensorrt_int8 flag is true.");
+
 namespace oneflow {
 namespace xrt {
 
@@ -153,7 +158,12 @@ void InitXrtConfigurations(const XrtConfig &config) {
   if (config.has_tensorrt_config()) {
     const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
     if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
-    if (trt_config.has_use_int8()) { FLAGS_tensorrt_int8 = trt_config.use_int8(); }
+    if (trt_config.has_use_int8()) {
+      FLAGS_tensorrt_int8 = trt_config.use_int8();
+      if (trt_config.has_int8_calibration()) {
+        FLAGS_int8_calibration = trt_config.int8_calibration();
+      }
+    }
   }
 }
 
@@ -189,29 +199,35 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
 
 #ifdef WITH_TENSORRT
 namespace tensorrt {
+void CacheInt8Calibration() {
+  const auto &calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto &res : calib_resources) {
+    std::lock_guard<std::mutex> lock(res.second->mutex_);
+    if (!res.second->calibrator_->isDone()) {
+      res.second->calibrator_->waitAndSetDone();
+      res.second->thread_->join();
+    }
+    res.second->calibrator_->ReleaseDevBuffers();
+  }
+}
+
 void WriteInt8Calibration(const std::string &path) {
   const auto &calib_resources = TRTInt8CalibratorResource::All();
   for (const auto &res : calib_resources) {
-    {
-      std::lock_guard<std::mutex> lock(res.second->mutex_);
-      if (!res.second->calibrator_->isDone()) {
-        res.second->calibrator_->waitAndSetDone();
-        res.second->thread_->join();
-      }
-    }
+    CHECK(res.second->calibrator_->isDone())  // NOLINT
+        << "Calibration table maybe has not been generated "
+        << "since the calibrator has not been done.";
 
     const std::string &calibration_table_data =
         res.second->calibrator_->getCalibrationTableAsString();
     CHECK(calibration_table_data.size()) << "Calibration table data is empty.";
 
-    std::string calib_restore_path =  // NOLINT
+    std::string calib_store_path =  // NOLINT
         absl::StrCat(path, "/", res.first /*calibrator name*/);
-    std::ofstream ofile(calib_restore_path, std::ios::out);
-    CHECK(ofile.good()) << "Could not open calibration file: " << calib_restore_path;
+    std::ofstream ofile(calib_store_path, std::ios::out);
+    CHECK(ofile.good()) << "Could not open calibration file: " << calib_store_path;
     ofile << calibration_table_data;
     ofile.close();
-
-    res.second->calibrator_->ReleaseDevBuffers();
   }
 }
 }  // namespace tensorrt

@@ -158,11 +158,23 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
+Maybe<void> CacheInt8Calibration() {
 #ifdef WITH_TENSORRT
-Maybe<void> WriteInt8Calibration(const std::string& path) {
-  xrt::tensorrt::WriteInt8Calibration(path);
+  xrt::tensorrt::CacheInt8Calibration();
+#else
+  OF_CHECK(0) << "Please recompile with TensorRT.";
+#endif  // WITH_TENSORRT
   return Maybe<void>::Ok();
 }
+
+Maybe<void> WriteInt8Calibration(const std::string& path) {
+#ifdef WITH_TENSORRT
+  xrt::tensorrt::CacheInt8Calibration();
+  xrt::tensorrt::WriteInt8Calibration(path);
+#else
+  OF_CHECK(0) << "Please recompile with TensorRT.";
 #endif  // WITH_TENSORRT
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

@@ -48,11 +48,12 @@ message MemoryAllocationAlgorithmConf {
 
 message XrtConfig {
   message XlaConfig {
-    // TODO
+    // TODO(hjchen2)
   }
   message TensorRTConfig {
     optional bool use_fp16 = 1 [default = false];
     optional bool use_int8 = 2 [default = false];
+    optional string int8_calibration = 3;
   }
   optional bool use_xla_jit = 1 [default = false];
   optional bool use_tensorrt = 2 [default = false];

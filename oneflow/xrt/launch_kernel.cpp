@@ -15,6 +15,7 @@ DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
 
 DECLARE_bool(tensorrt_fp16);
 DECLARE_bool(tensorrt_int8);
+DECLARE_string(int8_calibration);
 
 namespace oneflow {
 namespace xrt {
@@ -166,6 +167,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
     run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
+    run_options.tensorrt_int8_calibration = FLAGS_int8_calibration;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";

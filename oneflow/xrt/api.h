@@ -68,6 +68,7 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
 
 #ifdef WITH_TENSORRT
 namespace tensorrt {
+void CacheInt8Calibration();
 void WriteInt8Calibration(const std::string &path);
 }  // namespace tensorrt
 #endif  // WITH_TENSORRT

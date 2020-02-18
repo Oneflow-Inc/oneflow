@@ -30,6 +30,8 @@ TRTInt8Calibrator::TRTInt8Calibrator(const std::string& calib_data)
       batch_is_set_(false),
       calibration_table_(calib_data) {}
 
+TRTInt8Calibrator::~TRTInt8Calibrator() { ReleaseDevBuffers(); }
+
 void TRTInt8Calibrator::waitAndSetDone() {
   std::unique_lock<std::mutex> lk(cond_mtx_);
   while ((calib_running_ || batch_is_set_) && !done_) cond_.wait(lk);

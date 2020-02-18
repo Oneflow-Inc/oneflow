@@ -299,6 +299,11 @@ def set_tensorrt_use_int8(func_desc, value = True):
     set_use_tensorrt(func_desc, True)
     func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value
 
+@oneflow_function_config('tensorrt.int8_calibration')
+def set_tensorrt_int8_calibration(func_desc, value):
+    assert(func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8)
+    func_desc.job_config_proto.xrt_config.tensorrt_config.int8_calibration = value
+
 @oneflow_function_config('default_distribute_strategy')
 def set_default_distribute_strategy(func_desc, value):
     assert isinstance(value, distribute_ctx.DistributeStrategy)

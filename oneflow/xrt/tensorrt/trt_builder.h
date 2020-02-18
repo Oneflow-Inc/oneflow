@@ -65,7 +65,7 @@ class TrtBuilder {
   std::string builder_name_;
 
   // The next new handle number.
-  int64_t next_handle_ = 0;
+  int64_t next_handle_ = -1;
 
   nv::unique_ptr<nvinfer1::IBuilder> builder_;
   nv::unique_ptr<nvinfer1::INetworkDefinition> network_;
@@ -78,7 +78,7 @@ class TrtBuilder {
   util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> host_weights_;
 
  public:
-  explicit TrtBuilder(const std::string &name) : builder_name_(name), next_handle_(0) {
+  explicit TrtBuilder(const std::string &name) : builder_name_(name), next_handle_(-1) {
     static nv::Logger logger;
     builder_.reset(nvinfer1::createInferBuilder(logger));
     nvinfer1::NetworkDefinitionCreationFlags flags =
@@ -140,7 +140,7 @@ class TrtBuilder {
     CHECK_GT(params_.count(handle), 0) << "Parameter is not found for handle " << handle;
   }
 
-  int64_t IncreaseHandle() { return next_handle_++; }
+  int64_t IncreaseHandle() { return ++next_handle_; }
 };
 
 }  // namespace tensorrt

@@ -45,6 +45,8 @@ class TrtExecutable : public Executable {
 
   bool ExecuteEngine(const int batch_size, void **buffers, void *stream, bool block_until_done);
 
+  std::string LoadCalibrationTable(const std::string &calibration_path);
+
  private:
   nv::unique_ptr<nvinfer1::ICudaEngine> engine_;
   nv::unique_ptr<nvinfer1::IBuilder> builder_;

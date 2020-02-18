@@ -26,7 +26,7 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   // more, as the calibration data is provided.
   TRTInt8Calibrator(const std::string& calibration_data);
 
-  ~TRTInt8Calibrator() = default;
+  ~TRTInt8Calibrator();
 
   int getBatchSize() const override;
 

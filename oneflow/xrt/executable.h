@@ -35,7 +35,7 @@ struct ExecutableRunOptions {
   // Enable TensorRT int8
   bool tensorrt_int8 = false;
 
-  std::string tensorrt_calibration = "";
+  std::string tensorrt_int8_calibration = "";
 
   // Feed the return parameters to reuse it's storage while running
   // the executable.
