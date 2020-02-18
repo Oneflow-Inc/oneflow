@@ -15,19 +15,16 @@ class UserKernelContext final : public user_op::KernelContext {
       : user_op::KernelContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
         arg2tensor_() {
-    const auto& user_op_conf = op_conf.user_conf();
-    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
+        }
       }
-    }
-    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
-      }
-    }
+    };
+    InitInOrOut(op_conf.user_conf().input());
+    InitInOrOut(op_conf.user_conf().output());
     arg2tensor_.emplace(std::make_pair("tmp_buffer", 0), std::unique_ptr<user_op::Tensor>());
   }
   ~UserKernelContext() = default;
@@ -46,8 +43,7 @@ class UserKernelContext final : public user_op::KernelContext {
       if (blob == nullptr) {
         pair.second.reset();
       } else {
-        pair.second.reset(new user_op::Tensor(blob->static_shape(), blob->data_type(),
-                                              static_cast<char*>(blob->mut_dptr())));
+        pair.second.reset(new user_op::Tensor(blob));
       }
     }
   }
@@ -102,15 +98,20 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelContext> ctx_;
 
   void VirtualKernelInit(DeviceCtx* device_ctx) override {
-    auto kernel_reg_val = user_op::LookUpInKernelRegistry(
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
-        UserKernelRegContext(kernel_conf(),
-                             user_op::UserOpConfWrapper(kernel_conf().op_attribute().op_conf())));
-    CHECK_NOTNULL(kernel_reg_val);
-
-    user_op::KernelInitContext init_ctx;
-    kernel_.reset(kernel_reg_val->create_fn(init_ctx));
     ctx_.reset(new UserKernelContext(device_ctx, op_conf()));
+
+    const std::string& op_type_name =
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
+    {
+      auto kernel_reg_val = user_op::LookUpInKernelRegistry(
+          op_type_name,
+          UserKernelRegContext(kernel_conf(),
+                               user_op::UserOpConfWrapper(kernel_conf().op_attribute().op_conf())));
+      CHECK_NOTNULL(kernel_reg_val);
+
+      user_op::KernelInitContext init_ctx;
+      kernel_.reset(kernel_reg_val->create_fn(init_ctx));
+    }
   }
 
   void ForwardDataContent(const KernelCtx& ctx,

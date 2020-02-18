@@ -43,12 +43,17 @@ class KernelRegContext {
 
 using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
 using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
-using InferTmpSizeFn = std::function<size_t(const InferContext&)>;
+using InferTmpSizeFn = std::function<size_t(InferContext*)>;
+using AddInplaceArgPair = std::function<Maybe<void>(
+    const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
+    int32_t in_arg_index, bool is_mutable)>;
+using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;
   IsMatchedPredicator is_matched_fn;
   InferTmpSizeFn infer_tmp_size_fn;
+  InplaceProposalFn inplace_proposal_fn;
 };
 
 struct KernelRegistryWrapper final {
@@ -64,6 +69,7 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
+  KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 
   KernelRegistryWrapper Build();
 

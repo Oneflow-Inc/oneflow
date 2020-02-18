@@ -16,25 +16,15 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
  protected:
   NormalMdUpdateKernel() = default;
-  virtual void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                           const int64_t* train_step, const float* learning_rate,
+  virtual void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
+                           const float* learning_rate,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual bool IsWeightDecaySupported() { return false; }
 
  private:
   void VirtualKernelInit() override;
-  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  NormalModelUpdateOpUserConf user_conf_;
-  T l1_;
-  T l2_;
-};
-
-template<DeviceType device_type, typename T>
-class NormalMdUpdateKernelUtil final {
- public:
-  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
-                                        T* ratio_ptr);
+  T weight_decay_;
 };
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);

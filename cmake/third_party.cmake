@@ -14,6 +14,7 @@ include(eigen)
 include(cocoapi)
 include(half)
 include(json)
+include(re2)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -37,10 +38,27 @@ if (BUILD_CUDA)
       break()
     endif()
   endforeach()
-  set(extra_cuda_libs libculibos.a libcublas_static.a libcurand_static.a)
+  set(extra_cuda_libs libculibos.a libcurand_static.a)
   foreach(extra_cuda_lib ${extra_cuda_libs})
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
+  foreach(cublas_lib_path ${CUDA_CUBLAS_LIBRARIES})
+    get_filename_component(cublas_lib_name ${cublas_lib_path} NAME)
+    if (${cublas_lib_name} STREQUAL libcublas.so)
+      get_filename_component(cublas_lib_dir ${cublas_lib_path} DIRECTORY)
+      break()
+    endif()
+  endforeach()
+  if(EXISTS ${cublas_lib_dir}/libcublas_static.a)
+    if(EXISTS ${cublas_lib_dir}/libcublasLt_static.a)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
+    endif()
+    list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+  elseif(EXISTS ${cuda_lib_dir}/libcublas_static.a)
+    list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
+  else()
+    message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
+  endif()
   find_package(CuDNN REQUIRED)
 endif()
 
@@ -72,6 +90,7 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
+    ${RE2_LIBRARIES}
 )
 
 if(WIN32)
@@ -103,6 +122,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   json_copy_headers_to_destination
+  re2
 )
 
 
@@ -120,6 +140,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
+    ${RE2_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
@@ -170,6 +191,7 @@ endif()
 include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
+  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 

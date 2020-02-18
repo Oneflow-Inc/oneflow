@@ -1,4 +1,5 @@
-#include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 
@@ -29,9 +30,18 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   return parallel_conf;
 }
 
-}  // namespace
+class NonDistributedOptimizerPass final : public OpGraphPass {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NonDistributedOptimizerPass);
+  NonDistributedOptimizerPass() = default;
+  ~NonDistributedOptimizerPass() = default;
+  bool IsEnabled() const override {
+    return GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer();
+  }
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+};
 
-void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
+void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) const {
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2model_size;
@@ -175,5 +185,9 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     builder->MutOpsOnlyOnce({op_node7op_conf.second});
   }
 }
+
+REGISTER_FUNCTION_PASS("NonDistributedOptimizerPass", NonDistributedOptimizerPass);
+
+}  // namespace
 
 }  // namespace oneflow

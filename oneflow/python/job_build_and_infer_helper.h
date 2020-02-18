@@ -12,7 +12,7 @@ namespace oneflow {
 namespace {
 
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  const auto& job_name = *JUST(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
+  const auto job_name = *JUST(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
   return Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name);
 }
 
@@ -39,6 +39,8 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   OF_CHECK(TxtString2PbMessage(serialized_job_conf, &job_conf)) << "job conf parse failed";
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
+
+Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
 
 Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() { return JUST(GetCurInferCtx())->HasJobConf(); }
 

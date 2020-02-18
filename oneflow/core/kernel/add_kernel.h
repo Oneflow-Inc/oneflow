@@ -22,7 +22,7 @@ class AddKernel final : public KernelIf<device_type> {
 
   const PbMessage& GetCustomizedOpConf() const override;
 
-  decltype(make_tuple_from_sequence<7>()) tp_;
+  decltype(make_tuple_from_sequence<8>()) tp_;
 };
 
 void HalfGpuAdd(DeviceCtx* ctx, const int64_t n, float16* out_dptr,

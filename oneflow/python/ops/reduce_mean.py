@@ -6,27 +6,26 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-
 import collections
+import oneflow as flow
 
 
 @oneflow_export("math.reduce_mean")
-def reduce_mean(input_tensor, axis=None, keepdims=False, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ReduceMean_"),
-    )
-    setattr(op_conf.reduce_mean_conf, "in", input_tensor.logical_blob_name)
-    setattr(op_conf.reduce_mean_conf, "out", "out")
-    if axis is not None:
-        op_conf.reduce_mean_conf.axis[:] = (
-            list(axis) if isinstance(axis, collections.Sized) else [axis]
-        )
-    setattr(op_conf.reduce_mean_conf, "keep_dims", keepdims)
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def reduce_mean(input_blob, axis=None, keepdims=False, name=None):
+    reduce_sum = flow.math.reduce_sum(input_blob, axis=axis, keepdims=keepdims, name=name)
+    if input_blob.is_dynamic:
+        reduce_count = flow.math.reduced_shape_elem_cnt(input_blob, axis=axis, dtype=input_blob.dtype)
+        return reduce_sum / reduce_count
+    else:
+        if axis is None:
+            axes = []
+        else:
+            axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
+        reduce_count = 1
+        if len(axes) == 0:
+            for dim in input_blob.static_shape:
+                reduce_count *= dim
+        else:
+            for i in axes:
+                reduce_count *= input_blob.static_shape[i]
+        return flow.math.multiply(reduce_sum, 1.0 / reduce_count)

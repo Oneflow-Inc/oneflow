@@ -7,6 +7,8 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.core.job.placement_pb2 as placement_proto_pb
+import re
 
 def InputOpByArgBlobDef(blob_def):
     assert isinstance(blob_def, input_blob_util.ArgBlobDef)
@@ -18,12 +20,18 @@ def InputOpByArgBlobDef(blob_def):
     blob_def.AddAndInferOp(op_conf)
     return remote_blob_util.RemoteBlob(blob_def.lbi)
 
-def RetOpByRemoteBlob(remote_blob):
+def RetOpByRemoteBlob(remote_blob, allow_cpu_return_op = True):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Return_')
     setattr(op_conf.return_conf, 'in', remote_blob.logical_blob_name)
     op_conf.return_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf, remote_blob.parallel_conf)
+    parallel_conf = placement_proto_pb.ParallelConf()
+    parallel_conf.CopyFrom(remote_blob.parallel_conf)
+    if allow_cpu_return_op:
+        op_conf.device_type = c_api_util.DeviceType4DeviceTag('cpu')
+        for i in range(len(parallel_conf.device_name)):
+            parallel_conf.device_name[i] = re.sub(":\w+:", ":cpu:", parallel_conf.device_name[i])
+    compile_context.CurJobAddOp(op_conf, parallel_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"

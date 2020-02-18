@@ -1,9 +1,11 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/framework/batch_axis_context.h"
 
 namespace oneflow {
 
@@ -30,12 +32,14 @@ class UserOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().user_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   Maybe<void> InferBatchAxis(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -43,6 +47,8 @@ class UserOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
+
+  const user_op::OpRegistrationVal* val_;
 };
 
 class UserOpKernelRegContext final : public user_op::KernelRegContext {
@@ -108,25 +114,20 @@ class UserOpInferContext : public user_op::InferContext {
   UserOpInferContext(const OperatorConf& op_conf,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
-    const auto& user_op_conf = op_conf.user_conf();
-    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        inputs_.emplace_back(std::make_pair(arg_name, i));
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          arg2tensor_desc_.emplace(key, user_op::TensorDesc(blob->shape(), blob->data_type()));
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
       }
-    }
-    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-      const std::string& arg_name = it->first;
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
-        outputs_.emplace_back(std::make_pair(arg_name, i));
-      }
-    }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
   }
   ~UserOpInferContext() = default;
 
@@ -136,8 +137,8 @@ class UserOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
   ArgVec inputs_;
@@ -172,16 +173,65 @@ class UserOpSbpContext : public user_op::SbpContext {
   ~UserOpSbpContext() = default;
 
   const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) override {
+      const std::string& input_arg_name, int32_t index) const override {
     return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
   }
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+};
+
+class UserOpBatchAxisContext : public user_op::BatchAxisContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpBatchAxisContext(const OperatorConf& op_conf,
+                         std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp,
+                         std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4Ibn)
+      : user_op::BatchAxisContext(user_op::UserOpConfWrapper(op_conf)) {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        std::string ibn = GenRepeatedBn(arg_name, i);
+        const BlobDesc& blob = LogicalBlobDesc4Ibn(ibn);
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 user_op::TensorDesc(blob.shape(), blob.data_type()));
+        arg2batch_axis_.emplace(std::make_pair(arg_name, i), BatchAxis4BnInOp(ibn));
+        inputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        arg2batch_axis_.emplace(std::make_pair(arg_name, i),
+                                BatchAxis4BnInOp(GenRepeatedBn(arg_name, i)));
+        outputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+  }
+  ~UserOpBatchAxisContext() = default;
+
+  const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const override {
+    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+  }
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
+
+  OptInt64* BatchAxis4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2batch_axis_.at(std::make_pair(arg_name, index));
+  }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, OptInt64*> arg2batch_axis_;
 };
 
 void UserOp::InitFromOpConf() {
@@ -193,14 +243,15 @@ void UserOp::InitFromOpConf() {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
+  val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
-  const user_op::OpRegistrationVal* val =
-      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in op registry!";
+                                   const ParallelContext* parallel_ctx,
+                                   const SbpSignature* sbp_signature,
+                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
   // set out blob desc other attr as first input blob desc (if has)
   // TODO(ChengCheng): infer other attribute in blob desc
@@ -211,28 +262,63 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
   UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);
 
-  JUST(val->shape_infer_fn(&infer_ctx));
-  JUST(val->dtype_infer_fn(&infer_ctx));
+  JUST(val_->shape_infer_fn(&infer_ctx));
+  JUST(val_->dtype_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
     out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
   }
 
-  // tmp buffer size must be inferred after out shape/dtype
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
-  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
+  // tmp buffer size must be inferred after out shape/dtype
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK(tmp_buffer_blob != nullptr);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
+
+  // get inplace proposal in/out blob pair
+  UserOpCtx* op_ctx = new UserOpCtx();
+  HashSet<std::string> bn_in_op_unique_check;
+  user_op::AddInplaceArgPair AddInplaceArgPairFn =
+      [&](const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
+          int32_t in_arg_index, bool is_mutable) -> Maybe<void> {
+    std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+    std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+    if (is_mutable) {
+      op_ctx->mut_inplace_obn2ibn.emplace(obn, ibn);
+    } else {
+      op_ctx->con_inplace_obn2ibn.emplace(obn, ibn);
+    }
+
+    CHECK_OR_RETURN(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end())
+        << "Cannot find input_arg_name : " << in_arg_name << " input_arg_index : " << in_arg_index
+        << " in op_name: " << op_conf().name();
+    CHECK_OR_RETURN(std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end())
+        << "Cannot find output_arg_name : " << out_arg_name
+        << " output_arg_index : " << out_arg_index << " in op_name: " << op_conf().name();
+
+    std::string repeated_ibn_err_msg =
+        "Cannot repeated set inplace proposal for same intput arg : " + in_arg_name
+        + " index : " + std::to_string(in_arg_index) + " in op_name: " + op_conf().name();
+    std::string repeated_obn_err_msg =
+        "Cannot repeated set inplace proposal for same output arg : " + out_arg_name
+        + " index : " + std::to_string(out_arg_index) + " in op_name: " + op_conf().name();
+    CHECK_OR_RETURN(bn_in_op_unique_check.insert(ibn).second) << repeated_ibn_err_msg;
+    CHECK_OR_RETURN(bn_in_op_unique_check.insert(obn).second) << repeated_obn_err_msg;
+    return Maybe<void>::Ok();
+  };
+  JUST(kernel_reg_val->inplace_proposal_fn(infer_ctx, AddInplaceArgPairFn));
+  EnrollOpCtx(op_ctx);
+
   return Maybe<void>::Ok();
 }
 
@@ -243,37 +329,29 @@ LogicalBlobId UserOp::ibn2lbi(const std::string& input_bn) const {
 
 LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
   auto pair = GenUnRepeatedBn(output_bn);
-  return GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
+  auto ret = GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
+  CHECK_EQ(ret.op_name(), op_conf().name());
+  CHECK_EQ(ret.blob_name(), output_bn);
+  return ret;
 }
 
 Maybe<void> UserOp::InferBatchAxis(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  // TODO(ChengCheng): default func for infer batch axis, need to DELETE
-  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
-  /*
-  OptInt64* batch_axis = nullptr;
-  for (const std::string& ibn : input_bns()) {
-    if (BatchAxis4BnInOp(ibn)->has_value()) {
-      batch_axis = BatchAxis4BnInOp(ibn);
-      break;
-    }
-  }
-  if (batch_axis) {
-    for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
-  }
-  */
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
+  UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
+  JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const user_op::OpRegistrationVal* val =
-      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in op registry!";
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   UserOpSbpContext sbp_ctx(op_conf(), sbp_sig_list, LogicalBlobDesc4Ibn);
-  JUST(val->get_sbp_fn(&sbp_ctx));
+  JUST(val_->get_sbp_fn(&sbp_ctx));
   return Maybe<void>::Ok();
 }
 

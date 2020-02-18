@@ -270,11 +270,6 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
-template<>
-void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  memset(dst, value, sz);
-}
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
@@ -433,6 +428,9 @@ KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
 }
 KU_FLOATING_METHOD Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::pow(x[i], power); }

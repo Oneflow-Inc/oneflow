@@ -18,6 +18,8 @@ def dense(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
     model_distribute=distribute_util.broadcast(),
@@ -51,6 +53,7 @@ def dense(
             if kernel_initializer is not None
             else flow.constant_initializer(0)
         ),
+        regularizer=kernel_regularizer,
         trainable=trainable,
         model_name="weight",
         distribute=model_distribute,
@@ -73,6 +76,7 @@ def dense(
                 if bias_initializer is not None
                 else flow.constant_initializer(0)
             ),
+            regularizer=bias_regularizer,
             trainable=trainable,
             model_name="bias",
             distribute=model_distribute,
@@ -106,6 +110,8 @@ def conv2d(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
     weight_name=None,
@@ -125,6 +131,7 @@ def conv2d(
         initializer=kernel_initializer
         if kernel_initializer is not None
         else flow.constant_initializer(0),
+        regularizer=kernel_regularizer,
         trainable=trainable,
         model_name="weight",
     )
@@ -139,6 +146,7 @@ def conv2d(
             initializer=bias_initializer
             if bias_initializer is not None
             else flow.constant_initializer(0),
+            regularizer=bias_regularizer,
             trainable=trainable,
             model_name="bias",
         )
@@ -159,6 +167,7 @@ def layer_norm(
     trainable=True,
     begin_norm_axis=1,
     begin_params_axis=-1,
+    epsilon=1e-5,
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
@@ -178,7 +187,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(0.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="beta",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
@@ -189,7 +198,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(1.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="gamma",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
@@ -201,6 +210,7 @@ def layer_norm(
     setattr(op_conf.layer_norm_conf, "scale", scale)
     setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
@@ -278,12 +288,15 @@ def batch_normalization(
     scale=True,
     beta_initializer=None,
     gamma_initializer=None,
+    beta_regularizer=None,
+    gamma_regularizer=None,
     moving_mean_initializer=None,
     moving_variance_initializer=None,
-    trainable=False,
+    trainable=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
+    if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
     if name is None:
@@ -295,6 +308,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=beta_initializer or flow.zeros_initializer(),
+            regularizer=beta_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
@@ -305,6 +319,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=gamma_initializer or flow.ones_initializer(),
+            regularizer=gamma_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )

@@ -19,6 +19,7 @@
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -90,6 +91,9 @@ Maybe<void> StartGlobalSession() {
   OF_CHECK_NOTNULL(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
+  }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
   OF_CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
@@ -149,23 +153,5 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
-
-namespace {
-
-struct GlobalChecker final {
-  GlobalChecker() = default;
-  ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) {
-      std::cerr << "global session is not closed yet" << std::endl;
-    }
-    if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
-      std::cerr << "global session is not destroyed yet" << std::endl;
-    }
-  }
-};
-
-GlobalChecker checker;
-
-}  // namespace
 
 }  // namespace oneflow

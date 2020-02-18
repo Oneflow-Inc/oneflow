@@ -26,9 +26,6 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
-
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
   return x + y;
@@ -158,6 +155,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon);
   static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
@@ -268,6 +266,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,

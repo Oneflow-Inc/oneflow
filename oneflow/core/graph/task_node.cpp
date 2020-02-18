@@ -24,8 +24,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kPackForward
-         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward
-         || tt == TaskType::kEveryNth;
+         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward;
 }
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 

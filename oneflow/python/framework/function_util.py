@@ -218,6 +218,10 @@ def set_enable_non_distributed_optimizer(func_desc, value = True):
 def set_disable_all_reduce_sequence(func_desc, value = True):
     func_desc.job_config_proto.disable_all_reduce_sequence = value
 
+@oneflow_function_config('prune_parallel_cast_ops')
+def set_prune_parallel_cast_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_parallel_cast_ops = value
+
 @oneflow_function_config('non_distributed_optimizer_group_size_mbyte')
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
@@ -244,6 +248,12 @@ def set_model_update_conf(func_desc, value):
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
+@oneflow_function_config('indexed_slices_optimizer_conf')
+def set_indexed_slices_optimizer_conf(func_desc, value):
+    assert type(value) is dict
+    pb_msg = func_desc.job_config_proto.indexed_slices_optimizer_conf
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+
 @oneflow_function_config('train.loss_scale_factor')
 def set_loss_scale_factor(func_desc, value):
     func_desc.job_config_proto.train_conf.loss_scale_factor = value
@@ -255,22 +265,6 @@ def set_primary_lr(func_desc, value):
 @oneflow_function_config('train.secondary_lr')
 def set_secondary_lr(func_desc, value):
     func_desc.job_config_proto.train_conf.secondary_lr = value
-
-@oneflow_function_config('train.weight_l1')
-def set_weight_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l1 = value
-
-@oneflow_function_config('train.bias_l1')
-def set_bias_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l1 = value
-
-@oneflow_function_config('train.weight_l2')
-def set_weight_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l2 = value
-
-@oneflow_function_config('train.bias_l2')
-def set_bias_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l2 = value
 
 @oneflow_function_config('default_placement_scope')
 def set_default_placement(func_desc, value):
@@ -299,3 +293,7 @@ def set_tensorrt_use_int8(func_desc, value = True):
 def set_default_distribute_strategy(func_desc, value):
     assert isinstance(value, distribute_ctx.DistributeStrategy)
     func_desc.function_attribute.default_distribute_strategy = value
+
+@oneflow_function_config('allow_cpu_return_op')
+def allow_cpu_return_op(func_desc, value):
+    func_desc.function_attribute.allow_cpu_return_op = value

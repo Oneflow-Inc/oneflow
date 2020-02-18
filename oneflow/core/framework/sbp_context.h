@@ -15,7 +15,7 @@ class SbpContext {
   virtual ~SbpContext() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) = 0;
+      const std::string& input_arg_name, int32_t index) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 

@@ -363,7 +363,7 @@ def piece_slice(inputs, output_size, name=None):
 
 
 @oneflow_export("elem_cnt")
-def elem_cnt(inputs, begin_axis=None, end_axis=None, dtype=None, name=None):
+def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("ElemCnt_"))
     op_conf.shape_elem_cnt_conf.x = inputs.logical_blob_name
@@ -417,7 +417,7 @@ def stack(inputs, axis, name=None):
 
 
 @oneflow_export("assign")
-def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
+def assign(ref, value, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Assign_"))
     op_conf.assign_conf.ref = ref.logical_blob_name

@@ -15,11 +15,11 @@ def CurJobAddOp(op_conf, parallel_conf=None):
     return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):
-    op_conf, parallel_conf = _GetOpConfAndParallelConf(op_conf, parallel_conf)
+    op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddMirroredOp(op_conf, parallel_conf=None):
-    op_conf, parallel_conf = _GetOpConfAndParallelConf(op_conf, parallel_conf)
+    op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 
 def ResetCurJobContext():
@@ -30,9 +30,10 @@ def ResetCurJobContext():
     assert len(cur_job_variable_scope_stack) == 0
     cur_job_variable_scope_stack = []
 
-def _GetOpConfAndParallelConf(op_conf, parallel_conf):
+def GetOpConfAndParallelConf(op_conf, parallel_conf=None):
     _PrependOpNamePrefixIfNeed(op_conf)
-    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
+    if not op_conf.HasField('device_type'):
+        op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
     return op_conf, parallel_conf
 

@@ -23,8 +23,8 @@ struct ConfigDefBuidler final {
 #define REGISTER_SESSION_CONFIG_DEF() REGISTER_CONFIG_DEF(kSessionConfigType)
 #define REGISTER_FUNCTION_CONFIG_DEF() REGISTER_CONFIG_DEF(kFunctionConfigType)
 
-#define REGISTER_CONFIG_DEF(config_def_type)                                                 \
-  static ConfigDefBuidler<config_def_type> OF_PP_CAT(g_##config_def_type##_def_, __LINE__) = \
+#define REGISTER_CONFIG_DEF(config_def_type)                                                    \
+  static ConfigDefBuidler<config_def_type> OF_PP_CAT(g_##config_def_type##_def_, __COUNTER__) = \
       ConfigDefBuidler<config_def_type>()
 
 const ConfigDef& GlobalEnvConfigDef();

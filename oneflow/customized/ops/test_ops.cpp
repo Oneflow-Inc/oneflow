@@ -50,19 +50,6 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("TestReshape")
-    .Input("in")
-    .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
-      CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
-      *out_shape = conf_shape;
-      return Maybe<void>::Ok();
-    });
-
 REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
@@ -77,5 +64,61 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
     AddOp(ccrelu_grad_op);
   }
 });
+
+REGISTER_USER_OP("TestReshape")
+    .Input("in")
+    .Output("out")
+    .Attr("shape", UserOpAttrType::kAtShape)
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
+      *out_shape = conf_shape;
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestSource")
+    .Output("out")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = Shape({5});
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split(ctx->outputs(), 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestMultiOutputOrder")
+    .Input("in")
+    .Output("out1")
+    .Output("out2")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
+      Shape* out2_shape = ctx->Shape4ArgNameAndIndex("out2", 0);
+      *out1_shape = *in_shape;
+      *out2_shape = *in_shape;
+      int32_t last_axis = in_shape->NumAxes() - 1;
+      out2_shape->Set(last_axis, in_shape->At(last_axis) * 2);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split(ctx->outputs(), 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
