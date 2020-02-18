@@ -49,6 +49,28 @@ cmake .. \
 make -j$(nproc)
 ```
 
+#### Install OneFlow
+
+In the root path of OneFlow repo, run:
+```
+pip3 install -e . --user
+```
+
+Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`
+
+For example:
+```
+export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
+```
+
+#### Generate Pip package
+
+In the root path of OneFlow repo, run:
+```
+python3 setup.py bdist_wheel
+```
+Your should find a `.whl` package in `dist`.
+
 ### Build with XLA
 
 - Install bazel
