@@ -228,11 +228,11 @@ def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
 
 @oneflow_function_config('enable_true_half_config_when_conv', 'cudnn_conv_enable_true_half')
 def set_cudnn_conv_enable_true_half(func_desc, value = True):
-    func_desc.job_config_proto.cudnn_conv_use_pseudo_half = (not value)
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = (not value)
 
-@oneflow_function_config('cudnn_conv_use_pseudo_half')
-def set_cudnn_conv_enable_true_half(func_desc, value):
-    func_desc.job_config_proto.cudnn_conv_use_pseudo_half = value
+@oneflow_function_config('cudnn_conv_enable_pseudo_half', 'enable_cudnn_conv_pseudo_half')
+def set_cudnn_conv_enable_pseudo_half(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = value
 
 @oneflow_function_config('enable_float_compute_for_half_gemm')
 def set_enable_float_compute_for_half_gemm(func_desc, value = True):

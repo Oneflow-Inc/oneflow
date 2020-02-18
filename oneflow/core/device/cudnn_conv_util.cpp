@@ -26,14 +26,34 @@ void SetAlgo4Perf(const CudnnConvArgs& args, perf_t* algo_perf, algo_t algo) {
 template<typename perf_t>
 perf_t GetBestAlgorithm(const CudnnConvArgs& args, const std::vector<perf_t>& perf_vec) {
   int found_algo_idx = -1;
-  bool find_deterministic = args.conf.cudnn_conv_use_deterministic_algo_only();
   FOR_RANGE(size_t, i, 0, perf_vec.size()) {
     // Note: Shouldn't all returned results be successful?
     CHECK_EQ(perf_vec[i].status, CUDNN_STATUS_SUCCESS);
     if (perf_vec[i].memory > args.params.max_ws_size) { continue; }
-    if (find_deterministic && perf_vec[i].determinism == CUDNN_NON_DETERMINISTIC) { continue; }
+    if (args.deterministic && perf_vec[i].determinism == CUDNN_NON_DETERMINISTIC) { continue; }
     found_algo_idx = i;
     break;
+  }
+
+  if (found_algo_idx == -1) {
+    LOG(WARNING) << "Cannot find any algorithm meets requirements (max_workspace_size="
+                 << args.params.max_ws_size << ", determinism=" << args.deterministic << ") using "
+                 << (args.heuristic ? "heuristic searching way." : "exhaustive searching way.")
+                 << " Using default algo(" << CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO
+                 << ") instead.";
+    perf_t algo_perf;
+    SetAlgo4Perf(args, &algo_perf, CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO);
+    return algo_perf;
+  }
+
+  if (found_algo_idx != 0) {
+    LOG(WARNING) << "Currently available alogrithm (algo=" << perf_vec[found_algo_idx].algo
+                 << ", require memory=" << perf_vec[found_algo_idx].memory
+                 << ", idx=" << found_algo_idx
+                 << ") meeting requirments (max_workspace_size=" << args.params.max_ws_size
+                 << ", determinism=" << args.deterministic
+                 << ") is not fastest. Fastest algorithm (" << perf_vec[0].algo
+                 << ") requires memory " << perf_vec[0].memory;
   }
 
 #if CUDNN_VERSION < 7500
@@ -90,15 +110,19 @@ CudnnConvArgs::CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& co
     : xdesc(x->data_type(), x->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
       ydesc(y->data_type(), y->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
       wdesc(w->data_type(), w->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
-      cdesc(GetConvDescDataType(x->data_type(), job_conf.cudnn_conv_use_pseudo_half()), x->shape(),
-            conv_conf),
+      cdesc(GetConvDescDataType(x->data_type(), job_conf.cudnn_conv_enable_pseudo_half()),
+            x->shape(), conv_conf),
       x_dptr(nullptr),
       y_dptr(nullptr),
       w_dptr(nullptr),
       ws_dptr(nullptr),
+      heuristic(job_conf.cudnn_conv_heuristic_search_algo()),
+      deterministic(job_conf.cudnn_conv_use_deterministic_algo_only()),
+      force_fwd_algo(-1),
+      force_bwd_data_algo(-1),
+      force_bwd_filter_algo(-1),
       need_create_handle(true),
-      need_free_memory(false),
-      conf(job_conf) {
+      need_free_memory(false) {
   CudaCheck(cudnnCreate(&handle));
   std::memset(&params, 0, sizeof(CudnnConvParams));
 
@@ -120,6 +144,16 @@ CudnnConvArgs::CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& co
   CHECK_EQ(params.x_ndim, params.w_ndim);
   CHECK_EQ(conv_dim_size + 2, params.x_ndim);
   params.max_ws_size = max_ws_size;
+
+  if (job_conf.has_cudnn_conv_force_fwd_algo()) {
+    force_fwd_algo = job_conf.cudnn_conv_force_fwd_algo();
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_data_algo()) {
+    force_bwd_data_algo = job_conf.cudnn_conv_force_bwd_data_algo();
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_filter_algo()) {
+    force_bwd_filter_algo = job_conf.cudnn_conv_force_bwd_filter_algo();
+  }
 }
 
 CudnnConvArgs::CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf,
@@ -128,16 +162,20 @@ CudnnConvArgs::CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& co
     : xdesc(x->data_type(), x->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
       ydesc(y->data_type(), y->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
       wdesc(w->data_type(), w->shape(), GetValFromPbMessage<std::string>(conv_conf, "data_format")),
-      cdesc(GetConvDescDataType(x->data_type(), job_conf.cudnn_conv_use_pseudo_half()), x->shape(),
-            conv_conf),
+      cdesc(GetConvDescDataType(x->data_type(), job_conf.cudnn_conv_enable_pseudo_half()),
+            x->shape(), conv_conf),
       handle(handle),
       x_dptr(const_cast<void*>(x->dptr())),
       y_dptr(const_cast<void*>(y->dptr())),
       w_dptr(const_cast<void*>(w->dptr())),
       ws_dptr(buf ? buf->mut_dptr() : nullptr),
+      heuristic(job_conf.cudnn_conv_heuristic_search_algo()),
+      deterministic(job_conf.cudnn_conv_use_deterministic_algo_only()),
+      force_fwd_algo(-1),
+      force_bwd_data_algo(-1),
+      force_bwd_filter_algo(-1),
       need_create_handle(false),
-      need_free_memory(false),
-      conf(job_conf) {
+      need_free_memory(false) {
   std::memset(&params, 0, sizeof(CudnnConvParams));
   CudaCheck(cudnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
                                        &params.x_data_type, &params.x_ndim, params.x_dims,
@@ -157,6 +195,16 @@ CudnnConvArgs::CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& co
   CHECK_EQ(params.x_ndim, params.w_ndim);
   CHECK_EQ(conv_dim_size + 2, params.x_ndim);
   params.max_ws_size = buf ? buf->ByteSizeOfBlobBody() : 0;
+
+  if (job_conf.has_cudnn_conv_force_fwd_algo()) {
+    force_fwd_algo = job_conf.cudnn_conv_force_fwd_algo();
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_data_algo()) {
+    force_bwd_data_algo = job_conf.cudnn_conv_force_bwd_data_algo();
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_filter_algo()) {
+    force_bwd_filter_algo = job_conf.cudnn_conv_force_bwd_filter_algo();
+  }
 }
 
 CudnnConvArgs::~CudnnConvArgs() {
@@ -170,8 +218,8 @@ CudnnConvArgs::~CudnnConvArgs() {
 }
 
 void CudnnConvArgs::AllocateIfNeed() {
-  if (!conf.cudnn_conv_heuristic_search_algo() && x_dptr == nullptr && y_dptr == nullptr
-      && w_dptr == nullptr && ws_dptr == nullptr) {
+  if (!heuristic && x_dptr == nullptr && y_dptr == nullptr && w_dptr == nullptr
+      && ws_dptr == nullptr) {
     size_t x_byte_size = GetByteSizeOfCudnnDataType(params.x_data_type);
     FOR_RANGE(int, i, 0, params.x_ndim) { x_byte_size *= params.x_dims[i]; }
     CudaCheck(cudaMalloc(&x_dptr, RoundUp(x_byte_size, kCudaMemAllocAlignSize)));
@@ -204,19 +252,24 @@ size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type) {
     case CUDNN_DATA_INT8x4:
     case CUDNN_DATA_UINT8x4: {
       byte_size = 4;
+      break;
     }
     case CUDNN_DATA_DOUBLE: {
       byte_size = 8;
+      break;
     }
     case CUDNN_DATA_HALF: {
       byte_size = 2;
+      break;
     }
     case CUDNN_DATA_INT8:
     case CUDNN_DATA_UINT8: {
       byte_size = 1;
+      break;
     }
     case CUDNN_DATA_INT8x32: {
       byte_size = 32;
+      break;
     }
     default: { UNIMPLEMENTED(); }
   }
@@ -250,14 +303,14 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
   static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
 
   static void FindAlgorithm(const CudnnConvArgs& args, perf_t* algo_perf) {
-    if (args.conf.has_cudnn_conv_force_fwd_algo()) {
-      SetAlgo4Perf(args, algo_perf, static_cast<algo_t>(args.conf.cudnn_conv_force_fwd_algo()));
+    if (args.force_fwd_algo != -1) {
+      SetAlgo4Perf(args, algo_perf, static_cast<algo_t>(args.force_fwd_algo));
     } else {
       int max_algo_cnt = 0;
       int found_algo_cnt = 0;
       CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(args.handle, &max_algo_cnt));
       std::vector<perf_t> perf_vec(max_algo_cnt);
-      if (args.conf.cudnn_conv_heuristic_search_algo()) {
+      if (args.heuristic) {
         CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
             args.handle, args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
             max_algo_cnt, &found_algo_cnt, perf_vec.data()));
@@ -284,15 +337,14 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
   static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
 
   static void FindAlgorithm(const CudnnConvArgs& args, perf_t* algo_perf) {
-    if (args.conf.has_cudnn_conv_force_bwd_data_algo()) {
-      SetAlgo4Perf(args, algo_perf,
-                   static_cast<algo_t>(args.conf.cudnn_conv_force_bwd_data_algo()));
+    if (args.force_bwd_data_algo != -1) {
+      SetAlgo4Perf(args, algo_perf, static_cast<algo_t>(args.force_bwd_data_algo));
     } else {
       int max_algo_cnt = 0;
       int found_algo_cnt = 0;
       CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(args.handle, &max_algo_cnt));
       std::vector<perf_t> perf_vec(max_algo_cnt);
-      if (args.conf.cudnn_conv_heuristic_search_algo()) {
+      if (args.heuristic) {
         CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
             args.handle, args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
             max_algo_cnt, &found_algo_cnt, perf_vec.data()));
@@ -319,15 +371,14 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
   static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
 
   static void FindAlgorithm(const CudnnConvArgs& args, perf_t* algo_perf) {
-    if (args.conf.has_cudnn_conv_force_bwd_filter_algo()) {
-      SetAlgo4Perf(args, algo_perf,
-                   static_cast<algo_t>(args.conf.cudnn_conv_force_bwd_filter_algo()));
+    if (args.force_bwd_filter_algo != -1) {
+      SetAlgo4Perf(args, algo_perf, static_cast<algo_t>(args.force_bwd_filter_algo));
     } else {
       int max_algo_cnt = 0;
       int found_algo_cnt = 0;
       CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(args.handle, &max_algo_cnt));
       std::vector<perf_t> perf_vec(max_algo_cnt);
-      if (args.conf.cudnn_conv_heuristic_search_algo()) {
+      if (args.heuristic) {
         CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
             args.handle, args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
             max_algo_cnt, &found_algo_cnt, perf_vec.data()));

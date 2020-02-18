@@ -61,10 +61,13 @@ struct CudnnConvArgs final {
   void* y_dptr;
   void* w_dptr;
   void* ws_dptr;
-  size_t max_ws_size;
+  bool heuristic;
+  bool deterministic;
+  int force_fwd_algo;
+  int force_bwd_data_algo;
+  int force_bwd_filter_algo;
   bool need_create_handle;
   bool need_free_memory;
-  const JobConfigProto& conf;
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
   CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf, const BlobDesc* x,
