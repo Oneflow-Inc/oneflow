@@ -20,6 +20,7 @@ void SetAlgo4Perf(const CudnnConvArgs& args, perf_t* algo_perf, algo_t algo) {
     algo_perf->mathType = CUDNN_DEFAULT_MATH;
   }
   CudaCheck(GetConvWorkspaceSize(args, algo_perf->algo, &(algo_perf->memory)));
+  algo_perf->status = CUDNN_STATUS_SUCCESS;
 }
 
 template<typename perf_t>
