@@ -107,6 +107,10 @@ namespace oneflow {
   bool __WalkFieldUntil__(WalkCtxType* ctx) {                                                 \
     return __DSS__FieldIterUntil<field_counter, F, WalkCtxType>::Call(ctx, this);             \
   }                                                                                           \
+  template<int tpl_field_counter, typename FieldType, typename Enable = void>                 \
+  struct __DssFieldTypeId__ final {                                                           \
+    static std::string Call() { return typeid(FieldType).name(); }                            \
+  };                                                                                          \
                                                                                               \
  private:                                                                                     \
   template<int tpl_fld_counter, template<int, class, class> class F, typename WalkCtxType,    \

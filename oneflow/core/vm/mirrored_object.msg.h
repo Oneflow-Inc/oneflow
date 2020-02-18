@@ -10,36 +10,6 @@
 
 namespace oneflow {
 
-// clang-format off
-BEGIN_OBJECT_MSG(LogicalBlobIdObj);
-END_OBJECT_MSG(LogicalBlobIdObj);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(BlobDescObj);
-END_OBJECT_MSG(BlobDescObj);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(BlobObj);
-END_OBJECT_MSG(BlobObj);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(OperatorObj);
-END_OBJECT_MSG(OperatorObj);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(HostMemoryBuffer);
-END_OBJECT_MSG(HostMemoryBuffer);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(DeviceMemoryBuffer);
-END_OBJECT_MSG(DeviceMemoryBuffer);
-// clang-format on
-
 class VpuInstructionCtx;
 class MirroredObject;
 
@@ -86,13 +56,6 @@ BEGIN_OBJECT_MSG(MirroredObject);
   PUBLIC void TryResetCurrentAccessType(); 
   PUBLIC MirroredObjectAccess* GetFirstAllowedAccess();
   //fields
-  OBJECT_MSG_DEFINE_ONEOF(type,
-    OBJECT_MSG_ONEOF_FIELD(LogicalBlobIdObj, logical_blob_id)
-    OBJECT_MSG_ONEOF_FIELD(BlobDescObj, blob_desc)
-    OBJECT_MSG_ONEOF_FIELD(BlobObj, blob)
-    OBJECT_MSG_ONEOF_FIELD(OperatorObj, op)
-    OBJECT_MSG_ONEOF_FIELD(HostMemoryBuffer, host_memory_buffer)
-    OBJECT_MSG_ONEOF_FIELD(DeviceMemoryBuffer, device_memory_buffer));
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
 

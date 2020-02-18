@@ -14,9 +14,17 @@ namespace oneflow {
 // details
 #define _OBJECT_MSG_DEFINE_RAW_PTR(field_counter, field_type, field_name) \
   _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                \
+  OBJECT_MSG_OVERLOAD_FIELD_TYPE_ID(field_counter, field_type);           \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgRawPtrInit);           \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgRawPtrDelete);       \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+
+#define OBJECT_MSG_OVERLOAD_FIELD_TYPE_ID(field_counter, field_type)      \
+ public:                                                                  \
+  template<typename FieldType, typename Enable>                           \
+  struct __DssFieldTypeId__<field_counter, FieldType, Enable> final {     \
+    static std::string Call() { return OF_PP_STRINGIZE(field_type) "*"; } \
+  };
 
 #define _OBJECT_MSG_DEFINE_RAW_PTR_FIELD(field_type, field_name)                           \
  public:                                                                                   \
