@@ -78,17 +78,17 @@ BEGIN_OBJECT_MSG(RunningVmInstructionPackage);
 END_OBJECT_MSG(RunningVmInstructionPackage);
 // clang-format on
 
-class VpuSetCtx;
+class VmThread;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VmStream);
   // methods
-  PUBLIC void __Init__(VpuSetCtx* vpu_set_ctx, const VpuId& vpu_id) {
-    set_vpu_set_ctx(vpu_set_ctx);
+  PUBLIC void __Init__(VmThread* vm_thread, const VpuId& vpu_id) {
+    set_vm_thread(vm_thread);
     mut_vpu_id()->CopyFrom(vpu_id);
   }
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuSetCtx, vpu_set_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
   
   // links
@@ -116,15 +116,15 @@ END_OBJECT_MSG(VpuTypeCtx);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuSetCtx);
+BEGIN_OBJECT_MSG(VmThread);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeCtx, vpu_type_ctx); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vpu_set_ctx_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stram_link_of_vpu_set, vm_stram_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVmInstructionPackage, launched_pkg_link, launched_pkg_list);
-END_OBJECT_MSG(VpuSetCtx);
+END_OBJECT_MSG(VmThread);
 // clang-format on
 
 }  // namespace oneflow
