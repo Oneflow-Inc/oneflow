@@ -8,13 +8,12 @@
 namespace oneflow {
 
 // clang-format off
-BEGIN_OBJECT_MSG(VM);
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VpuScheduler, vpu_scheduler); 
+BEGIN_OBJECT_MSG(VMDesc);
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MemZoneTypeId, mem_zone_type_id, mem_zone_type_id2desc);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeId, vpu_type_id, vpu_type_id2desc);
-END_OBJECT_MSG(VM);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeId, vpu_type_id, remote_vpu_type_id2desc);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeId, vpu_type_id, local_vpu_type_id2desc);
+END_OBJECT_MSG(VMDesc);
 // clang-format on
 
 }  // namespace oneflow

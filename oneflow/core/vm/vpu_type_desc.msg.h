@@ -61,9 +61,12 @@ END_FLAT_MSG(VpuId);
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuTypeDesc);
+  // methods
+  PUBLIC int32_t num_threads() const;
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machine);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_device);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_devices_per_machine);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
