@@ -78,8 +78,9 @@ void FilterAndRunControlVmInstructions(VpuScheduler* scheduler,
                                        TmpWaitingVmInstrMsgList* vm_instr_msg_list) {
   ControlVpu control_vpu;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    const VpuTypeId vpu_type_id = vm_instr_msg->vm_instruction_proto().vpu_type_id();
-    if (vpu_type_id != kControlVpuTypeId) { continue; }
+    const VmStreamTypeId vm_stream_type_id =
+        vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
+    if (vm_stream_type_id != kControlVmStreamTypeId) { continue; }
     control_vpu.Run(scheduler, vm_instr_msg);
     vm_instr_msg_list->Erase(vm_instr_msg);
   }
@@ -88,8 +89,9 @@ void FilterAndRunControlVmInstructions(VpuScheduler* scheduler,
 void MakeVmInstructionCtx(VpuScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_instr_msg_list,
                           /*out*/ NewVmInstrCtxList* ret_vm_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    VpuTypeId vpu_type_id = vm_instr_msg->vm_instruction_proto().vpu_type_id();
-    auto* vpu_type_ctx = scheduler->mut_vpu_type_id2vpu_type_ctx()->FindPtr(vpu_type_id);
+    VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
+    auto* vpu_type_ctx =
+        scheduler->mut_vm_stream_type_id2vpu_type_ctx()->FindPtr(vm_stream_type_id);
     OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_type_ctx->mut_vm_stram_list(), vm_stram) {
       auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
           scheduler->mut_default_allocator(), vm_instr_msg, vm_stram);

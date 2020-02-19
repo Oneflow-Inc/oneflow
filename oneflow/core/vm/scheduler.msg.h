@@ -28,7 +28,7 @@ BEGIN_OBJECT_MSG(VpuScheduler);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObject, maybe_available_access_link, maybe_available_access_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stram_link, active_vm_stram_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeCtx, vpu_type_id, vpu_type_id2vpu_type_ctx);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeCtx, vm_stream_type_id, vm_stream_type_id2vpu_type_ctx);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, zombie_link, zombie_logical_object_list);
 END_OBJECT_MSG(VpuScheduler);
