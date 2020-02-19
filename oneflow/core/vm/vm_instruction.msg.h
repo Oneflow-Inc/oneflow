@@ -96,7 +96,7 @@ BEGIN_OBJECT_MSG(VmStream);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_stram_link_of_vpu_set);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_stram_link_of_vpu_type);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
-  // collect_vm_instruction_list used by VpuScheduler
+  // collect_vm_instruction_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link,
                               collect_vm_instruction_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(RunningVmInstructionPackage, running_pkg_link,

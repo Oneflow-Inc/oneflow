@@ -4,13 +4,13 @@
 
 namespace oneflow {
 
-using WaitingVmInstrCtxList = VpuScheduler::waiting_vm_instr_ctx_list_ObjectMsgListType;
-using ReadyVmInstrCtxList = VpuScheduler::ready_vm_instr_ctx_list_ObjectMsgListType;
-using MaybeAvailableAccessList = VpuScheduler::maybe_available_access_list_ObjectMsgListType;
-using TmpWaitingVmInstrMsgList = VpuScheduler::tmp_waiting_msg_list_ObjectMsgListType;
-using NewVmInstrCtxList = VpuScheduler::new_vm_instr_ctx_list_ObjectMsgListType;
-using Id2LogicalObject = VpuScheduler::id2logical_object_ObjectMsgSkipListType;
-using ActiveVmStreamList = VpuScheduler::active_vm_stram_list_ObjectMsgListType;
+using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instr_ctx_list_ObjectMsgListType;
+using ReadyVmInstrCtxList = VmScheduler::ready_vm_instr_ctx_list_ObjectMsgListType;
+using MaybeAvailableAccessList = VmScheduler::maybe_available_access_list_ObjectMsgListType;
+using TmpWaitingVmInstrMsgList = VmScheduler::tmp_waiting_msg_list_ObjectMsgListType;
+using NewVmInstrCtxList = VmScheduler::new_vm_instr_ctx_list_ObjectMsgListType;
+using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
+using ActiveVmStreamList = VmScheduler::active_vm_stram_list_ObjectMsgListType;
 
 namespace {
 
@@ -74,7 +74,7 @@ void FilterReadyVmInstrCtx(MaybeAvailableAccessList* maybe_available_access_list
   }
 }
 
-void FilterAndRunControlVmInstructions(VpuScheduler* scheduler,
+void FilterAndRunControlVmInstructions(VmScheduler* scheduler,
                                        TmpWaitingVmInstrMsgList* vm_instr_msg_list) {
   ControlVmStreamType control_vm_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
@@ -86,7 +86,7 @@ void FilterAndRunControlVmInstructions(VpuScheduler* scheduler,
   }
 }
 
-void MakeVmInstructionCtx(VpuScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_instr_msg_list,
+void MakeVmInstructionCtx(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_instr_msg_list,
                           /*out*/ NewVmInstrCtxList* ret_vm_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
@@ -162,7 +162,7 @@ void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instr_ctx_lis
   }
 }
 
-void DispatchVmInstructionCtx(VpuScheduler* scheduler,
+void DispatchVmInstructionCtx(VmScheduler* scheduler,
                               ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
   auto* allocator = scheduler->mut_default_allocator();
   auto* active_vm_stram_list = scheduler->mut_active_vm_stram_list();
@@ -182,11 +182,11 @@ void DispatchVmInstructionCtx(VpuScheduler* scheduler,
 
 }  // namespace
 
-void VpuScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
+void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
   mut_waiting_msg_list()->MoveFrom(vm_instr_list);
 }
 
-void VpuScheduler::Schedule() {
+void VmScheduler::Schedule() {
   auto* vm_thread_list = mut_vm_thread_list();
   auto* maybe_available_access_list = mut_maybe_available_access_list();
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vm_thread_list, vm_thread) {

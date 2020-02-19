@@ -9,7 +9,7 @@ namespace oneflow {
 using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuScheduler);
+BEGIN_OBJECT_MSG(VmScheduler);
   // methods
   PUBLIC void __Init__() { __Init__(mut_allocator()); }
   PUBLIC void __Init__(ObjectMsgAllocator* allocator) { set_default_allocator(allocator); }
@@ -31,7 +31,7 @@ BEGIN_OBJECT_MSG(VpuScheduler);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VpuTypeCtx, vm_stream_type_id, vm_stream_type_id2vpu_type_ctx);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, zombie_link, zombie_logical_object_list);
-END_OBJECT_MSG(VpuScheduler);
+END_OBJECT_MSG(VmScheduler);
 // clang-format on
 
 }  // namespace oneflow

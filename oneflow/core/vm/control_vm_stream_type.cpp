@@ -16,7 +16,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
   void Call(LogicalObject* logical_object) const override {
     CHECK(!logical_object->is_zombie_link_empty());
-    auto* scheduler = logical_object->mut_vpu_scheduler();
+    auto* scheduler = logical_object->mut_vm_scheduler();
     auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
     std::size_t size = parallel_id2mirrored_object->size();
     for (int i = 0; i < size; ++i) {
@@ -46,7 +46,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
 enum CtrlInstrOpCode { kNewMirroredObjectSymbol = 0, kDeleteMirroredObjectSymbol };
 
-typedef void (*CtrlInstrFunc)(VpuScheduler*, VmInstructionMsg*);
+typedef void (*CtrlInstrFunc)(VmScheduler*, VmInstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
 
 #define REGISTER_CTRL_INSTRUCTION(op_code, function_name) \
@@ -87,7 +87,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
   return vm_instr_msg;
 }
 
-void NewMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
+void NewMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
   FlatMsg<LogicalObjectId> logical_object_id;
@@ -123,7 +123,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
   vm_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
   return vm_instr_msg;
 }
-void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
+void DeleteMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
   const auto& logical_objectId = view->mutable_logical_object_id().value();
@@ -137,7 +137,7 @@ void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_in
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 
-void ControlVmStreamType::Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
+void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
   VmInstructionOpcode opcode = vm_instr_msg->vm_instruction_proto().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }

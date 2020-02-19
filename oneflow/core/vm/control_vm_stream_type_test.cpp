@@ -11,7 +11,7 @@ namespace {
 
 TEST(ControlVmStreamType, new_symbol) {
   CachedObjectMsgAllocator allocator(20, 100);
-  auto scheduler = ObjectMsgPtr<VpuScheduler>::NewFrom(&allocator);
+  auto scheduler = ObjectMsgPtr<VmScheduler>::NewFrom(&allocator);
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
@@ -39,7 +39,7 @@ TEST(ControlVmStreamType, new_symbol) {
 }
 
 TEST(ControlVmStreamType, delete_symbol) {
-  auto scheduler = ObjectMsgPtr<VpuScheduler>::New();
+  auto scheduler = ObjectMsgPtr<VmScheduler>::New();
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
