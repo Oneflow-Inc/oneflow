@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
 
-#include "oneflow/core/vm/vpu_type_desc.msg.h"
+#include "oneflow/core/vm/vm_stream_desc.msg.h"
 
 namespace oneflow {
 
