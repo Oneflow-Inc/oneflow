@@ -10,23 +10,23 @@
 
 namespace oneflow {
 
-class VpuInstructionCtx;
+class VmInstructionCtx;
 class MirroredObject;
 
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // methods
-  PUBLIC void __Init__(VpuInstructionCtx* vpu_instruction_ctx, MirroredObject* mirrored_object,
+  PUBLIC void __Init__(VmInstructionCtx* vm_instruction_ctx, MirroredObject* mirrored_object,
                        uint64_t logical_object_id_value, bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_RAW_PTR(VpuInstructionCtx, vpu_instruction_ctx);
+  OBJECT_MSG_DEFINE_RAW_PTR(VmInstructionCtx, vm_instruction_ctx);
   OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vpu_instr_operand_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_operand_link);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, uint64_t, logical_object_id_value);
   
 END_OBJECT_MSG(MirroredObjectAccess);
