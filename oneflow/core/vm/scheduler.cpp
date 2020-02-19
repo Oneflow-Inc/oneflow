@@ -90,9 +90,9 @@ void MakeVmInstructionCtx(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_i
                           /*out*/ NewVmInstrCtxList* ret_vm_instr_ctx_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
-    auto* vpu_type_ctx =
-        scheduler->mut_vm_stream_type_id2vpu_type_ctx()->FindPtr(vm_stream_type_id);
-    OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_type_ctx->mut_vm_stream_list(), vm_stream) {
+    auto* vm_stream_rt_desc =
+        scheduler->mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
+    OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vm_stream_rt_desc->mut_vm_stream_list(), vm_stream) {
       auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
           scheduler->mut_default_allocator(), vm_instr_msg, vm_stream);
       ret_vm_instr_ctx_list->PushBack(vm_instr_ctx.Mutable());

@@ -105,20 +105,20 @@ END_OBJECT_MSG(VmStream);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuTypeCtx);
+BEGIN_OBJECT_MSG(VmStreamRtDesc);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stream_link_of_vpu_type, vm_stream_list);
-END_OBJECT_MSG(VpuTypeCtx);
+END_OBJECT_MSG(VmStreamRtDesc);
 // clang-format on
 
 // clang-format off
 BEGIN_OBJECT_MSG(VmThread);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeCtx, vpu_type_ctx); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
