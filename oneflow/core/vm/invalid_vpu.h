@@ -11,7 +11,7 @@ class InvalidVmStreamType final : public VmStreamType {
   InvalidVmStreamType() : VmStreamType() {}
   ~InvalidVmStreamType() override = default;
 
-  void Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
+  void Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 
   // UNIMPLEMENTED methods
   const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const override {
