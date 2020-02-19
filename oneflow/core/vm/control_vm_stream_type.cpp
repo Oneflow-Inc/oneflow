@@ -1,4 +1,4 @@
-#include "oneflow/core/vm/vpu_type_desc.msg.h"
+#include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"

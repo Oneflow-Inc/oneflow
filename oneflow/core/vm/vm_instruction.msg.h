@@ -5,7 +5,7 @@
 #include <mutex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/vpu_type_desc.msg.h"
+#include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction_msg_observer.h"
@@ -104,11 +104,12 @@ BEGIN_OBJECT_MSG(VmStream);
 END_OBJECT_MSG(VmStream);
 // clang-format on
 
+// Rt is short for Runtime
 // clang-format off
 BEGIN_OBJECT_MSG(VmStreamRtDesc);
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type); 
-  OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamDesc, vm_stream_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stream_link_of_vpu_type, vm_stream_list);

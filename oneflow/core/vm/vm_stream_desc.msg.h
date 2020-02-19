@@ -60,7 +60,7 @@ END_FLAT_MSG(VmStreamId);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VpuTypeDesc);
+BEGIN_OBJECT_MSG(VmStreamDesc);
   // methods
   PUBLIC int32_t num_threads() const;
   // fields
@@ -70,7 +70,7 @@ BEGIN_OBJECT_MSG(VpuTypeDesc);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-END_OBJECT_MSG(VpuTypeDesc);
+END_OBJECT_MSG(VmStreamDesc);
 // clang-format on
 
 }  // namespace oneflow
