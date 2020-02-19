@@ -49,14 +49,14 @@ END_FLAT_MSG(VpuMask);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(VpuId);
+BEGIN_FLAT_MSG(VmStreamId);
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
 
   // methods
   FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
-END_FLAT_MSG(VpuId);
+END_FLAT_MSG(VmStreamId);
 // clang-format on
 
 // clang-format off

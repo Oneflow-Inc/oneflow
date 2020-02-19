@@ -83,13 +83,13 @@ class VmThread;
 // clang-format off
 BEGIN_OBJECT_MSG(VmStream);
   // methods
-  PUBLIC void __Init__(VmThread* vm_thread, const VpuId& vpu_id) {
+  PUBLIC void __Init__(VmThread* vm_thread, const VmStreamId& vm_stream_id) {
     set_vm_thread(vm_thread);
-    mut_vpu_id()->CopyFrom(vpu_id);
+    mut_vm_stream_id()->CopyFrom(vm_stream_id);
   }
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
-  OBJECT_MSG_DEFINE_FLAT_MSG(VpuId, vpu_id);
+  OBJECT_MSG_DEFINE_FLAT_MSG(VmStreamId, vm_stream_id);
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stram_link);
