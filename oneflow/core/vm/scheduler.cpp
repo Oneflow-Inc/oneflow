@@ -42,9 +42,9 @@ void ReleaseVmInstructionPackage(RunningVmInstructionPackage* pkg,
 }
 
 void TryReleaseFinishedVmInstructionPackages(
-    VpuSetCtx* vpu_set_ctx,
+    VmThread* vm_thread,
     /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  auto* pkg_list = vpu_set_ctx->mut_launched_pkg_list();
+  auto* pkg_list = vm_thread->mut_launched_pkg_list();
   while (true) {
     auto* begin = pkg_list->Begin();
     if (begin == nullptr || !begin->Done()) { break; }
@@ -172,7 +172,7 @@ void DispatchVmInstructionCtx(VpuScheduler* scheduler,
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stram_list, vm_stram) {
     auto pkg = ObjectMsgPtr<RunningVmInstructionPackage>::NewFrom(allocator, vm_stram);
     vm_stram->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_ctx_list());
-    vm_stram->mut_vpu_set_ctx()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
+    vm_stram->mut_vm_thread()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
     vm_stram->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
     active_vm_stram_list->Erase(vm_stram);
   }
@@ -185,10 +185,10 @@ void VpuScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
 }
 
 void VpuScheduler::Schedule() {
-  auto* vpu_set_ctx_list = mut_vpu_set_ctx_list();
+  auto* vm_thread_list = mut_vm_thread_list();
   auto* maybe_available_access_list = mut_maybe_available_access_list();
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_set_ctx_list, vpu_set_ctx) {
-    TryReleaseFinishedVmInstructionPackages(vpu_set_ctx, /*out*/ maybe_available_access_list);
+  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vm_thread_list, vm_thread) {
+    TryReleaseFinishedVmInstructionPackages(vm_thread, /*out*/ maybe_available_access_list);
   };
   auto* waiting_vm_instr_ctx_list = mut_waiting_vm_instr_ctx_list();
   auto* ready_vm_instr_ctx_list = mut_ready_vm_instr_ctx_list();
