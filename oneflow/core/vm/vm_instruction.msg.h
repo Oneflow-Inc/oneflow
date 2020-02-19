@@ -18,7 +18,7 @@ static const int kVmInstructionOperandLimit = 64;
 // clang-format off
 BEGIN_FLAT_MSG(VmInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, vm_instruction_id);
-  FLAT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
   FLAT_MSG_DEFINE_REPEATED(VmInstructionOperand, operand, kVmInstructionOperandLimit);
   FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
@@ -110,7 +110,7 @@ BEGIN_OBJECT_MSG(VpuTypeCtx);
   OBJECT_MSG_DEFINE_RAW_PTR(const Vpu, vpu); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stram_link_of_vpu_type, vm_stram_list);
 END_OBJECT_MSG(VpuTypeCtx);
 // clang-format on

@@ -22,7 +22,7 @@ class ControlVpu final {
   void Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 };
 
-static const VpuTypeId kControlVpuTypeId = 0;
+static const VmStreamTypeId kControlVmStreamTypeId = 0;
 
 }  // namespace oneflow
 

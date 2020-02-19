@@ -8,7 +8,7 @@
 
 namespace oneflow {
 
-using VpuTypeId = int32_t;
+using VmStreamTypeId = int32_t;
 using VmInstructionOpcode = int32_t;
 
 // clang-format off
@@ -51,7 +51,7 @@ END_FLAT_MSG(VpuMask);
 // clang-format off
 BEGIN_FLAT_MSG(VpuId);
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(VpuTypeId, vpu_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
 
   // methods
@@ -69,7 +69,7 @@ BEGIN_OBJECT_MSG(VpuTypeDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VpuTypeId, vpu_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
 END_OBJECT_MSG(VpuTypeDesc);
 // clang-format on
 
