@@ -5,9 +5,9 @@
 namespace oneflow {
 
 using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instr_ctx_list_ObjectMsgListType;
-using ReadyVmInstrCtxList = VmScheduler::ready_vm_instr_ctx_list_ObjectMsgListType;
-using MaybeAvailableAccessList = VmScheduler::maybe_available_access_list_ObjectMsgListType;
-using TmpWaitingVmInstrMsgList = VmScheduler::tmp_waiting_msg_list_ObjectMsgListType;
+using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstructionCtx, vm_instruction_ctx_link);
+using MaybeAvailableAccessList = OBJECT_MSG_LIST(MirroredObject, maybe_available_access_link);
+using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
 using NewVmInstrCtxList = VmScheduler::new_vm_instr_ctx_list_ObjectMsgListType;
 using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
 using ActiveVmStreamList = VmScheduler::active_vm_stream_list_ObjectMsgListType;
@@ -32,7 +32,7 @@ void ReleaseVmInstructionCtx(VmInstructionCtx* vm_instr_ctx,
   }
 }
 
-void ReleaseVmInstructionPackage(RunningVmInstructionPackage* pkg,
+void ReleaseVmInstructionPackage(VmInstructionPackage* pkg,
                                  /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   auto* vm_instr_ctx_list = pkg->mut_vm_instruction_ctx_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_ctx_list, vm_instr_ctx) {
@@ -42,9 +42,8 @@ void ReleaseVmInstructionPackage(RunningVmInstructionPackage* pkg,
 }
 
 void TryReleaseFinishedVmInstructionPackages(
-    VmThread* vm_thread,
-    /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  auto* pkg_list = vm_thread->mut_launched_pkg_list();
+    VmStream* vm_stream, /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
+  auto* pkg_list = vm_stream->mut_running_pkg_list();
   while (true) {
     auto* begin = pkg_list->Begin();
     if (begin == nullptr || !begin->Done()) { break; }
@@ -165,18 +164,22 @@ void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instr_ctx_lis
 void DispatchVmInstructionCtx(VmScheduler* scheduler,
                               ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
   auto* allocator = scheduler->mut_default_allocator();
-  auto* active_vm_stream_list = scheduler->mut_active_vm_stream_list();
+  OBJECT_MSG_LIST(VmStream, tmp_active_vm_stream_link) tmp_active_vm_stream_list;
   while (auto* first = ready_vm_instr_ctx_list->Begin()) {
     auto* vm_stream = first->mut_vm_stream();
     ready_vm_instr_ctx_list->MoveToDstBack(first, vm_stream->mut_collect_vm_instruction_list());
-    if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
+    if (vm_stream->is_tmp_active_vm_stream_link_empty()) {
+      tmp_active_vm_stream_list.PushBack(vm_stream);
+    }
   }
-  OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stream_list, vm_stream) {
-    auto pkg = ObjectMsgPtr<RunningVmInstructionPackage>::NewFrom(allocator, vm_stream);
+  auto* active_vm_stream_list = scheduler->mut_active_vm_stream_list();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_active_vm_stream_list, vm_stream) {
+    tmp_active_vm_stream_list.Erase(vm_stream);
+    auto pkg = ObjectMsgPtr<VmInstructionPackage>::NewFrom(allocator, vm_stream);
     vm_stream->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_ctx_list());
-    vm_stream->mut_vm_thread()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
+    vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
+    if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
     vm_stream->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
-    active_vm_stream_list->Erase(vm_stream);
   }
 }
 
@@ -187,27 +190,28 @@ void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
 }
 
 void VmScheduler::Schedule() {
-  auto* vm_thread_list = mut_vm_thread_list();
-  auto* maybe_available_access_list = mut_maybe_available_access_list();
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vm_thread_list, vm_thread) {
-    TryReleaseFinishedVmInstructionPackages(vm_thread, /*out*/ maybe_available_access_list);
+  MaybeAvailableAccessList maybe_available_access_list;
+  auto* active_vm_stream_list = mut_active_vm_stream_list();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stream_list, vm_stream) {
+    TryReleaseFinishedVmInstructionPackages(vm_stream, /*out*/ &maybe_available_access_list);
+    if (vm_stream->running_pkg_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
   };
   auto* waiting_vm_instr_ctx_list = mut_waiting_vm_instr_ctx_list();
-  auto* ready_vm_instr_ctx_list = mut_ready_vm_instr_ctx_list();
+  ReadyVmInstrCtxList ready_vm_instr_ctx_list;
   if (waiting_msg_list().size() > 0) {
-    auto* tmp_waiting_msg_list = mut_tmp_waiting_msg_list();
-    mut_waiting_msg_list()->MoveTo(tmp_waiting_msg_list);
-    FilterAndRunControlVmInstructions(this, tmp_waiting_msg_list);
+    TmpWaitingVmInstrMsgList tmp_waiting_msg_list;
+    mut_waiting_msg_list()->MoveTo(&tmp_waiting_msg_list);
+    FilterAndRunControlVmInstructions(this, &tmp_waiting_msg_list);
     auto* new_vm_instr_ctx_list = mut_new_vm_instr_ctx_list();
-    MakeVmInstructionCtx(this, tmp_waiting_msg_list, /*out*/ new_vm_instr_ctx_list);
+    MakeVmInstructionCtx(this, &tmp_waiting_msg_list, /*out*/ new_vm_instr_ctx_list);
     ConsumeMirroredObjects(mut_id2logical_object(), new_vm_instr_ctx_list,
-                           /*out*/ maybe_available_access_list);
-    MoveToReadyCtxListIfNoObjectOperand(new_vm_instr_ctx_list, /*out*/ ready_vm_instr_ctx_list);
+                           /*out*/ &maybe_available_access_list);
+    MoveToReadyCtxListIfNoObjectOperand(new_vm_instr_ctx_list, /*out*/ &ready_vm_instr_ctx_list);
     new_vm_instr_ctx_list->MoveTo(waiting_vm_instr_ctx_list);
   }
-  FilterReadyVmInstrCtx(maybe_available_access_list, waiting_vm_instr_ctx_list,
-                        /*out*/ ready_vm_instr_ctx_list);
-  DispatchVmInstructionCtx(this, ready_vm_instr_ctx_list);
+  FilterReadyVmInstrCtx(&maybe_available_access_list, waiting_vm_instr_ctx_list,
+                        /*out*/ &ready_vm_instr_ctx_list);
+  DispatchVmInstructionCtx(this, &ready_vm_instr_ctx_list);
 }
 
 }  // namespace oneflow

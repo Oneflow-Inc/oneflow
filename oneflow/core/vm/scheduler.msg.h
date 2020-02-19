@@ -21,11 +21,8 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, waiting_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, tmp_waiting_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, new_vm_instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, waiting_vm_instr_ctx_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, ready_vm_instr_ctx_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObject, maybe_available_access_link, maybe_available_access_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stream_link, active_vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmStreamRtDesc, vm_stream_type_id, vm_stream_type_id2vm_stream_rt_desc);
