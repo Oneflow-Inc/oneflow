@@ -11,7 +11,7 @@ void VmInstructionCtx::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* 
   set_vm_stream(vm_stream);
 }
 
-void RunningVmInstructionPackage::__Init__(VmStream* vm_stream) {
+void VmInstructionPackage::__Init__(VmStream* vm_stream) {
   set_vm_stream(vm_stream);
   const auto* vm_stream_type = &vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type();
   mutable_status_querier()->__Init__(

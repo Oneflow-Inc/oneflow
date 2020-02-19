@@ -18,7 +18,7 @@ class VmInstruction {
 class VmStream;
 class ObjectMsgAllocator;
 class VmInstructionStatusQuerier;
-class RunningVmInstructionPackage;
+class VmInstructionPackage;
 
 class VmStreamType {
  public:
@@ -28,7 +28,7 @@ class VmStreamType {
   virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
                                                        int* allocated_size,
                                                        const VmStream* vm_stream) const = 0;
-  virtual void Run(VmStream* vm_stream, RunningVmInstructionPackage* vm_instr_pkg) const = 0;
+  virtual void Run(VmStream* vm_stream, VmInstructionPackage* vm_instr_pkg) const = 0;
 
  protected:
   VmStreamType() = default;

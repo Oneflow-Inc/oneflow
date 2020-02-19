@@ -62,7 +62,7 @@ END_OBJECT_MSG(VmInstructionCtx);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(RunningVmInstructionPackage);
+BEGIN_OBJECT_MSG(VmInstructionPackage);
   // methods
   PUBLIC void __Init__(VmStream* vm_stream);
   PUBLIC bool Done() const { return status_querier()->Done(); }
@@ -73,9 +73,9 @@ BEGIN_OBJECT_MSG(RunningVmInstructionPackage);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, vm_instruction_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
   OBJECT_MSG_DEFINE_LIST_LINK(running_pkg_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(launched_pkg_link);
-END_OBJECT_MSG(RunningVmInstructionPackage);
+END_OBJECT_MSG(VmInstructionPackage);
 // clang-format on
 
 class VmThread;
@@ -93,14 +93,15 @@ BEGIN_OBJECT_MSG(VmStream);
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stream_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(tmp_active_vm_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_vm_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_stream_desc_vm_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   // collect_vm_instruction_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link,
                               collect_vm_instruction_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(RunningVmInstructionPackage, running_pkg_link,
-                                        waiting_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, running_pkg_link, running_pkg_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstructionPackage, waiting_pkg_link, waiting_pkg_list);
 END_OBJECT_MSG(VmStream);
 // clang-format on
 
@@ -124,7 +125,6 @@ BEGIN_OBJECT_MSG(VmThread);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_thread_vm_stream_link, vm_stream_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RunningVmInstructionPackage, launched_pkg_link, launched_pkg_list);
 END_OBJECT_MSG(VmThread);
 // clang-format on
 
