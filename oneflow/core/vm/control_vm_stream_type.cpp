@@ -83,7 +83,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
     view->set_is_remote(is_remote);
     view->set_parallel_num(parallel_num);
   }
-  vm_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
+  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
 }
 
@@ -120,7 +120,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mutable_logical_object_id()->mutable_value()->CopyFrom(logical_object_id);
   }
-  vm_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
+  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
 }
 void DeleteMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
