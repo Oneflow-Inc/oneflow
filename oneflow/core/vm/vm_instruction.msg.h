@@ -21,7 +21,7 @@ BEGIN_FLAT_MSG(VmInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
   FLAT_MSG_DEFINE_REPEATED(VmInstructionOperand, operand, kVmInstructionOperandLimit);
-  FLAT_MSG_DEFINE_OPTIONAL(VpuMask, vpu_mask);
+  FLAT_MSG_DEFINE_OPTIONAL(VmStreamMask, vm_stream_mask);
 END_FLAT_MSG(VmInstructionProto);
 // clang-format on
 

@@ -36,16 +36,16 @@ END_FLAT_MSG(VmInstructionOperand);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(AllVpuEnabledMask);
-END_FLAT_MSG(AllVpuEnabledMask);
+BEGIN_FLAT_MSG(AllVmStreamEnabledMask);
+END_FLAT_MSG(AllVmStreamEnabledMask);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(VpuMask);
+BEGIN_FLAT_MSG(VmStreamMask);
   FLAT_MSG_DEFINE_ONEOF(mask_type,
-    FLAT_MSG_ONEOF_FIELD(AllVpuEnabledMask, all_vpu_enabled)
+    FLAT_MSG_ONEOF_FIELD(AllVmStreamEnabledMask, all_vm_stream_enabled)
     FLAT_MSG_ONEOF_FIELD(LogicalObjectId, enabled_parallel_desc_symbol));
-END_FLAT_MSG(VpuMask);
+END_FLAT_MSG(VmStreamMask);
 // clang-format on
 
 // clang-format off
