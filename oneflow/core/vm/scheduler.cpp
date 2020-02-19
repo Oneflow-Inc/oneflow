@@ -133,7 +133,7 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             NewVmInstrCtxList* new_vm_instr_ctx_list,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
-    int64_t parallel_id = vm_instr_ctx->vm_stram().vpu_id().parallel_id();
+    int64_t parallel_id = vm_instr_ctx->vm_stram().vm_stream_id().parallel_id();
     const auto& operands = vm_instr_ctx->vm_instruction_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (operand.has_const_operand()) {

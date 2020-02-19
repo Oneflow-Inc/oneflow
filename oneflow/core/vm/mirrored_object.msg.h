@@ -41,7 +41,7 @@ END_FLAT_MSG(ReadOnlyAccessType);
 BEGIN_FLAT_MSG(MirroredObjectAccessType);
   FLAT_MSG_DEFINE_ONEOF(access_type,
     FLAT_MSG_ONEOF_FIELD(ReadOnlyAccessType, read_only)
-    FLAT_MSG_ONEOF_FIELD(VpuId, vpu_id_only));
+    FLAT_MSG_ONEOF_FIELD(VmStreamId, vpu_id_only));
 END_FLAT_MSG(MirroredObjectAccessType);
 // clang-format on
 

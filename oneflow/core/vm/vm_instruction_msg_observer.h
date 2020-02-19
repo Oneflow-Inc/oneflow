@@ -5,15 +5,15 @@
 
 namespace oneflow {
 
-class VpuId;
+class VmStreamId;
 
 class VmInstructionMsgObserver {
  public:
   virtual ~VmInstructionMsgObserver() = default;
 
-  virtual void OnDispatched(const VpuId &) = 0;
-  virtual void OnReady(const VpuId &) = 0;
-  virtual void OnDone(const VpuId &) = 0;
+  virtual void OnDispatched(const VmStreamId &) = 0;
+  virtual void OnReady(const VmStreamId &) = 0;
+  virtual void OnDone(const VmStreamId &) = 0;
 
  protected:
   VmInstructionMsgObserver() = default;
@@ -26,9 +26,9 @@ class VmInstructionMsgNoneObserver : public VmInstructionMsgObserver {
   VmInstructionMsgNoneObserver() : VmInstructionMsgObserver() {}
   ~VmInstructionMsgNoneObserver() override = default;
 
-  void OnDispatched(const VpuId &) override{};
-  void OnReady(const VpuId &) override{};
-  void OnDone(const VpuId &) override{};
+  void OnDispatched(const VmStreamId &) override{};
+  void OnReady(const VmStreamId &) override{};
+  void OnDone(const VmStreamId &) override{};
 
   static VmInstructionMsgNoneObserver *Singleton() {
     static VmInstructionMsgNoneObserver observer;

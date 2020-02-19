@@ -29,7 +29,7 @@ void MirroredObject::TryResetCurrentAccessType() {
     return;
   }
   const auto& vm_stram = mut_waiting_access_list()->Begin()->vm_instruction_ctx().vm_stram();
-  mut_current_access_type()->mut_vpu_id_only()->CopyFrom(vm_stram.vpu_id());
+  mut_current_access_type()->mut_vpu_id_only()->CopyFrom(vm_stram.vm_stream_id());
 }
 
 MirroredObjectAccess* MirroredObject::GetFirstAllowedAccess() {
@@ -39,8 +39,8 @@ MirroredObjectAccess* MirroredObject::GetFirstAllowedAccess() {
     if (first->is_const_operand()) { return first; }
   } else if (current_access_type().has_vpu_id_only()) {
     auto* first = mut_waiting_access_list()->Begin();
-    const auto& vpu_id = first->vm_instruction_ctx().vm_stram().vpu_id();
-    if (current_access_type().vpu_id_only() == vpu_id) { return first; }
+    const auto& vm_stream_id = first->vm_instruction_ctx().vm_stram().vm_stream_id();
+    if (current_access_type().vpu_id_only() == vm_stream_id) { return first; }
   } else {
     UNIMPLEMENTED();
   }
