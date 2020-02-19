@@ -1,5 +1,5 @@
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
-#include "oneflow/core/vm/control_vpu.h"
+#include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/free_mirrored_object_handler.h"
@@ -71,8 +71,8 @@ void MakeLogicalObjectId(LogicalObjectId* logical_object_id, uint64_t symbol, bo
   }
 }
 
-ObjectMsgPtr<VmInstructionMsg> ControlVpu::NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
-                                                                   int64_t parallel_num) const {
+ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
+    uint64_t symbol, bool is_remote, int64_t parallel_num) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kControlVmStreamTypeId);
@@ -110,7 +110,7 @@ BEGIN_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
 END_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
-ObjectMsgPtr<VmInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
+ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
@@ -137,7 +137,7 @@ void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_in
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 
-void ControlVpu::Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
+void ControlVmStreamType::Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
   VmInstructionOpcode opcode = vm_instr_msg->vm_instruction_proto().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }

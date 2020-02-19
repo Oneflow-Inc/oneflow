@@ -7,7 +7,7 @@
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
-#include "oneflow/core/vm/vpu.h"
+#include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction_msg_observer.h"
 #include "oneflow/core/vm/vm_instruction_status_querier.h"
 
@@ -107,7 +107,7 @@ END_OBJECT_MSG(VmStream);
 // clang-format off
 BEGIN_OBJECT_MSG(VpuTypeCtx);
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const Vpu, vpu); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);

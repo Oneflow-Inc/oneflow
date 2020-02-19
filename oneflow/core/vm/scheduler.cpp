@@ -1,5 +1,5 @@
 #include "oneflow/core/vm/scheduler.msg.h"
-#include "oneflow/core/vm/control_vpu.h"
+#include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -76,12 +76,12 @@ void FilterReadyVmInstrCtx(MaybeAvailableAccessList* maybe_available_access_list
 
 void FilterAndRunControlVmInstructions(VpuScheduler* scheduler,
                                        TmpWaitingVmInstrMsgList* vm_instr_msg_list) {
-  ControlVpu control_vpu;
+  ControlVmStreamType control_vm_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     const VmStreamTypeId vm_stream_type_id =
         vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     if (vm_stream_type_id != kControlVmStreamTypeId) { continue; }
-    control_vpu.Run(scheduler, vm_instr_msg);
+    control_vm_stream_type.Run(scheduler, vm_instr_msg);
     vm_instr_msg_list->Erase(vm_instr_msg);
   }
 }

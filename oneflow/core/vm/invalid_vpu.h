@@ -1,15 +1,15 @@
 #ifndef ONEFLOW_CORE_VM_CONTROL_VPU_H_
 #define ONEFLOW_CORE_VM_CONTROL_VPU_H_
 
-#include "oneflow/core/vm/vpu.h"
+#include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-class InvalidVpu final : public Vpu {
+class InvalidVmStreamType final : public VmStreamType {
  public:
-  InvalidVpu() : Vpu() {}
-  ~InvalidVpu() override = default;
+  InvalidVmStreamType() : VmStreamType() {}
+  ~InvalidVmStreamType() override = default;
 
   void Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 

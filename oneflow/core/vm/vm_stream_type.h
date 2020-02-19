@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VPU_H_
-#define ONEFLOW_CORE_VM_VPU_H_
+#ifndef ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
 
@@ -20,9 +20,9 @@ class ObjectMsgAllocator;
 class VmInstructionStatusQuerier;
 class RunningVmInstructionPackage;
 
-class Vpu {
+class VmStreamType {
  public:
-  virtual ~Vpu() = default;
+  virtual ~VmStreamType() = default;
 
   virtual const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const = 0;
   virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
@@ -31,9 +31,9 @@ class Vpu {
   virtual void Run(VmStream* vm_stram, RunningVmInstructionPackage* vm_instr_pkg) const = 0;
 
  protected:
-  Vpu() = default;
+  VmStreamType() = default;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_H_
+#endif  // ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
