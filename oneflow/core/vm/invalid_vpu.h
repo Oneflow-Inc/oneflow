@@ -19,11 +19,11 @@ class InvalidVmStreamType final : public VmStreamType {
     return nullptr;
   }
   VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
-                                               const VmStream* vm_stram) const override {
+                                               const VmStream* vm_stream) const override {
     UNIMPLEMENTED();
     return nullptr;
   }
-  void Run(VmStream* vm_stram, RunningVmInstructionPackage* vm_instr_pkg) const override {
+  void Run(VmStream* vm_stream, RunningVmInstructionPackage* vm_instr_pkg) const override {
     UNIMPLEMENTED();
   }
 };

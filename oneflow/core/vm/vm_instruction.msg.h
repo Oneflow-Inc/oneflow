@@ -45,12 +45,12 @@ class VmStream;
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstructionCtx);
   // methods
-  PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stram);
+  PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instruction_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(const VmInstruction, vm_instruction); 
-  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stram); 
+  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_ctx_link);
@@ -64,11 +64,11 @@ END_OBJECT_MSG(VmInstructionCtx);
 // clang-format off
 BEGIN_OBJECT_MSG(RunningVmInstructionPackage);
   // methods
-  PUBLIC void __Init__(VmStream* vm_stram);
+  PUBLIC void __Init__(VmStream* vm_stream);
   PUBLIC bool Done() const { return status_querier()->Done(); }
 
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stram);
+  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VmInstructionStatusQuerier>, status_querier); 
 
   // links
@@ -92,9 +92,9 @@ BEGIN_OBJECT_MSG(VmStream);
   OBJECT_MSG_DEFINE_FLAT_MSG(VmStreamId, vm_stream_id);
   
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stram_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_stram_link_of_vpu_set);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_stram_link_of_vpu_type);
+  OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stream_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_stream_link_of_vpu_set);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_stream_link_of_vpu_type);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   // collect_vm_instruction_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link,
@@ -111,7 +111,7 @@ BEGIN_OBJECT_MSG(VpuTypeCtx);
   OBJECT_MSG_DEFINE_RAW_PTR(const VpuTypeDesc, vpu_type_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stram_link_of_vpu_type, vm_stram_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stream_link_of_vpu_type, vm_stream_list);
 END_OBJECT_MSG(VpuTypeCtx);
 // clang-format on
 
@@ -122,7 +122,7 @@ BEGIN_OBJECT_MSG(VmThread);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stram_link_of_vpu_set, vm_stram_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stream_link_of_vpu_set, vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(RunningVmInstructionPackage, launched_pkg_link, launched_pkg_list);
 END_OBJECT_MSG(VmThread);
 // clang-format on
