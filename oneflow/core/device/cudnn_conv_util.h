@@ -115,8 +115,6 @@ class ManagedCudnnConvResource final : public CudnnConvResource {
   void* ws_dptr() override;
 
  private:
-  size_t ByteSize4Tensor(const int* dims, int ndim, cudnnDataType_t data_type);
-
   cudnnHandle_t handle_;
   void* x_dptr_;
   void* w_dptr_;
@@ -135,12 +133,12 @@ size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type);
 template<typename perf_t>
 struct CudnnConvAlgorithmSearch;
 
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionFwdAlgo_t algo, size_t* sz);
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionBwdDataAlgo_t algo, size_t* sz);
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionFwdAlgo_t algo, size_t* sz);
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionBwdDataAlgo_t algo, size_t* sz);
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);

@@ -11,6 +11,30 @@ namespace oneflow {
 
 namespace {
 
+template<typename algo_t>
+algo_t GetDefaultAlgo();
+
+template<>
+cudnnConvolutionFwdAlgo_t GetDefaultAlgo<cudnnConvolutionFwdAlgo_t>() {
+  return CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+}
+
+template<>
+cudnnConvolutionBwdDataAlgo_t GetDefaultAlgo<cudnnConvolutionBwdDataAlgo_t>() {
+  return CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
+}
+
+template<>
+cudnnConvolutionBwdFilterAlgo_t GetDefaultAlgo<cudnnConvolutionBwdFilterAlgo_t>() {
+  return CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
+}
+
+size_t ByteSize4Tensor(const int* dims, int ndim, cudnnDataType_t data_type) {
+  size_t byte_size = GetByteSizeOfCudnnDataType(data_type);
+  FOR_RANGE(int, i, 0, ndim) { byte_size *= dims[i]; }
+  return byte_size;
+}
+
 template<typename perf_t, typename algo_t>
 void SetAlgo4Perf(const CudnnConvArgs& args, CudnnConvResource* res, perf_t* algo_perf,
                   algo_t algo) {
@@ -20,21 +44,21 @@ void SetAlgo4Perf(const CudnnConvArgs& args, CudnnConvResource* res, perf_t* alg
   } else {
     algo_perf->mathType = CUDNN_DEFAULT_MATH;
   }
-  CudaCheck(GetConvWorkspaceSize(args, res, algo_perf->algo, &(algo_perf->memory)));
+  CudaCheck(GetCudnnConvWorkspaceSize(args, res, algo_perf->algo, &(algo_perf->memory)));
   algo_perf->status = CUDNN_STATUS_SUCCESS;
 }
 
 template<typename perf_t>
 perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
                         const std::vector<perf_t>& perf_vec) {
+  using algo_t = decltype(std::declval<perf_t>().algo);
   if (perf_vec.size() == 0) {
     LOG(WARNING) << "There is no result with "
                  << (args.heuristic ? "heuristic searching way." : "exhaustive searching way.")
                  << " (max_workspace_size=" << args.params.max_ws_size << ")"
-                 << " Use default algo(" << CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO
-                 << ") instead.";
+                 << " Use default algo(" << GetDefaultAlgo<algo_t>() << ") instead.";
     perf_t perf;
-    SetAlgo4Perf(args, res, &perf, CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO);
+    SetAlgo4Perf(args, res, &perf, GetDefaultAlgo<algo_t>());
     return perf;
   }
 
@@ -52,10 +76,9 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
     LOG(WARNING) << "Cannot find any algorithm meets requirements (max_workspace_size="
                  << args.params.max_ws_size << ", determinism=" << args.deterministic << ") using "
                  << (args.heuristic ? "heuristic searching way." : "exhaustive searching way.")
-                 << " Using default algo(" << CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO
-                 << ") instead.";
+                 << " Using default algo(" << GetDefaultAlgo<algo_t>() << ") instead.";
     perf_t algo_perf;
-    SetAlgo4Perf(args, res, &algo_perf, CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO);
+    SetAlgo4Perf(args, res, &algo_perf, GetDefaultAlgo<algo_t>());
     return algo_perf;
   }
 
@@ -80,7 +103,7 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
         && (perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
             || perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
       perf_t algo_perf;
-      SetAlgo4Perf(args, res, &algo_perf, CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO);
+      SetAlgo4Perf(args, res, &algo_perf, GetDefaultAlgo<algo_t>());
       return algo_perf;
     }
   }
@@ -203,13 +226,6 @@ void* ManagedCudnnConvResource::ws_dptr() {
   return ws_dptr_;
 }
 
-size_t ManagedCudnnConvResource::ByteSize4Tensor(const int* dims, int ndim,
-                                                 cudnnDataType_t data_type) {
-  size_t byte_size = GetByteSizeOfCudnnDataType(data_type);
-  FOR_RANGE(int, i, 0, ndim) { byte_size *= dims[i]; }
-  return byte_size;
-}
-
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b) {
   auto ptr1 = reinterpret_cast<const uint8_t*>(&a);
   auto ptr2 = reinterpret_cast<const uint8_t*>(&b);
@@ -252,22 +268,22 @@ size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type) {
   return byte_size;
 }
 
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionFwdAlgo_t algo, size_t* sz) {
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionFwdAlgo_t algo, size_t* sz) {
   return cudnnGetConvolutionForwardWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
                                                  args.wdesc.Get(), args.cdesc.Get(),
                                                  args.ydesc.Get(), algo, sz);
 }
 
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionBwdDataAlgo_t algo, size_t* sz) {
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionBwdDataAlgo_t algo, size_t* sz) {
   return cudnnGetConvolutionBackwardDataWorkspaceSize(res->cudnn_handle(), args.wdesc.Get(),
                                                       args.ydesc.Get(), args.cdesc.Get(),
                                                       args.xdesc.Get(), algo, sz);
 }
 
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
-                                   cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz) {
+cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                        cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz) {
   return cudnnGetConvolutionBackwardFilterWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
                                                         args.ydesc.Get(), args.cdesc.Get(),
                                                         args.wdesc.Get(), algo, sz);
@@ -276,104 +292,100 @@ cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource*
 template<>
 struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
   using perf_t = cudnnConvolutionFwdAlgoPerf_t;
-  using algo_t = cudnnConvolutionFwdAlgo_t;
-  static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+
+  static int GetAlgoMaxCount(CudnnConvResource* res) {
+    int max_algo_cnt = 0;
+    CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
+    return max_algo_cnt;
+  }
 
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                              perf_t* algo_perf) {
-    int max_algo_cnt = 0;
+                              std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
-        max_algo_cnt, &found_algo_cnt, perf_vec.data()));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               perf_t* algo_perf) {
-    int max_algo_cnt = 0;
+                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
-        res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(), max_algo_cnt,
-        &found_algo_cnt, perf_vec.data(), res->ws_dptr(), args.params.max_ws_size));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        args.params.max_ws_size));
+    perf_vec->resize(found_algo_cnt);
   }
 };
 
 template<>
 struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
   using perf_t = cudnnConvolutionBwdDataAlgoPerf_t;
-  using algo_t = cudnnConvolutionBwdDataAlgo_t;
-  static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
+
+  static int GetAlgoMaxCount(CudnnConvResource* res) {
+    int max_algo_cnt = 0;
+    CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
+    return max_algo_cnt;
+  }
 
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                              perf_t* algo_perf) {
-    int max_algo_cnt = 0;
+                              std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
-        max_algo_cnt, &found_algo_cnt, perf_vec.data()));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               perf_t* algo_perf) {
-    int max_algo_cnt = 0;
+                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
-        res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(), max_algo_cnt,
-        &found_algo_cnt, perf_vec.data(), res->ws_dptr(), args.params.max_ws_size));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        args.params.max_ws_size));
+    perf_vec->resize(found_algo_cnt);
   }
 };
 
 template<>
 struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
   using perf_t = cudnnConvolutionBwdFilterAlgoPerf_t;
-  using algo_t = cudnnConvolutionBwdFilterAlgo_t;
-  static constexpr algo_t DEFAULT_ALGO = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
 
-  static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                              perf_t* algo_perf) {
+  static int GetAlgoMaxCount(CudnnConvResource* res) {
     int max_algo_cnt = 0;
-    int found_algo_cnt = 0;
     CudaCheck(
         cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    return max_algo_cnt;
+  }
+
+  static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
+                              std::vector<perf_t>* perf_vec) {
+    int found_algo_cnt = 0;
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
-        max_algo_cnt, &found_algo_cnt, perf_vec.data()));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               perf_t* algo_perf) {
-    int max_algo_cnt = 0;
+                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    CudaCheck(
-        cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(res->cudnn_handle(), &max_algo_cnt));
-    std::vector<perf_t> perf_vec(max_algo_cnt);
+    perf_vec->reserve(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
-        res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(), max_algo_cnt,
-        &found_algo_cnt, perf_vec.data(), res->ws_dptr(), args.params.max_ws_size));
-    perf_vec.resize(found_algo_cnt);
-    *algo_perf = GetBestAlgorithm<perf_t>(args, res, perf_vec);
+        res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
+        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        args.params.max_ws_size));
+    perf_vec->resize(found_algo_cnt);
   }
 };
 
@@ -386,14 +398,13 @@ perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args) {
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource* res) {
   auto Infer = [args, res](const CudnnConvParams& params) {
-    perf_t perf;
+    std::vector<perf_t> perf_vec;
     if (args->heuristic) {
-      CudnnConvAlgorithmSearch<perf_t>::HeuristicSearch(*args, res, &perf);
+      CudnnConvAlgorithmSearch<perf_t>::HeuristicSearch(*args, res, &perf_vec);
     } else {
-      CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf);
+      CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
     }
-    CHECK_LE(perf.memory, args->params.max_ws_size);
-    return perf;
+    return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
   size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
   return ThreadLocalCachedCall(cache_size, Infer, args->params);
@@ -401,10 +412,8 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
 
 template<typename perf_t, typename algo_t>
 perf_t GetCudnnConvAlgorithmPerference(CudnnConvArgs* args, algo_t algo) {
-  perf_t perf;
   ManagedCudnnConvResource res(*args);
-  SetAlgo4Perf(*args, &res, &perf, algo);
-  return perf;
+  return GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(args, &res, algo);
 }
 
 template<typename perf_t, typename algo_t>
@@ -415,25 +424,17 @@ perf_t GetCudnnConvAlgorithmPerferenceWithResource(CudnnConvArgs* args, CudnnCon
   return perf;
 }
 
-#define EXPLICIT_INSTANTIAT_FIND_CUDNN_CONV_ALGORITHM(perf_t) \
-  template perf_t FindCudnnConvAlgorithm(CudnnConvArgs*);     \
-  template perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs*, CudnnConvResource*);
+#define EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(perf_t)                        \
+  template perf_t FindCudnnConvAlgorithm(CudnnConvArgs*);                                 \
+  template perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs*, CudnnConvResource*); \
+  template perf_t GetCudnnConvAlgorithmPerference(CudnnConvArgs*,                         \
+                                                  decltype(std::declval<perf_t>().algo)); \
+  template perf_t GetCudnnConvAlgorithmPerferenceWithResource(                            \
+      CudnnConvArgs*, CudnnConvResource*, decltype(std::declval<perf_t>().algo));
 
-#define EXPLICIT_INSTANTIAT_GET_CUDNN_CONV_ALGORITHM_PERFERENCE(perf_t, algo_t)                   \
-  template perf_t GetCudnnConvAlgorithmPerference(CudnnConvArgs*, algo_t);                        \
-  template perf_t GetCudnnConvAlgorithmPerferenceWithResource(CudnnConvArgs*, CudnnConvResource*, \
-                                                              algo_t);
-
-EXPLICIT_INSTANTIAT_FIND_CUDNN_CONV_ALGORITHM(cudnnConvolutionFwdAlgoPerf_t)
-EXPLICIT_INSTANTIAT_FIND_CUDNN_CONV_ALGORITHM(cudnnConvolutionBwdDataAlgoPerf_t)
-EXPLICIT_INSTANTIAT_FIND_CUDNN_CONV_ALGORITHM(cudnnConvolutionBwdFilterAlgoPerf_t)
-
-EXPLICIT_INSTANTIAT_GET_CUDNN_CONV_ALGORITHM_PERFERENCE(cudnnConvolutionFwdAlgoPerf_t,
-                                                        cudnnConvolutionFwdAlgo_t)
-EXPLICIT_INSTANTIAT_GET_CUDNN_CONV_ALGORITHM_PERFERENCE(cudnnConvolutionBwdDataAlgoPerf_t,
-                                                        cudnnConvolutionBwdDataAlgo_t)
-EXPLICIT_INSTANTIAT_GET_CUDNN_CONV_ALGORITHM_PERFERENCE(cudnnConvolutionBwdFilterAlgoPerf_t,
-                                                        cudnnConvolutionBwdFilterAlgo_t)
+EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(cudnnConvolutionFwdAlgoPerf_t)
+EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(cudnnConvolutionBwdDataAlgoPerf_t)
+EXPLICIT_INSTANTIAT_CUDNN_CONV_ALGORITHM_INTERFACE(cudnnConvolutionBwdFilterAlgoPerf_t)
 
 }  // namespace oneflow
 

@@ -96,7 +96,16 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
                          job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
                          job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                          job_desc().job_conf().cudnn_conv_enable_pseudo_half());
-      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(&args);
+      using perf_t = cudnnConvolutionBwdFilterAlgoPerf_t;
+      using algo_t = cudnnConvolutionBwdFilterAlgo_t;
+      perf_t algo_perf;
+      if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+        algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
+            &args,
+            static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_bwd_filter_algo()));
+      } else {
+        algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
+      }
       CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS);
       CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size);
       workspace_size = algo_perf.memory;

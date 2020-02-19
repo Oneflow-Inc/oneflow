@@ -71,7 +71,7 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   using perf_t = cudnnConvolutionFwdAlgoPerf_t;
   using algo_t = cudnnConvolutionFwdAlgo_t;
   perf_t algo_perf;
-  if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+  if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
     algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
         &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
   } else {
@@ -206,7 +206,7 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   using perf_t = cudnnConvolutionFwdAlgoPerf_t;
   using algo_t = cudnnConvolutionFwdAlgo_t;
   perf_t algo_perf;
-  if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+  if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
     algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
         &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
   } else {
