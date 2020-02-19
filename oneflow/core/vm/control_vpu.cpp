@@ -4,7 +4,6 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/free_mirrored_object_handler.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/static_counter.h"
 #include "oneflow/core/common/flat_msg_view.h"
 
 namespace oneflow {
@@ -45,11 +44,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
 }  // namespace
 
-DEFINE_STATIC_COUNTER(kCtrlInstrOpCode);
-static const int kNewMirroredObjectSymbol = STATIC_COUNTER(kCtrlInstrOpCode);
-INCREASE_STATIC_COUNTER(kCtrlInstrOpCode);
-static const int kDeleteMirroredObjectSymbol = STATIC_COUNTER(kCtrlInstrOpCode);
-INCREASE_STATIC_COUNTER(kCtrlInstrOpCode);
+enum CtrlInstrOpCode { kNewMirroredObjectSymbol = 0, kDeleteMirroredObjectSymbol };
 
 typedef void (*CtrlInstrFunc)(VpuScheduler*, VpuInstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
@@ -81,7 +76,7 @@ ObjectMsgPtr<VpuInstructionMsg> ControlVpu::NewMirroredObjectSymbol(uint64_t sym
   auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
   auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
   vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
-  vpu_instr_proto->set_opcode(kNewMirroredObjectSymbol);
+  vpu_instr_proto->set_opcode(CtrlInstrOpCode::kNewMirroredObjectSymbol);
   {
     FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view(vpu_instr_proto->mutable_operand());
     view->set_symbol(symbol);
@@ -107,7 +102,7 @@ void NewMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_ins
     CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
   }
 }
-REGISTER_CTRL_INSTRUCTION(kNewMirroredObjectSymbol, NewMirroredObjectSymbol);
+REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewMirroredObjectSymbol, NewMirroredObjectSymbol);
 
 // clang-format off
 BEGIN_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
@@ -120,7 +115,7 @@ ObjectMsgPtr<VpuInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
   auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
   auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
   vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
-  vpu_instr_proto->set_opcode(kDeleteMirroredObjectSymbol);
+  vpu_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vpu_instr_proto->mutable_operand());
     view->mutable_mutable_logical_object_id()->mutable_value()->CopyFrom(logical_object_id);
@@ -140,7 +135,7 @@ void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_
   logical_object->set_free_mirrored_object_handler(FreeMirroredObjectTryDeleter::Singleton());
   logical_object->free_mirrored_object_handler().Call(logical_object);
 }
-REGISTER_CTRL_INSTRUCTION(kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
+REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 
 void ControlVpu::Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const {
   VpuInstructionOpcode opcode = vpu_instr_msg->vpu_instruction_proto().opcode();
