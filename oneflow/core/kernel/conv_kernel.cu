@@ -57,15 +57,33 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->EnableCudnn());
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  CudnnConvArgs args(this->job_desc().job_conf(), this->GetCustomizedOpConf(),
-                     device_ctx->cudnn_handle(), in_blob, out_blob, weight_blob, fw_cudnn_buf);
-  auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(&args);
+  CudnnConvArgs args(this->GetCustomizedOpConf(), in_blob->data_type(), in_blob->shape(),
+                     weight_blob->data_type(), weight_blob->shape(), out_blob->data_type(),
+                     out_blob->shape(),
+                     GetValFromPbMessage<std::string>(this->GetCustomizedOpConf(), "data_format"),
+                     fw_cudnn_buf->ByteSizeOfBlobBody(),
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                     this->job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+  AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(in_blob->dptr()),
+                                 const_cast<void*>(weight_blob->dptr()), out_blob->mut_dptr(),
+                                 fw_cudnn_buf->mut_dptr());
+  using perf_t = cudnnConvolutionFwdAlgoPerf_t;
+  using algo_t = cudnnConvolutionFwdAlgo_t;
+  perf_t algo_perf;
+  if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+    algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
+        &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
+  } else {
+    algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
+  }
   CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
   CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
-  CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<float16>(), args.xdesc.Get(),
-                                    args.x_dptr, args.wdesc.Get(), args.w_dptr, args.cdesc.Get(),
-                                    algo_perf.algo, args.ws_dptr, args.params.max_ws_size,
-                                    CudnnSPZeroPtr<float16>(), args.ydesc.Get(), args.y_dptr));
+  CudaCheck(cudnnConvolutionForward(
+      device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), args.xdesc.Get(), in_blob->dptr(),
+      args.wdesc.Get(), weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
+      fw_cudnn_buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr<float16>(),
+      args.ydesc.Get(), out_blob->mut_dptr()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
@@ -174,15 +192,33 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  CudnnConvArgs args(this->job_desc().job_conf(), this->GetCustomizedOpConf(),
-                     device_ctx->cudnn_handle(), in_blob, out_blob, weight_blob, fw_cudnn_buf);
-  auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(&args);
+  CudnnConvArgs args(this->GetCustomizedOpConf(), in_blob->data_type(), in_blob->shape(),
+                     weight_blob->data_type(), weight_blob->shape(), out_blob->data_type(),
+                     out_blob->shape(),
+                     GetValFromPbMessage<std::string>(this->GetCustomizedOpConf(), "data_format"),
+                     fw_cudnn_buf->ByteSizeOfBlobBody(),
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                     this->job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+  AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(in_blob->dptr()),
+                                 const_cast<void*>(weight_blob->dptr()), out_blob->mut_dptr(),
+                                 fw_cudnn_buf->mut_dptr());
+  using perf_t = cudnnConvolutionFwdAlgoPerf_t;
+  using algo_t = cudnnConvolutionFwdAlgo_t;
+  perf_t algo_perf;
+  if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+    algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
+        &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
+  } else {
+    algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
+  }
   CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
   CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
-  CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr,
-                                    args.wdesc.Get(), args.w_dptr, args.cdesc.Get(), algo_perf.algo,
-                                    args.ws_dptr, args.params.max_ws_size, CudnnSPZeroPtr<T>(),
-                                    args.ydesc.Get(), args.y_dptr));
+  CudaCheck(cudnnConvolutionForward(device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(),
+                                    args.xdesc.Get(), in_blob->dptr(), args.wdesc.Get(),
+                                    weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
+                                    fw_cudnn_buf->mut_dptr(), args.params.max_ws_size,
+                                    CudnnSPZeroPtr<T>(), args.ydesc.Get(), out_blob->mut_dptr()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");

@@ -123,8 +123,14 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
     // cudnn_buf
     size_t workspace_size = cudnn_buf_limit_byte();
     if (!out_blob_desc->is_dynamic()) {
-      CudnnConvArgs args(this->job_desc().job_conf(), GetCustomizedConf(), in_blob_desc,
-                         out_blob_desc, weight_blob_desc, workspace_size);
+      CudnnConvArgs args(GetCustomizedConf(), in_blob_desc->data_type(),
+                         ShapeView(in_blob_desc->shape()), weight_blob_desc->data_type(),
+                         ShapeView(weight_blob_desc->shape()), out_blob_desc->data_type(),
+                         ShapeView(out_blob_desc->shape()),
+                         GetValFromPbMessage<std::string>(GetCustomizedConf(), "data_format"),
+                         workspace_size, job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                         job_desc().job_conf().cudnn_conv_enable_pseudo_half());
       auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(&args);
       CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS);
       CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size);

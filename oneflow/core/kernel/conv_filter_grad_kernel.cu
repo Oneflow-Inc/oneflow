@@ -17,17 +17,36 @@ class ConvFilterGradGpuKernel final : public KernelIf<DeviceType::kGPU> {
 
   void ForwardDataContent(const KernelCtx &ctx,
                           std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
-    CudnnConvArgs args(this->job_desc().job_conf(),
-                       this->op_conf().conv_filter_grad_conf().conv_conf(),
-                       ctx.device_ctx->cudnn_handle(), BnInOp2Blob("x"), BnInOp2Blob("dy"),
-                       BnInOp2Blob("filter_diff"), BnInOp2Blob("buf"));
-    auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(&args);
+    const Blob *dy = BnInOp2Blob("dy");
+    const Blob *x = BnInOp2Blob("x");
+    Blob *filter_diff = BnInOp2Blob("filter_diff");
+    Blob *buf = BnInOp2Blob("buf");
+    const ConvConf &conv_conf = this->op_conf().conv_filter_grad_conf().conv_conf();
+    CudnnConvArgs args(conv_conf, x->data_type(), x->shape(), filter_diff->data_type(),
+                       filter_diff->shape(), dy->data_type(), dy->shape(), conv_conf.data_format(),
+                       buf->ByteSizeOfBlobBody(),
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                       this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       this->job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+    AllocatedCudnnConvResource res(ctx.device_ctx->cudnn_handle(), const_cast<void *>(x->dptr()),
+                                   filter_diff->mut_dptr(), const_cast<void *>(dy->dptr()),
+                                   buf->mut_dptr());
+    using perf_t = cudnnConvolutionBwdFilterAlgoPerf_t;
+    using algo_t = cudnnConvolutionBwdFilterAlgo_t;
+    perf_t algo_perf;
+    if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+      algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
+          &args, &res,
+          static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_bwd_filter_algo()));
+    } else {
+      algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
+    }
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
-    CHECK_LE(algo_perf.memory, BnInOp2Blob("buf")->ByteSizeOfBlobBody());
+    CHECK_LE(algo_perf.memory, buf->ByteSizeOfBlobBody());
     CudaCheck(cudnnConvolutionBackwardFilter(
-        args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
-        args.y_dptr, args.cdesc.Get(), algo_perf.algo, args.ws_dptr, args.params.max_ws_size,
-        CudnnSPZeroPtr<T>(), args.wdesc.Get(), args.w_dptr));
+        ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
+        args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
+        args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
   }
 };
 

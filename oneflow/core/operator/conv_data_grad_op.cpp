@@ -60,7 +60,12 @@ Maybe<void> ConvDataGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     size_t workspace_size = cudnn_buf_limit_byte();
     if (!dx->is_dynamic()) {
-      CudnnConvArgs args(this->job_desc().job_conf(), conv_conf, dx, dy, filter, workspace_size);
+      CudnnConvArgs args(conv_conf, dx->data_type(), ShapeView(dx->shape()), filter->data_type(),
+                         ShapeView(filter->shape()), dy->data_type(), ShapeView(dy->shape()),
+                         conv_conf.data_format(), workspace_size,
+                         job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                         job_desc().job_conf().cudnn_conv_enable_pseudo_half());
       auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdDataAlgoPerf_t>(&args);
       CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS);
       CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size);

@@ -48,51 +48,112 @@ struct CudnnConvParams {
   size_t max_ws_size;
 };
 
-bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
-
 struct CudnnConvArgs final {
   CudnnConvParams params;
   CudnnTensorDesc xdesc;
   CudnnTensorDesc ydesc;
   CudnnFilterDesc wdesc;
   CudnnConvDesc cdesc;
-  cudnnHandle_t handle;
-  void* x_dptr;
-  void* y_dptr;
-  void* w_dptr;
-  void* ws_dptr;
   bool heuristic;
   bool deterministic;
-  int force_fwd_algo;
-  int force_bwd_data_algo;
-  int force_bwd_filter_algo;
-  bool need_create_handle;
-  bool need_free_memory;
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
-  CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf, const BlobDesc* x,
-                const BlobDesc* y, const BlobDesc* w, size_t max_ws_size);
-  CudnnConvArgs(const JobConfigProto& job_conf, const PbMessage& conv_conf, cudnnHandle_t handle,
-                const Blob* x, const Blob* y, const Blob* w, Blob* buf);
-  ~CudnnConvArgs();
-  void AllocateIfNeed();
+  CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type, const ShapeView& x_shape,
+                DataType w_data_type, const ShapeView& w_shape, DataType y_data_type,
+                const ShapeView& y_shape, const std::string& data_format, size_t max_workspace_size,
+                bool heuristic_search, bool use_deterministic_algo_only, bool enable_pseudo_half);
 };
 
+class CudnnConvResource {
+ public:
+  CudnnConvResource() = default;
+  virtual ~CudnnConvResource() = default;
+  virtual cudnnHandle_t cudnn_handle() = 0;
+  virtual void* w_mut_dptr() = 0;
+  virtual void* x_mut_dptr() = 0;
+  virtual void* y_mut_dptr() = 0;
+  virtual const void* w_const_dptr() const = 0;
+  virtual const void* x_const_dptr() const = 0;
+  virtual const void* y_const_dptr() const = 0;
+  virtual void* ws_dptr() = 0;
+};
+
+class AllocatedCudnnConvResource final : public CudnnConvResource {
+ public:
+  AllocatedCudnnConvResource(cudnnHandle_t handle, void* x_dptr, void* w_dptr, void* y_dptr,
+                             void* ws_dptr)
+      : handle_(handle), x_dptr_(x_dptr), w_dptr_(w_dptr), y_dptr_(y_dptr), ws_dptr_(ws_dptr) {}
+  ~AllocatedCudnnConvResource() = default;
+  cudnnHandle_t cudnn_handle() override { return handle_; }
+  const void* x_const_dptr() const override { return x_dptr_; }
+  const void* w_const_dptr() const override { return w_dptr_; }
+  const void* y_const_dptr() const override { return y_dptr_; }
+  void* x_mut_dptr() override { return x_dptr_; }
+  void* w_mut_dptr() override { return w_dptr_; }
+  void* y_mut_dptr() override { return y_dptr_; }
+  void* ws_dptr() override { return ws_dptr_; }
+
+ private:
+  cudnnHandle_t handle_;
+  void* x_dptr_;
+  void* w_dptr_;
+  void* y_dptr_;
+  void* ws_dptr_;
+};
+
+class ManagedCudnnConvResource final : public CudnnConvResource {
+ public:
+  ManagedCudnnConvResource(const CudnnConvArgs& args);
+  ~ManagedCudnnConvResource() override;
+  cudnnHandle_t cudnn_handle() override;
+  void* x_mut_dptr() override;
+  void* w_mut_dptr() override;
+  void* y_mut_dptr() override;
+  const void* x_const_dptr() const override;
+  const void* w_const_dptr() const override;
+  const void* y_const_dptr() const override;
+  void* ws_dptr() override;
+
+ private:
+  size_t ByteSize4Tensor(const int* dims, int ndim, cudnnDataType_t data_type);
+
+  cudnnHandle_t handle_;
+  void* x_dptr_;
+  void* w_dptr_;
+  void* y_dptr_;
+  void* ws_dptr_;
+  size_t x_byte_size_;
+  size_t w_byte_size_;
+  size_t y_byte_size_;
+  size_t ws_byte_size_;
+};
+
+bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
 DataType GetConvDescDataType(DataType data_type, bool pseudo_half);
 size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type);
 
 template<typename perf_t>
 struct CudnnConvAlgorithmSearch;
 
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, cudnnConvolutionFwdAlgo_t algo,
-                                   size_t* sz);
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, cudnnConvolutionBwdDataAlgo_t algo,
-                                   size_t* sz);
-cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, cudnnConvolutionBwdFilterAlgo_t algo,
-                                   size_t* sz);
+cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                   cudnnConvolutionFwdAlgo_t algo, size_t* sz);
+cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                   cudnnConvolutionBwdDataAlgo_t algo, size_t* sz);
+cudnnStatus_t GetConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
+                                   cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);
+
+template<typename perf_t>
+perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource* res);
+
+template<typename perf_t, typename algo_t>
+perf_t GetCudnnConvAlgorithmPerference(CudnnConvArgs* args, algo_t algo);
+
+template<typename perf_t, typename algo_t>
+perf_t GetCudnnConvAlgorithmPerferenceWithResource(CudnnConvArgs* args, CudnnConvResource* res,
+                                                   algo_t algo);
 
 }  // namespace oneflow
 
