@@ -10,7 +10,7 @@ using MaybeAvailableAccessList = VpuScheduler::maybe_available_access_list_Objec
 using TmpWaitingVmInstrMsgList = VpuScheduler::tmp_waiting_msg_list_ObjectMsgListType;
 using NewVmInstrCtxList = VpuScheduler::new_vm_instr_ctx_list_ObjectMsgListType;
 using Id2LogicalObject = VpuScheduler::id2logical_object_ObjectMsgSkipListType;
-using ActiveVpuCtxList = VpuScheduler::active_vpu_ctx_list_ObjectMsgListType;
+using ActiveVmStreamList = VpuScheduler::active_vm_stram_list_ObjectMsgListType;
 
 namespace {
 
@@ -90,9 +90,9 @@ void MakeVmInstructionCtx(VpuScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VpuTypeId vpu_type_id = vm_instr_msg->vm_instruction_proto().vpu_type_id();
     auto* vpu_type_ctx = scheduler->mut_vpu_type_id2vpu_type_ctx()->FindPtr(vpu_type_id);
-    OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_type_ctx->mut_vpu_ctx_list(), vpu_ctx) {
+    OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vpu_type_ctx->mut_vm_stram_list(), vm_stram) {
       auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
-          scheduler->mut_default_allocator(), vm_instr_msg, vpu_ctx);
+          scheduler->mut_default_allocator(), vm_instr_msg, vm_stram);
       ret_vm_instr_ctx_list->PushBack(vm_instr_ctx.Mutable());
     }
     vm_instr_msg_list->Erase(vm_instr_msg);
@@ -131,7 +131,7 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             NewVmInstrCtxList* new_vm_instr_ctx_list,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
   OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
-    int64_t parallel_id = vm_instr_ctx->vpu_ctx().vpu_id().parallel_id();
+    int64_t parallel_id = vm_instr_ctx->vm_stram().vpu_id().parallel_id();
     const auto& operands = vm_instr_ctx->vm_instruction_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (operand.has_const_operand()) {
@@ -163,18 +163,18 @@ void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instr_ctx_lis
 void DispatchVmInstructionCtx(VpuScheduler* scheduler,
                               ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
   auto* allocator = scheduler->mut_default_allocator();
-  auto* active_vpu_ctx_list = scheduler->mut_active_vpu_ctx_list();
+  auto* active_vm_stram_list = scheduler->mut_active_vm_stram_list();
   while (auto* first = ready_vm_instr_ctx_list->Begin()) {
-    auto* vpu_ctx = first->mut_vpu_ctx();
-    ready_vm_instr_ctx_list->MoveToDstBack(first, vpu_ctx->mut_collect_vm_instruction_list());
-    if (vpu_ctx->is_active_vpu_ctx_link_empty()) { active_vpu_ctx_list->PushBack(vpu_ctx); }
+    auto* vm_stram = first->mut_vm_stram();
+    ready_vm_instr_ctx_list->MoveToDstBack(first, vm_stram->mut_collect_vm_instruction_list());
+    if (vm_stram->is_active_vm_stram_link_empty()) { active_vm_stram_list->PushBack(vm_stram); }
   }
-  OBJECT_MSG_LIST_FOR_EACH_PTR(active_vpu_ctx_list, vpu_ctx) {
-    auto pkg = ObjectMsgPtr<RunningVmInstructionPackage>::NewFrom(allocator, vpu_ctx);
-    vpu_ctx->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_ctx_list());
-    vpu_ctx->mut_vpu_set_ctx()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
-    vpu_ctx->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
-    active_vpu_ctx_list->Erase(vpu_ctx);
+  OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stram_list, vm_stram) {
+    auto pkg = ObjectMsgPtr<RunningVmInstructionPackage>::NewFrom(allocator, vm_stram);
+    vm_stram->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_ctx_list());
+    vm_stram->mut_vpu_set_ctx()->mut_launched_pkg_list()->PushBack(pkg.Mutable());
+    vm_stram->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
+    active_vm_stram_list->Erase(vm_stram);
   }
 }
 

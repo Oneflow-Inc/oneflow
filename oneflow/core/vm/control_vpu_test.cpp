@@ -28,7 +28,7 @@ TEST(ControlVpu, new_symbol) {
   ASSERT_TRUE(scheduler->waiting_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->ready_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->maybe_available_access_list().empty());
-  ASSERT_TRUE(scheduler->active_vpu_ctx_list().empty());
+  ASSERT_TRUE(scheduler->active_vm_stram_list().empty());
   ASSERT_TRUE(scheduler->vpu_set_ctx_list().empty());
   ASSERT_TRUE(scheduler->vpu_type_id2vpu_type_ctx().empty());
   ASSERT_TRUE(scheduler->zombie_logical_object_list().empty());
@@ -57,7 +57,7 @@ TEST(ControlVpu, delete_symbol) {
   ASSERT_TRUE(scheduler->waiting_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->ready_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->maybe_available_access_list().empty());
-  ASSERT_TRUE(scheduler->active_vpu_ctx_list().empty());
+  ASSERT_TRUE(scheduler->active_vm_stram_list().empty());
   ASSERT_TRUE(scheduler->vpu_set_ctx_list().empty());
   ASSERT_TRUE(scheduler->vpu_type_id2vpu_type_ctx().empty());
   ASSERT_TRUE(scheduler->zombie_logical_object_list().empty());

@@ -19,11 +19,11 @@ class InvalidVpu final : public Vpu {
     return nullptr;
   }
   VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
-                                               const VpuCtx* vpu_ctx) const override {
+                                               const VmStream* vm_stram) const override {
     UNIMPLEMENTED();
     return nullptr;
   }
-  void Run(VpuCtx* vpu_ctx, RunningVmInstructionPackage* vm_instr_pkg) const override {
+  void Run(VmStream* vm_stram, RunningVmInstructionPackage* vm_instr_pkg) const override {
     UNIMPLEMENTED();
   }
 };

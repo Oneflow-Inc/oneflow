@@ -15,7 +15,7 @@ class VmInstruction {
   VmInstruction() = default;
 };
 
-class VpuCtx;
+class VmStream;
 class ObjectMsgAllocator;
 class VmInstructionStatusQuerier;
 class RunningVmInstructionPackage;
@@ -27,8 +27,8 @@ class Vpu {
   virtual const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const = 0;
   virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
                                                        int* allocated_size,
-                                                       const VpuCtx* vpu_ctx) const = 0;
-  virtual void Run(VpuCtx* vpu_ctx, RunningVmInstructionPackage* vm_instr_pkg) const = 0;
+                                                       const VmStream* vm_stram) const = 0;
+  virtual void Run(VmStream* vm_stram, RunningVmInstructionPackage* vm_instr_pkg) const = 0;
 
  protected:
   Vpu() = default;

@@ -3,19 +3,19 @@
 
 namespace oneflow {
 
-void VmInstructionCtx::__Init__(VmInstructionMsg* vm_instruction_msg, VpuCtx* vpu_ctx) {
+void VmInstructionCtx::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stram) {
   reset_vm_instruction_msg(vm_instruction_msg);
-  const auto& vpu = vpu_ctx->vpu_set_ctx().vpu_type_ctx().vpu();
+  const auto& vpu = vm_stram->vpu_set_ctx().vpu_type_ctx().vpu();
   VmInstructionOpcode opcode = vm_instruction_msg->vm_instruction_proto().opcode();
   set_vm_instruction(vpu.GetVmInstruction(opcode));
-  set_vpu_ctx(vpu_ctx);
+  set_vm_stram(vm_stram);
 }
 
-void RunningVmInstructionPackage::__Init__(VpuCtx* vpu_ctx) {
-  set_vpu_ctx(vpu_ctx);
-  const auto* vpu = &vpu_ctx->vpu_set_ctx().vpu_type_ctx().vpu();
-  mutable_status_querier()->__Init__([vpu, vpu_ctx](ObjectMsgAllocator* allocator, int32_t* size) {
-    return vpu->NewStatusQuerier(allocator, size, vpu_ctx);
+void RunningVmInstructionPackage::__Init__(VmStream* vm_stram) {
+  set_vm_stram(vm_stram);
+  const auto* vpu = &vm_stram->vpu_set_ctx().vpu_type_ctx().vpu();
+  mutable_status_querier()->__Init__([vpu, vm_stram](ObjectMsgAllocator* allocator, int32_t* size) {
+    return vpu->NewStatusQuerier(allocator, size, vm_stram);
   });
 }
 
