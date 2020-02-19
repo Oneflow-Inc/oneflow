@@ -23,6 +23,8 @@ set(LZ4_HEADERS
     "${LZ4_BUILD_DIR}/xxhash.h"
 )
 
+set(LZ4_CFLAGS "-O3 -fPIC")
+
 if(THIRD_PARTY)
 
 ExternalProject_Add(lz4
@@ -31,7 +33,7 @@ ExternalProject_Add(lz4
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j lib
+    BUILD_COMMAND make -j lib CFLAGS=${LZ4_CFLAGS}
     INSTALL_COMMAND ""
 )
 
