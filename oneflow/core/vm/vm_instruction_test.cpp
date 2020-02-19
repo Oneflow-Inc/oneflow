@@ -1,4 +1,4 @@
-#include "oneflow/core/vm/vpu_instruction.msg.h"
+#include "oneflow/core/vm/vm_instruction.msg.h"
 
 namespace oneflow {
 

@@ -12,7 +12,7 @@ namespace {
 TEST(ControlVpu, new_symbol) {
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<VpuScheduler>::NewFrom(&allocator);
-  VpuInstructionMsgList list;
+  VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
   uint64_t symbol_value = 9527;
@@ -24,9 +24,9 @@ TEST(ControlVpu, new_symbol) {
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->tmp_waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->new_vpu_instr_ctx_list().empty());
-  ASSERT_TRUE(scheduler->waiting_vpu_instr_ctx_list().empty());
-  ASSERT_TRUE(scheduler->ready_vpu_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->new_vm_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->waiting_vm_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->ready_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->maybe_available_access_list().empty());
   ASSERT_TRUE(scheduler->active_vpu_ctx_list().empty());
   ASSERT_TRUE(scheduler->vpu_set_ctx_list().empty());
@@ -40,7 +40,7 @@ TEST(ControlVpu, new_symbol) {
 
 TEST(ControlVpu, delete_symbol) {
   auto scheduler = ObjectMsgPtr<VpuScheduler>::New();
-  VpuInstructionMsgList list;
+  VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
   uint64_t symbol_value = 9527;
@@ -53,9 +53,9 @@ TEST(ControlVpu, delete_symbol) {
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   ASSERT_TRUE(scheduler->tmp_waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->new_vpu_instr_ctx_list().empty());
-  ASSERT_TRUE(scheduler->waiting_vpu_instr_ctx_list().empty());
-  ASSERT_TRUE(scheduler->ready_vpu_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->new_vm_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->waiting_vm_instr_ctx_list().empty());
+  ASSERT_TRUE(scheduler->ready_vm_instr_ctx_list().empty());
   ASSERT_TRUE(scheduler->maybe_available_access_list().empty());
   ASSERT_TRUE(scheduler->active_vpu_ctx_list().empty());
   ASSERT_TRUE(scheduler->vpu_set_ctx_list().empty());

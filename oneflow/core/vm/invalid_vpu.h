@@ -11,19 +11,19 @@ class InvalidVpu final : public Vpu {
   InvalidVpu() : Vpu() {}
   ~InvalidVpu() override = default;
 
-  void Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const;
+  void Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 
   // UNIMPLEMENTED methods
-  const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const override {
+  const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const override {
     UNIMPLEMENTED();
     return nullptr;
   }
-  VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
-                                                const VpuCtx* vpu_ctx) const override {
+  VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
+                                               const VpuCtx* vpu_ctx) const override {
     UNIMPLEMENTED();
     return nullptr;
   }
-  void Run(VpuCtx* vpu_ctx, RunningVpuInstructionPackage* vpu_instr_pkg) const override {
+  void Run(VpuCtx* vpu_ctx, RunningVmInstructionPackage* vm_instr_pkg) const override {
     UNIMPLEMENTED();
   }
 };

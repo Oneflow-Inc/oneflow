@@ -7,34 +7,34 @@ namespace oneflow {
 
 class VpuId;
 
-class VpuInstructionMsgObserver {
+class VmInstructionMsgObserver {
  public:
-  virtual ~VpuInstructionMsgObserver() = default;
+  virtual ~VmInstructionMsgObserver() = default;
 
   virtual void OnDispatched(const VpuId &) = 0;
   virtual void OnReady(const VpuId &) = 0;
   virtual void OnDone(const VpuId &) = 0;
 
  protected:
-  VpuInstructionMsgObserver() = default;
+  VmInstructionMsgObserver() = default;
 };
 
 class ObjectMsgAllocator;
 
-class VpuInstructionMsgNoneObserver : public VpuInstructionMsgObserver {
+class VmInstructionMsgNoneObserver : public VmInstructionMsgObserver {
  public:
-  VpuInstructionMsgNoneObserver() : VpuInstructionMsgObserver() {}
-  ~VpuInstructionMsgNoneObserver() override = default;
+  VmInstructionMsgNoneObserver() : VmInstructionMsgObserver() {}
+  ~VmInstructionMsgNoneObserver() override = default;
 
   void OnDispatched(const VpuId &) override{};
   void OnReady(const VpuId &) override{};
   void OnDone(const VpuId &) override{};
 
-  static VpuInstructionMsgNoneObserver *Singleton() {
-    static VpuInstructionMsgNoneObserver observer;
+  static VmInstructionMsgNoneObserver *Singleton() {
+    static VmInstructionMsgNoneObserver observer;
     return &observer;
   }
-  static VpuInstructionMsgNoneObserver *NewObserver(ObjectMsgAllocator *, int32_t *size) {
+  static VmInstructionMsgNoneObserver *NewObserver(ObjectMsgAllocator *, int32_t *size) {
     *size = 0;
     return Singleton();
   }

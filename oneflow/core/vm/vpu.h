@@ -5,30 +5,30 @@
 
 namespace oneflow {
 
-class VpuInstruction {
+class VmInstruction {
  public:
-  virtual ~VpuInstruction() = default;
+  virtual ~VmInstruction() = default;
 
   virtual void Execute() const = 0;
 
  protected:
-  VpuInstruction() = default;
+  VmInstruction() = default;
 };
 
 class VpuCtx;
 class ObjectMsgAllocator;
-class VpuInstructionStatusQuerier;
-class RunningVpuInstructionPackage;
+class VmInstructionStatusQuerier;
+class RunningVmInstructionPackage;
 
 class Vpu {
  public:
   virtual ~Vpu() = default;
 
-  virtual const VpuInstruction* GetVpuInstruction(VpuInstructionOpcode vpu_instr_opcode) const = 0;
-  virtual VpuInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
-                                                        int* allocated_size,
-                                                        const VpuCtx* vpu_ctx) const = 0;
-  virtual void Run(VpuCtx* vpu_ctx, RunningVpuInstructionPackage* vpu_instr_pkg) const = 0;
+  virtual const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const = 0;
+  virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
+                                                       int* allocated_size,
+                                                       const VpuCtx* vpu_ctx) const = 0;
+  virtual void Run(VpuCtx* vpu_ctx, RunningVmInstructionPackage* vm_instr_pkg) const = 0;
 
  protected:
   Vpu() = default;

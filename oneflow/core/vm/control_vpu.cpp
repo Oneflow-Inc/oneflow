@@ -1,6 +1,6 @@
 #include "oneflow/core/vm/vpu_type_desc.msg.h"
 #include "oneflow/core/vm/control_vpu.h"
-#include "oneflow/core/vm/vpu_instruction.msg.h"
+#include "oneflow/core/vm/vm_instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/free_mirrored_object_handler.h"
 #include "oneflow/core/common/util.h"
@@ -46,7 +46,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
 
 enum CtrlInstrOpCode { kNewMirroredObjectSymbol = 0, kDeleteMirroredObjectSymbol };
 
-typedef void (*CtrlInstrFunc)(VpuScheduler*, VpuInstructionMsg*);
+typedef void (*CtrlInstrFunc)(VpuScheduler*, VmInstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
 
 #define REGISTER_CTRL_INSTRUCTION(op_code, function_name) \
@@ -71,25 +71,25 @@ void MakeLogicalObjectId(LogicalObjectId* logical_object_id, uint64_t symbol, bo
   }
 }
 
-ObjectMsgPtr<VpuInstructionMsg> ControlVpu::NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
-                                                                    int64_t parallel_num) const {
-  auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
-  auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
-  vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
-  vpu_instr_proto->set_opcode(CtrlInstrOpCode::kNewMirroredObjectSymbol);
+ObjectMsgPtr<VmInstructionMsg> ControlVpu::NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
+                                                                   int64_t parallel_num) const {
+  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
+  vm_instr_proto->set_vpu_type_id(kControlVpuTypeId);
+  vm_instr_proto->set_opcode(CtrlInstrOpCode::kNewMirroredObjectSymbol);
   {
-    FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view(vpu_instr_proto->mutable_operand());
+    FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
     view->set_symbol(symbol);
     view->set_is_remote(is_remote);
     view->set_parallel_num(parallel_num);
   }
-  vpu_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
-  return vpu_instr_msg;
+  vm_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
+  return vm_instr_msg;
 }
 
-void NewMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) {
+void NewMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view;
-  CHECK(view->Match(vpu_instr_msg->mut_vpu_instruction_proto()->mut_operand()));
+  CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
   FlatMsg<LogicalObjectId> logical_object_id;
   MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_default_allocator(),
@@ -110,22 +110,22 @@ BEGIN_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
 END_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
-ObjectMsgPtr<VpuInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
+ObjectMsgPtr<VmInstructionMsg> ControlVpu::DeleteMirroredObjectSymbol(
     const LogicalObjectId& logical_object_id) const {
-  auto vpu_instr_msg = ObjectMsgPtr<VpuInstructionMsg>::New();
-  auto* vpu_instr_proto = vpu_instr_msg->mutable_vpu_instruction_proto();
-  vpu_instr_proto->set_vpu_type_id(kControlVpuTypeId);
-  vpu_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
+  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
+  vm_instr_proto->set_vpu_type_id(kControlVpuTypeId);
+  vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
-    FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vpu_instr_proto->mutable_operand());
+    FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mutable_logical_object_id()->mutable_value()->CopyFrom(logical_object_id);
   }
-  vpu_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
-  return vpu_instr_msg;
+  vm_instr_proto->mutable_vpu_mask()->mutable_all_vpu_enabled();
+  return vm_instr_msg;
 }
-void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) {
+void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view;
-  CHECK(view->Match(vpu_instr_msg->mut_vpu_instruction_proto()->mut_operand()));
+  CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
   const auto& logical_objectId = view->mutable_logical_object_id().value();
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
   CHECK_NOTNULL(logical_object);
@@ -137,9 +137,9 @@ void DeleteMirroredObjectSymbol(VpuScheduler* scheduler, VpuInstructionMsg* vpu_
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 
-void ControlVpu::Run(VpuScheduler* scheduler, VpuInstructionMsg* vpu_instr_msg) const {
-  VpuInstructionOpcode opcode = vpu_instr_msg->vpu_instruction_proto().opcode();
-  return ctrl_instr_table.at(opcode)(scheduler, vpu_instr_msg);
+void ControlVpu::Run(VpuScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
+  VmInstructionOpcode opcode = vm_instr_msg->vm_instruction_proto().opcode();
+  return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }
 
 }  // namespace oneflow

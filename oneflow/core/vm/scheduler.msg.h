@@ -2,29 +2,29 @@
 #define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 
 #include <mutex>
-#include "oneflow/core/vm/vpu_instruction.msg.h"
+#include "oneflow/core/vm/vm_instruction.msg.h"
 
 namespace oneflow {
 
-using VpuInstructionMsgList = OBJECT_MSG_LIST(VpuInstructionMsg, vpu_instruction_msg_link);
+using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
 
 // clang-format off
 BEGIN_OBJECT_MSG(VpuScheduler);
   // methods
   PUBLIC void __Init__() { __Init__(mut_allocator()); }
   PUBLIC void __Init__(ObjectMsgAllocator* allocator) { set_default_allocator(allocator); }
-  PUBLIC void Receive(VpuInstructionMsgList* vpu_instr_list);
+  PUBLIC void Receive(VmInstructionMsgList* vm_instr_list);
   PUBLIC void Schedule();
 
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
 
   //links
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, waiting_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionMsg, vpu_instruction_msg_link, tmp_waiting_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, new_vpu_instr_ctx_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, waiting_vpu_instr_ctx_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VpuInstructionCtx, vpu_instruction_ctx_link, ready_vpu_instr_ctx_list);
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, waiting_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, tmp_waiting_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, new_vm_instr_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, waiting_vm_instr_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, ready_vm_instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObject, maybe_available_access_link, maybe_available_access_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuCtx, active_vpu_ctx_link, active_vpu_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VpuSetCtx, vpu_set_ctx_link, vpu_set_ctx_list);

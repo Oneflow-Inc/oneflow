@@ -3,13 +3,13 @@
 
 namespace oneflow {
 
-class VpuInstructionStatusQuerier {
+class VmInstructionStatusQuerier {
  public:
-  virtual ~VpuInstructionStatusQuerier() = default;
+  virtual ~VmInstructionStatusQuerier() = default;
   virtual bool Done() const;
 
  protected:
-  VpuInstructionStatusQuerier() = default;
+  VmInstructionStatusQuerier() = default;
 };
 
 }  // namespace oneflow
