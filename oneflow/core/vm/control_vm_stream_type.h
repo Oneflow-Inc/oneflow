@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_VM_CONTROL_VPU_H_
-#define ONEFLOW_CORE_VM_CONTROL_VPU_H_
+#ifndef ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_
 
-#include "oneflow/core/vm/vpu.h"
+#include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction.msg.h"
 
 namespace oneflow {
@@ -9,10 +9,10 @@ namespace oneflow {
 class VpuScheduler;
 class VmInstructionMsg;
 
-class ControlVpu final {
+class ControlVmStreamType final {
  public:
-  ControlVpu() = default;
-  ~ControlVpu() = default;
+  ControlVmStreamType() = default;
+  ~ControlVmStreamType() = default;
 
   ObjectMsgPtr<VmInstructionMsg> NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
                                                          int64_t parallel_num) const;
@@ -26,4 +26,4 @@ static const VmStreamTypeId kControlVmStreamTypeId = 0;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CONTROL_VPU_H_
+#endif  // ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_

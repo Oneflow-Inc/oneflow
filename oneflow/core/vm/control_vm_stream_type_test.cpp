@@ -1,5 +1,5 @@
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/control_vpu.h"
+#include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
@@ -9,7 +9,7 @@ namespace test {
 
 namespace {
 
-TEST(ControlVpu, new_symbol) {
+TEST(ControlVmStreamType, new_symbol) {
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<VpuScheduler>::NewFrom(&allocator);
   VmInstructionMsgList list;
@@ -17,7 +17,7 @@ TEST(ControlVpu, new_symbol) {
   FlatMsg<LogicalObjectId> logical_object_id;
   uint64_t symbol_value = 9527;
   logical_object_id->set_remote_value(symbol_value);
-  list.EmplaceBack(ControlVpu().NewMirroredObjectSymbol(symbol_value, true, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, true, parallel_num));
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 1);
@@ -38,15 +38,15 @@ TEST(ControlVpu, new_symbol) {
   ASSERT_EQ(logical_object->parallel_id2mirrored_object().size(), parallel_num);
 }
 
-TEST(ControlVpu, delete_symbol) {
+TEST(ControlVmStreamType, delete_symbol) {
   auto scheduler = ObjectMsgPtr<VpuScheduler>::New();
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
   uint64_t symbol_value = 9527;
   logical_object_id->set_remote_value(symbol_value);
-  list.EmplaceBack(ControlVpu().NewMirroredObjectSymbol(symbol_value, true, parallel_num));
-  list.EmplaceBack(ControlVpu().DeleteMirroredObjectSymbol(logical_object_id.Get()));
+  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, true, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(logical_object_id.Get()));
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 2);
