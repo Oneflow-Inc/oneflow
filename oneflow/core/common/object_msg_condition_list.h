@@ -169,6 +169,6 @@ class ObjectMsgConditionList : public TrivialObjectMsgConditionList<LinkField> {
   ObjectMsgConditionList() { this->__Init__(); }
   ~ObjectMsgConditionList() { this->__Delete__(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CONDITION_LIST_H_

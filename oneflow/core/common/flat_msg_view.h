@@ -185,6 +185,6 @@ struct FlatMsgView final {
     T view_;
   };
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
