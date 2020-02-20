@@ -162,6 +162,14 @@ def set_cudnn_conv_force_bwd_data_algo(func_desc, value):
 def set_cudnn_conv_force_bwd_filter_algo(func_desc, value):
     func_desc.job_config_proto.cudnn_conv_force_bwd_filter_algo = value
 
+@oneflow_function_config('cudnn_conv_heuristic_search_algo')
+def set_cudnn_conv_heuristic_search_algo(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_heuristic_search_algo = value
+
+@oneflow_function_config('cudnn_conv_use_deterministic_algo_only')
+def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_use_deterministic_algo_only = value
+
 @oneflow_function_config('enable_reused_mem')
 def set_enable_reused_mem(func_desc, value = True):
     func_desc.job_config_proto.enable_reused_mem = value
