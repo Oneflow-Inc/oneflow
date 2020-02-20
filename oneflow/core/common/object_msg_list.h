@@ -23,20 +23,15 @@ namespace oneflow {
                             OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
                                                                            _DssFieldOffset)()>>
 
-#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem)                            \
-  for (ObjectMsgPtr<std::remove_pointer<decltype((list_ptr)->End())>::type> \
-           elem = (list_ptr)->Begin(),                                      \
-           __next_elem__ = (list_ptr)->Next(elem.Mutable());                \
-       elem.Mutable() != (list_ptr)->End();                                 \
-       elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__.Mutable()))
+#define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
+  _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
-#define OBJECT_MSG_LIST_FOR_EACH_PTR(list_ptr, elem)                       \
-  for (decltype((list_ptr)->End()) elem = (list_ptr)->Begin(),             \
-                                   __next_elem__ = (list_ptr)->Next(elem); \
-       elem != nullptr; elem = __next_elem__, __next_elem__ = (list_ptr)->Next(__next_elem__))
+#define OBJECT_MSG_LIST_FOR_EACH_PTR(list_ptr, elem) \
+  _OBJECT_MSG_LIST_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
 
-#define OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(list_ptr, elem) \
-  for (auto* elem = (list_ptr)->Begin(); elem != (list_ptr)->End(); elem = (list_ptr)->Next(elem))
+#define OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_ptr, elem)                                     \
+  _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, \
+                                       elem)
 
 // details
 
@@ -103,6 +98,26 @@ namespace oneflow {
  private:                                                      \
   EmbeddedListLink OF_PP_CAT(field_name, _);
 
+#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                         \
+  for (ObjectMsgPtr<list_type::value_type> elem, *end_if_not_null = nullptr;         \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)     \
+  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                  \
+      (StructField<list_type, EmbeddedListLink,                                      \
+                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
+      list_type::value_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
+
+#define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
+  EMBEDDED_LIST_FOR_EACH(                                                            \
+      (StructField<list_type, EmbeddedListLink,                                      \
+                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
+      list_type::value_link_struct_field, elem)
+
+#define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
+  EMBEDDED_LIST_UNSAFE_FOR_EACH(                                                     \
+      (StructField<list_type, EmbeddedListLink,                                      \
+                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
+      list_type::value_link_struct_field, elem)
+
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedListHeadInit {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
@@ -123,10 +138,17 @@ struct ObjectMsgEmbeddedListLinkDelete {
   static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { CHECK(field->empty()); }
 };
 
-template<typename LinkField>
+template<typename ValueLinkField>
 class TrivialObjectMsgList {
  public:
-  using value_type = typename LinkField::struct_type;
+  using value_type = typename ValueLinkField::struct_type;
+  using value_link_struct_field = ValueLinkField;
+
+  template<typename Enabled = void>
+  static constexpr int ContainerLinkOffset() {
+    return offsetof(TrivialObjectMsgList, list_head_)
+           + EmbeddedListHead<ValueLinkField>::ContainerLinkOffset();
+  }
 
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
@@ -213,7 +235,7 @@ class TrivialObjectMsgList {
   }
 
  private:
-  EmbeddedListHead<LinkField> list_head_;
+  EmbeddedListHead<ValueLinkField> list_head_;
 };
 
 template<typename LinkField>

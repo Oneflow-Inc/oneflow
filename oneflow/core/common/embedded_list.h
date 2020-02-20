@@ -47,12 +47,44 @@ struct EmbeddedListLink {
   EmbeddedListLink* next_;
 };
 
+#define EMBEDDED_LIST_FOR_EACH(head_link, elem_link_struct_field, elem) \
+  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, 0)
+
+#define EMBEDDED_LIST_FOR_EACH_WITH_EXPR(head_link, elem_link_struct_field, elem, expr) \
+  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr;   \
+       elem = nullptr, elem++)                                                          \
+  EMBEDDED_LIST_FOR_EACH_I(                                                             \
+      head_link, __elem_link__,                                                         \
+      ((elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)), expr))
+
+#define EMBEDDED_LIST_FOR_EACH_I(head_link, elem_link, expr)                              \
+  for (EmbeddedListLink* __head_link__ = (head_link), *elem_link = __head_link__->next(), \
+                         *__next_link__ = elem_link->next();                              \
+       (elem_link != __head_link__) && ((expr) || true);                                  \
+       elem_link = __next_link__, __next_link__ = __next_link__->next())
+
+#define EMBEDDED_LIST_UNSAFE_FOR_EACH(head_link, elem_link_struct_field, elem)        \
+  for (typename elem_link_struct_field::struct_type* elem = nullptr; elem == nullptr; \
+       elem = nullptr, elem++)                                                        \
+  EMBEDDED_LIST_UNSAFE_FOR_EACH_I(                                                    \
+      head_link, __elem_link__,                                                       \
+      (elem = elem_link_struct_field::StructPtr4FieldPtr(__elem_link__)))
+
+#define EMBEDDED_LIST_UNSAFE_FOR_EACH_I(head_link, elem_link, expr)                       \
+  for (EmbeddedListLink* __head_link__ = (head_link), *elem_link = __head_link__->next(); \
+       (elem_link != __head_link__) && ((expr), true); elem_link = elem_link->next())
+
 template<typename LinkField>
 class EmbeddedListHead {
  public:
   using value_type = typename LinkField::struct_type;
   static_assert(std::is_same<typename LinkField::field_type, EmbeddedListLink>::value,
                 "no EmbeddedListLink found");
+
+  template<typename Enabled = void>
+  static constexpr int ContainerLinkOffset() {
+    return offsetof(EmbeddedListHead, container_);
+  }
 
   std::size_t size() const { return size_; }
   bool empty() const {

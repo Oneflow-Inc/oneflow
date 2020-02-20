@@ -91,7 +91,7 @@ void MakeVmInstructionCtx(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_i
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     auto* vm_stream_rt_desc =
         scheduler->mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
-    OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(vm_stream_rt_desc->mut_vm_stream_list(), vm_stream) {
+    OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_vm_stream_list(), vm_stream) {
       auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
           scheduler->mut_default_allocator(), vm_instr_msg, vm_stream);
       ret_vm_instr_ctx_list->PushBack(vm_instr_ctx.Mutable());
@@ -131,7 +131,7 @@ inline void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
 void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             NewVmInstrCtxList* new_vm_instr_ctx_list,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
     int64_t parallel_id = vm_instr_ctx->vm_stream().vm_stream_id().parallel_id();
     const auto& operands = vm_instr_ctx->vm_instruction_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
@@ -187,7 +187,6 @@ void DispatchVmInstructionCtx(VmScheduler* scheduler,
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_default_allocator(allocator);
-  TODO();
 }
 
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
