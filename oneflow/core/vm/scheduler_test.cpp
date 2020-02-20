@@ -10,9 +10,10 @@ namespace test {
 namespace {
 
 TEST(VmScheduler, ToDot) {
-  std::cout << std::endl;
-  std::cout << ObjectMsgListReflection<VmScheduler>().ToDot() << std::endl;
-  std::cout << std::endl;
+  std::string dot_str = ObjectMsgListReflection<VmScheduler>().ToDot("VmScheduler");
+  //  std::cout << std::endl;
+  //  std::cout << dot_str << std::endl;
+  //  std::cout << std::endl;
 }
 
 }  // namespace

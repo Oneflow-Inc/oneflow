@@ -66,7 +66,7 @@ BEGIN_OBJECT_MSG(VmStreamDesc);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_devices_per_machine);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);

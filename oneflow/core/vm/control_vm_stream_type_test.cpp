@@ -1,6 +1,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
@@ -10,8 +11,9 @@ namespace test {
 namespace {
 
 TEST(ControlVmStreamType, new_symbol) {
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   CachedObjectMsgAllocator allocator(20, 100);
-  auto scheduler = ObjectMsgPtr<VmScheduler>::NewFrom(&allocator);
+  auto scheduler = ObjectMsgPtr<VmScheduler>::NewFrom(&allocator, vm_desc.Get());
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;
@@ -36,7 +38,8 @@ TEST(ControlVmStreamType, new_symbol) {
 }
 
 TEST(ControlVmStreamType, delete_symbol) {
-  auto scheduler = ObjectMsgPtr<VmScheduler>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   FlatMsg<LogicalObjectId> logical_object_id;

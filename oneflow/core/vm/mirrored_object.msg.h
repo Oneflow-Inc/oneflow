@@ -4,7 +4,7 @@
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
-#include "oneflow/core/vm/mem_zone_type_desc.msg.h"
+#include "oneflow/core/vm/vm_mem_zone_desc.msg.h"
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/free_mirrored_object_handler.h"
 

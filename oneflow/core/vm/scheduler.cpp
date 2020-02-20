@@ -185,6 +185,11 @@ void DispatchVmInstructionCtx(VmScheduler* scheduler,
 
 }  // namespace
 
+void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
+  set_default_allocator(allocator);
+  TODO();
+}
+
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
   mut_waiting_msg_list()->MoveFrom(vm_instr_list);
 }
