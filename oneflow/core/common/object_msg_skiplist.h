@@ -29,10 +29,12 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name) \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                   \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);               \
+#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)  \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                \
+  OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name); \
+  OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);  \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                    \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
@@ -51,6 +53,29 @@ namespace oneflow {
                                                                                                    \
  private:                                                                                          \
   OF_PP_CAT(field_name, _ObjectMsgSkipListType) OF_PP_CAT(field_name, _);
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
+                                               field_name)                                \
+ public:                                                                                  \
+  template<typename Enabled>                                                              \
+  struct ContainerElemStruct<field_counter, Enabled> final {                              \
+    using type = elem_type;                                                               \
+  };
+
+#define OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, \
+                                              field_name)                                \
+ public:                                                                                 \
+  template<typename Enable>                                                              \
+  struct LinkEdgesGetter<field_counter, Enable> final {                                  \
+    static void Call(std::set<ObjectMsgContainerLinkEdge>* edges) {                      \
+      ObjectMsgContainerLinkEdge edge;                                                   \
+      edge.container_type_name = typeid(self_type).name();                               \
+      edge.container_field_name = OF_PP_STRINGIZE(field_name) "_";                       \
+      edge.elem_type_name = typeid(elem_type).name();                                    \
+      edge.elem_link_name = OF_PP_STRINGIZE(elem_field_name) "_";                        \
+      edges->insert(edge);                                                               \
+    }                                                                                    \
+  };
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_KEY(field_counter, max_level, T, field_name)      \
   _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, T, field_name)                     \
@@ -82,30 +107,22 @@ namespace oneflow {
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->Clear();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->Clear(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListIteratorInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListIteratorDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->CheckEmpty();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->CheckEmpty(); }
 };
 
 template<typename ElemKeyField>
@@ -159,6 +176,6 @@ class ObjectMsgSkipList final : public TrivialObjectMsgSkipList<ItemField> {
   ObjectMsgSkipList() { this->__Init__(); }
   ~ObjectMsgSkipList() { this->Clear(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_SKIPLIST_H_

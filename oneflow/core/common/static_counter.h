@@ -30,6 +30,6 @@ namespace oneflow {
   struct _STATIC_COUNTER_NAME(counter_name)<auto_counter, Enabled> {                          \
     static const int value = _STATIC_COUNTER_NAME(counter_name)<auto_counter - 1>::value + 1; \
   };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STATIC_COUNTER_H_

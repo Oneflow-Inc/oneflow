@@ -23,6 +23,10 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(field_counter, elem_type, elem_field_name, \
                                                field_name)                                \
   _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)    \
+  OBJECT_MSG_DEFINE_CONDITION_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
+                                               field_name);                               \
+  OBJECT_MSG_DEFINE_CONDITION_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name,  \
+                                              field_name);                                \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedConditionListHeadInit);        \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedConditionListHeadDelete);    \
   DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
@@ -45,18 +49,37 @@ namespace oneflow {
  private:                                                                                      \
   OF_PP_CAT(field_name, _ObjectMsgListType) OF_PP_CAT(field_name, _);
 
+#define OBJECT_MSG_DEFINE_CONDITION_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
+                                                     field_name)                                \
+ public:                                                                                        \
+  template<typename Enabled>                                                                    \
+  struct ContainerElemStruct<field_counter, Enabled> final {                                    \
+    using type = elem_type;                                                                     \
+  };
+
+#define OBJECT_MSG_DEFINE_CONDITION_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name, \
+                                                    field_name)                                \
+ public:                                                                                       \
+  template<typename Enable>                                                                    \
+  struct LinkEdgesGetter<field_counter, Enable> final {                                        \
+    static void Call(std::set<ObjectMsgContainerLinkEdge>* edges) {                            \
+      ObjectMsgContainerLinkEdge edge;                                                         \
+      edge.container_type_name = typeid(self_type).name();                                     \
+      edge.container_field_name = OF_PP_STRINGIZE(field_name) "_";                             \
+      edge.elem_type_name = typeid(elem_type).name();                                          \
+      edge.elem_link_name = OF_PP_STRINGIZE(elem_field_name) "_";                              \
+      edges->insert(edge);                                                                     \
+    }                                                                                          \
+  };
+
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedConditionListHeadInit {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Init__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Init__(); }
 };
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedConditionListHeadDelete {
-  static void Call(WalkCtxType* ctx, PtrFieldType* field, const char* field_name) {
-    field->__Delete__();
-  }
+  static void Call(WalkCtxType* ctx, PtrFieldType* field) { field->__Delete__(); }
 };
 
 enum ObjectMsgConditionListStatus {
@@ -146,6 +169,6 @@ class ObjectMsgConditionList : public TrivialObjectMsgConditionList<LinkField> {
   ObjectMsgConditionList() { this->__Init__(); }
   ~ObjectMsgConditionList() { this->__Delete__(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CONDITION_LIST_H_

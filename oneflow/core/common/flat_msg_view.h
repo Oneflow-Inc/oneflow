@@ -102,7 +102,7 @@ class FlatMsgViewFieldMatchCtx {
 
 template<int field_counter, typename WalkCtxType, typename FieldPtrT>
 struct FlatMsgViewFieldMatcher {
-  static bool Call(WalkCtxType* ctx, FieldPtrT* field, const char* field_name) {
+  static bool Call(WalkCtxType* ctx, FieldPtrT* field) {
     using FieldType = typename std::remove_pointer<FieldPtrT>::type;
     auto* oneof = ctx->MutableOneof();
     if (!oneof->template HasField<FieldType>()) { return true; }
@@ -135,7 +135,7 @@ class FlatMsgViewFieldInitCtx {
 
 template<int field_counter, typename WalkCtxType, typename FieldPtrT>
 struct FlatMsgViewFieldIniter {
-  static void Call(WalkCtxType* ctx, FieldPtrT* field, const char* field_name) {
+  static void Call(WalkCtxType* ctx, FieldPtrT* field) {
     using FieldType = typename std::remove_pointer<FieldPtrT>::type;
     auto* oneof = ctx->AddOneof();
     *field = oneof->template MutableField<FieldType>();
@@ -185,6 +185,6 @@ struct FlatMsgView final {
     T view_;
   };
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
