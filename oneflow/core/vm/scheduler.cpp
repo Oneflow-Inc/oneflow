@@ -1,6 +1,8 @@
 #include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -91,7 +93,8 @@ void MakeVmInstructionCtx(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_i
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     auto* vm_stream_rt_desc =
         scheduler->mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
-    OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_vm_stream_list(), vm_stream) {
+    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_parallel_id2vm_stream(),
+                                            vm_stream) {
       auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
           scheduler->mut_default_allocator(), vm_instr_msg, vm_stream);
       ret_vm_instr_ctx_list->PushBack(vm_instr_ctx.Mutable());
@@ -187,6 +190,24 @@ void DispatchVmInstructionCtx(VmScheduler* scheduler,
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_default_allocator(allocator);
+  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.vm_stream_type_id2desc(), vm_stream_desc) {
+    auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
+    mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
+    BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
+    for (int i = 0; i < vm_stream_desc->num_threads(); ++i) {
+      auto vm_thread = ObjectMsgPtr<VmThread>::NewFrom(allocator, vm_stream_rt_desc.Get());
+      mut_vm_thread_list()->PushBack(vm_thread.Mutable());
+      for (int parallel_id = bs.At(i).begin(); parallel_id < bs.At(i).end(); ++parallel_id) {
+        FlatMsg<VmStreamId> vm_stream_id;
+        vm_stream_id->set_vm_stream_type_id(vm_stream_desc->vm_stream_type_id());
+        vm_stream_id->set_parallel_id(parallel_id);
+        auto vm_stream = ObjectMsgPtr<VmStream>::NewFrom(mut_allocator(), vm_thread.Mutable(),
+                                                         vm_stream_id.Get());
+        vm_stream_rt_desc->mut_parallel_id2vm_stream()->Insert(vm_stream.Mutable());
+        vm_thread->mut_vm_stream_list()->PushBack(vm_stream.Mutable());
+      }
+    }
+  }
 }
 
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
