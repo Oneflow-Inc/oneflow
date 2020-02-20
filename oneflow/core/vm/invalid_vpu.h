@@ -14,10 +14,6 @@ class InvalidVmStreamType final : public VmStreamType {
   void Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 
   // UNIMPLEMENTED methods
-  const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
   VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator, int* allocated_size,
                                                const VmStream* vm_stream) const override {
     UNIMPLEMENTED();

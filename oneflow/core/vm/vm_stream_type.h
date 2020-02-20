@@ -5,16 +5,6 @@
 
 namespace oneflow {
 
-class VmInstruction {
- public:
-  virtual ~VmInstruction() = default;
-
-  virtual void Execute() const = 0;
-
- protected:
-  VmInstruction() = default;
-};
-
 class VmStream;
 class ObjectMsgAllocator;
 class VmInstructionStatusQuerier;
@@ -24,7 +14,6 @@ class VmStreamType {
  public:
   virtual ~VmStreamType() = default;
 
-  virtual const VmInstruction* GetVmInstruction(VmInstructionOpcode vm_instr_opcode) const = 0;
   virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
                                                        int* allocated_size,
                                                        const VmStream* vm_stream) const = 0;

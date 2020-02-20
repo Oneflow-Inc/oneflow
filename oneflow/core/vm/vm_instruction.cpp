@@ -11,11 +11,8 @@ void VmStreamRtDesc::__Init__(const VmStreamDesc* vm_stream_desc) {
   set_vm_stream_type_id(vm_stream_type_id);
 }
 
-void VmInstructionCtx::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream) {
+void VmInstruction::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream) {
   reset_vm_instruction_msg(vm_instruction_msg);
-  const auto& vm_stream_type = vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type();
-  VmInstructionOpcode opcode = vm_instruction_msg->vm_instruction_proto().opcode();
-  set_vm_instruction(vm_stream_type.GetVmInstruction(opcode));
   set_vm_stream(vm_stream);
 }
 
