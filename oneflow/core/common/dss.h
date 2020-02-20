@@ -226,8 +226,8 @@ namespace oneflow {
 
 #define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                          \
  public:                                                                                           \
-  template<typename Enabled = void>                                                                \
   constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                        \
+    static_assert(std::is_standard_layout<__DssSelfType__>::value, "");                            \
     return offsetof(__DssSelfType__, field);                                                       \
   }                                                                                                \
                                                                                                    \
@@ -287,7 +287,10 @@ namespace oneflow {
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldOffset4Counter<field_counter, fake> {                                         \
-    constexpr static int Get() { return offsetof(__DssSelfType__, field); }                        \
+    constexpr static int Get() {                                                                   \
+      static_assert(std::is_standard_layout<__DssSelfType__>::value, "");                          \
+      return offsetof(__DssSelfType__, field);                                                     \
+    }                                                                                              \
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__StaticAssertFieldCounter<field_counter, fake> {                                    \

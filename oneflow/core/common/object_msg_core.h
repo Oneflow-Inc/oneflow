@@ -13,18 +13,19 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                                               \
-  struct class_name final : public ObjectMsgStruct {                               \
-   public:                                                                         \
-    using self_type = class_name;                                                  \
-    static const bool __is_object_message_type__ = true;                           \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);                                  \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name, sizeof(ObjectMsgStruct)); \
-    OBJECT_MSG_DEFINE_DEFAULT(class_name);                                         \
-    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                                         \
-    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();                                     \
-    OBJECT_MSG_DEFINE_INIT();                                                      \
-    OBJECT_MSG_DEFINE_DELETE();
+#define BEGIN_OBJECT_MSG(class_name)                         \
+  struct class_name final : public ObjectMsgStruct {         \
+   public:                                                   \
+    using self_type = class_name;                            \
+    static const bool __is_object_message_type__ = true;     \
+    PRIVATE DEFINE_STATIC_COUNTER(field_counter);            \
+    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name, 0); \
+    OBJECT_MSG_DEFINE_DEFAULT(class_name);                   \
+    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                   \
+    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();               \
+    OBJECT_MSG_DEFINE_INIT();                                \
+    OBJECT_MSG_DEFINE_DELETE();                              \
+    OBJECT_MSG_DEFINE_BASE();
 
 #define END_OBJECT_MSG(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
@@ -211,6 +212,17 @@ namespace oneflow {
     return default_object_msg.Get();                                                  \
   }
 
+#define OBJECT_MSG_DEFINE_BASE()                                                            \
+ public:                                                                                    \
+  ObjectMsgBase* __mut_object_msg_base__() { return &__object_msg_base__; }                 \
+  int32_t ref_cnt() const { return __object_msg_base__.ref_cnt(); }                         \
+  ObjectMsgAllocator* mut_allocator() const { return __object_msg_base__.mut_allocator(); } \
+                                                                                            \
+ private:                                                                                   \
+  ObjectMsgBase __object_msg_base__;                                                        \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                           \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", __object_msg_base__);
+
 #define OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT()     \
  public:                                              \
   template<int field_counter, typename Enable = void> \
@@ -306,11 +318,13 @@ class ObjectMsgPtrUtil;
 template<typename T>
 class ObjectMsgPtr;
 
-class ObjectMsgStruct {
- public:
+struct ObjectMsgStruct {
   void __Init__() {}
   void __Delete__() {}
+};
 
+class ObjectMsgBase {
+ public:
   int32_t ref_cnt() const { return ref_cnt_; }
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
@@ -326,21 +340,21 @@ class ObjectMsgStruct {
 };
 
 struct ObjectMsgPtrUtil final {
-  static void SetAllocator(ObjectMsgStruct* ptr, ObjectMsgAllocator* allocator) {
+  static void SetAllocator(ObjectMsgBase* ptr, ObjectMsgAllocator* allocator) {
     ptr->set_allocator(allocator);
   }
   template<typename T>
   static void InitRef(T* ptr) {
-    ptr->InitRefCount();
+    ptr->__mut_object_msg_base__()->InitRefCount();
   }
   template<typename T>
   static void Ref(T* ptr) {
-    ptr->IncreaseRefCount();
+    ptr->__mut_object_msg_base__()->IncreaseRefCount();
   }
   template<typename T>
   static void ReleaseRef(T* ptr) {
     CHECK_NOTNULL(ptr);
-    int32_t ref_cnt = ptr->DecreaseRefCount();
+    int32_t ref_cnt = ptr->__mut_object_msg_base__()->DecreaseRefCount();
     if (ref_cnt > 0) { return; }
     auto* allocator = ptr->mut_allocator();
     ptr->ObjectMsg__Delete__();
@@ -406,7 +420,7 @@ struct _ObjectMsgNaiveInit<true> {
     *field_ptr = ptr;
     std::memset(reinterpret_cast<void*>(ptr), 0, sizeof(FieldType));
     ObjectMsgPtrUtil::InitRef<FieldType>(ptr);
-    ObjectMsgPtrUtil::SetAllocator(ptr, ctx);
+    ObjectMsgPtrUtil::SetAllocator(ptr->__mut_object_msg_base__(), ctx);
     ObjectMsgPtrUtil::Ref<FieldType>(ptr);
     ptr->template ObjectMsg__Init__<WalkCtxType>(ctx);
   }
