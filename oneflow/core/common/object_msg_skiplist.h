@@ -176,6 +176,6 @@ class ObjectMsgSkipList final : public TrivialObjectMsgSkipList<ItemField> {
   ObjectMsgSkipList() { this->__Init__(); }
   ~ObjectMsgSkipList() { this->Clear(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_SKIPLIST_H_

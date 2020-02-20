@@ -134,6 +134,6 @@ class ObjectMsgMutexedList : public TrivialObjectMsgMutexedList<LinkField> {
   ObjectMsgMutexedList() { this->__Init__(); }
   ~ObjectMsgMutexedList() { this->Clear(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_MUTEXED_LIST_H_

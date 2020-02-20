@@ -411,6 +411,6 @@ class FlatMsgRepeatedField final {
   std::size_t size_;
   std::array<T, N> array_;
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_FLAT_MSG_H_

@@ -540,6 +540,6 @@ struct ObjectMsgContainerLinkEdge {
     return false;
   }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
