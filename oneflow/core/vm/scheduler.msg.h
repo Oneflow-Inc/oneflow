@@ -8,11 +8,13 @@ namespace oneflow {
 
 using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
 
+class VmDesc;
+
 // clang-format off
 BEGIN_OBJECT_MSG(VmScheduler);
   // methods
-  PUBLIC void __Init__() { __Init__(mut_allocator()); }
-  PUBLIC void __Init__(ObjectMsgAllocator* allocator) { set_default_allocator(allocator); }
+  PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
+  PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   PUBLIC void Receive(VmInstructionMsgList* vm_instr_list);
   PUBLIC void Schedule();
 
