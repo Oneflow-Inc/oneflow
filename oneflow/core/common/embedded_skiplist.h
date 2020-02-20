@@ -14,6 +14,11 @@ template<int max_level>
 struct EmbeddedSkipListLink final {
  public:
   using self_type = EmbeddedSkipListLink<max_level>;
+  template<typename Enabled = void>
+  static constexpr int LevelZeroLinkOffset() {
+    return 0;
+  }
+
   void __Init__() { Clear(); }
   void Clear() {
     for (auto& link : links_) { link.Clear(); }
@@ -66,6 +71,10 @@ struct EmbeddedSkipListKey {
   using key_type = T;
   static const int max_level = N;
   static_assert(N > 0, "invalid number of levels");
+  template<typename Enabled = void>
+  static constexpr int LevelZeroLinkOffset() {
+    return offsetof(EmbeddedSkipListKey, link_) + link_type::LevelZeroLinkOffset();
+  }
 
   void __Init__() { link_.NullptrClear(); }
 
@@ -159,6 +168,11 @@ class EmbeddedSkipListHead {
   using key_link_type = typename ValueLinkField::field_type;
   using key_type = typename key_link_type::key_type;
   static const int max_level = key_link_type::max_level;
+  template<typename Enabled = void>
+  static constexpr int ContainerLevelZeroLinkOffset() {
+    return offsetof(EmbeddedSkipListHead, skiplist_head_)
+           + EmbeddedSkipListLink<max_level>::LevelZeroLinkOffset();
+  }
 
   void __Init__() {
     skiplist_head_.__Init__();

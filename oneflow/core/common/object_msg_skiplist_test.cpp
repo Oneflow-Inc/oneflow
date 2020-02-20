@@ -172,6 +172,30 @@ TEST(ObjectMsgSkipList, MAP_HEAD) {
   }
   ASSERT_EQ(elem_cnt, 101);
 }
+
+TEST(ObjectMsgSkipList, FOR_EACH) {
+  int elem_cnt = 0;
+  {
+    auto foo_map_container = ObjectMsgPtr<ObjectMsgSkipListFooContainer>::New();
+    auto& foo_map = *foo_map_container->mutable_foo_map();
+    ObjectMsgPtr<ObjectMsgSkipListFoo> exists[100];
+    for (int i = 0; i < 100; ++i) {
+      exists[i] = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
+      int key = i - 50;
+      exists[i]->set_foo_map_key(key);
+      exists[i]->set_is_deleted(&elem_cnt);
+      foo_map.Insert(exists[i].Mutable());
+      ASSERT_TRUE(foo_map.Find(key) == exists[i]);
+      ASSERT_EQ(exists[i]->ref_cnt(), 2);
+    }
+    int value = -50;
+    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&foo_map, foo) {
+      ASSERT_EQ(foo->foo_map_key(), value);
+      ++value;
+    }
+  }
+  ASSERT_EQ(elem_cnt, 100);
+}
 }  // namespace test
 
 }  // namespace oneflow
