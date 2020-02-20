@@ -370,6 +370,6 @@ struct MutableTrait<true, Enabled> {
     return *data;
   }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_DSS_H_

@@ -224,6 +224,6 @@ class ObjectMsgList : public TrivialObjectMsgList<LinkField> {
   ObjectMsgList() { this->__Init__(); }
   ~ObjectMsgList() { this->Clear(); }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
