@@ -6,19 +6,19 @@
 
 namespace oneflow {
 
-using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instr_ctx_list_ObjectMsgListType;
-using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstructionCtx, vm_instruction_ctx_link);
+using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instruction_list_ObjectMsgListType;
+using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
 using MaybeAvailableAccessList = OBJECT_MSG_LIST(MirroredObject, maybe_available_access_link);
 using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
-using NewVmInstrCtxList = VmScheduler::new_vm_instr_ctx_list_ObjectMsgListType;
+using NewVmInstrCtxList = VmScheduler::new_vm_instruction_list_ObjectMsgListType;
 using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
 using ActiveVmStreamList = VmScheduler::active_vm_stream_list_ObjectMsgListType;
 
 namespace {
 
-void ReleaseVmInstructionCtx(VmInstructionCtx* vm_instr_ctx,
-                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  auto* holding_operand_list = vm_instr_ctx->mut_holding_operand_list();
+void ReleaseVmInstruction(VmInstruction* vm_instruction,
+                          /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
+  auto* holding_operand_list = vm_instruction->mut_holding_operand_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(holding_operand_list, mirrored_object_access) {
     auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
     auto* holding_access_list = mirrored_object->mut_holding_access_list();
@@ -36,10 +36,10 @@ void ReleaseVmInstructionCtx(VmInstructionCtx* vm_instr_ctx,
 
 void ReleaseVmInstructionPackage(VmInstructionPackage* pkg,
                                  /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  auto* vm_instr_ctx_list = pkg->mut_vm_instruction_ctx_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_ctx_list, vm_instr_ctx) {
-    ReleaseVmInstructionCtx(vm_instr_ctx, /*out*/ maybe_available_access_list);
-    vm_instr_ctx_list->Erase(vm_instr_ctx);
+  auto* vm_instruction_list = pkg->mut_vm_instruction_list();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instruction_list, vm_instruction) {
+    ReleaseVmInstruction(vm_instruction, /*out*/ maybe_available_access_list);
+    vm_instruction_list->Erase(vm_instruction);
   }
 }
 
@@ -55,20 +55,20 @@ void TryReleaseFinishedVmInstructionPackages(
 }
 
 void FilterReadyVmInstrCtx(MaybeAvailableAccessList* maybe_available_access_list,
-                           WaitingVmInstrCtxList* waiting_vm_instr_ctx_list,
-                           /*out*/ ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
+                           WaitingVmInstrCtxList* waiting_vm_instruction_list,
+                           /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(maybe_available_access_list, mirrored_object) {
     mirrored_object->TryResetCurrentAccessType();
     auto* waiting_access_list = mirrored_object->mut_waiting_access_list();
     auto* holding_access_list = mirrored_object->mut_holding_access_list();
     while (auto* mirrored_object_access = mirrored_object->GetFirstAllowedAccess()) {
       waiting_access_list->MoveToDstBack(mirrored_object_access, holding_access_list);
-      auto* vm_instruction_ctx = mirrored_object_access->mut_vm_instruction_ctx();
-      auto* waiting_operand_list = vm_instruction_ctx->mut_waiting_operand_list();
-      auto* holding_operand_list = vm_instruction_ctx->mut_holding_operand_list();
+      auto* vm_instruction = mirrored_object_access->mut_vm_instruction();
+      auto* waiting_operand_list = vm_instruction->mut_waiting_operand_list();
+      auto* holding_operand_list = vm_instruction->mut_holding_operand_list();
       waiting_operand_list->MoveToDstBack(mirrored_object_access, holding_operand_list);
       if (waiting_operand_list->empty()) {
-        waiting_vm_instr_ctx_list->MoveToDstBack(vm_instruction_ctx, ready_vm_instr_ctx_list);
+        waiting_vm_instruction_list->MoveToDstBack(vm_instruction, ready_vm_instruction_list);
       }
     }
     maybe_available_access_list->Erase(mirrored_object);
@@ -87,17 +87,17 @@ void FilterAndRunControlVmInstructions(VmScheduler* scheduler,
   }
 }
 
-void MakeVmInstructionCtx(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_instr_msg_list,
-                          /*out*/ NewVmInstrCtxList* ret_vm_instr_ctx_list) {
+void MakeVmInstruction(VmScheduler* scheduler, TmpWaitingVmInstrMsgList* vm_instr_msg_list,
+                       /*out*/ NewVmInstrCtxList* ret_vm_instruction_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     auto* vm_stream_rt_desc =
         scheduler->mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_parallel_id2vm_stream(),
                                             vm_stream) {
-      auto vm_instr_ctx = ObjectMsgPtr<VmInstructionCtx>::NewFrom(
-          scheduler->mut_default_allocator(), vm_instr_msg, vm_stream);
-      ret_vm_instr_ctx_list->PushBack(vm_instr_ctx.Mutable());
+      auto vm_instruction = ObjectMsgPtr<VmInstruction>::NewFrom(scheduler->mut_default_allocator(),
+                                                                 vm_instr_msg, vm_stream);
+      ret_vm_instruction_list->PushBack(vm_instruction.Mutable());
     }
     vm_instr_msg_list->Erase(vm_instr_msg);
   }
@@ -115,13 +115,13 @@ MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
 static const bool kConstOperandAccess = true;
 static const bool kMutableOperandAccess = false;
 template<bool is_const_operand>
-void ConsumeMirroredObject(MirroredObject* mirrored_object, VmInstructionCtx* vm_instr_ctx) {
+void ConsumeMirroredObject(MirroredObject* mirrored_object, VmInstruction* vm_instruction) {
   uint64_t id_value = mirrored_object->logical_object().logical_object_id().value();
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      vm_instr_ctx->mut_allocator(), vm_instr_ctx, mirrored_object, id_value, is_const_operand);
+      vm_instruction->mut_allocator(), vm_instruction, mirrored_object, id_value, is_const_operand);
   mirrored_object->mut_waiting_access_list()->PushBack(mirrored_object_access.Mutable());
-  vm_instr_ctx->mut_waiting_operand_list()->PushBack(mirrored_object_access.Mutable());
-  vm_instr_ctx->mut_logical_object_id2operand_access()->Insert(mirrored_object_access.Mutable());
+  vm_instruction->mut_waiting_operand_list()->PushBack(mirrored_object_access.Mutable());
+  vm_instruction->mut_logical_object_id2operand_access()->Insert(mirrored_object_access.Mutable());
 }
 
 inline void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
@@ -132,21 +132,21 @@ inline void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
 }
 
 void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                            NewVmInstrCtxList* new_vm_instr_ctx_list,
+                            NewVmInstrCtxList* new_vm_instruction_list,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
-    int64_t parallel_id = vm_instr_ctx->vm_stream().vm_stream_id().parallel_id();
-    const auto& operands = vm_instr_ctx->vm_instruction_msg().vm_instruction_proto().operand();
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(new_vm_instruction_list, vm_instruction) {
+    int64_t parallel_id = vm_instruction->vm_stream().vm_stream_id().parallel_id();
+    const auto& operands = vm_instruction->vm_instruction_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (operand.has_const_operand()) {
         auto* mirrored_object =
             FindMirroredObject(id2logical_object, operand.const_operand().value(), parallel_id);
-        ConsumeMirroredObject<kConstOperandAccess>(mirrored_object, vm_instr_ctx);
+        ConsumeMirroredObject<kConstOperandAccess>(mirrored_object, vm_instruction);
         TryPushBack(maybe_available_access_list, mirrored_object);
       } else if (operand.has_mutable_operand()) {
         auto* mirrored_object =
             FindMirroredObject(id2logical_object, operand.mutable_operand().value(), parallel_id);
-        ConsumeMirroredObject<kMutableOperandAccess>(mirrored_object, vm_instr_ctx);
+        ConsumeMirroredObject<kMutableOperandAccess>(mirrored_object, vm_instruction);
         TryPushBack(maybe_available_access_list, mirrored_object);
       } else {
         // do nothing
@@ -155,22 +155,21 @@ void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instr_ctx_list,
-                                         /*out*/ ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_ctx_list, vm_instr_ctx) {
-    if (vm_instr_ctx->waiting_operand_list().empty()) {
-      new_vm_instr_ctx_list->MoveToDstBack(vm_instr_ctx, ready_vm_instr_ctx_list);
+void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instruction_list,
+                                         /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instruction_list, vm_instruction) {
+    if (vm_instruction->waiting_operand_list().empty()) {
+      new_vm_instruction_list->MoveToDstBack(vm_instruction, ready_vm_instruction_list);
     }
   }
 }
 
-void DispatchVmInstructionCtx(VmScheduler* scheduler,
-                              ReadyVmInstrCtxList* ready_vm_instr_ctx_list) {
+void DispatchVmInstruction(VmScheduler* scheduler, ReadyVmInstrCtxList* ready_vm_instruction_list) {
   auto* allocator = scheduler->mut_default_allocator();
   OBJECT_MSG_LIST(VmStream, tmp_active_vm_stream_link) tmp_active_vm_stream_list;
-  while (auto* first = ready_vm_instr_ctx_list->Begin()) {
+  while (auto* first = ready_vm_instruction_list->Begin()) {
     auto* vm_stream = first->mut_vm_stream();
-    ready_vm_instr_ctx_list->MoveToDstBack(first, vm_stream->mut_collect_vm_instruction_list());
+    ready_vm_instruction_list->MoveToDstBack(first, vm_stream->mut_collect_vm_instruction_list());
     if (vm_stream->is_tmp_active_vm_stream_link_empty()) {
       tmp_active_vm_stream_list.PushBack(vm_stream);
     }
@@ -179,7 +178,7 @@ void DispatchVmInstructionCtx(VmScheduler* scheduler,
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_active_vm_stream_list, vm_stream) {
     tmp_active_vm_stream_list.Erase(vm_stream);
     auto pkg = ObjectMsgPtr<VmInstructionPackage>::NewFrom(allocator, vm_stream);
-    vm_stream->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_ctx_list());
+    vm_stream->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_list());
     vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
     if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
     vm_stream->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
@@ -221,22 +220,23 @@ void VmScheduler::Schedule() {
     TryReleaseFinishedVmInstructionPackages(vm_stream, /*out*/ &maybe_available_access_list);
     if (vm_stream->running_pkg_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
   };
-  auto* waiting_vm_instr_ctx_list = mut_waiting_vm_instr_ctx_list();
-  ReadyVmInstrCtxList ready_vm_instr_ctx_list;
+  auto* waiting_vm_instruction_list = mut_waiting_vm_instruction_list();
+  ReadyVmInstrCtxList ready_vm_instruction_list;
   if (waiting_msg_list().size() > 0) {
     TmpWaitingVmInstrMsgList tmp_waiting_msg_list;
     mut_waiting_msg_list()->MoveTo(&tmp_waiting_msg_list);
     FilterAndRunControlVmInstructions(this, &tmp_waiting_msg_list);
-    auto* new_vm_instr_ctx_list = mut_new_vm_instr_ctx_list();
-    MakeVmInstructionCtx(this, &tmp_waiting_msg_list, /*out*/ new_vm_instr_ctx_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), new_vm_instr_ctx_list,
+    auto* new_vm_instruction_list = mut_new_vm_instruction_list();
+    MakeVmInstruction(this, &tmp_waiting_msg_list, /*out*/ new_vm_instruction_list);
+    ConsumeMirroredObjects(mut_id2logical_object(), new_vm_instruction_list,
                            /*out*/ &maybe_available_access_list);
-    MoveToReadyCtxListIfNoObjectOperand(new_vm_instr_ctx_list, /*out*/ &ready_vm_instr_ctx_list);
-    new_vm_instr_ctx_list->MoveTo(waiting_vm_instr_ctx_list);
+    MoveToReadyCtxListIfNoObjectOperand(new_vm_instruction_list,
+                                        /*out*/ &ready_vm_instruction_list);
+    new_vm_instruction_list->MoveTo(waiting_vm_instruction_list);
   }
-  FilterReadyVmInstrCtx(&maybe_available_access_list, waiting_vm_instr_ctx_list,
-                        /*out*/ &ready_vm_instr_ctx_list);
-  DispatchVmInstructionCtx(this, &ready_vm_instr_ctx_list);
+  FilterReadyVmInstrCtx(&maybe_available_access_list, waiting_vm_instruction_list,
+                        /*out*/ &ready_vm_instruction_list);
+  DispatchVmInstruction(this, &ready_vm_instruction_list);
 }
 
 }  // namespace oneflow

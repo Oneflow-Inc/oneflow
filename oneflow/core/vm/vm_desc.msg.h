@@ -9,6 +9,8 @@ namespace oneflow {
 
 // clang-format off
 BEGIN_OBJECT_MSG(VmDesc);
+  // methods
+
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmMemZoneDesc, vm_mem_zone_type_id, mem_zone_type_id2desc);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmStreamDesc, vm_stream_type_id, vm_stream_type_id2desc);

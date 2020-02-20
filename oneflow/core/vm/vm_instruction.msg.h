@@ -43,22 +43,21 @@ END_OBJECT_MSG(VmInstructionMsg);
 class VmStream;
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstructionCtx);
+BEGIN_OBJECT_MSG(VmInstruction);
   // methods
   PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instruction_msg);
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmInstruction, vm_instruction); 
   OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_ctx_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vm_instr_operand_link, waiting_operand_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vm_instr_operand_link, holding_operand_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, logical_object_id_value,
                                   logical_object_id2operand_access);
-END_OBJECT_MSG(VmInstructionCtx);
+END_OBJECT_MSG(VmInstruction);
 // clang-format on
 
 // clang-format off
@@ -72,7 +71,7 @@ BEGIN_OBJECT_MSG(VmInstructionPackage);
   OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VmInstructionStatusQuerier>, status_querier); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link, vm_instruction_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
   OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
   OBJECT_MSG_DEFINE_LIST_LINK(running_pkg_link);
 END_OBJECT_MSG(VmInstructionPackage);
@@ -97,7 +96,7 @@ BEGIN_OBJECT_MSG(VmStream);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_vm_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   // collect_vm_instruction_list used by VmScheduler
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link,
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link,
                               collect_vm_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, running_pkg_link, running_pkg_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstructionPackage, waiting_pkg_link, waiting_pkg_list);
