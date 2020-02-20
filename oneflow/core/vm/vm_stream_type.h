@@ -34,6 +34,9 @@ class VmStreamType {
   VmStreamType() = default;
 };
 
+const VmStreamType* LookupVmStreamType(VmStreamTypeId);
+void RegisterVmStreamType(VmStreamTypeId, const VmStreamType*);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_

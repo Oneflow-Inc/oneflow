@@ -63,6 +63,8 @@ END_FLAT_MSG(VmStreamId);
 BEGIN_OBJECT_MSG(VmStreamDesc);
   // methods
   PUBLIC int32_t num_threads() const;
+  PUBLIC int32_t parallel_num() const { return num_machines() * num_devices_per_machine(); }
+
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_devices_per_machine);

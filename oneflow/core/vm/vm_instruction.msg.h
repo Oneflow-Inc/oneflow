@@ -95,7 +95,6 @@ BEGIN_OBJECT_MSG(VmStream);
   OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(tmp_active_vm_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_vm_stream_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_stream_desc_vm_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   // collect_vm_instruction_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionCtx, vm_instruction_ctx_link,
@@ -108,17 +107,24 @@ END_OBJECT_MSG(VmStream);
 // Rt is short for Runtime
 // clang-format off
 BEGIN_OBJECT_MSG(VmStreamRtDesc);
+  // methods
+  PUBLIC void __Init__(const VmStreamDesc* vm_stream_desc);
+
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type); 
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamDesc, vm_stream_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_stream_desc_vm_stream_link, vm_stream_list);
+  OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, parallel_id, parallel_id2vm_stream);
 END_OBJECT_MSG(VmStreamRtDesc);
 // clang-format on
 
 // clang-format off
 BEGIN_OBJECT_MSG(VmThread);
+  // methods
+  PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc) {
+    set_vm_stream_rt_desc(&vm_stream_rt_desc);
+  }
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
 
