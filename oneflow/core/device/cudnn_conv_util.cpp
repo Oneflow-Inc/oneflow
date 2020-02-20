@@ -1,8 +1,6 @@
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -30,7 +28,7 @@ cudnnConvolutionBwdFilterAlgo_t GetDefaultAlgo<cudnnConvolutionBwdFilterAlgo_t>(
 }
 
 size_t ByteSize4Tensor(const int* dims, int ndim, cudnnDataType_t data_type) {
-  size_t byte_size = GetByteSizeOfCudnnDataType(data_type);
+  size_t byte_size = GetCudnnDataTypeByteSize(data_type);
   FOR_RANGE(int, i, 0, ndim) { byte_size *= dims[i]; }
   return byte_size;
 }
@@ -234,38 +232,6 @@ bool operator==(const CudnnConvParams& a, const CudnnConvParams& b) {
 
 DataType GetConvDescDataType(DataType data_type, bool pseudo_half) {
   return (data_type == DataType::kFloat16 && pseudo_half) ? DataType::kFloat : data_type;
-}
-
-size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type) {
-  size_t byte_size = 0;
-  switch (data_type) {
-    case CUDNN_DATA_FLOAT:
-    case CUDNN_DATA_INT32:
-    case CUDNN_DATA_INT8x4:
-    case CUDNN_DATA_UINT8x4: {
-      byte_size = 4;
-      break;
-    }
-    case CUDNN_DATA_DOUBLE: {
-      byte_size = 8;
-      break;
-    }
-    case CUDNN_DATA_HALF: {
-      byte_size = 2;
-      break;
-    }
-    case CUDNN_DATA_INT8:
-    case CUDNN_DATA_UINT8: {
-      byte_size = 1;
-      break;
-    }
-    case CUDNN_DATA_INT8x32: {
-      byte_size = 32;
-      break;
-    }
-    default: { UNIMPLEMENTED(); }
-  }
-  return byte_size;
 }
 
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,

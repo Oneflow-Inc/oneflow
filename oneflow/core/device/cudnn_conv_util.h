@@ -4,9 +4,7 @@
 #ifdef WITH_CUDA
 
 #include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/register/blob.h"
-#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -128,7 +126,6 @@ class ManagedCudnnConvResource final : public CudnnConvResource {
 
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
 DataType GetConvDescDataType(DataType data_type, bool pseudo_half);
-size_t GetByteSizeOfCudnnDataType(cudnnDataType_t data_type);
 
 template<typename perf_t>
 struct CudnnConvAlgorithmSearch;
