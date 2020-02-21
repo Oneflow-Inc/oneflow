@@ -40,9 +40,6 @@
 [submodule "build/third_party/onerec/src/onerec"]
 	path = build/third_party/onerec/src/onerec
 	url = https://github.com/Oneflow-Inc/onerec.git
-[submodule "build/build/third_party/lz4/src/lz4"]
-	path = build/build/third_party/lz4/src/lz4
-	url = https://github.com/lz4/lz4.git
 [submodule "build/third_party/lz4/src/lz4"]
 	path = build/third_party/lz4/src/lz4
 	url = https://github.com/lz4/lz4.git
