@@ -6,20 +6,13 @@
 
 namespace oneflow {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
-using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
-using MaybeAvailableAccessList = OBJECT_MSG_LIST(MirroredObject, maybe_available_access_link);
-using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
-
-class WaitingVmInstrCtxList;
-class NewVmInstrCtxList;
-class Id2LogicalObject;
-class ActiveVmStreamList;
 class VmDesc;
 
 // clang-format off
 BEGIN_OBJECT_MSG(VmScheduler);
   // methods
+  using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+
   PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   PUBLIC void Receive(VmInstructionMsgList* vm_instr_list);
@@ -30,7 +23,6 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, waiting_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, new_vm_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, waiting_vm_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stream_link, active_vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
@@ -40,11 +32,16 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   // methods
  private:
+  using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
+  using MaybeAvailableAccessList = OBJECT_MSG_LIST(MirroredObject, maybe_available_access_link);
+  using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+  using NewVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
   using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instruction_list_ObjectMsgListType;
-  using NewVmInstrCtxList = VmScheduler::new_vm_instruction_list_ObjectMsgListType;
   using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
   using ActiveVmStreamList = VmScheduler::active_vm_stream_list_ObjectMsgListType;
 
+  void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
+                   MirroredObject* mirrored_object);
   void ReleaseVmInstruction(VmInstruction* vm_instruction,
                             /*out*/ MaybeAvailableAccessList* maybe_available_access_list);
   void ReleaseVmInstructionPackage(VmInstructionPackage* pkg,

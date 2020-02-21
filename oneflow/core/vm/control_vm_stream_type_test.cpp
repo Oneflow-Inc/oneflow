@@ -10,6 +10,8 @@ namespace test {
 
 namespace {
 
+using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+
 TEST(ControlVmStreamType, new_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   CachedObjectMsgAllocator allocator(20, 100);
@@ -25,7 +27,6 @@ TEST(ControlVmStreamType, new_symbol) {
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 1);
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->new_vm_instruction_list().empty());
   ASSERT_TRUE(scheduler->waiting_vm_instruction_list().empty());
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
   ASSERT_TRUE(scheduler->vm_thread_list().empty());
@@ -52,7 +53,6 @@ TEST(ControlVmStreamType, delete_symbol) {
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 2);
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->new_vm_instruction_list().empty());
   ASSERT_TRUE(scheduler->waiting_vm_instruction_list().empty());
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
   ASSERT_TRUE(scheduler->vm_thread_list().empty());
