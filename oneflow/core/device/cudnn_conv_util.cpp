@@ -204,7 +204,7 @@ void* ManagedCudnnConvResource::w_mut_dptr() {
 
 void* ManagedCudnnConvResource::y_mut_dptr() {
   if (y_dptr_ == nullptr) { CudaCheck(cudaMalloc(&y_dptr_, y_byte_size_)); }
-  return x_dptr_;
+  return y_dptr_;
 }
 
 const void* ManagedCudnnConvResource::x_const_dptr() const {
