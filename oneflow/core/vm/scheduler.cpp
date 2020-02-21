@@ -6,16 +6,12 @@
 
 namespace oneflow {
 
-namespace {
-
-inline void TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
-                        MirroredObject* mirrored_object) {
+void VmScheduler::TryPushBack(MaybeAvailableAccessList* maybe_available_access_list,
+                              MirroredObject* mirrored_object) {
   if (mirrored_object->is_maybe_available_access_link_empty()) {
     maybe_available_access_list->PushBack(mirrored_object);
   }
 }
-
-}  // namespace
 
 void VmScheduler::ReleaseVmInstruction(
     VmInstruction* vm_instruction,
@@ -219,13 +215,13 @@ void VmScheduler::Schedule() {
     TmpWaitingVmInstrMsgList tmp_waiting_msg_list;
     mut_waiting_msg_list()->MoveTo(&tmp_waiting_msg_list);
     FilterAndRunControlVmInstructions(&tmp_waiting_msg_list);
-    auto* new_vm_instruction_list = mut_new_vm_instruction_list();
-    MakeVmInstruction(&tmp_waiting_msg_list, /*out*/ new_vm_instruction_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), new_vm_instruction_list,
+    NewVmInstrCtxList new_vm_instruction_list;
+    MakeVmInstruction(&tmp_waiting_msg_list, /*out*/ &new_vm_instruction_list);
+    ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instruction_list,
                            /*out*/ &maybe_available_access_list);
-    MoveToReadyCtxListIfNoObjectOperand(new_vm_instruction_list,
+    MoveToReadyCtxListIfNoObjectOperand(&new_vm_instruction_list,
                                         /*out*/ &ready_vm_instruction_list);
-    new_vm_instruction_list->MoveTo(waiting_vm_instruction_list);
+    new_vm_instruction_list.MoveTo(waiting_vm_instruction_list);
   }
   FilterReadyVmInstrCtx(&maybe_available_access_list, waiting_vm_instruction_list,
                         /*out*/ &ready_vm_instruction_list);
