@@ -49,6 +49,6 @@ struct ConstStruct<const T> {
 
 template<typename T>
 using ConstType = typename ConstStruct<T>::type;
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_

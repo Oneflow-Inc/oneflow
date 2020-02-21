@@ -82,7 +82,7 @@ TEST(ObjectMsgFieldListUtil, ToDot) {
   //  std::cout << ObjectMsgListReflection<FooBar>().ToDot() << std::endl;
   //  std::cout << std::endl;
 }
-}
+}  // namespace
 
 }  // namespace test
 

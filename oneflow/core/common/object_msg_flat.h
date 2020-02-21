@@ -67,6 +67,6 @@ template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgFlatMsgDelete {
   static void Call(WalkCtxType* ctx, PtrFieldType* field) {}
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_FLAT_H_
