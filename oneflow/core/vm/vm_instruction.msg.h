@@ -9,7 +9,6 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction_msg_observer.h"
-#include "oneflow/core/vm/vm_instruction_status_querier.h"
 
 namespace oneflow {
 
@@ -60,15 +59,25 @@ BEGIN_OBJECT_MSG(VmInstruction);
 END_OBJECT_MSG(VmInstruction);
 // clang-format on
 
+static const int kVmInstructionStatusBufferLength = 1024;
+
+// clang-format off
+BEGIN_FLAT_MSG(VmInstructionStatusBuffer);
+  FLAT_MSG_DEFINE_REPEATED(char, buffer, kVmInstructionStatusBufferLength);
+END_FLAT_MSG(VmInstructionStatusBuffer);
+// clang-format on
+
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstructionPackage);
   // methods
   PUBLIC void __Init__(VmStream* vm_stream);
-  PUBLIC bool Done() const { return status_querier()->Done(); }
+  PUBLIC void __Delete__();
+  PUBLIC bool Done() const;
 
   // fields
+  OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionStatusBuffer, status_buffer);
   OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream);
-  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VmInstructionStatusQuerier>, status_querier); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);

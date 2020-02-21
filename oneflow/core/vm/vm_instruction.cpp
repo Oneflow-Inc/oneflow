@@ -18,11 +18,16 @@ void VmInstruction::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_
 
 void VmInstructionPackage::__Init__(VmStream* vm_stream) {
   set_vm_stream(vm_stream);
-  const auto* vm_stream_type = &vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type();
-  mutable_status_querier()->__Init__(
-      [vm_stream_type, vm_stream](ObjectMsgAllocator* allocator, int32_t* size) {
-        return vm_stream_type->NewStatusQuerier(allocator, size, vm_stream);
-      });
+  set_vm_stream_type(&vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type());
+  vm_stream_type().InitVmInstructionStatus(*vm_stream, mutable_status_buffer());
+}
+
+void VmInstructionPackage::__Delete__() {
+  vm_stream_type().DeleteVmInstructionStatus(vm_stream(), mut_status_buffer());
+}
+
+bool VmInstructionPackage::Done() const {
+  return vm_stream_type().QueryVmInstructionStatusDone(vm_stream(), status_buffer());
 }
 
 }  // namespace oneflow
