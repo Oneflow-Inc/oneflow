@@ -7,16 +7,19 @@ namespace oneflow {
 
 class VmStream;
 class ObjectMsgAllocator;
-class VmInstructionStatusQuerier;
+class VmInstructionStatusBuffer;
 class VmInstructionPackage;
 
 class VmStreamType {
  public:
   virtual ~VmStreamType() = default;
 
-  virtual VmInstructionStatusQuerier* NewStatusQuerier(ObjectMsgAllocator* allocator,
-                                                       int* allocated_size,
-                                                       const VmStream* vm_stream) const = 0;
+  virtual void InitVmInstructionStatus(const VmStream& vm_stream,
+                                       VmInstructionStatusBuffer* status_buffer) const = 0;
+  virtual void DeleteVmInstructionStatus(const VmStream& vm_stream,
+                                         VmInstructionStatusBuffer* status_buffer) const = 0;
+  virtual bool QueryVmInstructionStatusDone(
+      const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const = 0;
   virtual void Run(VmStream* vm_stream, VmInstructionPackage* vm_instr_pkg) const = 0;
 
  protected:
