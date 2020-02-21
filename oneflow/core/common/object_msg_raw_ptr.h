@@ -52,6 +52,6 @@ struct ObjectMsgRawPtrDelete {
     static_assert(std::is_pointer<PtrFieldType>::value, "PtrFieldType is not a pointer type");
   }
 };
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_RAW_PTR_H_
