@@ -30,4 +30,19 @@ bool VmInstructionPackage::Done() const {
   return vm_stream_type().QueryVmInstructionStatusDone(vm_stream(), status_buffer());
 }
 
+ObjectMsgPtr<VmInstructionPackage> VmStream::NewVmInstructionPackage() {
+  if (free_pkg_list().empty()) {
+    return ObjectMsgPtr<VmInstructionPackage>::NewFrom(mut_allocator(), this);
+  }
+  ObjectMsgPtr<VmInstructionPackage> vm_instr_pkg = mut_free_pkg_list()->PopFront();
+  vm_instr_pkg->__Init__(this);
+  return vm_instr_pkg;
+}
+
+void VmStream::DeleteVmInstructionPackage(VmInstructionPackage* vm_instr_pkg) {
+  CHECK(vm_instr_pkg->is_waiting_pkg_link_empty());
+  mut_running_pkg_list()->MoveToDstBack(vm_instr_pkg, mut_free_pkg_list());
+  vm_instr_pkg->__Delete__();
+}
+
 }  // namespace oneflow

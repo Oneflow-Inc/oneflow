@@ -45,12 +45,12 @@ void ReleaseVmInstructionPackage(VmInstructionPackage* pkg,
 
 void TryReleaseFinishedVmInstructionPackages(
     VmStream* vm_stream, /*out*/ MaybeAvailableAccessList* maybe_available_access_list) {
-  auto* pkg_list = vm_stream->mut_running_pkg_list();
+  auto* running_pkg_list = vm_stream->mut_running_pkg_list();
   while (true) {
-    auto* begin = pkg_list->Begin();
-    if (begin == nullptr || !begin->Done()) { break; }
-    ReleaseVmInstructionPackage(begin, /*out*/ maybe_available_access_list);
-    pkg_list->Erase(begin);
+    auto* vm_instr_pkg = running_pkg_list->Begin();
+    if (vm_instr_pkg == nullptr || !vm_instr_pkg->Done()) { break; }
+    ReleaseVmInstructionPackage(vm_instr_pkg, /*out*/ maybe_available_access_list);
+    vm_stream->DeleteVmInstructionPackage(vm_instr_pkg);
   }
 }
 
@@ -165,7 +165,6 @@ void MoveToReadyCtxListIfNoObjectOperand(NewVmInstrCtxList* new_vm_instruction_l
 }
 
 void DispatchVmInstruction(VmScheduler* scheduler, ReadyVmInstrCtxList* ready_vm_instruction_list) {
-  auto* allocator = scheduler->mut_default_allocator();
   OBJECT_MSG_LIST(VmStream, tmp_active_vm_stream_link) tmp_active_vm_stream_list;
   while (auto* first = ready_vm_instruction_list->Begin()) {
     auto* vm_stream = first->mut_vm_stream();
@@ -177,7 +176,7 @@ void DispatchVmInstruction(VmScheduler* scheduler, ReadyVmInstrCtxList* ready_vm
   auto* active_vm_stream_list = scheduler->mut_active_vm_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_active_vm_stream_list, vm_stream) {
     tmp_active_vm_stream_list.Erase(vm_stream);
-    auto pkg = ObjectMsgPtr<VmInstructionPackage>::NewFrom(allocator, vm_stream);
+    auto pkg = vm_stream->NewVmInstructionPackage();
     vm_stream->mut_collect_vm_instruction_list()->MoveTo(pkg->mut_vm_instruction_list());
     vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
     if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
