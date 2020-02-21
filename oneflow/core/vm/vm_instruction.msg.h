@@ -70,6 +70,7 @@ END_FLAT_MSG(VmInstructionStatusBuffer);
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstructionPackage);
   // methods
+  PUBLIC void __Init__() {}
   PUBLIC void __Init__(VmStream* vm_stream);
   PUBLIC void __Delete__();
   PUBLIC bool Done() const;
@@ -82,7 +83,7 @@ BEGIN_OBJECT_MSG(VmInstructionPackage);
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
   OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(running_pkg_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_pkg_link);
 END_OBJECT_MSG(VmInstructionPackage);
 // clang-format on
 
@@ -95,6 +96,9 @@ BEGIN_OBJECT_MSG(VmStream);
     set_vm_thread(vm_thread);
     mut_vm_stream_id()->CopyFrom(vm_stream_id);
   }
+  PUBLIC ObjectMsgPtr<VmInstructionPackage> NewVmInstructionPackage();
+  PUBLIC void DeleteVmInstructionPackage(VmInstructionPackage*);
+
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
   OBJECT_MSG_DEFINE_FLAT_MSG(VmStreamId, vm_stream_id);
@@ -107,8 +111,9 @@ BEGIN_OBJECT_MSG(VmStream);
   // collect_vm_instruction_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link,
                               collect_vm_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, running_pkg_link, running_pkg_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstructionPackage, waiting_pkg_link, waiting_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, vm_instr_pkg_link, running_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, vm_instr_pkg_link, free_pkg_list);
 END_OBJECT_MSG(VmStream);
 // clang-format on
 
