@@ -19,7 +19,7 @@ class OneRecExampleWrapper {
   }
   ~OneRecExampleWrapper() = default;
 
-  const onerec::example::Example* GetExample() { return example_; }
+  const onerec::example::Example* GetExample() const { return example_; }
 
  private:
   int32_t size_;

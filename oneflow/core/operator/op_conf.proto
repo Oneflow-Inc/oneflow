@@ -1740,6 +1740,24 @@ message IndexedSlicesLazyAdamModelUpdateOpConf {
   optional float epsilon = 10 [default = 1e-8];
 }
 
+message DecodeOneRecFieldConf {
+  required string key = 1;
+  required DataType data_type = 2;
+  required ShapeProto static_shape = 3;
+  optional bool is_dynamic = 4 [default = false];
+  optional ShapeProto reshape = 5;
+  optional ShapeProto batch_padding = 6;
+}
+
+message DecodeOneRecOpConf {
+  optional string tick = 1;
+  repeated string out = 2;
+  repeated DecodeOneRecFieldConf field = 3;
+  repeated string file = 4;
+  required int64 batch_size = 5;
+  optional int64 buffer_size = 6 [default = 2];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1810,6 +1828,7 @@ message OperatorConf {
     IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
     IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
+    DecodeOneRecOpConf decode_onerec_conf = 166;
     UserOpConf user_conf = 199;
     
     // domain op

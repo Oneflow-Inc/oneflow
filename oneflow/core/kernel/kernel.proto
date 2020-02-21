@@ -201,6 +201,12 @@ message IndexedSlicesLazyAdamModelUpdateKernelConf {
   required int64 upper_bound = 3;
 }
 
+message DecodeOneRecKernelConf {
+  repeated string file = 1;
+  required int64 device_batch_size = 2;
+  required int64 buffer_size = 3;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -231,6 +237,7 @@ message KernelConf {
     IndexedSlicesNaiveModelUpdateKernelConf indexed_slices_naive_model_update_conf = 357;
     IndexedSlicesMomentumModelUpdateKernelConf indexed_slices_momentum_model_update_conf = 358;
     IndexedSlicesLazyAdamModelUpdateKernelConf indexed_slices_lazy_adam_model_update_conf = 359;
+    DecodeOneRecKernelConf decode_onerec_conf = 360;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
