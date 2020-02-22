@@ -6,6 +6,7 @@ namespace oneflow {
 void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   std::vector<OperatorConf> op_confs;
   op_graph.TopoForEachNode([&](OpNode* node) {
+    if (node->parallel_desc().device_type() == DeviceType::kCPU) { return; }
     const PbRpf<std::string>& ibns = node->op().input_bns();
     std::vector<std::string> header_only_ibns;
     for (const std::string& ibn : ibns) {
