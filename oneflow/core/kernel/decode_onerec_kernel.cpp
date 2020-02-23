@@ -74,8 +74,8 @@ void GetTensorDimsWithReshape(const std::vector<const onerec::example::Tensor*>&
 }
 
 template<typename L, bool dim0_padding>
-void CopyTensorValues(void* dst, const onerec::example::Tensor* tensor, int32_t elem_cnt,
-                      int32_t elem_size) {
+inline void CopyTensorValues(void* dst, const onerec::example::Tensor* tensor, int32_t elem_cnt,
+                             int32_t elem_size) {
   const L* list = tensor->data_as<L>();
   CHECK_NOTNULL(list);
   const auto* values = list->values();
@@ -97,34 +97,41 @@ void CopyTensorValues(void* dst, const onerec::example::Tensor* tensor, int32_t 
   }
 }
 
+template<typename L, bool dim0_padding>
+void BatchCopyTensorValues(void* dst, const std::vector<const onerec::example::Tensor*>& tensors,
+                           int32_t elem_cnt, int32_t elem_size) {
+  char* dst_ptr = reinterpret_cast<char*>(dst);
+  const int32_t size = elem_cnt * elem_size;
+  for (int32_t i = 0; i < tensors.size(); ++i) {
+    const auto* tensor = tensors.at(i);
+    CopyTensorValues<L, dim0_padding>(dst_ptr, tensor, elem_cnt, elem_size);
+    dst_ptr += size;
+  }
+}
+
 template<bool dim0_padding>
 void CopyTensorsToBlob(const std::vector<const onerec::example::Tensor*>& tensors, Blob* blob) {
   const DataType blob_data_type = blob->data_type();
   const int32_t elem_cnt = blob->shape().Count(1);
   const int32_t elem_size = GetSizeOfDataType(blob_data_type);
-  const int32_t size = elem_cnt * elem_size;
   char* dst_ptr = blob->mut_dptr<char>();
-  for (int32_t i = 0; i < tensors.size(); ++i) {
-    const auto* tensor = tensors.at(i);
-    if (blob_data_type == DataType::kInt8) {
-      CopyTensorValues<onerec::example::Int8List, dim0_padding>(dst_ptr, tensor, elem_cnt,
-                                                                elem_size);
-    } else if (blob_data_type == DataType::kInt32) {
-      CopyTensorValues<onerec::example::Int32List, dim0_padding>(dst_ptr, tensor, elem_cnt,
-                                                                 elem_size);
-    } else if (blob_data_type == DataType::kInt64) {
-      CopyTensorValues<onerec::example::Int64List, dim0_padding>(dst_ptr, tensor, elem_cnt,
-                                                                 elem_size);
-    } else if (blob_data_type == DataType::kFloat) {
-      CopyTensorValues<onerec::example::Float32List, dim0_padding>(dst_ptr, tensor, elem_cnt,
+  if (blob_data_type == DataType::kInt8) {
+    BatchCopyTensorValues<onerec::example::Int8List, dim0_padding>(dst_ptr, tensors, elem_cnt,
                                                                    elem_size);
-    } else if (blob_data_type == DataType::kDouble) {
-      CopyTensorValues<onerec::example::Float64List, dim0_padding>(dst_ptr, tensor, elem_cnt,
-                                                                   elem_size);
-    } else {
-      UNIMPLEMENTED();
-    }
-    dst_ptr += size;
+  } else if (blob_data_type == DataType::kInt32) {
+    BatchCopyTensorValues<onerec::example::Int32List, dim0_padding>(dst_ptr, tensors, elem_cnt,
+                                                                    elem_size);
+  } else if (blob_data_type == DataType::kInt64) {
+    BatchCopyTensorValues<onerec::example::Int64List, dim0_padding>(dst_ptr, tensors, elem_cnt,
+                                                                    elem_size);
+  } else if (blob_data_type == DataType::kFloat) {
+    BatchCopyTensorValues<onerec::example::Float32List, dim0_padding>(dst_ptr, tensors, elem_cnt,
+                                                                      elem_size);
+  } else if (blob_data_type == DataType::kDouble) {
+    BatchCopyTensorValues<onerec::example::Float64List, dim0_padding>(dst_ptr, tensors, elem_cnt,
+                                                                      elem_size);
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
@@ -134,7 +141,7 @@ class DecodeOneRecKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeOneRecKernel);
   DecodeOneRecKernel() = default;
-  ~DecodeOneRecKernel() override = default;
+  ~DecodeOneRecKernel() override;
 
  private:
   void VirtualKernelInit() override;
@@ -144,6 +151,11 @@ class DecodeOneRecKernel final : public KernelIf<DeviceType::kCPU> {
   std::unique_ptr<BufferedBatchedOneRecReader> reader_;
   std::unique_ptr<PersistentInStream> in_stream_;
 };
+
+DecodeOneRecKernel::~DecodeOneRecKernel() {
+  reader_.reset();
+  in_stream_.reset();
+}
 
 void DecodeOneRecKernel::VirtualKernelInit() {
   const DecodeOneRecKernelConf& conf = this->kernel_conf().decode_onerec_conf();
