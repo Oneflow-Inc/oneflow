@@ -38,7 +38,7 @@ class FieldConf(object):
 @oneflow_export("onerec.decode_onerec")
 def decode_onerec(files, fields,
                   batch_size=1,
-                  buffer_size=8,
+                  buffer_size=16,
                   name=None):
     if name is None:
         name = id_util.UniqueStr("DecodeOneRec_")

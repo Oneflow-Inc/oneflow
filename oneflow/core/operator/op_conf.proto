@@ -1755,7 +1755,7 @@ message DecodeOneRecOpConf {
   repeated DecodeOneRecFieldConf field = 3;
   repeated string file = 4;
   required int64 batch_size = 5;
-  optional int64 buffer_size = 6 [default = 2];
+  optional int64 buffer_size = 6 [default = 16];
 }
 
 message OperatorConf {
