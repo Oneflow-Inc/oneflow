@@ -138,10 +138,12 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
       byte_size = 1;
       break;
     }
+#if CUDNN_VERSION > 7200
     case CUDNN_DATA_INT8x32: {
       byte_size = 32;
       break;
     }
+#endif
     default: { UNIMPLEMENTED(); }
   }
   return byte_size;
