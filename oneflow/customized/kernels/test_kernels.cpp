@@ -87,7 +87,10 @@ class TestSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestSourceKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kCPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
@@ -115,7 +118,10 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
       return new TestMultiOutputOrderKernel(ctx);
     })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      if (ctx.device() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 
