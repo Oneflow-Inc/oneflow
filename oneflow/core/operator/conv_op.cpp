@@ -140,8 +140,12 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
       } else {
         algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
       }
-      CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS);
-      CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size);
+      CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS)
+          << "op (" << op_conf().name()
+          << ") find algorithm perference failed. algo: " << algo_perf.algo;
+      CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size)
+          << "op (" << op_conf().name() << ") find algorithm " << algo_perf.algo << ", need memory "
+          << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
       workspace_size = algo_perf.memory;
     }
     workspace_size = std::max(size_t(1), workspace_size);

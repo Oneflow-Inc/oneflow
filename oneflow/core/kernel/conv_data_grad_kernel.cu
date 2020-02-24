@@ -41,8 +41,13 @@ class ConvDataGradGpuKernel final : public KernelIf<DeviceType::kGPU> {
     } else {
       algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
     }
-    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
-    CHECK_LE(algo_perf.memory, buf->ByteSizeOfBlobBody());
+    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+        << "op (" << this->op_conf().name()
+        << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    CHECK_LE(algo_perf.memory, buf->ByteSizeOfBlobBody())
+        << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
+        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+        << buf->ByteSizeOfBlobBody();
     CudaCheck(cudnnConvolutionBackwardData(
         ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), filter->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),

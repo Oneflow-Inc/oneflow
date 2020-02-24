@@ -77,8 +77,13 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   } else {
     algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
   }
-  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
-  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+      << "op (" << this->op_conf().name()
+      << ") find algorithm perference failed. algo: " << algo_perf.algo;
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody())
+      << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
+      << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+      << fw_cudnn_buf->ByteSizeOfBlobBody();
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), args.xdesc.Get(), in_blob->dptr(),
       args.wdesc.Get(), weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
@@ -212,8 +217,13 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   } else {
     algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
   }
-  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS);
-  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody());
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+      << "op (" << this->op_conf().name()
+      << ") find algorithm perference failed. algo: " << algo_perf.algo;
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody())
+      << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
+      << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+      << fw_cudnn_buf->ByteSizeOfBlobBody();
   CudaCheck(cudnnConvolutionForward(device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(),
                                     args.xdesc.Get(), in_blob->dptr(), args.wdesc.Get(),
                                     weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
