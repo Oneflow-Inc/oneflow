@@ -12,7 +12,7 @@ flags.DEFINE_string(
 )
 flags.DEFINE_string("model_save_dir", "snapshots", "")
 flags.DEFINE_float("lr", 1e-4, "learning rate")
-flags.DEFINE_float("weight_l2", 0.01, "")
+flags.DEFINE_float("weight_decay_rate", 0.01, "")
 flags.DEFINE_integer("batch_size", 24, "")
 flags.DEFINE_integer("data_part_num", 8, "")
 flags.DEFINE_integer("seq_length", 128, "")
@@ -105,6 +105,8 @@ _BERT_MODEL_UPDATE_CONF = dict(
     warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
+    weight_decay_conf=dict(
+        weight_decay_rate=FLAGS.weight_decay_rate, excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm']))
 )
 
 def PretrainJob():
@@ -128,7 +130,6 @@ func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
-func_config.train.weight_l2(FLAGS.weight_l2)
 
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
@@ -166,7 +167,6 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     train_config.train.primary_lr(FLAGS.lr)
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
-    train_config.train.weight_l2(FLAGS.weight_l2)
     train_config.enable_inplace(enable_inplace)
     @flow.function(train_config)
     def PretrainJob():

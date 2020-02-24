@@ -277,7 +277,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
   // tmp buffer size must be inferred after out shape/dtype
-  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK(tmp_buffer_blob != nullptr);

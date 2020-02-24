@@ -71,6 +71,7 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     DoPass("AutoTrainStep");
     DoPass("AutoLearningRate");
     DoPass("GenerateBackwardAndOptimizerOpConfs");
+    DoPass("IndexedSlicesOptimizerRewritePass");
     DoPass("SequentializeNcclTupleBroadcastReducePass");
     DoPass("AddAllReduceGroupPass");
     DoPass("AddLbiDiffWatcherOpConfs");

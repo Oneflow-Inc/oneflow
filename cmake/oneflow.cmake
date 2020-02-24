@@ -269,3 +269,52 @@ if(BUILD_TESTING)
     #  endforeach()
   endif()
 endif()
+
+# build include
+set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
+add_custom_target(of_include_copy ALL
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
+foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
+  set(oneflow_all_include_file)
+  #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
+  #list(APPEND oneflow_all_include_file ${h_files})
+  #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
+  #list(APPEND oneflow_all_include_file ${hpp_files})
+  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
+  foreach(of_hdr_file ${oneflow_all_include_file})
+    file(RELATIVE_PATH of_include_rel_file_path ${of_include_src_dir} ${of_hdr_file})
+    add_custom_command(TARGET of_include_copy POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy
+      "${of_hdr_file}"
+      "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+  endforeach()
+endforeach()
+
+foreach(of_proto_hdr_file ${PROTO_HDRS})
+  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_BINARY_DIR} ${of_proto_hdr_file})
+  add_custom_command(TARGET of_include_copy POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${of_proto_hdr_file}"
+    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+endforeach()
+
+set(OF_CORE_HDRS)
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
+foreach(of_core_dir_name ${of_core_dir_name_list})
+  file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
+  list(APPEND OF_CORE_HDRS ${h_files})
+  file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
+  list(APPEND OF_CORE_HDRS ${hpp_files})
+endforeach()
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
+foreach(of_core_hdr_file ${OF_CORE_HDRS})
+  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
+  add_custom_command(TARGET of_include_copy POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${of_core_hdr_file}"
+    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+endforeach()

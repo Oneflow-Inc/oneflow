@@ -5,6 +5,7 @@ import re
 import sys
 import argparse
 import shutil
+import glob
 
 from setuptools import find_packages
 from setuptools import setup
@@ -37,7 +38,10 @@ packages = find_packages("build/python_scripts")
 package_dir = {
     '':'build/python_scripts',
 }
-package_data = {'oneflow': ['_oneflow_internal.so']}
+
+include_files = glob.glob("build/python_scripts/oneflow/include/**/*", recursive=True)
+include_files = [os.path.relpath(p, "build/python_scripts/oneflow") for p in include_files]
+package_data = {'oneflow': ['_oneflow_internal.so'] + include_files}
 
 if args.with_xla:
     packages += ['oneflow.libs']

@@ -156,7 +156,7 @@ class EmbeddedListHead {
 
  private:
   EmbeddedListLink container_;
-  std::size_t size_;
+  volatile std::size_t size_;
 };
 
 }  // namespace oneflow
