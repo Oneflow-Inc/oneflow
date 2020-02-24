@@ -89,13 +89,13 @@ def reshape(x, shape, name=None):
         setattr(op_conf.dynamic_reshape_conf, "out", "out")
     else:
         dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
+        in_elem_cnt = reduce(operator.mul, x.shape, 1)
+        out_elem_cnt = reduce(operator.mul, shape, 1)
         if dim_index_need_infer is not None:
-            assert (reduce(operator.mul, x.shape, 1) % reduce(operator.mul, shape, 1)) == 0
-            shape[dim_index_need_infer] = int(
-                abs(reduce(operator.mul, x.shape, 1) / reduce(operator.mul, shape, 1))
-            )
+            assert (in_elem_cnt % out_elem_cnt) == 0
+            shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
         else:
-            assert reduce(operator.mul, x.shape, 1) == reduce(operator.mul, shape, 1)
+            assert in_elem_cnt == out_elem_cnt
         op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
         setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
         op_conf.reshape_conf.shape.dim[:] = list(shape)

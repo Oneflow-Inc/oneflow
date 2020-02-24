@@ -17,7 +17,7 @@ class DynamicReshapeOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
-    Shape out_shape(conf.shape());
+    DimVector out_dim_vec(conf.shape().dim().begin(), conf.shape().dim().end());
     if (parallel_ctx->parallel_num() > 1) {
       // consistent strategy
       //   ONLY support sbp: S(0); and -1 must at axis 0
@@ -29,30 +29,28 @@ class DynamicReshapeOp final : public Operator {
       const SbpParallel& in_sbp = in_sbp_it->second;
       if (out_sbp.has_split_parallel()) {
         CHECK_EQ_OR_RETURN(out_sbp.split_parallel().axis(), 0);
-        CHECK_EQ_OR_RETURN(out_shape.At(0), -1);
+        CHECK_EQ_OR_RETURN(out_dim_vec.at(0), -1);
         CHECK_OR_RETURN(in_sbp.has_split_parallel());
         CHECK_EQ_OR_RETURN(in_sbp.split_parallel().axis(), 0);
       }
     }
     int32_t inferred_axis = -1;
-    DimVector tmp_dim_vec;
-    for (int32_t i = 0; i < out_shape.NumAxes(); ++i) {
-      if (out_shape.At(i) == -1) {
+    int32_t product = 1;
+    for (int32_t i = 0; i < out_dim_vec.size(); ++i) {
+      if (out_dim_vec.at(i) == -1) {
         CHECK_EQ_OR_RETURN(-1, inferred_axis);
         inferred_axis = i;
       } else {
-        CHECK_GT_OR_RETURN(out_shape.At(i), 0);
-        tmp_dim_vec.push_back(out_shape.At(i));
+        CHECK_GT_OR_RETURN(out_dim_vec.at(i), 0);
+        product *= out_dim_vec.at(i);
       }
     }
     if (inferred_axis >= 0) {
-      int64_t one = 1;
-      int64_t product = std::max(Shape(tmp_dim_vec).elem_cnt(), one);
-      int64_t elem_cnt = in->shape().elem_cnt();
-      CHECK_EQ_OR_RETURN(elem_cnt % product, 0);
-      out_shape.Set(inferred_axis, elem_cnt / product);
+      CHECK_GE_OR_RETURN(product, 1);
+      CHECK_EQ_OR_RETURN(in->shape().elem_cnt() % product, 0);
+      out_dim_vec.at(inferred_axis) = in->shape().elem_cnt() / product;
     }
-    out->mut_shape() = std::move(out_shape);
+    out->mut_shape() = Shape(out_dim_vec);
     CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), out->shape().elem_cnt());
     return Maybe<void>::Ok();
   }
