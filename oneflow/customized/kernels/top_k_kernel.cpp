@@ -76,8 +76,9 @@ class TopKCpuKernel final : public user_op::OpKernel {
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
-    CpuTopK(ctx->device_ctx(), in->dptr<T>(), tmp_buffer->mut_dptr<int32_t>(), instance_num,
-            instance_size, k, ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
+    int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
+    CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
+            ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
   };
 };
 
