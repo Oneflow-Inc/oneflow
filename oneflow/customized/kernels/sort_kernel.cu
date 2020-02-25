@@ -1,6 +1,5 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort_infer_util.cuh"
 #include "oneflow/customized/kernels/gpu_sort_utils/radix_sort.cuh"
 
 namespace oneflow {
@@ -37,30 +36,28 @@ class GpuSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_SORT_KERNEL(dtype)                                                         \
-  REGISTER_USER_KERNEL("sort")                                                                  \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                         \
-        return new GpuSortKernel<dtype>(ctx);                                                   \
-      })                                                                                        \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);           \
-        return ctx.device() == DeviceType::kGPU                                                 \
-               && in_desc->data_type() == GetDataType<dtype>::value;                            \
-      })                                                                                        \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                              \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                            \
-        const int32_t instance_size = in_shape->dim_vec().back();                               \
-        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                      \
-        const std::string& dir = ctx->GetAttr<std::string>("dir");                              \
-        if (dir == "ASCENDING") {                                                               \
-          return InferTempStorageForSortingKeysAscendingAtCompile(instance_num, instance_size,  \
-                                                                  GetDataType<dtype>::value);   \
-        } else if (dir == "DESCENDING") {                                                       \
-          return InferTempStorageForSortingKeysDescendingAtCompile(instance_num, instance_size, \
-                                                                   GetDataType<dtype>::value);  \
-        } else {                                                                                \
-          UNIMPLEMENTED();                                                                      \
-        }                                                                                       \
+#define REGISTER_GPU_SORT_KERNEL(dtype)                                                        \
+  REGISTER_USER_KERNEL("sort")                                                                 \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                        \
+        return new GpuSortKernel<dtype>(ctx);                                                  \
+      })                                                                                       \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);          \
+        return ctx.device() == DeviceType::kGPU                                                \
+               && in_desc->data_type() == GetDataType<dtype>::value;                           \
+      })                                                                                       \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                             \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                           \
+        const int32_t instance_size = in_shape->dim_vec().back();                              \
+        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                     \
+        const std::string& dir = ctx->GetAttr<std::string>("dir");                             \
+        if (dir == "ASCENDING") {                                                              \
+          return InferTempStorageForSortingKeysAscending<dtype>(instance_num, instance_size);  \
+        } else if (dir == "DESCENDING") {                                                      \
+          return InferTempStorageForSortingKeysDescending<dtype>(instance_num, instance_size); \
+        } else {                                                                               \
+          UNIMPLEMENTED();                                                                     \
+        }                                                                                      \
       });
 
 REGISTER_GPU_SORT_KERNEL(float)

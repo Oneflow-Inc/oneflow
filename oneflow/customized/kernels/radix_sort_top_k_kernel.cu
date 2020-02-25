@@ -1,5 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort_infer_util.cuh"
 #include "oneflow/customized/kernels/gpu_sort_utils/radix_sort.cuh"
 
 namespace oneflow {
@@ -114,9 +113,8 @@ class RadixSortTopKKernel final : public user_op::OpKernel {
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                             \
         const int32_t instance_size = in_shape->dim_vec().back();                                \
         return static_cast<int32_t>(in_shape->elem_cnt() * (sizeof(dtype) + 2 * sizeof(int32_t)) \
-                                    + InferTempStorageForSortingPairsDescendingAtCompile(        \
-                                          in_shape->elem_cnt() / instance_size, instance_size,   \
-                                          *(ctx->Dtype4ArgNameAndIndex("in", 0))));              \
+                                    + InferTempStorageForSortingPairsDescending<dtype, int32_t>( \
+                                          in_shape->elem_cnt() / instance_size, instance_size)); \
       });
 
 REGISTER_RADIX_SORT_TOP_K_KERNEL(float)
