@@ -73,7 +73,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int32_t instance_size = in->shape().dim_vec().back();
+    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), tmp_buffer->mut_dptr<int32_t>(), instance_num,
