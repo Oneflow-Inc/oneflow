@@ -676,3 +676,16 @@ def square(x, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.top_k")
+def top_k(input, k=1, sorted=True, name=None):
+    return (
+        flow.user_op_builder(name)
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .SetAttr("k", k, "AttrTypeInt32",)
+        .SetAttr("sorted", sorted, "AttrTypeBool",)
+        .Build()
+        .RemoteBlobList()[0]
+    )
