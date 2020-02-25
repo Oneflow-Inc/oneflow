@@ -93,5 +93,6 @@ void DecodeOneRecOp::VirtualGenKernelConf(
 }
 
 REGISTER_CPU_OP(OperatorConf::kDecodeOnerecConf, DecodeOneRecOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kDecodeOnerecConf, 2);
 
 }  // namespace oneflow
