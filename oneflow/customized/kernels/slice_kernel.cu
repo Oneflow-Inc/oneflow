@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 namespace {
@@ -13,6 +14,44 @@ struct SliceGpuParams {
   int64_t end[kSliceMaxDims];
   int64_t stride[kSliceMaxDims];
 };
+
+SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_op::Tensor* entire,
+                                       const user_op::Tensor* sliced) {
+  auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
+  auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
+  auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+  CHECK_LE(entire->shape().NumAxes(), kSliceMaxDims);
+  CHECK_EQ(entire->shape().NumAxes(), sliced->shape().NumAxes());
+  CHECK_EQ(entire->shape().NumAxes(), begin_vec.size() + 1);
+  CHECK_EQ(entire->shape().NumAxes(), end_vec.size() + 1);
+  CHECK_EQ(entire->shape().NumAxes(), stride_vec.size() + 1);
+
+  SliceGpuParams params;
+  std::memset(&params, 0, sizeof(SliceGpuParams));
+  params.ndims = entire->shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, params.ndims) {
+    params.dims[i] = entire->shape().At(i);
+    params.sliced_dims[i] = sliced->shape().At(i);
+    if (i == 0) {
+      params.begin[i] = 0;
+      params.end[i] = params.dims[i];
+      params.stride[i] = 1;
+    } else {
+      int64_t begin = begin_vec.at(i - 1);
+      if (begin < 0) { begin += params.dims[i]; }
+      CHECK_GE(begin, 0);
+      CHECK_LT(begin, params.dims[i]);
+      int64_t end = end_vec.at(i - 1);
+      if (end < 0) { end += params.dims[i]; }
+      CHECK_GT(end, 0);
+      end = std::min(end, params.dims[i]);
+      params.begin[i] = begin;
+      params.end[i] = end;
+      params.stride[i] = stride_vec.at(i - 1);
+    }
+  }
+  return params;
+}
 
 __device__ __forceinline__ void OffsetToDimCoords(const int64_t offset, const int64_t ndims,
                                                   const int64_t* dims, int64_t* dim_coords) {
@@ -66,19 +105,6 @@ __global__ void SliceBackwardGpu(const int n, SliceGpuParams params, const T* pa
   }
 }
 
-int64_t FixSliceBegin(int64_t begin, int64_t dims) {
-  begin = (begin >= 0) ? begin : begin + dims;
-  CHECK_GE(begin, 0);
-  CHECK_LT(begin, dims);
-  return begin;
-}
-
-int64_t FixSliceEnd(int64_t end, int64_t dims) {
-  end = end >= 0 ? end : end + dims;
-  CHECK_GT(end, 0);
-  return std::min(end, dims);
-}
-
 }  // namespace
 
 template<typename T>
@@ -90,39 +116,67 @@ class SliceGpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
-    auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
-    auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-
-    CHECK_LE(input->shape().NumAxes(), kSliceMaxDims);
-    CHECK_EQ(input->shape().NumAxes(), output->shape().NumAxes());
-    CHECK_EQ(input->shape().NumAxes(), begin_vec.size() + 1);
-    CHECK_EQ(input->shape().NumAxes(), end_vec.size() + 1);
-    CHECK_EQ(input->shape().NumAxes(), stride_vec.size() + 1);
-
-    SliceGpuParams params;
-    std::memset(&params, 0, sizeof(SliceGpuParams));
-    params.ndims = input->shape().NumAxes();
-    FOR_RANGE(int64_t, i, 0, params.ndims) {
-      params.dims[i] = input->shape().At(i);
-      params.sliced_dims[i] = output->shape().At(i);
-      if (i == 0) {
-        params.begin[i] = 0;
-        params.end[i] = input->shape().At(i);
-        params.stride[i] = 1;
-      } else {
-        params.begin[i] = FixSliceBegin(begin_vec.at(i - 1), params.dims[i]);
-        params.end[i] = FixSliceEnd(end_vec.at(i - 1), params.dims[i]);
-        params.stride[i] = stride_vec.at(i - 1);
-      }
-    }
-    const int64_t elem_cnt = output->shape().elem_cnt();
+    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
+    auto params = ConstructSliceGpuParams(ctx, input, output);
+    int64_t elem_cnt = output->shape().elem_cnt();
     SliceForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                          ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, input->dptr<T>(),
                                                              output->mut_dptr<T>());
   }
 };
+
+template<typename T>
+class SliceGradGpuKernel final : public user_op::OpKernel {
+ public:
+  SliceGradGpuKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  SliceGradGpuKernel() = default;
+  ~SliceGradGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    size_t dx_byte_size = dx->shape().elem_cnt() * sizeof(T);
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_byte_size);
+    auto params = ConstructSliceGpuParams(ctx, dx, dy);
+    int64_t elem_cnt = dy->shape().elem_cnt();
+    SliceBackwardGpu<T>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, dy->dptr<T>(), dx->mut_dptr<T>());
+  }
+};
+
+#define REGISTER_SLICE_GPU_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("slice_v2")                                                    \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
+        return new SliceGpuKernel<dtype>(ctx);                                        \
+      })                                                                              \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);   \
+        if (ctx.device() == DeviceType::kGPU                                          \
+            && y_desc->data_type() == GetDataType<dtype>::value) {                    \
+          return true;                                                                \
+        }                                                                             \
+        return false;                                                                 \
+      });                                                                             \
+  REGISTER_USER_KERNEL("slice_grad_v2")                                               \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
+        return new SliceGradGpuKernel<dtype>(ctx);                                    \
+      })                                                                              \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
+        if (ctx.device() == DeviceType::kGPU                                          \
+            && dx_desc->data_type() == GetDataType<dtype>::value) {                   \
+          return true;                                                                \
+        }                                                                             \
+        return false;                                                                 \
+      });
+
+REGISTER_SLICE_GPU_KERNEL(float)
+REGISTER_SLICE_GPU_KERNEL(double)
+REGISTER_SLICE_GPU_KERNEL(int32_t)
+REGISTER_SLICE_GPU_KERNEL(int64_t)
+REGISTER_SLICE_GPU_KERNEL(int8_t)
 
 }  // namespace oneflow
