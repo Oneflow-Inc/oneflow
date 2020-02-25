@@ -239,7 +239,9 @@ def slice_v2(input, slice_tup_list, name=None):
 
     ndims = len(input.shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) >= ndims:
-        raise ValueError('param "slice_tup_list" must be a list or tuple whose length should be 1 less than number of dimensions of input')
+        raise ValueError(
+            'param "slice_tup_list" must be a list or tuple whose length should be 1 less than number of dimensions of input'
+        )
 
     # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
     if len(slice_tup_list) < ndims - 1:
@@ -250,7 +252,9 @@ def slice_v2(input, slice_tup_list, name=None):
     stride_list = []
     for slice_tup, dim in zip(slice_tup_list, input.shape[1:]):
         if not isinstance(slice_tup, (tuple, list)):
-            raise ValueError("element of slice_tup_list must be a list or tuple with form (begin, end, stride)")
+            raise ValueError(
+                "element of slice_tup_list must be a list or tuple with form (begin, end, stride)"
+            )
         (begin, end, stride) = slice_tup
         if begin is None:
             begin = 0
@@ -262,11 +266,16 @@ def slice_v2(input, slice_tup_list, name=None):
         end_list.append(end)
         stride_list.append(stride)
 
-    op = flow.user_op_builder(name).Op("slice_v2").Input("x", [input]).Output("y")
-            .SetAttr("begin", begin_list, "AttrTypeListInt64")
-            .SetAttr("end", end_list, "AttrTypeListInt64")
-            .SetAttr("stride", stride_list, "AttrTypeListInt64")
-            .Build()
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice_v2")
+        .Input("x", [input])
+        .Output("y")
+        .SetAttr("begin", begin_list, "AttrTypeListInt64")
+        .SetAttr("end", end_list, "AttrTypeListInt64")
+        .SetAttr("stride", stride_list, "AttrTypeListInt64")
+        .Build()
+    )
     return op.RemoteBlobList()[0]
 
 @oneflow_export("concat")
