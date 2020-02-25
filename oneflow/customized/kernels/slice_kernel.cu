@@ -1,7 +1,9 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/customized/ops/slice_util.h"
 
 namespace oneflow {
+
 namespace {
 
 constexpr size_t kSliceMaxDims = 8;
@@ -37,17 +39,15 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
       params.end[i] = params.dims[i];
       params.stride[i] = 1;
     } else {
-      int64_t begin = begin_vec.at(i - 1);
-      if (begin < 0) { begin += params.dims[i]; }
-      CHECK_GE(begin, 0);
-      CHECK_LT(begin, params.dims[i]);
-      int64_t end = end_vec.at(i - 1);
-      if (end < 0) { end += params.dims[i]; }
-      CHECK_GT(end, 0);
-      end = std::min(end, params.dims[i]);
-      params.begin[i] = begin;
-      params.end[i] = end;
+      params.begin[i] = RegulateSliceIndex(begin_vec.at(i - 1), params.dims[i]);
+      params.end[i] = RegulateSliceIndex(end_vec.at(i - 1), params.dims[i]);
       params.stride[i] = stride_vec.at(i - 1);
+      CHECK_NE(params.stride[i], 0);
+      if (params.stride[i] > 0) {
+        CHECK_LT(params.begin[i], params.end[i]);
+      } else {
+        CHECK_GT(params.begin[i], params.end[i]);
+      }
     }
   }
   return params;
