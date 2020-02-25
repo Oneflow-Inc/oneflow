@@ -103,7 +103,7 @@ REGISTER_USER_OP("TestReshapeLike4KeepHeaderOnly")
       *out_shape = *like_shape;
       return Maybe<void>::Ok();
     })
-    .SetAdvancedInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);

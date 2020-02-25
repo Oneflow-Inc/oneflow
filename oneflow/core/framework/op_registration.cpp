@@ -159,9 +159,9 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetAdvancedInputArgModifyFn(
-    AdvancedInputArgModifyFn advanced_input_arg_modify_fn) {
-  wrapper_.reg_val.advanced_input_arg_modify_fn = std::move(advanced_input_arg_modify_fn);
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
+    InputArgModifyFn input_arg_modify_fn) {
+  wrapper_.reg_val.input_arg_modify_fn = std::move(input_arg_modify_fn);
   return *this;
 }
 
@@ -180,8 +180,8 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
     wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
   }
-  if (wrapper_.reg_val.advanced_input_arg_modify_fn == nullptr) {
-    wrapper_.reg_val.advanced_input_arg_modify_fn = [](GetInputArgModifier) {};
+  if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
+    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};
   }
   return wrapper_;
 }

@@ -30,7 +30,7 @@ using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using AdvancedInputArgModifyFn = std::function<void(GetInputArgModifier)>;
+using InputArgModifyFn = std::function<void(GetInputArgModifier)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
@@ -39,7 +39,9 @@ struct OpRegistrationVal {
   DtypeInferFn dtype_infer_fn;
   BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
-  AdvancedInputArgModifyFn advanced_input_arg_modify_fn;
+  // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
+  // performance other than op definition
+  InputArgModifyFn input_arg_modify_fn;
 };
 
 struct OpRegistryWrapper final {
@@ -74,7 +76,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& SetDataTypeInferFn(DtypeInferFn fn);
   OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
-  OpRegistryWrapperBuilder& SetAdvancedInputArgModifyFn(AdvancedInputArgModifyFn fn);
+  OpRegistryWrapperBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistryWrapper Build();

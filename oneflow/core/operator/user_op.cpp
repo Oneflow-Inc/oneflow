@@ -245,7 +245,7 @@ void UserOp::InitFromOpConf() {
       }
       return nullptr;
     };
-    val_->advanced_input_arg_modify_fn(GetInputArgModifierFn);
+    val_->input_arg_modify_fn(GetInputArgModifierFn);
   }
 }
 
