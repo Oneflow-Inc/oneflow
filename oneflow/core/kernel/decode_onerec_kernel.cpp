@@ -182,12 +182,14 @@ void DecodeOneRecKernel::Forward(const KernelCtx& ctx,
     GetTensorsFromRecords(records, field.key(), &tensors);
     std::vector<std::vector<int32_t>> tensor_dims;
     if (field.has_reshape()) {
+      CHECK_EQ(field.reshape().dim_size(), field.static_shape().dim_size());
       GetTensorDimsWithReshape(tensors, field.reshape(), &tensor_dims);
     } else {
       GetTensorDimsWithoutReshape(tensors, field.static_shape().dim_size(), &tensor_dims);
     }
     DimVector instance_dim_vec;
     if (field.has_batch_padding()) {
+      CHECK_EQ(field.batch_padding().dim_size(), field.static_shape().dim_size());
       for (int32_t d = 1; d < field.batch_padding().dim_size(); ++d) {
         if (field.batch_padding().dim(d) != 0) { UNIMPLEMENTED(); }
       }
