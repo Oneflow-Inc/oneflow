@@ -82,7 +82,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_TOP_K_CPU_KERNEL(dtype)                                                    \
+#define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                    \
   REGISTER_USER_KERNEL("top_k")                                                             \
       .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                     \
         return new TopKCpuKernel<dtype>(ctx);                                               \
@@ -97,10 +97,10 @@ class TopKCpuKernel final : public user_op::OpKernel {
         return ctx->GetAttr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
       });
 
-REGISTER_TOP_K_CPU_KERNEL(float)
-REGISTER_TOP_K_CPU_KERNEL(double)
-REGISTER_TOP_K_CPU_KERNEL(int8_t)
-REGISTER_TOP_K_CPU_KERNEL(int32_t)
-REGISTER_TOP_K_CPU_KERNEL(int64_t)
+REGISTER_CPU_TOP_K_KERNEL(float)
+REGISTER_CPU_TOP_K_KERNEL(double)
+REGISTER_CPU_TOP_K_KERNEL(int8_t)
+REGISTER_CPU_TOP_K_KERNEL(int32_t)
+REGISTER_CPU_TOP_K_KERNEL(int64_t)
 
 }  // namespace oneflow
