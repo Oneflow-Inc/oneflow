@@ -1,4 +1,6 @@
-#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort_infer_util.h"
+#ifndef ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_INFER_UTIL_CUH_
+#define ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_INFER_UTIL_CUH_
+
 #include "oneflow/customized/kernels/gpu_sort_utils/radix_sort.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
@@ -219,3 +221,5 @@ size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_
 }
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_INFER_UTIL_CUH_

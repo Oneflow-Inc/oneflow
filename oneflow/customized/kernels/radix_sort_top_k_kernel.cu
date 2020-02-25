@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort_infer_util.h"
+#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort_infer_util.cuh"
 #include "oneflow/customized/kernels/gpu_sort_utils/radix_sort.cuh"
 
 namespace oneflow {
