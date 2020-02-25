@@ -26,7 +26,10 @@ def compare_with_tensorflow(device_type, in_shape, k, sorted):
     # OneFlow
     of_out = TopKJob([input]).get().ndarray_list()[0]
     # TensorFlow
-    _, tf_out = tf.math.top_k(tf.Variable(input), k, sorted)
+    if k <= in_shape[-1]:
+        _, tf_out = tf.math.top_k(tf.Variable(input), k, sorted)
+    else:
+        tf_out = tf.argsort(input, axis=-1, direction="DESCENDING", stable=True)
 
     assert np.allclose(of_out, tf_out.numpy())
 
@@ -34,8 +37,8 @@ def compare_with_tensorflow(device_type, in_shape, k, sorted):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
-    arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000)]
-    arg_dict["k"] = [1, 50, 100]
+    arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 1000000)]
+    arg_dict["k"] = [1, 50, 100, 200, 256]
     arg_dict["sorted"] = [True]
 
     return GenArgList(arg_dict)
