@@ -681,19 +681,6 @@ def square(x, name=None):
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
     return (
-        flow.user_op_builder(name)
-        .Op("top_k")
-        .Input("in", [input])
-        .Output("out")
-        .SetAttr("k", k, "AttrTypeInt32",)
-        .SetAttr("sorted", sorted, "AttrTypeBool",)
-        .Build()
-        .RemoteBlobList()[0]
-    )
-
-@oneflow_export("math.top_k")
-def top_k(input, k=1, sorted=True, name=None):
-    return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
         .Input("in", [input])
