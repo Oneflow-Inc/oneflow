@@ -16,35 +16,26 @@ def compare_with_tensorflow(device_type, in_shape, k, sorted):
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def TopKJob():
+    def TopKJob(
+        input=flow.MirroredTensorDef(tuple([dim + 10 for dim in in_shape]), dtype=flow.float32)
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
-            input = flow.get_variable(
-                "input",
-                shape=in_shape,
-                dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-                trainable=False,
-            )
-            flow.watch(input, Save("input"))
-
             return flow.math.top_k(input, k, sorted)
 
+    input = (np.random.random(in_shape) * 100).astype(np.float32)
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-    of_out = TopKJob().get()
+    of_out = TopKJob([input]).get().ndarray_list()[0]
     # TensorFlow
-    input = tf.Variable(np.load(os.path.join(GetSavePath(), "input.npy")))
-    _, tf_out = tf.math.top_k(input, k, sorted)
+    _, tf_out = tf.math.top_k(tf.Variable(input), k, sorted)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy())
+    assert np.allclose(of_out, tf_out.numpy())
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
     arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000)]
-    arg_dict["k"] = [1, 50, 100, 200, 256]
+    arg_dict["k"] = [1, 50, 100]
     arg_dict["sorted"] = [True]
 
     return GenArgList(arg_dict)
