@@ -1,19 +1,17 @@
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-
 namespace {
-
 Maybe<int64_t> FixSliceBegin(int64_t begin, int64_t dims) {
   begin = (begin >= 0) ? begin : begin + dims;
-  CHECK_GE(begin, 0);
-  CHECK_LT(begin, dims);
+  CHECK_GE_OR_RETURN(begin, 0);
+  CHECK_LT_OR_RETURN(begin, dims);
   return begin;
 }
 
 Maybe<int64_t> FixSliceEnd(int64_t end, int64_t dims) {
   end = end >= 0 ? end : end + dims;
-  CHECK_GT(end, 0);
+  CHECK_GT_OR_RETURN(end, 0);
   return std::min(end, dims);
 }
 
@@ -42,9 +40,9 @@ REGISTER_USER_OP("slice_v2")
         if (i == 0) {
           dim_vec[i] = in_shape->At(i);
         } else {
-          int64_t begin = FixSliceBegin(begin_vec.at(i - 1), in_shape->At(i));
-          int64_t end = FixSliceEnd(end_vec.at(i - 1), in_shape->At(i));
-          int64_t stride = stride_vec.at(i - 1);
+          const int64_t begin = CHECK_JUST(FixSliceBegin(begin_vec.at(i - 1), in_shape->At(i)));
+          const int64_t end = CHECK_JUST(FixSliceEnd(end_vec.at(i - 1), in_shape->At(i)));
+          const int64_t stride = stride_vec.at(i - 1);
           CHECK_NE_OR_RETURN(begin, end);
           CHECK_NE_OR_RETURN(stride, 0);
           if (stride > 0) {
