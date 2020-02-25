@@ -21,10 +21,10 @@ class FieldConf(object):
         self.is_dynamic = is_dynamic
         if reshape is not None:
             assert(len(reshape) == len(static_shape))
-            self.reshape = reshape
+        self.reshape = reshape
         if batch_padding is not None:
             assert(len(batch_padding) == len(static_shape))
-            self.batch_padding = batch_padding
+        self.batch_padding = batch_padding
 
     def to_proto(self):
         field_conf = op_conf_util.DecodeOneRecFieldConf()
