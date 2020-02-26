@@ -100,10 +100,10 @@ class Entry final {
 };
 
 template<typename T>
-class Heap final {
+class MaxHeap final {
  public:
-  __device__ __forceinline__ Heap(Entry<T>* data, const int32_t heap_size, const int32_t init_index,
-                                  const T init_value)
+  __device__ __forceinline__ MaxHeap(Entry<T>* data, const int32_t heap_size,
+                                     const int32_t init_index, const T init_value)
       : data_(data), heap_size_(heap_size) {
     for (int32_t i = 0; i < heap_size; ++i) {
       data_[i].SetIndex(init_index);
@@ -116,7 +116,7 @@ class Heap final {
     data_[j] = data_[i];
     data_[i] = tmp;
   }
-  __device__ __forceinline__ void Heapify(int32_t index) {
+  __device__ __forceinline__ void MaxHeapify(int32_t index) {
     while (true) {
       const int32_t left = 2 * index + 1;
       const int32_t right = 2 * index + 2;
@@ -143,7 +143,8 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
   auto* shared_entries = reinterpret_cast<Entry<T>*>(smem);
 
   const T* input = in_ptr + blockIdx.x * instance_size;
-  auto heap = Heap<T>(shared_entries + threadIdx.x * heap_size, heap_size, init_index, init_value);
+  auto heap =
+      MaxHeap<T>(shared_entries + threadIdx.x * heap_size, heap_size, init_index, init_value);
   // Divide elements to be sorted into disjoint sets (# of sets == # of heaps).
   // Each thread in the thread block manipulate one heap to select top heap_size entries from
   // corresponding set
@@ -151,7 +152,7 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
     auto entry = Entry<T>(i, input[i]);
     if (entry > heap.Top()) {
       heap.Top() = entry;
-      heap.Heapify(0);
+      heap.MaxHeapify(0);
     }
   }
 
