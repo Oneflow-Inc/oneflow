@@ -37,7 +37,7 @@ def compare_with_tensorflow(device_type, in_shape, dir, data_type):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 100000)]
+    arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 10000)]
     arg_dict["dir"] = ["ASCENDING", "DESCENDING"]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
 
