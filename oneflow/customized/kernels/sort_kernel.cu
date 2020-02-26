@@ -62,7 +62,6 @@ class GpuSortKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_SORT_KERNEL(float)
 REGISTER_GPU_SORT_KERNEL(double)
-REGISTER_GPU_SORT_KERNEL(int8_t)
 REGISTER_GPU_SORT_KERNEL(int32_t)
 REGISTER_GPU_SORT_KERNEL(int64_t)
 

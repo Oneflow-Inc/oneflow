@@ -46,7 +46,6 @@ class CpuSortKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_SORT_KERNEL(float)
 REGISTER_CPU_SORT_KERNEL(double)
-REGISTER_CPU_SORT_KERNEL(int8_t)
 REGISTER_CPU_SORT_KERNEL(int32_t)
 REGISTER_CPU_SORT_KERNEL(int64_t)
 

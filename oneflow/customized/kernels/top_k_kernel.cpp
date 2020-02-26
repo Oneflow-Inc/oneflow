@@ -99,7 +99,6 @@ class TopKCpuKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_TOP_K_KERNEL(float)
 REGISTER_CPU_TOP_K_KERNEL(double)
-REGISTER_CPU_TOP_K_KERNEL(int8_t)
 REGISTER_CPU_TOP_K_KERNEL(int32_t)
 REGISTER_CPU_TOP_K_KERNEL(int64_t)
 
