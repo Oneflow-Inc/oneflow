@@ -7,34 +7,33 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-class TmpBufManager final {
+class TmpBufferManager final {
  public:
-  TmpBufManager(int32_t tmp_buffer_bytes, char* tmp_buffer_ptr, const ShapeView& in_shape)
-      : capacity_{tmp_buffer_bytes},
+  TmpBufferManager(int32_t capacity, char* tmp_buffer_ptr, const ShapeView& in_shape)
+      : capacity_{capacity},
         sorted_in_bytes_{in_shape.elem_cnt() * sizeof(T)},
         indices_bytes_{in_shape.elem_cnt() * sizeof(int32_t)},
         temp_storage_bytes_{capacity_ - sorted_in_bytes_ - indices_bytes_} {
     sorted_in_ptr_ = (T*)tmp_buffer_ptr;
     indices_ptr_ = (int32_t*)(tmp_buffer_ptr + sorted_in_bytes_);
-    temp_storage_ptr_ = (void*)((char*)indices_ptr_ + indices_bytes_);
+    temp_storage_ptr_ = (void*)(tmp_buffer_ptr + sorted_in_bytes_ + indices_bytes_);
   }
-
-  int32_t Capacity() const { return capacity_; }
+  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
+  ~TmpBufferManager() = default;
 
   T* SortedInPtr() const { return sorted_in_ptr_; }
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t GetSortedInBytes() { return sorted_in_bytes_; }
-  int32_t GetIndicesBytes() { return indices_bytes_; }
-  int32_t GetTempStorageBytes() { return temp_storage_bytes_; }
+  int32_t GetSortedInBytes() const { return sorted_in_bytes_; }
+  int32_t GetIndicesBytes() const { return indices_bytes_; }
+  int32_t GetTempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
   int32_t capacity_;
 
   T* sorted_in_ptr_;
   int32_t* indices_ptr_;
-  int32_t* sorted_indices_ptr_;
   void* temp_storage_ptr_;
 
   int32_t sorted_in_bytes_;
@@ -62,8 +61,9 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    auto* buf_manager = new TmpBufManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                                             tmp_buffer->mut_dptr<char>(), in->shape());
+    auto* buf_manager =
+        new TmpBufferManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
+                                tmp_buffer->mut_dptr<char>(), in->shape());
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
@@ -89,33 +89,32 @@ class GpuArgSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("arg_sort")                                                           \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                      \
-        return new GpuArgSortKernel<dtype>(ctx);                                             \
-      })                                                                                     \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);        \
-        return ctx.device() == DeviceType::kGPU                                              \
-               && in_desc->data_type() == GetDataType<dtype>::value;                         \
-      })                                                                                     \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                           \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                         \
-        const int32_t instance_size = in_shape->dim_vec().back();                            \
-        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                   \
-        int32_t temp_storage_bytes = -1;                                                     \
-        const std::string& dir = ctx->GetAttr<std::string>("dir");                           \
-        if (dir == "ASCENDING") {                                                            \
-          temp_storage_bytes = InferTempStorageForSortPairsAscending<dtype, int32_t>(     \
-              instance_num, instance_size);                                                  \
-        } else if (dir == "DESCENDING") {                                                    \
-          temp_storage_bytes = InferTempStorageForSortPairsDescending<dtype, int32_t>(    \
-              instance_num, instance_size);                                                  \
-        } else {                                                                             \
-          UNIMPLEMENTED();                                                                   \
-        }                                                                                    \
-        return static_cast<int32_t>(in_shape->elem_cnt() * (sizeof(dtype) + sizeof(int32_t)) \
-                                    + temp_storage_bytes);                                   \
+#define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
+  REGISTER_USER_KERNEL("arg_sort")                                                                 \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                            \
+        return new GpuArgSortKernel<dtype>(ctx);                                                   \
+      })                                                                                           \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                        \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
+        return ctx.device() == DeviceType::kGPU                                                    \
+               && in_desc->data_type() == GetDataType<dtype>::value;                               \
+      })                                                                                           \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                                 \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
+        const int32_t instance_size = in_shape->dim_vec().back();                                  \
+        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                         \
+        int32_t temp_storage_bytes = -1;                                                           \
+        const std::string& dir = ctx->GetAttr<std::string>("dir");                                 \
+        if (dir == "ASCENDING") {                                                                  \
+          temp_storage_bytes =                                                                     \
+              InferTempStorageForSortPairsAscending<dtype, int32_t>(instance_num, instance_size);  \
+        } else if (dir == "DESCENDING") {                                                          \
+          temp_storage_bytes =                                                                     \
+              InferTempStorageForSortPairsDescending<dtype, int32_t>(instance_num, instance_size); \
+        } else {                                                                                   \
+          UNIMPLEMENTED();                                                                         \
+        }                                                                                          \
+        return in_shape->elem_cnt() * (sizeof(dtype) + sizeof(int32_t)) + temp_storage_bytes;      \
       });
 
 REGISTER_GPU_ARG_SORT_KERNEL(float)
