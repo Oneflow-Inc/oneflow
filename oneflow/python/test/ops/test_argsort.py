@@ -16,17 +16,17 @@ def compare_with_tensorflow(device_type, in_shape, dir):
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def SortJob(
+    def ArgSortJob(
         input=flow.MirroredTensorDef(tuple([dim + 10 for dim in in_shape]), dtype=flow.float32)
     ):
         with flow.device_prior_placement(device_type, "0:0"):
-            return flow.sort(input, dir)
+            return flow.argsort(input, dir)
 
     input = (np.random.random(in_shape) * 100).astype(np.float32)
     # OneFlow
-    of_out = SortJob([input]).get().ndarray_list()[0]
+    of_out = ArgSortJob([input]).get().ndarray_list()[0]
     # TensorFlow
-    tf_out = tf.sort(input, axis=-1, direction=dir)
+    tf_out = tf.argsort(input, axis=-1, direction=dir)
 
     assert np.allclose(of_out, tf_out.numpy())
 
@@ -40,6 +40,6 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_sort(test_case):
+def test_argsort(test_case):
     for arg in gen_arg_list():
         compare_with_tensorflow(*arg)
