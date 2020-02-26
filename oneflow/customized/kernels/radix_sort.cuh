@@ -1,8 +1,7 @@
-#ifndef ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_CUH_
-#define ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_CUH_
+#ifndef ONEFLOW_CUSTOMIZED_KERNELS_RADIX_SORT_CUH_
+#define ONEFLOW_CUSTOMIZED_KERNELS_RADIX_SORT_CUH_
 
 #include <cub/cub.cuh>
-#include <glog/logging.h>
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -12,7 +11,9 @@ namespace {
 class SegmentOffsetCreator final {
  public:
   SegmentOffsetCreator(int32_t num_col) : num_col_(num_col) {}
-  __device__ int32_t operator()(int32_t idx) const { return idx * num_col_; }
+  __host__ __device__ __forceinline__ int32_t operator()(int32_t idx) const {
+    return idx * num_col_;
+  }
 
  private:
   int32_t num_col_;
@@ -21,16 +22,13 @@ class SegmentOffsetCreator final {
 }  // namespace
 
 template<typename KeyType, typename ValueType>
-size_t InferTempStorageForSortingPairsAscending(int32_t num_row, int32_t num_col) {
-  size_t temp_storage_bytes = -1;
-
+size_t InferTempStorageForSortPairsAscending(int32_t num_row, int32_t num_col) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
-  cudaStream_t cuda_stream;
-  CudaCheck(cudaStreamCreate(&cuda_stream));
-
+  size_t temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortPairs(
       /* d_temp_storage */ static_cast<void*>(NULL),
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -40,30 +38,24 @@ size_t InferTempStorageForSortingPairsAscending(int32_t num_row, int32_t num_col
       /* d_values_out */ static_cast<ValueType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
-      /* stream */ cuda_stream);
+      /* stream */ 0);
   CudaCheck(err);
-  CudaCheck(cudaStreamSynchronize(cuda_stream));
-  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
-  CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
 }
 
 template<typename KeyType, typename ValueType>
-size_t InferTempStorageForSortingPairsDescending(int32_t num_row, int32_t num_col) {
-  size_t temp_storage_bytes = -1;
-
+size_t InferTempStorageForSortPairsDescending(int32_t num_row, int32_t num_col) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
-  cudaStream_t cuda_stream;
-  CudaCheck(cudaStreamCreate(&cuda_stream));
-
+  size_t temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
       /* d_temp_storage */ static_cast<void*>(NULL),
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -73,30 +65,24 @@ size_t InferTempStorageForSortingPairsDescending(int32_t num_row, int32_t num_co
       /* d_values_out */ static_cast<ValueType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
-      /* stream */ cuda_stream);
+      /* stream */ 0);
   CudaCheck(err);
-  CudaCheck(cudaStreamSynchronize(cuda_stream));
-  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
-  CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
 }
 
 template<typename KeyType>
-size_t InferTempStorageForSortingKeysAscending(int32_t num_row, int32_t num_col) {
-  size_t temp_storage_bytes = -1;
-
+size_t InferTempStorageForSortKeysAscending(int32_t num_row, int32_t num_col) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
-  cudaStream_t cuda_stream;
-  CudaCheck(cudaStreamCreate(&cuda_stream));
-
+  size_t temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortKeys(
       /* d_temp_storage */ static_cast<void*>(NULL),
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -104,30 +90,24 @@ size_t InferTempStorageForSortingKeysAscending(int32_t num_row, int32_t num_col)
       /* d_keys_out */ static_cast<KeyType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
-      /* stream */ cuda_stream);
+      /* stream */ 0);
   CudaCheck(err);
-  CudaCheck(cudaStreamSynchronize(cuda_stream));
-  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
-  CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
 }
 
 template<typename KeyType>
-size_t InferTempStorageForSortingKeysDescending(int32_t num_row, int32_t num_col) {
-  size_t temp_storage_bytes = -1;
-
+size_t InferTempStorageForSortKeysDescending(int32_t num_row, int32_t num_col) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
-  cudaStream_t cuda_stream;
-  CudaCheck(cudaStreamCreate(&cuda_stream));
-
+  size_t temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortKeysDescending(
       /* d_temp_storage */ static_cast<void*>(NULL),
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -135,28 +115,25 @@ size_t InferTempStorageForSortingKeysDescending(int32_t num_row, int32_t num_col
       /* d_keys_out */ static_cast<KeyType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
-      /* stream */ cuda_stream);
+      /* stream */ 0);
   CudaCheck(err);
-  CudaCheck(cudaStreamSynchronize(cuda_stream));
-  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
-  CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
 }
 
-// Sort key-value pairs in ascending order
 template<typename KeyType, typename ValueType>
 void SortPairsAscending(const KeyType* keys_ptr, const ValueType* values_ptr, int32_t num_row,
                         int32_t num_col, void* temp_storage_ptr, int32_t temp_storage_bytes,
                         KeyType* sorted_keys_ptr, ValueType* sorted_values_ptr,
                         cudaStream_t cuda_stream) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
   size_t rt_inferred_temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortPairs(
@@ -168,8 +145,8 @@ void SortPairsAscending(const KeyType* keys_ptr, const ValueType* values_ptr, in
       /* d_values_out */ static_cast<ValueType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
@@ -185,23 +162,23 @@ void SortPairsAscending(const KeyType* keys_ptr, const ValueType* values_ptr, in
       /* d_values_out */ sorted_values_ptr,
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
 }
 
-// Sort key-value pairs in descending order
 template<typename KeyType, typename ValueType>
 void SortPairsDescending(const KeyType* keys_ptr, const ValueType* values_ptr, int32_t num_row,
                          int32_t num_col, void* temp_storage_ptr, int32_t temp_storage_bytes,
                          KeyType* sorted_keys_ptr, ValueType* sorted_values_ptr,
                          cudaStream_t cuda_stream) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
   size_t rt_inferred_temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
@@ -213,8 +190,8 @@ void SortPairsDescending(const KeyType* keys_ptr, const ValueType* values_ptr, i
       /* d_values_out */ static_cast<ValueType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
@@ -230,22 +207,22 @@ void SortPairsDescending(const KeyType* keys_ptr, const ValueType* values_ptr, i
       /* d_values_out */ sorted_values_ptr,
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
 }
 
-// Sort keys in ascending order
 template<typename KeyType>
 void SortKeysAscending(const KeyType* keys_ptr, int32_t num_row, int32_t num_col,
                        void* temp_storage_ptr, int32_t temp_storage_bytes, KeyType* sorted_keys_ptr,
                        cudaStream_t cuda_stream) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
   size_t rt_inferred_temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortKeys(
@@ -255,8 +232,8 @@ void SortKeysAscending(const KeyType* keys_ptr, int32_t num_row, int32_t num_col
       /* d_keys_out */ static_cast<KeyType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
@@ -270,22 +247,22 @@ void SortKeysAscending(const KeyType* keys_ptr, int32_t num_row, int32_t num_col
       /* d_keys_out */ sorted_keys_ptr,
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
 }
 
-// Sort keys in descending order
 template<typename KeyType>
 void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_col,
                         void* temp_storage_ptr, int32_t temp_storage_bytes,
                         KeyType* sorted_keys_ptr, cudaStream_t cuda_stream) {
   cub::CountingInputIterator<int32_t> counting_iter(0);
+  SegmentOffsetCreator conversion_op(num_col);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
+      segment_offsets_iter(counting_iter, conversion_op);
 
   size_t rt_inferred_temp_storage_bytes = -1;
   auto err = cub::DeviceSegmentedRadixSort::SortKeysDescending(
@@ -295,8 +272,8 @@ void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_co
       /* d_keys_out */ static_cast<KeyType*>(NULL),
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
@@ -310,8 +287,8 @@ void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_co
       /* d_keys_out */ sorted_keys_ptr,
       /* num_items */ num_row * num_col,
       /* num_segments */ num_row,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
+      /* d_begin_offsets */ segment_offsets_iter,
+      /* d_end_offsets */ segment_offsets_iter + 1,
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
@@ -320,4 +297,4 @@ void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_co
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_KERNELS_GPU_SORT_UTILS_RADIX_SORT_CUH_
+#endif  // ONEFLOW_CUSTOMIZED_KERNELS_RADIX_SORT_CUH_

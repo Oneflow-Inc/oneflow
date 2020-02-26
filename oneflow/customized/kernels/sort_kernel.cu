@@ -1,6 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/customized/kernels/gpu_sort_utils/radix_sort.cuh"
+#include "oneflow/customized/kernels/radix_sort.cuh"
 
 namespace oneflow {
 
@@ -52,9 +52,9 @@ class GpuSortKernel final : public user_op::OpKernel {
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                     \
         const std::string& dir = ctx->GetAttr<std::string>("dir");                             \
         if (dir == "ASCENDING") {                                                              \
-          return InferTempStorageForSortingKeysAscending<dtype>(instance_num, instance_size);  \
+          return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
         } else if (dir == "DESCENDING") {                                                      \
-          return InferTempStorageForSortingKeysDescending<dtype>(instance_num, instance_size); \
+          return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size); \
         } else {                                                                               \
           UNIMPLEMENTED();                                                                     \
         }                                                                                      \
