@@ -125,10 +125,10 @@ class TrtBuilder {
 
   nv::unique_ptr<nvinfer1::ICudaEngine> BuildCudaEngine();
 
-#define TRT_BUILDER_ADD_LAYER(Layer)                                          \
-  template<typename... Args>                                                  \
-  auto add##Layer(Args &&... args)->decltype(network_->add##Layer(args...)) { \
-    return network_->add##Layer(std::forward<Args>(args)...);                 \
+#define TRT_BUILDER_ADD_LAYER(Layer)                          \
+  template<typename... Args>                                  \
+  auto add##Layer(Args &&... args) {                          \
+    return network_->add##Layer(std::forward<Args>(args)...); \
   }
 
   FOREACH_TENSORRT_LAYER(TRT_BUILDER_ADD_LAYER);
