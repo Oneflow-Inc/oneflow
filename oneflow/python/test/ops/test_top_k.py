@@ -5,24 +5,27 @@ import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 
 
-def compare_with_tensorflow(device_type, in_shape, k, sorted):
+def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     assert device_type in ["gpu", "cpu"]
+    assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
     def TopKJob(
-        input=flow.MirroredTensorDef(tuple([dim + 10 for dim in in_shape]), dtype=flow.float32)
+        input=flow.MirroredTensorDef(
+            tuple([dim + 10 for dim in in_shape]), dtype=type_name_to_flow_type[data_type]
+        )
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.top_k(input, k, sorted)
 
-    input = (np.random.random(in_shape) * 100).astype(np.float32)
+    input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = TopKJob([input]).get().ndarray_list()[0]
     # TensorFlow
@@ -39,6 +42,7 @@ def gen_arg_list():
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 10000)]
     arg_dict["k"] = [1, 50, 100, 200, 256]
+    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     arg_dict["sorted"] = [True]
 
     return GenArgList(arg_dict)
