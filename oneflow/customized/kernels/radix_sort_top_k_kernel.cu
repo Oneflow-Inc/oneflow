@@ -74,9 +74,8 @@ class RadixSortTopKKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufManager<T>* buf_manager =
-        new TmpBufManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                             tmp_buffer->mut_dptr<char>(), in->shape());
+    auto* buf_manager = new TmpBufManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
+                                             tmp_buffer->mut_dptr<char>(), in->shape());
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
