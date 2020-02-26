@@ -47,15 +47,14 @@ class TmpBufferManager final {
   int32_t temp_storage_bytes_;
 };
 
-__global__ void RadixSortTopKInitializeKernel(int32_t* indices_ptr, int32_t instance_size) {
+__global__ void InitializeIndices(int32_t* indices_ptr, int32_t instance_size) {
   for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
     indices_ptr[blockIdx.x * instance_size + i] = i;
   }
 }
 
-__global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_ptr,
-                                                 int32_t instance_size, int32_t k,
-                                                 int32_t* output_ptr) {
+__global__ void WriteToOutput(const int32_t* sorted_indices_ptr, int32_t instance_size, int32_t k,
+                              int32_t* output_ptr) {
   for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
     output_ptr[blockIdx.x * k + i] = sorted_indices_ptr[blockIdx.x * instance_size + i];
   }
@@ -64,11 +63,11 @@ __global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_p
 }  // namespace
 
 template<typename T>
-class RadixSortTopKKernel final : public user_op::OpKernel {
+class GpuRadixSortTopKKernel final : public user_op::OpKernel {
  public:
-  RadixSortTopKKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
-  RadixSortTopKKernel() = default;
-  ~RadixSortTopKKernel() = default;
+  GpuRadixSortTopKKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GpuRadixSortTopKKernel() = default;
+  ~GpuRadixSortTopKKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
@@ -82,26 +81,23 @@ class RadixSortTopKKernel final : public user_op::OpKernel {
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
-    int32_t num_thread =
-        instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
-    RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0,
-                                    ctx->device_ctx()->cuda_stream()>>>(buf_manager->IndicesPtr(),
-                                                                        instance_size);
+    InitializeIndices<<<instance_num, std::min(instance_size, kCudaThreadsNumPerBlock), 0,
+                        ctx->device_ctx()->cuda_stream()>>>(buf_manager->IndicesPtr(),
+                                                            instance_size);
     SortPairsDescending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
                         buf_manager->TempStoragePtr(), buf_manager->GetTempStorageBytes(),
                         buf_manager->SortedInPtr(), buf_manager->SortedIndicesPtr(),
                         ctx->device_ctx()->cuda_stream());
-    num_thread = k <= kCudaThreadsNumPerBlock ? k : kCudaThreadsNumPerBlock;
-    RadixSortTopKWriteToOutputKernel<<<instance_num, num_thread, 0,
-                                       ctx->device_ctx()->cuda_stream()>>>(
-        buf_manager->SortedIndicesPtr(), instance_size, k, out->mut_dptr<int32_t>());
+    WriteToOutput<<<instance_num, std::min(k, kCudaThreadsNumPerBlock), 0,
+                    ctx->device_ctx()->cuda_stream()>>>(buf_manager->SortedIndicesPtr(),
+                                                        instance_size, k, out->mut_dptr<int32_t>());
   };
 };
 
-#define REGISTER_RADIX_SORT_TOP_K_KERNEL(dtype)                                                  \
+#define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("top_k")                                                                  \
       .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                          \
-        return new RadixSortTopKKernel<dtype>(ctx);                                              \
+        return new GpuRadixSortTopKKernel<dtype>(ctx);                                           \
       })                                                                                         \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                      \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
@@ -116,9 +112,9 @@ class RadixSortTopKKernel final : public user_op::OpKernel {
                                           in_shape->elem_cnt() / instance_size, instance_size)); \
       });
 
-REGISTER_RADIX_SORT_TOP_K_KERNEL(float)
-REGISTER_RADIX_SORT_TOP_K_KERNEL(double)
-REGISTER_RADIX_SORT_TOP_K_KERNEL(int32_t)
-REGISTER_RADIX_SORT_TOP_K_KERNEL(int64_t)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(float)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(double)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int32_t)
+REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(int64_t)
 
 }  // namespace oneflow

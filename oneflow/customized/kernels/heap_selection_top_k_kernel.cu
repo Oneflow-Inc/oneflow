@@ -171,11 +171,11 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
 }  // namespace
 
 template<typename T>
-class HeapSelectionTopKKernel final : public user_op::OpKernel {
+class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
  public:
-  HeapSelectionTopKKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
-  HeapSelectionTopKKernel() = default;
-  ~HeapSelectionTopKKernel() = default;
+  GpuHeapSelectionTopKKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GpuHeapSelectionTopKKernel() = default;
+  ~GpuHeapSelectionTopKKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
@@ -207,10 +207,10 @@ class HeapSelectionTopKKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                   \
+#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                               \
   REGISTER_USER_KERNEL("top_k")                                                       \
       .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
-        return new HeapSelectionTopKKernel<dtype>(ctx);                               \
+        return new GpuHeapSelectionTopKKernel<dtype>(ctx);                            \
       })                                                                              \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
@@ -218,9 +218,9 @@ class HeapSelectionTopKKernel final : public user_op::OpKernel {
                && in_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
-REGISTER_HEAP_SELECTION_TOP_K_KERNEL(float)
-REGISTER_HEAP_SELECTION_TOP_K_KERNEL(double)
-REGISTER_HEAP_SELECTION_TOP_K_KERNEL(int32_t)
-REGISTER_HEAP_SELECTION_TOP_K_KERNEL(int64_t)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(double)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int32_t)
+REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(int64_t)
 
 }  // namespace oneflow

@@ -41,7 +41,7 @@ class TmpBufferManager final {
   int32_t temp_storage_bytes_;
 };
 
-__global__ void RadixSortTopKInitializeKernel(int32_t* indices_ptr, int32_t instance_size) {
+__global__ void InitializeIndices(int32_t* indices_ptr, int32_t instance_size) {
   for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
     indices_ptr[blockIdx.x * instance_size + i] = i;
   }
@@ -68,11 +68,9 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const std::string& dir = ctx->GetAttr<std::string>("dir");
-    const int32_t num_thread =
-        instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
-    RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0,
-                                    ctx->device_ctx()->cuda_stream()>>>(buf_manager->IndicesPtr(),
-                                                                        instance_size);
+    InitializeIndices<<<instance_num, std::min(instance_size, kCudaThreadsNumPerBlock), 0,
+                        ctx->device_ctx()->cuda_stream()>>>(buf_manager->IndicesPtr(),
+                                                            instance_size);
     if (dir == "ASCENDING") {
       SortPairsAscending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
                          buf_manager->TempStoragePtr(), buf_manager->GetTempStorageBytes(),
