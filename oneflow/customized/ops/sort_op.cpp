@@ -2,7 +2,6 @@
 
 namespace oneflow {
 
-// TODO: deal with sbp and batch axis
 REGISTER_USER_OP("sort")
     .Input("in")
     .Output("out")
@@ -13,6 +12,19 @@ REGISTER_USER_OP("sort")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      SbpSignatureBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(in_desc.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
 
