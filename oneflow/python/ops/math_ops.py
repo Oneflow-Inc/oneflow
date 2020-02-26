@@ -690,3 +690,15 @@ def top_k(input, k=1, sorted=True, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("math.sort")
+def sort(input, direction="ASCENDING", name=None):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
+        .Op("sort")
+        .Input("in", [input])
+        .Output("out")
+        .SetAttr("dir", direction, "AttrTypeString")
+        .Build()
+        .RemoteBlobList()[0]
+    )

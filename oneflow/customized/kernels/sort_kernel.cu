@@ -17,11 +17,11 @@ class GpuSortKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(),
+                             in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const std::string& dir = ctx->GetAttr<std::string>("dir");
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(),
-                             instance_num * instance_size * sizeof(T));
     if (dir == "ASCENDING") {
       SortKeysAscending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                         tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
@@ -42,9 +42,9 @@ class GpuSortKernel final : public user_op::OpKernel {
         return new GpuSortKernel<dtype>(ctx);                                                  \
       })                                                                                       \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);          \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);        \
         return ctx.device() == DeviceType::kGPU                                                \
-               && in_desc->data_type() == GetDataType<dtype>::value;                           \
+               && out_desc->data_type() == GetDataType<dtype>::value;                          \
       })                                                                                       \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                             \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                           \
