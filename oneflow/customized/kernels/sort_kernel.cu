@@ -36,28 +36,28 @@ class GpuSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_SORT_KERNEL(dtype)                                                        \
-  REGISTER_USER_KERNEL("sort")                                                                 \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                        \
-        return new GpuSortKernel<dtype>(ctx);                                                  \
-      })                                                                                       \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);        \
-        return ctx.device() == DeviceType::kGPU                                                \
-               && out_desc->data_type() == GetDataType<dtype>::value;                          \
-      })                                                                                       \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                             \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                           \
-        const int32_t instance_size = in_shape->dim_vec().back();                              \
-        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                     \
-        const std::string& dir = ctx->GetAttr<std::string>("dir");                             \
-        if (dir == "ASCENDING") {                                                              \
+#define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
+  REGISTER_USER_KERNEL("sort")                                                              \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                     \
+        return new GpuSortKernel<dtype>(ctx);                                               \
+      })                                                                                    \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                 \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
+        return ctx.device() == DeviceType::kGPU                                             \
+               && out_desc->data_type() == GetDataType<dtype>::value;                       \
+      })                                                                                    \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                          \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
+        const int32_t instance_size = in_shape->dim_vec().back();                           \
+        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \
+        const std::string& dir = ctx->GetAttr<std::string>("dir");                          \
+        if (dir == "ASCENDING") {                                                           \
           return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
-        } else if (dir == "DESCENDING") {                                                      \
+        } else if (dir == "DESCENDING") {                                                   \
           return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size); \
-        } else {                                                                               \
-          UNIMPLEMENTED();                                                                     \
-        }                                                                                      \
+        } else {                                                                            \
+          UNIMPLEMENTED();                                                                  \
+        }                                                                                   \
       });
 
 REGISTER_GPU_SORT_KERNEL(float)

@@ -7,6 +7,7 @@ import oneflow as flow
 
 @oneflow_export("sort")
 def sort(input, direction="ASCENDING", name=None):
+    assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
         .Op("sort")
@@ -19,6 +20,7 @@ def sort(input, direction="ASCENDING", name=None):
 
 @oneflow_export("argsort")
 def sort(input, direction="ASCENDING", name=None):
+    assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgSort_"))
         .Op("arg_sort")
