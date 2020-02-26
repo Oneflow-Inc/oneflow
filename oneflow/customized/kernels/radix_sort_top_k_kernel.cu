@@ -107,8 +107,6 @@ class RadixSortTopKKernel final : public user_op::OpKernel {
                && in_desc->data_type() == GetDataType<dtype>::value;                             \
       })                                                                                         \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
-        /* tmp buffer for top_k implemented by radix sort will be split into 4 parts: sorted_in, \
-         * indices, sorted_indices and temp storage for CUB radix sort. */                       \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                             \
         const int32_t instance_size = in_shape->dim_vec().back();                                \
         return static_cast<int32_t>(in_shape->elem_cnt() * (sizeof(dtype) + 2 * sizeof(int32_t)) \
