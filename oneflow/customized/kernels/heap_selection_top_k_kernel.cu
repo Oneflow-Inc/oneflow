@@ -7,25 +7,28 @@ namespace {
 #define MAX_POWER 16
 
 int32_t PowOf2Floor(int32_t val) {
-  int32_t ret = 0;
-  for (int32_t i = 0; i <= MAX_POWER; i++) {
+  CHECK_GT(val, 0);
+  int32_t ret = -1;
+  for (int32_t i = 0; i <= MAX_POWER; ++i) {
     ret = std::pow(2, i);
-    if (val < ret) {
-      return ret / 2;
-    } else if (val == ret) {
-      return ret;
+    if (ret > val) {
+      ret /= 2;
+      break;
+    } else if (ret == val) {
+      break;
     }
   }
-  return -1;
+  return ret;
 }
 
 int32_t PowOf2Ceil(int32_t val) {
-  int32_t ret = 0;
-  for (int32_t i = 0; i <= MAX_POWER; i++) {
+  CHECK_GT(val, 0);
+  int32_t ret = -1;
+  for (int32_t i = 0; i <= MAX_POWER; ++i) {
     ret = std::pow(2, i);
-    if (val <= ret) { return ret; }
+    if (ret >= val) { break; }
   }
-  return -1;
+  return ret;
 }
 
 template<typename T, typename Compare>
@@ -38,9 +41,10 @@ __device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const boo
   }
 }
 
+// https://en.wikipedia.org/wiki/Bitonic_sorter
 template<typename T, typename Compare>
 __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
-  // The element count of instance to be sorted must be pow-of-2
+  // The element count of instance should be pow-of-2
   assert(elem_cnt > 0 && !(elem_cnt & (elem_cnt - 1)));
 
   // Generate a bitonic sequence from input
@@ -74,22 +78,20 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp
 }
 
 template<typename T>
-class Entry {
+class Entry final {
  public:
-  __device__ Entry(int32_t index, T value) : index_(index), value_(value) {}
+  __device__ __forceinline__ Entry(int32_t index, T value) : index_(index), value_(value) {}
 
-  __device__ const int32_t GetIndex() const { return index_; }
-  __device__ const T GetValue() const { return value_; }
-  __device__ void SetIndex(int32_t index) { index_ = index; }
-  __device__ void SetValue(T value) { value_ = value; }
+  __device__ __forceinline__ const int32_t GetIndex() const { return index_; }
+  __device__ __forceinline__ const T GetValue() const { return value_; }
+  __device__ __forceinline__ void SetIndex(int32_t index) { index_ = index; }
+  __device__ __forceinline__ void SetValue(T value) { value_ = value; }
 
-  __device__ bool operator<(const Entry& entry) const {
-    return (this->GetValue() < entry.GetValue())
-           || (this->GetValue() == entry.GetValue() && this->GetIndex() > entry.GetIndex());
+  __device__ __forceinline__ bool operator<(const Entry& entry) const {
+    return (value_ < entry.GetValue()) || (value_ == entry.GetValue() && index_ > entry.GetIndex());
   }
-  __device__ bool operator>(const Entry& entry) const {
-    return (this->GetValue() > entry.GetValue())
-           || (this->GetValue() == entry.GetValue() && this->GetIndex() < entry.GetIndex());
+  __device__ __forceinline__ bool operator>(const Entry& entry) const {
+    return (value_ > entry.GetValue()) || (value_ == entry.GetValue() && index_ < entry.GetIndex());
   }
 
  private:
@@ -98,28 +100,26 @@ class Entry {
 };
 
 template<typename T>
-class Heap {
+class Heap final {
  public:
-  __device__ Heap(Entry<T>* data, const int32_t heap_size, const int32_t init_index,
-                  const T init_value)
+  __device__ __forceinline__ Heap(Entry<T>* data, const int32_t heap_size, const int32_t init_index,
+                                  const T init_value)
       : data_(data), heap_size_(heap_size) {
     for (int32_t i = 0; i < heap_size; ++i) {
       data_[i].SetIndex(init_index);
       data_[i].SetValue(init_value);
     }
   }
-  __device__ Entry<T>& operator[](const int32_t index) const { return data_[index]; }
-  __device__ const int32_t Left(const int32_t index) const { return 2 * index + 1; }
-  __device__ const int32_t Right(const int32_t index) const { return 2 * index + 2; }
-  __device__ void Swap(const int32_t i, const int32_t j) {
+  __device__ __forceinline__ Entry<T>& Top() const { return data_[0]; }
+  __device__ __forceinline__ void Swap(const int32_t i, const int32_t j) {
     auto tmp = data_[j];
     data_[j] = data_[i];
     data_[i] = tmp;
   }
-  __device__ void Heapify(int32_t index) {
+  __device__ __forceinline__ void Heapify(int32_t index) {
     while (true) {
-      const int32_t left = Left(index);
-      const int32_t right = Right(index);
+      const int32_t left = 2 * index + 1;
+      const int32_t right = 2 * index + 2;
       int32_t min = index;
       if (left < heap_size_ && data_[left] < data_[min]) { min = left; }
       if (right < heap_size_ && data_[right] < data_[min]) { min = right; }
@@ -127,10 +127,6 @@ class Heap {
       Swap(min, index);
       index = min;
     }
-  }
-  __device__ void ReplaceRoot(const Entry<T>& entry) {
-    data_[0] = entry;
-    Heapify(0);
   }
 
  private:
@@ -153,7 +149,10 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
   // corresponding set
   for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
     auto entry = Entry<T>(i, input[i]);
-    if (entry > heap[0]) { heap.ReplaceRoot(entry); }
+    if (entry > heap.Top()) {
+      heap.Top() = entry;
+      heap.Heapify(0);
+    }
   }
 
   __syncthreads();
@@ -186,24 +185,20 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
 
-    // Use as many heaps as possible (# of heaps == # of threads in thread block).
-    // Limitation 1, max shared memory: 48KB
+    // Use as many heaps as possible (# of heaps == # of threads used in thread block).
+    // Limitation 1: size of shared memory
     // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
-    // implemented in our system
     const int32_t heap_size = PowOf2Ceil(k);
     const int32_t heap_byte_size = heap_size * sizeof(Entry<T>);
     int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / heap_byte_size);
     CHECK_GT(num_heap, 0);
-    // Limitation 2: # of threads in a thread block
-    if (num_heap > kCudaThreadsNumPerBlock) { num_heap = kCudaThreadsNumPerBlock; }
+    // Limitation 2: # of threads in thread block
+    num_heap = std::min(num_heap, kCudaThreadsNumPerBlock);
 
-    // Calculate shared memory size in thread block
-    const int64_t smem_size = num_heap * heap_byte_size;
-    CHECK_LE(smem_size, kCudaMaxSharedMemoryByteSize);
-
-    HeapTopKKernel<T><<<instance_num, num_heap, smem_size, ctx->device_ctx()->cuda_stream()>>>(
-        in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
-        GetMinVal<T>(), out->mut_dptr<int32_t>());
+    HeapTopKKernel<T>
+        <<<instance_num, num_heap, num_heap * heap_byte_size, ctx->device_ctx()->cuda_stream()>>>(
+            in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
+            GetMinVal<T>(), out->mut_dptr<int32_t>());
   };
 };
 
