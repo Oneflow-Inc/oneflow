@@ -8,8 +8,7 @@
 namespace oneflow {
 
 // DSS is short for domain specific struct
-#define BEGIN_DSS(field_counter, type, base_byte_size) \
-  _BEGIN_DSS(field_counter, type, base_byte_size)
+#define BEGIN_DSS(field_counter, type) _BEGIN_DSS(field_counter, type)
 #define DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name) \
   _DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name)
 #define END_DSS(field_counter, dss_type, type) _END_DSS(field_counter, dss_type, type)
@@ -87,7 +86,7 @@ namespace oneflow {
     PartialF<field_type>::Call(ctx, case_field_name, __oneof_name__);              \
   }
 
-#define _BEGIN_DSS(field_counter, type, base_byte_size)                                       \
+#define _BEGIN_DSS(field_counter, type)                                                       \
  private:                                                                                     \
   using __DssSelfType__ = type;                                                               \
                                                                                               \
@@ -185,12 +184,13 @@ namespace oneflow {
   };                                                                                          \
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__FieldAlign4Counter {                                                          \
+    static const int value = 1;                                                               \
     constexpr static int Get() { return 1; }                                                  \
   };                                                                                          \
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__FieldSize4Counter {                                                           \
-    constexpr static int Get() { return base_byte_size; }                                     \
+    constexpr static int Get() { return 0; }                                                  \
   };                                                                                          \
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
@@ -201,7 +201,7 @@ namespace oneflow {
   };                                                                                          \
   template<typename fake>                                                                     \
   struct __DSS__FieldOffset4Counter<field_counter, fake> {                                    \
-    constexpr static int Get() { return base_byte_size; }                                     \
+    constexpr static int Get() { return 0; }                                                  \
   };                                                                                          \
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__StaticAssertFieldCounter {};                                                  \
@@ -274,6 +274,7 @@ namespace oneflow {
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldAlign4Counter<field_counter, fake> {                                          \
+    static const int value = alignof(field_type);                                                  \
     constexpr static int Get() { return alignof(field_type); }                                     \
   };                                                                                               \
   template<typename fake>                                                                          \
