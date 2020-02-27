@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 struct Foo {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
+  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo);
   int x;
   int y;
   int* z;
@@ -19,7 +19,7 @@ struct Foo {
 };
 
 struct Bar {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
+  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo);
 
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Bar);
 };
@@ -108,7 +108,7 @@ TEST(DSS, filter_field_until) {
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion, 0);
+  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion);
 
  public:
   struct UnionField {

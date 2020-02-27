@@ -18,7 +18,7 @@ namespace {
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion, 0);
+  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion);
 
  public:
   struct UnionField {

@@ -13,18 +13,18 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                         \
-  struct class_name final : public ObjectMsgStruct {         \
-   public:                                                   \
-    using self_type = class_name;                            \
-    static const bool __is_object_message_type__ = true;     \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);            \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name, 0); \
-    OBJECT_MSG_DEFINE_DEFAULT(class_name);                   \
-    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                   \
-    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();               \
-    OBJECT_MSG_DEFINE_INIT();                                \
-    OBJECT_MSG_DEFINE_DELETE();                              \
+#define BEGIN_OBJECT_MSG(class_name)                      \
+  struct class_name final : public ObjectMsgStruct {      \
+   public:                                                \
+    using self_type = class_name;                         \
+    static const bool __is_object_message_type__ = true;  \
+    PRIVATE DEFINE_STATIC_COUNTER(field_counter);         \
+    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name); \
+    OBJECT_MSG_DEFINE_DEFAULT(class_name);                \
+    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                \
+    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();            \
+    OBJECT_MSG_DEFINE_INIT();                             \
+    OBJECT_MSG_DEFINE_DELETE();                           \
     OBJECT_MSG_DEFINE_BASE();
 
 #define END_OBJECT_MSG(class_name)                                                  \
