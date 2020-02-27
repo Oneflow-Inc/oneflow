@@ -20,16 +20,17 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(field_counter, elem_type, elem_field_name, \
-                                               field_name)                                \
-  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)    \
-  OBJECT_MSG_DEFINE_CONDITION_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
-                                               field_name);                               \
-  OBJECT_MSG_DEFINE_CONDITION_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name,  \
-                                              field_name);                                \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedConditionListHeadInit);        \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedConditionListHeadDelete);    \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(field_counter, elem_type, elem_field_name,      \
+                                               field_name)                                     \
+  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)         \
+  OBJECT_MSG_DEFINE_CONDITION_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name,      \
+                                               field_name);                                    \
+  OBJECT_MSG_DEFINE_CONDITION_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name,       \
+                                              field_name);                                     \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedConditionListHeadInit);             \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedConditionListHeadDelete);         \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
+                   OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)   \
  public:                                                                                       \

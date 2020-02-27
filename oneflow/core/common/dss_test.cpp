@@ -11,9 +11,9 @@ struct Foo {
   int y;
   int* z;
 
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", x);
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", y);
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", z);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int, x);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int, y);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int*, z);
 
   END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
 };
@@ -101,17 +101,17 @@ TEST(DSS, filter_field_until) {
   ASSERT_TRUE(field_names.empty());
 }
 
-#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                   \
-  DSS_DEFINE_FIELD(field_counter, "demo dss", union_field);          \
-  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,          \
-                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1) \
+#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                      \
+  DSS_DEFINE_FIELD(field_counter, "demo dss", UnionField, union_field); \
+  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,             \
+                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1)    \
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
   BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion, 0);
 
  public:
-  struct {
+  struct UnionField {
     int32_t union_case;
     union {
       int32_t x;
