@@ -35,13 +35,14 @@ namespace oneflow {
 
 // details
 
-#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)  \
-  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                 \
-  OBJECT_MSG_DEFINE_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name); \
-  OBJECT_MSG_DEFINE_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListHeadInit);                    \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);                \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
+  _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)                   \
+  OBJECT_MSG_DEFINE_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name);   \
+  OBJECT_MSG_DEFINE_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);    \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListHeadInit);                      \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListHeadDelete);                  \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
+                   OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)         \
  public:                                                                                   \
@@ -87,7 +88,7 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)                              \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedListLinkInit);     \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedListLinkDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(field_counter, "object message", EmbeddedListLink, OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_LIST_LINK_FIELD(field_name)         \
  public:                                                       \

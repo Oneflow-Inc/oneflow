@@ -68,7 +68,8 @@ namespace oneflow {
   using OF_PP_CAT(field_name, _OneofFieldType) = typename OBJECT_MSG_STRUCT_MEMBER(field_type);
 
 #define OBJECT_MSG_DSS_DEFINE_UION_FIELD(field_counter, oneof_name, type_and_field_name_seq) \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(oneof_name, _UnionStructType), \
+                   OF_PP_CAT(oneof_name, _));                                                \
   DSS_DEFINE_UNION_FIELD_VISITOR(                                                            \
       field_counter, case_,                                                                  \
       OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
@@ -221,7 +222,8 @@ namespace oneflow {
  private:                                                                                   \
   ObjectMsgBase __object_msg_base__;                                                        \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                           \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", __object_msg_base__);
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgBase,          \
+                   __object_msg_base__);
 
 #define OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT()     \
  public:                                              \

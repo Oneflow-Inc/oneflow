@@ -17,7 +17,7 @@ namespace oneflow {
   OBJECT_MSG_OVERLOAD_FIELD_TYPE_ID(field_counter, field_type);           \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgRawPtrInit);           \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgRawPtrDelete);       \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(field_counter, "object message", field_type*, OF_PP_CAT(field_name, _));
 
 #define OBJECT_MSG_OVERLOAD_FIELD_TYPE_ID(field_counter, field_type)      \
  public:                                                                  \

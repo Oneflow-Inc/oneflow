@@ -5,6 +5,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 // clang-format off
 BEGIN_OBJECT_MSG(TestListItem)
   OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
@@ -293,6 +295,16 @@ TEST(ObjectMsg, MoveTo) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
 }
+
+// clang-format off
+// BEGIN_OBJECT_MSG(HeadlessContainer);
+//   // links
+//   OBJECT_MSG_DEFINE_LIST_LINK(link);
+//   OBJECT_MSG_DEFINE_LIST_HEAD(HeadlessContainer, link, head);
+// END_OBJECT_MSG(HeadlessContainer);
+// clang-format on
+
+}  // namespace
 
 }  // namespace test
 

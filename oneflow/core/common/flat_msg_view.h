@@ -24,11 +24,12 @@ namespace oneflow {
   }                                                                                       \
   ;
 
-#define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                     \
-  static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);    \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view", OF_PP_CAT(field_name, _));
+#define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                        \
+  static_assert(__is_flat_message_view_type__, "this struct is not a flat message view");    \
+  _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);       \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                            \
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view", flat_msg_field_type*, \
+                   OF_PP_CAT(field_name, _));
 
 // details
 

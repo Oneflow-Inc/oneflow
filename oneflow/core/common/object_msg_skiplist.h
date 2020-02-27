@@ -40,13 +40,14 @@ namespace oneflow {
                                            skiplist_ptr, elem)
 // details
 
-#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)  \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                \
-  OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name); \
-  OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                    \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                  \
+  OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name);   \
+  OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);    \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                      \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                  \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgSkipListType), \
+                   OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
  public:                                                                                           \
@@ -92,7 +93,8 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, T, field_name)                     \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListIteratorInit);     \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListIteratorDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(field_counter, "object message",                                   \
+                   OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType), OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)                     \
  public:                                                                                           \
@@ -108,7 +110,7 @@ namespace oneflow {
   }                                                                                                \
                                                                                                    \
  private:                                                                                          \
-  EmbeddedSkipListKey<key_type, max_level> OF_PP_CAT(field_name, _);
+  OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)             \
   StructField<OBJECT_MSG_TYPE_CHECK(elem_type),                                       \

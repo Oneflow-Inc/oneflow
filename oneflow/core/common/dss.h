@@ -10,8 +10,8 @@ namespace oneflow {
 // DSS is short for domain specific struct
 #define BEGIN_DSS(field_counter, type, base_byte_size) \
   _BEGIN_DSS(field_counter, type, base_byte_size)
-#define DSS_DEFINE_FIELD(field_counter, dss_type, field) \
-  _DSS_DEFINE_FIELD(field_counter, dss_type, field)
+#define DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name) \
+  _DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name)
 #define END_DSS(field_counter, dss_type, type) _END_DSS(field_counter, dss_type, type)
 #define DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq) \
   _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq)
@@ -20,6 +20,7 @@ namespace oneflow {
 // details
 
 #define _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq) \
+ private:                                                                                     \
   template<template<int, class, class> class F, typename WalkCtxType, typename DssFieldType,  \
            typename fake>                                                                     \
   struct __DSS__VisitField<field_counter, F, WalkCtxType, DssFieldType, fake> {               \
@@ -224,13 +225,7 @@ namespace oneflow {
       __LINE__) ") carefully\n"                                             \
                 "    non " dss_type " member found before line " OF_PP_STRINGIZE(__LINE__) "\n\n"
 
-#define _DSS_DEFINE_FIELD(field_counter, dss_type, field)                                          \
- public:                                                                                           \
-  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                        \
-    static_assert(std::is_standard_layout<__DssSelfType__>::value, "");                            \
-    return offsetof(__DssSelfType__, field);                                                       \
-  }                                                                                                \
-                                                                                                   \
+#define _DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field)                              \
  private:                                                                                          \
   template<template<int, class, class> class F, typename WalkCtxType, typename fake>               \
   struct __DSS__FieldIter<field_counter, F, WalkCtxType, fake> {                                   \
@@ -279,11 +274,11 @@ namespace oneflow {
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldAlign4Counter<field_counter, fake> {                                          \
-    constexpr static int Get() { return alignof(((__DssSelfType__*)nullptr)->field); }             \
+    constexpr static int Get() { return alignof(field_type); }                                     \
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldSize4Counter<field_counter, fake> {                                           \
-    constexpr static int Get() { return sizeof(((__DssSelfType__*)nullptr)->field); }              \
+    constexpr static int Get() { return sizeof(field_type); }                                      \
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldOffset4Counter<field_counter, fake> {                                         \
@@ -299,7 +294,15 @@ namespace oneflow {
       static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),                  \
                     DSS_ASSERT_VERBOSE(dss_type));                                                 \
     }                                                                                              \
-  };
+  };                                                                                               \
+                                                                                                   \
+ public:                                                                                           \
+  constexpr static int OF_PP_CAT(OF_PP_CAT(__, field), DssFieldOffset__)() {                       \
+    return field_counter;                                                                          \
+  }                                                                                                \
+  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                        \
+    return __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get();                            \
+  }
 
 #define _END_DSS(field_counter, dss_type, type)                                                   \
  public:                                                                                          \
