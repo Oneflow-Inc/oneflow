@@ -185,12 +185,11 @@ namespace oneflow {
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__FieldAlign4Counter {                                                          \
     static const int value = 1;                                                               \
-    constexpr static int Get() { return 1; }                                                  \
   };                                                                                          \
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__FieldSize4Counter {                                                           \
-    constexpr static int Get() { return 0; }                                                  \
+    static const int value = 0;                                                               \
   };                                                                                          \
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
@@ -208,16 +207,14 @@ namespace oneflow {
                                                                                               \
   template<int tpl_fld_counter, typename fake = void>                                         \
   struct __DSS__AccumulatedAlignedSize4Counter {                                              \
-    constexpr static int Get() {                                                              \
-      return ConstExprRoundUp<                                                                \
-          __DSS__AccumulatedAlignedSize4Counter<tpl_fld_counter - 1, fake>::Get()             \
-              + __DSS__FieldSize4Counter<tpl_fld_counter - 1, fake>::Get(),                   \
-          __DSS__FieldAlign4Counter<tpl_fld_counter, fake>::Get()>();                         \
-    }                                                                                         \
+    static const int value =                                                                  \
+        ConstExprRoundUp<__DSS__AccumulatedAlignedSize4Counter<tpl_fld_counter - 1>::value    \
+                             + __DSS__FieldSize4Counter<tpl_fld_counter - 1>::value,          \
+                         __DSS__FieldAlign4Counter<tpl_fld_counter>::value>();                \
   };                                                                                          \
   template<typename fake>                                                                     \
   struct __DSS__AccumulatedAlignedSize4Counter<field_counter, fake> {                         \
-    constexpr static int Get() { return 0; }                                                  \
+    static const int value = 0;                                                               \
   };
 
 #define DSS_ASSERT_VERBOSE(dss_type)                                        \
@@ -275,11 +272,10 @@ namespace oneflow {
   template<typename fake>                                                                          \
   struct __DSS__FieldAlign4Counter<field_counter, fake> {                                          \
     static const int value = alignof(field_type);                                                  \
-    constexpr static int Get() { return alignof(field_type); }                                     \
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldSize4Counter<field_counter, fake> {                                           \
-    constexpr static int Get() { return sizeof(field_type); }                                      \
+    static const int value = sizeof(field_type);                                                   \
   };                                                                                               \
   template<typename fake>                                                                          \
   struct __DSS__FieldOffset4Counter<field_counter, fake> {                                         \
@@ -291,19 +287,15 @@ namespace oneflow {
   template<typename fake>                                                                          \
   struct __DSS__StaticAssertFieldCounter<field_counter, fake> {                                    \
     static void StaticAssert() {                                                                   \
-      static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get();     \
+      static const int kAccSize = __DSS__AccumulatedAlignedSize4Counter<field_counter>::value;     \
       static_assert(kAccSize == __DSS__FieldOffset4Counter<field_counter>::Get(),                  \
                     DSS_ASSERT_VERBOSE(dss_type));                                                 \
     }                                                                                              \
   };                                                                                               \
                                                                                                    \
  public:                                                                                           \
-  constexpr static int OF_PP_CAT(OF_PP_CAT(__, field), DssFieldOffset__)() {                       \
-    return field_counter;                                                                          \
-  }                                                                                                \
-  constexpr static int OF_PP_CAT(field, DssFieldOffset)() {                                        \
-    return __DSS__AccumulatedAlignedSize4Counter<field_counter>::Get();                            \
-  }
+  static const int OF_PP_CAT(field, kDssFieldOffset) =                                             \
+      __DSS__AccumulatedAlignedSize4Counter<field_counter>::value;
 
 #define _END_DSS(field_counter, dss_type, type)                                                   \
  public:                                                                                          \
@@ -331,7 +323,7 @@ namespace oneflow {
   };                                                                                              \
   static void __DSS__StaticAssertStructSize() {                                                   \
     static const int kSize =                                                                      \
-        ConstExprRoundUp<__DSS__AccumulatedAlignedSize4Counter<field_counter>::Get(),             \
+        ConstExprRoundUp<__DSS__AccumulatedAlignedSize4Counter<field_counter>::value,             \
                          alignof(type)>();                                                        \
     static_assert((kSize == 0 && sizeof(type) == 1) || (kSize == sizeof(type)),                   \
                   DSS_ASSERT_VERBOSE(dss_type));                                                  \
