@@ -8,7 +8,7 @@ namespace {
 
 int32_t PowOf2Floor(int32_t val) {
   CHECK_GT(val, 0);
-  int32_t ret = std::pow(2, MAX_POWER);
+  int32_t ret = -1;
   for (int32_t i = 0; i <= MAX_POWER; ++i) {
     ret = std::pow(2, i);
     if (ret > val) {
