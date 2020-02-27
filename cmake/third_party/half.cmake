@@ -2,7 +2,7 @@ include (ExternalProject)
 
 set(HALF_INCLUDE_DIR ${THIRD_PARTY_DIR}/half/include)
 
-set(HALF_URL http://cfhcable.dl.sourceforge.net/project/half/half/1.12.0/half-1.12.0.zip)
+set(HALF_URL https://raw.githubusercontent.com/Oneflow-Inc/ThirdPartyLib/master/half-2.1.0.zip)
 set(HALF_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/half/src/half)
 
 set(HALF_HEADERS
