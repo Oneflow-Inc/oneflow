@@ -297,11 +297,11 @@ TEST(ObjectMsg, MoveTo) {
 }
 
 // clang-format off
-// BEGIN_OBJECT_MSG(HeadlessContainer);
-//   // links
-//   OBJECT_MSG_DEFINE_LIST_LINK(link);
-//   OBJECT_MSG_DEFINE_LIST_HEAD(HeadlessContainer, link, head);
-// END_OBJECT_MSG(HeadlessContainer);
+BEGIN_OBJECT_MSG(HeadlessContainer);
+  // links
+  OBJECT_MSG_DEFINE_LIST_LINK(link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(HeadlessContainer, link, head);
+END_OBJECT_MSG(HeadlessContainer);
 // clang-format on
 
 }  // namespace

@@ -21,7 +21,7 @@ namespace oneflow {
 #define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)                                      \
   ObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink,        \
                             OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
-                                                                           _DssFieldOffset)()>>
+                                                                           _kDssFieldOffset)>>
 
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
   _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
@@ -49,7 +49,7 @@ namespace oneflow {
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                        \
       TrivialObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
                                        OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(        \
-                                           elem_field_name, _DssFieldOffset)()>>;          \
+                                           elem_field_name, _kDssFieldOffset)>>;           \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
     return OF_PP_CAT(field_name, _);                                                       \
   }                                                                                        \

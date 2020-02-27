@@ -28,7 +28,7 @@ END_FLAT_MSG(DefaultOneofNameVariantFoo);
 // clang-format on
 
 using TestOneofField =
-    StructField<VariantFoo, VariantFoo::__OneofType, VariantFoo::__DssFieldOffset()>;
+    StructField<VariantFoo, VariantFoo::__OneofType, VariantFoo::__kDssFieldOffset>;
 
 // clang-format off
 BEGIN_FLAT_MSG(VariantList);

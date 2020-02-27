@@ -15,7 +15,7 @@ namespace oneflow {
 #define OBJECT_MSG_MUTEXED_LIST(obj_msg_type, obj_msg_field)                              \
   ObjectMsgMutexedList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink, \
                                    OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(        \
-                                       obj_msg_field, _DssFieldOffset)()>>
+                                       obj_msg_field, _kDssFieldOffset)>>
 
 // details
 
@@ -36,7 +36,7 @@ namespace oneflow {
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                               \
       TrivialObjectMsgMutexedList<StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
                                               OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(        \
-                                                  elem_field_name, _DssFieldOffset)()>>;          \
+                                                  elem_field_name, _kDssFieldOffset)>>;           \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                          \
     return OF_PP_CAT(field_name, _);                                                              \
   }                                                                                               \

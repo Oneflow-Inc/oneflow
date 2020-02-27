@@ -60,7 +60,7 @@ namespace oneflow {
   bool Match(RepeatedFlatMsgT* repeated_flat_msg) {                                           \
     using OneofField = StructField<typename RepeatedFlatMsgT::value_type,                     \
                                    typename RepeatedFlatMsgT::value_type::__OneofType,        \
-                                   RepeatedFlatMsgT::value_type::__DssFieldOffset()>;         \
+                                   RepeatedFlatMsgT::value_type::__kDssFieldOffset>;          \
     return MatchOneof<OneofField>(repeated_flat_msg);                                         \
   }                                                                                           \
   template<typename FlatMsgOneofField, typename RepeatedFlatMsgT>                             \
@@ -72,7 +72,7 @@ namespace oneflow {
   void Init(RepeatedFlatMsgT* repeated_flat_msg) {                                            \
     using OneofField = StructField<typename RepeatedFlatMsgT::value_type,                     \
                                    typename RepeatedFlatMsgT::value_type::__OneofType,        \
-                                   RepeatedFlatMsgT::value_type::__DssFieldOffset()>;         \
+                                   RepeatedFlatMsgT::value_type::__kDssFieldOffset>;          \
     return InitOneof<OneofField>(repeated_flat_msg);                                          \
   }
 
