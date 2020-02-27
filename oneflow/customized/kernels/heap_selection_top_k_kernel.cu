@@ -110,7 +110,7 @@ class MinHeap final {
       data_[i].SetValue(init_value);
     }
   }
-  __device__ __forceinline__ Entry<T>& Top() const { return data_[0]; }
+  __device__ __forceinline__ Entry<T>& Top() { return data_[0]; }
   __device__ __forceinline__ void Swap(const int32_t i, const int32_t j) {
     auto tmp = data_[j];
     data_[j] = data_[i];
