@@ -82,8 +82,8 @@ class Entry final {
  public:
   __device__ __forceinline__ Entry(int32_t index, T value) : index_(index), value_(value) {}
 
-  __device__ __forceinline__ const int32_t GetIndex() const { return index_; }
-  __device__ __forceinline__ const T GetValue() const { return value_; }
+  __device__ __forceinline__ int32_t GetIndex() const { return index_; }
+  __device__ __forceinline__ T GetValue() const { return value_; }
   __device__ __forceinline__ void SetIndex(int32_t index) { index_ = index; }
   __device__ __forceinline__ void SetValue(T value) { value_ = value; }
 
