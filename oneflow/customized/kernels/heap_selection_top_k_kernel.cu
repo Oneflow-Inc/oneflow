@@ -8,7 +8,7 @@ namespace {
 
 int32_t PowOf2Floor(int32_t val) {
   CHECK_GT(val, 0);
-  int32_t ret = -1;
+  int32_t ret = std::pow(2, MAX_POWER);
   for (int32_t i = 0; i <= MAX_POWER; ++i) {
     ret = std::pow(2, i);
     if (ret > val) {
@@ -100,9 +100,9 @@ class Entry final {
 };
 
 template<typename T>
-class MaxHeap final {
+class MinHeap final {
  public:
-  __device__ __forceinline__ MaxHeap(Entry<T>* data, const int32_t heap_size,
+  __device__ __forceinline__ MinHeap(Entry<T>* data, const int32_t heap_size,
                                      const int32_t init_index, const T init_value)
       : data_(data), heap_size_(heap_size) {
     for (int32_t i = 0; i < heap_size; ++i) {
@@ -116,7 +116,7 @@ class MaxHeap final {
     data_[j] = data_[i];
     data_[i] = tmp;
   }
-  __device__ __forceinline__ void MaxHeapify(int32_t index) {
+  __device__ __forceinline__ void MinHeapify(int32_t index) {
     while (true) {
       const int32_t left = 2 * index + 1;
       const int32_t right = 2 * index + 2;
@@ -142,29 +142,29 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
   extern __shared__ char smem[];
   auto* shared_entries = reinterpret_cast<Entry<T>*>(smem);
 
+  // Divide elements to be sorted into disjoint sets (# of sets == # of heaps).
+  // Each thread in the thread block manipulates one heap to select top heap_size entries from
+  // corresponding set
   const T* input = in_ptr + blockIdx.x * instance_size;
   auto heap =
-      MaxHeap<T>(shared_entries + threadIdx.x * heap_size, heap_size, init_index, init_value);
-  // Divide elements to be sorted into disjoint sets (# of sets == # of heaps).
-  // Each thread in the thread block manipulate one heap to select top heap_size entries from
-  // corresponding set
+      MinHeap<T>(shared_entries + threadIdx.x * heap_size, heap_size, init_index, init_value);
   for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
     auto entry = Entry<T>(i, input[i]);
     if (entry > heap.Top()) {
       heap.Top() = entry;
-      heap.MaxHeapify(0);
+      heap.MinHeapify(0);
     }
   }
 
   __syncthreads();
 
-  // Merge all heaps to a unified, sorted array
+  // Merge all heaps into a unified, sorted array
   bitonicSort(shared_entries, blockDim.x * heap_size,
               [](const Entry<T>& x, const Entry<T>& y) { return x > y; });
+
   // Write top_k elements in sorted array to output
-  int32_t* output = out_ptr + blockIdx.x * k;
   for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
-    output[i] = shared_entries[i].GetIndex();
+    (out_ptr + blockIdx.x * k)[i] = shared_entries[i].GetIndex();
   }
 }
 
@@ -190,16 +190,14 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
     // Limitation 1: size of shared memory
     // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
     const int32_t heap_size = PowOf2Ceil(k);
-    const int32_t heap_byte_size = heap_size * sizeof(Entry<T>);
-    int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / heap_byte_size);
-    CHECK_GT(num_heap, 0);
+    int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / (heap_size * sizeof(Entry<T>)));
     // Limitation 2: # of threads in thread block
     num_heap = std::min(num_heap, kCudaThreadsNumPerBlock);
 
-    HeapTopKKernel<T>
-        <<<instance_num, num_heap, num_heap * heap_byte_size, ctx->device_ctx()->cuda_stream()>>>(
-            in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
-            GetMinVal<T>(), out->mut_dptr<int32_t>());
+    HeapTopKKernel<T><<<instance_num, num_heap, num_heap * heap_size * sizeof(Entry<T>),
+                        ctx->device_ctx()->cuda_stream()>>>(
+        in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
+        GetMinVal<T>(), out->mut_dptr<int32_t>());
   };
 };
 
