@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include <memory>
 #include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
