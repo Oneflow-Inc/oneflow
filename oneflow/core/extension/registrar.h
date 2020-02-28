@@ -6,7 +6,8 @@
 namespace oneflow {
 
 namespace {
-HashMap<std::string, std::vector<std::function<extension::ExtensionBase*()>>>* MutKernelRegistry() {
+HashMap<std::string, std::vector<std::function<extension::ExtensionBase*()>>>*
+MutExtensionRegistry() {
   static HashMap<std::string, std::vector<std::function<extension::ExtensionBase*()>>> creators;
   return &creators;
 }
@@ -17,7 +18,7 @@ namespace extension {
 
 struct Registrar final {
   Registrar(std::string ev_name, std::function<extension::ExtensionBase*()> ext_contructor) {
-    auto* creators = MutKernelRegistry();
+    auto* creators = MutExtensionRegistry();
     (*creators)[ev_name].emplace_back(std::move(ext_contructor));
   }
 };
