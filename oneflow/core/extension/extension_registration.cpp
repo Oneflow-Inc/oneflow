@@ -16,7 +16,6 @@ namespace extension {
 Registrar::Registrar(std::string ev_name,
                      std::function<extension::ExtensionBase*()> ext_contructor) {
   auto* creators = MutExtensionRegistry();
-  LOG(ERROR) << "registering: " << ev_name;
   (*creators)[ev_name].emplace_back(std::move(ext_contructor));
 }
 
