@@ -47,7 +47,8 @@ namespace oneflow {
 #define _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)         \
  public:                                                                                   \
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                        \
-      TrivialObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
+      TrivialObjectMsgList<kDisableSelfLoopLink,                                           \
+                           StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
                                        OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(        \
                                            elem_field_name, _kDssFieldOffset)>>;           \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                   \
@@ -139,8 +140,24 @@ struct ObjectMsgEmbeddedListLinkDelete {
   static void Call(WalkCtxType* ctx, EmbeddedListLink* field) { CHECK(field->empty()); }
 };
 
+enum ObjectMsgLinkType { kDisableSelfLoopLink = 0, kEnableSelfLoopLink };
+
+template<bool enable_self_loop_link>
+struct GetObjectMsgLinkType {};
+template<>
+struct GetObjectMsgLinkType<true> {
+  static const ObjectMsgLinkType value = kEnableSelfLoopLink;
+};
+template<>
+struct GetObjectMsgLinkType<false> {
+  static const ObjectMsgLinkType value = kDisableSelfLoopLink;
+};
+
+template<ObjectMsgLinkType link_type, typename ValueLinkField>
+class TrivialObjectMsgList;
+
 template<typename ValueLinkField>
-class TrivialObjectMsgList {
+class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
  public:
   using value_type = typename ValueLinkField::struct_type;
   using value_link_struct_field = ValueLinkField;
@@ -240,7 +257,7 @@ class TrivialObjectMsgList {
 };
 
 template<typename LinkField>
-class ObjectMsgList : public TrivialObjectMsgList<LinkField> {
+class ObjectMsgList : public TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> {
  public:
   ObjectMsgList(const ObjectMsgList&) = delete;
   ObjectMsgList(ObjectMsgList&&) = delete;

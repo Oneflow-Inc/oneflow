@@ -7,10 +7,11 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(elem_type, elem_field_name, field_name) \
-  static_assert(__is_object_message_type__, "this struct is not a object message");   \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                     \
-  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type,    \
+#define OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(elem_type, elem_field_name, field_name)           \
+  static_assert(__is_object_message_type__, "this struct is not a object message");             \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported"); \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                               \
+  _OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type,              \
                                          elem_field_name, field_name);
 
 #define OBJECT_MSG_CONDITION_LIST(obj_msg_type, obj_msg_field)                              \
@@ -115,7 +116,8 @@ class TrivialObjectMsgConditionList {
     return kObjectMsgConditionListStatusSuccess;
   }
 
-  ObjectMsgConditionListStatus MoveFrom(TrivialObjectMsgList<LinkField>* src) {
+  ObjectMsgConditionListStatus MoveFrom(
+      TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* src) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kObjectMsgConditionListStatusErrorClosed; }
     src->MoveToDstBack(&list_head_);
@@ -123,7 +125,7 @@ class TrivialObjectMsgConditionList {
     return kObjectMsgConditionListStatusSuccess;
   }
 
-  ObjectMsgConditionListStatus MoveTo(TrivialObjectMsgList<LinkField>* dst) {
+  ObjectMsgConditionListStatus MoveTo(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
     if (list_head_.empty()) { return kObjectMsgConditionListStatusErrorClosed; }
@@ -150,7 +152,7 @@ class TrivialObjectMsgConditionList {
     return reinterpret_cast<std::condition_variable*>(&cond_buff_[0]);
   }
 
-  TrivialObjectMsgList<LinkField> list_head_;
+  TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
   union {
     char mutex_buff_[sizeof(std::mutex)];
     int64_t mutex_buff_align_;

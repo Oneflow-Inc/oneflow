@@ -18,10 +18,11 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
                                   FLAT_MSG_TYPE_CHECK(T), field_name);
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)               \
-  static_assert(__is_object_message_type__, "this struct is not a object message");           \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                             \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
+#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                 \
+  static_assert(__is_object_message_type__, "this struct is not a object message");             \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported"); \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                               \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name,   \
                                    field_name);
 
 #define OBJECT_MSG_SKIPLIST(elem_type, elem_field_name) \

@@ -8,6 +8,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(elem_type, elem_field_name, field_name)               \
   static_assert(__is_object_message_type__, "this struct is not a object message");               \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported");   \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                                 \
   _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
                                        field_name);
@@ -110,12 +111,12 @@ class TrivialObjectMsgMutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(TrivialObjectMsgList<LinkField>* src) {
+  void MoveFrom(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* src) {
     std::unique_lock<std::mutex> lock(mutex_);
     src->MoveToDstBack(&list_head_);
   }
 
-  void MoveTo(TrivialObjectMsgList<LinkField>* dst) {
+  void MoveTo(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }
@@ -123,7 +124,7 @@ class TrivialObjectMsgMutexedList {
   void Clear() { list_head_.Clear(); }
 
  private:
-  TrivialObjectMsgList<LinkField> list_head_;
+  TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
   std::mutex mutex_;
 };
 
