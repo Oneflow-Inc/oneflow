@@ -1,7 +1,9 @@
 #include "oneflow/core/actor/actor.h"
+#include <memory>
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/extension/extension_base.h"
 
 namespace oneflow {
 
@@ -36,13 +38,16 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
+  std::shared_ptr<extension::ActorExtensionContext> actor_ext_ctx_(
+      new extension::ActorExtensionContext());
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
+    ek.kernel =
+        ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get(), actor_ext_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
@@ -228,7 +233,9 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
-    default: { UNIMPLEMENTED(); }
+    default: {
+      UNIMPLEMENTED();
+    }
   }
 }
 

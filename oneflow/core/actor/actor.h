@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include <memory>
 #include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
@@ -14,6 +15,10 @@
 #include "oneflow/core/actor/register_slot.h"
 
 namespace oneflow {
+
+namespace extension {
+class ActorExtensionContext;
+}
 
 enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
@@ -233,6 +238,7 @@ class Actor {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+  std::shared_ptr<extension::ActorExtensionContext> actor_ext_ctx_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

@@ -15,6 +15,10 @@
 namespace oneflow {
 
 class RuntimeBlobShapeInferHelper;
+namespace extension {
+class KernelExtensionContext;
+class ActorExtensionContext;
+}  // namespace extension
 
 class Kernel {
  public:
@@ -39,9 +43,10 @@ class Kernel {
    * 2) all asynchronous task has been queued (e.g. NCCL related kernel)
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
+  void set_actor_ext_ctx(extension::ActorExtensionContext*);
 
  protected:
-  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
+  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr), kernel_ext_ctx_(nullptr) {}
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
@@ -91,6 +96,7 @@ class Kernel {
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
+  extension::KernelExtensionContext* kernel_ext_ctx_;
 };
 
 template<DeviceType device_type>
@@ -119,7 +125,7 @@ class KernelIf : public Kernel {
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
-                                              DeviceCtx*);
+                                              DeviceCtx*, extension::ActorExtensionContext*);
 
 }  // namespace oneflow
 

@@ -1,4 +1,5 @@
 #include <string>
+#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"
 
@@ -24,15 +25,28 @@ class ExtensionContext {
 };
 class RuntimeExtensionContext : public ExtensionContext {};
 class ThreadExtensionContext : public ExtensionContext {
-  RuntimeExtensionContext* runtime_cxt;
+ public:
+  const RuntimeExtensionContext* runtime_cxt() { return runtime_cxt_; }
+
+ private:
+  RuntimeExtensionContext* runtime_cxt_;
 };
 class ActorExtensionContext : public ExtensionContext {
+ public:
   std::function<Blob*(const std::string&)> BnInOp2Blob;
-  ThreadExtensionContext* thread_cxt;
+  const ThreadExtensionContext* thread_cxt() { return thread_cxt_; }
+
+ private:
+  ThreadExtensionContext* thread_cxt_;
 };
 class KernelExtensionContext : public ExtensionContext {
+ public:
   Kernel* kernel_ptr;
-  ActorExtensionContext* actor_ctx;
+  const ActorExtensionContext* actor_ctx() { return actor_ctx_; }
+
+ private:
+  friend Kernel;
+  ActorExtensionContext* actor_ctx_;
 };
 class Event {
  public:
