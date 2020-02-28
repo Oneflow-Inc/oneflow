@@ -1,4 +1,4 @@
-#include "oneflow/core/extension/extension_registration.h"
+#include "oneflow/core/extension/extension.h"
 namespace oneflow {
 using namespace oneflow::extension;
 class MyStruct {
