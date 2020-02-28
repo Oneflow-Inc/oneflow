@@ -1,3 +1,4 @@
+#define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/object_msg.h"
 
@@ -297,12 +298,182 @@ TEST(ObjectMsg, MoveTo) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(HeadlessContainer);
+BEGIN_OBJECT_MSG(SelfLoopContainer);
+  // methods
+  PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
+  PUBLIC void __Delete__() { *mut_deleted() = true; }
+  // fields
+  OBJECT_MSG_DEFINE_RAW_PTR(bool, deleted);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(HeadlessContainer, link, head);
-END_OBJECT_MSG(HeadlessContainer);
+  OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);
+END_OBJECT_MSG(SelfLoopContainer);
 // clang-format on
+
+TEST(ObjectMsgSelfLoopList, __Init__) {
+  bool deleted = false;
+  auto self_loop_head = ObjectMsgPtr<SelfLoopContainer>::New(&deleted);
+  ASSERT_EQ(self_loop_head->mut_head()->container_, self_loop_head.Mutable());
+}
+
+TEST(ObjectMsgSelfLoopList, PushBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PushFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushFront(self_loop_head0.Mutable());
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushFront(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, EmplaceBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, EmplaceFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, Erase) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->Erase(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->Erase(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PopBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->PopBack();
+    self_loop_head0->mut_head()->PopBack();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PopFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->PopFront();
+    self_loop_head0->mut_head()->PopFront();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, MoveTo) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->MoveTo(self_loop_head1->mut_head());
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, Clear) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->Clear();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
 
 }  // namespace
 
