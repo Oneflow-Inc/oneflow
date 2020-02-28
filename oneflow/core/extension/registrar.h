@@ -23,6 +23,17 @@ struct Registrar final {
   }
 };
 
+const std::vector<std::function<extension::ExtensionBase*()>>* LookUpExtensionRegistry(
+    const std::string& ev_name) {
+  const auto registry = MutExtensionRegistry();
+  auto it = registry->find(ev_name);
+  if (it == registry->end()) {
+    return nullptr;
+  } else {
+    return &(it->second);
+  }
+}
+
 }  // namespace extension
 
 }  // namespace oneflow
