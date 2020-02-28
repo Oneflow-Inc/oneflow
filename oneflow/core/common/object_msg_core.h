@@ -137,7 +137,7 @@ namespace oneflow {
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                 \
  public:                                                                                         \
   void OF_PP_CAT(clear_, oneof_name)() {                                                         \
-    __DSS__VisitField<field_counter, ObjectMsgField__Delete__, void,                             \
+    __DssVisitField__<field_counter, ObjectMsgField__Delete__, void,                             \
                       OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                    \
                                                                      &OF_PP_CAT(oneof_name, _)); \
     OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                                \
@@ -260,6 +260,12 @@ namespace oneflow {
   template<typename WalkCtxType, typename PtrFieldType>                   \
   struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType> \
       : public init_template<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, init_template) \
+ private:                                                                       \
+  template<typename WalkCtxType, typename PtrFieldType>                         \
+  struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType>       \
+      : public init_template<field_counter, WalkCtxType, PtrFieldType> {};
 
 #define OBJECT_MSG_DEFINE_DELETE()                                                \
  public:                                                                          \
