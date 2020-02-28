@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_
 #define ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_
 
-#include <string>
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"

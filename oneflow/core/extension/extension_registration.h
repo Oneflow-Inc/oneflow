@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_EXTENSION_REGISTRAR_H_
 
 #include "oneflow/core/extension/extension_base.h"
-#include <string>
 
 namespace oneflow {
 namespace extension {
