@@ -1,4 +1,5 @@
 #include <string>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -7,12 +8,19 @@ namespace extension {
 class ExtensionContext {
  public:
   virtual ~ExtensionContext() = default;
-  void* get_state(std::string ext_name) { return state_; }
-  void set_state(std::string ext_name, void* new_state) { state_ = new_state; }
+  void* get_state(std::string ext_name) {
+    auto it = ext_name2state_.find(ext_name);
+    if (it == ext_name2state_.end()) {
+      ext_name2state_[ext_name] = nullptr;
+      return nullptr;
+    } else {
+      return it->second;
+    }
+  }
+  void set_state(std::string ext_name, void* new_state) { ext_name2state_[ext_name] = new_state; }
 
  private:
-  // FIXME: by tsai, member state_ only for demo, state should be managed by oneflow runtime
-  void* state_;
+  HashMap<std::string, void*> ext_name2state_;
 };
 class RuntimeExtensionContext : public ExtensionContext {};
 class ThreadExtensionContext : public ExtensionContext {
