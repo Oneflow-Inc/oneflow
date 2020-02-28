@@ -8,10 +8,11 @@ namespace oneflow {
 namespace extension {
 
 struct Registrar final {
-  Registrar(std::string ev_name, std::function<extension::ExtensionBase*()> ext_contructor);
+  Registrar(std::string, std::function<extension::ExtensionBase*()>);
 };
 
-const std::vector<extension::ExtensionBase*> LookUpExtensionRegistry(const std::string& ev_name);
+const std::vector<std::function<extension::ExtensionBase*()>>* LookUpExtensionRegistry(
+    const std::string&);
 
 }  // namespace extension
 }  // namespace oneflow

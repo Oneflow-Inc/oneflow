@@ -5,13 +5,18 @@
 namespace oneflow {
 namespace extension {
 void kernel_event(std::string event_name, const Kernel* kernel) {
-  for (extension::ExtensionBase* ext : LookUpExtensionRegistry(event_name)) {
+  auto* ext_constructors = LookUpExtensionRegistry(event_name);
+  if (ext_constructors == nullptr) {
+    LOG(ERROR) << "No ext";
+    return;
+  }
+  for (const std::function<extension::ExtensionBase*()> ext_constructor : *ext_constructors) {
     KernelExtensionContext* ctx = kernel->kernel_ext_ctx.get();
     KernelEvent event;
     event.name = event_name;
     event.context = ctx;
     event.kernel_ptr = kernel;
-    ext->callback(&event);
+    ext_constructor()->callback(&event);
   }
 }
 }  // namespace extension
