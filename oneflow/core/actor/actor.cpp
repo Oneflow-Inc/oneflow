@@ -37,8 +37,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
-  std::unique_ptr<extension::ActorExtensionContext> actor_ext_ctx_(
-      new extension::ActorExtensionContext());
+  actor_ext_ctx_.reset(new extension::ActorExtensionContext());
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
