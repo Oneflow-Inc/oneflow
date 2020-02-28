@@ -9,14 +9,14 @@ class MyStruct {
 };
 class MyExtension final : public ExtensionBase {
   std::string name() override { return "kernel sync"; }
-  void callback(Event ev) override {
-    ExtensionContext* ctx = ev.context;
-    auto kernel_ctx = dynamic_cast<KernelExtensionContext*>(ctx);
-    if (ev.name == "Kernel/WillForward") {
-      ctx->set_state(name(), reinterpret_cast<void*>(new MyStruct(10, 12.2)));
+  void callback(const Event* ev) override {
+    const KernelEvent* kernel_ev = dynamic_cast<const KernelEvent*>(ev);
+    KernelExtensionContext* kernel_ctx = kernel_ev->context;
+    if (ev->name == "Kernel/WillForward") {
+      kernel_ctx->set_state(name(), reinterpret_cast<void*>(new MyStruct(10, 12.2)));
       // TODO: by niuchong 也可考虑传递std::shared_ptr<void>，而非void*
-    } else if (ev.name == "Kernel/DidForward") {
-      MyStruct* my_struct = reinterpret_cast<MyStruct*>(ctx->get_state(name()));
+    } else if (ev->name == "Kernel/DidForward") {
+      MyStruct* my_struct = reinterpret_cast<MyStruct*>(kernel_ctx->get_state(name()));
     }
   }
 };

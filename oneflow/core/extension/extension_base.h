@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_
+#define ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_
+
 #include <string>
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/util.h"
@@ -26,37 +29,32 @@ class ExtensionContext {
 class RuntimeExtensionContext : public ExtensionContext {};
 class ThreadExtensionContext : public ExtensionContext {
  public:
-  const RuntimeExtensionContext* runtime_cxt() { return runtime_cxt_; }
-
- private:
-  RuntimeExtensionContext* runtime_cxt_;
+  RuntimeExtensionContext* runtime_cxt;
 };
 class ActorExtensionContext : public ExtensionContext {
  public:
   std::function<Blob*(const std::string&)> BnInOp2Blob;
-  const ThreadExtensionContext* thread_cxt() { return thread_cxt_; }
-
- private:
-  ThreadExtensionContext* thread_cxt_;
+  ThreadExtensionContext* thread_cxt;
 };
 class KernelExtensionContext : public ExtensionContext {
  public:
-  Kernel* kernel_ptr;
-  const ActorExtensionContext* actor_ctx() { return actor_ctx_; }
-
- private:
-  friend Kernel;
-  ActorExtensionContext* actor_ctx_;
+  ActorExtensionContext* actor_ctx;
 };
 class Event {
  public:
+  virtual ~Event() = default;
   std::string name;
-  ExtensionContext* context;
+};
+class KernelEvent : public Event {
+ public:
+  const Kernel* kernel_ptr;
+  KernelExtensionContext* context;
 };
 class ExtensionBase {
  public:
   virtual std::string name() = 0;
-  virtual void callback(Event event) = 0;
+  virtual void callback(const Event* event) = 0;
 };
 }  // namespace extension
 }  // namespace oneflow
+#endif  // ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_

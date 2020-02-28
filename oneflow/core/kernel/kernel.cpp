@@ -3,6 +3,7 @@
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/extension/extension_base.h"
+#include "oneflow/core/extension/event_handler.h"
 
 namespace oneflow {
 
@@ -21,7 +22,6 @@ bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
-  if (kernel_ext_ctx_ != nullptr) { delete kernel_ext_ctx_; }
 }
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
@@ -30,8 +30,7 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
-  kernel_ext_ctx_ = new extension::KernelExtensionContext();
-  kernel_ext_ctx_->kernel_ptr = this;
+  kernel_ext_ctx.reset(new extension::KernelExtensionContext());
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
@@ -42,7 +41,9 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+  extension::kernel_event("Kernel/WillForward", this);
   Forward(ctx, BnInOp2Blob);
+  extension::kernel_event("Kernel/DidForward", this);
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
@@ -75,10 +76,6 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
 void Kernel::ForwardShape(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   return shape_infer_helper_->InferShape(BnInOp2Blob);
-}
-
-void Kernel::set_actor_ext_ctx(extension::ActorExtensionContext* actor_ext_ctx) {
-  this->kernel_ext_ctx_->actor_ctx_ = actor_ext_ctx;
 }
 
 template<DeviceType device_type>
@@ -124,7 +121,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                               extension::ActorExtensionContext* actor_ext_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = kernel_registration::CreateKernel(conf);
-  rptr->set_actor_ext_ctx(actor_ext_ctx);
+  rptr->kernel_ext_ctx->actor_ctx = actor_ext_ctx;
   if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);

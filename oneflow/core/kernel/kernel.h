@@ -43,10 +43,10 @@ class Kernel {
    * 2) all asynchronous task has been queued (e.g. NCCL related kernel)
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
-  void set_actor_ext_ctx(extension::ActorExtensionContext*);
+  std::shared_ptr<extension::KernelExtensionContext> kernel_ext_ctx;
 
  protected:
-  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr), kernel_ext_ctx_(nullptr) {}
+  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
@@ -96,7 +96,6 @@ class Kernel {
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
-  extension::KernelExtensionContext* kernel_ext_ctx_;
 };
 
 template<DeviceType device_type>

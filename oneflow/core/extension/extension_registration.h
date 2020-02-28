@@ -11,8 +11,7 @@ struct Registrar final {
   Registrar(std::string ev_name, std::function<extension::ExtensionBase*()> ext_contructor);
 };
 
-const std::vector<std::function<ExtensionBase*()>>* LookUpExtensionRegistry(
-    const std::string& ev_name);
+const std::vector<extension::ExtensionBase*> LookUpExtensionRegistry(const std::string& ev_name);
 
 }  // namespace extension
 }  // namespace oneflow
