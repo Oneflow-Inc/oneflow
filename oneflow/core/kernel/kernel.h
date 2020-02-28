@@ -123,8 +123,9 @@ class KernelIf : public Kernel {
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
-                                              DeviceCtx*, extension::ActorExtensionContext*);
+std::unique_ptr<const Kernel> ConstructKernel(
+    const JobDesc* job_desc, const KernelConf&,
+    const std::shared_ptr<extension::ActorExtensionContext>, DeviceCtx*);
 
 }  // namespace oneflow
 

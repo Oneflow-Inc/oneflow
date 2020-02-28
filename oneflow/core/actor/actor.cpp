@@ -45,7 +45,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel =
-        ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get(), actor_ext_ctx.get());
+        ConstructKernel(job_desc_, node.kernel_conf(), this->actor_ext_ctx, device_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }

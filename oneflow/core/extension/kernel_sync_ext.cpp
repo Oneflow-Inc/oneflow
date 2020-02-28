@@ -13,10 +13,9 @@ class MyExtension final : public ExtensionBase {
     const KernelEvent* kernel_ev = dynamic_cast<const KernelEvent*>(ev);
     KernelExtensionContext* kernel_ctx = kernel_ev->context;
     if (ev->name == "Kernel/WillForward") {
-      kernel_ctx->set_state(name(), reinterpret_cast<void*>(new MyStruct(10, 12.2)));
-      // TODO: by niuchong 也可考虑传递std::shared_ptr<void>，而非void*
+      kernel_ctx->set_state(name(), std::shared_ptr<void>(new MyStruct(10, 12.2)));
     } else if (ev->name == "Kernel/DidForward") {
-      MyStruct* my_struct = reinterpret_cast<MyStruct*>(kernel_ctx->get_state(name()));
+      MyStruct* my_struct = reinterpret_cast<MyStruct*>(kernel_ctx->get_state(name()).get());
     }
   }
 };

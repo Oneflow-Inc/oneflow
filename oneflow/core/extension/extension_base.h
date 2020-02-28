@@ -12,7 +12,7 @@ namespace extension {
 class ExtensionContext {
  public:
   virtual ~ExtensionContext() = default;
-  void* get_state(std::string ext_name) {
+  std::shared_ptr<void> get_state(std::string ext_name) {
     auto it = ext_name2state_.find(ext_name);
     if (it == ext_name2state_.end()) {
       ext_name2state_[ext_name] = nullptr;
@@ -21,24 +21,26 @@ class ExtensionContext {
       return it->second;
     }
   }
-  void set_state(std::string ext_name, void* new_state) { ext_name2state_[ext_name] = new_state; }
+  void set_state(std::string ext_name, std::shared_ptr<void> new_state) {
+    ext_name2state_[ext_name] = new_state;
+  }
 
  private:
-  HashMap<std::string, void*> ext_name2state_;
+  HashMap<std::string, std::shared_ptr<void>> ext_name2state_;
 };
 class RuntimeExtensionContext : public ExtensionContext {};
 class ThreadExtensionContext : public ExtensionContext {
  public:
-  RuntimeExtensionContext* runtime_cxt;
+  std::shared_ptr<RuntimeExtensionContext> runtime_cxt;
 };
 class ActorExtensionContext : public ExtensionContext {
  public:
   std::function<Blob*(const std::string&)> BnInOp2Blob;
-  ThreadExtensionContext* thread_cxt;
+  std::shared_ptr<ThreadExtensionContext> thread_cxt;
 };
 class KernelExtensionContext : public ExtensionContext {
  public:
-  ActorExtensionContext* actor_ctx;
+  std::shared_ptr<ActorExtensionContext> actor_ctx;
 };
 class Event {
  public:
