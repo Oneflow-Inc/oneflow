@@ -234,7 +234,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   void EmplaceFront(ObjectMsgPtr<value_type>&& ptr) {
     value_type* raw_ptr = nullptr;
     ptr.__UnsafeMoveTo__(&raw_ptr);
-    list_head_.PushFront(ptr);
+    list_head_.PushFront(raw_ptr);
   }
 
   ObjectMsgPtr<value_type> Erase(value_type* ptr) {
@@ -307,23 +307,11 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
 
   void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
-    if (ptr == container_ && ptr != dst->container_) {
-      ObjectMsgPtrUtil::Ref(ptr);
-    } else if (ptr != container_ && ptr == dst->container_) {
-      ObjectMsgPtrUtil::ReleaseRef(ptr);
-    } else {
-      // do nothing
-    }
+    MoveReference(ptr, dst);
   }
   void MoveToDstFront(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstFront(ptr, &dst->list_head_);
-    if (ptr == container_ && ptr != dst->container_) {
-      ObjectMsgPtrUtil::Ref(ptr);
-    } else if (ptr != container_ && ptr == dst->container_) {
-      ObjectMsgPtrUtil::ReleaseRef(ptr);
-    } else {
-      // do nothing
-    }
+    MoveReference(ptr, dst);
   }
   value_type* MoveFrontToDstBack(TrivialObjectMsgList* dst) {
     value_type* begin = list_head_.Begin();
@@ -363,7 +351,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
     } else {
       raw_ptr = ptr.Mutable();
     }
-    list_head_.PushFront(ptr);
+    list_head_.PushFront(raw_ptr);
   }
 
   ObjectMsgPtr<value_type> Erase(value_type* ptr) {
@@ -397,7 +385,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
 
   void MoveTo(TrivialObjectMsgList* list) { MoveToDstBack(list); }
   void MoveToDstBack(TrivialObjectMsgList* list) {
-    while (!empty()) { MoveToDstBack(list_head_.PopFront(), list); }
+    while (!empty()) { MoveToDstBack(list_head_.Begin(), list); }
   }
 
   void Clear() {
@@ -408,6 +396,16 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
   }
 
  private:
+  void MoveReference(value_type* ptr, TrivialObjectMsgList* dst) {
+    if (ptr == container_ && ptr != dst->container_) {
+      ObjectMsgPtrUtil::Ref(ptr);
+    } else if (ptr != container_ && ptr == dst->container_) {
+      ObjectMsgPtrUtil::ReleaseRef(ptr);
+    } else {
+      // do nothing
+    }
+  }
+
   EmbeddedListHead<ValueLinkField> list_head_;
   const value_type* container_;
 };
