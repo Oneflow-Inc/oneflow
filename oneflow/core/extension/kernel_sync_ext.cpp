@@ -20,5 +20,5 @@ class MyExtension final : public ExtensionBase {
     }
   }
 };
-REGISTER_EXTENSION("Kernel/DidLaunch", []() { return new MyExtension(); });
+REGISTER_EXTENSION("Kernel/DidForward", []() { return new MyExtension(); });
 }  // namespace oneflow
