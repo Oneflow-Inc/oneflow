@@ -1752,6 +1752,15 @@ message IndexedSlicesLazyAdamModelUpdateOpConf {
   optional float epsilon = 10 [default = 1e-8];
 }
 
+message CategoricalHashTableLookupOpConf {
+  required string key = 1;
+  required string value = 2;
+  required string size = 3;
+  required string in = 4;
+  required string out = 5;
+  optional bool hash_precomputed = 6 [default = true];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1915,6 +1924,7 @@ message OperatorConf {
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
+    CategoricalHashTableLookupOpConf categorical_hash_table_lookup_conf = 340;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
