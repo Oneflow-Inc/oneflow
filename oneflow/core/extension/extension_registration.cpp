@@ -15,8 +15,6 @@ MutExtensionRegistry() {
 
 Registrar::Registrar(const std::string& ev_name,
                      std::function<extension::ExtensionBase*()> ext_contructor) {
-  std::cout << ev_name << "\n";
-  std::cout << ext_contructor()->name() << "\n";
   auto* registry = MutExtensionRegistry();
   (*registry)[ev_name].emplace_back(std::move(ext_contructor));
 }
