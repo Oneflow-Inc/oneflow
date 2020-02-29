@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+namespace extension {
+
 namespace {
 HashMap<std::string, std::vector<std::function<extension::ExtensionBase*()>>>*
 MutExtensionRegistry() {
@@ -10,8 +12,6 @@ MutExtensionRegistry() {
 }
 
 }  // namespace
-
-namespace extension {
 
 Registrar::Registrar(std::string ev_name,
                      std::function<extension::ExtensionBase*()> ext_contructor) {
