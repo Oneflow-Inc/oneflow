@@ -17,7 +17,7 @@ class TmpBufferManager final {
     indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
     temp_storage_ptr_ = reinterpret_cast<void*>(indices_ptr_ + indices_elem_cnt_);
     temp_storage_bytes_ = capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + sizeof(int32_t));
-    CHECK_GE(temp_storage_bytes, 0);
+    CHECK_GE(temp_storage_bytes_, 0);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
