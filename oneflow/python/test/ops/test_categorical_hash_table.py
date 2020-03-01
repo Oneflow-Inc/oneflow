@@ -1,5 +1,6 @@
 import oneflow as flow
 import numpy as np
+import sys
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -14,12 +15,14 @@ def test_categorical_hash_table_gpu(test_case):
     check_point = flow.train.CheckPoint()
     check_point.init()
 
+    tokens = np.random.randint(-sys.maxsize, sys.maxsize, size=[2000000]).astype(np.int64)
+
     k_set = set()
     v_set = set()
     kv_set = set()
     vk_set = set()
     for i in range(256):
-        x = np.random.randint(0, 2000000, (100000,)).astype(np.int64)
+        x = tokens[np.random.randint(0, 2000000, (100000,))]
         y = CategoricalHashTable(x).get().ndarray()
         for k, v in zip(x, y):
             k_set.add(k)
