@@ -21,7 +21,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
             tuple([dim + 10 for dim in in_shape]), dtype=type_name_to_flow_type[data_type]
         )
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.fixed_placement(device_type, "0:0"):
             return flow.math.top_k(input, k, sorted)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
@@ -29,11 +29,11 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     of_out = TopKJob([input]).get().ndarray_list()[0]
     # TensorFlow
     if k <= in_shape[-1]:
-        _, tf_out = tf.math.top_k(tf.Variable(input), k, sorted)
+        _, tf_out = tf.math.top_k(input, k, sorted)
     else:
         tf_out = tf.argsort(input, axis=-1, direction="DESCENDING", stable=True)
 
-    assert np.allclose(of_out, tf_out.numpy())
+    assert np.array_equal(of_out, tf_out.numpy())
 
 
 def gen_arg_list():

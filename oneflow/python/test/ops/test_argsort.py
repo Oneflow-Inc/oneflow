@@ -8,7 +8,7 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
 
-def compare_with_tensorflow(device_type, in_shape, dir, data_type):
+def compare_with_tensorflow(device_type, in_shape, direction, data_type):
     assert device_type in ["gpu", "cpu"]
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
@@ -21,23 +21,23 @@ def compare_with_tensorflow(device_type, in_shape, dir, data_type):
             tuple([dim + 10 for dim in in_shape]), dtype=type_name_to_flow_type[data_type]
         )
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            return flow.argsort(input, dir)
+        with flow.fixed_placement(device_type, "0:0"):
+            return flow.argsort(input, direction)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = ArgSortJob([input]).get().ndarray_list()[0]
     # TensorFlow
-    tf_out = tf.argsort(input, axis=-1, direction=dir)
+    tf_out = tf.argsort(input, axis=-1, direction=direction)
 
-    assert np.allclose(of_out, tf_out.numpy())
+    assert np.array_equal(of_out, tf_out.numpy())
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 10000)]
-    arg_dict["dir"] = ["ASCENDING", "DESCENDING"]
+    arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
 
     return GenArgList(arg_dict)

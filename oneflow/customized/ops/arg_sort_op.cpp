@@ -5,7 +5,7 @@ namespace oneflow {
 REGISTER_USER_OP("arg_sort")
     .Input("in")
     .Output("out")
-    .Attr("dir", UserOpAttrType::kAtString)
+    .Attr("direction", UserOpAttrType::kAtString)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();

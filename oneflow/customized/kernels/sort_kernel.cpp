@@ -19,12 +19,12 @@ class CpuSortKernel final : public user_op::OpKernel {
                              in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const std::string& dir = ctx->GetAttr<std::string>("dir");
+    const std::string& direction = ctx->GetAttr<std::string>("direction");
     FOR_RANGE(int32_t, i, 0, instance_num) {
       T* out_ptr_i = out->mut_dptr<T>() + i * instance_size;
-      if (dir == "ASCENDING") {
+      if (direction == "ASCENDING") {
         std::sort(out_ptr_i, out_ptr_i + instance_size, std::less<T>());
-      } else if (dir == "DESCENDING") {
+      } else if (direction == "DESCENDING") {
         std::sort(out_ptr_i, out_ptr_i + instance_size, std::greater<T>());
       } else {
         UNIMPLEMENTED();
