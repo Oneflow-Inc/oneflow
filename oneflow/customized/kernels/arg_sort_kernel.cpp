@@ -28,9 +28,9 @@ class CpuArgSortKernel final : public user_op::OpKernel {
         if (l == r) {
           return lhs < rhs;
         } else {
-          if (direction == "ASCENDING") {
+          if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {
             return l < r;
-          } else if (direction == "DESCENDING") {
+          } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {
             return l > r;
           } else {
             UNIMPLEMENTED();

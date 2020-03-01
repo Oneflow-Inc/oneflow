@@ -71,12 +71,12 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager->IndicesPtr(),
                                                             instance_size);
-    if (direction == "ASCENDING") {
+    if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {
       SortPairsAscending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
                          buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
                          buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
                          ctx->device_ctx()->cuda_stream());
-    } else if (direction == "DESCENDING") {
+    } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {
       SortPairsDescending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
                           buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
                           buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
@@ -103,10 +103,10 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                         \
         int32_t temp_storage_bytes = -1;                                                           \
         const std::string& direction = ctx->GetAttr<std::string>("direction");                     \
-        if (direction == "ASCENDING") {                                                            \
+        if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {                                  \
           temp_storage_bytes =                                                                     \
               InferTempStorageForSortPairsAscending<dtype, int32_t>(instance_num, instance_size);  \
-        } else if (direction == "DESCENDING") {                                                    \
+        } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {                         \
           temp_storage_bytes =                                                                     \
               InferTempStorageForSortPairsDescending<dtype, int32_t>(instance_num, instance_size); \
         } else {                                                                                   \

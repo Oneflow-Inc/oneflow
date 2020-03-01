@@ -22,11 +22,11 @@ class GpuSortKernel final : public user_op::OpKernel {
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const std::string& direction = ctx->GetAttr<std::string>("direction");
-    if (direction == "ASCENDING") {
+    if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {
       SortKeysAscending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                         tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
                         ctx->device_ctx()->cuda_stream());
-    } else if (direction == "DESCENDING") {
+    } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {
       SortKeysDescending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                          tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
                          ctx->device_ctx()->cuda_stream());
@@ -51,9 +51,9 @@ class GpuSortKernel final : public user_op::OpKernel {
         const int32_t instance_size = in_shape->dim_vec().back();                           \
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \
         const std::string& direction = ctx->GetAttr<std::string>("direction");              \
-        if (direction == "ASCENDING") {                                                     \
+        if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {                           \
           return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
-        } else if (direction == "DESCENDING") {                                             \
+        } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {                  \
           return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size); \
         } else {                                                                            \
           UNIMPLEMENTED();                                                                  \

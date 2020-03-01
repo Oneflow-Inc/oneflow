@@ -22,9 +22,9 @@ class CpuSortKernel final : public user_op::OpKernel {
     const std::string& direction = ctx->GetAttr<std::string>("direction");
     FOR_RANGE(int32_t, i, 0, instance_num) {
       T* out_ptr_i = out->mut_dptr<T>() + i * instance_size;
-      if (direction == "ASCENDING") {
+      if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {
         std::sort(out_ptr_i, out_ptr_i + instance_size, std::less<T>());
-      } else if (direction == "DESCENDING") {
+      } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {
         std::sort(out_ptr_i, out_ptr_i + instance_size, std::greater<T>());
       } else {
         UNIMPLEMENTED();
