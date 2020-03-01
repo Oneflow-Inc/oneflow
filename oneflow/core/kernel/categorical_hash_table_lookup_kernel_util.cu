@@ -50,9 +50,8 @@ __device__ bool TryGetOrInsert(K* key, volatile V* value, V* size, const K hash,
   }
 }
 
-template<typename K, typename V>
-__device__ void GetOrInsertOne(const size_t capacity, K* keys, V* values, V* size, const K hash,
-                               V* out) {
+template<typename T>
+__device__ void GetOrInsertOne(const size_t capacity, T* table, T* size, const T hash, T* out) {
   if (hash == 0) {
     *out = 0;
     return;
@@ -62,14 +61,14 @@ __device__ void GetOrInsertOne(const size_t capacity, K* keys, V* values, V* siz
   while (!success) {
     if (count >= capacity) { break; }
     const size_t idx = (static_cast<size_t>(hash) + count) % capacity;
-    K* key = keys + idx;
-    V* value = values + idx;
+    T* key = table + idx * 2;
+    T* value = key + 1;
     if (count == 0 && *key == hash && *value != 0) {
       *out = *value;
       success = true;
       break;
     }
-    if (TryGetOrInsert<K, V>(key, value, size, hash, out)) {
+    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) {
       success = true;
       break;
     } else {
@@ -79,31 +78,27 @@ __device__ void GetOrInsertOne(const size_t capacity, K* keys, V* values, V* siz
   assert(success);
 }
 
-template<typename K, typename V>
-__global__ void GetOrInsertGpu(const size_t capacity, K* keys, V* values, V* size, const int64_t n,
-                               const K* hash, V* out) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    GetOrInsertOne<K, V>(capacity, keys, values, size, hash[i], out + i);
-  }
+template<typename T>
+__global__ void GetOrInsertGpu(const size_t capacity, T* table, T* size, const int64_t n,
+                               const T* hash, T* out) {
+  CUDA_1D_KERNEL_LOOP(i, n) { GetOrInsertOne<T>(capacity, table, size, hash[i], out + i); }
 }
 
 }  // namespace
 
-template<typename K, typename V>
-struct CategoricalHashTableLookupKernelUtil<DeviceType::kGPU, K, V> {
-  static void GetOrInsert(DeviceCtx* ctx, int64_t capacity, K* keys, V* values, V* size, int64_t n,
-                          const K* hash, V* out) {
-    GetOrInsertGpu<K, V>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            capacity, keys, values, size, n, hash, out);
+template<typename T>
+struct CategoricalHashTableLookupKernelUtil<DeviceType::kGPU, T> {
+  static void GetOrInsert(DeviceCtx* ctx, int64_t capacity, T* table, T* size, int64_t n,
+                          const T* hash, T* out) {
+    GetOrInsertGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        capacity, table, size, n, hash, out);
   }
 };
 
-#define INSTANTIATE_CATEGORICAL_HASH_TABLE_LOOKUP_KERNEL_UTIL_GPU(key_type_pair, value_type_pair) \
-  template struct CategoricalHashTableLookupKernelUtil<                                           \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(key_type_pair), OF_PP_PAIR_FIRST(value_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CATEGORICAL_HASH_TABLE_LOOKUP_KERNEL_UTIL_GPU,
-                                 INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+#define INSTANTIATE_CATEGORICAL_HASH_TABLE_LOOKUP_KERNEL_UTIL_GPU(type_cpp, type_proto) \
+  template struct CategoricalHashTableLookupKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CATEGORICAL_HASH_TABLE_LOOKUP_KERNEL_UTIL_GPU,
+                     INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_CATEGORICAL_HASH_TABLE_LOOKUP_KERNEL_UTIL_GPU
 
 }  // namespace oneflow

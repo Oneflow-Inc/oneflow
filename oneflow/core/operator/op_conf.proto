@@ -1753,12 +1753,11 @@ message IndexedSlicesLazyAdamModelUpdateOpConf {
 }
 
 message CategoricalHashTableLookupOpConf {
-  required string key = 1;
-  required string value = 2;
-  required string size = 3;
-  required string in = 4;
-  required string out = 5;
-  optional bool hash_precomputed = 6 [default = true];
+  required string table = 1;
+  required string size = 2;
+  required string in = 3;
+  required string out = 4;
+  optional bool hash_precomputed = 5 [default = true];
 }
 
 message OperatorConf {

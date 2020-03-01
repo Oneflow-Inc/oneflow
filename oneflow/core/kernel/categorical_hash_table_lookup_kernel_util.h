@@ -5,10 +5,10 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename K, typename V>
+template<DeviceType device_type, typename T>
 struct CategoricalHashTableLookupKernelUtil {
-  static void GetOrInsert(DeviceCtx* ctx, int64_t capacity, K* keys, V* values, V* size, int64_t n,
-                          const K* hash, V* out);
+  static void GetOrInsert(DeviceCtx* ctx, int64_t capacity, T* table, T* size, int64_t n,
+                          const T* hash, T* out);
 };
 
 }  // namespace oneflow

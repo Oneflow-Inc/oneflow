@@ -15,12 +15,11 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export('experimental.categorical_hash_table_lookup')
-def categorical_hash_table_lookup(keys, values, size, x, hash_precomputed=True, name=None):
+def categorical_hash_table_lookup(table, size, x, hash_precomputed=True, name=None):
     assert hash_precomputed is True
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, 'name', name if name is not None else id_util.UniqueStr('CategoricalHashTableLookup_'))
-    setattr(op_conf.categorical_hash_table_lookup_conf, 'key', keys.logical_blob_name)
-    setattr(op_conf.categorical_hash_table_lookup_conf, 'value', values.logical_blob_name)
+    setattr(op_conf.categorical_hash_table_lookup_conf, 'table', table.logical_blob_name)
     setattr(op_conf.categorical_hash_table_lookup_conf, 'size', size.logical_blob_name)
     setattr(op_conf.categorical_hash_table_lookup_conf, 'in', x.logical_blob_name)
     setattr(op_conf.categorical_hash_table_lookup_conf, 'out', 'out')
@@ -32,31 +31,23 @@ def categorical_hash_table_lookup(keys, values, size, x, hash_precomputed=True, 
 
 
 @oneflow_export('experimental.layers.categorical_hash_table')
-def categorical_hash_table(x, capacity, value_dtype=None, hash_precomputed=True, name=None):
+def categorical_hash_table(x, capacity, hash_precomputed=True, name=None):
     assert hash_precomputed is True
     name_prefix = name if name is not None else id_util.UniqueStr('CategoricalHashTable_')
-    key_dtype = x.dtype
-    value_dtype = value_dtype or key_dtype
-    table_key = flow.get_variable(
-        name="{}-Key".format(name_prefix),
-        shape=(capacity,),
-        dtype=key_dtype,
-        initializer=flow.constant_initializer(0, dtype=key_dtype),
+    dtype = x.dtype
+    table = flow.get_variable(
+        name="{}-Table".format(name_prefix),
+        shape=(capacity * 2,),
+        dtype=dtype,
+        initializer=flow.constant_initializer(0, dtype=dtype),
         trainable=False,
     )
-    table_value = flow.get_variable(
-        name="{}-Value".format(name_prefix),
-        shape=(capacity,),
-        dtype=value_dtype,
-        initializer=flow.constant_initializer(0, dtype=key_dtype),
-        trainable=False,
-    )
-    table_size = flow.get_variable(
+    size = flow.get_variable(
         name="{}-Size".format(name_prefix),
         shape=(1,),
-        dtype=value_dtype,
-        initializer=flow.constant_initializer(0, dtype=key_dtype),
+        dtype=dtype,
+        initializer=flow.constant_initializer(0, dtype=dtype),
         trainable=False,
     )
-    return categorical_hash_table_lookup(keys=table_key, values=table_value, size=table_size, x=x,
+    return categorical_hash_table_lookup(table=table, size=size, x=x,
                                          name='{}-Lookup'.format(name_prefix))
