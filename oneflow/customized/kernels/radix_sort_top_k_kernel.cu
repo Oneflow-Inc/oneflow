@@ -12,12 +12,13 @@ class TmpBufferManager final {
       : capacity_{capacity},
         sorted_in_elem_cnt_{in_shape.elem_cnt()},
         indices_elem_cnt_{sorted_in_elem_cnt_},
-        sorted_indices_elem_cnt_{sorted_in_elem_cnt_},
-        temp_storage_bytes_{capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + 2 * sizeof(int32_t))} {
+        sorted_indices_elem_cnt_{sorted_in_elem_cnt_} {
     sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
     indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
     sorted_indices_ptr_ = indices_ptr_ + indices_elem_cnt_;
     temp_storage_ptr_ = reinterpret_cast<void*>(sorted_indices_ptr_ + sorted_indices_elem_cnt_);
+    temp_storage_bytes_ = capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + 2 * sizeof(int32_t));
+    CHECK_GE(temp_storage_bytes_, 0);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;

@@ -12,11 +12,12 @@ class TmpBufferManager final {
   TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
         sorted_in_elem_cnt_{in_shape.elem_cnt()},
-        indices_elem_cnt_{sorted_in_elem_cnt_},
-        temp_storage_bytes_{capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + sizeof(int32_t))} {
+        indices_elem_cnt_{sorted_in_elem_cnt_} {
     sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
     indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
     temp_storage_ptr_ = reinterpret_cast<void*>(indices_ptr_ + indices_elem_cnt_);
+    temp_storage_bytes_ = capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + sizeof(int32_t));
+    CHECK_GE(temp_storage_bytes, 0);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
