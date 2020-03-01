@@ -9,14 +9,14 @@ namespace {
 template<typename T>
 class TmpBufferManager final {
  public:
-  TmpBufferManager(int32_t capacity, char* tmp_buffer_ptr, const ShapeView& in_shape)
+  TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
-        sorted_in_bytes_{in_shape.elem_cnt() * sizeof(T)},
-        indices_bytes_{in_shape.elem_cnt() * sizeof(int32_t)},
-        temp_storage_bytes_{capacity_ - sorted_in_bytes_ - indices_bytes_} {
-    sorted_in_ptr_ = (T*)tmp_buffer_ptr;
-    indices_ptr_ = (int32_t*)(tmp_buffer_ptr + sorted_in_bytes_);
-    temp_storage_ptr_ = (void*)(tmp_buffer_ptr + sorted_in_bytes_ + indices_bytes_);
+        sorted_in_elem_cnt_{in_shape.elem_cnt()},
+        indices_elem_cnt_{sorted_in_elem_cnt_},
+        temp_storage_bytes_{capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + sizeof(int32_t))} {
+    sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
+    indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
+    temp_storage_ptr_ = reinterpret_cast<void*>(indices_ptr_ + indices_elem_cnt_);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
@@ -25,9 +25,9 @@ class TmpBufferManager final {
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t GetSortedInBytes() const { return sorted_in_bytes_; }
-  int32_t GetIndicesBytes() const { return indices_bytes_; }
-  int32_t GetTempStorageBytes() const { return temp_storage_bytes_; }
+  int32_t SortedInElemCnt() const { return sorted_in_elem_cnt_; }
+  int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
+  int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
   int32_t capacity_;
@@ -36,15 +36,13 @@ class TmpBufferManager final {
   int32_t* indices_ptr_;
   void* temp_storage_ptr_;
 
-  int32_t sorted_in_bytes_;
-  int32_t indices_bytes_;
+  int32_t sorted_in_elem_cnt_;
+  int32_t indices_elem_cnt_;
   int32_t temp_storage_bytes_;
 };
 
-__global__ void InitializeIndices(int32_t* indices_ptr, int32_t instance_size) {
-  for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
-    indices_ptr[blockIdx.x * instance_size + i] = i;
-  }
+__global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr, int32_t instance_size) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { indices_ptr[i] = i % instance_size; };
 }
 
 }  // namespace
@@ -63,22 +61,23 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     auto* buf_manager =
         new TmpBufferManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                                tmp_buffer->mut_dptr<char>(), in->shape());
+                                tmp_buffer->mut_dptr<void>(), in->shape());
 
+    const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int32_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int32_t instance_num = elem_cnt / instance_size;
     const std::string& direction = ctx->GetAttr<std::string>("direction");
-    InitializeIndices<<<instance_num, std::min(instance_size, kCudaThreadsNumPerBlock), 0,
-                        ctx->device_ctx()->cuda_stream()>>>(buf_manager->IndicesPtr(),
+    InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager->IndicesPtr(),
                                                             instance_size);
     if (direction == "ASCENDING") {
       SortPairsAscending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
-                         buf_manager->TempStoragePtr(), buf_manager->GetTempStorageBytes(),
+                         buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
                          buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
                          ctx->device_ctx()->cuda_stream());
     } else if (direction == "DESCENDING") {
       SortPairsDescending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
-                          buf_manager->TempStoragePtr(), buf_manager->GetTempStorageBytes(),
+                          buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
                           buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
                           ctx->device_ctx()->cuda_stream());
     } else {
