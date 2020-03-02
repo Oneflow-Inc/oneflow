@@ -17,17 +17,15 @@ class MirroredObject;
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // methods
   PUBLIC void __Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
-                       uint64_t logical_object_id_value, bool is_const_operand);
+                       bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
   OBJECT_MSG_DEFINE_RAW_PTR(VmInstruction, vm_instruction);
-  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_operand_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, uint64_t, logical_object_id_value);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObject*, mirrored_object);
   
 END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
@@ -53,8 +51,6 @@ BEGIN_OBJECT_MSG(MirroredObject);
     set_logical_object(logical_object);
     set_parallel_id(parallel_id);
   }
-  PUBLIC void TryResetCurrentAccessType(); 
-  PUBLIC MirroredObjectAccess* GetFirstAllowedAccess();
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
@@ -62,12 +58,7 @@ BEGIN_OBJECT_MSG(MirroredObject);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
-                              waiting_access_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link,
-                              holding_access_list);
-  // methods
-  PRIVATE bool IsFirstTwoConsumersReadOnly(); 
+  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
 
