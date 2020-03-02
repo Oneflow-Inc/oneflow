@@ -49,6 +49,20 @@ struct ConstStruct<const T> {
 
 template<typename T>
 using ConstType = typename ConstStruct<T>::type;
+
+template<typename T>
+struct ConstRefOrPtrStruct {
+  using type = ConstType<T>&;
+};
+
+template<typename T>
+struct ConstRefOrPtrStruct<T*> {
+  using type = ConstType<T>*;
+};
+
+template<typename T>
+using ConstRefOrPtr = typename ConstRefOrPtrStruct<T>::type;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_

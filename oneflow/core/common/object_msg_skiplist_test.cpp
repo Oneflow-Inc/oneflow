@@ -5,6 +5,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgSkipListFoo);
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
@@ -196,6 +198,15 @@ TEST(ObjectMsgSkipList, FOR_EACH) {
   }
   ASSERT_EQ(elem_cnt, 100);
 }
+
+// clang-format off
+BEGIN_OBJECT_MSG(PtrAsKey);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, int*, ptr_key);
+END_OBJECT_MSG(PtrAsKey);
+// clang-format on
+
+}  // namespace
+
 }  // namespace test
 
 }  // namespace oneflow
