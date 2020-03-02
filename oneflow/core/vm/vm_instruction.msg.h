@@ -39,9 +39,12 @@ BEGIN_OBJECT_MSG(VmInstructionMsg);
 END_OBJECT_MSG(VmInstructionMsg);
 // clang-format on
 
+class VmInstruction;
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstrEdge);
   // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, src_vm_instr);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, dst_vm_instr);
 END_OBJECT_MSG(VmInstrEdge);
 // clang-format on
 
@@ -62,6 +65,8 @@ BEGIN_OBJECT_MSG(VmInstruction);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vm_instr_operand_link, holding_operand_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, logical_object_id_value,
                                   logical_object_id2operand_access);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, src_vm_instr, in_edges);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, dst_vm_instr, out_edges);
 END_OBJECT_MSG(VmInstruction);
 // clang-format on
 
