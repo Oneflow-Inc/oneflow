@@ -42,6 +42,11 @@ END_OBJECT_MSG(VmInstructionMsg);
 class VmInstruction;
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstrEdge);
+  // methods
+  PUBLIC void __Init__(VmInstruction* src_vm_instr, VmInstruction* dst_vm_instr) {
+    set_src_vm_instr(src_vm_instr);
+    set_dst_vm_instr(dst_vm_instr);
+  }
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, src_vm_instr);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, dst_vm_instr);
@@ -61,10 +66,7 @@ BEGIN_OBJECT_MSG(VmInstruction);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vm_instr_operand_link, waiting_operand_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, vm_instr_operand_link, holding_operand_list);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, logical_object_id_value,
-                                  logical_object_id2operand_access);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object, mirrored_object2access);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, src_vm_instr, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, dst_vm_instr, out_edges);
 END_OBJECT_MSG(VmInstruction);

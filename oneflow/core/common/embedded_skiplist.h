@@ -19,6 +19,8 @@ struct EmbeddedSkipListLink final {
     return 0;
   }
 
+  bool empty() const { return links_[0].nullptr_empty(); }
+
   void __Init__() { Clear(); }
   void Clear() {
     for (auto& link : links_) { link.Clear(); }
@@ -75,6 +77,8 @@ struct EmbeddedSkipListKey {
   static constexpr int LevelZeroLinkOffset() {
     return offsetof(EmbeddedSkipListKey, link_) + link_type::LevelZeroLinkOffset();
   }
+
+  bool empty() const { return link_.empty(); }
 
   void __Init__() { link_.NullptrClear(); }
 

@@ -97,20 +97,23 @@ namespace oneflow {
   DSS_DEFINE_FIELD(field_counter, "object message",                                   \
                    OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType), OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)                     \
- public:                                                                                           \
-  using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                         \
-      EmbeddedSkipListKey<key_type, max_level>;                                                    \
-  ConstRefOrPtr<key_type> field_name() const { return OF_PP_CAT(field_name, _).key(); }            \
-  key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }           \
-  key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }       \
-  template<typename T>                                                                             \
-  void OF_PP_CAT(set_, field_name)(const T& val) {                                                 \
-    static_assert(std::is_arithmetic<T>::value || std::is_enum<T>::value, "T is not scalar type"); \
-    *OF_PP_CAT(mut_, field_name)() = val;                                                          \
-  }                                                                                                \
-                                                                                                   \
- private:                                                                                          \
+#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)               \
+ public:                                                                                     \
+  using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                   \
+      EmbeddedSkipListKey<key_type, max_level>;                                              \
+  bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
+    return OF_PP_CAT(field_name, _).empty();                                                 \
+  }                                                                                          \
+  key_type field_name() const { return OF_PP_CAT(field_name, _).key(); }                     \
+  key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }     \
+  key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); } \
+  template<typename T>                                                                       \
+  void OF_PP_CAT(set_, field_name)(const T& val) {                                           \
+    static_assert(std::is_scalar<T>::value, "T is not scalar type");                         \
+    *OF_PP_CAT(mut_, field_name)() = val;                                                    \
+  }                                                                                          \
+                                                                                             \
+ private:                                                                                    \
   OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) OF_PP_CAT(field_name, _);
 
 #define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)             \

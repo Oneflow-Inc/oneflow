@@ -22,9 +22,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
     for (int i = 0; i < size; ++i) {
       auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
       CHECK_NOTNULL(mirrored_object);
-      if (!mirrored_object->is_maybe_available_access_link_empty()) { return; }
-      if (!mirrored_object->waiting_access_list().empty()) { return; }
-      if (!mirrored_object->holding_access_list().empty()) { return; }
+      if (!mirrored_object->access_list().empty()) { return; }
     }
     for (int i = 0; i < size; ++i) {
       auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
