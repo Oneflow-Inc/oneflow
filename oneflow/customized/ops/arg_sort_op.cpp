@@ -26,6 +26,12 @@ REGISTER_USER_OP("arg_sort")
           .MakeSplitSignatureListBuilder(in_desc.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
+    })
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
+                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
+      const std::string& direction = op_conf.attr<std::string>("direction");
+      CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow
