@@ -8,9 +8,9 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                    \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
+  static_assert(std::is_scalar<T>::value, "T is not a scalar type");                \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
-                                  OBJECT_MSG_TYPE_CHECK(T), field_name);
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level, T, field_name);
 
 #define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(max_level, T, field_name)           \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
@@ -101,7 +101,7 @@ namespace oneflow {
  public:                                                                                           \
   using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                         \
       EmbeddedSkipListKey<key_type, max_level>;                                                    \
-  const key_type& field_name() const { return OF_PP_CAT(field_name, _).key(); }                    \
+  ConstRefOrPtr<key_type> field_name() const { return OF_PP_CAT(field_name, _).key(); }            \
   key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }           \
   key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }       \
   template<typename T>                                                                             \

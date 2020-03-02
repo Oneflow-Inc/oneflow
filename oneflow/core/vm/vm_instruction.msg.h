@@ -39,6 +39,12 @@ BEGIN_OBJECT_MSG(VmInstructionMsg);
 END_OBJECT_MSG(VmInstructionMsg);
 // clang-format on
 
+// clang-format off
+BEGIN_OBJECT_MSG(VmInstrEdge);
+  // links
+END_OBJECT_MSG(VmInstrEdge);
+// clang-format on
+
 class VmStream;
 
 // clang-format off
