@@ -18,6 +18,8 @@ class CpuArgSortKernel final : public user_op::OpKernel {
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const bool is_ascending = std::memcmp(direction.data(), "ASCENDING", 9) == 0;
+    const bool is_descending = std::memcmp(direction.data(), "DESCENDING", 10) == 0;
     FOR_RANGE(int32_t, i, 0, instance_num) {
       const T* in_ptr_i = in->dptr<T>() + i * instance_size;
       int32_t* out_ptr_i = out->mut_dptr<int32_t>() + i * instance_size;
@@ -28,9 +30,9 @@ class CpuArgSortKernel final : public user_op::OpKernel {
         if (l == r) {
           return lhs < rhs;
         } else {
-          if (std::memcmp(direction.data(), "ASCENDING", 9) == 0) {
+          if (is_ascending) {
             return l < r;
-          } else if (std::memcmp(direction.data(), "DESCENDING", 10) == 0) {
+          } else if (is_descending) {
             return l > r;
           } else {
             UNIMPLEMENTED();
