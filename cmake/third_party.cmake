@@ -13,11 +13,15 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
-include(json)
+# include(json)
 include(re2)
 
 if (WITH_XLA)
   include(tensorflow)
+endif()
+
+if (WITH_TVM)
+  include(tvm)
 endif()
 
 if (WITH_TENSORRT)
@@ -121,7 +125,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
-  json_copy_headers_to_destination
+  # json_copy_headers_to_destination
   re2
 )
 

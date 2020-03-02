@@ -46,13 +46,16 @@ endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
  "${PROJECT_SOURCE_DIR}/oneflow/customized/*.*")
-if (WITH_XLA OR WITH_TENSORRT)
+if (WITH_XLA OR WITH_TENSORRT OR WITH_TVM)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
     file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/xla/*.*")
   endif ()
   if (NOT WITH_TENSORRT)
     file(GLOB_RECURSE trt_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tensorrt/*.*")
+  endif ()
+  if (NOT WITH_TVM)
+    file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tvm/*.*")
   endif ()
 
   list(APPEND xrt_removing_srcs ${xla_removing_src})
