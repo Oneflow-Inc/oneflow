@@ -13,11 +13,18 @@ class TmpBufferManager final {
         sorted_in_elem_cnt_{in_shape.elem_cnt()},
         indices_elem_cnt_{sorted_in_elem_cnt_},
         sorted_indices_elem_cnt_{sorted_in_elem_cnt_} {
+    const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(T));
+    const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
+    const int32_t sorted_indices_aligned_bytes = indices_aligned_bytes;
     sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
-    indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
-    sorted_indices_ptr_ = indices_ptr_ + indices_elem_cnt_;
-    temp_storage_ptr_ = reinterpret_cast<void*>(sorted_indices_ptr_ + sorted_indices_elem_cnt_);
-    temp_storage_bytes_ = capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + 2 * sizeof(int32_t));
+    indices_ptr_ = reinterpret_cast<int32_t*>(reinterpret_cast<char*>(sorted_in_ptr_)
+                                              + sorted_in_aligned_bytes);
+    sorted_indices_ptr_ =
+        reinterpret_cast<int32_t*>(reinterpret_cast<char*>(indices_ptr_) + indices_aligned_bytes);
+    temp_storage_ptr_ = reinterpret_cast<void*>(reinterpret_cast<char*>(sorted_indices_ptr_)
+                                                + sorted_indices_aligned_bytes);
+    temp_storage_bytes_ =
+        capacity_ - sorted_in_aligned_bytes - indices_aligned_bytes - sorted_indices_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
@@ -72,23 +79,22 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    auto* buf_manager =
-        new TmpBufferManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                                tmp_buffer->mut_dptr<void>(), in->shape());
+    TmpBufferManager<T> buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
+                                    tmp_buffer->mut_dptr<void>(), in->shape());
 
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
     const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager->IndicesPtr(),
+                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
-    SortPairsDescending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
-                        buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
-                        buf_manager->SortedInPtr(), buf_manager->SortedIndicesPtr(),
+    SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
+                        buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
+                        buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
                         ctx->device_ctx()->cuda_stream());
     WriteToOutput<<<instance_num, std::min(k, kCudaThreadsNumPerBlock), 0,
-                    ctx->device_ctx()->cuda_stream()>>>(buf_manager->SortedIndicesPtr(),
+                    ctx->device_ctx()->cuda_stream()>>>(buf_manager.SortedIndicesPtr(),
                                                         instance_size, k, out->mut_dptr<int32_t>());
   };
 };
@@ -105,10 +111,22 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
       })                                                                                         \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                             \
+        const int32_t elem_cnt = in_shape->elem_cnt();                                           \
         const int32_t instance_size = in_shape->dim_vec().back();                                \
-        return static_cast<int32_t>(in_shape->elem_cnt() * (sizeof(dtype) + 2 * sizeof(int32_t)) \
-                                    + InferTempStorageForSortPairsDescending<dtype, int32_t>(    \
-                                          in_shape->elem_cnt() / instance_size, instance_size)); \
+        const int32_t instance_num = elem_cnt / instance_size;                                   \
+                                                                                                 \
+        /* Sorted In*/                                                                           \
+        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));    \
+        /* Indices */                                                                            \
+        const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));    \
+        /* Sorted Indices */                                                                     \
+        const int32_t sorted_indices_aligned_bytes = indices_aligned_bytes;                      \
+        /* CUB Temp Storage */                                                                   \
+        int32_t temp_storage_bytes =                                                             \
+            InferTempStorageForSortPairsDescending<dtype, int32_t>(instance_num, instance_size); \
+                                                                                                 \
+        return sorted_in_aligned_bytes + indices_aligned_bytes + sorted_indices_aligned_bytes    \
+               + temp_storage_bytes;                                                             \
       });
 
 REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(float)

@@ -13,10 +13,14 @@ class TmpBufferManager final {
       : capacity_{capacity},
         sorted_in_elem_cnt_{in_shape.elem_cnt()},
         indices_elem_cnt_{sorted_in_elem_cnt_} {
+    const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(T));
+    const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
     sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
-    indices_ptr_ = reinterpret_cast<int32_t*>(sorted_in_ptr_ + sorted_in_elem_cnt_);
-    temp_storage_ptr_ = reinterpret_cast<void*>(indices_ptr_ + indices_elem_cnt_);
-    temp_storage_bytes_ = capacity_ - sorted_in_elem_cnt_ * (sizeof(T) + sizeof(int32_t));
+    indices_ptr_ = reinterpret_cast<int32_t*>(reinterpret_cast<char*>(sorted_in_ptr_)
+                                              + sorted_in_aligned_bytes);
+    temp_storage_ptr_ =
+        reinterpret_cast<void*>(reinterpret_cast<char*>(indices_ptr_) + indices_aligned_bytes);
+    temp_storage_bytes_ = capacity_ - sorted_in_aligned_bytes - indices_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
@@ -60,26 +64,25 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    auto* buf_manager =
-        new TmpBufferManager<T>(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                                tmp_buffer->mut_dptr<void>(), in->shape());
+    TmpBufferManager<T> buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
+                                    tmp_buffer->mut_dptr<void>(), in->shape());
 
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
     const std::string& direction = ctx->GetAttr<std::string>("direction");
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager->IndicesPtr(),
+                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
     if (direction == "ASCENDING") {
-      SortPairsAscending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
-                         buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
-                         buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
+      SortPairsAscending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
+                         buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
+                         buf_manager.SortedInPtr(), out->mut_dptr<int32_t>(),
                          ctx->device_ctx()->cuda_stream());
     } else if (direction == "DESCENDING") {
-      SortPairsDescending(in->dptr<T>(), buf_manager->IndicesPtr(), instance_num, instance_size,
-                          buf_manager->TempStoragePtr(), buf_manager->TempStorageBytes(),
-                          buf_manager->SortedInPtr(), out->mut_dptr<int32_t>(),
+      SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
+                          buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
+                          buf_manager.SortedInPtr(), out->mut_dptr<int32_t>(),
                           ctx->device_ctx()->cuda_stream());
     } else {
       UNIMPLEMENTED();
@@ -99,8 +102,15 @@ class GpuArgSortKernel final : public user_op::OpKernel {
       })                                                                                           \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                                 \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
+        const int32_t elem_cnt = in_shape->elem_cnt();                                             \
         const int32_t instance_size = in_shape->dim_vec().back();                                  \
-        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                         \
+        const int32_t instance_num = elem_cnt / instance_size;                                     \
+                                                                                                   \
+        /* Sorted In */                                                                            \
+        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));      \
+        /* Indices */                                                                              \
+        const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));      \
+        /* CUB Temp Storage */                                                                     \
         int32_t temp_storage_bytes = -1;                                                           \
         const std::string& direction = ctx->GetAttr<std::string>("direction");                     \
         if (direction == "ASCENDING") {                                                            \
@@ -112,7 +122,8 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         } else {                                                                                   \
           UNIMPLEMENTED();                                                                         \
         }                                                                                          \
-        return in_shape->elem_cnt() * (sizeof(dtype) + sizeof(int32_t)) + temp_storage_bytes;      \
+                                                                                                   \
+        return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;               \
       });
 
 REGISTER_GPU_ARG_SORT_KERNEL(float)
