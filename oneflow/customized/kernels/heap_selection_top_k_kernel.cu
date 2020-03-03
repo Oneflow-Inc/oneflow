@@ -4,31 +4,28 @@ namespace oneflow {
 
 namespace {
 
-constexpr int32_t kMaxPower = 16;
-
-int32_t PowOf2Floor(int32_t val) {
-  CHECK_GT(val, 0);
-  int32_t ret = -1;
-  for (int32_t i = 0; i <= kMaxPower; ++i) {
-    ret = std::pow(2, i);
-    if (ret > val) {
-      ret /= 2;
-      break;
-    } else if (ret == val) {
-      break;
-    }
+template<typename T>
+T PowOf2Floor(T val, int32_t max_power) {
+  CHECK_GT(val, GetZeroVal<T>());
+  T max_floor = static_cast<T>(std::pow(2, max_power));
+  val = std::min(val, max_floor);
+  T ret = GetOneVal<T>();
+  while (true) {
+    ret *= 2;
+    if (ret >= val) { return ret == val ? ret : ret / 2; }
   }
-  return ret;
 }
 
-int32_t PowOf2Ceil(int32_t val) {
-  CHECK_GT(val, 0);
-  int32_t ret = -1;
-  for (int32_t i = 0; i <= kMaxPower; ++i) {
-    ret = std::pow(2, i);
-    if (ret >= val) { break; }
+template<typename T>
+T PowOf2Ceil(T val, int32_t max_power) {
+  CHECK_GT(val, GetZeroVal<T>());
+  T max_ceil = static_cast<T>(std::pow(2, max_power));
+  val = std::min(val, max_ceil);
+  T ret = 1;
+  while (true) {
+    ret *= 2;
+    if (ret >= val) { return ret; }
   }
-  return ret;
 }
 
 template<typename T, typename Compare>
@@ -189,8 +186,9 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
     // Use as many heaps as possible (# of heaps == # of threads used in thread block).
     // Limitation 1: size of shared memory
     // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
-    const int32_t heap_size = PowOf2Ceil(k);
-    int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / (heap_size * sizeof(Entry<T>)));
+    const int32_t heap_size = PowOf2Ceil(k, 16);
+    int32_t num_heap =
+        PowOf2Floor(kCudaMaxSharedMemoryByteSize / (heap_size * sizeof(Entry<T>)), 16);
     // Limitation 2: # of threads in thread block
     num_heap = std::min(num_heap, kCudaThreadsNumPerBlock);
 
