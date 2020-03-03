@@ -7,8 +7,8 @@ namespace test {
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjectMsgSkipListFoo);
-  OBJECT_MSG_DEFINE_MAP_KEY(int, foo_map_key);
-  OBJECT_MSG_DEFINE_RAW_PTR(int*, is_deleted);
+  OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
+  OBJECT_MSG_DEFINE_RAW_PTR(int, is_deleted);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }
@@ -29,7 +29,7 @@ TEST(ObjectMsgSkipList, empty) {
 
 TEST(ObjectMsgSkipList, insert_naive) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -45,7 +45,7 @@ TEST(ObjectMsgSkipList, insert_naive) {
 
 TEST(ObjectMsgSkipList, erase_by_key) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -57,7 +57,7 @@ TEST(ObjectMsgSkipList, erase_by_key) {
 
 TEST(ObjectMsgSkipList, erase_by_elem) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 1);
@@ -69,16 +69,16 @@ TEST(ObjectMsgSkipList, erase_by_elem) {
 
 TEST(ObjectMsgSkipList, insert_many) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  OBJECT_MSG_PTR(ObjectMsgSkipListFoo) exists[100];
+  ObjectMsgPtr<ObjectMsgSkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+    exists[i] = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -96,16 +96,16 @@ TEST(ObjectMsgSkipList, insert_many) {
 
 TEST(ObjectMsgSkipList, erase_many_by_key) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  OBJECT_MSG_PTR(ObjectMsgSkipListFoo) exists[100];
+  ObjectMsgPtr<ObjectMsgSkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+    exists[i] = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -119,16 +119,16 @@ TEST(ObjectMsgSkipList, erase_many_by_key) {
 
 TEST(ObjectMsgSkipList, erase_many_by_elem) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
-  OBJECT_MSG_PTR(ObjectMsgSkipListFoo) exists[100];
+  ObjectMsgPtr<ObjectMsgSkipListFoo> exists[100];
   for (int i = 0; i < 100; ++i) {
-    exists[i] = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+    exists[i] = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
     int key = i - 50;
     if (key >= 0) { ++key; }
     exists[i]->set_foo_map_key(key);
     foo_map.Insert(exists[i].Mutable());
     ASSERT_TRUE(foo_map.Find(key) == exists[i]);
   }
-  auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
   elem0->set_foo_map_key(0);
   foo_map.Insert(elem0.Mutable());
   ASSERT_EQ(foo_map.size(), 101);
@@ -143,11 +143,11 @@ TEST(ObjectMsgSkipList, erase_many_by_elem) {
 TEST(ObjectMsgSkipList, MAP_HEAD) {
   int elem_cnt = 0;
   {
-    auto foo_map_container = OBJECT_MSG_PTR(ObjectMsgSkipListFooContainer)::New();
+    auto foo_map_container = ObjectMsgPtr<ObjectMsgSkipListFooContainer>::New();
     auto& foo_map = *foo_map_container->mutable_foo_map();
-    OBJECT_MSG_PTR(ObjectMsgSkipListFoo) exists[100];
+    ObjectMsgPtr<ObjectMsgSkipListFoo> exists[100];
     for (int i = 0; i < 100; ++i) {
-      exists[i] = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+      exists[i] = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
       int key = i - 50;
       if (key >= 0) { ++key; }
       exists[i]->set_foo_map_key(key);
@@ -156,7 +156,7 @@ TEST(ObjectMsgSkipList, MAP_HEAD) {
       ASSERT_TRUE(foo_map.Find(key) == exists[i]);
       ASSERT_EQ(exists[i]->ref_cnt(), 2);
     }
-    auto elem0 = OBJECT_MSG_PTR(ObjectMsgSkipListFoo)::New();
+    auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
     elem0->set_foo_map_key(0);
     elem0->set_is_deleted(&elem_cnt);
     foo_map.Insert(elem0.Mutable());

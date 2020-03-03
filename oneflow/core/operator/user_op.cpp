@@ -34,6 +34,9 @@ class UserOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext*, const SbpSignature* sbp_signature,
+                                std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
@@ -64,15 +67,6 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     parallel_ctx_ = parallel_ctx;
 
     {
-      BlobDesc* first_blob_desc =
-          FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, user_op->input_bns());
-      if (!first_blob_desc) {
-        first_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, user_op->output_bns());
-      }
-      if (first_blob_desc) { data_type_ = first_blob_desc->data_type(); }
-    }
-
-    {
 #define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                      \
   for (const auto& bn : user_op->prefix##_bns()) {                                             \
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                        \
@@ -91,7 +85,6 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ~UserOpKernelRegContext() = default;
 
   DeviceType device() const override { return device_; }
-  DataType data_type() const override { return data_type_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -102,7 +95,6 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
 
  private:
   DeviceType device_;
-  DataType data_type_;
   const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
@@ -250,34 +242,17 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx,
                                    const SbpSignature* sbp_signature,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
-  CHECK_OR_RETURN(val_ != nullptr)
-      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
-  // set out blob desc other attr as first input blob desc (if has)
-  // TODO(ChengCheng): infer other attribute in blob desc
-  BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
-  if (first_in_blob_desc) {
-    for (const std::string& obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *first_in_blob_desc; }
-  }
+  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
 
+  // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);
-
-  JUST(val_->shape_infer_fn(&infer_ctx));
-  JUST(val_->dtype_infer_fn(&infer_ctx));
-  for (const auto& pair : infer_ctx.outputs()) {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-    out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
-    out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
-  }
-
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
-  // tmp buffer size must be inferred after out shape/dtype
-  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK(tmp_buffer_blob != nullptr);
@@ -318,7 +293,32 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   };
   JUST(kernel_reg_val->inplace_proposal_fn(infer_ctx, AddInplaceArgPairFn));
   EnrollOpCtx(op_ctx);
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> UserOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK_OR_RETURN(val_ != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
+  // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
+  // set out blob desc other attr as first input blob desc (if has)
+  // TODO(ChengCheng): infer other attribute in blob desc
+  BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
+  if (first_in_blob_desc) {
+    for (const std::string& obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *first_in_blob_desc; }
+  }
+
+  UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);
+
+  JUST(val_->shape_infer_fn(&infer_ctx));
+  JUST(val_->dtype_infer_fn(&infer_ctx));
+  for (const auto& pair : infer_ctx.outputs()) {
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
+    out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
+    out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+  }
   return Maybe<void>::Ok();
 }
 

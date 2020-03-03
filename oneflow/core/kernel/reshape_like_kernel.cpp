@@ -11,5 +11,6 @@ void ReshapeLikeKernel<device_type>::ForwardDataContent(
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeLikeConf, ReshapeLikeKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDynamicReshapeLikeConf, ReshapeLikeKernel);
 
 }  // namespace oneflow

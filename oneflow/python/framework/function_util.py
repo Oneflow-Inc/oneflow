@@ -162,6 +162,14 @@ def set_cudnn_conv_force_bwd_data_algo(func_desc, value):
 def set_cudnn_conv_force_bwd_filter_algo(func_desc, value):
     func_desc.job_config_proto.cudnn_conv_force_bwd_filter_algo = value
 
+@oneflow_function_config('cudnn_conv_heuristic_search_algo')
+def set_cudnn_conv_heuristic_search_algo(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_heuristic_search_algo = value
+
+@oneflow_function_config('cudnn_conv_use_deterministic_algo_only')
+def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_use_deterministic_algo_only = value
+
 @oneflow_function_config('enable_reused_mem')
 def set_enable_reused_mem(func_desc, value = True):
     func_desc.job_config_proto.enable_reused_mem = value
@@ -228,7 +236,11 @@ def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
 
 @oneflow_function_config('enable_true_half_config_when_conv', 'cudnn_conv_enable_true_half')
 def set_cudnn_conv_enable_true_half(func_desc, value = True):
-    func_desc.job_config_proto.cudnn_conv_enable_true_half = value
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = (not value)
+
+@oneflow_function_config('cudnn_conv_enable_pseudo_half', 'enable_cudnn_conv_pseudo_half')
+def set_cudnn_conv_enable_pseudo_half(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = value
 
 @oneflow_function_config('enable_float_compute_for_half_gemm')
 def set_enable_float_compute_for_half_gemm(func_desc, value = True):
@@ -246,6 +258,12 @@ def set_concurrency_width(func_desc, value):
 def set_model_update_conf(func_desc, value):
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+
+@oneflow_function_config('indexed_slices_optimizer_conf')
+def set_indexed_slices_optimizer_conf(func_desc, value):
+    assert type(value) is dict
+    pb_msg = func_desc.job_config_proto.indexed_slices_optimizer_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
 @oneflow_function_config('train.loss_scale_factor')

@@ -127,4 +127,24 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
   }
 }
 
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
+                      std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
+  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
+  if (out) { out->assign(opkernel_dim, 0); }
+  if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
+  if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
+  const auto& data_format = GetValFromPbMessage<std::string>(conv_conf, "data_format");
+  const std::string& padding = GetValFromPbMessage<std::string>(conv_conf, "padding");
+  const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
+  const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
+  const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
+  FOR_RANGE(int32_t, i, 0, opkernel_dim) {
+    GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
+                          dilation_rate.Get(i), strides.Get(i), padding,
+                          out ? &(out->at(i)) : nullptr,
+                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+  }
+}
+
 }  // namespace oneflow

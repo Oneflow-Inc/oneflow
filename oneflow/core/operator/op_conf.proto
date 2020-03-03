@@ -772,6 +772,18 @@ message ReshapeLikeOpConf {
   required string like = 3;
 }
 
+message DynamicReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
+message DynamicReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+}
+
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -1710,6 +1722,36 @@ message ScalarDivByTensorOpConf {
   required string out = 3;
 }
 
+message IndexedSlicesNaiveModelUpdateOpConf {
+  required string model_diff_indices = 1;
+  required string model_diff_values = 2;
+  required string model = 3;
+  required string learning_rate = 4;
+}
+
+message IndexedSlicesMomentumModelUpdateOpConf {
+  required string momentum = 1;
+  required string model_diff_indices = 2;
+  required string model_diff_values = 3;
+  required string model = 4;
+  required string train_step = 5;
+  required string learning_rate = 6;
+  optional float beta = 7 [default = 0.9];
+}
+
+message IndexedSlicesLazyAdamModelUpdateOpConf {
+  required string m = 1;
+  required string v = 2;
+  required string model_diff_indices = 3;
+  required string model_diff_values = 4;
+  required string model = 5;
+  required string train_step = 6;
+  required string learning_rate = 7;
+  optional float beta1 = 8 [default = 0.9];
+  optional float beta2 = 9 [default = 0.999];
+  optional float epsilon = 10 [default = 1e-8];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1777,12 +1819,16 @@ message OperatorConf {
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
+    IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
+    IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
+    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     UserOpConf user_conf = 199;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
+    DynamicReshapeOpConf dynamic_reshape_conf = 203;
     Conv1DOpConf conv_1d_conf = 205;
     Conv2DOpConf conv_2d_conf = 206;
     Conv3DOpConf conv_3d_conf = 207;
@@ -1830,7 +1876,6 @@ message OperatorConf {
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
-    ReshapeLikeOpConf reshape_like_conf = 268;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     DropoutGradOpConf dropout_grad_conf = 271;
@@ -1847,6 +1892,8 @@ message OperatorConf {
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
+    ReshapeLikeOpConf reshape_like_conf = 286;
+    DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;

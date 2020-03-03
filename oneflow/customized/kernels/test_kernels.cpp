@@ -40,7 +40,7 @@ class ReluGradKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new ReluKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
-    .SetInferTmpSizeFn([](const user_op::InferContext&) { return 10; })
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; })
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
@@ -50,7 +50,7 @@ REGISTER_USER_KERNEL("ccrelu")
 REGISTER_USER_KERNEL("ccrelu_grad")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new ReluGradKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
-    .SetInferTmpSizeFn([](const user_op::InferContext&) { return 10; });
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; });
 
 class TestReshapeKernel final : public user_op::OpKernel {
  public:
@@ -71,29 +71,29 @@ REGISTER_USER_KERNEL("TestReshape")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestReshapeKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
-class TestSourceKernel final : public oneflow::user_op::OpKernel {
+class TestSourceKernel final : public user_op::OpKernel {
  public:
-  TestSourceKernel(const oneflow::user_op::KernelInitContext& ctx)
-      : oneflow::user_op::OpKernel(ctx) {}
+  TestSourceKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
   TestSourceKernel() = default;
   ~TestSourceKernel() = default;
 
  private:
-  void Compute(oneflow::user_op::KernelContext* ctx) override {
-    oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
 };
 
 REGISTER_USER_KERNEL("TestSource")
-    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
-      return new TestSourceKernel(ctx);
-    })
-    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kCPU && ctx.data_type() == DataType::kFloat) { return true; }
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestSourceKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     })
-    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 0; });
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
  public:
@@ -114,11 +114,14 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
-    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
       return new TestMultiOutputOrderKernel(ctx);
     })
-    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      if (ctx.device() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 
