@@ -58,13 +58,6 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr, int32_
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { indices_ptr[i] = i % instance_size; };
 }
 
-__global__ void WriteToOutput(const int32_t* sorted_indices_ptr, int32_t instance_size, int32_t k,
-                              int32_t* output_ptr) {
-  for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
-    output_ptr[blockIdx.x * k + i] = sorted_indices_ptr[blockIdx.x * instance_size + i];
-  }
-}
-
 }  // namespace
 
 template<typename T>
@@ -93,9 +86,9 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                         buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                         buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
                         ctx->device_ctx()->cuda_stream());
-    WriteToOutput<<<instance_num, std::min(k, kCudaThreadsNumPerBlock), 0,
-                    ctx->device_ctx()->cuda_stream()>>>(buf_manager.SortedIndicesPtr(),
-                                                        instance_size, k, out->mut_dptr<int32_t>());
+    cudaMemcpy2DAsync(out->mut_dptr<int32_t>(), k * sizeof(int32_t), buf_manager.SortedIndicesPtr(),
+                      instance_size * sizeof(int32_t), k * sizeof(int32_t), instance_num,
+                      cudaMemcpyDeviceToDevice, ctx->device_ctx()->cuda_stream());
   };
 };
 
