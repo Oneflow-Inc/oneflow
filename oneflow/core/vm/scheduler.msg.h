@@ -23,7 +23,7 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, waiting_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, waiting_vm_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, waiting_vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stream_link, active_vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmStreamRtDesc, vm_stream_type_id, vm_stream_type_id2vm_stream_rt_desc);
@@ -32,22 +32,22 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   // methods
  private:
-  using ReadyVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
+  using ReadyVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
   using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
-  using NewVmInstrCtxList = OBJECT_MSG_LIST(VmInstruction, vm_instruction_link);
-  using WaitingVmInstrCtxList = VmScheduler::waiting_vm_instruction_list_ObjectMsgListType;
+  using NewVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
+  using WaitingVmInstrChainList = VmScheduler::waiting_vm_instr_chain_list_ObjectMsgListType;
   using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
   using ActiveVmStreamList = VmScheduler::active_vm_stream_list_ObjectMsgListType;
 
-  void ReleaseVmInstruction(VmInstruction* vm_instruction,
-                            /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list);
-  void ReleaseVmInstructionPackage(VmInstructionPackage* pkg,
-                                  /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list);
-  void TryReleaseFinishedVmInstructionPackages(
-          VmStream* vm_stream, /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list);
+  void ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
+                            /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
+  void ReleaseVmInstrChainPackage(VmInstrChainPackage* pkg,
+                                  /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
+  void TryReleaseFinishedVmInstrChainPackages(
+          VmStream* vm_stream, /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void FilterAndRunControlVmInstructions(TmpWaitingVmInstrMsgList* vm_instr_msg_list);
   void MakeVmInstruction(TmpWaitingVmInstrMsgList* vm_instr_msg_list,
-                         /*out*/ NewVmInstrCtxList* ret_vm_instruction_list);
+                         /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list);
   MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
                                      const LogicalObjectId& logical_object_id,
                                      int64_t parallel_id);
@@ -56,13 +56,13 @@ BEGIN_OBJECT_MSG(VmScheduler);
     kConstOperandAccess
   };
 
-  void ConnectVmInstruction(VmInstruction* src_vm_instr, VmInstruction* dst_vm_instr);
+  void ConnectVmInstruction(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain);
   void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
-                             VmInstruction* vm_instruction);
+                             VmInstrChain* vm_instr_chain);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              NewVmInstrCtxList* new_vm_instruction_list,
-                              /*out*/ ReadyVmInstrCtxList* ready_vm_instruction_list);
-  void DispatchVmInstruction(ReadyVmInstrCtxList* ready_vm_instruction_list);
+                              NewVmInstrChainList* new_vm_instr_chain_list,
+                              /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
+  void DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_chain_list);
 
 END_OBJECT_MSG(VmScheduler);
 // clang-format on

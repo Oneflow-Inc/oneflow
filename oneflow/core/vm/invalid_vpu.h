@@ -19,7 +19,7 @@ class InvalidVmStreamType final : public VmStreamType {
     UNIMPLEMENTED();
     return nullptr;
   }
-  void Run(VmStream* vm_stream, VmInstructionPackage* vm_instr_pkg) const override {
+  void Run(VmStream* vm_stream, VmInstrChainPackage* vm_instr_chain_pkg) const override {
     UNIMPLEMENTED();
   }
 };
