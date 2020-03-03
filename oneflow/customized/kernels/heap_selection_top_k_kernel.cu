@@ -21,7 +21,7 @@ T PowOf2Ceil(T val, int32_t max_power) {
   CHECK_GT(val, GetZeroVal<T>());
   T max_ceil = static_cast<T>(std::pow(2, max_power));
   val = std::min(val, max_ceil);
-  T ret = 1;
+  T ret = GetOneVal<T>();
   while (true) {
     ret *= 2;
     if (ret >= val) { return ret; }
