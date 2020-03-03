@@ -238,33 +238,42 @@ def slice_v2(input, slice_tup_list, name=None):
         raise ValueError('param "name" must be a string')
 
     ndims = len(input.shape)
-    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) >= ndims:
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
         raise ValueError(
-            'param "slice_tup_list" must be a list or tuple whose length should be 1 less than number of dimensions of input'
+            'param "slice_tup_list" must be a list or tuple whose length should be '
+            'less than or equal to number of dimensions of input'
         )
 
     # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
-    if len(slice_tup_list) < ndims - 1:
-        slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list) - 1)
+    if len(slice_tup_list) < ndims:
+        slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list))
 
     begin_list = []
     end_list = []
     stride_list = []
-    for slice_tup, dim in zip(slice_tup_list, input.shape[1:]):
+    has_begin_list = []
+    has_end_list = []
+    for slice_tup, dim in zip(slice_tup_list, input.shape):
         if not isinstance(slice_tup, (tuple, list)):
             raise ValueError(
                 "element of slice_tup_list must be a list or tuple with form (begin, end, stride)"
             )
         (begin, end, stride) = slice_tup
+        has_begin = 1
+        has_end = 1
         if begin is None:
             begin = 0
+            has_begin = 0
         if end is None:
-            end = dim
+            end = 0
+            has_end = 0
         if stride is None:
             stride = 1
         begin_list.append(begin)
         end_list.append(end)
         stride_list.append(stride)
+        has_begin_list.append(has_begin)
+        has_end_list.append(has_end)
 
     op = (
         flow.user_op_builder(name)
@@ -274,6 +283,8 @@ def slice_v2(input, slice_tup_list, name=None):
         .SetAttr("begin", begin_list, "AttrTypeListInt64")
         .SetAttr("end", end_list, "AttrTypeListInt64")
         .SetAttr("stride", stride_list, "AttrTypeListInt64")
+        .SetAttr("has_begin", has_begin_list, "AttrTypeListInt64")
+        .SetAttr("has_end", has_end_list, "AttrTypeListInt64")
         .Build()
     )
     return op.RemoteBlobList()[0]

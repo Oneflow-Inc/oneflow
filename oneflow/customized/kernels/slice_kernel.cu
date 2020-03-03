@@ -22,54 +22,81 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
   auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
   auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
   auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+  auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+  auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
   CHECK_LE(entire->shape().NumAxes(), kSliceMaxDims);
   CHECK_EQ(entire->shape().NumAxes(), sliced->shape().NumAxes());
-  CHECK_EQ(entire->shape().NumAxes(), begin_vec.size() + 1);
-  CHECK_EQ(entire->shape().NumAxes(), end_vec.size() + 1);
-  CHECK_EQ(entire->shape().NumAxes(), stride_vec.size() + 1);
+  CHECK_EQ(entire->shape().NumAxes(), begin_vec.size());
+  CHECK_EQ(entire->shape().NumAxes(), end_vec.size());
+  CHECK_EQ(entire->shape().NumAxes(), stride_vec.size());
+  CHECK_EQ(begin_vec.size(), has_begin_vec.size());
+  CHECK_EQ(end_vec.size(), has_end_vec.size());
 
   SliceGpuParams params;
   std::memset(&params, 0, sizeof(SliceGpuParams));
-  params.ndims = entire->shape().NumAxes();
-  FOR_RANGE(int64_t, i, 0, params.ndims) {
-    params.dims[i] = entire->shape().At(i);
-    params.sliced_dims[i] = sliced->shape().At(i);
-    if (i == 0) {
-      params.begin[i] = 0;
-      params.end[i] = params.dims[i];
-      params.stride[i] = 1;
+  // merge contiguous dims whose slice begin == none, end == none
+  // that can reduce params.ndims thus reduce loop numbers in cuda kernel
+  bool can_merge_to_prev_dim = false;
+  params.ndims = -1;
+  for (int64_t i = 0; i < entire->shape().NumAxes(); ++i) {
+    int64_t begin =
+        has_begin_vec[i] ? RegulateSliceIndex(begin_vec.at(i), entire->shape().At(i)) : 0;
+    int64_t end = has_end_vec[i] ? RegulateSliceIndex(end_vec.at(i), entire->shape().At(i))
+                                 : entire->shape().At(i);
+    int64_t stride = stride_vec.at(i);
+    CHECK_NE(stride, 0);
+    if (stride > 0) {
+      CHECK_LT(begin, end);
     } else {
-      params.begin[i] = RegulateSliceIndex(begin_vec.at(i - 1), params.dims[i]);
-      params.end[i] = RegulateSliceIndex(end_vec.at(i - 1), params.dims[i]);
-      params.stride[i] = stride_vec.at(i - 1);
-      CHECK_NE(params.stride[i], 0);
-      if (params.stride[i] > 0) {
-        CHECK_LT(params.begin[i], params.end[i]);
-      } else {
-        CHECK_GT(params.begin[i], params.end[i]);
-      }
+      CHECK_GT(begin, end);
+    }
+
+    if (can_merge_to_prev_dim && params.ndims >= 0
+        && entire->shape().At(i) == sliced->shape().At(i)) {
+      params.dims[params.ndims] *= entire->shape().At(i);
+      params.sliced_dims[params.ndims] *= sliced->shape().At(i);
+    } else {
+      params.ndims += 1;
+      params.dims[params.ndims] = entire->shape().At(i);
+      params.sliced_dims[params.ndims] = sliced->shape().At(i);
+    }
+
+    if (entire->shape().At(i) == sliced->shape().At(i)) {
+      CHECK_EQ(begin, 0);
+      CHECK_EQ(end, entire->shape().At(i));
+      CHECK_EQ(stride, 1);
+      params.begin[params.ndims] = 0;
+      params.end[params.ndims] = params.dims[params.ndims];
+      params.stride[params.ndims] = 1;
+      can_merge_to_prev_dim = true;
+    } else {
+      params.begin[params.ndims] = begin;
+      params.end[params.ndims] = end;
+      params.stride[params.ndims] = stride;
+      can_merge_to_prev_dim = false;
     }
   }
+  params.ndims += 1;
   return params;
 }
 
-__device__ __forceinline__ void OffsetToDimCoords(const int64_t offset, const int64_t ndims,
-                                                  const int64_t* dims, int64_t* dim_coords) {
+__device__ __forceinline__ void OffsetToIndices(const int64_t offset, const int64_t ndims,
+                                                const int64_t* dims, int64_t* indices) {
   int64_t divisor = offset;
 #pragma unroll
   for (int64_t i = ndims - 1; i >= 0; --i) {
-    dim_coords[i] = divisor % dims[i];
+    indices[i] = divisor % dims[i];
     divisor /= dims[i];
   }
 }
 
-__device__ __forceinline__ int64_t DimCoordsToOffset(const int64_t ndims, const int64_t* dims,
-                                                     const int64_t* dim_coords) {
+__device__ __forceinline__ int64_t IndicesToOffset(const int64_t ndims, const int64_t* dims,
+                                                   const int64_t* indices) {
   int64_t offset = 0;
   int64_t product = 1;
 #pragma unroll
   for (int64_t i = ndims - 1; i >= 0; --i) {
-    offset += dim_coords[i] * product;
+    offset += indices[i] * product;
     product *= dims[i];
   }
   return offset;
@@ -77,30 +104,30 @@ __device__ __forceinline__ int64_t DimCoordsToOffset(const int64_t ndims, const 
 
 template<typename T>
 __global__ void SliceForwardGpu(const int n, SliceGpuParams params, const T* entire, T* part) {
-  int64_t dim_coords[kSliceMaxDims];
+  int64_t dim_indices[kSliceMaxDims];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    OffsetToDimCoords(i, params.ndims, params.sliced_dims, dim_coords);
+    OffsetToIndices(i, params.ndims, params.sliced_dims, dim_indices);
 #pragma unroll
     for (int64_t i = 0; i < params.ndims; ++i) {
-      dim_coords[i] = params.begin[i] + params.stride[i] * dim_coords[i];
-      assert(dim_coords[i] < params.end[i]);
+      dim_indices[i] = params.begin[i] + params.stride[i] * dim_indices[i];
+      assert(dim_indices[i] < params.dims[i]);
     }
-    int64_t offset = DimCoordsToOffset(params.ndims, params.dims, dim_coords);
+    int64_t offset = IndicesToOffset(params.ndims, params.dims, dim_indices);
     part[i] = entire[offset];
   }
 }
 
 template<typename T>
 __global__ void SliceBackwardGpu(const int n, SliceGpuParams params, const T* part, T* entire) {
-  int64_t dim_coords[kSliceMaxDims];
+  int64_t dim_indices[kSliceMaxDims];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    OffsetToDimCoords(i, params.ndims, params.sliced_dims, dim_coords);
+    OffsetToIndices(i, params.ndims, params.sliced_dims, dim_indices);
 #pragma unroll
     for (int64_t i = 0; i < params.ndims; ++i) {
-      dim_coords[i] = params.begin[i] + params.stride[i] * dim_coords[i];
-      assert(dim_coords[i] < params.end[i]);
+      dim_indices[i] = params.begin[i] + params.stride[i] * dim_indices[i];
+      assert(dim_indices[i] < params.dims[i]);
     }
-    int64_t offset = DimCoordsToOffset(params.ndims, params.dims, dim_coords);
+    int64_t offset = IndicesToOffset(params.ndims, params.dims, dim_indices);
     entire[offset] = part[i];
   }
 }
