@@ -34,9 +34,9 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
 
   SliceGpuParams params;
   std::memset(&params, 0, sizeof(SliceGpuParams));
-  // merge contiguous dims whose slice begin == none, end == none
-  // that can reduce params.ndims thus reduce loop numbers in cuda kernel
-  bool can_merge_to_prev_dim = false;
+  // collapse contiguous dims who slice defautly (slice whole dim),
+  // that it can reduce params.ndims thus reduce loop numbers in cuda kernel
+  bool can_collapse_from = false;
   params.ndims = -1;
   for (int64_t i = 0; i < entire->shape().NumAxes(); ++i) {
     int64_t begin =
@@ -50,9 +50,9 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
     } else {
       CHECK_GT(begin, end);
     }
-
-    if (can_merge_to_prev_dim && params.ndims >= 0
-        && entire->shape().At(i) == sliced->shape().At(i)) {
+    // default slice (slice whole dim) dim can be collapsed to prev dim
+    bool can_collapse_to = (begin == 0) && (end == entire->shape().At(i)) && (stride == 1);
+    if (params.ndims >= 0 && can_collapse_from && can_collapse_to) {
       params.dims[params.ndims] *= entire->shape().At(i);
       params.sliced_dims[params.ndims] *= sliced->shape().At(i);
     } else {
@@ -60,20 +60,17 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
       params.dims[params.ndims] = entire->shape().At(i);
       params.sliced_dims[params.ndims] = sliced->shape().At(i);
     }
-
-    if (entire->shape().At(i) == sliced->shape().At(i)) {
-      CHECK_EQ(begin, 0);
-      CHECK_EQ(end, entire->shape().At(i));
-      CHECK_EQ(stride, 1);
+    if (can_collapse_to) {
+      CHECK_EQ(entire->shape().At(i), sliced->shape().At(i));
       params.begin[params.ndims] = 0;
       params.end[params.ndims] = params.dims[params.ndims];
       params.stride[params.ndims] = 1;
-      can_merge_to_prev_dim = true;
+      can_collapse_from = true;
     } else {
       params.begin[params.ndims] = begin;
       params.end[params.ndims] = end;
       params.stride[params.ndims] = stride;
-      can_merge_to_prev_dim = false;
+      can_collapse_from = false;
     }
   }
   params.ndims += 1;
