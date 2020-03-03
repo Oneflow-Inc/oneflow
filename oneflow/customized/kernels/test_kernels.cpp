@@ -71,6 +71,29 @@ REGISTER_USER_KERNEL("TestReshape")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestReshapeKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
+class CopyIn2OutKernel final : public user_op::OpKernel {
+ public:
+  CopyIn2OutKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  CopyIn2OutKernel() = default;
+  ~CopyIn2OutKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+                             in_blob->shape().elem_cnt() * sizeof(float));
+  }
+};
+
+REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+
+REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+
 class TestSourceKernel final : public user_op::OpKernel {
  public:
   TestSourceKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
