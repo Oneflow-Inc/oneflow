@@ -28,17 +28,15 @@ class InferContext {
     return conf_.attr<T>(attr_name);
   }
 
-  const ParallelContext* parallel_ctx() const { return parallel_ctx_; }
+  virtual const ParallelContext& parallel_ctx() const = 0;
 
  protected:
-  InferContext(UserOpConfWrapper&& conf, const ParallelContext* parallel_ctx)
-      : conf_(std::move(conf)), parallel_ctx_(parallel_ctx) {}
+  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
 
  private:
   UserOpConfWrapper conf_;
-  const ParallelContext* parallel_ctx_;
 };
 
 struct ShapeInferFnUtil {

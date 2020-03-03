@@ -105,7 +105,7 @@ class UserOpInferContext : public user_op::InferContext {
 
   UserOpInferContext(const OperatorConf& op_conf, const ParallelContext* parallel_ctx,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
-      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf), parallel_ctx) {
+      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)), parallel_ctx_(parallel_ctx) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -131,10 +131,12 @@ class UserOpInferContext : public user_op::InferContext {
   }
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
+  const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
+  const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 

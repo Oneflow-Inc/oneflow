@@ -174,9 +174,9 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       int64_t out_num = ctx->GetAttr<int64_t>("out_num");
-      const ParallelContext* parallel_ctx = ctx->parallel_ctx();
-      BalancedSplitter bs(out_num, parallel_ctx->parallel_num());
-      *out_shape = Shape({bs.At(parallel_ctx->parallel_id()).size()});
+      const ParallelContext& parallel_ctx = ctx->parallel_ctx();
+      BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
+      *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
