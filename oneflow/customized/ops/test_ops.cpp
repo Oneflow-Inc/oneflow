@@ -177,6 +177,10 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
       *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
+
+      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

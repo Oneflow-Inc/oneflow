@@ -4,6 +4,7 @@
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 
@@ -29,6 +30,7 @@ class InferContext {
   }
 
   virtual const ParallelContext& parallel_ctx() const = 0;
+  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
  protected:
   InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}

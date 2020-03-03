@@ -104,8 +104,11 @@ class UserOpInferContext : public user_op::InferContext {
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
   UserOpInferContext(const OperatorConf& op_conf, const ParallelContext* parallel_ctx,
+                     const SbpSignature* sbp_signature,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
-      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)), parallel_ctx_(parallel_ctx) {
+      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)),
+        parallel_ctx_(parallel_ctx),
+        sbp_signature_(sbp_signature) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -132,11 +135,19 @@ class UserOpInferContext : public user_op::InferContext {
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
+    const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    CHECK(bn2sbp.find(bn) != bn2sbp.end());
+    return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
+  }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
   const ParallelContext* parallel_ctx_;
+  const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
@@ -260,7 +271,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
 
   // tmp buffer size must be inferred after out shape/dtype
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, GetBlobDesc4BnInOp);
+  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, GetBlobDesc4BnInOp);
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
@@ -327,7 +338,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     }
   }
 
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, GetBlobDesc4BnInOp);
+  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, GetBlobDesc4BnInOp);
 
   JUST(val_->shape_infer_fn(&infer_ctx));
   JUST(val_->dtype_infer_fn(&infer_ctx));
