@@ -98,6 +98,11 @@ REGISTER_USER_OP("slice_grad_v2")
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = *like_data_type;
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_arg_modifier != nullptr);
+      like_arg_modifier->set_use_header_only(true);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("dx", 0)->set_value(0);
       return Maybe<void>::Ok();
