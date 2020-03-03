@@ -109,7 +109,9 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                          /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
     int64_t parallel_id = vm_instr_chain->vm_stream().vm_stream_id().parallel_id();
-    const auto& operands = vm_instr_chain->vm_instruction_msg().vm_instruction_proto().operand();
+    CHECK_EQ(vm_instr_chain->vm_instruction_list().size(), 1);
+    auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
+    const auto& operands = vm_instruction->vm_instruction_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (!operand.has_mutable_operand()) { continue; }
       auto* mirrored_object =

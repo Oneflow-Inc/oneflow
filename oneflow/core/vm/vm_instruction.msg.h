@@ -53,19 +53,32 @@ BEGIN_OBJECT_MSG(VmInstrEdge);
 END_OBJECT_MSG(VmInstrEdge);
 // clang-format on
 
-class VmStream;
+// clang-format off
+BEGIN_OBJECT_MSG(VmInstruction);
+  // methods
+  PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg) {
+    reset_vm_instruction_msg(vm_instruction_msg);
+  }
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instruction_msg);
 
+  // links
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
+END_OBJECT_MSG(VmInstruction);
+// clang-format on
+
+class VmStream;
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstrChain);
   // methods
   PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream);
 
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instruction_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object, mirrored_object2access);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, src_vm_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, dst_vm_instr_chain, out_edges);
