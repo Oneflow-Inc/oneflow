@@ -326,6 +326,15 @@ message TanHGradOpConf {
   required string dx = 3;
 }
 
+message PadOpConf{
+  required string in = 1;
+  required string out = 2;
+  repeated int32 paddings = 3;
+  optional int32 constant_value = 4 [default = 0];
+  optional string mode = 5 [default = "constant"];
+}
+
+
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
@@ -1915,6 +1924,7 @@ message OperatorConf {
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
+    PadOpConf pad_conf = 440;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
