@@ -111,7 +111,7 @@ REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestSourceKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
@@ -142,7 +142,7 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
     })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      if (ctx.device() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
@@ -170,7 +170,7 @@ REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
     })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
