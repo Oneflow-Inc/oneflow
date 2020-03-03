@@ -1,7 +1,6 @@
-#include "oneflow/core/operator/conv_data_grad_op.h"
-#include "oneflow/core/operator/conv_op.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/conv_data_grad_op.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -59,22 +58,36 @@ Maybe<void> ConvDataGradOp::InferBlobDescs(
   dx->CopyMetaFrom(*x_like);
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
-    size_t bwd_data_cudnn_buf_size = cudnn_buf_limit_byte();
+    size_t workspace_size = cudnn_buf_limit_byte();
     if (!dx->is_dynamic()) {
-      CudnnConvAlgoCtx cudnn_conv_algo_ctx;
-      CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-          *x_like, *dy, *filter, conv_conf, cudnn_buf_limit_byte(),
-          this->job_desc().cudnn_conv_enable_true_half(), &cudnn_conv_algo_ctx));
-      CHECK_OR_RETURN(cudnn_conv_algo_ctx.bwd_data_algo_found)
-          << "cudnn conv data grad algo: " << cudnn_conv_algo_ctx.bwd_data_algo
-          << " alog_workspace_size: " << cudnn_conv_algo_ctx.bwd_data_ws_size
-          << " max_workspace_size: " << bwd_data_cudnn_buf_size;
-      bwd_data_cudnn_buf_size = cudnn_conv_algo_ctx.bwd_data_ws_size;
+      CudnnConvArgs args(conv_conf, dx->data_type(), ShapeView(dx->shape()), filter->data_type(),
+                         ShapeView(filter->shape()), dy->data_type(), ShapeView(dy->shape()),
+                         conv_conf.data_format(), workspace_size,
+                         job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                         job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+      using perf_t = cudnnConvolutionBwdDataAlgoPerf_t;
+      using algo_t = cudnnConvolutionBwdDataAlgo_t;
+      perf_t algo_perf;
+      if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
+        algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
+            &args,
+            static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_bwd_data_algo()));
+      } else {
+        algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
+      }
+      CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS)
+          << "op (" << op_conf().name()
+          << ") find algorithm perference failed. algo: " << algo_perf.algo;
+      CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size)
+          << "op (" << op_conf().name() << ") find algorithm " << algo_perf.algo << ", need memory "
+          << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
+      workspace_size = algo_perf.memory;
     }
-    bwd_data_cudnn_buf_size = std::max(size_t(1), bwd_data_cudnn_buf_size);
+    workspace_size = std::max(size_t(1), workspace_size);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(bwd_data_cudnn_buf_size)});
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(workspace_size)});
 #else
     UNIMPLEMENTED_THEN_RETURN();
 #endif

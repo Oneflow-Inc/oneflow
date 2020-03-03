@@ -1,4 +1,0 @@
-net: "./net.prototxt"
-resource: "./resource.prototxt"
-placement: "./placement.prototxt"
-other: "./other.prototxt"
