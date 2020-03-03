@@ -34,9 +34,7 @@ class SyncDynamicResizeOp : public Operator {
 
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    if (BatchAxis4BnInOp("in")->has_value()) {
-      BatchAxis4BnInOp("out")->set_value(BatchAxis4BnInOp("in")->value());
-    }
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 
