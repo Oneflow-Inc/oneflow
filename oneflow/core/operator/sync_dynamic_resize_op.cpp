@@ -13,6 +13,7 @@ class SyncDynamicResizeOp : public Operator {
     EnrollInputBn("size", false);
     EnrollOutputBn("out");
   }
+
   const PbMessage& GetCustomizedConf() const override {
     return op_conf().sync_dynamic_resize_conf();
   }
@@ -33,11 +34,9 @@ class SyncDynamicResizeOp : public Operator {
 
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    CHECK_OR_RETURN(BatchAxis4BnInOp("in")->has_value());
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->value(), 0);
-    CHECK_OR_RETURN(BatchAxis4BnInOp("size")->has_value());
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("size")->value(), 0);
-    BatchAxis4BnInOp("out")->set_value(0);
+    if (BatchAxis4BnInOp("in")->has_value()) {
+      BatchAxis4BnInOp("out")->set_value(BatchAxis4BnInOp("in")->value());
+    }
     return Maybe<void>::Ok();
   }
 
