@@ -11,6 +11,7 @@
 namespace oneflow {
 
 namespace {
+
 class CudaHostMem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaHostMem);
@@ -21,6 +22,7 @@ class CudaHostMem {
  private:
   void* ptr_;
 };
+
 }  // namespace
 
 class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {

@@ -41,8 +41,6 @@ class SyncDynamicResizeOp : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    SbpSignatureBuilder().Broadcast("in").Broadcast("size").Broadcast("out").Build(
-        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
