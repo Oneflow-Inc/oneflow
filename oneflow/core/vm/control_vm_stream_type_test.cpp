@@ -27,7 +27,7 @@ TEST(ControlVmStreamType, new_symbol) {
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 1);
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->waiting_vm_instruction_list().empty());
+  ASSERT_TRUE(scheduler->waiting_vm_instr_chain_list().empty());
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
   ASSERT_TRUE(scheduler->vm_thread_list().empty());
   ASSERT_TRUE(scheduler->vm_stream_type_id2vm_stream_rt_desc().empty());
@@ -53,7 +53,7 @@ TEST(ControlVmStreamType, delete_symbol) {
   ASSERT_EQ(scheduler->waiting_msg_list().size(), 2);
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->waiting_msg_list().empty());
-  ASSERT_TRUE(scheduler->waiting_vm_instruction_list().empty());
+  ASSERT_TRUE(scheduler->waiting_vm_instr_chain_list().empty());
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
   ASSERT_TRUE(scheduler->vm_thread_list().empty());
   ASSERT_TRUE(scheduler->vm_stream_type_id2vm_stream_rt_desc().empty());

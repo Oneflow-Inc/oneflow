@@ -39,24 +39,24 @@ BEGIN_OBJECT_MSG(VmInstructionMsg);
 END_OBJECT_MSG(VmInstructionMsg);
 // clang-format on
 
-class VmInstruction;
+class VmInstrChain;
 // clang-format off
 BEGIN_OBJECT_MSG(VmInstrEdge);
   // methods
-  PUBLIC void __Init__(VmInstruction* src_vm_instr, VmInstruction* dst_vm_instr) {
-    set_src_vm_instr(src_vm_instr);
-    set_dst_vm_instr(dst_vm_instr);
+  PUBLIC void __Init__(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain) {
+    set_src_vm_instr_chain(src_vm_instr_chain);
+    set_dst_vm_instr_chain(dst_vm_instr_chain);
   }
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, src_vm_instr);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstruction*, dst_vm_instr);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, src_vm_instr_chain);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, dst_vm_instr_chain);
 END_OBJECT_MSG(VmInstrEdge);
 // clang-format on
 
 class VmStream;
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstruction);
+BEGIN_OBJECT_MSG(VmInstrChain);
   // methods
   PUBLIC void __Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream);
 
@@ -65,11 +65,11 @@ BEGIN_OBJECT_MSG(VmInstruction);
   OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object, mirrored_object2access);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, src_vm_instr, in_edges);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, dst_vm_instr, out_edges);
-END_OBJECT_MSG(VmInstruction);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, src_vm_instr_chain, in_edges);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrEdge, dst_vm_instr_chain, out_edges);
+END_OBJECT_MSG(VmInstrChain);
 // clang-format on
 
 static const int kVmInstructionStatusBufferLength = 1024;
@@ -81,7 +81,7 @@ END_FLAT_MSG(VmInstructionStatusBuffer);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstructionPackage);
+BEGIN_OBJECT_MSG(VmInstrChainPackage);
   // methods
   PUBLIC void __Init__() {}
   PUBLIC void __Init__(VmStream* vm_stream);
@@ -94,10 +94,10 @@ BEGIN_OBJECT_MSG(VmInstructionPackage);
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_pkg_link);
-END_OBJECT_MSG(VmInstructionPackage);
+  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_pkg_link);
+END_OBJECT_MSG(VmInstrChainPackage);
 // clang-format on
 
 class VmThread;
@@ -109,8 +109,8 @@ BEGIN_OBJECT_MSG(VmStream);
     set_vm_thread(vm_thread);
     mut_vm_stream_id()->CopyFrom(vm_stream_id);
   }
-  PUBLIC ObjectMsgPtr<VmInstructionPackage> NewVmInstructionPackage();
-  PUBLIC void DeleteVmInstructionPackage(VmInstructionPackage*);
+  PUBLIC ObjectMsgPtr<VmInstrChainPackage> NewVmInstrChainPackage();
+  PUBLIC void DeleteVmInstrChainPackage(VmInstrChainPackage*);
 
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
@@ -121,12 +121,12 @@ BEGIN_OBJECT_MSG(VmStream);
   OBJECT_MSG_DEFINE_LIST_LINK(tmp_active_vm_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_vm_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
-  // collect_vm_instruction_list used by VmScheduler
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link,
-                              collect_vm_instruction_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstructionPackage, waiting_pkg_link, waiting_pkg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, vm_instr_pkg_link, running_pkg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionPackage, vm_instr_pkg_link, free_pkg_list);
+  // collect_vm_instr_chain_list used by VmScheduler
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link,
+                              collect_vm_instr_chain_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, waiting_pkg_link, waiting_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, running_pkg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, free_pkg_list);
 END_OBJECT_MSG(VmStream);
 // clang-format on
 

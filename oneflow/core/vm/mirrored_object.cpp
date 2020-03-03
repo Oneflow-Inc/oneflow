@@ -4,9 +4,9 @@
 
 namespace oneflow {
 
-void MirroredObjectAccess::__Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
+void MirroredObjectAccess::__Init__(VmInstrChain* vm_instr_chain, MirroredObject* mirrored_object,
                                     bool is_const_operand) {
-  set_vm_instruction(vm_instruction);
+  set_vm_instr_chain(vm_instr_chain);
   set_mirrored_object(mirrored_object);
   set_is_const_operand(is_const_operand);
 }
