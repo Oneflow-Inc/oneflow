@@ -148,4 +148,32 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
       return false;
     });
 
+class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
+ public:
+  TestSourceMultiGpuFixedOutNumKernel(const user_op::KernelInitContext& ctx)
+      : user_op::OpKernel(ctx) {}
+  TestSourceMultiGpuFixedOutNumKernel() = default;
+  ~TestSourceMultiGpuFixedOutNumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+      *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
+    }
+  }
+};
+
+REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
+      return new TestSourceMultiGpuFixedOutNumKernel(ctx);
+    })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
 }  // namespace oneflow

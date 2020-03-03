@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 
@@ -28,13 +28,17 @@ class InferContext {
     return conf_.attr<T>(attr_name);
   }
 
+  const ParallelContext* parallel_ctx() const { return parallel_ctx_; }
+
  protected:
-  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
+  InferContext(UserOpConfWrapper&& conf, const ParallelContext* parallel_ctx)
+      : conf_(std::move(conf)), parallel_ctx_(parallel_ctx) {}
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
 
  private:
   UserOpConfWrapper conf_;
+  const ParallelContext* parallel_ctx_;
 };
 
 struct ShapeInferFnUtil {
