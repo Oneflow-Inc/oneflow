@@ -1585,7 +1585,6 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
-<<<<<<< HEAD
 message SliceBoxingConf {
   required LogicalBlobId lbi = 1;
   repeated TensorSliceViewProto in_slice = 2;
