@@ -50,7 +50,7 @@ class ActorExtensionContext : public ExtensionContext {
   const std::shared_ptr<ThreadExtensionContext> get_thread_ext_ctx() { return thread_ext_ctx_; }
 
   void set_actor(Actor* actor) { actor_ = actor; }
-  const Actor* get_actor() { return actor_; }
+  Actor* get_actor() { return actor_; }
 
  private:
   std::shared_ptr<ThreadExtensionContext> thread_ext_ctx_;
@@ -65,7 +65,7 @@ class KernelExtensionContext : public ExtensionContext {
   const std::shared_ptr<ActorExtensionContext> get_actor_ext_ctx() { return actor_ext_ctx_; }
 
   void set_kernel(Kernel* kernel) { kernel_ = kernel; }
-  const Kernel* get_kernel() { return kernel_; }
+  Kernel* get_kernel() { return kernel_; }
 
  private:
   std::shared_ptr<ActorExtensionContext> actor_ext_ctx_;
