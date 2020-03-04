@@ -18,6 +18,7 @@ void VmInstrChain::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_s
 }
 
 void VmInstrChainPackage::__Init__(VmStream* vm_stream) {
+  mutable_status_buffer();
   set_vm_stream(vm_stream);
   set_vm_stream_type(&vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type());
   vm_stream_type().InitVmInstructionStatus(*vm_stream, mutable_status_buffer());
