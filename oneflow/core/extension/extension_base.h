@@ -6,6 +6,7 @@
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
 namespace extension {
 
 class ExtensionContext {
@@ -27,7 +28,9 @@ class ExtensionContext {
  private:
   HashMap<std::string, std::shared_ptr<void>> ext_name2state_;
 };
+
 class RuntimeExtensionContext : public ExtensionContext {};
+
 class ThreadExtensionContext : public ExtensionContext {
  public:
   void set_actor_ext_ctx(std::shared_ptr<RuntimeExtensionContext> new_ext_ctx) {
@@ -38,6 +41,7 @@ class ThreadExtensionContext : public ExtensionContext {
  private:
   std::shared_ptr<RuntimeExtensionContext> runtime_cxt_;
 };
+
 class ActorExtensionContext : public ExtensionContext {
  public:
   void set_actor_ext_ctx(std::shared_ptr<ThreadExtensionContext> new_ext_ctx) {
@@ -48,6 +52,7 @@ class ActorExtensionContext : public ExtensionContext {
  private:
   std::shared_ptr<ThreadExtensionContext> thread_cxt_;
 };
+
 class KernelExtensionContext : public ExtensionContext {
  public:
   void set_actor_ext_ctx(std::shared_ptr<ActorExtensionContext> new_ext_ctx) {
@@ -58,22 +63,28 @@ class KernelExtensionContext : public ExtensionContext {
  private:
   std::shared_ptr<ActorExtensionContext> actor_ext_ctx_;
 };
+
 class Event {
  public:
   virtual ~Event() = default;
   std::string name;
 };
+
 class KernelEvent : public Event {
  public:
   const Kernel* kernel_ptr;
   std::function<Blob*(const std::string&)> BnInOp2Blob;
   std::shared_ptr<KernelExtensionContext> kernel_ext_ctx;
 };
+
 class ExtensionBase {
  public:
   virtual std::string name() = 0;
   virtual void callback(const Event* event) = 0;
 };
+
 }  // namespace extension
+
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_EXTENSION_EXTENSION_BASE_H_
