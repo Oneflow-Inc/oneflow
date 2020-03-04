@@ -35,12 +35,11 @@ const SliceBoxingConf& SliceBoxingCopyKernel<device_type, T>::GetCustomizedBoxin
 template<DeviceType device_type, typename T>
 void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto* other_val = static_cast<std::pair<int64_t, int64_t>*>(ctx.other);
-  const int64_t in_bn_id = other_val->first;
   Blob* out = BnInOp2Blob("out");
-  const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", in_bn_id));
-  this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(), out,
-                                                     in_i);
+  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
+    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
+    this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out, in_i);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -51,32 +50,31 @@ const SliceBoxingConf& SliceBoxingAddKernel<device_type, T>::GetCustomizedBoxing
 template<DeviceType device_type, typename T>
 void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto* other_val = static_cast<std::pair<int64_t, int64_t>*>(ctx.other);
-  const int64_t in_bn_id = other_val->first;
-  const int64_t processed_cnt = other_val->second;
   Blob* out = BnInOp2Blob("out");
-  const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", in_bn_id));
-  if (processed_cnt == 0) {
-    this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(), out,
-                                                       in_i);
-  } else {
-    bool can_direct_access =
-        (device_type == kCPU)
-        || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
-            && in_i->mem_case().host_mem().has_cuda_pinned_mem())
-        || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
-            && out->mem_case().has_device_cuda_mem()
-            && out->mem_case().device_cuda_mem().device_id()
-                   == in_i->mem_case().device_cuda_mem().device_id());
-    if (in_i->shape() == out->shape() && can_direct_access) {
-      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
-                                       in_i->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
+    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
+    if (i == 0) {
+      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
+                                                  in_i);
     } else {
-      Blob* buf = BnInOp2Blob("buf");
-      this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(),
-                                                         buf, in_i);
-      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
-                                       buf->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+      bool can_direct_access =
+          (device_type == kCPU)
+          || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
+              && in_i->mem_case().host_mem().has_cuda_pinned_mem())
+          || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
+              && out->mem_case().has_device_cuda_mem()
+              && out->mem_case().device_cuda_mem().device_id()
+                     == in_i->mem_case().device_cuda_mem().device_id());
+      if (in_i->shape() == out->shape() && can_direct_access) {
+        KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
+                                         in_i->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+      } else {
+        Blob* buf = BnInOp2Blob("buf");
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
+                                                    in_i);
+        KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
+                                         buf->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+      }
     }
   }
 }
