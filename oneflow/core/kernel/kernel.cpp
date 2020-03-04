@@ -30,7 +30,8 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
-  kernel_ext_ctx.reset(new extension::KernelExtensionContext());
+  set_kernel_ext_ctx(
+      std::shared_ptr<extension::KernelExtensionContext>(new extension::KernelExtensionContext()));
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
@@ -41,9 +42,13 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-  extension::kernel_event("Kernel/WillForward", this);
+#ifdef WITH_ONEFLOW_EXTENSION
+  extension::kernel_event("Kernel/WillForward", this, BnInOp2Blob);
+#endif
   Forward(ctx, BnInOp2Blob);
-  extension::kernel_event("Kernel/DidForward", this);
+#ifdef WITH_ONEFLOW_EXTENSION
+  extension::kernel_event("Kernel/DidForward", this, BnInOp2Blob);
+#endif
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
@@ -124,7 +129,7 @@ std::unique_ptr<const Kernel> ConstructKernel(
   if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
-  rptr->kernel_ext_ctx->actor_ctx = actor_ext_ctx;
+  rptr->get_kernel_ext_ctx()->set_actor_ext_ctx(actor_ext_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

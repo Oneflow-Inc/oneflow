@@ -43,7 +43,12 @@ class Kernel {
    * 2) all asynchronous task has been queued (e.g. NCCL related kernel)
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
-  std::shared_ptr<extension::KernelExtensionContext> kernel_ext_ctx;
+  void set_kernel_ext_ctx(std::shared_ptr<extension::KernelExtensionContext> new_ctx) {
+    kernel_ext_ctx_ = new_ctx;
+  }
+  const std::shared_ptr<extension::KernelExtensionContext> get_kernel_ext_ctx() const {
+    return kernel_ext_ctx_;
+  }
 
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
@@ -96,6 +101,7 @@ class Kernel {
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
+  std::shared_ptr<extension::KernelExtensionContext> kernel_ext_ctx_;
 };
 
 template<DeviceType device_type>

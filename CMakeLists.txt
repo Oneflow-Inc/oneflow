@@ -11,6 +11,7 @@ option(RELEASE_VERSION "" ON)
 option(PY3 "" ON)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
+add_definitions(-DWITH_ONEFLOW_EXTENSION)
 
 if(NOT RELEASE_VERSION)
   set(CUDNN_STATIC OFF CACHE BOOL "")

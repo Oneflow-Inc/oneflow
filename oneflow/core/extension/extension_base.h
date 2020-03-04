@@ -30,16 +30,33 @@ class ExtensionContext {
 class RuntimeExtensionContext : public ExtensionContext {};
 class ThreadExtensionContext : public ExtensionContext {
  public:
-  std::shared_ptr<RuntimeExtensionContext> runtime_cxt;
+  void set_actor_ext_ctx(std::shared_ptr<RuntimeExtensionContext> new_ext_ctx) {
+    runtime_cxt_ = new_ext_ctx;
+  }
+  const std::shared_ptr<RuntimeExtensionContext> get_actor_ext_ctx() { return runtime_cxt_; }
+
+ private:
+  std::shared_ptr<RuntimeExtensionContext> runtime_cxt_;
 };
 class ActorExtensionContext : public ExtensionContext {
  public:
-  std::function<Blob*(const std::string&)> BnInOp2Blob;
-  std::shared_ptr<ThreadExtensionContext> thread_cxt;
+  void set_actor_ext_ctx(std::shared_ptr<ThreadExtensionContext> new_ext_ctx) {
+    thread_cxt_ = new_ext_ctx;
+  }
+  const std::shared_ptr<ThreadExtensionContext> get_actor_ext_ctx() { return thread_cxt_; }
+
+ private:
+  std::shared_ptr<ThreadExtensionContext> thread_cxt_;
 };
 class KernelExtensionContext : public ExtensionContext {
  public:
-  std::shared_ptr<ActorExtensionContext> actor_ctx;
+  void set_actor_ext_ctx(std::shared_ptr<ActorExtensionContext> new_ext_ctx) {
+    actor_ext_ctx_ = new_ext_ctx;
+  }
+  const std::shared_ptr<ActorExtensionContext> get_actor_ext_ctx() { return actor_ext_ctx_; }
+
+ private:
+  std::shared_ptr<ActorExtensionContext> actor_ext_ctx_;
 };
 class Event {
  public:
@@ -49,6 +66,7 @@ class Event {
 class KernelEvent : public Event {
  public:
   const Kernel* kernel_ptr;
+  std::function<Blob*(const std::string&)> BnInOp2Blob;
   KernelExtensionContext* context;
 };
 class ExtensionBase {

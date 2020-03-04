@@ -40,7 +40,12 @@ class Actor {
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
   int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
-  std::shared_ptr<extension::ActorExtensionContext> actor_ext_ctx;
+  void set_actor_ext_ctx(std::shared_ptr<extension::ActorExtensionContext> new_ctx) {
+    actor_ext_ctx_ = new_ctx;
+  }
+  const std::shared_ptr<extension::ActorExtensionContext> get_actor_ext_ctx() const {
+    return actor_ext_ctx_;
+  }
 
  protected:
   struct ExecKernel {
@@ -238,6 +243,7 @@ class Actor {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+  std::shared_ptr<extension::ActorExtensionContext> actor_ext_ctx_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
