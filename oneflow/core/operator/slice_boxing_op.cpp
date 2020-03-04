@@ -1,8 +1,53 @@
-#include "oneflow/core/operator/slice_boxing_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
+
+class SliceBoxingOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceBoxingOp);
+  SliceBoxingOp() = default;
+  ~SliceBoxingOp() override = default;
+
+  void InitFromOpConf() override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+
+ protected:
+  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const;
+  virtual void VirtualInferBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const {}
+  virtual void VirtualInitFromOpConf(){};
+
+ private:
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+};
+
+class SliceBoxingCopyOp final : public SliceBoxingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceBoxingCopyOp);
+  SliceBoxingCopyOp() = default;
+  ~SliceBoxingCopyOp() override = default;
+
+ private:
+  const PbMessage& GetCustomizedConf() const override;
+};
+
+class SliceBoxingAddOp final : public SliceBoxingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceBoxingAddOp);
+  SliceBoxingAddOp() = default;
+  ~SliceBoxingAddOp() override = default;
+
+ private:
+  const PbMessage& GetCustomizedConf() const override;
+  void VirtualInitFromOpConf() override;
+  void VirtualInferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+};
 
 void SliceBoxingOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in", GetCustomizedBoxingConf().in_slice_size(), false);
