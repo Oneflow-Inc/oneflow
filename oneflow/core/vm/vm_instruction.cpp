@@ -13,7 +13,8 @@ void VmStreamRtDesc::__Init__(const VmStreamDesc* vm_stream_desc) {
 
 void VmInstrChain::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream) {
   set_vm_stream(vm_stream);
-  auto vm_instruction = ObjectMsgPtr<VmInstruction>::NewFrom(mut_allocator(), vm_instruction_msg);
+  auto vm_instruction =
+      ObjectMsgPtr<VmInstruction>::NewFrom(mut_allocator(), this, vm_instruction_msg);
   mut_vm_instruction_list()->EmplaceBack(std::move(vm_instruction));
 }
 

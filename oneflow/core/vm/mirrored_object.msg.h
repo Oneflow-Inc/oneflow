@@ -4,28 +4,30 @@
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/vm_mem_zone_desc.msg.h"
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/free_mirrored_object_handler.h"
 
 namespace oneflow {
 
-class VmInstrChain;
+class VmInstruction;
 class MirroredObject;
 
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObjectAccess);
   // methods
-  PUBLIC void __Init__(VmInstrChain* vm_instr_chain, MirroredObject* mirrored_object,
+  PUBLIC void __Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_RAW_PTR(VmInstrChain, vm_instr_chain);
+  OBJECT_MSG_DEFINE_RAW_PTR(VmInstruction, vm_instruction);
+  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObject*, mirrored_object);
+  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, MirroredObjectId, mirrored_object_id);
   
 END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
@@ -47,12 +49,10 @@ class LogicalObject;
 // clang-format off
 BEGIN_OBJECT_MSG(MirroredObject);
   // methods
-  PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id) {
-    set_logical_object(logical_object);
-    set_parallel_id(parallel_id);
-  }
+  PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
+  OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
 
   // links

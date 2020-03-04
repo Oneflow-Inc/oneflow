@@ -21,10 +21,10 @@ class NaiveVmInstrStatusQuerier {
   }
 
  private:
-  NaiveVmInstrStatusQuerier(): done_(false) {}
+  NaiveVmInstrStatusQuerier() : done_(false) {}
   volatile bool done_;
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_NAIVE_VM_INSTRUCTION_STATUS_QUERIER_H_

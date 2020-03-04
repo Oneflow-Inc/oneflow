@@ -8,14 +8,16 @@ namespace oneflow {
 
 void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
                                        /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
-  auto* mirrored_object_accesses = vm_instr_chain->mut_mirrored_object2access();
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, access) {
-    mirrored_object_accesses->Erase(access);
-    auto* mirrored_object = access->mirrored_object();
-    mirrored_object->mut_access_list()->Erase(access);
-    if (mirrored_object->access_list().empty()) {
-      mirrored_object->logical_object().free_mirrored_object_handler().Call(
-          mirrored_object->mut_logical_object());
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
+    auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
+    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
+      mirrored_object_accesses->Erase(access);
+      auto* mirrored_object = access->mut_mirrored_object();
+      mirrored_object->mut_access_list()->Erase(access);
+      if (mirrored_object->access_list().empty()) {
+        mirrored_object->logical_object().free_mirrored_object_handler().Call(
+            mirrored_object->mut_logical_object());
+      }
     }
   }
   auto* out_edges = vm_instr_chain->mut_out_edges();
@@ -88,17 +90,17 @@ MirroredObject* VmScheduler::FindMirroredObject(Id2LogicalObject* id2logical_obj
 
 void VmScheduler::ConsumeMirroredObject(OperandAccessType access_type,
                                         MirroredObject* mirrored_object,
-                                        VmInstrChain* vm_instr_chain) {
+                                        VmInstruction* vm_instruction) {
   bool is_const_operand = (access_type == kConstOperandAccess);
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      vm_instr_chain->mut_allocator(), vm_instr_chain, mirrored_object, is_const_operand);
-  vm_instr_chain->mut_mirrored_object2access()->Insert(mirrored_object_access.Mutable());
+      vm_instruction->mut_allocator(), vm_instruction, mirrored_object, is_const_operand);
+  vm_instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable());
 }
 
 void VmScheduler::ConnectVmInstruction(VmInstrChain* src_vm_instr_chain,
                                        VmInstrChain* dst_vm_instr_chain) {
-  auto edge = ObjectMsgPtr<VmInstrEdge>::NewFrom(mut_default_allocator(), src_vm_instr_chain,
-                                                 dst_vm_instr_chain);
+  auto edge = ObjectMsgPtr<VmInstrChainEdge>::NewFrom(mut_default_allocator(), src_vm_instr_chain,
+                                                      dst_vm_instr_chain);
   bool src_inserted = src_vm_instr_chain->mut_out_edges()->Insert(edge.Mutable()).second;
   bool dst_inserted = dst_vm_instr_chain->mut_in_edges()->Insert(edge.Mutable()).second;
   CHECK_EQ(src_inserted, dst_inserted);
@@ -116,29 +118,29 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       if (!operand.has_mutable_operand()) { continue; }
       auto* mirrored_object =
           FindMirroredObject(id2logical_object, operand.mutable_operand().value(), parallel_id);
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, vm_instr_chain);
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, vm_instruction);
     }
     for (const auto& operand : operands) {
       if (!operand.has_const_operand()) { continue; }
       auto* mirrored_object =
           FindMirroredObject(id2logical_object, operand.const_operand().value(), parallel_id);
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, vm_instr_chain);
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, vm_instruction);
     }
-    auto* mirrored_object_accesses = vm_instr_chain->mut_mirrored_object2access();
+    auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
-      auto* mirrored_object = mirrored_object_access->mirrored_object();
+      auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
       if (mirrored_object->access_list().size() == 1) { continue; }
       if (mirrored_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
-          ConnectVmInstruction(first->mut_vm_instr_chain(), vm_instr_chain);
+          ConnectVmInstruction(first->mut_vm_instruction()->mut_vm_instr_chain(), vm_instr_chain);
         }
       } else {
         auto* access_list = mirrored_object->mut_access_list();
-        OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, prev_access) {
-          if (prev_access == mirrored_object_access) { break; }
-          ConnectVmInstruction(prev_access->mut_vm_instr_chain(), vm_instr_chain);
-          access_list->Erase(prev_access);
+        OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
+          if (access == mirrored_object_access) { break; }
+          ConnectVmInstruction(access->mut_vm_instruction()->mut_vm_instr_chain(), vm_instr_chain);
+          access_list->Erase(access);
         }
       }
     }
