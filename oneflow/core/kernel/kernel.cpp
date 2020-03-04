@@ -130,6 +130,7 @@ std::unique_ptr<const Kernel> ConstructKernel(
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
   rptr->get_kernel_ext_ctx()->set_actor_ext_ctx(actor_ext_ctx);
+  rptr->get_kernel_ext_ctx()->set_kernel(rptr);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

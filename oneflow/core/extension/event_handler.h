@@ -18,7 +18,6 @@ void kernel_event(std::string event_name, const Kernel* kernel,
       KernelEvent event;
       event.name = event_name;
       event.kernel_ext_ctx = kernel->get_kernel_ext_ctx();
-      event.kernel_ptr = kernel;
       event.BnInOp2Blob = BnInOp2Blob;
       ext_constructor()->callback(&event);
     }
