@@ -102,6 +102,16 @@ const PbMessage& SliceBoxingCopyOp::GetCustomizedConf() const {
   return op_conf().slice_boxing_copy_conf();
 }
 
+Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  CHECK(op_conf.has_slice_boxing_copy_conf());
+  auto* boxing_conf = op_conf.mutable_slice_boxing_copy_conf();
+  LogicalBlobId empty_logical_blob_id{};
+  *boxing_conf->mutable_slice_boxing_conf()->mutable_lbi() = empty_logical_blob_id;
+  return SymbolOf(op_conf);
+}
+
 const PbMessage& SliceBoxingAddOp::GetCustomizedConf() const {
   return op_conf().slice_boxing_add_conf();
 }
@@ -112,6 +122,16 @@ void SliceBoxingAddOp::VirtualInferBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("buf") = *GetBlobDesc4BnInOp("out");
+}
+
+Symbol<OperatorConf> SliceBoxingAddOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  CHECK(op_conf.has_slice_boxing_add_conf());
+  auto* boxing_conf = op_conf.mutable_slice_boxing_add_conf();
+  LogicalBlobId empty_logical_blob_id{};
+  *boxing_conf->mutable_slice_boxing_conf()->mutable_lbi() = empty_logical_blob_id;
+  return SymbolOf(op_conf);
 }
 
 REGISTER_OP(OperatorConf::kSliceBoxingCopyConf, SliceBoxingCopyOp);
