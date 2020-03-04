@@ -8,6 +8,7 @@
 
 namespace oneflow {
 
+#define FLAT_MSG_VIEW_BEGIN(struct_name) BEGIN_FLAT_MSG_VIEW(struct_name)
 #define BEGIN_FLAT_MSG_VIEW(struct_name)                    \
   struct struct_name final {                                \
     using self_type = struct_name;                          \
@@ -16,6 +17,7 @@ namespace oneflow {
     PRIVATE DEFINE_STATIC_COUNTER(field_counter);           \
     BEGIN_DSS(STATIC_COUNTER(field_counter), struct_name);
 
+#define FLAT_MSG_VIEW_END(struct_name) END_FLAT_MSG_VIEW(struct_name)
 #define END_FLAT_MSG_VIEW(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);             \

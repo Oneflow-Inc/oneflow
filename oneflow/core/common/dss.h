@@ -8,9 +8,11 @@
 namespace oneflow {
 
 // DSS is short for domain specific struct
+#define DSS_BEGIN(field_counter, type) BEGIN_DSS(field_counter, type)
 #define BEGIN_DSS(field_counter, type) _BEGIN_DSS(field_counter, type)
 #define DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name) \
   _DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name)
+#define DSS_END(field_counter, dss_type, type) END_DSS(field_counter, dss_type, type)
 #define END_DSS(field_counter, dss_type, type) _END_DSS(field_counter, dss_type, type)
 #define DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq) \
   _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq)

@@ -13,6 +13,7 @@
 
 namespace oneflow {
 
+#define OBJECT_MSG_BEGIN(class_name) BEGIN_OBJECT_MSG(class_name)
 #define BEGIN_OBJECT_MSG(class_name)                      \
   struct class_name final : public ObjectMsgStruct {      \
    public:                                                \
@@ -27,6 +28,7 @@ namespace oneflow {
     OBJECT_MSG_DEFINE_DELETE();                           \
     OBJECT_MSG_DEFINE_BASE();
 
+#define OBJECT_MSG_END(class_name) END_OBJECT_MSG(class_name)
 #define END_OBJECT_MSG(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);       \

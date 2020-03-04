@@ -10,6 +10,7 @@
 
 namespace oneflow {
 
+#define FLAT_MSG_BEGIN(struct_name) BEGIN_FLAT_MSG(struct_name)
 #define BEGIN_FLAT_MSG(struct_name)                        \
   struct struct_name final {                               \
     using self_type = struct_name;                         \
@@ -19,6 +20,7 @@ namespace oneflow {
     FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);            \
     FLAT_MSG_DEFINE_DEFAULT(struct_name);
 
+#define FLAT_MSG_END(struct_name) END_FLAT_MSG(struct_name)
 #define END_FLAT_MSG(struct_name)                                               \
   static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);   \
@@ -383,41 +385,44 @@ class FlatMsgRepeatedField final {
 
   void clear() { size_ = 0; }
 
-  T* begin() { return &array_[0]; }
+  T* begin() { return &data_[0]; }
   T* end() {
     CHECK_GE(size_, 0);
     CHECK_LE(size_, N);
-    return &array_[size_];
+    return &data_[size_];
   }
 
-  const T* begin() const { return &array_[0]; }
+  const T* begin() const { return &data_[0]; }
   const T* end() const {
     CHECK_GE(size_, 0);
     CHECK_LE(size_, N);
-    return &array_[size_];
+    return &data_[size_];
   }
 
   const T& Get(int32_t index) const {
     CHECK_GE(index, 0);
     CHECK_LT(index, N);
-    return array_[index];
+    return data_[index];
   }
 
   T* Mutable(int32_t index) {
     CHECK_GE(index, 0);
     CHECK_LT(index, N);
-    return &array_[index];
+    return &data_[index];
   }
+
+  const T* data() const { return &Get(0); }
+  T* mut_data() { return Mutable(0); }
 
   T* Add() {
     CHECK_GE(size_, 0);
     CHECK_LT(size_, N);
-    return &array_[size_++];
+    return &data_[size_++];
   }
 
  private:
   std::size_t size_;
-  std::array<T, N> array_;
+  std::array<T, N> data_;
 };
 }  // namespace oneflow
 
