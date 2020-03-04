@@ -67,7 +67,7 @@ class KernelEvent : public Event {
  public:
   const Kernel* kernel_ptr;
   std::function<Blob*(const std::string&)> BnInOp2Blob;
-  KernelExtensionContext* context;
+  std::shared_ptr<KernelExtensionContext> kernel_ext_ctx;
 };
 class ExtensionBase {
  public:
