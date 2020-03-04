@@ -13,7 +13,7 @@ void MirroredObjectAccess::__Init__(VmInstruction* vm_instruction, MirroredObjec
 }
 
 void MirroredObject::__Init__(LogicalObject* logical_object, int64_t parallel_id) {
-  mut_mirrored_object_id()->__Init__(logical_object->logical_object_id().value(), parallel_id);
+  mut_mirrored_object_id()->__Init__(logical_object->logical_object_id(), parallel_id);
   set_logical_object(logical_object);
   set_parallel_id(parallel_id);
 }

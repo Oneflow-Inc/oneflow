@@ -70,7 +70,7 @@ BEGIN_OBJECT_MSG(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
                        VmScheduler* vm_scheduler) {
-    mut_logical_object_id()->CopyFrom(logical_object_id);
+    set_logical_object_id(logical_object_id);
     set_free_mirrored_object_handler(FreeMirroredObjectIgnoreHandler::Singleton());
     set_vm_scheduler(vm_scheduler);
   }
@@ -79,7 +79,7 @@ BEGIN_OBJECT_MSG(LogicalObject);
   OBJECT_MSG_DEFINE_RAW_PTR(VmScheduler, vm_scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(LogicalObjectId, logical_object_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
   OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
 END_OBJECT_MSG(LogicalObject);
 // clang-format on

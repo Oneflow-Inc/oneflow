@@ -39,9 +39,8 @@ void VmCudaMallocHost(VmInstruction* vm_instr) {
     FlatMsgView<CudaMallocHostInstruction> view;
     CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
     size = view->size();
-    CHECK(view->symbol().value().has_remote_value());
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->symbol().value().value(), vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->symbol().value(), vm_stream.parallel_id());
     auto* mirrored_object_access =
         vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
@@ -68,9 +67,8 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<CudaFreeHostInstruction> view;
     CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
-    CHECK(view->symbol().value().has_remote_value());
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->symbol().value().value(), vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->symbol().value(), vm_stream.parallel_id());
     auto* mirrored_object_access =
         vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
@@ -80,6 +78,7 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     CHECK(!mirrored_object->has_object_type());
   }
   CudaCheck(cudaFreeHost(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
+  mirrored_object->clear_cuda_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, VmCudaFreeHost);
 
@@ -110,7 +109,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_symbol()->mutable_value()->set_remote_value(symbol);
+    view->mutable_symbol()->set_value(symbol);
     view->set_size(size);
   }
   return vm_instr_msg;
@@ -124,7 +123,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) c
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_symbol()->mutable_value()->set_remote_value(symbol);
+    view->mutable_symbol()->set_value(symbol);
   }
   return vm_instr_msg;
 }

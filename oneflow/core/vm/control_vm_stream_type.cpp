@@ -26,6 +26,7 @@ class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
     }
     for (int i = 0; i < size; ++i) {
       auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
+      CHECK(!mirrored_object->has_object_type());
       parallel_id2mirrored_object->Erase(mirrored_object);
     }
     scheduler->mut_zombie_logical_object_list()->Erase(logical_object);
@@ -55,22 +56,13 @@ std::vector<CtrlInstrFunc> ctrl_instr_table;
 
 // clang-format off
 BEGIN_FLAT_MSG_VIEW(NewMirroredObjectSymbolCtrlInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, symbol);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(bool, is_remote);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(LogicalObjectId, logical_object_id);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_num);
 END_FLAT_MSG_VIEW(NewMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
-void MakeLogicalObjectId(LogicalObjectId* logical_object_id, uint64_t symbol, bool is_remote) {
-  if (is_remote) {
-    logical_object_id->set_remote_value(symbol);
-  } else {
-    logical_object_id->set_local_value(symbol);
-  }
-}
-
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
-    uint64_t symbol, bool is_remote, int64_t parallel_num) const {
+    const LogicalObjectId& logical_object_id, int64_t parallel_num) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kControlVmStreamTypeId);
@@ -78,8 +70,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
-    view->set_symbol(symbol);
-    view->set_is_remote(is_remote);
+    view->set_logical_object_id(logical_object_id);
     view->set_parallel_num(parallel_num);
   }
   return vm_instr_msg;
@@ -88,10 +79,8 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
 void NewMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
-  FlatMsg<LogicalObjectId> logical_object_id;
-  MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-      scheduler->mut_scheduler_thread_only_allocator(), logical_object_id.Get(), scheduler);
+      scheduler->mut_scheduler_thread_only_allocator(), view->logical_object_id(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
@@ -116,7 +105,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_mutable_logical_object_id()->mutable_value()->CopyFrom(logical_object_id);
+    view->mutable_mutable_logical_object_id()->set_value(logical_object_id);
   }
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
