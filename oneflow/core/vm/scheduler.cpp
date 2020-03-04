@@ -70,8 +70,8 @@ void VmScheduler::MakeVmInstruction(TmpWaitingVmInstrMsgList* vm_instr_msg_list,
     auto* vm_stream_rt_desc = mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_parallel_id2vm_stream(),
                                             vm_stream) {
-      auto vm_instr_chain =
-          ObjectMsgPtr<VmInstrChain>::NewFrom(mut_default_allocator(), vm_instr_msg, vm_stream);
+      auto vm_instr_chain = ObjectMsgPtr<VmInstrChain>::NewFrom(
+          mut_scheduler_thread_only_allocator(), vm_instr_msg, vm_stream);
       ret_vm_instr_chain_list->PushBack(vm_instr_chain.Mutable());
     }
     vm_instr_msg_list->Erase(vm_instr_msg);
@@ -99,8 +99,8 @@ void VmScheduler::ConsumeMirroredObject(OperandAccessType access_type,
 
 void VmScheduler::ConnectVmInstruction(VmInstrChain* src_vm_instr_chain,
                                        VmInstrChain* dst_vm_instr_chain) {
-  auto edge = ObjectMsgPtr<VmInstrChainEdge>::NewFrom(mut_default_allocator(), src_vm_instr_chain,
-                                                      dst_vm_instr_chain);
+  auto edge = ObjectMsgPtr<VmInstrChainEdge>::NewFrom(mut_scheduler_thread_only_allocator(),
+                                                      src_vm_instr_chain, dst_vm_instr_chain);
   bool src_inserted = src_vm_instr_chain->mut_out_edges()->Insert(edge.Mutable()).second;
   bool dst_inserted = dst_vm_instr_chain->mut_in_edges()->Insert(edge.Mutable()).second;
   CHECK_EQ(src_inserted, dst_inserted);
@@ -113,7 +113,7 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     int64_t parallel_id = vm_instr_chain->vm_stream().vm_stream_id().parallel_id();
     CHECK_EQ(vm_instr_chain->vm_instruction_list().size(), 1);
     auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
-    const auto& operands = vm_instruction->vm_instruction_msg().vm_instruction_proto().operand();
+    const auto& operands = vm_instruction->vm_instr_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
       if (!operand.has_mutable_operand()) { continue; }
       auto* mirrored_object =
@@ -169,7 +169,7 @@ void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_ch
 }
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
-  set_default_allocator(allocator);
+  set_scheduler_thread_only_allocator(allocator);
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.vm_stream_type_id2desc(), vm_stream_desc) {
     auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
     mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());

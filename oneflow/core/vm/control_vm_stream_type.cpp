@@ -75,13 +75,13 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kControlVmStreamTypeId);
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kNewMirroredObjectSymbol);
+  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<NewMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
     view->set_symbol(symbol);
     view->set_is_remote(is_remote);
     view->set_parallel_num(parallel_num);
   }
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
 }
 
@@ -90,12 +90,12 @@ void NewMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_
   CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
   FlatMsg<LogicalObjectId> logical_object_id;
   MakeLogicalObjectId(logical_object_id.Mutable(), view->symbol(), view->is_remote());
-  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(scheduler->mut_default_allocator(),
-                                                             logical_object_id.Get(), scheduler);
+  auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
+      scheduler->mut_scheduler_thread_only_allocator(), logical_object_id.Get(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
-    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_default_allocator(),
+    auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
                                                                  logical_object.Mutable(), i);
     CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
   }

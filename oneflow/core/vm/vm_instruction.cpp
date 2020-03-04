@@ -11,10 +11,9 @@ void VmStreamRtDesc::__Init__(const VmStreamDesc* vm_stream_desc) {
   set_vm_stream_type_id(vm_stream_type_id);
 }
 
-void VmInstrChain::__Init__(VmInstructionMsg* vm_instruction_msg, VmStream* vm_stream) {
+void VmInstrChain::__Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream) {
   set_vm_stream(vm_stream);
-  auto vm_instruction =
-      ObjectMsgPtr<VmInstruction>::NewFrom(mut_allocator(), this, vm_instruction_msg);
+  auto vm_instruction = ObjectMsgPtr<VmInstruction>::NewFrom(mut_allocator(), this, vm_instr_msg);
   mut_vm_instruction_list()->EmplaceBack(std::move(vm_instruction));
 }
 

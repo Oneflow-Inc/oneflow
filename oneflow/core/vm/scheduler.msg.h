@@ -11,7 +11,7 @@ class VmDesc;
 // clang-format off
 BEGIN_OBJECT_MSG(VmScheduler);
   // methods
-  using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+  using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
 
   PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
@@ -19,10 +19,10 @@ BEGIN_OBJECT_MSG(VmScheduler);
   PUBLIC void Schedule();
 
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, default_allocator);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
 
   //links
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instruction_msg_link, waiting_msg_list);
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, waiting_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, waiting_vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stream_link, active_vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
@@ -33,7 +33,7 @@ BEGIN_OBJECT_MSG(VmScheduler);
   // methods
  private:
   using ReadyVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
-  using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+  using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
   using NewVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
   using WaitingVmInstrChainList = VmScheduler::waiting_vm_instr_chain_list_ObjectMsgListType;
   using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;

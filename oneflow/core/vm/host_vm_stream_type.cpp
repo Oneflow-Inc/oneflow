@@ -11,9 +11,9 @@ namespace {
 
 static const VmStreamTypeId kHostVmStreamTypeId = 1;
 
-enum HostInstrOpCode { kCudaHostMallocOpcode = 0 };
+enum HostInstrOpCode { kCudaMallocHostOpcode = 0, kCudaFreeHostOpcode };
 
-typedef void (*HostInstrFunc)(VmInstrChain*, VmInstructionMsg*);
+typedef void (*HostInstrFunc)(VmInstruction*);
 std::vector<HostInstrFunc> host_instr_table;
 
 #define REGISTER_HOST_INSTRUCTION(op_code, function_name) \
@@ -23,22 +23,65 @@ std::vector<HostInstrFunc> host_instr_table;
   })
 
 // clang-format off
-FLAT_MSG_VIEW_BEGIN(CudaHostMallocInstruction);
-FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, symbol);
-FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, device_id);
-FLAT_MSG_VIEW_END(CudaHostMallocInstruction);
+FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, symbol);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
+FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
 // clang-format on
 
-void VmCudaHostMalloc(VmInstrChain* vm_instr_chain, VmInstructionMsg* vm_instr_msg) {
-  FlatMsgView<CudaHostMallocInstruction> view;
-  CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
+void VmCudaMallocHost(VmInstruction* vm_instr) {
+  MirroredObject* mirrored_object = nullptr;
   char* dptr = nullptr;
-  cudaSetDevice(view->device_id());
-  CudaCheck(cudaMallocHost(&dptr, view->size()));
-  TODO();
+  size_t size = 0;
+  {
+    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
+    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    FlatMsgView<CudaMallocHostInstruction> view;
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    size = view->size();
+    CHECK(view->symbol().value().has_remote_value());
+    FlatMsg<MirroredObjectId> mirrored_object_id;
+    mirrored_object_id->__Init__(view->symbol().value().value(), vm_stream.parallel_id());
+    auto* mirrored_object_access =
+        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+    CHECK_NOTNULL(mirrored_object_access);
+    mirrored_object = mirrored_object_access->mut_mirrored_object();
+    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
+    CHECK(!mirrored_object->has_object_type());
+  }
+  CudaCheck(cudaMallocHost(&dptr, size));
+  mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
 }
-REGISTER_HOST_INSTRUCTION(kCudaHostMallocOpcode, VmCudaHostMalloc);
+REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, VmCudaMallocHost);
+
+// clang-format off
+FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, symbol);
+FLAT_MSG_VIEW_END(CudaFreeHostInstruction);
+// clang-format on
+
+void VmCudaFreeHost(VmInstruction* vm_instr) {
+  MirroredObject* mirrored_object = nullptr;
+  {
+    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
+    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    FlatMsgView<CudaFreeHostInstruction> view;
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->symbol().value().has_remote_value());
+    FlatMsg<MirroredObjectId> mirrored_object_id;
+    mirrored_object_id->__Init__(view->symbol().value().value(), vm_stream.parallel_id());
+    auto* mirrored_object_access =
+        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+    CHECK_NOTNULL(mirrored_object_access);
+    mirrored_object = mirrored_object_access->mut_mirrored_object();
+    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
+    CHECK(!mirrored_object->has_object_type());
+  }
+  CudaCheck(cudaFreeHost(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
+}
+REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, VmCudaFreeHost);
 
 }  // namespace
 
@@ -58,12 +101,39 @@ bool HostVmStreamType::QueryVmInstructionStatusDone(
   return NaiveVmInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
+ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
+                                                                size_t size) const {
+  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
+  vm_instr_proto->set_vm_stream_type_id(kHostVmStreamTypeId);
+  vm_instr_proto->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
+  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
+  {
+    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
+    view->mutable_symbol()->mutable_value()->set_remote_value(symbol);
+    view->set_size(size);
+  }
+  return vm_instr_msg;
+}
+
+ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) const {
+  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
+  vm_instr_proto->set_vm_stream_type_id(kHostVmStreamTypeId);
+  vm_instr_proto->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
+  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
+  {
+    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
+    view->mutable_symbol()->mutable_value()->set_remote_value(symbol);
+  }
+  return vm_instr_msg;
+}
+
 void HostVmStreamType::Run(VmStream* vm_stream, VmInstrChainPackage* vm_instr_chain_pkg) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain_pkg->mut_vm_instr_chain_list(), chain) {
     OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(chain->mut_vm_instruction_list(), vm_instruction) {
-      auto* vm_instruction_msg = vm_instruction->mut_vm_instruction_msg();
-      auto opcode = vm_instruction_msg->vm_instruction_proto().opcode();
-      host_instr_table.at(opcode)(chain, vm_instruction_msg);
+      auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instruction_proto().opcode();
+      host_instr_table.at(opcode)(vm_instruction);
     }
   }
   auto* status_buffer = vm_instr_chain_pkg->mut_status_buffer();
