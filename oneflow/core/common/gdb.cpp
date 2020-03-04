@@ -1,10 +1,14 @@
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_conf_util.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
 #include <google/protobuf/text_format.h>
 
 namespace oneflow {
+
+class Blob;
 
 // used by gdb only
 namespace gdb {

@@ -12,8 +12,8 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
-#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)
-#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)
+#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)(FloorMod)
+#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)(AND)
 
 #define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
 #define ARITHMETIC_BINARY_FUNC_SEQ \
@@ -74,6 +74,12 @@ struct BinaryFuncDiv final {
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
+struct BinaryFuncFloorMod final {
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x % y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
+
+template<typename T>
 struct BinaryFuncMax final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
@@ -120,6 +126,12 @@ struct BinaryFuncLE final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x <= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
+
+template<typename T>
+struct BinaryFuncAND final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -187,6 +199,58 @@ struct BinaryFuncMin<half> final {
 #else
     NO_HALF_UTIL_FOUND;
 #endif
+  }
+};
+
+#endif  // defined(__CUDACC__)
+
+#if defined(__CUDACC__)
+
+template<>
+struct BinaryFuncFloorMod<float> final {
+  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+    return fmodf(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<double> final {
+  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+    return fmod(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
+    return __float2half(fmodf(__half2float(x), __half2float(y)));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+
+#else
+
+template<>
+struct BinaryFuncFloorMod<float> final {
+  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+    return std::fmod(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<double> final {
+  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+    return std::fmod(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<float16> final {
+  static __device__ __forceinline__ const float16 Invoke(const float16 x, const float16 y) {
+    return static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
   }
 };
 

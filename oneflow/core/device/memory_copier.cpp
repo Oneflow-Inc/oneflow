@@ -31,11 +31,11 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   MemoryCopyNdDesc reduced;
-  std::vector<int64_t> dst_shape_vec;
-  std::vector<int64_t> src_shape_vec;
-  std::vector<int64_t> dst_pos_vec;
-  std::vector<int64_t> src_pos_vec;
-  std::vector<int64_t> extent_vec;
+  DimVector dst_shape_vec;
+  DimVector src_shape_vec;
+  DimVector dst_pos_vec;
+  DimVector src_pos_vec;
+  DimVector extent_vec;
   FOR_RANGE(int64_t, i, 0, MemoryCopyNdDescGetNumAxes(*this)) {
     if (dst_shape.At(i) == src_shape.At(i) && dst_shape.At(i) == extent.At(i) && dst_pos.At(i) == 0
         && src_pos.At(i) == 0 && i != 0) {

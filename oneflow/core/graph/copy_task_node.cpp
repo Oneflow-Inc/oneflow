@@ -23,8 +23,15 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
         && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
+    if (out_regst == nullptr) {
+      // normal copy hd task can reuse mem
+      out_regst = ProduceRegst(name, true);
+    }
   }
-  if (out_regst == nullptr) { out_regst = ProduceRegst(name, false); }
+  if (out_regst == nullptr) {
+    // copy comm_net task cannot reuse mem
+    out_regst = ProduceRegst(name, false);
+  }
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst(name, out_regst); });
 }
 
@@ -69,6 +76,11 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   conf.set_name("copy_hd_" + NewUniqueId());
   conf.set_device_type(device_type());
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
+  auto in_regst = GetSoleConsumedRegst("copy_in");
+  if (in_regst->NumOfLbi() == 1) {
+    in_regst->ForEachLbi(
+        [&](const LogicalBlobId& lbi) { *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi; });
+  }
   return conf;
 }
 

@@ -1,7 +1,7 @@
 # warning: never share the container image this dockerfile produces
-ARG CUDA=10
+ARG CUDA=10.0
 
-FROM nvidia/cuda:${CUDA}.0-cudnn7-devel-centos7
+FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
     openblas-devel \
@@ -34,7 +34,7 @@ RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then yum update -y \
     && pip install numpy==1.12.0 protobuf ; fi
 
 RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then yum update -y \
-    && yum install -y rh-python36 python36-devel.x86_64 \
+    && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
     && python3 -m ensurepip \
     && pip3 install numpy protobuf ; fi
 

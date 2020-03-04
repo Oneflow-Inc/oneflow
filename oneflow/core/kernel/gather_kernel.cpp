@@ -1,7 +1,20 @@
-#include "oneflow/core/kernel/gather_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 
 namespace oneflow {
+
+template<DeviceType device_type, typename T>
+class GatherKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherKernel);
+  GatherKernel() = default;
+  ~GatherKernel() override = default;
+
+ private:
+  const PbMessage& GetCustomizedOpConf() const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
 
 template<DeviceType device_type, typename T>
 const PbMessage& GatherKernel<device_type, T>::GetCustomizedOpConf() const {
@@ -18,6 +31,6 @@ void GatherKernel<device_type, T>::ForwardDataContent(
                                             this->kernel_conf().gather_conf().axis(), out);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, GATHER_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

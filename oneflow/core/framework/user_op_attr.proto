@@ -1,0 +1,41 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+
+enum UserOpAttrType {
+  kAtInt32 = 1;
+  kAtInt64 = 2;
+  kAtBool = 3;
+  kAtFloat = 4;
+  kAtDouble = 5;
+  kAtString = 6;
+  kAtShape = 7;
+  kAtListInt32 = 8;
+  kAtListInt64 = 9;
+  kAtListFloat = 10;
+}
+
+message UserOpAttrVal {
+  message ListInt32 {
+    repeated int32 val = 1;
+  }
+  message ListInt64 {
+    repeated int64 val = 1;
+  }
+  message ListFloat {
+    repeated float val = 1;
+  }
+  oneof value {
+    int32 at_int32 = 1;
+    int64 at_int64 = 2;
+    bool at_bool = 3;
+    float at_float = 4;
+    double at_double = 5;
+    string at_string = 6;
+    ShapeProto at_shape = 7;
+    ListInt32 at_list_int32 = 8;
+    ListInt64 at_list_int64 = 9;
+    ListFloat at_list_float = 10;
+  }
+}
