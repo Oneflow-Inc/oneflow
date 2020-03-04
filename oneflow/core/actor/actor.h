@@ -46,6 +46,7 @@ class Actor {
   const std::shared_ptr<extension::ActorExtensionContext> get_actor_ext_ctx() const {
     return actor_ext_ctx_;
   }
+  const std::unique_ptr<DeviceCtx>& device_ctx() { return device_ctx_; }
 
  protected:
   struct ExecKernel {
