@@ -4,6 +4,7 @@
 #include "oneflow/core/extension/extension_base.h"
 
 namespace oneflow {
+
 namespace extension {
 
 struct Registrar final {
@@ -15,5 +16,7 @@ const std::vector<std::function<extension::ExtensionBase*()>>* LookUpExtensionRe
     const std::string&);
 
 }  // namespace extension
+
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_EXTENSION_REGISTRAR_H_
