@@ -29,7 +29,7 @@ T PowOf2Ceil(T val, int32_t max_power) {
 }
 
 template<typename T, typename Compare>
-__device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const bool dir,
+__device__ void BitonicSwap(T* data, const int32_t i, const int32_t j, const bool dir,
                             const Compare& comp) {
   if (comp(data[i], data[j]) == dir) {
     T tmp = data[i];
@@ -40,7 +40,7 @@ __device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const boo
 
 // https://en.wikipedia.org/wiki/Bitonic_sorter
 template<typename T, typename Compare>
-__device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
+__device__ void BitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
   // The element count of instance should be pow-of-2
   assert(elem_cnt > 0 && !(elem_cnt & (elem_cnt - 1)));
 
@@ -54,7 +54,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp
         // Locate the pair {pos, pos + stride} which is going te be swaped if needed
         const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-        bitonicSwap(data, pos, pos + stride, dir, comp);
+        BitonicSwap(data, pos, pos + stride, dir, comp);
 
         __syncthreads();
       }
@@ -67,7 +67,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp
       // Locate the pair {pos, pos + stride} which is going te be swaped if needed
       const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-      bitonicSwap(data, pos, pos + stride, false, comp);
+      BitonicSwap(data, pos, pos + stride, false, comp);
 
       __syncthreads();
     }
@@ -156,7 +156,7 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
   __syncthreads();
 
   // Merge all heaps into a unified, sorted array
-  bitonicSort(shared_entries, blockDim.x * heap_size,
+  BitonicSort(shared_entries, blockDim.x * heap_size,
               [](const Entry<T>& x, const Entry<T>& y) { return x > y; });
 
   // Write top_k elements in sorted array to output
