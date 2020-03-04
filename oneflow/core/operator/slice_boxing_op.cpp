@@ -34,6 +34,7 @@ class SliceBoxingCopyOp final : public SliceBoxingOp {
 
  private:
   const PbMessage& GetCustomizedConf() const override;
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
 class SliceBoxingAddOp final : public SliceBoxingOp {
@@ -47,6 +48,7 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
   void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
 void SliceBoxingOp::InitFromOpConf() {
