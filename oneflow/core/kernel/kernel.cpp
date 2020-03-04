@@ -1,25 +1,32 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
+#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
 namespace oneflow {
 
 namespace {
 
-void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
-                                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
-}
-
-void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
-                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
 }
 
 }  // namespace
 
+Kernel::~Kernel() {
+  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
+}
+
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
+  shape_infer_helper_ =
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
 }
 
@@ -39,15 +46,6 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
-  }
-  return false;
-}
-
 void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
@@ -57,6 +55,7 @@ void Kernel::CheckSameDim0ValidNum(
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardHeader(ctx, BnInOp2Blob);
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
 }
 
@@ -65,43 +64,13 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
-    if (kernel_conf_.need_do_dense_shape()) { ForwardDenseShape(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_lod()) { ForwardLoD(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
   }
 }
 
-void Kernel::ForwardLoD(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-void Kernel::ForwardDenseShape(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
+void Kernel::ForwardShape(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  return shape_infer_helper_->InferShape(BnInOp2Blob);
 }
 
 template<DeviceType device_type>
@@ -141,17 +110,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     }
   }
 }
-
-namespace {
-
-const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
-  static HashSet<OperatorConf::OpTypeCase> ops = {
-      OperatorConf::kMatmulConf, OperatorConf::kCastConf, OperatorConf::kNcclTupleBroadcastConf,
-      OperatorConf::kNcclTupleReduceConf, OperatorConf::kAssignConf};
-  return ops;
-}
-
-}  // namespace
 
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
                                               DeviceCtx* device_ctx) {

@@ -26,6 +26,7 @@ enum TaskType {
   kNcclReduceScatter = 24;
   kNcclAllGather = 25;
   kAccuracy = 26;
+  kDeviceTick = 27;
   kDecodeRandom = 29;
   kPackForward = 30;
   kUnpackForward = 32;
@@ -33,7 +34,6 @@ enum TaskType {
   kReduceIdentity = 36;
   kAcc = 37;
   kOptimizer = 38;
-  kEveryNth = 39;
   kSourceTick = 40;
   kTick = 41;
   kAccTick = 42;
@@ -49,6 +49,8 @@ enum TaskType {
   kNcclBoxingReduceScatter = 52;
   kNcclBoxingAllGather = 53;
   kNcclBoxingAllReduce = 54;
+  kDistributeConcat = 55;
+  kDistributeSplit = 56;
 };
 
 enum AreaType {

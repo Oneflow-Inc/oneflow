@@ -24,8 +24,6 @@ class ReduceSplitOp final : public Operator {
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
   }
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*) const override;
 };
 
 }  // namespace oneflow

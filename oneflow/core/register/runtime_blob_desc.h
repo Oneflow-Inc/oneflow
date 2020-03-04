@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_REGISTER_RUNTIME_BLOB_DESC_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 
@@ -14,12 +13,12 @@ class RtBlobDesc final {
   RtBlobDesc() = delete;
   ~RtBlobDesc() = default;
 
-  RtBlobDesc(const BlobDesc&);
-  RtBlobDesc(const BlobDescProto&);
+  explicit RtBlobDesc(const BlobDesc& blob_desc);
+  explicit RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_body_disabled() const { return is_body_disabled_; }
-  int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
+  int64_t is_tensor_list() const { return is_tensor_list_; }
   bool is_dynamic() const { return is_dynamic_; }
   bool header_is_opaque() const { return header_is_opaque_; }
 
@@ -27,6 +26,7 @@ class RtBlobDesc final {
   int64_t NumAxes() const { return body_.shape().NumAxes(); }
   int64_t Capacity() const { return body_.shape().elem_cnt() * GetSizeOfDataType(data_type()); }
   const Shape& body_shape() const { return body_.shape(); }
+  const TensorPodDesc& body() const { return body_; }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -40,7 +40,7 @@ class RtBlobDesc final {
 
   TensorPodDesc body_;
   StructPodDesc header_;
-  int64_t num_of_lod_levels_;
+  bool is_tensor_list_;
   bool is_body_disabled_;
   bool is_dynamic_;
   bool header_is_opaque_;

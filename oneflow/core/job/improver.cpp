@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
@@ -408,6 +409,101 @@ void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
   }
 }
 
+void GenMemBlockAndChunk4Plan(Plan* plan) {
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  // mzuid = memory zone unique id
+  HashMap<int64_t, ChunkProto> mzuid2chunk;
+
+  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, int64_t job_id,
+                                     int64_t machine_id) {
+    int64_t mem_block_id = regst_desc->mem_block_id();
+    int64_t mem_block_offset = regst_desc->mem_block_offset();
+    CHECK_NE(mem_block_id, -1);
+    CHECK_NE(mem_block_offset, -1);
+    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
+
+    RtRegstDesc rt_regst_desc(*regst_desc);
+    int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
+    int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+
+    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+      MemBlockProto mem_block;
+      mem_block.set_mem_block_id(mem_block_id);
+      mem_block.add_job_id(job_id);
+      mem_block.set_machine_id(machine_id);
+      *(mem_block.mutable_mem_case()) = regst_desc->mem_case();
+      mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
+      mem_block.set_mem_size(regst_main_size + mem_block_offset);
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+    } else {
+      MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
+      CHECK_EQ(mem_block->job_id(0), job_id);
+      CHECK_EQ(mem_block->machine_id(), machine_id);
+      CHECK(mem_block->mem_case() == regst_desc->mem_case());
+      CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
+      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+    }
+
+    if (regst_separated_size > 0) {
+      int64_t separated_mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
+      MemBlockProto mem_block;
+      mem_block.set_mem_block_id(separated_mem_block_id);
+      mem_block.add_job_id(job_id);
+      mem_block.set_machine_id(machine_id);
+      *(mem_block.mutable_mem_case()) =
+          MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+      mem_block.set_enable_reuse_mem(false);
+      mem_block.set_mem_size(regst_separated_size);
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+    }
+  };
+
+  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
+    int64_t mzuid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
+      ChunkProto chunk;
+      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      chunk.add_job_id(mem_block->job_id(0));
+      chunk.set_machine_id(mem_block->machine_id());
+      *(chunk.mutable_mem_case()) = mem_block->mem_case();
+      chunk.set_mem_size(mem_block->mem_size());
+      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
+      mem_block->set_chunk_id(chunk.chunk_id());
+      mem_block->set_chunk_offset(0);
+    } else {
+      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
+      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
+      mem_block->set_chunk_id(chunk->chunk_id());
+      mem_block->set_chunk_offset(chunk->mem_size());
+      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+    }
+  };
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      GenMemBlock4RegstIfNeed(&pair.second, task->job_id(), task->machine_id());
+    }
+  }
+
+  for (auto& pair : mem_block_id2mem_block) {
+    MemBlockProto* mem_block = &pair.second;
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  }
+
+  for (const auto& pair : mem_block_id2mem_block) {
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
+  }
+
+  for (const auto& pair : mzuid2chunk) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -453,8 +549,13 @@ bool Improver::IsAnyZoneOutOfMemory(
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
-      if (CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii)
-          >= AvailableMemSize(machine_id, mem_zone_id)) {
+      const uint64_t calc =
+          CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
+      const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
+      if (calc >= available) {
+        LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id
+                  << ", mem_zone_id: " << mem_zone_id << ", calc: " << calc
+                  << ", available: " << available;
         return true;
       }
     }
@@ -527,20 +628,20 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-void Improver::ForEachInferredMemSharingCriticalSection(
+void Improver::ForEachInferredMemBlockCriticalSection(
     const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
-  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
+  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_block_id2regst_descs;
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int32_t mem_block_id = pair.second.mem_block_id();
       if (mem_block_id > start_mem_block_id_ && pair.second.consumer_task_id_size() > 0) {
         CHECK(pair.second.enable_reuse_mem());
-        mem_sharing_id2regst_descs[mem_block_id].push_back(&pair.second);
+        mem_block_id2regst_descs[mem_block_id].push_back(&pair.second);
       }
     }
   }
-  for (auto& pair : mem_sharing_id2regst_descs) {
+  for (auto& pair : mem_block_id2regst_descs) {
     std::sort(pair.second.begin(), pair.second.end(),
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
@@ -573,6 +674,7 @@ Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
   SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
+  GenMemBlockAndChunk4Plan(&complete_plan);
   return complete_plan;
 }
 
@@ -596,6 +698,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   SetUniqueMemBlockId4UnreusedMemRegst(&plan);
+  GenMemBlockAndChunk4Plan(&plan);
   return plan;
 }
 
@@ -604,10 +707,14 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   PlanTaskGraph plan_task_graph(naive_plan);
   {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
-    });
+    if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
+      IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan, plan_task_graph);
+    } else {
+      ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
+      });
+    }
     SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
   }
   {
@@ -615,10 +722,10 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
       return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
     };
     auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
-      return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
+      return plan_task_graph.IsReachable(src_task_id, dst_task_id);
     };
-    ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                             MakeSetterAddCtrlRegst(&plan, IsReachable));
+    ForEachInferredMemBlockCriticalSection(plan, OrderInGraph4TaskId,
+                                           MakeSetterAddCtrlRegst(&plan, IsReachable));
   }
   return plan;
 }

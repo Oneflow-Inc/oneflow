@@ -32,8 +32,8 @@ Maybe<void> SparseCrossEntropyOp::InferBlobDescs(
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *pred_blob_desc;
-  out_blob_desc->mut_shape() = Shape(std::vector<int64_t>(
-      pred_blob_desc->shape().dim_vec().cbegin(), pred_blob_desc->shape().dim_vec().cend() - 1));
+  out_blob_desc->mut_shape() = Shape(DimVector(pred_blob_desc->shape().dim_vec().cbegin(),
+                                               pred_blob_desc->shape().dim_vec().cend() - 1));
   return Maybe<void>::Ok();
 }
 

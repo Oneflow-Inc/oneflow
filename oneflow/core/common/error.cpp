@@ -4,6 +4,15 @@
 
 namespace oneflow {
 
+namespace {
+
+void LogError(const std::string& log_str, const Error& error) {
+  // gdb break point
+  LOG(ERROR) << log_str << error->msg();
+}
+
+}  // namespace
+
 Error::operator std::string() const { return PbMessage2TxtString(*error_proto_); }
 
 Error Error::Ok() { return std::make_shared<ErrorProto>(); }
@@ -57,7 +66,7 @@ Error Error::BoxingNotSupported() {
 }
 
 Error&& operator<=(const std::string& log_str, Error&& error) {
-  LOG(ERROR) << log_str << error->msg();
+  LogError(log_str, error);
   return std::move(error);
 }
 

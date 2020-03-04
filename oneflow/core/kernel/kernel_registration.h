@@ -6,9 +6,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/kernel/kernel_reg_value.pb.h"
 
 namespace oneflow {
 
@@ -32,10 +31,10 @@ class KernelConstraint final {
 };
 
 struct KernelRegistryVal final {
+  KernelRegistryVal() : func(), cons() {}
+
   CreateFn func;
   KernelConstraint cons;
-
-  KernelRegistryVal() : func(), cons() {}
 };
 
 class KernelRegistrarBuilder final {
@@ -57,8 +56,6 @@ struct KernelRegistrar final {
 };
 
 Kernel* CreateKernel(const KernelConf& kernel_conf);
-
-void ExportProtoFromKernelRegistry(KernelRegValProto*);
 
 }  // namespace kernel_registration
 

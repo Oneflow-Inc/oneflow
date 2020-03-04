@@ -10,7 +10,7 @@ class XpuUnaryFuncNdarray final {
 
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
-    return unary_func<T>::Invoke(x_.Get<NDIMS>(offset));
+    return unary_func<T>::Invoke(x_.template Get<NDIMS>(offset));
   }
 
  private:

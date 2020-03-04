@@ -100,12 +100,32 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::InferOutParallelDescIf(
+    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
+  return InferOutParallelDesc(ParallelDesc4Obn, LogicalBlobDesc4Ibn, op_parallel_desc,
+                              sbp_signature);
+}
+
+Maybe<void> Operator::InferOutParallelDesc(
+    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
+  for (const auto& obn : output_bns()) { *ParallelDesc4Obn(obn) = op_parallel_desc; }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  for (const std::string& ibn : input_bns()) {
-    CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(ibn)->elem_cnt(),
-                       GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
+  if (!input_bns().empty()) {
+    const int64_t first_input_time_shape_elem_cnt =
+        GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt();
+    FOR_RANGE(int64_t, i, 1, input_bns().size()) {
+      CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(input_bns().Get(i))->elem_cnt(),
+                         first_input_time_shape_elem_cnt);
+    }
   }
   return InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
@@ -130,6 +150,13 @@ Maybe<void> Operator::GetSbpSignaturesIf(
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
+}
+
+void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
+  for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(
@@ -200,6 +227,12 @@ void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
+  auto* dtype_signature = kernel_conf->mutable_dtype_signature();
+  for (const std::string& ibn : input_bns()) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
+    if (blob_desc == nullptr) { continue; }
+    (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
+  };
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
@@ -208,12 +241,12 @@ void Operator::GenKernelConf(
   } else {
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                              [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
-      kernel_conf->set_need_do_dense_shape(true);
+      kernel_conf->set_need_do_shape(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
-          return blob_desc->num_of_lod_levels() > 0;
+          return blob_desc->is_tensor_list();
         })) {
-      kernel_conf->set_need_do_lod(true);
+      kernel_conf->set_need_do_tensor_list(true);
     }
   }
 
@@ -428,6 +461,60 @@ Maybe<void> Operator::NaiveInferBatchAxis(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
+  for (const auto& ibn : input_bns()) {
+    if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
+    const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
+  }
+  return SymbolOf(op_conf);
+}
+
+LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
+  LogicalBlobId lbi;
+  size_t pos = lbn.find('/');
+  CHECK_NE(pos, std::string::npos);
+  lbi.set_op_name(lbn.substr(0, pos));
+  std::string blob_name_with_hit = lbn.substr(pos + 1);
+  size_t vbar_pos = blob_name_with_hit.rfind('|');
+  std::string blob_name_with_split_hit = blob_name_with_hit.substr(0, vbar_pos);
+  size_t split_pos = blob_name_with_split_hit.rfind(':');
+  lbi.set_blob_name(blob_name_with_split_hit.substr(0, split_pos));
+  return lbi;
+}
+
+Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sbp) {
+  size_t vbar_pos = lbn.rfind('|');
+  std::string lbn_with_split_hint = lbn.substr(0, vbar_pos);
+  size_t pos = lbn_with_split_hint.rfind(':');
+  CHECK_NE(pos, lbn_with_split_hint.length() - 1);
+  if (pos == std::string::npos) { return false; }
+  std::string split_hint = lbn_with_split_hint.substr(pos + 1);
+  if (split_hint[0] == 'S') {
+    std::string axis_str = split_hint.substr(1);
+    OF_CHECK(IsStrInt(axis_str));
+    sbp->mutable_split_parallel()->set_axis(oneflow_cast<int64_t>(axis_str));
+  } else if (split_hint[0] == 'B') {
+    sbp->mutable_broadcast_parallel();
+  } else {
+    return Error::CheckFailed() << "split hint only support 'S' or 'B', but get:" << split_hint[0];
+  }
+  return true;
+}
+
+Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing) {
+  size_t pos = lbn_with_hint.rfind('|');
+  if (pos == std::string::npos) { return false; }
+  CHECK_NE(pos, lbn_with_hint.length() - 1);
+  std::string disable_boxing_str = lbn_with_hint.substr(pos + 1);
+  OF_CHECK(IsStrInt(disable_boxing_str));
+  *disable_boxing = oneflow_cast<int64_t>(disable_boxing_str);
+  return true;
+}
+
 Maybe<void> InferOpSbpSignature(
     const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
@@ -456,6 +543,10 @@ Maybe<void> InferOpSbpSignature(
               && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
               && sbp_parallel.has_split_parallel() == false);
   };
+  auto OrderValue4SbpHint = [&](const std::string& ibn,
+                                const SbpParallel& sbp_parallel) -> int32_t {
+    return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
+  };
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
@@ -464,6 +555,7 @@ Maybe<void> InferOpSbpSignature(
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
         order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
       }
       for (const auto& obn : op.output_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
@@ -478,6 +570,44 @@ Maybe<void> InferOpSbpSignature(
   JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
                               SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
+}
+
+std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+                                          const std::string& fd_name_may_have_idx) {
+  const PbMessage* msg_ptr = &msg;
+  const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(msg_ptr);
+  if (user_conf) {
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    if (user_conf->input().find(pair.first) != user_conf->input().end()) {
+      return user_conf->input().at(pair.first).s(pair.second);
+    } else {
+      LOG(WARNING) << "cannot find input arg val in user op conf. (arg_name = " << pair.first
+                   << ", id = " << std::to_string(pair.second) << ")";
+      return "";
+    }
+  } else {
+    return GetStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx);
+  }
+}
+
+void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& old_val, const std::string& new_val) {
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(msg);
+  if (user_conf) {
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    CHECK(user_conf->input().find(pair.first) != user_conf->input().end())
+        << "cannot find input arg val in user op conf. (arg_name = " << pair.first
+        << ", id = " << std::to_string(pair.second) << ")\n"
+        << "old lbn = " << old_val << " new lbn = " << new_val;
+    CHECK_EQ(user_conf->input().at(pair.first).s(pair.second), old_val);
+    (*(user_conf->mutable_input()))[pair.first].set_s(pair.second, new_val);
+  } else {
+    ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, old_val, new_val);
+  }
+}
+
+bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {
+  return PbMd().Equals(lhs, rhs);
 }
 
 }  // namespace oneflow

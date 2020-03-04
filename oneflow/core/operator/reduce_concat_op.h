@@ -17,8 +17,7 @@ class ReduceConcatOp final : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             std::function<void(OpContext*)> EnrollOpCtx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -28,9 +27,6 @@ class ReduceConcatOp final : public Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*,
-                            const OpContext* op_ctx) const override;
 };
 
 }  // namespace oneflow

@@ -18,6 +18,8 @@ def dense(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
     model_distribute=distribute_util.broadcast(),
@@ -51,6 +53,7 @@ def dense(
             if kernel_initializer is not None
             else flow.constant_initializer(0)
         ),
+        regularizer=kernel_regularizer,
         trainable=trainable,
         model_name="weight",
         distribute=model_distribute,
@@ -73,6 +76,7 @@ def dense(
                 if bias_initializer is not None
                 else flow.constant_initializer(0)
             ),
+            regularizer=bias_regularizer,
             trainable=trainable,
             model_name="bias",
             distribute=model_distribute,
@@ -81,7 +85,11 @@ def dense(
         out = flow.nn.bias_add(
             out, bias, name="{}_bias_add".format(name_prefix)
         )
-    out = activation(out) if activation is not None else out
+    out = (
+        activation(out, name="{}_activation".format(name_prefix))
+        if activation is not None
+        else out
+    )
     out = (
         flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
     )
@@ -102,8 +110,12 @@ def conv2d(
     use_bias=True,
     kernel_initializer=None,
     bias_initializer=None,
+    kernel_regularizer=None,
+    bias_regularizer=None,
     trainable=True,
     name=None,
+    weight_name=None,
+    bias_name=None,
 ):
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
@@ -113,28 +125,36 @@ def conv2d(
         kernel_size = tuple(kernel_size)
     weight_shape = (filters, inputs.static_shape[1]) + kernel_size
     weight = flow.get_variable(
-        name_prefix + "-weight",
+        weight_name if weight_name else name_prefix + "-weight",
         shape=weight_shape,
         dtype=inputs.dtype,
         initializer=kernel_initializer
         if kernel_initializer is not None
         else flow.constant_initializer(0),
+        regularizer=kernel_regularizer,
+        trainable=trainable,
+        model_name="weight",
     )
     output = flow.nn.conv2d(
         inputs, weight, strides, padding, data_format, dilation_rate, name
     )
     if use_bias:
         bias = flow.get_variable(
-            name_prefix + "-bias",
+            bias_name if bias_name else name_prefix + "-bias",
             shape=(filters,),
             dtype=inputs.dtype,
             initializer=bias_initializer
             if bias_initializer is not None
             else flow.constant_initializer(0),
+            regularizer=bias_regularizer,
+            trainable=trainable,
+            model_name="bias",
         )
-    output = flow.nn.bias_add(output, bias, data_format)
+        output = flow.nn.bias_add(
+            output, bias, data_format, name=name_prefix + "-bias_add"
+        )
     if activation is not None:
-        activation(output)
+        output = activation(output, name=name_prefix + "-activation")
 
     return output
 
@@ -147,6 +167,7 @@ def layer_norm(
     trainable=True,
     begin_norm_axis=1,
     begin_params_axis=-1,
+    epsilon=1e-5,
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
@@ -166,7 +187,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(0.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="beta",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
@@ -177,7 +198,7 @@ def layer_norm(
             dtype=inputs.dtype,
             initializer=flow.constant_initializer(1.0),
             trainable=trainable,
-            model_name="weight",
+            model_name="gamma",
             distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
@@ -189,12 +210,73 @@ def layer_norm(
     setattr(op_conf.layer_norm_conf, "scale", scale)
     setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+@oneflow_export("layers.layer_norm_grad")
+def layer_norm_grad(
+    dy,
+    x,
+    mean,
+    inv_variance,
+    begin_norm_axis=1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "x", x.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "mean", mean.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
+    setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
+    setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "dx")
+    return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("layers.layer_norm_param_grad")
+def layer_norm_param_grad(
+    dy,
+    norm,
+    gamma,
+    begin_params_axis=-1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormParamGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
+    compile_context.CurJobAddOp(op_conf)
+
+    normalized_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    beta_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    gamma_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(normalized_diff_lbi, "op_name", op_conf.name)
+    setattr(beta_diff_lbi, "op_name", op_conf.name)
+    setattr(gamma_diff_lbi, "op_name", op_conf.name)
+    setattr(normalized_diff_lbi, "blob_name", "normalized_diff")
+    setattr(beta_diff_lbi, "blob_name", "beta_diff")
+    setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
+
+    return (remote_blob_util.RemoteBlob(normalized_diff_lbi),
+            remote_blob_util.RemoteBlob(beta_diff_lbi),
+            remote_blob_util.RemoteBlob(gamma_diff_lbi))
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
@@ -206,12 +288,15 @@ def batch_normalization(
     scale=True,
     beta_initializer=None,
     gamma_initializer=None,
+    beta_regularizer=None,
+    gamma_regularizer=None,
     moving_mean_initializer=None,
     moving_variance_initializer=None,
-    trainable=False,
+    trainable=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
+    if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
     if name is None:
@@ -223,6 +308,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=beta_initializer or flow.zeros_initializer(),
+            regularizer=beta_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
@@ -233,6 +319,7 @@ def batch_normalization(
             shape=params_shape,
             dtype=inputs.dtype,
             initializer=gamma_initializer or flow.ones_initializer(),
+            regularizer=gamma_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )

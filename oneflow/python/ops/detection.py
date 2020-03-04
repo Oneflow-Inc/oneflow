@@ -32,11 +32,11 @@ def roi_align(
     op_conf.roi_align_conf.x = x.logical_blob_name
     op_conf.roi_align_conf.rois = rois.logical_blob_name
     op_conf.roi_align_conf.y = "out"
-    op_conf.roi_align_conf.roi_align_conf.pooled_h = pooled_h
-    op_conf.roi_align_conf.roi_align_conf.pooled_w = pooled_w
-    op_conf.roi_align_conf.roi_align_conf.spatial_scale = float(spatial_scale)
-    op_conf.roi_align_conf.roi_align_conf.sampling_ratio = int(sampling_ratio)
-    op_conf.roi_align_conf.roi_align_conf.data_format = "channels_first"
+    op_conf.roi_align_conf.roi_align_args.pooled_h = pooled_h
+    op_conf.roi_align_conf.roi_align_args.pooled_w = pooled_w
+    op_conf.roi_align_conf.roi_align_args.spatial_scale = float(spatial_scale)
+    op_conf.roi_align_conf.roi_align_args.sampling_ratio = int(sampling_ratio)
+    op_conf.roi_align_conf.roi_align_args.data_format = "channels_first"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -417,3 +417,87 @@ def affine_channel(
         )
     out = activation(out) if activation is not None else out
     return out
+
+
+@oneflow_export("dim0_dynamic_to_fixed")
+def dim0_dynamic_to_fixed(inputs, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Dim0DynamicToFixed_"),
+    )
+    getattr(op_conf.dim0_dynamic_to_fixed_conf, "in").extend(
+        [i.logical_blob_name for i in inputs]
+    )
+    op_conf.dim0_dynamic_to_fixed_conf.out.extend(
+        ["out_" + str(i) for i in range(len(inputs))]
+    )
+    setattr(op_conf.dim0_dynamic_to_fixed_conf, "mask", "mask")
+    compile_context.CurJobAddOp(op_conf)
+
+    ret = []
+    for i in range(len(inputs) + 1):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        if i == len(inputs):
+            setattr(out_lbi, "blob_name", "mask")
+        else:
+            setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return tuple(ret)
+
+
+@oneflow_export("detection.maskrcnn_split")
+def maskrcnn_split(input, segms, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("MaskrcnnSplit_"),
+    )
+    setattr(op_conf.maskrcnn_split_conf, "in", input.logical_blob_name)
+    op_conf.maskrcnn_split_conf.segm[:] = [
+        segm.logical_blob_name for segm in segms
+    ]
+    op_conf.maskrcnn_split_conf.out[:] = [
+        "out_" + str(i) for i in range(len(segms))
+    ]
+    compile_context.CurJobAddOp(op_conf)
+    ret = []
+    for i in range(len(segms)):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return ret
+
+
+@oneflow_export("detection.masks_crop_and_resize")
+def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
+    assert len(masks.shape) == 4
+    assert len(rois.shape) == 2
+    assert masks.shape[0] == rois.shape[0]
+    assert isinstance(mask_h, int)
+    assert isinstance(mask_w, int)
+
+    name = name or id_util.UniqueStr("masks_crop_and_resize_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.masks_crop_and_resize_conf.masks = masks.logical_blob_name
+    op_conf.masks_crop_and_resize_conf.rois = rois.logical_blob_name
+    op_conf.masks_crop_and_resize_conf.mask_height = mask_h
+    op_conf.masks_crop_and_resize_conf.mask_width = mask_w
+    op_conf.masks_crop_and_resize_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("detection.random_perm_like")
+def random_perm_like(like, seed=None):
+    assert len(like.shape) == 1
+    mask = flow.random_like(like, seed=seed, name=like.op_name + "_random_perm_mask")
+    return flow.argsort(mask, name=like.op_name + "_random_perm_argsort")

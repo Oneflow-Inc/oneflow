@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_registration.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -55,12 +56,8 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
       ret = val.func();
     }
   }
+  // TODO: print more info when failed
   return ret;
-}
-
-void ExportProtoFromKernelRegistry(KernelRegValProto* proto) {
-  // TODO(niuchong) : not KernelRegistry but OpConf should export supported dev and dtypes
-  UNIMPLEMENTED();
 }
 
 }  // namespace kernel_registration

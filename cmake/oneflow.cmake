@@ -44,7 +44,26 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/customized/*.*")
+if (WITH_XLA OR WITH_TENSORRT)
+  file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
+  if (NOT WITH_XLA)
+    file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/xla/*.*")
+  endif ()
+  if (NOT WITH_TENSORRT)
+    file(GLOB_RECURSE trt_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tensorrt/*.*")
+  endif ()
+
+  list(APPEND xrt_removing_srcs ${xla_removing_src})
+  list(APPEND xrt_removing_srcs ${trt_removing_src})
+  # message(STATUS "removing_srcs: ${xrt_removing_srcs}")
+  foreach (removing_file ${xrt_removing_srcs})
+    list(REMOVE_ITEM oneflow_xrt_src ${removing_file})
+  endforeach ()
+  list(APPEND oneflow_all_src ${oneflow_xrt_src})
+endif()
+
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -70,33 +89,33 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
     if(BUILD_CUDA) 
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
   
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
@@ -126,7 +145,11 @@ endforeach()
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+	)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -174,6 +197,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.14")
     message(FATAL_ERROR "python include files and libraries not found")
   endif()
   message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
+  message("You can set PYTHON_INCLUDE_DIR and PYTHON_LIBRARY to specify Python version, run \"sysconfig.get_paths()\" in python")
   if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
   endif()
@@ -198,8 +222,11 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
-    COMMAND python "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
+    COMMAND python3 "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 foreach(oneflow_python_file ${oneflow_all_python_file})
@@ -229,13 +256,65 @@ if(BUILD_TESTING)
   if(NOT BUILD_CUDA)
     message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
   endif()
-  oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-  target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME oneflow_test COMMAND oneflow_testexe)
-  foreach(cc ${of_all_test_cc})
-    get_filename_component(test_name ${cc} NAME_WE)
-    string(CONCAT test_exe_name ${test_name} exe)
-    oneflow_add_executable(${test_exe_name} ${cc})
-    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-  endforeach()
+  if (of_all_test_cc)
+    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    add_test(NAME oneflow_test COMMAND oneflow_testexe)
+    #  foreach(cc ${of_all_test_cc})
+    #    get_filename_component(test_name ${cc} NAME_WE)
+    #    string(CONCAT test_exe_name ${test_name} exe)
+    #    oneflow_add_executable(${test_exe_name} ${cc})
+    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    #  endforeach()
+  endif()
 endif()
+
+# build include
+set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
+add_custom_target(of_include_copy ALL
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
+foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
+  set(oneflow_all_include_file)
+  #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
+  #list(APPEND oneflow_all_include_file ${h_files})
+  #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
+  #list(APPEND oneflow_all_include_file ${hpp_files})
+  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
+  foreach(of_hdr_file ${oneflow_all_include_file})
+    file(RELATIVE_PATH of_include_rel_file_path ${of_include_src_dir} ${of_hdr_file})
+    add_custom_command(TARGET of_include_copy POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy
+      "${of_hdr_file}"
+      "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+  endforeach()
+endforeach()
+
+foreach(of_proto_hdr_file ${PROTO_HDRS})
+  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_BINARY_DIR} ${of_proto_hdr_file})
+  add_custom_command(TARGET of_include_copy POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${of_proto_hdr_file}"
+    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+endforeach()
+
+set(OF_CORE_HDRS)
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
+foreach(of_core_dir_name ${of_core_dir_name_list})
+  file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
+  list(APPEND OF_CORE_HDRS ${h_files})
+  file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
+  list(APPEND OF_CORE_HDRS ${hpp_files})
+endforeach()
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
+foreach(of_core_hdr_file ${OF_CORE_HDRS})
+  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
+  add_custom_command(TARGET of_include_copy POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${of_core_hdr_file}"
+    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
+endforeach()

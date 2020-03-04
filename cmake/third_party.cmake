@@ -13,6 +13,19 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
+include(json)
+include(re2)
+
+if (WITH_XLA)
+  include(tensorflow)
+endif()
+
+if (WITH_TENSORRT)
+  if (NOT WITH_XLA)
+    include(absl)
+  endif()
+  include(tensorrt)
+endif()
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -25,10 +38,27 @@ if (BUILD_CUDA)
       break()
     endif()
   endforeach()
-  set(extra_cuda_libs libculibos.a libcublas_static.a libcurand_static.a)
+  set(extra_cuda_libs libculibos.a libcurand_static.a)
   foreach(extra_cuda_lib ${extra_cuda_libs})
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
+  foreach(cublas_lib_path ${CUDA_CUBLAS_LIBRARIES})
+    get_filename_component(cublas_lib_name ${cublas_lib_path} NAME)
+    if (${cublas_lib_name} STREQUAL libcublas.so)
+      get_filename_component(cublas_lib_dir ${cublas_lib_path} DIRECTORY)
+      break()
+    endif()
+  endforeach()
+  if(EXISTS ${cublas_lib_dir}/libcublas_static.a)
+    if(EXISTS ${cublas_lib_dir}/libcublasLt_static.a)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
+    endif()
+    list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+  elseif(EXISTS ${cuda_lib_dir}/libcublas_static.a)
+    list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
+  else()
+    message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
+  endif()
   find_package(CuDNN REQUIRED)
 endif()
 
@@ -60,6 +90,7 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
+    ${RE2_LIBRARIES}
 )
 
 if(WIN32)
@@ -90,9 +121,12 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
+  json_copy_headers_to_destination
+  re2
 )
 
-include_directories(
+
+list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
@@ -105,12 +139,19 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
+    ${JSON_INCLUDE_DIR}
+    ${RE2_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
+  if (WITH_XLA)
+    # Fix conflicts between tensorflow cublas dso and oneflow static cublas.
+    # TODO(hjchen2) Should commit a issue about this fix.
+    list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
+  endif()
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
@@ -119,11 +160,11 @@ if (BUILD_CUDA)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
 
-  include_directories(
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
     ${NCCL_INCLUDE_DIR}
-)
+  )
 endif()
 
 if(BUILD_RDMA)
@@ -145,6 +186,20 @@ if(BUILD_RDMA)
   else()
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
+endif()
+
+include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
+
+if(WITH_XLA)
+  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
+endif()
+
+if(WITH_TENSORRT)
+  if (NOT WITH_XLA)
+    list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
+  endif()
+  list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})

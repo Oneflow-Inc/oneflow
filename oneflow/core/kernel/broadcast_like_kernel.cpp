@@ -18,12 +18,6 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(reduced_shape, x_blob->dptr<T>()));
 }
 
-template<DeviceType device_type, typename T>
-void BroadcastLikeKernel<device_type, T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastLikeConf, BroadcastLikeKernel,
                            FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow
