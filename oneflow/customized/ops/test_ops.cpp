@@ -78,6 +78,52 @@ REGISTER_USER_OP("TestReshape")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
+    .Input("in")
+    .Output("out")
+    .Attr("shape", UserOpAttrType::kAtShape)
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      CHECK_EQ(in_shape->elem_cnt(), conf_shape.elem_cnt());
+      *out_shape = conf_shape;
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestReshapeLike4KeepHeaderOnly")
+    .Input("in")
+    .Input("like")
+    .Output("out")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      CHECK_EQ(in_shape->elem_cnt(), like_shape->elem_cnt());
+      *out_shape = *like_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_arg_modifier != nullptr);
+      like_arg_modifier->set_use_header_only(true);
+    });
+
+REGISTER_USER_OP_GRAD("TestReshape4KeepHeaderOnly")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper test_reshape_like_op =
+            builder.Op("TestReshapeLike4KeepHeaderOnly")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("like", op.input("in", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(test_reshape_like_op.output("out", 0), "in", 0);
+        AddOp(test_reshape_like_op);
+      }
+    });
+
 REGISTER_USER_OP("TestSource")
     .Output("out")
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

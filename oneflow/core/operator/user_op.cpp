@@ -236,6 +236,17 @@ void UserOp::InitFromOpConf() {
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
   val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  if (val_ != nullptr) {
+    user_op::GetInputArgModifier GetInputArgModifierFn =
+        [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
+      std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+      if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
+        return MutInputBlobModifier4Ibn(ibn);
+      }
+      return nullptr;
+    };
+    val_->input_arg_modify_fn(GetInputArgModifierFn);
+  }
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -307,7 +318,9 @@ Maybe<void> UserOp::InferOutBlobDescs(
   // TODO(ChengCheng): infer other attribute in blob desc
   BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
   if (first_in_blob_desc) {
-    for (const std::string& obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *first_in_blob_desc; }
+    for (const std::string& obn : output_bns()) {
+      GetBlobDesc4BnInOp(obn)->CopyMetaFrom(*first_in_blob_desc);
+    }
   }
 
   UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);

@@ -1771,6 +1771,13 @@ message DecodeOneRecOpConf {
   optional int64 num_threads = 7 [default = 1];
 }
 
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1935,6 +1942,7 @@ message OperatorConf {
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
