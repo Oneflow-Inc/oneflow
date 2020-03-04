@@ -58,7 +58,7 @@ BEGIN_OBJECT_MSG(VmScheduler);
 
   void ConnectVmInstruction(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain);
   void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
-                             VmInstrChain* vm_instr_chain);
+                             VmInstruction* vm_instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewVmInstrChainList* new_vm_instr_chain_list,
                               /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
