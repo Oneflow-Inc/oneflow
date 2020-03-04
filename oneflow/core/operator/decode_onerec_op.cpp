@@ -44,9 +44,11 @@ Maybe<void> DecodeOneRecOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const DecodeOneRecOpConf& conf = op_conf().decode_onerec_conf();
   const int64_t batch_size = conf.batch_size();
-  CHECK_EQ(batch_size % parallel_ctx->parallel_num(), 0);
+  CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
   const int64_t device_batch_size = batch_size / parallel_ctx->parallel_num();
-  CHECK_EQ(output_bns().size(), conf.field_size());
+  CHECK_EQ_OR_RETURN(output_bns().size(), conf.field_size());
+  CHECK_OR_RETURN(!conf.file().empty());
+  CHECK_EQ_OR_RETURN(conf.file_size() % (parallel_ctx->parallel_num() * conf.num_threads()), 0);
   FOR_RANGE(int64_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const DecodeOneRecFieldConf& field_conf = conf.field().Get(i);
@@ -87,6 +89,8 @@ void DecodeOneRecOp::VirtualGenKernelConf(
   decode_onerec_kernel_conf->set_device_batch_size(conf.batch_size()
                                                    / parallel_ctx->parallel_num());
   decode_onerec_kernel_conf->set_buffer_size(conf.buffer_size());
+  CHECK_EQ(range.size() % conf.num_threads(), 0);
+  decode_onerec_kernel_conf->set_num_threads(conf.num_threads());
   FOR_RANGE(int64_t, i, range.begin(), range.end()) {
     *(decode_onerec_kernel_conf->mutable_file()->Add()) = conf.file(i);
   }

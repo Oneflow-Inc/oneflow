@@ -84,10 +84,10 @@ bool ReadOneRecFrame(PersistentInStream* is, OneRecFrame* frame) {
 
 }  // namespace
 
-BufferedBatchedOneRecReader::BufferedBatchedOneRecReader(PersistentInStream* in,
+BufferedBatchedOneRecReader::BufferedBatchedOneRecReader(std::unique_ptr<PersistentInStream>&& in,
                                                          size_t num_max_read, size_t batch_size,
                                                          size_t buffer_size)
-    : in_stream_(in),
+    : in_stream_(std::move(in)),
       num_read_(0),
       num_max_read_(num_max_read),
       batch_size_(batch_size),
@@ -100,7 +100,7 @@ BufferedBatchedOneRecReader::BufferedBatchedOneRecReader(PersistentInStream* in,
       cur_batch.reserve(cur_batch_size);
       OneRecFrame frame;
       for (size_t i = 0; i < cur_batch_size; ++i) {
-        if (ReadOneRecFrame(in_stream_, &frame)) {
+        if (ReadOneRecFrame(in_stream_.get(), &frame)) {
           cur_batch.emplace_back(frame.payload, frame.payload_size);
         }
       }
@@ -125,6 +125,7 @@ BufferedBatchedOneRecReader::BufferedBatchedOneRecReader(PersistentInStream* in,
 BufferedBatchedOneRecReader::~BufferedBatchedOneRecReader() {
   buffer_.Close();
   reader_thread_.join();
+  in_stream_.reset();
 }
 
 void BufferedBatchedOneRecReader::Read(std::vector<OneRecExampleWrapper>* batch) {

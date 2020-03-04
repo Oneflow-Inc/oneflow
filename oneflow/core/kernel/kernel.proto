@@ -205,6 +205,7 @@ message DecodeOneRecKernelConf {
   repeated string file = 1;
   required int64 device_batch_size = 2;
   required int64 buffer_size = 3;
+  required int64 num_threads = 4;
 }
 
 message KernelConf {

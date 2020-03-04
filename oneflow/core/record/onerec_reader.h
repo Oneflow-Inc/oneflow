@@ -30,16 +30,17 @@ class OneRecExampleWrapper {
 class BufferedBatchedOneRecReader final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BufferedBatchedOneRecReader);
-  BufferedBatchedOneRecReader(PersistentInStream* in, size_t batch_size, size_t buffer_size)
-      : BufferedBatchedOneRecReader(in, GetMaxVal<int64_t>(), batch_size, buffer_size) {}
-  BufferedBatchedOneRecReader(PersistentInStream* in, size_t num_max_read, size_t batch_size,
-                              size_t buffer_size);
+  BufferedBatchedOneRecReader(std::unique_ptr<PersistentInStream>&& in, size_t batch_size,
+                              size_t buffer_size)
+      : BufferedBatchedOneRecReader(std::move(in), GetMaxVal<int64_t>(), batch_size, buffer_size) {}
+  BufferedBatchedOneRecReader(std::unique_ptr<PersistentInStream>&& in, size_t num_max_read,
+                              size_t batch_size, size_t buffer_size);
   ~BufferedBatchedOneRecReader();
 
   void Read(std::vector<OneRecExampleWrapper>* batch);
 
  private:
-  PersistentInStream* in_stream_;
+  std::unique_ptr<PersistentInStream> in_stream_;
   size_t num_read_;
   const size_t num_max_read_;
   const size_t batch_size_;

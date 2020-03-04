@@ -20,10 +20,10 @@ class FieldConf(object):
         self.static_shape = static_shape
         self.is_dynamic = is_dynamic
         if reshape is not None:
-            assert(len(reshape) == len(static_shape))
+            assert (len(reshape) == len(static_shape))
         self.reshape = reshape
         if batch_padding is not None:
-            assert(len(batch_padding) == len(static_shape))
+            assert (len(batch_padding) == len(static_shape))
         self.batch_padding = batch_padding
 
     def to_proto(self):
@@ -43,6 +43,7 @@ class FieldConf(object):
 def decode_onerec(files, fields,
                   batch_size=1,
                   buffer_size=16,
+                  num_threads=1,
                   name=None):
     if name is None:
         name = id_util.UniqueStr("DecodeOneRec_")
@@ -55,6 +56,7 @@ def decode_onerec(files, fields,
     op_conf.decode_onerec_conf.file.extend(files)
     op_conf.decode_onerec_conf.batch_size = batch_size
     op_conf.decode_onerec_conf.buffer_size = buffer_size
+    op_conf.decode_onerec_conf.num_threads = num_threads
     for idx, field in enumerate(fields):
         op_conf.decode_onerec_conf.field.extend([field.to_proto()])
         out_blob_name = "out_" + str(idx)
