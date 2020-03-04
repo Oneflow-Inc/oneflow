@@ -12,22 +12,12 @@ using VmStreamTypeId = int32_t;
 using VmInstructionOpcode = int32_t;
 
 // clang-format off
-BEGIN_FLAT_MSG(ConstLogicalObjectId);
-  FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(ConstLogicalObjectId);
-// clang-format on
-
-// clang-format off
-BEGIN_FLAT_MSG(MutableLogicalObjectId);
-  FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(MutableLogicalObjectId);
-// clang-format on
-
-// clang-format off
 BEGIN_FLAT_MSG(VmInstructionOperand);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableLogicalObjectId, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(ConstLocalLogicalObjectId, const_local_operand)
+    FLAT_MSG_ONEOF_FIELD(MutableLocalLogicalObjectId, mutable_local_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
     FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)

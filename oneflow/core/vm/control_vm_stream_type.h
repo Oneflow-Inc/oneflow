@@ -14,7 +14,7 @@ class ControlVmStreamType final {
   ControlVmStreamType() = default;
   ~ControlVmStreamType() = default;
 
-  ObjectMsgPtr<VmInstructionMsg> NewMirroredObjectSymbol(uint64_t symbol, bool is_remote,
+  ObjectMsgPtr<VmInstructionMsg> NewMirroredObjectSymbol(const LogicalObjectId& logical_object_id,
                                                          int64_t parallel_num) const;
   ObjectMsgPtr<VmInstructionMsg> DeleteMirroredObjectSymbol(
       const LogicalObjectId& logical_object_id) const;

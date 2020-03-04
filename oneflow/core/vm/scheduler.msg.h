@@ -49,8 +49,7 @@ BEGIN_OBJECT_MSG(VmScheduler);
   void MakeVmInstruction(TmpWaitingVmInstrMsgList* vm_instr_msg_list,
                          /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list);
   MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
-                                     const LogicalObjectId& logical_object_id,
-                                     int64_t parallel_id);
+                                     const LogicalObjectId& logical_object_id, int64_t parallel_id);
   enum OperandAccessType { 
     kMutableOperandAccess = 0,
     kConstOperandAccess
