@@ -13,6 +13,9 @@ class HostVmStreamType final : public VmStreamType {
   HostVmStreamType() = default;
   ~HostVmStreamType() = default;
 
+  ObjectMsgPtr<VmInstructionMsg> CudaMallocHost(uint64_t symbol, size_t size) const;
+  ObjectMsgPtr<VmInstructionMsg> CudaFreeHost(uint64_t symbol) const;
+
   void InitVmInstructionStatus(const VmStream& vm_stream,
                                VmInstructionStatusBuffer* status_buffer) const override;
   void DeleteVmInstructionStatus(const VmStream& vm_stream,

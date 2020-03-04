@@ -10,7 +10,7 @@ namespace test {
 
 namespace {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instruction_msg_link);
+using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
 
 TEST(ControlVmStreamType, new_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();

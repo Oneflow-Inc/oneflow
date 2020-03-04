@@ -33,16 +33,17 @@ END_OBJECT_MSG(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(ReadOnlyAccessType);
-END_FLAT_MSG(ReadOnlyAccessType);
-// clang-format on
+OBJECT_MSG_BEGIN(CudaMemBuffer);
+  // methods
+  PUBLIC void __Init__(size_t size, char* data) {
+    set_size(size);
+    set_data(data);
+  }
 
-// clang-format off
-BEGIN_FLAT_MSG(MirroredObjectAccessType);
-  FLAT_MSG_DEFINE_ONEOF(access_type,
-    FLAT_MSG_ONEOF_FIELD(ReadOnlyAccessType, read_only)
-    FLAT_MSG_ONEOF_FIELD(VmStreamId, vm_stream_id_only));
-END_FLAT_MSG(MirroredObjectAccessType);
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
+  OBJECT_MSG_DEFINE_RAW_PTR(char, data);
+OBJECT_MSG_END(CudaMemBuffer);
 // clang-format on
 
 class LogicalObject;
@@ -51,13 +52,14 @@ BEGIN_OBJECT_MSG(MirroredObject);
   // methods
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
   //fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectAccessType, current_access_type);
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_ONEOF(object_type,
+      OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(int64_t, parallel_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
 END_OBJECT_MSG(MirroredObject);
 // clang-format on
