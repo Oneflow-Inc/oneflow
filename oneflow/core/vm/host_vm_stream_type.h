@@ -22,7 +22,7 @@ class HostVmStreamType final : public VmStreamType {
                                  VmInstructionStatusBuffer* status_buffer) const override;
   bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
                                     const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmStream* vm_stream, VmInstrChainPackage* vm_instr_chain_pkg) const override;
+  void Run(VmInstrChainPackage* vm_instr_chain_pkg) const override;
 };
 
 }  // namespace oneflow

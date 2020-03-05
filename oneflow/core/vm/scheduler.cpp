@@ -176,7 +176,7 @@ void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_ch
     vm_stream->mut_collect_vm_instr_chain_list()->MoveTo(pkg->mut_vm_instr_chain_list());
     vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
     if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
-    vm_stream->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
+    vm_stream->mut_vm_thread()->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
   }
 }
 

@@ -30,7 +30,6 @@ BEGIN_OBJECT_MSG(VmStream);
   // collect_vm_instr_chain_list used by VmScheduler
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link,
                               collect_vm_instr_chain_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, waiting_pkg_link, waiting_pkg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, running_pkg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, free_pkg_list);
 END_OBJECT_MSG(VmStream);
