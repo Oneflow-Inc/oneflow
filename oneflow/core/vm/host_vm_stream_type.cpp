@@ -1,6 +1,8 @@
 #include "oneflow/core/common/flat_msg_view.h"
 #include "oneflow/core/vm/host_vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction.msg.h"
+#include "oneflow/core/vm/vm_stream.msg.h"
+#include "oneflow/core/vm/vm_thread.msg.h"
 #include "oneflow/core/vm/naive_vm_instruction_status_querier.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"

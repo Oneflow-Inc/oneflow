@@ -115,66 +115,6 @@ BEGIN_OBJECT_MSG(VmInstrChainPackage);
 END_OBJECT_MSG(VmInstrChainPackage);
 // clang-format on
 
-class VmThread;
-
-// clang-format off
-BEGIN_OBJECT_MSG(VmStream);
-  // methods
-  PUBLIC void __Init__(VmThread* vm_thread, const VmStreamId& vm_stream_id) {
-    set_vm_thread(vm_thread);
-    mut_vm_stream_id()->CopyFrom(vm_stream_id);
-  }
-  PUBLIC ObjectMsgPtr<VmInstrChainPackage> NewVmInstrChainPackage();
-  PUBLIC void DeleteVmInstrChainPackage(VmInstrChainPackage*);
-
-  // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
-  OBJECT_MSG_DEFINE_FLAT_MSG(VmStreamId, vm_stream_id);
-  
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(active_vm_stream_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(tmp_active_vm_stream_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_vm_stream_link);
-  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
-  // collect_vm_instr_chain_list used by VmScheduler
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link,
-                              collect_vm_instr_chain_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, waiting_pkg_link, waiting_pkg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, running_pkg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, free_pkg_list);
-END_OBJECT_MSG(VmStream);
-// clang-format on
-
-// Rt is short for Runtime
-// clang-format off
-BEGIN_OBJECT_MSG(VmStreamRtDesc);
-  // methods
-  PUBLIC void __Init__(const VmStreamDesc* vm_stream_desc);
-
-  // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type); 
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamDesc, vm_stream_desc); 
-  // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, parallel_id, parallel_id2vm_stream);
-END_OBJECT_MSG(VmStreamRtDesc);
-// clang-format on
-
-// clang-format off
-BEGIN_OBJECT_MSG(VmThread);
-  // methods
-  PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc) {
-    set_vm_stream_rt_desc(&vm_stream_rt_desc);
-  }
-  // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
-
-  // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_thread_vm_stream_link, vm_stream_list);
-END_OBJECT_MSG(VmThread);
-// clang-format on
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
