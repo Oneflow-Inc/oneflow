@@ -17,8 +17,10 @@ if (THIRD_PARTY)
     GIT_TAG ${TVM_GIT_TAG}
     CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:STRING=${TVM_INSTALL_DIR}
+        -DINSTALL_DEV:BOOL=ON
     BUILD_COMMAND cd ${TVM_SOURCES_DIR} && mkdir -p build
-      && cp cmake/config.cmake build && cd build && cmake .. && make -j8)
+      && cp cmake/config.cmake build && cd build && cmake .. && make -j32
+    LOG_DOWNLOAD ON)
 
 endif(THIRD_PARTY)
 
