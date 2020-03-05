@@ -18,6 +18,8 @@ if (THIRD_PARTY)
     CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:STRING=${TVM_INSTALL_DIR}
         -DINSTALL_DEV:BOOL=ON
+        -DUSE_CUDA:BOOL=ON
+        -DUSE_LLVM:BOOL=ON
     BUILD_COMMAND cd ${TVM_SOURCES_DIR} && mkdir -p build
       && cp cmake/config.cmake build && cd build && cmake .. && make -j32
     LOG_DOWNLOAD ON)
