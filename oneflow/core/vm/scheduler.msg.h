@@ -13,7 +13,7 @@ namespace oneflow {
 class VmDesc;
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmScheduler);
+OBJECT_MSG_BEGIN(VmScheduler);
   // methods
   using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
 
@@ -67,7 +67,7 @@ BEGIN_OBJECT_MSG(VmScheduler);
                               /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_chain_list);
 
-END_OBJECT_MSG(VmScheduler);
+OBJECT_MSG_END(VmScheduler);
 // clang-format on
 
 }  // namespace oneflow

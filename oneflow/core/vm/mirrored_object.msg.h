@@ -15,7 +15,7 @@ class VmInstruction;
 class MirroredObject;
 
 // clang-format off
-BEGIN_OBJECT_MSG(MirroredObjectAccess);
+OBJECT_MSG_BEGIN(MirroredObjectAccess);
   // methods
   PUBLIC void __Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
@@ -29,7 +29,7 @@ BEGIN_OBJECT_MSG(MirroredObjectAccess);
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
   OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, MirroredObjectId, mirrored_object_id);
   
-END_OBJECT_MSG(MirroredObjectAccess);
+OBJECT_MSG_END(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
@@ -48,7 +48,7 @@ OBJECT_MSG_END(CudaMemBuffer);
 
 class LogicalObject;
 // clang-format off
-BEGIN_OBJECT_MSG(MirroredObject);
+OBJECT_MSG_BEGIN(MirroredObject);
   // methods
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
   //fields
@@ -61,12 +61,12 @@ BEGIN_OBJECT_MSG(MirroredObject);
   OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
-END_OBJECT_MSG(MirroredObject);
+OBJECT_MSG_END(MirroredObject);
 // clang-format on
 
 class VmScheduler;
 // clang-format off
-BEGIN_OBJECT_MSG(LogicalObject);
+OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
                        VmScheduler* vm_scheduler) {
@@ -81,7 +81,7 @@ BEGIN_OBJECT_MSG(LogicalObject);
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
   OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
-END_OBJECT_MSG(LogicalObject);
+OBJECT_MSG_END(LogicalObject);
 // clang-format on
 
 }  // namespace oneflow

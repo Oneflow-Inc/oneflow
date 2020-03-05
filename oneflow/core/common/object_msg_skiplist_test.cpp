@@ -8,19 +8,19 @@ namespace test {
 namespace {
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjectMsgSkipListFoo);
+OBJECT_MSG_BEGIN(ObjectMsgSkipListFoo);
   OBJECT_MSG_DEFINE_MAP_KEY(int32_t, foo_map_key);
   OBJECT_MSG_DEFINE_RAW_PTR(int, is_deleted);
   void __Delete__() {
     if (has_is_deleted()) { ++*mutable_is_deleted(); }
   }
-END_OBJECT_MSG(ObjectMsgSkipListFoo);
+OBJECT_MSG_END(ObjectMsgSkipListFoo);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjectMsgSkipListFooContainer);
+OBJECT_MSG_BEGIN(ObjectMsgSkipListFooContainer);
   OBJECT_MSG_DEFINE_MAP_HEAD(ObjectMsgSkipListFoo, foo_map_key, foo_map);
-END_OBJECT_MSG(ObjectMsgSkipListFooContainer);
+OBJECT_MSG_END(ObjectMsgSkipListFooContainer);
 // clang-format on
 
 TEST(ObjectMsgSkipList, empty) {
@@ -200,9 +200,9 @@ TEST(ObjectMsgSkipList, FOR_EACH) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(PtrAsKey);
+OBJECT_MSG_BEGIN(PtrAsKey);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, int*, ptr_key);
-END_OBJECT_MSG(PtrAsKey);
+OBJECT_MSG_END(PtrAsKey);
 // clang-format on
 
 }  // namespace

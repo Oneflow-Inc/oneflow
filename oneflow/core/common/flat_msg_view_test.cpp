@@ -8,46 +8,46 @@ namespace test {
 namespace {
 
 // clang-format off
-BEGIN_FLAT_MSG(VariantFoo);
+FLAT_MSG_BEGIN(VariantFoo);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(int8_t, int8_value)
     FLAT_MSG_ONEOF_FIELD(int16_t, int16_value)
     FLAT_MSG_ONEOF_FIELD(int32_t, int32_value)
     FLAT_MSG_ONEOF_FIELD(float, float_value));
-END_FLAT_MSG(VariantFoo);
+FLAT_MSG_END(VariantFoo);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(DefaultOneofNameVariantFoo);
+FLAT_MSG_BEGIN(DefaultOneofNameVariantFoo);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(int8_t, int8_value)
     FLAT_MSG_ONEOF_FIELD(int16_t, int16_value)
     FLAT_MSG_ONEOF_FIELD(int32_t, int32_value)
     FLAT_MSG_ONEOF_FIELD(float, float_value));
-END_FLAT_MSG(DefaultOneofNameVariantFoo);
+FLAT_MSG_END(DefaultOneofNameVariantFoo);
 // clang-format on
 
 using TestOneofField =
     StructField<VariantFoo, VariantFoo::__OneofType, VariantFoo::__kDssFieldOffset>;
 
 // clang-format off
-BEGIN_FLAT_MSG(VariantList);
+FLAT_MSG_BEGIN(VariantList);
   FLAT_MSG_DEFINE_REPEATED(VariantFoo, foo, 16);
-END_FLAT_MSG(VariantList);
+FLAT_MSG_END(VariantList);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(DefaultOneofNameVariantFooList);
+FLAT_MSG_BEGIN(DefaultOneofNameVariantFooList);
   FLAT_MSG_DEFINE_REPEATED(DefaultOneofNameVariantFoo, foo, 16);
-END_FLAT_MSG(DefaultOneofNameVariantFooList);
+FLAT_MSG_END(DefaultOneofNameVariantFooList);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG_VIEW(ViewFoo);
+FLAT_MSG_VIEW_BEGIN(ViewFoo);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int32_t, int32_value);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int16_t, int16_value);
   FLAT_MSG_VIEW_DEFINE_PATTERN(float, float_value);
-END_FLAT_MSG_VIEW(ViewFoo);
+FLAT_MSG_VIEW_END(ViewFoo);
 // clang-format on
 
 TEST(FlatMsgView, match_success) {

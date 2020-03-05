@@ -55,10 +55,10 @@ std::vector<CtrlInstrFunc> ctrl_instr_table;
   })
 
 // clang-format off
-BEGIN_FLAT_MSG_VIEW(NewMirroredObjectSymbolCtrlInstruction);
+FLAT_MSG_VIEW_BEGIN(NewMirroredObjectSymbolCtrlInstruction);
   FLAT_MSG_VIEW_DEFINE_PATTERN(LogicalObjectId, logical_object_id);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_num);
-END_FLAT_MSG_VIEW(NewMirroredObjectSymbolCtrlInstruction);
+FLAT_MSG_VIEW_END(NewMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
@@ -92,9 +92,9 @@ void NewMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewMirroredObjectSymbol, NewMirroredObjectSymbol);
 
 // clang-format off
-BEGIN_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
+FLAT_MSG_VIEW_BEGIN(DeleteMirroredObjectSymbolCtrlInstruction);
   FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, mutable_logical_object_id);
-END_FLAT_MSG_VIEW(DeleteMirroredObjectSymbolCtrlInstruction);
+FLAT_MSG_VIEW_END(DeleteMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(

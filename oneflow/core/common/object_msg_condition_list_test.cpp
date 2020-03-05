@@ -9,20 +9,20 @@ namespace test {
 namespace {
 
 // clang-format off
-BEGIN_OBJECT_MSG(Foo);
+OBJECT_MSG_BEGIN(Foo);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int, x);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
-END_OBJECT_MSG(Foo);
+OBJECT_MSG_END(Foo);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(FooList);
+OBJECT_MSG_BEGIN(FooList);
   // links
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, link, list);
-END_OBJECT_MSG(FooList);
+OBJECT_MSG_END(FooList);
 // clang-format on
 
 using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, link);

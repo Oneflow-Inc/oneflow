@@ -8,7 +8,7 @@ namespace oneflow {
 
 // clang-format off
 template<typename CppObjectT>
-BEGIN_OBJECT_MSG(Wrapper4CppObject);
+OBJECT_MSG_BEGIN(Wrapper4CppObject);
  public:
   template<typename NewCppObjectT>
   void __Init__(const NewCppObjectT& NewCppObject) {
@@ -38,7 +38,7 @@ BEGIN_OBJECT_MSG(Wrapper4CppObject);
 
   OBJECT_MSG_DEFINE_RAW_PTR(CppObjectT, obj);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, obj_size);
-END_OBJECT_MSG(Wrapper4CppObject);
+OBJECT_MSG_END(Wrapper4CppObject);
 // clang-format on
 
 }  // namespace oneflow

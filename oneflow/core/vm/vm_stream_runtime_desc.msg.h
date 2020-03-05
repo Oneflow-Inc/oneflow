@@ -11,7 +11,7 @@ class VmStreamDesc;
 
 // Rt is short for Runtime
 // clang-format off
-BEGIN_OBJECT_MSG(VmStreamRtDesc);
+OBJECT_MSG_BEGIN(VmStreamRtDesc);
   // methods
   PUBLIC void __Init__(const VmStreamDesc* vm_stream_desc);
 
@@ -21,7 +21,7 @@ BEGIN_OBJECT_MSG(VmStreamRtDesc);
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
   OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, parallel_id, parallel_id2vm_stream);
-END_OBJECT_MSG(VmStreamRtDesc);
+OBJECT_MSG_END(VmStreamRtDesc);
 // clang-format on
 
 }  // namespace oneflow
