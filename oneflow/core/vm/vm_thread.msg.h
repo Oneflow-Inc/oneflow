@@ -12,13 +12,16 @@ BEGIN_OBJECT_MSG(VmThread);
   PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc) {
     set_vm_stream_rt_desc(&vm_stream_rt_desc);
   }
-  PUBLIC void Run();
+  PUBLIC void LoopRun();
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_thread_vm_stream_link, vm_stream_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, waiting_pkg_link, waiting_pkg_list);
+
+  PRIVATE ObjectMsgConditionListStatus WaitAndRun();
 END_OBJECT_MSG(VmThread);
 // clang-format on
 

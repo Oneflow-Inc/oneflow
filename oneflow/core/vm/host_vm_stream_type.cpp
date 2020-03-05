@@ -130,7 +130,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) c
   return vm_instr_msg;
 }
 
-void HostVmStreamType::Run(VmStream* vm_stream, VmInstrChainPackage* vm_instr_chain_pkg) const {
+void HostVmStreamType::Run(VmInstrChainPackage* vm_instr_chain_pkg) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain_pkg->mut_vm_instr_chain_list(), chain) {
     OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(chain->mut_vm_instruction_list(), vm_instruction) {
       auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instruction_proto().opcode();
