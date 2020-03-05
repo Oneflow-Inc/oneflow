@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
@@ -1584,6 +1585,21 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message SliceBoxingConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorSliceViewProto in_slice = 2;
+  required TensorSliceViewProto out_slice = 3;
+  optional ShapeProto out_shape = 4;
+}
+
+message SliceBoxingCopyOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+message SliceBoxingAddOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
 message XrtLaunchOpConf {
   message Argument {
     required string name = 1;
@@ -1848,7 +1864,9 @@ message OperatorConf {
     IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
     IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
-    DecodeOneRecOpConf decode_onerec_conf = 166;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    DecodeOneRecOpConf decode_onerec_conf = 168;
     UserOpConf user_conf = 199;
     
     // domain op
