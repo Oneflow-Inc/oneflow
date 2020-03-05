@@ -8,21 +8,19 @@
 
 namespace oneflow {
 
-#define FLAT_MSG_VIEW_BEGIN(struct_name) BEGIN_FLAT_MSG_VIEW(struct_name)
-#define BEGIN_FLAT_MSG_VIEW(struct_name)                    \
+#define FLAT_MSG_VIEW_BEGIN(struct_name)                    \
   struct struct_name final {                                \
     using self_type = struct_name;                          \
     static const bool __is_flat_message_view_type__ = true; \
     FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(struct_name);        \
     PRIVATE DEFINE_STATIC_COUNTER(field_counter);           \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), struct_name);
+    DSS_BEGIN(STATIC_COUNTER(field_counter), struct_name);
 
-#define FLAT_MSG_VIEW_END(struct_name) END_FLAT_MSG_VIEW(struct_name)
-#define END_FLAT_MSG_VIEW(struct_name)                                                    \
+#define FLAT_MSG_VIEW_END(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);             \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
-  END_DSS(STATIC_COUNTER(field_counter), "flat message view", struct_name);               \
+  DSS_END(STATIC_COUNTER(field_counter), "flat message view", struct_name);               \
   }                                                                                       \
   ;
 

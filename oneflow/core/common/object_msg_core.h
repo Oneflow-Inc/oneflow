@@ -13,14 +13,13 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_BEGIN(class_name) BEGIN_OBJECT_MSG(class_name)
-#define BEGIN_OBJECT_MSG(class_name)                      \
+#define OBJECT_MSG_BEGIN(class_name)                      \
   struct class_name final : public ObjectMsgStruct {      \
    public:                                                \
     using self_type = class_name;                         \
     static const bool __is_object_message_type__ = true;  \
     PRIVATE DEFINE_STATIC_COUNTER(field_counter);         \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name); \
+    DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
     OBJECT_MSG_DEFINE_DEFAULT(class_name);                \
     OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                \
     OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();            \
@@ -28,12 +27,11 @@ namespace oneflow {
     OBJECT_MSG_DEFINE_DELETE();                           \
     OBJECT_MSG_DEFINE_BASE();
 
-#define OBJECT_MSG_END(class_name) END_OBJECT_MSG(class_name)
-#define END_OBJECT_MSG(class_name)                                                  \
+#define OBJECT_MSG_END(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);       \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
-  END_DSS(STATIC_COUNTER(field_counter), "object message", class_name);             \
+  DSS_END(STATIC_COUNTER(field_counter), "object message", class_name);             \
   }                                                                                 \
   ;
 

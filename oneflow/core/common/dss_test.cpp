@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 struct Foo {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), Foo);
   int x;
   int y;
   int* z;
@@ -15,13 +15,13 @@ struct Foo {
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int, y);
   DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int*, z);
 
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
 };
 
 struct Bar {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), Foo);
 
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Bar);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", Bar);
 };
 
 template<typename T>
@@ -108,7 +108,7 @@ TEST(DSS, filter_field_until) {
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), TestDssUnion);
 
  public:
   struct UnionField {
@@ -120,7 +120,7 @@ struct TestDssUnion {
   } union_field;
 
   DSS_DEFINE_TEST_UNION_FIELD(DSS_GET_FIELD_COUNTER());
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
 };
 
 template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType,

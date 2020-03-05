@@ -7,7 +7,7 @@
 namespace oneflow {
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmThread);
+OBJECT_MSG_BEGIN(VmThread);
   // methods
   PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc) {
     set_vm_stream_rt_desc(&vm_stream_rt_desc);
@@ -22,7 +22,7 @@ BEGIN_OBJECT_MSG(VmThread);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, waiting_pkg_link, waiting_pkg_list);
 
   PRIVATE ObjectMsgConditionListStatus WaitAndRun();
-END_OBJECT_MSG(VmThread);
+OBJECT_MSG_END(VmThread);
 // clang-format on
 
 }  // namespace oneflow

@@ -9,7 +9,7 @@ namespace test {
 namespace {
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestListItem)
+OBJECT_MSG_BEGIN(TestListItem)
   OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
   OBJECT_MSG_DEFINE_RAW_PTR(int, cnt);
 
@@ -17,7 +17,7 @@ BEGIN_OBJECT_MSG(TestListItem)
   void __Delete__() {
     if (has_cnt()) { --*mutable_cnt(); }
   }
-END_OBJECT_MSG(TestListItem)
+OBJECT_MSG_END(TestListItem)
 // clang-format on
 
 TEST(ObjectMsgList, empty) {
@@ -212,9 +212,9 @@ TEST(ObjectMsgList, FOR_EACH) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestObjectMsgListHead);
+OBJECT_MSG_BEGIN(TestObjectMsgListHead);
   OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
-END_OBJECT_MSG(TestObjectMsgListHead);
+OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
 
 TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
@@ -244,9 +244,9 @@ TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
   OBJECT_MSG_DEFINE_OPTIONAL(TestObjectMsgListHead, head);
-END_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 // clang-format on
 
 TEST(ObjectMsg, nested_list_delete) {
@@ -298,7 +298,7 @@ TEST(ObjectMsg, MoveTo) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(SelfLoopContainer);
+OBJECT_MSG_BEGIN(SelfLoopContainer);
   // methods
   PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
   PUBLIC void __Delete__() { *mut_deleted() = true; }
@@ -307,7 +307,7 @@ BEGIN_OBJECT_MSG(SelfLoopContainer);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);
-END_OBJECT_MSG(SelfLoopContainer);
+OBJECT_MSG_END(SelfLoopContainer);
 // clang-format on
 
 TEST(ObjectMsgSelfLoopList, __Init__) {

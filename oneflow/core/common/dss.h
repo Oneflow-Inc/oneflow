@@ -8,12 +8,10 @@
 namespace oneflow {
 
 // DSS is short for domain specific struct
-#define DSS_BEGIN(field_counter, type) BEGIN_DSS(field_counter, type)
-#define BEGIN_DSS(field_counter, type) _BEGIN_DSS(field_counter, type)
+#define DSS_BEGIN(field_counter, type) _DSS_BEGIN(field_counter, type)
 #define DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name) \
   _DSS_DEFINE_FIELD(field_counter, dss_type, field_type, field_name)
-#define DSS_END(field_counter, dss_type, type) END_DSS(field_counter, dss_type, type)
-#define END_DSS(field_counter, dss_type, type) _END_DSS(field_counter, dss_type, type)
+#define DSS_END(field_counter, dss_type, type) _DSS_END(field_counter, dss_type, type)
 #define DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq) \
   _DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, field_case, type7field7case_tuple_seq)
 #define DSS_GET_FIELD_COUNTER() __COUNTER__
@@ -88,7 +86,7 @@ namespace oneflow {
     PartialF<field_type>::Call(ctx, case_field_name, __oneof_name__);              \
   }
 
-#define _BEGIN_DSS(field_counter, type)                                                       \
+#define _DSS_BEGIN(field_counter, type)                                                       \
  private:                                                                                     \
   using __DssSelfType__ = type;                                                               \
                                                                                               \
@@ -305,7 +303,7 @@ namespace oneflow {
   static const int OF_PP_CAT(field, kDssFieldOffset) =                                             \
       __DssAccumulatedAlignedSize4Counter__<field_counter>::value;
 
-#define _END_DSS(field_counter, dss_type, type)                                                   \
+#define _DSS_END(field_counter, dss_type, type)                                                   \
  public:                                                                                          \
   template<template<int, class, class> class F, typename WalkCtxType>                             \
   void __ReverseWalkField__(WalkCtxType* ctx) {                                                   \

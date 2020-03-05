@@ -15,17 +15,17 @@ namespace oneflow {
 static const int kVmInstructionOperandLimit = 64;
 
 // clang-format off
-BEGIN_FLAT_MSG(VmInstructionProto);
+FLAT_MSG_BEGIN(VmInstructionProto);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, vm_instruction_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
   FLAT_MSG_DEFINE_REPEATED(VmInstructionOperand, operand, kVmInstructionOperandLimit);
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamMask, vm_stream_mask);
-END_FLAT_MSG(VmInstructionProto);
+FLAT_MSG_END(VmInstructionProto);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstructionMsg);
+OBJECT_MSG_BEGIN(VmInstructionMsg);
   PUBLIC void __Init__() { __Init__(&VmInstructionMsgNoneObserver::NewObserver); }
   PUBLIC template<typename NewObserverT>
   void __Init__(const NewObserverT& NewObserver) { mutable_observer()->__Init__(NewObserver); }
@@ -36,12 +36,12 @@ BEGIN_OBJECT_MSG(VmInstructionMsg);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_msg_link);
-END_OBJECT_MSG(VmInstructionMsg);
+OBJECT_MSG_END(VmInstructionMsg);
 // clang-format on
 
 class VmInstrChain;
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstrChainEdge);
+OBJECT_MSG_BEGIN(VmInstrChainEdge);
   // methods
   PUBLIC void __Init__(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain) {
     set_src_vm_instr_chain(src_vm_instr_chain);
@@ -50,11 +50,11 @@ BEGIN_OBJECT_MSG(VmInstrChainEdge);
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, src_vm_instr_chain);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, dst_vm_instr_chain);
-END_OBJECT_MSG(VmInstrChainEdge);
+OBJECT_MSG_END(VmInstrChainEdge);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstruction);
+OBJECT_MSG_BEGIN(VmInstruction);
   // methods
   PUBLIC void __Init__(VmInstrChain* vm_instr_chain, VmInstructionMsg* vm_instr_msg) {
     set_vm_instr_chain(vm_instr_chain);
@@ -67,12 +67,12 @@ BEGIN_OBJECT_MSG(VmInstruction);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
-END_OBJECT_MSG(VmInstruction);
+OBJECT_MSG_END(VmInstruction);
 // clang-format on
 
 class VmStream;
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstrChain);
+OBJECT_MSG_BEGIN(VmInstrChain);
   // methods
   PUBLIC void __Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream);
 
@@ -84,19 +84,19 @@ BEGIN_OBJECT_MSG(VmInstrChain);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, src_vm_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, dst_vm_instr_chain, out_edges);
-END_OBJECT_MSG(VmInstrChain);
+OBJECT_MSG_END(VmInstrChain);
 // clang-format on
 
 static const int kVmInstructionStatusBufferLength = 1024;
 
 // clang-format off
-BEGIN_FLAT_MSG(VmInstructionStatusBuffer);
+FLAT_MSG_BEGIN(VmInstructionStatusBuffer);
   FLAT_MSG_DEFINE_REPEATED(char, buffer, kVmInstructionStatusBufferLength);
-END_FLAT_MSG(VmInstructionStatusBuffer);
+FLAT_MSG_END(VmInstructionStatusBuffer);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmInstrChainPackage);
+OBJECT_MSG_BEGIN(VmInstrChainPackage);
   // methods
   PUBLIC void __Init__() {}
   PUBLIC void __Init__(VmStream* vm_stream);
@@ -112,7 +112,7 @@ BEGIN_OBJECT_MSG(VmInstrChainPackage);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_pkg_link);
-END_OBJECT_MSG(VmInstrChainPackage);
+OBJECT_MSG_END(VmInstrChainPackage);
 // clang-format on
 
 }  // namespace oneflow

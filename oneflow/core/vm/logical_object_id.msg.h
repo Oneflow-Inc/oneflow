@@ -8,27 +8,27 @@ namespace oneflow {
 using LogicalObjectId = uint64_t;
 
 // clang-format off
-BEGIN_FLAT_MSG(ConstLogicalObjectId);
+FLAT_MSG_BEGIN(ConstLogicalObjectId);
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(ConstLogicalObjectId);
+FLAT_MSG_END(ConstLogicalObjectId);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(MutableLogicalObjectId);
+FLAT_MSG_BEGIN(MutableLogicalObjectId);
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(MutableLogicalObjectId);
+FLAT_MSG_END(MutableLogicalObjectId);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(ConstLocalLogicalObjectId);
+FLAT_MSG_BEGIN(ConstLocalLogicalObjectId);
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(ConstLocalLogicalObjectId);
+FLAT_MSG_END(ConstLocalLogicalObjectId);
 // clang-format on
 
 // clang-format off
-BEGIN_FLAT_MSG(MutableLocalLogicalObjectId);
+FLAT_MSG_BEGIN(MutableLocalLogicalObjectId);
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, value);
-END_FLAT_MSG(MutableLocalLogicalObjectId);
+FLAT_MSG_END(MutableLocalLogicalObjectId);
 // clang-format on
 
 }  // namespace oneflow

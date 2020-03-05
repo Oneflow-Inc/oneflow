@@ -9,7 +9,7 @@ namespace oneflow {
 class VmThread;
 
 // clang-format off
-BEGIN_OBJECT_MSG(VmStream);
+OBJECT_MSG_BEGIN(VmStream);
   // methods
   PUBLIC void __Init__(VmThread* vm_thread, const VmStreamId& vm_stream_id) {
     set_vm_thread(vm_thread);
@@ -32,7 +32,7 @@ BEGIN_OBJECT_MSG(VmStream);
                               collect_vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, running_pkg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChainPackage, vm_instr_chain_pkg_link, free_pkg_list);
-END_OBJECT_MSG(VmStream);
+OBJECT_MSG_END(VmStream);
 // clang-format on
 
 }  // namespace oneflow
