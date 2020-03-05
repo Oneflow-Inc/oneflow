@@ -267,21 +267,36 @@ def concat(values, axis, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("local_scatter_nd_update")
-def local_scatter_nd_update(inputs, indices, updates, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LocalScatterNdUpdate_")
+
+@oneflow_export("gather_nd")
+def gather_nd(params, indices, name=None):
+    if name is None:
+        name = id_util.UniqueStr("GatherNd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("gather_nd")
+        .Input("x", [params])
+        .Input("indices", [indices])
+        .Output("y")
+        .Build()
     )
-    setattr(op_conf.local_scatter_nd_update_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "indices", indices.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "updates", updates.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    return op.RemoteBlobList()[0]
+
+
+@oneflow_export("scatter_nd_update")
+def scatter_nd_update(inputs, indices, updates, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ScatterNdUpdate_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("scatter_nd_update")
+        .Input("in", [inputs])
+        .Input("updates", [updates])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
+    )
+    return op.RemoteBlobList()[0]
 
 
 @oneflow_export("local_nonzero")

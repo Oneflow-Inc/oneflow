@@ -33,7 +33,8 @@ inline NdIndicesSliceParams<T, I> ConstructNdIndicesSliceParams(user_op::Tensor*
   FOR_RANGE(int64_t, i, 0, dense->shape().NumAxes()) { params.shape[i] = dense->shape().At(i); }
   params.dense = dense->mut_dptr<T>();
   params.sparse = sparse->mut_dptr<T>();
-  params.indices = sparse->dptr<I>();
+  params.indices = indices->dptr<I>();
+  return params;
 }
 
 template<DeviceType device_type, typename T, typename I>
