@@ -34,7 +34,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
       })                                                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0);      \
-        return ctx.device() == DeviceType::kGPU && in->data_type() == proto_type;     \
+        return ctx.device() == device_type && in->data_type() == proto_type;          \
       });
 
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
