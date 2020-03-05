@@ -79,4 +79,56 @@ REGISTER_USER_OP("scatter_nd_add")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("gather_nd")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder zero_grad_builder(op.op_name() + "_zero_grad");
+        user_op::UserOpConfWrapper zero_grad_op =
+            zero_grad_builder.Op("zero_like").Input("like", op.input("x", 0)).Output("out").Build();
+        AddOp(zero_grad_op);
+        user_op::UserOpConfWrapperBuilder grad_builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            grad_builder.Op("scatter_nd_add")
+                .Input("in", zero_grad_op.output("out", 0))
+                .Input("updates", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("indices", op.input("indices", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
+
+REGISTER_USER_OP_GRAD("scatter_nd_update")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("updates", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("gather_nd")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("out", 0))
+                                                 .Input("indices", op.input("indices", 0))
+                                                 .Output("y")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "updates", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder zero_grad_builder(op.op_name() + "_zero_grad");
+        user_op::UserOpConfWrapper zero_grad_op = zero_grad_builder.Op("zero_like")
+                                                      .Input("like", op.input("update", 0))
+                                                      .Output("out")
+                                                      .Build();
+        AddOp(zero_grad_op);
+        user_op::UserOpConfWrapperBuilder grad_builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            grad_builder.Op("scatter_nd_update")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("updates", zero_grad_op.output("out", 0))
+                .Input("indices", op.input("indices", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+        AddOp(grad_op);
+      }
+    });
+
 }  // namespace oneflow
