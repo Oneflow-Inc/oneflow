@@ -195,6 +195,10 @@ if(BUILD_RDMA)
   endif()
 endif()
 
+if(WITH_TVM)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${TVM_INCLUDE_DIR})
+endif()
+
 include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
@@ -211,6 +215,10 @@ endif()
 
 if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
+endif()
+
+if(WITH_TVM)
+  list(APPEND oneflow_third_party_libs ${TVM_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})

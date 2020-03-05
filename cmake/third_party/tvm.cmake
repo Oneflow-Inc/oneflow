@@ -24,4 +24,7 @@ if (THIRD_PARTY)
 
 endif(THIRD_PARTY)
 
+set(TVM_INCLUDE_DIR ${TVM_INSTALL_DIR}/include CACHE PATH "" FORCE)
+list(APPEND TVM_LIBRARIES ${TVM_INSTALL_DIR}/lib/libtvm.so)
+
 endif(WITH_TVM)
