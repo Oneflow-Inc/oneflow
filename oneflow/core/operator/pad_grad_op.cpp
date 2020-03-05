@@ -3,36 +3,34 @@
 
 namespace oneflow {
 
-class PadOp final : public Operator {
+class PadGradOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadOp);
-  PadOp() = default;
-  ~PadOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PadGradOp);
+  PadGradOp() = default;
+  ~PadGradOp() = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_pad_conf());
+    CHECK(op_conf().has_pad_grad_conf());
     EnrollInputBn("in");
     EnrollOutputBn("out");
   }
-
-  const PbMessage& GetCustomizedConf() const override { return op_conf().pad_conf(); }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().pad_grad_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
     out_blob_desc->set_data_type(in_blob_desc->data_type());
+
     DimVector out_shape(in_blob_desc->shape().dim_vec());
-    CHECK_EQ(op_conf().pad_conf().paddings_size() % 2 , 0);
-    const int64_t ndims = op_conf().pad_conf().paddings_size() / 2;
-    CHECK_GE(in_blob_desc->shape().NumAxes(), ndims);
+    const int64_t ndims = op_conf().pad_grad_conf().paddings_size() / 2;
     const int64_t offset = in_blob_desc->shape().NumAxes() - ndims;
     for (int64_t i = 0; i < in_blob_desc->shape().NumAxes(); ++i) {
         if (i >= offset){
           int64_t j = i - offset;
           int64_t padding_before = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2*j);
           int64_t padding_after = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2*j + 1);
-          out_shape[i] = in_blob_desc->shape().At(i) + padding_before + padding_after;
+          out_shape[i] = in_blob_desc->shape().At(i) - padding_before - padding_after;
         }else{
           out_shape[i] = in_blob_desc->shape().At(i);
         }
@@ -59,6 +57,6 @@ class PadOp final : public Operator {
   }
 };
 
-REGISTER_OP(OperatorConf::kPadConf, PadOp);
+REGISTER_OP(OperatorConf::kPadGradConf, PadGradOp);
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/memory_copier.h"
 namespace oneflow {
+
 namespace{
 
   void SetShapeDimVector(const ShapeView& blob_shape, const int64_t ndims, 
@@ -20,11 +21,11 @@ namespace{
 }//namespace
 
 template<DeviceType device_type, typename T>
-class PadKernel final : public KernelIf<device_type> {
+class PadGradKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadKernel);
-  PadKernel() = default;
-  ~PadKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PadGradKernel);
+  PadGradKernel() = default;
+  ~PadGradKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
@@ -34,36 +35,36 @@ class PadKernel final : public KernelIf<device_type> {
     const int32_t constant_value = this->op_conf().pad_conf().constant_value();
     Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), constant_value,
                         out_blob->AlignedByteSizeOfBlobBody());
-    const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(in_blob->data_type()));
-    MemoryCopyNdDesc memory_copy_nd_desc;
-    const int32_t ndims = this->op_conf().pad_conf().paddings_size() / 2;
+    const size_t size_of_data_type = GetSizeOfDataType(in_blob->data_type());
+    const int32_t ndims = this->op_conf().pad_grad_conf().paddings_size() / 2;
 
+    MemoryCopyNdDesc memory_copy_nd_desc;
     DimVector src_shape_vec(ndims);
     DimVector dst_shape_vec(ndims);
     SetShapeDimVector(in_blob->shape(), ndims, size_of_data_type, src_shape_vec);
     SetShapeDimVector(out_blob->shape(), ndims, size_of_data_type, dst_shape_vec);
     memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
     memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-    
-    DimVector dst_pos_vec(ndims) ;
-    for (int64_t i = 0; i < ndims; ++i) {
-        dst_pos_vec[i] = this->op_conf().pad_conf().paddings()[2*i];
-    }
-    dst_pos_vec[ndims - 1] = dst_pos_vec[ndims - 1] * size_of_data_type;
-    DimVector src_pos_vec(ndims, 0);
 
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
+    DimVector src_pos_vec(ndims) ;
+    for (int64_t i = 0; i < ndims; ++i) {
+        src_pos_vec[i] = this->op_conf().pad_grad_conf().paddings()[2*i];
+    }
+    src_pos_vec[ndims - 1] = src_pos_vec[ndims - 1] * size_of_data_type; 
+    DimVector dst_pos_vec(ndims, 0);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
+    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
+    memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->Copy(ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
                                memory_copy_nd_desc);
   }
 };
 
-#define REGISTER_PAD_KERNEL(dev, dtype) \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPadConf, dev, dtype, PadKernel<dev, dtype>)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_PAD_KERNEL(DeviceType::kGPU, double);
+#define REGISTER_PAD_GRAD_KERNEL(dev, dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPadGradConf, dev, dtype, \
+                                        PadGradKernel<dev, dtype>)
+REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float);
+REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace oneflow

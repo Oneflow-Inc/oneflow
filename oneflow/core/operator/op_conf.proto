@@ -331,9 +331,14 @@ message PadOpConf{
   required string out = 2;
   repeated int32 paddings = 3;
   optional int32 constant_value = 4 [default = 0];
-  optional string mode = 5 [default = "constant"];
 }
 
+message PadGradOpConf{
+  required string in = 1;
+  required string out = 2;
+  repeated int32 paddings = 3;
+  optional int32 constant_value = 4 [default = 0];
+}
 
 message SoftmaxOpConf {
   required string in = 1;
@@ -1925,6 +1930,7 @@ message OperatorConf {
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     PadOpConf pad_conf = 440;
+    PadGradOpConf pad_grad_conf = 441;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
