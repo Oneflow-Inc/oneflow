@@ -3,6 +3,10 @@
 
 #include <mutex>
 #include "oneflow/core/vm/vm_instruction.msg.h"
+#include "oneflow/core/vm/vm_stream.msg.h"
+#include "oneflow/core/vm/vm_stream_runtime_desc.msg.h"
+#include "oneflow/core/vm/vm_thread.msg.h"
+#include "oneflow/core/vm/mirrored_object.msg.h"
 
 namespace oneflow {
 
