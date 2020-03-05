@@ -20,14 +20,17 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
+if (WITH_TVM OR WITH_TRT)
+  if (NOT WITH_XLA)
+    include(absl)  # Xrt framework depends on absl, and TensorFlow take certain version of absl as third_party, so exclude WITH_XLA
+  endif()
+endif()
+
 if (WITH_TVM)
   include(tvm)
 endif()
 
 if (WITH_TENSORRT)
-  if (NOT WITH_XLA)
-    include(absl)
-  endif()
   include(tensorrt)
 endif()
 
@@ -199,10 +202,14 @@ if(WITH_XLA)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
-if(WITH_TENSORRT)
+if (WITH_TVM OR WITH_TRT)
   if (NOT WITH_XLA)
+    # Xrt framework depends on absl, and TensorFlow take certain version of absl as third_party, so exclude WITH_XLA
     list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
   endif()
+endif()
+
+if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
