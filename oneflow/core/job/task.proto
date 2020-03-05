@@ -51,6 +51,7 @@ enum TaskType {
   kNcclBoxingAllReduce = 54;
   kDistributeConcat = 55;
   kDistributeSplit = 56;
+  kSliceBoxing = 57;
 };
 
 enum AreaType {
