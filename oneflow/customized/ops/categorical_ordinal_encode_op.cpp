@@ -27,6 +27,16 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* table = GetInputArgModifierFn("table", 0);
+      table->set_is_mutable(true);
+      table->set_requires_grad(false);
+      user_op::InputArgModifier* size = GetInputArgModifierFn("size", 0);
+      size->set_is_mutable(true);
+      size->set_requires_grad(false);
+      user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
+      in->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("table", 0)->has_value());
       CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("size", 0)->has_value());
