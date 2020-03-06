@@ -25,12 +25,15 @@ REGISTER_USER_OP("top_k")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(in_desc.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+      if (num_axes > 1) {
+        SbpSignatureBuilder()
+            .Split(ctx->inputs(), 0)
+            .Split(ctx->outputs(), 0)
+            .MakeSplitSignatureListBuilder(num_axes - 1)
+            .Build(ctx->sbp_sig_list());
+      }
       return Maybe<void>::Ok();
     });
 
