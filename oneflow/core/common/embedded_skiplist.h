@@ -172,6 +172,11 @@ class EmbeddedSkipListHead {
   using value_type = typename ValueLinkField::struct_type;
   using key_link_type = typename ValueLinkField::field_type;
   using key_type = typename key_link_type::key_type;
+  using value_key_level0_link_struct_field =
+      StructField<typename ValueLinkField::field_type, EmbeddedListLink,
+                  ValueLinkField::field_type::LevelZeroLinkOffset()>;
+  using value_level0_link_struct_field =
+      typename ComposeStructField<ValueLinkField, value_key_level0_link_struct_field>::type;
   static const int max_level = key_link_type::max_level;
   template<typename Enabled = void>
   static constexpr int ContainerLevelZeroLinkOffset() {
@@ -191,7 +196,7 @@ class EmbeddedSkipListHead {
     EmbeddedListLink* head_level0 = skiplist_head_.mutable_link(0);
     EmbeddedListLink* begin_list_link = head_level0->next();
     if (begin_list_link == head_level0) { return nullptr; }
-    return ValueLinkField::StructPtr4FieldPtr(key_link_type::ThisPtr4LinkPtr(begin_list_link, 0));
+    return value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_link);
   }
 
   value_type* Find(const key_type& key) {
@@ -227,7 +232,7 @@ class EmbeddedSkipListHead {
       auto* begin = link_type::ThisPtr4LinkPtr(begin_list_link, 0);
       if (begin == &skiplist_head_) { break; }
       begin->Erase();
-      cb(ValueLinkField::StructPtr4FieldPtr(key_link_type::ThisPtr4LinkPtr(begin_list_link, 0)));
+      cb(value_level0_link_struct_field::StructPtr4FieldPtr(begin_list_link));
     }
     CHECK(empty_debug());
   }
