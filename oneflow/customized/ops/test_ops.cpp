@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -164,6 +165,40 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       SbpSignatureBuilder()
           .Split(ctx->outputs(), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
+    .Output("out")
+    .Attr("out_num", UserOpAttrType::kAtInt64)
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      int64_t out_num = ctx->GetAttr<int64_t>("out_num");
+      const ParallelContext& parallel_ctx = ctx->parallel_ctx();
+      BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
+      *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
+
+      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      int64_t parallel_num = ctx->parallel_num();
+      DeviceType device_type = ctx->device_type();
+      if (device_type == DeviceType::kCPU && parallel_num > 1) {
+        SbpSignatureBuilder()
+            .Split(ctx->outputs(), 0)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     });
 
