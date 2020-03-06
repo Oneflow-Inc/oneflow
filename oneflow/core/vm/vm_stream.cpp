@@ -13,7 +13,7 @@ ObjectMsgPtr<VmInstrChainPackage> VmStream::NewVmInstrChainPackage() {
 }
 
 void VmStream::DeleteVmInstrChainPackage(VmInstrChainPackage* vm_instr_chain_pkg) {
-  CHECK(vm_instr_chain_pkg->is_waiting_pkg_link_empty());
+  CHECK(vm_instr_chain_pkg->is_pending_pkg_link_empty());
   mut_running_pkg_list()->MoveToDstBack(vm_instr_chain_pkg, mut_free_pkg_list());
   vm_instr_chain_pkg->__Delete__();
 }

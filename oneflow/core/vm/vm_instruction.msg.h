@@ -113,7 +113,7 @@ OBJECT_MSG_BEGIN(VmInstrChainPackage);
 
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, vm_instr_chain_list);
-  OBJECT_MSG_DEFINE_LIST_LINK(waiting_pkg_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(pending_pkg_link);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_pkg_link);
 OBJECT_MSG_END(VmInstrChainPackage);
 // clang-format on
