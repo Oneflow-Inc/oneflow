@@ -77,5 +77,3 @@ def test_pow(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-
-test_pow(1)
