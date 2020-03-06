@@ -93,6 +93,8 @@ const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
 
 std::vector<std::string> GetAllUserOpInOpRegistry();
 
+static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput";
+
 }  // namespace user_op
 
 }  // namespace oneflow
