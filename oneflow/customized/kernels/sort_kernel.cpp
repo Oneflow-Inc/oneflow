@@ -42,7 +42,7 @@ class CpuSortKernel final : public user_op::OpKernel {
       })                                                                                \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device() == DeviceType::kCPU                                         \
+        return ctx.device_type() == DeviceType::kCPU                                    \
                && out_desc->data_type() == GetDataType<dtype>::value;                   \
       });
 
