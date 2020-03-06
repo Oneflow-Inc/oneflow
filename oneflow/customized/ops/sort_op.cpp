@@ -19,6 +19,8 @@ REGISTER_USER_OP("sort")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      // The current implementation can only do sort in the last dimension and should use Broadcast
+      // (by default) instead of Split for that dimension
       const int32_t num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       if (num_axes > 1) {
