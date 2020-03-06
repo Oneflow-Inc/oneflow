@@ -23,7 +23,7 @@ class NopVmStreamType final : public VmStreamType {
                                  VmInstructionStatusBuffer* status_buffer) const override;
   bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
                                     const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmInstrChainPackage* vm_instr_chain_pkg) const override;
+  void Run(VmInstrChain* vm_instr_chain) const override;
 };
 
 }  // namespace oneflow

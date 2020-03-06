@@ -8,7 +8,7 @@ namespace oneflow {
 class VmStream;
 class ObjectMsgAllocator;
 class VmInstructionStatusBuffer;
-class VmInstrChainPackage;
+class VmInstrChain;
 
 class VmStreamType {
  public:
@@ -20,7 +20,7 @@ class VmStreamType {
                                          VmInstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryVmInstructionStatusDone(
       const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Run(VmInstrChainPackage* vm_instr_chain_pkg) const = 0;
+  virtual void Run(VmInstrChain* vm_instr_chain) const = 0;
 
  protected:
   VmStreamType() = default;

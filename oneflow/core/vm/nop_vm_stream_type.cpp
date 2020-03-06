@@ -38,8 +38,8 @@ ObjectMsgPtr<VmInstructionMsg> NopVmStreamType::Nop() const {
   return vm_instr_msg;
 }
 
-void NopVmStreamType::Run(VmInstrChainPackage* vm_instr_chain_pkg) const {
-  auto* status_buffer = vm_instr_chain_pkg->mut_status_buffer();
+void NopVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
+  auto* status_buffer = vm_instr_chain->mut_status_buffer();
   NaiveVmInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 

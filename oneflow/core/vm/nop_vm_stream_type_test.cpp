@@ -45,9 +45,7 @@ void TestNopVmStreamTypeNoArgument(
   ASSERT_TRUE(vm_thread != nullptr);
   auto* vm_stream = vm_thread->mut_vm_stream_list()->Begin();
   ASSERT_TRUE(vm_stream != nullptr);
-  auto* vm_instr_chain_pkg = vm_stream->mut_running_pkg_list()->Begin();
-  ASSERT_TRUE(vm_instr_chain_pkg != nullptr);
-  auto* vm_instr_chain = vm_instr_chain_pkg->mut_vm_instr_chain_list()->Begin();
+  auto* vm_instr_chain = vm_stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(vm_instr_chain != nullptr);
   auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
   ASSERT_TRUE(vm_instruction != nullptr);
@@ -96,10 +94,7 @@ void TestNopVmStreamTypeOneArgument(
   ASSERT_TRUE(vm_thread != nullptr);
   auto* vm_stream = vm_thread->mut_vm_stream_list()->Begin();
   ASSERT_TRUE(vm_stream != nullptr);
-  auto* vm_instr_chain_pkg = vm_stream->mut_running_pkg_list()->Begin();
-  ASSERT_TRUE(vm_instr_chain_pkg != nullptr);
-  ASSERT_EQ(vm_instr_chain_pkg->mut_vm_instr_chain_list()->size(), 1);
-  auto* vm_instr_chain = vm_instr_chain_pkg->mut_vm_instr_chain_list()->Begin();
+  auto* vm_instr_chain = vm_stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(vm_instr_chain != nullptr);
   ASSERT_EQ(vm_instr_chain->out_edges().size(), 1);
   auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();

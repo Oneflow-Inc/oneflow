@@ -19,9 +19,7 @@ class InvalidVmStreamType final : public VmStreamType {
     UNIMPLEMENTED();
     return nullptr;
   }
-  void Run(VmStream* vm_stream, VmInstrChainPackage* vm_instr_chain_pkg) const override {
-    UNIMPLEMENTED();
-  }
+  void Run(VmStream* vm_stream, VmInstrChain* vm_instr_chain) const override { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
