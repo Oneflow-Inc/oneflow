@@ -58,7 +58,6 @@ OBJECT_MSG_BEGIN(MirroredObject);
       OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(maybe_available_access_link);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
 OBJECT_MSG_END(MirroredObject);

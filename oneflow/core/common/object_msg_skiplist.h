@@ -185,7 +185,7 @@ class TrivialObjectMsgSkipList {
 
   std::size_t size() const { return skiplist_head_.size(); }
   bool empty() const { return skiplist_head_.empty(); }
-
+  value_type* Begin() { return skiplist_head_.Begin(); }
   ObjectMsgPtr<value_type> Find(const key_type& key) {
     ObjectMsgPtr<value_type> ret;
     ret.Reset(skiplist_head_.Find(key));

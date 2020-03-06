@@ -187,6 +187,13 @@ class EmbeddedSkipListHead {
   std::size_t size() const { return size_; }
   bool empty() const { return size_ == 0; }
 
+  value_type* Begin() {
+    EmbeddedListLink* head_level0 = skiplist_head_.mutable_link(0);
+    EmbeddedListLink* begin_list_link = head_level0->next();
+    if (begin_list_link == head_level0) { return nullptr; }
+    return ValueLinkField::StructPtr4FieldPtr(key_link_type::ThisPtr4LinkPtr(begin_list_link, 0));
+  }
+
   value_type* Find(const key_type& key) {
     auto* key_link_ptr = key_link_type::Find(key, &skiplist_head_, size_shift());
     if (key_link_ptr == nullptr) { return nullptr; }
