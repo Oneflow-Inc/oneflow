@@ -37,7 +37,6 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
   // collapse contiguous dims who slice defautly (slice whole dim),
   // that it can reduce params.ndims thus reduce loop numbers in cuda kernel
   bool do_slice_on_prev_axis = false;
-  params.ndims = 0;
   for (int64_t i = 0; i < entire->shape().NumAxes(); ++i) {
     int64_t begin =
         has_begin_vec[i] ? RegulateSliceIndex(begin_vec.at(i), entire->shape().At(i)) : 0;
