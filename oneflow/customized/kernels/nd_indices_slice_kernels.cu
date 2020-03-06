@@ -1,6 +1,7 @@
 // #include "oneflow/core/framework/framework.h"
 // #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/customized/kernels/nd_indices_slice_util.h"
+#include "oneflow/core/kernel/util/cuda_kernel_util.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ struct ScatterNdOnDevice<DeviceType::kGPU, T, I, Opt> {
 
 template<typename T>
 struct ScatterNdAddOpt<DeviceType::kGPU, T> {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y = *x; }
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
 };
 
 template<typename T, typename I>
