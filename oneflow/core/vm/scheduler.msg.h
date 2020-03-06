@@ -26,7 +26,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
   OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
 
   //links
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, waiting_msg_list);
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, waiting_vm_instr_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, active_vm_stream_link, active_vm_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmThread, vm_thread_link, vm_thread_list);
@@ -37,7 +37,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
   // methods
  private:
   using ReadyVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
-  using TmpWaitingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
+  using TmpPendingVmInstrMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
   using NewVmInstrChainList = OBJECT_MSG_LIST(VmInstrChain, vm_instr_chain_link);
   using WaitingVmInstrChainList = VmScheduler::waiting_vm_instr_chain_list_ObjectMsgListType;
   using Id2LogicalObject = VmScheduler::id2logical_object_ObjectMsgSkipListType;
@@ -49,8 +49,8 @@ OBJECT_MSG_BEGIN(VmScheduler);
                                   /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void TryReleaseFinishedVmInstrChainPackages(
           VmStream* vm_stream, /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
-  void FilterAndRunControlVmInstructions(TmpWaitingVmInstrMsgList* vm_instr_msg_list);
-  void MakeVmInstruction(TmpWaitingVmInstrMsgList* vm_instr_msg_list,
+  void FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list);
+  void MakeVmInstruction(TmpPendingVmInstrMsgList* vm_instr_msg_list,
                          /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list);
   MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
                                      const LogicalObjectId& logical_object_id, int64_t parallel_id);

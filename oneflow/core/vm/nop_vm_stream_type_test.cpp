@@ -34,11 +34,11 @@ void TestNopVmStreamTypeNoArgument(
   VmInstructionMsgList list;
   auto nop_vm_instr_msg = NopVmStreamType().Nop();
   list.PushBack(nop_vm_instr_msg.Mutable());
-  ASSERT_TRUE(scheduler->waiting_msg_list().empty());
+  ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
-  ASSERT_EQ(scheduler->waiting_msg_list().size(), 1);
+  ASSERT_EQ(scheduler->pending_msg_list().size(), 1);
   scheduler->Schedule();
-  ASSERT_TRUE(scheduler->waiting_msg_list().empty());
+  ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_EQ(scheduler->waiting_vm_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_vm_stream_list().size(), 1);
   auto* vm_thread = scheduler->mut_vm_thread_list()->Begin();
@@ -85,11 +85,11 @@ void TestNopVmStreamTypeOneArgument(
       ->mutable_mutable_operand()
       ->set_value(symbol_value);
   list.PushBack(nop1_vm_instr_msg.Mutable());
-  ASSERT_TRUE(scheduler->waiting_msg_list().empty());
+  ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
-  ASSERT_EQ(scheduler->waiting_msg_list().size(), 3);
+  ASSERT_EQ(scheduler->pending_msg_list().size(), 3);
   scheduler->Schedule();
-  ASSERT_TRUE(scheduler->waiting_msg_list().empty());
+  ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_EQ(scheduler->waiting_vm_instr_chain_list().size(), 1);
   ASSERT_EQ(scheduler->active_vm_stream_list().size(), 1);
   auto* vm_thread = scheduler->mut_vm_thread_list()->Begin();

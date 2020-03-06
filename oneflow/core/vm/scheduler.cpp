@@ -52,7 +52,7 @@ void VmScheduler::TryReleaseFinishedVmInstrChainPackages(
   }
 }
 
-void VmScheduler::FilterAndRunControlVmInstructions(TmpWaitingVmInstrMsgList* vm_instr_msg_list) {
+void VmScheduler::FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list) {
   ControlVmStreamType control_vm_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     const VmStreamTypeId vm_stream_type_id =
@@ -63,7 +63,7 @@ void VmScheduler::FilterAndRunControlVmInstructions(TmpWaitingVmInstrMsgList* vm
   }
 }
 
-void VmScheduler::MakeVmInstruction(TmpWaitingVmInstrMsgList* vm_instr_msg_list,
+void VmScheduler::MakeVmInstruction(TmpPendingVmInstrMsgList* vm_instr_msg_list,
                                     /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
@@ -185,7 +185,7 @@ void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_ch
     vm_stream->mut_collect_vm_instr_chain_list()->MoveTo(pkg->mut_vm_instr_chain_list());
     vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
     if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
-    vm_stream->mut_vm_thread()->mut_waiting_pkg_list()->EmplaceBack(std::move(pkg));
+    vm_stream->mut_vm_thread()->mut_pending_pkg_list()->EmplaceBack(std::move(pkg));
   }
 }
 
@@ -212,7 +212,7 @@ void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator)
 }
 
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
-  mut_waiting_msg_list()->MoveFrom(vm_instr_list);
+  mut_pending_msg_list()->MoveFrom(vm_instr_list);
 }
 
 void VmScheduler::Schedule() {
@@ -223,12 +223,12 @@ void VmScheduler::Schedule() {
     if (vm_stream->running_pkg_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
   };
   auto* waiting_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
-  if (waiting_msg_list().size() > 0) {
-    TmpWaitingVmInstrMsgList tmp_waiting_msg_list;
-    mut_waiting_msg_list()->MoveTo(&tmp_waiting_msg_list);
-    FilterAndRunControlVmInstructions(&tmp_waiting_msg_list);
+  if (pending_msg_list().size() > 0) {
+    TmpPendingVmInstrMsgList tmp_pending_msg_list;
+    mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
+    FilterAndRunControlVmInstructions(&tmp_pending_msg_list);
     NewVmInstrChainList new_vm_instr_chain_list;
-    MakeVmInstruction(&tmp_waiting_msg_list, /*out*/ &new_vm_instr_chain_list);
+    MakeVmInstruction(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list,
                            /*out*/ &ready_vm_instr_chain_list);
     new_vm_instr_chain_list.MoveTo(waiting_vm_instr_chain_list);
