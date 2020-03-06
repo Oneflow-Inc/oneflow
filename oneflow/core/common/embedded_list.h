@@ -179,6 +179,7 @@ class EmbeddedListHead {
     EmbeddedListLink* prev_list_link = LinkField::FieldPtr4StructPtr(prev_elem);
     EmbeddedListLink* next_list_link = prev_list_link->next();
     EmbeddedListLink* new_list_link = LinkField::FieldPtr4StructPtr(new_elem);
+    CHECK(new_list_link->empty());
     new_list_link->AppendTo(prev_list_link);
     next_list_link->AppendTo(new_list_link);
     ++size_;

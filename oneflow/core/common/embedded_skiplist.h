@@ -29,6 +29,7 @@ struct EmbeddedSkipListLink final {
     for (auto& link : links_) { link.NullptrClear(); }
   }
   void InsertAfter(EmbeddedSkipListLink* prev_skiplist_link, int levels) {
+    CHECK(empty());
     EmbeddedListLink* prev_link = &prev_skiplist_link->links_[0];
     int i = 0;
     for (; i < levels; ++i, ++prev_link) {

@@ -10,6 +10,7 @@ void VmInstrChain::__Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream)
   set_vm_stream(vm_stream);
   auto vm_instruction = ObjectMsgPtr<VmInstruction>::NewFrom(mut_allocator(), this, vm_instr_msg);
   mut_vm_instruction_list()->EmplaceBack(std::move(vm_instruction));
+  CHECK_EQ(vm_instruction_list().size(), 1);
 }
 
 void VmInstrChainPackage::__Init__(VmStream* vm_stream) {
