@@ -70,7 +70,7 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
   return params;
 }
 
-__device__ __forceinline__ void OffsetToIndices(const int64_t offset, const int64_t ndims,
+__device__ __forceinline__ void OffsetToNdIndex(const int64_t offset, const int64_t ndims,
                                                 const int64_t* dims, int64_t* indices) {
   int64_t divisor = offset;
 #pragma unroll
@@ -80,7 +80,7 @@ __device__ __forceinline__ void OffsetToIndices(const int64_t offset, const int6
   }
 }
 
-__device__ __forceinline__ int64_t IndicesToOffset(const int64_t ndims, const int64_t* dims,
+__device__ __forceinline__ int64_t NdIndexToOffset(const int64_t ndims, const int64_t* dims,
                                                    const int64_t* indices) {
   int64_t offset = 0;
   int64_t product = 1;
@@ -94,30 +94,30 @@ __device__ __forceinline__ int64_t IndicesToOffset(const int64_t ndims, const in
 
 template<typename T>
 __global__ void SliceForwardGpu(const int n, SliceGpuParams params, const T* entire, T* part) {
-  int64_t dim_indices[kSliceMaxDims];
+  int64_t nd_index[kSliceMaxDims];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    OffsetToIndices(i, params.ndims, params.sliced_dims, dim_indices);
+    OffsetToNdIndex(i, params.ndims, params.sliced_dims, nd_index);
 #pragma unroll
     for (int64_t i = 0; i < params.ndims; ++i) {
-      dim_indices[i] = params.begin[i] + params.stride[i] * dim_indices[i];
-      assert(dim_indices[i] < params.dims[i]);
+      nd_index[i] = params.begin[i] + params.stride[i] * nd_index[i];
+      assert(nd_index[i] < params.dims[i]);
     }
-    int64_t offset = IndicesToOffset(params.ndims, params.dims, dim_indices);
+    int64_t offset = NdIndexToOffset(params.ndims, params.dims, nd_index);
     part[i] = entire[offset];
   }
 }
 
 template<typename T>
 __global__ void SliceBackwardGpu(const int n, SliceGpuParams params, const T* part, T* entire) {
-  int64_t dim_indices[kSliceMaxDims];
+  int64_t nd_index[kSliceMaxDims];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    OffsetToIndices(i, params.ndims, params.sliced_dims, dim_indices);
+    OffsetToNdIndex(i, params.ndims, params.sliced_dims, nd_index);
 #pragma unroll
     for (int64_t i = 0; i < params.ndims; ++i) {
-      dim_indices[i] = params.begin[i] + params.stride[i] * dim_indices[i];
-      assert(dim_indices[i] < params.dims[i]);
+      nd_index[i] = params.begin[i] + params.stride[i] * nd_index[i];
+      assert(nd_index[i] < params.dims[i]);
     }
-    int64_t offset = IndicesToOffset(params.ndims, params.dims, dim_indices);
+    int64_t offset = NdIndexToOffset(params.ndims, params.dims, nd_index);
     entire[offset] = part[i];
   }
 }
