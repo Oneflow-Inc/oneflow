@@ -13,10 +13,16 @@ typedef struct {
 	float dy;
 }stBinary;
 
-__device__ void PowCallInDiff4GpuFloat(float x, float y, float dz, float& dx, float& dy)
+__device__ void PowCallInDiff4GpuFloat(float x, float y, float dz, float& dtmp, bool flag=true)
 {
-	dx = dz * y * (powf(x, y-1));
-	dy = dz * logf(x) * (powf(x, y));
+	if(flag)
+	{
+		dtmp = dz * y * (powf(x, y-1));
+	}
+	else
+	{
+		dtmp = dz * logf(x) * (powf(x, y));
+	}	
 }
 
 // __device__ stBinary PowCallInDiff4GpuFloat(float x, float y, float dz)
@@ -39,21 +45,35 @@ __device__ void PowCallInDiff4GpuFloat(float x, float y, float dz, float& dx, fl
 	  CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                                                         \
 	  func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);                \
   }                                                                                                                                  \
-  __global__ void func_name##BackwardGpu(const int n, const dtype* x, const dtype* y, const dtype* dz, dtype* dx, dtype* dy){        \
+  __global__ void func_name##XBackwardGpu(const int n, const dtype* x, const dtype* y, const dtype* dz, dtype* dx){                  \
 	   CUDA_1D_KERNEL_LOOP(i, n){    																								 \
-	       bw_func(x[i], y[i], dz[i], dx[i], dy[i]);                                                                                 \
+	       bw_func(x[i], y[i], dz[i], dx[i]);                                                                                        \
 	   }                                                                                                                             \
   }                                                                                                                                  \
-  void func_name##Backward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y, const Tensor* tensor_dz,                  \
-                          Tensor* tensor_dx, Tensor* tensor_dy) {                                                                    \
+  void func_name##XBackward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y, const Tensor* tensor_dz,                 \
+                          Tensor* tensor_dx) {                                                                                       \
 	  const dtype* x = tensor_x->dptr<dtype>();                                                                                      \
 	  const dtype* y = tensor_y->dptr<dtype>();                                                                                      \
 	  const dtype* dz = tensor_dz->dptr<dtype>();                                                                                    \
 	  dtype* dx = tensor_dx->mut_dptr<dtype>();                                                                                      \
-	  dtype* dy = tensor_dy->mut_dptr<dtype>();                                                                                      \
 	  int64_t n = tensor_x->shape().elem_cnt();                                                                                      \
 	  CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                                                         \
-	  func_name##BackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, dz, dx, dy);      \
+	  func_name##XBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, dz, dx);         \
+  }																																	 \
+  __global__ void func_name##YBackwardGpu(const int n, const dtype* x, const dtype* y, const dtype* dz, dtype* dy){                  \
+	CUDA_1D_KERNEL_LOOP(i, n){    																								     \
+		bw_func(x[i], y[i], dz[i], dy[i], false);                                                                                    \
+	}                                                                                                                                \
+  }                                                                                                                                  \
+  void func_name##YBackward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y, const Tensor* tensor_dz,                 \
+					   Tensor* tensor_dy) {                                                                                          \
+      const dtype* x = tensor_x->dptr<dtype>();                                                                                      \
+      const dtype* y = tensor_y->dptr<dtype>();                                                                                      \
+      const dtype* dz = tensor_dz->dptr<dtype>();                                                                                    \
+      dtype* dy = tensor_dy->mut_dptr<dtype>();                                                                                      \
+      int64_t n = tensor_x->shape().elem_cnt();                                                                                      \
+      CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                                                         \
+      func_name##YBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, dz, dy);         \
   }
 	  
      
@@ -98,12 +118,12 @@ REGISTER_USER_KERNEL("binary")
 		return false;
 	});
 	
-class MathBinaryGradGpuFloatKernel final : public OpKernel 
+class MathBinaryXGradGpuFloatKernel final : public OpKernel 
 {
 public:
-	MathBinaryGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
-	MathBinaryGradGpuFloatKernel() = default;
-	~MathBinaryGradGpuFloatKernel() = default;
+	MathBinaryXGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+	MathBinaryXGradGpuFloatKernel() = default;
+	~MathBinaryXGradGpuFloatKernel() = default;
 	
 private:
     void Compute(KernelContext* ctx) override 
@@ -112,12 +132,11 @@ private:
         const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
         const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
         Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-        Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
         std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");	
         
 #define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                                       \
  if(binary_math_type == binary_math_type_str){                                                             \
-	 func_name_prefix##Backward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx, tensor_dy);   \
+	 func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx);             \
  }																				   
  
   OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
@@ -125,8 +144,41 @@ private:
   }
 };
 
-REGISTER_USER_KERNEL("binary_grad")
-    .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryGradGpuFloatKernel(ctx); })
+class MathBinaryYGradGpuFloatKernel final : public OpKernel 
+{
+public:
+	MathBinaryYGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+	MathBinaryYGradGpuFloatKernel() = default;
+	~MathBinaryYGradGpuFloatKernel() = default;
+	
+private:
+    void Compute(KernelContext* ctx) override 
+    {
+        const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+        const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+        const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
+        Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+        std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");	
+        
+#define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                                       \
+ if(binary_math_type == binary_math_type_str){                                                             \
+	 func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy);             \
+ }																				   
+ 
+  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+#undef MATH_BINARY_FORWARD
+  }
+};
+
+REGISTER_USER_KERNEL("binary_x_grad")
+    .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryXGradGpuFloatKernel(ctx); })
+    .SetIsMatchedPred([](const KernelRegContext& ctx) {
+      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      return false;
+	});
+	
+REGISTER_USER_KERNEL("binary_y_grad")
+    .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryYGradGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
       return false;
