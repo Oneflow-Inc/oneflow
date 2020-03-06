@@ -109,7 +109,9 @@ void VmScheduler::ConnectVmInstruction(VmInstrChain* src_vm_instr_chain,
 void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                          NewVmInstrChainList* new_vm_instr_chain_list,
                                          /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
+  auto* begin = new_vm_instr_chain_list->Begin();
+  if (begin != nullptr) { CHECK_EQ(begin->vm_instruction_list().size(), 1); }
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
     int64_t parallel_id = vm_instr_chain->vm_stream().vm_stream_id().parallel_id();
     CHECK_EQ(vm_instr_chain->vm_instruction_list().size(), 1);
     auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
@@ -156,7 +158,9 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         }
       }
     }
-    if (vm_instr_chain->in_edges().empty()) { ready_vm_instr_chain_list->PushBack(vm_instr_chain); }
+    if (vm_instr_chain->in_edges().empty()) {
+      new_vm_instr_chain_list->MoveToDstBack(vm_instr_chain, ready_vm_instr_chain_list);
+    }
   }
 }
 
