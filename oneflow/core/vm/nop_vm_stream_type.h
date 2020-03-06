@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_HOST_VM_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_HOST_VM_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_NOP_VM_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_NOP_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/vm_stream_type.h"
 
@@ -8,15 +8,14 @@ namespace oneflow {
 class VmScheduler;
 class VmInstructionMsg;
 
-class HostVmStreamType final : public VmStreamType {
+class NopVmStreamType final : public VmStreamType {
  public:
-  HostVmStreamType() = default;
-  ~HostVmStreamType() = default;
+  NopVmStreamType() = default;
+  ~NopVmStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 2;
+  static const VmStreamTypeId kVmStreamTypeId = 1;
 
-  ObjectMsgPtr<VmInstructionMsg> CudaMallocHost(uint64_t symbol, size_t size) const;
-  ObjectMsgPtr<VmInstructionMsg> CudaFreeHost(uint64_t symbol) const;
+  ObjectMsgPtr<VmInstructionMsg> Nop() const;
 
   void InitVmInstructionStatus(const VmStream& vm_stream,
                                VmInstructionStatusBuffer* status_buffer) const override;
@@ -29,4 +28,4 @@ class HostVmStreamType final : public VmStreamType {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_HOST_VM_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_NOP_VM_STREAM_TYPE_H_

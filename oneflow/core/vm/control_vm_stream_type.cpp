@@ -65,7 +65,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewMirroredObjectSymbol(
     const LogicalObjectId& logical_object_id, int64_t parallel_num) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kControlVmStreamTypeId);
+  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kNewMirroredObjectSymbol);
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
@@ -97,11 +97,13 @@ FLAT_MSG_VIEW_BEGIN(DeleteMirroredObjectSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(DeleteMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
+const VmStreamTypeId ControlVmStreamType::kVmStreamTypeId;
+
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kControlVmStreamTypeId);
+  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());

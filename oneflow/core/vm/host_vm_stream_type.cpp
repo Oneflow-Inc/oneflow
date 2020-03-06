@@ -11,8 +11,6 @@ namespace oneflow {
 
 namespace {
 
-static const VmStreamTypeId kHostVmStreamTypeId = 1;
-
 enum HostInstrOpCode { kCudaMallocHostOpcode = 0, kCudaFreeHostOpcode };
 
 typedef void (*HostInstrFunc)(VmInstruction*);
@@ -86,6 +84,8 @@ REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, VmCudaFreeHost);
 
 }  // namespace
 
+const VmStreamTypeId HostVmStreamType::kVmStreamTypeId;
+
 void HostVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
                                                VmInstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveVmInstrStatusQuerier) < kVmInstructionStatusBufferLength, "");
@@ -106,7 +106,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
                                                                 size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kHostVmStreamTypeId);
+  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
@@ -120,7 +120,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
 ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kHostVmStreamTypeId);
+  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
@@ -140,5 +140,7 @@ void HostVmStreamType::Run(VmInstrChainPackage* vm_instr_chain_pkg) const {
   auto* status_buffer = vm_instr_chain_pkg->mut_status_buffer();
   NaiveVmInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
+
+COMMAND(RegisterVmStreamType<HostVmStreamType>());
 
 }  // namespace oneflow

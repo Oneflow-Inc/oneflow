@@ -28,6 +28,10 @@ class VmStreamType {
 
 const VmStreamType* LookupVmStreamType(VmStreamTypeId);
 void RegisterVmStreamType(VmStreamTypeId, const VmStreamType*);
+template<typename T>
+void RegisterVmStreamType() {
+  RegisterVmStreamType(T::kVmStreamTypeId, new T());
+}
 
 }  // namespace oneflow
 
