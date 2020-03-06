@@ -37,7 +37,7 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
   // collapse contiguous dims who slice defautly (slice whole dim),
   // that it can reduce params.ndims thus reduce loop numbers in cuda kernel
   bool do_slice_on_prev_axis = false;
-  params.ndims = -1;
+  params.ndims = 0;
   for (int64_t i = 0; i < entire->shape().NumAxes(); ++i) {
     int64_t begin =
         has_begin_vec[i] ? RegulateSliceIndex(begin_vec.at(i), entire->shape().At(i)) : 0;
@@ -53,22 +53,20 @@ SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_o
     // default slice (slice whole dim) dim can be collapsed to prev dim
     bool do_slice_on_cur_axis = (begin != 0) || (end != entire->shape().At(i)) || (stride != 1);
     if (i != 0 && !do_slice_on_prev_axis && !do_slice_on_cur_axis) {
-      params.dims[params.ndims] *= entire->shape().At(i);
-      params.sliced_dims[params.ndims] *= sliced->shape().At(i);
-      params.begin[params.ndims] = 0;
-      params.end[params.ndims] = params.dims[params.ndims];
-      params.stride[params.ndims] = 1;
+      int64_t cur_idx = params.ndims - 1;
+      params.dims[cur_idx] *= entire->shape().At(i);
+      params.sliced_dims[cur_idx] *= sliced->shape().At(i);
+      params.end[cur_idx] = params.dims[cur_idx];
     } else {
-      params.ndims += 1;
       params.dims[params.ndims] = entire->shape().At(i);
       params.sliced_dims[params.ndims] = sliced->shape().At(i);
       params.begin[params.ndims] = begin;
       params.end[params.ndims] = end;
       params.stride[params.ndims] = stride;
+      params.ndims += 1;
     }
     do_slice_on_prev_axis = do_slice_on_cur_axis;
   }
-  params.ndims += 1;
   return params;
 }
 
