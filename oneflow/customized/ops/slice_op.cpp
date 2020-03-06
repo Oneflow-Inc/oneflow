@@ -97,7 +97,7 @@ REGISTER_USER_OP("slice_grad_v2")
       CHECK_EQ_OR_RETURN(like_shape->NumAxes(), stride_vec.size());
       CHECK_EQ_OR_RETURN(begin_vec.size(), has_begin_vec.size());
       CHECK_EQ_OR_RETURN(end_vec.size(), has_end_vec.size());
-      const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+      const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("dx", 0);
       if (ctx->parallel_ctx().parallel_num() != 1 && dx_sbp.has_split_parallel()
           && dx_sbp.split_parallel().axis() == 0) {
         CHECK_EQ_OR_RETURN(has_begin_vec[0], 0);

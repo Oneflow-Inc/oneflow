@@ -178,7 +178,7 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
       })                                                                              \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);   \
-        if (ctx.device() == DeviceType::kGPU                                          \
+        if (ctx.device_type() == DeviceType::kGPU                                     \
             && y_desc->data_type() == GetDataType<dtype>::value) {                    \
           return true;                                                                \
         }                                                                             \
@@ -190,7 +190,7 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
       })                                                                              \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        if (ctx.device() == DeviceType::kGPU                                          \
+        if (ctx.device_type() == DeviceType::kGPU                                     \
             && dx_desc->data_type() == GetDataType<dtype>::value) {                   \
           return true;                                                                \
         }                                                                             \
