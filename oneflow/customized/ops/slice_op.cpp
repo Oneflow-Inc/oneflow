@@ -63,8 +63,7 @@ REGISTER_USER_OP("slice_v2")
       auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       FOR_RANGE(int64_t, axis, 0, num_axes) {
-        if (ctx->parallel_num() == 1
-            || (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1)) {
+        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           SbpSignatureBuilder()
               .Split("x", 0, axis)
               .Split("y", 0, axis)
@@ -121,8 +120,7 @@ REGISTER_USER_OP("slice_grad_v2")
       auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       FOR_RANGE(int64_t, axis, 0, num_axes) {
-        if (ctx->parallel_num() == 1
-            || (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1)) {
+        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           SbpSignatureBuilder()
               .Split("dy", 0, axis)
               .Split("like", 0, axis)
