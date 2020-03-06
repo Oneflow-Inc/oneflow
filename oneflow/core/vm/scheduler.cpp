@@ -94,7 +94,12 @@ void VmScheduler::ConsumeMirroredObject(OperandAccessType access_type,
   bool is_const_operand = (access_type == kConstOperandAccess);
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
       vm_instruction->mut_allocator(), vm_instruction, mirrored_object, is_const_operand);
-  vm_instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable());
+  bool success = vm_instruction->mut_mirrored_object_id2access()
+                     ->Insert(mirrored_object_access.Mutable())
+                     .second;
+  if (success) {
+    mirrored_object->mut_access_list()->EmplaceBack(std::move(mirrored_object_access));
+  }
 }
 
 void VmScheduler::ConnectVmInstruction(VmInstrChain* src_vm_instr_chain,
