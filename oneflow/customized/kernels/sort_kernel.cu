@@ -43,7 +43,7 @@ class GpuSortKernel final : public user_op::OpKernel {
       })                                                                                    \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                 \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device() == DeviceType::kGPU                                             \
+        return ctx.device_type() == DeviceType::kGPU                                        \
                && out_desc->data_type() == GetDataType<dtype>::value;                       \
       })                                                                                    \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                          \
