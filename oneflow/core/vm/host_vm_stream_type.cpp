@@ -88,7 +88,7 @@ const VmStreamTypeId HostVmStreamType::kVmStreamTypeId;
 
 void HostVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
                                                VmInstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(NaiveVmInstrStatusQuerier) < kVmInstructionStatusBufferLength, "");
+  static_assert(sizeof(NaiveVmInstrStatusQuerier) < kVmInstructionStatusBufferBytes, "");
   NaiveVmInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 

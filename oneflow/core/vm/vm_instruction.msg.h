@@ -70,14 +70,25 @@ OBJECT_MSG_BEGIN(VmInstruction);
 OBJECT_MSG_END(VmInstruction);
 // clang-format on
 
+static const int kVmInstructionStatusBufferBytes = 32;
+// clang-format off
+FLAT_MSG_BEGIN(VmInstructionStatusBuffer);
+  FLAT_MSG_DEFINE_REPEATED(char, buffer, kVmInstructionStatusBufferBytes);
+FLAT_MSG_END(VmInstructionStatusBuffer);
+// clang-format on
+
 class VmStream;
 // clang-format off
 OBJECT_MSG_BEGIN(VmInstrChain);
   // methods
   PUBLIC void __Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream);
+  PUBLIC void __Delete__();
+  PUBLIC bool Done() const;
 
   // fields
+  OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionStatusBuffer, status_buffer);
   OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
+  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
@@ -85,14 +96,6 @@ OBJECT_MSG_BEGIN(VmInstrChain);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, src_vm_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, dst_vm_instr_chain, out_edges);
 OBJECT_MSG_END(VmInstrChain);
-// clang-format on
-
-static const int kVmInstructionStatusBufferLength = 1024;
-
-// clang-format off
-FLAT_MSG_BEGIN(VmInstructionStatusBuffer);
-  FLAT_MSG_DEFINE_REPEATED(char, buffer, kVmInstructionStatusBufferLength);
-FLAT_MSG_END(VmInstructionStatusBuffer);
 // clang-format on
 
 // clang-format off
