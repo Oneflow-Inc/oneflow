@@ -1,10 +1,11 @@
 #ifndef ONEFLOW_CORE_RECORD_ONEREC_READER_H_
 #define ONEFLOW_CORE_RECORD_ONEREC_READER_H_
 
-#include <onerec/example_generated.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/common/buffer.h"
+#include "oneflow/core/record/example_generated.h"
+
 
 namespace oneflow {
 

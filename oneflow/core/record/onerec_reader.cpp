@@ -1,6 +1,5 @@
 #include "oneflow/core/record/onerec_reader.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include <onerec/example_generated.h>
 
 #define XXH_NAMESPACE LZ4_
 #include <xxhash.h>
