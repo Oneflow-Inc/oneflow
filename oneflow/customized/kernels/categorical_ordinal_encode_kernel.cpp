@@ -27,14 +27,14 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device_type, proto_type, cpp_type) \
-  REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                                    \
-      .SetCreateFn([](const user_op::KernelInitContext& ctx) {                        \
-        return new CategoricalOrdinalEncodeKernel<device_type, cpp_type>(ctx);        \
-      })                                                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0);      \
-        return ctx.device() == device_type && in->data_type() == proto_type;          \
+#define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
+  REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
+      .SetCreateFn([](const user_op::KernelInitContext& ctx) {                   \
+        return new CategoricalOrdinalEncodeKernel<device, cpp_type>(ctx);        \
+      })                                                                         \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {               \
+        const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
+        return ctx.device_type() == device && in->data_type() == proto_type;     \
       });
 
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);

@@ -9,7 +9,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Output("out")
     .Attr("hash_precomputed", UserOpAttrType::kAtBool)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // TODO(liujuncheng): CHECK(parallel_num == 1)
+      CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);
       const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
       CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
       CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
@@ -43,7 +43,10 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->parallel_num(), 1);
+      return Maybe<void>::Ok();
+    })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       CHECK_OR_RETURN(op_conf.attr<bool>("hash_precomputed"));
