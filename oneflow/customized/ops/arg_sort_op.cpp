@@ -19,8 +19,8 @@ REGISTER_USER_OP("arg_sort")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // The current implementation can only do arg_sort in the last dimension and should use Broadcast
-      // (by default) instead of Split for that dimension
+      // The current implementation can only do arg_sort in the last dimension and should use
+      // Broadcast (by default) instead of Split for that dimension
       const int32_t num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       if (num_axes > 1) {

@@ -99,7 +99,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
       })                                                                                         \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                      \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
-        return ctx.device() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") > 128               \
+        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") > 128          \
                && in_desc->data_type() == GetDataType<dtype>::value;                             \
       })                                                                                         \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
