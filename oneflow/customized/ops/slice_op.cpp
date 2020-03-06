@@ -26,6 +26,14 @@ REGISTER_USER_OP("slice_v2")
       CHECK_EQ_OR_RETURN(begin_vec.size(), has_begin_vec.size());
       CHECK_EQ_OR_RETURN(end_vec.size(), has_end_vec.size());
 
+      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+      if (ctx->parallel_ctx().parallel_num() != 1 && out_sbp.has_split_parallel()
+          && out_sbp.split_parallel().axis() == 0) {
+        CHECK_EQ_OR_RETURN(has_begin_vec[0], 0);
+        CHECK_EQ_OR_RETURN(has_end_vec[0], 0);
+        CHECK_EQ_OR_RETURN(stride_vec[0], 1);
+      }
+
       DimVector dim_vec(in_shape->NumAxes());
       FOR_RANGE(size_t, i, 0, dim_vec.size()) {
         int64_t begin = has_begin_vec[i] ? RegulateSliceIndex(begin_vec[i], in_shape->At(i)) : 0;
@@ -46,25 +54,25 @@ REGISTER_USER_OP("slice_v2")
         dim_vec[i] = (end - begin + align) / stride + 1;
       }
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .PartialSum(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      FOR_RANGE(int64_t, axis, 0, num_axes) {
+        if (ctx->parallel_num() == 1
+            || (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1)) {
+          SbpSignatureBuilder()
+              .Split("x", 0, axis)
+              .Split("y", 0, axis)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
+      SbpSignatureBuilder().PartialSum("x", 0).PartialSum("y", 0).Build(
+          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -89,10 +97,14 @@ REGISTER_USER_OP("slice_grad_v2")
       CHECK_EQ_OR_RETURN(like_shape->NumAxes(), stride_vec.size());
       CHECK_EQ_OR_RETURN(begin_vec.size(), has_begin_vec.size());
       CHECK_EQ_OR_RETURN(end_vec.size(), has_end_vec.size());
+      const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+      if (ctx->parallel_ctx().parallel_num() != 1 && dx_sbp.has_split_parallel()
+          && dx_sbp.split_parallel().axis() == 0) {
+        CHECK_EQ_OR_RETURN(has_begin_vec[0], 0);
+        CHECK_EQ_OR_RETURN(has_end_vec[0], 0);
+        CHECK_EQ_OR_RETURN(stride_vec[0], 1);
+      }
       *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType* like_data_type = ctx->Dtype4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *like_data_type);
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = *like_data_type;
@@ -103,22 +115,28 @@ REGISTER_USER_OP("slice_grad_v2")
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("dx", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
+      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      FOR_RANGE(int64_t, axis, 0, num_axes) {
+        if (ctx->parallel_num() == 1
+            || (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1)) {
+          SbpSignatureBuilder()
+              .Split("dy", 0, axis)
+              .Split("like", 0, axis)
+              .Split("dx", 0, axis)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       SbpSignatureBuilder()
           .PartialSum(ctx->inputs())
           .PartialSum(ctx->outputs())
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder().PartialSum("dy").Broadcast("like").PartialSum("dx").Build(
+      SbpSignatureBuilder().PartialSum("dy", 0).Broadcast("like", 0).PartialSum("dx", 0).Build(
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder().Broadcast("dy").PartialSum("like").Broadcast("dx").Build(
+      SbpSignatureBuilder().Broadcast("dy", 0).PartialSum("like", 0).Broadcast("dx", 0).Build(
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
