@@ -66,11 +66,15 @@ __device__ void GetOrInsertOne(const size_t capacity, T* table, T* size, const T
       return;
     }
   }
+  bool success = false;
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     T* key = table + idx * 2;
     T* value = key + 1;
-    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) { break; }
+    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) {
+      success = true;
+      break;
+    }
   }
   assert(success);
 }
