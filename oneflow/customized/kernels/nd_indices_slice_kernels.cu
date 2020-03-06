@@ -114,7 +114,7 @@ class ScatterNdAddGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
         const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
-        if (ctx.device() == DeviceType::kGPU                                                    \
+        if (ctx.device_type() == DeviceType::kGPU                                               \
             && indices_desc->data_type() == GetDataType<itype>::value                           \
             && out_desc->data_type() == GetDataType<dtype>::value) {                            \
           return true;                                                                          \
@@ -135,7 +135,7 @@ class ScatterNdAddGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
         const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);             \
-        if (ctx.device() == DeviceType::kGPU                                                    \
+        if (ctx.device_type() == DeviceType::kGPU                                               \
             && indices_desc->data_type() == GetDataType<itype>::value                           \
             && y_desc->data_type() == GetDataType<dtype>::value) {                              \
           return true;                                                                          \
