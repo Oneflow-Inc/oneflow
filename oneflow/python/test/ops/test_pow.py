@@ -1,12 +1,13 @@
 import os
-import numpy as np 
-import tensorflow as tf 
+import numpy as np
+import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
 from test_util import GetSavePath
-from test_util import Save 
+from test_util import Save
+
 
 def compare_with_tensorflow(device_type, x_shape, y_shape):
     assert device_type in ["gpu", "cpu"]
@@ -14,10 +15,9 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-   #func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    
+
     @flow.function(func_config)
     def PowJob():
         with flow.device_prior_placement(device_type, "0:0"):
@@ -25,14 +25,16 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
                 "x",
                 shape=x_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                initializer=flow.random_uniform_initializer(
+                    minval=2, maxval=5),
                 trainable=True,
             )
             y = flow.get_variable(
                 "y",
                 shape=y_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=2, maxval=4),
+                initializer=flow.random_uniform_initializer(
+                    minval=2, maxval=4),
                 trainable=True,
             )
             loss = flow.math.pow(x, y)
@@ -60,17 +62,12 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
-    # xx=np.load(os.path.join(GetSavePath(), "x_diff.npy"))
-
-    # yy=tf_x_diff.numpy()
-
-    # zz=np.load(os.path.join(GetSavePath(), "y_diff.npy"))
-
-    # kk=tf_y_diff.numpy()
-
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(np.load(os.path.join(
+        GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(np.load(os.path.join(
+        GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5)
+
 
 def test_pow(test_case):
     arg_dict = OrderedDict()
@@ -79,3 +76,6 @@ def test_pow(test_case):
     arg_dict["y_shape"] = [(2, 2)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
+
+test_pow(1)
