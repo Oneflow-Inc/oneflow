@@ -16,7 +16,6 @@ include(half)
 include(json)
 include(re2)
 include(flatbuffers)
-include(onerec)
 include(lz4)
 
 if (WITH_XLA)
@@ -128,7 +127,6 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   json_copy_headers_to_destination
   re2
-  onerec_copy_headers_to_destination
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
@@ -150,7 +148,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${JSON_INCLUDE_DIR}
     ${RE2_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
-    ${ONEREC_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
 
