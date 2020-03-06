@@ -31,24 +31,15 @@ void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
   }
 }
 
-void VmScheduler::ReleaseVmInstrChainPackage(
-    VmInstrChainPackage* pkg,
-    /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
-  auto* vm_instr_chain_list = pkg->mut_vm_instr_chain_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_chain_list, vm_instr_chain) {
-    ReleaseVmInstruction(vm_instr_chain, /*out*/ ready_vm_instr_chain_list);
-    vm_instr_chain_list->Erase(vm_instr_chain);
-  }
-}
-
-void VmScheduler::TryReleaseFinishedVmInstrChainPackages(
+void VmScheduler::TryReleaseFinishedVmInstrChains(
     VmStream* vm_stream, /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
-  auto* running_pkg_list = vm_stream->mut_running_pkg_list();
+  auto* running_chain_list = vm_stream->mut_running_chain_list();
   while (true) {
-    auto* vm_instr_chain_pkg = running_pkg_list->Begin();
-    if (vm_instr_chain_pkg == nullptr || !vm_instr_chain_pkg->Done()) { break; }
-    ReleaseVmInstrChainPackage(vm_instr_chain_pkg, /*out*/ ready_vm_instr_chain_list);
-    vm_stream->DeleteVmInstrChainPackage(vm_instr_chain_pkg);
+    auto* vm_instr_chain_ptr = running_chain_list->Begin();
+    if (vm_instr_chain_ptr == nullptr || !vm_instr_chain_ptr->Done()) { break; }
+    ObjectMsgPtr<VmInstrChain> vm_instr_chain(vm_instr_chain_ptr);
+    ReleaseVmInstruction(vm_instr_chain_ptr, /*out*/ ready_vm_instr_chain_list);
+    vm_stream->DeleteVmInstrChain(running_chain_list->Erase(vm_instr_chain_ptr));
   }
 }
 
@@ -63,16 +54,14 @@ void VmScheduler::FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm
   }
 }
 
-void VmScheduler::MakeVmInstruction(TmpPendingVmInstrMsgList* vm_instr_msg_list,
-                                    /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list) {
+void VmScheduler::MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
+                                    /*out*/ NewVmInstrChainList* new_vm_instr_chain_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     auto* vm_stream_rt_desc = mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_parallel_id2vm_stream(),
                                             vm_stream) {
-      auto vm_instr_chain = ObjectMsgPtr<VmInstrChain>::NewFrom(
-          mut_scheduler_thread_only_allocator(), vm_instr_msg, vm_stream);
-      ret_vm_instr_chain_list->PushBack(vm_instr_chain.Mutable());
+      new_vm_instr_chain_list->EmplaceBack(vm_stream->NewVmInstrChain(vm_instr_msg));
     }
     vm_instr_msg_list->Erase(vm_instr_msg);
   }
@@ -169,23 +158,13 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_chain_list) {
-  OBJECT_MSG_LIST(VmStream, tmp_active_vm_stream_link) tmp_active_vm_stream_list;
-  while (auto* first = ready_vm_instr_chain_list->Begin()) {
-    auto* vm_stream = first->mut_vm_stream();
-    ready_vm_instr_chain_list->MoveToDstBack(first, vm_stream->mut_collect_vm_instr_chain_list());
-    if (vm_stream->is_tmp_active_vm_stream_link_empty()) {
-      tmp_active_vm_stream_list.PushBack(vm_stream);
-    }
-  }
+void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_chain_list) {
   auto* active_vm_stream_list = mut_active_vm_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_active_vm_stream_list, vm_stream) {
-    tmp_active_vm_stream_list.Erase(vm_stream);
-    auto pkg = vm_stream->NewVmInstrChainPackage();
-    vm_stream->mut_collect_vm_instr_chain_list()->MoveTo(pkg->mut_vm_instr_chain_list());
-    vm_stream->mut_running_pkg_list()->PushBack(pkg.Mutable());
+  OBJECT_MSG_LIST_FOR_EACH(ready_chain_list, vm_instr_chain) {
+    auto* vm_stream = vm_instr_chain->mut_vm_stream();
+    ready_chain_list->MoveToDstBack(vm_instr_chain.Mutable(), vm_stream->mut_running_chain_list());
     if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
-    vm_stream->mut_vm_thread()->mut_pending_pkg_list()->EmplaceBack(std::move(pkg));
+    vm_stream->mut_vm_thread()->mut_pending_chain_list()->EmplaceBack(std::move(vm_instr_chain));
   }
 }
 
@@ -219,8 +198,8 @@ void VmScheduler::Schedule() {
   ReadyVmInstrChainList ready_vm_instr_chain_list;
   auto* active_vm_stream_list = mut_active_vm_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stream_list, vm_stream) {
-    TryReleaseFinishedVmInstrChainPackages(vm_stream, /*out*/ &ready_vm_instr_chain_list);
-    if (vm_stream->running_pkg_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
+    TryReleaseFinishedVmInstrChains(vm_stream, /*out*/ &ready_vm_instr_chain_list);
+    if (vm_stream->running_chain_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
   };
   auto* waiting_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
   if (pending_msg_list().size() > 0) {
@@ -228,7 +207,7 @@ void VmScheduler::Schedule() {
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunControlVmInstructions(&tmp_pending_msg_list);
     NewVmInstrChainList new_vm_instr_chain_list;
-    MakeVmInstruction(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
+    MakeVmInstrChains(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list,
                            /*out*/ &ready_vm_instr_chain_list);
     new_vm_instr_chain_list.MoveTo(waiting_vm_instr_chain_list);

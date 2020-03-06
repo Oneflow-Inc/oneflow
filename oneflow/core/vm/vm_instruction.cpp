@@ -18,24 +18,12 @@ void VmInstrChain::__Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream)
 
 void VmInstrChain::__Delete__() {
   vm_stream_type().DeleteVmInstructionStatus(vm_stream(), mut_status_buffer());
+  mut_vm_instruction_list()->Clear();
+  mut_in_edges()->Clear();
+  mut_out_edges()->Clear();
 }
 
 bool VmInstrChain::Done() const {
-  return vm_stream_type().QueryVmInstructionStatusDone(vm_stream(), status_buffer());
-}
-
-void VmInstrChainPackage::__Init__(VmStream* vm_stream) {
-  mutable_status_buffer();
-  set_vm_stream(vm_stream);
-  set_vm_stream_type(&vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type());
-  vm_stream_type().InitVmInstructionStatus(*vm_stream, mutable_status_buffer());
-}
-
-void VmInstrChainPackage::__Delete__() {
-  vm_stream_type().DeleteVmInstructionStatus(vm_stream(), mut_status_buffer());
-}
-
-bool VmInstrChainPackage::Done() const {
   return vm_stream_type().QueryVmInstructionStatusDone(vm_stream(), status_buffer());
 }
 

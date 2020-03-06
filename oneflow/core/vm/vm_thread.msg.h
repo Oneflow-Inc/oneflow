@@ -19,7 +19,7 @@ OBJECT_MSG_BEGIN(VmThread);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_thread_vm_stream_link, vm_stream_list);
-  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChainPackage, pending_pkg_link, pending_pkg_list);
+  OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChain, pending_chain_link, pending_chain_list);
 
   PRIVATE ObjectMsgConditionListStatus WaitAndRun();
 OBJECT_MSG_END(VmThread);

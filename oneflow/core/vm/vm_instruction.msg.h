@@ -92,30 +92,11 @@ OBJECT_MSG_BEGIN(VmInstrChain);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, src_vm_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, dst_vm_instr_chain, out_edges);
 OBJECT_MSG_END(VmInstrChain);
-// clang-format on
-
-// clang-format off
-OBJECT_MSG_BEGIN(VmInstrChainPackage);
-  // methods
-  PUBLIC void __Init__() {}
-  PUBLIC void __Init__(VmStream* vm_stream);
-  PUBLIC void __Delete__();
-  PUBLIC bool Done() const;
-
-  // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionStatusBuffer, status_buffer);
-  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream);
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type);
-
-  // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(VmInstrChain, vm_instr_chain_link, vm_instr_chain_list);
-  OBJECT_MSG_DEFINE_LIST_LINK(pending_pkg_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_pkg_link);
-OBJECT_MSG_END(VmInstrChainPackage);
 // clang-format on
 
 }  // namespace oneflow

@@ -45,12 +45,10 @@ OBJECT_MSG_BEGIN(VmScheduler);
 
   void ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
                             /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
-  void ReleaseVmInstrChainPackage(VmInstrChainPackage* pkg,
-                                  /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
-  void TryReleaseFinishedVmInstrChainPackages(
+  void TryReleaseFinishedVmInstrChains(
           VmStream* vm_stream, /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list);
-  void MakeVmInstruction(TmpPendingVmInstrMsgList* vm_instr_msg_list,
+  void MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
                          /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list);
   MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
                                      const LogicalObjectId& logical_object_id, int64_t parallel_id);
