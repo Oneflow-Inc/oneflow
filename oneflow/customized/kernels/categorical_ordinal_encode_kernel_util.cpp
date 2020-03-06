@@ -9,7 +9,7 @@ struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kCPU, T> {
     for (int64_t i = 0; i < n; ++i) {
       const T h = hash[i];
       bool success = false;
-      for (int64_t count = 0; count < capacity && !success; ++count) {
+      for (int64_t count = 0; count < capacity; ++count) {
         size_t idx =
             (static_cast<size_t>(h) + static_cast<size_t>(count)) % static_cast<size_t>(capacity);
         T* k_ptr = table + idx * 2;

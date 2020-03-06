@@ -56,24 +56,21 @@ __device__ void GetOrInsertOne(const size_t capacity, T* table, T* size, const T
     *out = 0;
     return;
   }
-  size_t count = 0;
-  bool success = false;
-  while (!success) {
-    if (count >= capacity) { break; }
-    const size_t idx = (static_cast<size_t>(hash) + count) % capacity;
+  const size_t start_idx = static_cast<size_t>(hash) % capacity;
+  // fast path
+  {
+    T* key = table + start_idx * 2;
+    T* value = key + 1;
+    if (*key == hash && *value != 0) {
+      *out = *value;
+      return;
+    }
+  }
+  for (size_t count = 0; count < capacity; ++count) {
+    const size_t idx = (start_idx + count) % capacity;
     T* key = table + idx * 2;
     T* value = key + 1;
-    if (count == 0 && *key == hash && *value != 0) {
-      *out = *value;
-      success = true;
-      break;
-    }
-    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) {
-      success = true;
-      break;
-    } else {
-      count += 1;
-    }
+    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) { break; }
   }
   assert(success);
 }
