@@ -57,7 +57,7 @@ void VmScheduler::FilterAndRunControlVmInstructions(TmpWaitingVmInstrMsgList* vm
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     const VmStreamTypeId vm_stream_type_id =
         vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
-    if (vm_stream_type_id != kControlVmStreamTypeId) { continue; }
+    if (vm_stream_type_id != ControlVmStreamType::kVmStreamTypeId) { continue; }
     control_vm_stream_type.Run(this, vm_instr_msg);
     vm_instr_msg_list->Erase(vm_instr_msg);
   }

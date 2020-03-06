@@ -1,5 +1,5 @@
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_vm_stream_type.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"

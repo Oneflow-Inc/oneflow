@@ -4,26 +4,13 @@
 #include <cstring>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/vm/vm_instruction_operand.msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 
 namespace oneflow {
 
-using VmStreamTypeId = int32_t;
+using VmStreamTypeId = int;
 using VmInstructionOpcode = int32_t;
-
-// clang-format off
-FLAT_MSG_BEGIN(VmInstructionOperand);
-  FLAT_MSG_DEFINE_STRICT_ONEOF(_,
-    FLAT_MSG_ONEOF_FIELD(ConstLogicalObjectId, const_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableLogicalObjectId, mutable_operand)
-    FLAT_MSG_ONEOF_FIELD(ConstLocalLogicalObjectId, const_local_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableLocalLogicalObjectId, mutable_local_operand)
-    FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
-    FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
-    FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
-    FLAT_MSG_ONEOF_FIELD(bool, bool_i_operand));
-FLAT_MSG_END(VmInstructionOperand);
-// clang-format on
 
 // clang-format off
 FLAT_MSG_BEGIN(AllVmStreamEnabledMask);
@@ -52,12 +39,14 @@ FLAT_MSG_END(VmStreamId);
 // clang-format off
 OBJECT_MSG_BEGIN(VmStreamDesc);
   // methods
+  PUBLIC void __Init__(VmStreamTypeId vm_stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+                       int32_t num_streams_per_thread);
   PUBLIC int32_t num_threads() const;
-  PUBLIC int32_t parallel_num() const { return num_machines() * num_devices_per_machine(); }
+  PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_devices_per_machine);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_machine);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
 
   // links

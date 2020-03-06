@@ -14,6 +14,8 @@ class ControlVmStreamType final {
   ControlVmStreamType() = default;
   ~ControlVmStreamType() = default;
 
+  static const VmStreamTypeId kVmStreamTypeId = 0;
+
   ObjectMsgPtr<VmInstructionMsg> NewMirroredObjectSymbol(const LogicalObjectId& logical_object_id,
                                                          int64_t parallel_num) const;
   ObjectMsgPtr<VmInstructionMsg> DeleteMirroredObjectSymbol(
@@ -21,8 +23,6 @@ class ControlVmStreamType final {
 
   void Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 };
-
-static const VmStreamTypeId kControlVmStreamTypeId = 0;
 
 }  // namespace oneflow
 
