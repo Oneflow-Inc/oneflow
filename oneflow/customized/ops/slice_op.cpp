@@ -18,8 +18,6 @@ REGISTER_USER_OP("slice_v2")
       auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
-      // Don't support slice dim0 for now
-      // so begin,end,stride must be 1 less than input's num of axes
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), begin_vec.size());
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), end_vec.size());
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), stride_vec.size());
