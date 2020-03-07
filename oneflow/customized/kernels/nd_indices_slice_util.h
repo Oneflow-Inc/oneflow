@@ -1,11 +1,8 @@
 #ifndef ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_UTIL_H_
 #define ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_UTIL_H_
 
-// #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
-
-// #define SCATTER_ND_FUNC_NAME_SEQ (Update)(Add)
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 
@@ -38,10 +35,14 @@ inline NdIndicesSliceParams<T, I> ConstructNdIndicesSliceParams(user_op::Tensor*
 }
 
 template<DeviceType device_type, typename T, typename I>
-struct GatherNdOnDevice;
+struct GatherNdOnDevice {
+  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params);
+};
 
 template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
-struct ScatterNdOnDevice;
+struct ScatterNdOnDevice {
+  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params);
+};
 
 // If values in output is to be updated more than once, because there are duplicate entries in
 // indices, the order at which the updates happen for each value is undefined.
@@ -116,6 +117,13 @@ struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
     }
   }
 };
+
+#define GATHER_ND_DATA_TYPE_SEQ                   \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
+
+#define GATHER_ND_INDEX_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 }  // namespace oneflow
 
