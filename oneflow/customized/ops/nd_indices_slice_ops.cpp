@@ -16,7 +16,8 @@ Maybe<void> InferScatterNdOptShape(user_op::InferContext* ctx) {
   }
   OF_CHECK_EQ(updates_shape->NumAxes() - indices_shape->NumAxes() + 1,
               in_shape->NumAxes() - segm_dim);
-  for (int64_t i = updates_shape->NumAxes() - 1, j = segm_dim; j < in_shape->NumAxes(); ++i, ++j) {
+  for (int64_t i = indices_shape->NumAxes() - 1, j = segm_dim;
+       i < updates_shape->NumAxes() && j < in_shape->NumAxes(); ++i, ++j) {
     OF_CHECK_EQ(updates_shape->At(i), in_shape->At(j));
   }
   *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
