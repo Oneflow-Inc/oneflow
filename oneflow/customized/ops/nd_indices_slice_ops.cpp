@@ -21,6 +21,10 @@ Maybe<void> InferScatterNdOptShape(user_op::InferContext* ctx) {
     OF_CHECK_EQ(updates_shape->At(i), in_shape->At(j));
   }
   *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferScatterNdOptDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
@@ -65,6 +69,9 @@ REGISTER_USER_OP("gather_nd")
       y_shape_vec.pop_back();
       FOR_RANGE(int64_t, i, segm_dim, x_shape->NumAxes()) { y_shape_vec.push_back(x_shape->At(i)); }
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_shape_vec);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
@@ -97,6 +104,7 @@ REGISTER_USER_OP("scatter_nd_update")
     .Input("indices")
     .Output("out")
     .SetShapeInferFn(InferScatterNdOptShape)
+    .SetDataTypeInferFn(InferScatterNdOptDataType)
     .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP("scatter_nd_add")
@@ -105,6 +113,7 @@ REGISTER_USER_OP("scatter_nd_add")
     .Input("indices")
     .Output("out")
     .SetShapeInferFn(InferScatterNdOptShape)
+    .SetDataTypeInferFn(InferScatterNdOptDataType)
     .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP_GRAD("gather_nd")
