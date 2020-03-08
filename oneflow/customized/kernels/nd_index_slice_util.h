@@ -81,17 +81,17 @@ struct NdIndicesSliceUtil final {
 
 template<typename I>
 struct SliceOffsetInDenseWithNdIndex {
-  OF_DEVICE_FUNC static int64_t Compute(int64_t batch_size, int64_t index_ndims,
+  OF_DEVICE_FUNC static int64_t Compute(int64_t slice_size, int64_t index_ndims,
                                         const int64_t* dense_shape, const I* indices, int64_t n) {
-    int64_t batch_idx = n / batch_size;
-    const I* cur_nd_index_ptr = indices + batch_idx * index_ndims;
+    int64_t slice_idx = n / slice_size;
+    const I* cur_nd_index_ptr = indices + slice_idx * index_ndims;
     int64_t offset = 0;
     int64_t product = 1;
     for (int64_t i = index_ndims - 1; i >= 0; --i) {
       offset += cur_nd_index_ptr[i] * product;
       product *= dense_shape[i];
     }
-    return offset * batch_size + n % batch_size;
+    return offset * slice_size + n % slice_size;
   }
 };
 
