@@ -58,13 +58,13 @@ def _compare_scatter_nd_update_with_tf(
         z2 = tf.tensor_scatter_nd_update(const_x, i, y)
         dz_dy = t2.gradient(z2, y)
 
-    test_case.assertTrue(np.allclose(z1.numpy(), z2.numpy()))
+    test_case.assertTrue(np.array_equal(z1.numpy(), z2.numpy()))
 
     def compare_dz_dx(params_grad):
-        test_case.assertTrue(np.allclose(dz_dx.numpy(), params_grad.ndarray()))
+        test_case.assertTrue(np.array_equal(dz_dx.numpy(), params_grad.ndarray()))
 
     def compare_dz_dy(updates_grad):
-        test_case.assertTrue(np.allclose(dz_dy.numpy(), updates_grad.ndarray()))
+        test_case.assertTrue(np.array_equal(dz_dy.numpy(), updates_grad.ndarray()))
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -113,7 +113,7 @@ def _compare_scatter_nd_update_with_tf(
     # print("indices:", indices)
     # print("tf_z:", z1.numpy())
     # print("of_z:", of_z.ndarray())
-    test_case.assertTrue(np.allclose(z1.numpy(), of_z.ndarray()))
+    test_case.assertTrue(np.array_equal(z1.numpy(), of_z.ndarray()))
 
 
 def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, updates):
@@ -137,7 +137,7 @@ def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, upda
     of_out = scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
     # print("tf_out", tf_out)
     # print("of_out", of_out)
-    test_case.assertTrue(np.allclose(tf_out, of_out))
+    test_case.assertTrue(np.array_equal(tf_out, of_out))
 
 
 def test_scatter_nd_update(test_case):
