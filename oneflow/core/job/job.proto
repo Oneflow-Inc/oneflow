@@ -121,7 +121,7 @@ message JobConfigProto {
   optional bool disable_all_reduce_sequence = 508 [default = false];
   optional bool prune_parallel_cast_ops = 509 [default = false];
 
-  optional bool cudnn_conv_enable_true_half = 600 [default = false];
+  optional bool cudnn_conv_enable_pseudo_half = 600 [default = false];
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
 

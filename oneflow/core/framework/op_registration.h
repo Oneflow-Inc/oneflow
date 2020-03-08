@@ -7,6 +7,7 @@
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
 
@@ -26,6 +27,10 @@ using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
 using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
+using InputArgModifier = InputBlobModifier;
+using GetInputArgModifier =
+    std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
+using InputArgModifyFn = std::function<void(GetInputArgModifier)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
@@ -34,6 +39,9 @@ struct OpRegistrationVal {
   DtypeInferFn dtype_infer_fn;
   BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
+  // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
+  // performance other than op definition
+  InputArgModifyFn input_arg_modify_fn;
 };
 
 struct OpRegistryWrapper final {
@@ -68,6 +76,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& SetDataTypeInferFn(DtypeInferFn fn);
   OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
+  OpRegistryWrapperBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistryWrapper Build();
@@ -83,6 +92,8 @@ class OpRegistryWrapperBuilder final {
 const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
 
 std::vector<std::string> GetAllUserOpInOpRegistry();
+
+static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput";
 
 }  // namespace user_op
 

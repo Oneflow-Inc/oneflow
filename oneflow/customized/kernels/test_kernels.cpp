@@ -71,6 +71,29 @@ REGISTER_USER_KERNEL("TestReshape")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestReshapeKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
+class CopyIn2OutKernel final : public user_op::OpKernel {
+ public:
+  CopyIn2OutKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  CopyIn2OutKernel() = default;
+  ~CopyIn2OutKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+                             in_blob->shape().elem_cnt() * sizeof(float));
+  }
+};
+
+REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+
+REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+
 class TestSourceKernel final : public user_op::OpKernel {
  public:
   TestSourceKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
@@ -87,7 +110,10 @@ class TestSourceKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn([](const user_op::KernelInitContext& ctx) { return new TestSourceKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kCPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
@@ -115,7 +141,94 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
       return new TestMultiOutputOrderKernel(ctx);
     })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      if (ctx.device_type() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
+class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
+ public:
+  TestSourceMultiGpuFixedOutNumKernel(const user_op::KernelInitContext& ctx)
+      : user_op::OpKernel(ctx) {}
+  TestSourceMultiGpuFixedOutNumKernel() = default;
+  ~TestSourceMultiGpuFixedOutNumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+      *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
+    }
+  }
+};
+
+REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
+      return new TestSourceMultiGpuFixedOutNumKernel(ctx);
+    })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
+class TestMultiInputFwKernel final : public user_op::OpKernel {
+ public:
+  TestMultiInputFwKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TestMultiInputFwKernel() = default;
+  ~TestMultiInputFwKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    const user_op::Tensor* x1_blob = ctx->Tensor4ArgNameAndIndex("x1", 0);
+    user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
+                             x1_blob->shape().elem_cnt() * sizeof(float));
+  }
+};
+
+REGISTER_USER_KERNEL("TestMultiInput")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
+      return new TestMultiInputFwKernel(ctx);
+    })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
+      if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
+class TestMultiInputBwKernel final : public user_op::OpKernel {
+ public:
+  TestMultiInputBwKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TestMultiInputBwKernel() = default;
+  ~TestMultiInputBwKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
+    user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x1_diff_blob->shape().elem_cnt(), 1.0,
+                                          x1_diff_blob->mut_dptr<float>());
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x2_diff_blob->shape().elem_cnt(), 2.0,
+                                          x2_diff_blob->mut_dptr<float>());
+  }
+};
+
+REGISTER_USER_KERNEL("TestMultiInputGrad")
+    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
+      return new TestMultiInputBwKernel(ctx);
+    })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
+      if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 

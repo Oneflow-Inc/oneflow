@@ -60,8 +60,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
       : user_op::KernelRegContext(std::move(user_op_conf)) {
     CHECK(kernel_conf.has_user_conf());
 
-    device_ = kernel_conf.op_attribute().op_conf().device_type();
-    data_type_ = kernel_conf.data_type();
+    device_type_ = kernel_conf.op_attribute().op_conf().device_type();
     parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
 
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
@@ -70,8 +69,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   }
   ~UserKernelRegContext() = default;
 
-  DeviceType device() const override { return device_; }
-  DataType data_type() const override { return data_type_; }
+  DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -81,8 +79,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   }
 
  private:
-  DeviceType device_;
-  DataType data_type_;
+  DeviceType device_type_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
