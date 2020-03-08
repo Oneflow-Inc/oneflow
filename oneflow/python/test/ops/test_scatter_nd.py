@@ -36,6 +36,87 @@ def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_i
     return params, updates, indices
 
 
+def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_fn):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    if mirrored:
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    else:
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.train.primary_lr(1e-3)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+
+    def do_scatter_nd(indices_blob, updates_blob):
+        with flow.device_prior_placement(device_type, "0:0"):
+            x = flow.get_variable(
+                "updates",
+                shape=updates.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+            )
+            x = x + updates_blob
+            y = flow.scatter_nd(indices_blob, x, shape)
+            flow.losses.add_loss(y)
+        flow.watch_diff(x, compare_fn)
+        return y
+
+    if mirrored:
+
+        @flow.function(func_config)
+        def scatter_nd_fn(
+            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
+            updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
+        ):
+            return do_scatter_nd(indices_def, updates_def)
+
+    else:
+
+        @flow.function(func_config)
+        def scatter_nd_fn(
+            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
+            updates_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
+        ):
+            return do_scatter_nd(indices_def, updates_def)
+
+    return scatter_nd_fn
+
+
+def _compare_scatter_nd_with_tf(
+    test_case, device_type, params_shape, indices_shape, updates_shape, mirrored=False
+):
+    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+
+    with tf.GradientTape() as t:
+        x = tf.Variable(updates)
+        y = tf.scatter_nd(tf.Variable(indices), x, params_shape)
+        dy_dx = t.gradient(y, x)
+
+    if mirrored:
+
+        def compare_dy(params_grad):
+            test_case.assertTrue(np.array_equal(dy_dx.numpy(), params_grad.ndarray_list()[0]))
+
+    else:
+
+        def compare_dy(params_grad):
+            test_case.assertTrue(np.array_equal(dy_dx.numpy(), params_grad.ndarray()))
+
+    scatter_nd_fn = _make_scatter_nd_fn(
+        indices, updates, params_shape, device_type, mirrored, compare_dy
+    )
+
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
+    if mirrored:
+        of_y = scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
+    else:
+        of_y = scatter_nd_fn(indices, updates).get().ndarray()
+
+    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+
+
 def _compare_scatter_nd_update_with_tf(
     test_case, device_type, params_shape, indices_shape, updates_shape
 ):
@@ -121,6 +202,7 @@ def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, upda
         tf.Variable(params), tf.Variable(indices), tf.Variable(updates)
     ).numpy()
 
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
@@ -135,9 +217,29 @@ def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, upda
             return flow.scatter_nd_update(input_def, indices_def, updates_def)
 
     of_out = scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
-    # print("tf_out", tf_out)
-    # print("of_out", of_out)
     test_case.assertTrue(np.array_equal(tf_out, of_out))
+
+
+def test_scatter_nd(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["params_shape"] = [(10,)]
+    arg_dict["indices_shape"] = [(5, 1)]
+    arg_dict["updates_shape"] = [(5,)]
+    arg_dict["mirrored"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_many_dims(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(24, 25, 32, 10, 12)]
+    arg_dict["indices_shape"] = [(3, 3, 2)]
+    arg_dict["updates_shape"] = [(3, 3, 32, 10, 12)]
+    arg_dict["mirrored"] = [False]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_with_tf(test_case, *arg)
 
 
 def test_scatter_nd_update(test_case):

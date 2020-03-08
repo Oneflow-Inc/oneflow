@@ -335,7 +335,7 @@ def scatter_nd(indices, updates, shape, name=None):
         .Op("scatter_nd")
         .Input("indices", [indices])
         .Input("updates", [updates])
-        .Attr("shape", shape)
+        .SetAttr("shape", shape, "AttrTypeShape")
         .Output("out")
         .Build()
     )

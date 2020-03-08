@@ -183,7 +183,7 @@ REGISTER_USER_OP_GRAD("scatter_nd")
                 .Input("indices", op.input("indices", 0))
                 .Output("out")
                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
         AddOp(grad_op);
       }
     });
