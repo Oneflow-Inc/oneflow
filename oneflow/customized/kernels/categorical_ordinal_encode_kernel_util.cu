@@ -1,3 +1,7 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <assert.h>
 #include "oneflow/customized/kernels/categorical_ordinal_encode_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
@@ -51,10 +55,10 @@ __device__ bool TryGetOrInsert(K* key, volatile V* value, V* size, const K hash,
 }
 
 template<typename T>
-__device__ void GetOrInsertOne(const size_t capacity, T* table, T* size, const T hash, T* out) {
+__device__ bool GetOrInsertOne(const size_t capacity, T* table, T* size, const T hash, T* out) {
   if (hash == 0) {
     *out = 0;
-    return;
+    return true;
   }
   const size_t start_idx = static_cast<size_t>(hash) % capacity;
   // fast path
@@ -63,26 +67,25 @@ __device__ void GetOrInsertOne(const size_t capacity, T* table, T* size, const T
     T* value = key + 1;
     if (*key == hash && *value != 0) {
       *out = *value;
-      return;
+      return true;
     }
   }
-  bool success = false;
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     T* key = table + idx * 2;
     T* value = key + 1;
-    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) {
-      success = true;
-      break;
-    }
+    if (TryGetOrInsert<T, T>(key, value, size, hash, out)) { return true; }
   }
-  assert(success);
+  return false;
 }
 
 template<typename T>
 __global__ void EncodeGpu(const size_t capacity, T* table, T* size, const int64_t n, const T* hash,
                           T* out) {
-  CUDA_1D_KERNEL_LOOP(i, n) { GetOrInsertOne<T>(capacity, table, size, hash[i], out + i); }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    bool success = GetOrInsertOne<T>(capacity, table, size, hash[i], out + i);
+    assert(success);
+  }
 }
 
 }  // namespace
