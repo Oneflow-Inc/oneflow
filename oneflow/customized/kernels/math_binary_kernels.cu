@@ -13,7 +13,10 @@ __device__ float PowCalXDiff4GpuFloat(float x, float y, float dz) {
 }
 
 __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
-  return dz * logf(x) * (powf(x, y));
+  if (x > 0)
+    return dz * logf(x) * (powf(x, y));
+  else
+    return 0;
 }
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
