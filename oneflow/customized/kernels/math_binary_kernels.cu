@@ -80,13 +80,17 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_FORWARD(binary_math_type_str, func_name_prefix)             \
   if (binary_math_type == binary_math_type_str) {                               \
+    is_find = true;                                                             \
     func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z); \
-  }
-
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  }                                                                             \
+  CHECK(is_find);                                                               \
+  is_find = is_find ? false : is_find;                                                              
+  
+  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
 #undef MATH_BINARY_FORWARD
   }
 };
@@ -128,11 +132,15 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                                    \
   if (binary_math_type == binary_math_type_str) {                                                       \
-    func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx);            \
-  }
+    is_find = true;                                                                                     \
+    func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx);           \
+  }                                                                                                     \
+  CHECK(is_find);                                                                                       \
+  is_find = is_find ? false : is_find;                                          
 
     OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
 #undef MATH_UNARY_BACKWARD
@@ -164,11 +172,15 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                                    \
   if (binary_math_type == binary_math_type_str) {                                                       \
-    func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy); \
-  }
+    is_find = true;                                                                                     \
+    func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy);           \
+  }                                                                                                     \
+  CHECK(is_find);                                                                                       \
+  is_find = is_find ? false : is_find;                                          
 
     OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
 #undef MATH_UNARY_BACKWARD

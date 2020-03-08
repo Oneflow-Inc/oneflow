@@ -352,10 +352,10 @@ def tanh(x, name=None):
 @oneflow_export("math.floormod")
 def floormod(x, y, name=None):
     if name is None:
-        name = id_util.UniqueStr("Floormod_")
+        name = id_util.UniqueStr("FloorMod_")
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
             .Input("x",[x])\
             .Input("y",[y])\
             .Output("z")\
-            .SetAttr("binary_math_type", "Floormod", "AttrTypeString")\
+            .SetAttr("binary_math_type", "FloorMod", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
