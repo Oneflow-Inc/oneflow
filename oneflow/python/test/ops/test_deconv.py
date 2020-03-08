@@ -92,7 +92,7 @@ def compare_with_tensorflow(device_type, input_shape, padding, output_shape,
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = flow.nn.conv2d_transpose2(x, weight, strides=strides, output_shape=output_shape, 
+            loss = flow.nn.conv2d_transpose_V2(x, weight, strides=strides, output_shape=output_shape, 
                                              dilations=dilations, padding=padding, data_format="NCHW")
             flow.losses.add_loss(loss)
 
@@ -130,7 +130,7 @@ def test_deconv_with_torch():
     arg_dict["output_padding"] = [1]   
     arg_dict["strides"] = [2]   
     arg_dict["kernel_size"] = [5]   
-    arg_dict["dilations"] = [1]   
+    arg_dict["dilations"] = [2]   
     arg_dict["out_channels"] = [4]   
     for arg in GenArgList(arg_dict):
         compare_with_pytorch(*arg)
@@ -150,4 +150,5 @@ def test_deconv_with_tf():
 
 if __name__ == "__main__":
     tf.enable_eager_execution()
-    test_deconv_with_tf()
+    # test_deconv_with_tf()
+    test_deconv_with_torch()
