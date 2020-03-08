@@ -7,98 +7,103 @@
 namespace oneflow {
 
 template<typename T, typename I>
-struct NdIndicesSliceParams {
+struct NdIndexSliceParams {
   static const size_t kMaxDims = 8;
-  int64_t num_segms;
-  int64_t segm_size;
-  int64_t segm_dim;
-  int64_t shape[kMaxDims];
-  T* dense;
-  T* sparse;
-  const I* indices;
+  int64_t num_slices;
+  int64_t slice_size;
+  int64_t index_ndims;
+  int64_t dense_shape[kMaxDims];
+  T* dense_dptr;
+  T* slices_dptr;
+  const I* indices_dptr;
 };
 
 template<typename T, typename I>
-inline NdIndicesSliceParams<T, I> ConstructNdIndicesSliceParams(user_op::Tensor* dense,
-                                                                user_op::Tensor* sparse,
-                                                                const user_op::Tensor* indices) {
-  NdIndicesSliceParams<T, I> params;
-  std::memset(&params, 0, sizeof(NdIndicesSliceParams<T, I>));
-  params.num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
-  params.segm_size = sparse->shape().Count(indices->shape().NumAxes() - 1);
-  params.segm_dim = indices->shape().At(indices->shape().NumAxes() - 1);
-  FOR_RANGE(int64_t, i, 0, dense->shape().NumAxes()) { params.shape[i] = dense->shape().At(i); }
-  params.dense = dense->mut_dptr<T>();
-  params.sparse = sparse->mut_dptr<T>();
-  params.indices = indices->dptr<I>();
+inline NdIndexSliceParams<T, I> ConstructNdIndexSliceParams(user_op::Tensor* dense,
+                                                            user_op::Tensor* slices,
+                                                            const user_op::Tensor* indices) {
+  NdIndexSliceParams<T, I> params;
+  std::memset(&params, 0, sizeof(NdIndexSliceParams<T, I>));
+  params.num_slices = indices->shape().Count(0, indices->shape().NumAxes() - 1);
+  params.index_ndims = indices->shape().At(indices->shape().NumAxes() - 1);
+  params.slice_size = slices->shape().Count(indices->shape().NumAxes() - 1);
+  FOR_RANGE(int64_t, i, 0, dense->shape().NumAxes()) {
+    params.dense_shape[i] = dense->shape().At(i);
+  }
+  params.dense_dptr = dense->mut_dptr<T>();
+  params.slices_dptr = slices->mut_dptr<T>();
+  params.indices_dptr = indices->dptr<I>();
   return params;
 }
 
 template<DeviceType device_type, typename T, typename I>
-struct GatherNdOnDevice {
-  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params);
+struct GatherNdImpl {
+  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params);
 };
 
 template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
-struct ScatterNdOnDevice {
-  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params);
+struct ScatterNdImpl {
+  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params);
 };
 
 // If values in output is to be updated more than once, because there are duplicate entries in
 // indices, the order at which the updates happen for each value is undefined.
 template<DeviceType device_type, typename T>
-struct ScatterNdUpdateOpt {
+struct ScatterNdReduceReplace {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y = *x; }
 };
 
 template<DeviceType device_type, typename T>
-struct ScatterNdAddOpt;
+struct ScatterNdReduceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y);
+};
 
 template<DeviceType device_type, typename T, typename I>
 struct NdIndicesSliceUtil final {
-  static void GatherNd(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
-    GatherNdOnDevice<device_type, T, I>::Run(ctx, params);
+  static void GatherNd(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+    GatherNdImpl<device_type, T, I>::Apply(ctx, params);
   }
 
-  static void ScatterNdUpdate(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
-    ScatterNdApplyOpt<ScatterNdUpdateOpt>(ctx, params);
+  static void ScatterNdUpdate(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+    ScatterNdReduce<ScatterNdReduceReplace>(ctx, params);
   }
 
-  static void ScatterNdAdd(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
-    ScatterNdApplyOpt<ScatterNdAddOpt>(ctx, params);
+  static void ScatterNdAdd(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+    ScatterNdReduce<ScatterNdReduceAdd>(ctx, params);
   }
 
  private:
   template<template<DeviceType, typename> class Opt>
-  static void ScatterNdApplyOpt(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
-    ScatterNdOnDevice<device_type, T, I, Opt>::Run(ctx, params);
+  static void ScatterNdReduce(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+    ScatterNdImpl<device_type, T, I, Opt>::Apply(ctx, params);
   }
 };
 
 template<typename I>
-struct IndicesOffset {
-  OF_DEVICE_FUNC static int64_t Compute(int64_t segm_size, int64_t segm_dim, const int64_t* shape,
-                                        const I* indices, int64_t n) {
+struct SliceOffsetInDenseWithNdIndex {
+  OF_DEVICE_FUNC static int64_t Compute(int64_t batch_size, int64_t index_ndims,
+                                        const int64_t* dense_shape, const I* indices, int64_t n) {
+    int64_t batch_idx = n / batch_size;
+    const I* cur_nd_index_ptr = indices + batch_idx * index_ndims;
     int64_t offset = 0;
-    const auto* cur_ids_ptr = indices + (n / segm_size) * segm_dim;
-    FOR_RANGE(int64_t, i, 0, segm_dim) {
-      assert(cur_ids_ptr[i] < shape[i]);
-      int64_t stride = segm_size;
-      FOR_RANGE(int64_t, j, i + 1, segm_dim) { stride *= shape[j]; }
-      offset += cur_ids_ptr[i] * stride;
+    int64_t product = 1;
+    for (int64_t i = index_ndims - 1; i >= 0; --i) {
+      offset += cur_nd_index_ptr[i] * product;
+      product *= dense_shape[i];
     }
-    return offset + n % segm_size;
+    return offset * batch_size + n % batch_size;
   }
 };
 
 template<typename T, typename I>
 struct GatherNdFunctor {
-  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t segm_size, int64_t segm_dim,
-                                    const int64_t* shape, const I* indices, const T* dense,
-                                    T* sparse) {
+  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                    const int64_t* dense_shape, const I* indices, const T* dense,
+                                    T* slices) {
     XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset = IndicesOffset<I>::Compute(segm_size, segm_dim, shape, indices, i);
-      sparse[i] = dense[offset];
+      int64_t offset = SliceOffsetInDenseWithNdIndex<I>::Compute(slice_size, index_ndims,
+                                                                 dense_shape, indices, i);
+      slices[i] = dense[offset];
     }
   }
 };
@@ -108,12 +113,13 @@ struct ScatterNdFunctor;
 
 template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
 struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
-  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t segm_size, int64_t segm_dim,
-                                    const int64_t* shape, const I* indices, const T* sparse,
+  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                    const int64_t* dense_shape, const I* indices, const T* slices,
                                     T* dense) {
     XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset = IndicesOffset<I>::Compute(segm_size, segm_dim, shape, indices, i);
-      Opt<device_type, T>::Invoke(sparse + i, dense + offset);
+      int64_t offset = SliceOffsetInDenseWithNdIndex<I>::Compute(slice_size, index_ndims,
+                                                                 dense_shape, indices, i);
+      Opt<device_type, T>::Invoke(slices + i, dense + offset);
     }
   }
 };

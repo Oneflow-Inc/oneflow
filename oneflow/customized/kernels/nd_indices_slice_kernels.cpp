@@ -3,25 +3,25 @@
 namespace oneflow {
 
 template<typename T, typename I>
-struct GatherNdOnDevice<DeviceType::kCPU, T, I> {
-  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
-    GatherNdFunctor<T, I>::Invoke(params->num_segms * params->segm_size, params->segm_size,
-                                  params->segm_dim, params->shape, params->indices, params->dense,
-                                  params->sparse);
+struct GatherNdImpl<DeviceType::kCPU, T, I> {
+  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+    GatherNdFunctor<T, I>::Invoke(params->num_slices * params->slice_size, params->slice_size,
+                                  params->index_ndims, params->dense_shape, params->indices_dptr,
+                                  params->dense_dptr, params->slices_dptr);
   }
 };
 
 template<typename T, typename I, template<DeviceType, typename> class Opt>
-struct ScatterNdOnDevice<DeviceType::kCPU, T, I, Opt> {
-  static void Run(DeviceCtx* ctx, NdIndicesSliceParams<T, I>* params) {
+struct ScatterNdImpl<DeviceType::kCPU, T, I, Opt> {
+  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
     ScatterNdFunctor<T, I, Opt<DeviceType::kCPU, T>>::Invoke(
-        params->num_segms * params->segm_size, params->segm_size, params->segm_dim, params->shape,
-        params->indices, params->sparse, params->dense);
+        params->num_slices * params->slice_size, params->slice_size, params->index_ndims,
+        params->dense_shape, params->indices_dptr, params->slices_dptr, params->dense_dptr);
   }
 };
 
 template<typename T>
-struct ScatterNdAddOpt<DeviceType::kCPU, T> {
+struct ScatterNdReduceAdd<DeviceType::kCPU, T> {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y += *x; }
 };
 
@@ -37,7 +37,7 @@ class GatherNdKernel final : public user_op::OpKernel {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto params = ConstructNdIndicesSliceParams<T, I>(x, y, indices);
+    auto params = ConstructNdIndexSliceParams<T, I>(x, y, indices);
     NdIndicesSliceUtil<device_type, T, I>::GatherNd(ctx->device_ctx(), &params);
   }
 };
@@ -59,7 +59,7 @@ class ScatterNdUpdateKernel final : public user_op::OpKernel {
       size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
       Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(), out_bytes_size);
     }
-    auto params = ConstructNdIndicesSliceParams<T, I>(out, updates, indices);
+    auto params = ConstructNdIndexSliceParams<T, I>(out, updates, indices);
     NdIndicesSliceUtil<device_type, T, I>::ScatterNdUpdate(ctx->device_ctx(), &params);
   }
 };
@@ -81,7 +81,7 @@ class ScatterNdAddKernel final : public user_op::OpKernel {
       size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
       Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(), out_bytes_size);
     }
-    auto params = ConstructNdIndicesSliceParams<T, I>(out, updates, indices);
+    auto params = ConstructNdIndexSliceParams<T, I>(out, updates, indices);
     NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), &params);
   }
 };
