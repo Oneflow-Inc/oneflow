@@ -21,6 +21,32 @@ Maybe<void> InferScatterNdOptShape(user_op::InferContext* ctx) {
     OF_CHECK_EQ(updates_shape->At(i), in_shape->At(j));
   }
   *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& indices_desc =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+  int64_t indices_num_axes = indices_desc.shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+    SbpSignatureBuilder()
+        .Broadcast("in", 0)
+        .Split("indices", 0, i)
+        .Split("updates", 0, i)
+        .Broadcast("out", 0)
+        .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  }
+  int64_t segm_dim = indices_desc.shape().At(indices_num_axes - 1);
+  FOR_RANGE(int64_t, i, segm_dim, in_desc.shape().NumAxes()) {
+    SbpSignatureBuilder()
+        .Split("in", 0, i)
+        .Broadcast("indices", 0)
+        .Split("updates", 0, i - segm_dim + indices_num_axes - 1)
+        .Split("out", 0, i)
+        .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 
@@ -39,14 +65,29 @@ REGISTER_USER_OP("gather_nd")
       y_shape_vec.pop_back();
       FOR_RANGE(int64_t, i, segm_dim, x_shape->NumAxes()) { y_shape_vec.push_back(x_shape->At(i)); }
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_shape_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO
+      const user_op::TensorDesc& indices_desc =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+      const user_op::TensorDesc& x_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      int64_t indices_num_axes = indices_desc.shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+        SbpSignatureBuilder()
+            .Broadcast("x", 0)
+            .Split("indices", 0, i)
+            .Split("y", 0, i)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
+      int64_t segm_dim = indices_desc.shape().At(indices_num_axes - 1);
+      FOR_RANGE(int64_t, i, segm_dim, x_desc.shape().NumAxes()) {
+        SbpSignatureBuilder()
+            .Split("x", 0, i)
+            .Broadcast("indices", 0)
+            .Split("y", 0, i - segm_dim + indices_num_axes - 1)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     });
 
@@ -56,14 +97,7 @@ REGISTER_USER_OP("scatter_nd_update")
     .Input("indices")
     .Output("out")
     .SetShapeInferFn(InferScatterNdOptShape)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP("scatter_nd_add")
     .Input("in")
@@ -71,14 +105,7 @@ REGISTER_USER_OP("scatter_nd_add")
     .Input("indices")
     .Output("out")
     .SetShapeInferFn(InferScatterNdOptShape)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO
-      return Maybe<void>::Ok();
-    });
+    .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP_GRAD("gather_nd")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
