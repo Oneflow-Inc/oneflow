@@ -34,6 +34,7 @@ const int32_t kCudaMaxBlocksNum = 4096;
 const int32_t kCudaWarpSize = 32;
 
 // 48KB, max byte size of shared memroy per thread block
+// TODO: limit of shared memory should be different for different arch
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
 int32_t GetSMCudaMaxBlocksNum();

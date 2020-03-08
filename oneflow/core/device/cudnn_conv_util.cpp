@@ -98,8 +98,10 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
         std::any_of(std::begin(args.params.stride), std::begin(args.params.stride) + stride_dim,
                     [](int n) { return n != 1; });
     if (blacklist
-        && (perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
-            || perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
+        && (static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
+                == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
+            || static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
+                   == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT) {
       perf_t algo_perf;
       SetAlgo4Perf(args, res, &algo_perf, GetDefaultAlgo<algo_t>());
       return algo_perf;
