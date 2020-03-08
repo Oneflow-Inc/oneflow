@@ -70,6 +70,21 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
   if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
+void GetwindowedOutputSizeWithPaddingNeeded(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                                            int32_t stride, const int32_t padding_needed, int64_t* output_size,
+                                            int32_t* padding_before, int32_t* padding_after) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  if (output_size) { 
+    *output_size = (input_size + padding_needed - effective_filter_size) / stride + 1;
+    CHECK_GE((*output_size), 0); 
+  }
+  if (padding_before) { *padding_before = padding_needed / 2; } // not used in deconv
+  if (padding_after) { *padding_after = padding_needed / 2;}
+}
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
                            const std::string& padding_type, int64_t* output_size,
                            int32_t* padding_before, int32_t* padding_after) {
@@ -138,12 +153,23 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
   const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
-  FOR_RANGE(int32_t, i, 0, opkernel_dim) {
-    GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
-                          dilation_rate.Get(i), strides.Get(i), padding,
-                          out ? &(out->at(i)) : nullptr,
-                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
-                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+  if (padding == "torch") {
+    const PbRf<int32_t>& padding_needed = GetPbRfFromPbMessage<int32_t>(conv_conf, "padding_needed");
+    FOR_RANGE(int32_t, i, 0, opkernel_dim) {
+    GetwindowedOutputSizeWithPaddingNeeded(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), 
+                                          dilation_rate.Get(i), strides.Get(i), padding_needed.Get(i), 
+                                          out ? &(out->at(i)) : nullptr,
+                                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+    }
+  }else{
+    FOR_RANGE(int32_t, i, 0, opkernel_dim) {
+      GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
+                            dilation_rate.Get(i), strides.Get(i), padding,
+                            out ? &(out->at(i)) : nullptr,
+                            pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                            pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+    }
   }
 }
 
