@@ -1,4 +1,4 @@
-#include "oneflow/customized/kernels/nd_indices_slice_kernels.h"
+#include "oneflow/customized/kernels/nd_index_slice_kernels.h"
 
 namespace oneflow {
 

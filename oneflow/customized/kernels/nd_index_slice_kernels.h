@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_KERNELS_H_
-#define ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_KERNELS_H_
+#ifndef ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_KERNELS_H_
+#define ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_KERNELS_H_
 
-#include "oneflow/customized/kernels/nd_indices_slice_util.h"
+#include "oneflow/customized/kernels/nd_index_slice_util.h"
 
 namespace oneflow {
 
@@ -159,4 +159,4 @@ MakeGatherScatterNdKernelMatchedPredictor() {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_KERNELS_H_
+#endif  // ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_KERNELS_H_

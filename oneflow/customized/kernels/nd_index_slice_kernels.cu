@@ -1,4 +1,4 @@
-#include "oneflow/customized/kernels/nd_indices_slice_kernels.h"
+#include "oneflow/customized/kernels/nd_index_slice_kernels.h"
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 
 namespace oneflow {

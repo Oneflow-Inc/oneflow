@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_UTIL_H_
-#define ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_UTIL_H_
+#ifndef ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_UTIL_H_
+#define ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_UTIL_H_
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/xpu_util.h"
@@ -134,4 +134,4 @@ struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_KERNELS_ND_INDICES_SLICE_UTIL_H_
+#endif  // ONEFLOW_CUSTOMIZED_KERNELS_ND_INDEX_SLICE_UTIL_H_
