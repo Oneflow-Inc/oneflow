@@ -124,12 +124,13 @@ struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
   }
 };
 
-#define GATHER_ND_DATA_TYPE_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-
-#define GATHER_ND_INDEX_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+#define INSTANTIATE_GATHER_SCATTER_ND_IMPL(device_type_v, dtype_pair, itype_pair)      \
+  template struct GatherNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
+                               OF_PP_PAIR_FIRST(itype_pair)>;                          \
+  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),           \
+                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceReplace>; \
+  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),           \
+                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceAdd>;
 
 }  // namespace oneflow
 

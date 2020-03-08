@@ -1,4 +1,4 @@
-#include "oneflow/customized/kernels/nd_indices_slice_util.h"
+#include "oneflow/customized/kernels/nd_indices_slice_kernels.h"
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 
 namespace oneflow {
@@ -41,14 +41,7 @@ struct ScatterNdReduceAdd<DeviceType::kGPU, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
 };
 
-#define INSTANTIATE_GPU_GATHER_SCATTER_ND_UTIL(dtype_pair, itype_pair)                 \
-  template struct GatherNdImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair),         \
-                               OF_PP_PAIR_FIRST(itype_pair)>;                          \
-  template struct ScatterNdImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair),        \
-                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceReplace>; \
-  template struct ScatterNdImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair),        \
-                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceAdd>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_SCATTER_ND_IMPL, (DeviceType::kGPU),
+                                 GATHER_ND_DATA_TYPE_SEQ, GATHER_ND_INDEX_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GPU_GATHER_SCATTER_ND_UTIL, GATHER_ND_DATA_TYPE_SEQ,
-                                 GATHER_ND_INDEX_TYPE_SEQ)
 }  // namespace oneflow
