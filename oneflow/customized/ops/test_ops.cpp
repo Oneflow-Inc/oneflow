@@ -202,4 +202,69 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("TestMultiInput")
+    .Input("x1")
+    .Input("x2")
+    .Output("y")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
+      Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
+      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      CHECK(*x1_shape == *x2_shape);
+      *y_shape = *x1_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      SbpSignatureBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestMultiInputGrad")
+    .Input("x1")
+    .Input("x2")
+    .Input("y_diff")
+    .Output("x1_diff")
+    .Output("x2_diff")
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
+      Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
+      Shape* x1_diff_shape = ctx->Shape4ArgNameAndIndex("x1_diff", 0);
+      Shape* x2_diff_shape = ctx->Shape4ArgNameAndIndex("x2_diff", 0);
+      *x1_diff_shape = *x1_shape;
+      *x2_diff_shape = *x2_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      SbpSignatureBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("TestMultiInput")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x1", 0) || op.NeedGenGradTensor4OpInput("x2", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper test_multi_input_grad_op =
+            builder.Op("TestMultiInputGrad")
+                .Input("x1", op.input("x1", 0))
+                .Input("x2", op.input("x2", 0))
+                .Input("y_diff", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("x1_diff")
+                .Output("x2_diff")
+                .Build();
+        op.BindGradTensorWithOpInput(test_multi_input_grad_op.output("x1_diff", 0), "x1", 0);
+        op.BindGradTensorWithOpInput(test_multi_input_grad_op.output("x2_diff", 0), "x2", 0);
+        AddOp(test_multi_input_grad_op);
+      }
+    });
+
 }  // namespace oneflow
