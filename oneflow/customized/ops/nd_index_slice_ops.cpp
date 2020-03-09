@@ -7,22 +7,15 @@ namespace {
 
 Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
                                 const Shape& updates_shape) {
-  // TODO
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CheckScatterNdShape(Shape* params_shape, Shape* indices_shape, Shape* updates_shape) {
-  int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);
-  OF_CHECK_LE(index_ndims, params_shape->NumAxes());
-  OF_CHECK_LE(indices_shape->NumAxes() - 1, updates_shape->NumAxes());
-  FOR_RANGE(int64_t, i, 0, indices_shape->NumAxes() - 1) {
-    OF_CHECK_EQ(updates_shape->At(i), indices_shape->At(i));
-  }
-  OF_CHECK_EQ(updates_shape->NumAxes() - indices_shape->NumAxes() + 1,
-              params_shape->NumAxes() - index_ndims);
-  for (int64_t i = indices_shape->NumAxes() - 1, j = index_ndims;
-       i < updates_shape->NumAxes() && j < params_shape->NumAxes(); ++i, ++j) {
-    OF_CHECK_EQ(updates_shape->At(i), params_shape->At(j));
+  int64_t batch_ndims = indices_shape.NumAxes() - 1;
+  int64_t index_ndims = indices_shape.At(batch_ndims);
+  OF_CHECK_LE(batch_ndims, updates_shape.NumAxes());
+  OF_CHECK_LE(index_ndims, params_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, batch_ndims) { OF_CHECK_EQ(updates_shape.At(i), indices_shape.At(i)); }
+  int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
+  OF_CHECK_EQ(slice_ndims, updates_shape.NumAxes() - batch_ndims);
+  FOR_RANGE(int64_t, i, 0, slice_ndims) {
+    OF_CHECK_EQ(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims));
   }
   return Maybe<void>::Ok();
 }
@@ -32,7 +25,7 @@ Maybe<void> InferScatterNdOptShape(user_op::InferContext* ctx) {
   Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
   Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
   *ctx->Shape4ArgNameAndIndex("out", 0) = *params_shape;
-  return CheckScatterNdShape(params_shape, indices_shape, updates_shape);
+  return CheckScatterNdShape(*params_shape, *indices_shape, *updates_shape);
 }
 
 Maybe<void> InferScatterNdOptDataType(user_op::InferContext* ctx) {
@@ -133,7 +126,7 @@ REGISTER_USER_OP("scatter_nd")
       Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
       Shape params_shape = ctx->GetAttr<Shape>("shape");
       *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
-      return CheckScatterNdShape(&params_shape, indices_shape, updates_shape);
+      return CheckScatterNdShape(params_shape, *indices_shape, *updates_shape);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
