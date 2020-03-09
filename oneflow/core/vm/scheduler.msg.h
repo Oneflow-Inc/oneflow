@@ -61,8 +61,10 @@ OBJECT_MSG_BEGIN(VmScheduler);
   void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
                              VmInstruction* vm_instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              NewVmInstrChainList* new_vm_instr_chain_list,
-                              /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
+                              NewVmInstrChainList* new_vm_instr_chain_list);
+  void MergeChains(NewVmInstrChainList* new_vm_instr_chain_list);
+  void FilterReadyChains(NewVmInstrChainList* new_vm_instr_chain_list,
+                         /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void DispatchVmInstruction(ReadyVmInstrChainList* ready_vm_instr_chain_list);
 
 OBJECT_MSG_END(VmScheduler);
