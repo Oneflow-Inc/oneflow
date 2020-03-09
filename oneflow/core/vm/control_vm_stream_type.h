@@ -9,7 +9,7 @@ namespace oneflow {
 class VmScheduler;
 class VmInstructionMsg;
 
-class ControlVmStreamType final {
+class ControlVmStreamType final : public VmStreamType {
  public:
   ControlVmStreamType() = default;
   ~ControlVmStreamType() = default;
@@ -20,6 +20,16 @@ class ControlVmStreamType final {
                                                          int64_t parallel_num) const;
   ObjectMsgPtr<VmInstructionMsg> DeleteMirroredObjectSymbol(
       const LogicalObjectId& logical_object_id) const;
+
+  bool IsSourceOpcode(VmInstructionOpcode opcode) const;
+
+  void InitVmInstructionStatus(const VmStream& vm_stream,
+                               VmInstructionStatusBuffer* status_buffer) const override;
+  void DeleteVmInstructionStatus(const VmStream& vm_stream,
+                                 VmInstructionStatusBuffer* status_buffer) const override;
+  bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
+                                    const VmInstructionStatusBuffer& status_buffer) const override;
+  void Run(VmInstrChain* vm_instr_chain) const override;
 
   void Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
 };

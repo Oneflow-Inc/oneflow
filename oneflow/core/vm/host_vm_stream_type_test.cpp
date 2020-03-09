@@ -23,8 +23,8 @@ TEST(HostVmStreamType, basic) {
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
   list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1));
-  list.EmplaceBack(HostVmStreamType().CudaMallocHost(9527, 1024));
-  list.EmplaceBack(HostVmStreamType().CudaFreeHost(9527));
+  list.EmplaceBack(HostVmStreamType().CudaMallocHost(symbol_value, 1024));
+  list.EmplaceBack(HostVmStreamType().CudaFreeHost(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();

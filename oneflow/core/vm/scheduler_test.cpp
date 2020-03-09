@@ -18,8 +18,8 @@ TEST(VmScheduler, __Init__) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
   auto vm_scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
-  ASSERT_EQ(vm_scheduler->vm_thread_list().size(), 1);
-  ASSERT_EQ(vm_scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 1);
+  ASSERT_EQ(vm_scheduler->vm_thread_list().size(), 2);
+  ASSERT_EQ(vm_scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 2);
 }
 
 TEST(VmScheduler, ToDot) {

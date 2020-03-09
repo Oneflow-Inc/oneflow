@@ -47,11 +47,13 @@ OBJECT_MSG_BEGIN(VmScheduler);
                             /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
   void TryReleaseFinishedVmInstrChains(
           VmStream* vm_stream, /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list);
-  void FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list);
+  void FilterAndRunSourceControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list);
   void MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
                          /*out*/ NewVmInstrChainList* ret_vm_instr_chain_list);
-  MirroredObject* FindMirroredObject(Id2LogicalObject* id2logical_object,
-                                     const MirroredObjectOperand& mirrored_object_operand, int64_t parallel_id);
+  template<typename DoEachT>
+  void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
+                             const MirroredObjectOperand& mirrored_object_operand,
+                             int64_t parallel_id, const DoEachT& DoEach);
   enum OperandAccessType {
     kMutableOperandAccess = 0,
     kConstOperandAccess
