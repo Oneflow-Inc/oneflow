@@ -8,15 +8,19 @@ namespace user_op {
 
 #ifdef WITH_CUDA
 
-__device__ float PowCallXDiff4GpuFloat(float x, float y, float dz) {
+__device__ float PowCalXDiff4GpuFloat(float x, float y, float dz) {
   return dz * y * (powf(x, y - 1));
 }
 
-__device__ float PowCallYDiff4GpuFloat(float x, float y, float dz) {
-  return dz * logf(x) * (powf(x, y));
+__device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
+  if (x > 0) {
+    return dz * logf(x) * (powf(x, y));
+  } else {
+    return 0;
+  }
 }
 
-#define MATH_BINARY_GPU(func_name, fw_func, bw_func_call_x_diff, bw_func_call_y_diff, dtype)     \
+#define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
     CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                                    \
   }                                                                                              \
@@ -32,7 +36,7 @@ __device__ float PowCallYDiff4GpuFloat(float x, float y, float dz) {
   }                                                                                              \
   __global__ void func_name##XBackwardGpu(const int n, const dtype* x, const dtype* y,           \
                                           const dtype* dz, dtype* dx) {                          \
-    CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = bw_func_call_x_diff(x[i], y[i], dz[i]); }                \
+    CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = bw_func_cal_x_diff(x[i], y[i], dz[i]); }                 \
   }                                                                                              \
   void func_name##XBackward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y,      \
                             const Tensor* tensor_dz, Tensor* tensor_dx) {                        \
@@ -47,7 +51,7 @@ __device__ float PowCallYDiff4GpuFloat(float x, float y, float dz) {
   }                                                                                              \
   __global__ void func_name##YBackwardGpu(const int n, const dtype* x, const dtype* y,           \
                                           const dtype* dz, dtype* dy) {                          \
-    CUDA_1D_KERNEL_LOOP(i, n) { dy[i] = bw_func_call_y_diff(x[i], y[i], dz[i]); }                \
+    CUDA_1D_KERNEL_LOOP(i, n) { dy[i] = bw_func_cal_y_diff(x[i], y[i], dz[i]); }                 \
   }                                                                                              \
   void func_name##YBackward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y,      \
                             const Tensor* tensor_dz, Tensor* tensor_dy) {                        \
@@ -63,7 +67,7 @@ __device__ float PowCallYDiff4GpuFloat(float x, float y, float dz) {
 
 #define MATH_BINARY_GPU_FLOAT_SEQ OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)
 
-MATH_BINARY_GPU(Pow, powf, PowCallXDiff4GpuFloat, PowCallYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
