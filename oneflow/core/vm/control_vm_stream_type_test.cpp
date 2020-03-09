@@ -31,7 +31,6 @@ TEST(ControlVmStreamType, new_symbol) {
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
   ASSERT_EQ(scheduler->vm_thread_list().size(), 1);
   ASSERT_EQ(scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 1);
-  ASSERT_TRUE(scheduler->zombie_logical_object_list().empty());
   ASSERT_EQ(scheduler->id2logical_object().size(), 1);
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(symbol_value);
   ASSERT_NE(logical_object, nullptr);
@@ -39,8 +38,6 @@ TEST(ControlVmStreamType, new_symbol) {
 }
 
 TEST(ControlVmStreamType, delete_symbol) {
-  // TODO(lixinqi)
-  return;
   auto nop_vm_stream_desc =
       ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
@@ -52,7 +49,7 @@ TEST(ControlVmStreamType, delete_symbol) {
   list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, parallel_num));
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
   auto* operand = nop0_vm_instr_msg->mut_vm_instruction_proto()->mut_operand()->Add();
-  operand->mutable_mutable_operand()->mut_operand()->__Init__(symbol_value);
+  operand->mutable_mutable_operand()->mutable_operand()->__Init__(symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
   list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
@@ -64,9 +61,8 @@ TEST(ControlVmStreamType, delete_symbol) {
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_TRUE(scheduler->waiting_vm_instr_chain_list().empty());
   ASSERT_TRUE(scheduler->active_vm_stream_list().empty());
-  ASSERT_EQ(scheduler->vm_thread_list().size(), 1);
-  ASSERT_EQ(scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 1);
-  ASSERT_TRUE(scheduler->zombie_logical_object_list().empty());
+  ASSERT_EQ(scheduler->vm_thread_list().size(), 2);
+  ASSERT_EQ(scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 2);
   ASSERT_TRUE(scheduler->id2logical_object().empty());
 }
 

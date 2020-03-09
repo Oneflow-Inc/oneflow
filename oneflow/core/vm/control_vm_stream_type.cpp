@@ -2,46 +2,10 @@
 #include "oneflow/core/vm/control_vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"
-#include "oneflow/core/vm/free_mirrored_object_handler.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/flat_msg_view.h"
 
 namespace oneflow {
-
-namespace {
-
-class FreeMirroredObjectTryDeleter : public FreeMirroredObjectHandler {
- public:
-  ~FreeMirroredObjectTryDeleter() override = default;
-
-  void Call(LogicalObject* logical_object) const override {
-    CHECK(!logical_object->is_zombie_link_empty());
-    auto* scheduler = logical_object->mut_vm_scheduler();
-    auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-    std::size_t size = parallel_id2mirrored_object->size();
-    for (int i = 0; i < size; ++i) {
-      auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
-      CHECK_NOTNULL(mirrored_object);
-      if (!mirrored_object->access_list().empty()) { return; }
-    }
-    for (int i = 0; i < size; ++i) {
-      auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
-      CHECK(!mirrored_object->has_object_type());
-      parallel_id2mirrored_object->Erase(mirrored_object);
-    }
-    scheduler->mut_zombie_logical_object_list()->Erase(logical_object);
-  }
-
-  static const FreeMirroredObjectTryDeleter* Singleton() {
-    static const FreeMirroredObjectTryDeleter singleton;
-    return &singleton;
-  }
-
- private:
-  FreeMirroredObjectTryDeleter() : FreeMirroredObjectHandler() {}
-};
-
-}  // namespace
 
 enum CtrlInstrOpCode { kNewMirroredObjectSymbol = 0, kDeleteMirroredObjectSymbol };
 
@@ -107,7 +71,9 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
+    auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();
+    mirrored_object_operand->set_logical_object_id(logical_object_id);
+    mirrored_object_operand->mutable_all_parallel_id();
   }
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
@@ -118,11 +84,13 @@ void DeleteMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_ins
   const auto& logical_objectId = view->mirrored_object_operand().operand().logical_object_id();
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
   CHECK_NOTNULL(logical_object);
-  CHECK(logical_object->is_zombie_link_empty());
-  scheduler->mut_zombie_logical_object_list()->PushBack(logical_object);
+  auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+  for (int i = 0; i < parallel_id2mirrored_object->size(); ++i) {
+    auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
+    CHECK(!mirrored_object->has_object_type());
+    parallel_id2mirrored_object->Erase(mirrored_object);
+  }
   scheduler->mut_id2logical_object()->Erase(logical_object);
-  logical_object->set_free_mirrored_object_handler(FreeMirroredObjectTryDeleter::Singleton());
-  logical_object->free_mirrored_object_handler().Call(logical_object);
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteMirroredObjectSymbol, DeleteMirroredObjectSymbol);
 
@@ -131,14 +99,20 @@ void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }
 
+void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstrChain* vm_instr_chain) const {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instr) {
+    Run(scheduler, vm_instr->mut_vm_instr_msg());
+  }
+}
+
 void ControlVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
                                                   VmInstructionStatusBuffer* status_buffer) const {
-  UNIMPLEMENTED();
+  // do nothing
 }
 
 void ControlVmStreamType::DeleteVmInstructionStatus(
     const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
-  UNIMPLEMENTED();
+  // do nothing
 }
 
 bool ControlVmStreamType::QueryVmInstructionStatusDone(

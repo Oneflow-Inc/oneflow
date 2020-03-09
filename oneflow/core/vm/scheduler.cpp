@@ -15,10 +15,6 @@ void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
       if (access->is_mirrored_object_access_link_empty()) { continue; }
       auto* mirrored_object = access->mut_mirrored_object();
       mirrored_object->mut_access_list()->Erase(access);
-      if (mirrored_object->access_list().empty()) {
-        mirrored_object->logical_object().free_mirrored_object_handler().Call(
-            mirrored_object->mut_logical_object());
-      }
     }
   }
   auto* wait_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
@@ -183,12 +179,20 @@ void VmScheduler::FilterReadyChains(NewVmInstrChainList* new_vm_instr_chain_list
 
 void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_chain_list) {
   auto* active_vm_stream_list = mut_active_vm_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH(ready_chain_list, vm_instr_chain) {
+  ControlVmStreamType control_vm_stream_type;
+  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, vm_instr_chain) {
     auto* vm_stream = vm_instr_chain->mut_vm_stream();
-    ready_chain_list->MoveToDstBack(vm_instr_chain.Mutable(), vm_stream->mut_running_chain_list());
-    if (vm_stream->is_active_vm_stream_link_empty()) { active_vm_stream_list->PushBack(vm_stream); }
-    vm_stream->mut_vm_thread()->mut_pending_chain_list()->EmplaceBack(std::move(vm_instr_chain));
+    if (vm_stream->vm_stream_id().vm_stream_type_id() == ControlVmStreamType::kVmStreamTypeId) {
+      control_vm_stream_type.Run(this, vm_instr_chain);
+    } else {
+      ready_chain_list->MoveToDstBack(vm_instr_chain, vm_stream->mut_running_chain_list());
+      if (vm_stream->is_active_vm_stream_link_empty()) {
+        active_vm_stream_list->PushBack(vm_stream);
+      }
+      vm_stream->mut_vm_thread()->mut_pending_chain_list()->PushBack(vm_instr_chain);
+    }
   }
+  ready_chain_list->Clear();
 }
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
