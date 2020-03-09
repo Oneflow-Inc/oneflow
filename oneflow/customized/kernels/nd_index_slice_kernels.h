@@ -119,11 +119,6 @@ MakeGatherScatterNdKernelMatchedPredictor() {
 
 }  // namespace
 
-#define GATHER_ND_DATA_TYPE_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-
 #define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,          \
                                            itype_pair)                                           \
   REGISTER_USER_KERNEL(#op_type_name)                                                            \

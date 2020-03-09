@@ -45,7 +45,30 @@ struct ScatterNdReduceAdd<DeviceType::kGPU, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
 };
 
+#define GATHER_ND_GPU_DATA_TYPE_SEQ \
+  FLOATING_DATA_TYPE_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_SCATTER_ND_IMPL, (DeviceType::kGPU),
-                                 GATHER_ND_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 GATHER_ND_GPU_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kGPU),
+                                 GATHER_ND_GPU_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
+
+template<>
+struct ScatterNdReduceAdd<DeviceType::kGPU, float16> {
+  __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
+    gpu_atomic_add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
+  }
+};
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_SCATTER_ND_IMPL, (DeviceType::kGPU),
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kGPU),
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#endif
 
 }  // namespace oneflow
