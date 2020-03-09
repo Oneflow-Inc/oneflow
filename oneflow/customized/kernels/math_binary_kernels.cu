@@ -95,7 +95,12 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
 REGISTER_USER_KERNEL("binary")
     .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
+      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
+          && y_tensor_desc->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 
@@ -152,7 +157,10 @@ REGISTER_USER_KERNEL("binary_x_grad")
       return new MathBinaryXGradGpuFloatKernel(ctx);
     })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
+      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 
@@ -161,7 +169,10 @@ REGISTER_USER_KERNEL("binary_y_grad")
       return new MathBinaryYGradGpuFloatKernel(ctx);
     })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
-      if (ctx.device() == DeviceType::kGPU && ctx.data_type() == DataType::kFloat) { return true; }
+      const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
+      if (ctx.device() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {
+        return true;
+      }
       return false;
     });
 
