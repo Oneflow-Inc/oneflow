@@ -62,7 +62,7 @@ DLDataType XrtDType2DLDtype(DataType data_type) {
 DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, int32_t device_id) {
   DLManagedTensor ret;
   auto& tensor = ret.dl_tensor;
-  CHECK(IsAligned(para.data(), tvm::runtime::kAllocAligned));
+  CHECK(IsAligned(para.data(), tvm::runtime::kAllocAlignment));
   tensor.data = para.data();
   tensor.ctx.device_type = XrtDev2DLDev(XrtDevice::GPU_CUDA); // TODO(niuchong): support more device
   tensor.ctx.device_id = device_id;
@@ -77,11 +77,9 @@ DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, int32_t devi
 
 TVMExecutable::TVMExecutable(const std::string& name, const int num_inputs,
     const std::vector<Parameter>& outputs,
-    XrtDevice device,
-    int device_id,
     const std::string& json,
     const tvm::runtime::Module& built_mod,
-    const std::vector<TVMContext>& ctxs) :
+    TVMContext ctx) :
       Executable(XrtEngine::TVM), name_(name), num_inputs_(num_inputs),
       outputs_(), ctx_(ctx) {
   {
@@ -93,16 +91,16 @@ TVMExecutable::TVMExecutable(const std::string& name, const int num_inputs,
     get_num_outputs_ = executor_.GetFunction("get_num_outputs", false);
   }
   for (const auto& output : outputs) {
-    outputs_.emplace_back(XrtParameter2DLManagedTensor(output));
+    outputs_.emplace_back(XrtParameter2DLManagedTensor(output, ctx_.device_id));
   }
 }
 
 bool TVMExecutable::Run(const std::vector<Parameter> &inputs, 
     const ExecutableRunOptions &run_options,
-    bool block_until_done = true) override {
+    bool block_until_done) {
   std::vector<DLManagedTensor> dl_managed_tensors;
   for (const auto& input : inputs) {
-    dl_managed_tensors.emplace_back(XrtParameter2DLManagedTensor(input));
+    dl_managed_tensors.emplace_back(XrtParameter2DLManagedTensor(input, ctx_.device_id));
     set_input_zero_copy_(input.name(),
         tvm::runtime::NDArray::FromDLPack(&dl_managed_tensors.back()));
   }
@@ -112,7 +110,11 @@ bool TVMExecutable::Run(const std::vector<Parameter> &inputs,
   int num_outputs = get_num_outputs_();
   CHECK_EQ(num_outputs, outputs_.size());
   for (int i = 0;i < outputs_.size(); ++i) {
-    get_output(i, outputs_.at(i));
+    get_output_(i, &outputs_.at(i));
+  }
+
+  if (block_until_done) {
+    // TODO(niuchong): tvm async
   }
 
   this->results_ = run_options.return_params;

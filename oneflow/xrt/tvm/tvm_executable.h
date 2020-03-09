@@ -3,7 +3,8 @@
 
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/parameter.h"
-#include <tvm/bulid_module.h>
+#include <tvm/build_module.h>
+#include <tvm/runtime/device_api.h>
 
 namespace oneflow {
 
@@ -13,6 +14,7 @@ class TVMExecutable final : public Executable {
  public:
   TVMExecutable(const std::string& name, const int num_inputs,
       const std::vector<Parameter>& outputs,
+      const std::string& json,
       const tvm::runtime::Module& built_mod,
       TVMContext ctx);
 
@@ -26,10 +28,10 @@ class TVMExecutable final : public Executable {
 
   TVMContext ctx_;
   tvm::runtime::Module executor_;
-  tvm::PackedFunc set_input_zero_copy_;
-  tvm::PackedFunc run_;
-  tvm::PackedFunc get_output_;
-  tvm::PackedFunc get_num_outputs_;
+  tvm::runtime::PackedFunc set_input_zero_copy_;
+  tvm::runtime::PackedFunc run_;
+  tvm::runtime::PackedFunc get_output_;
+  tvm::runtime::PackedFunc get_num_outputs_;
 };
 
 }
