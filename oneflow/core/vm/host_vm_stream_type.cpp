@@ -75,7 +75,6 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     mirrored_object = mirrored_object_access->mut_mirrored_object();
     CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
-    CHECK(!mirrored_object->has_object_type());
   }
   CudaCheck(cudaFreeHost(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
   mirrored_object->clear_cuda_mem_buffer();
