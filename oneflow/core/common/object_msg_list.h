@@ -177,6 +177,8 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
 
+  void CheckSize() const { list_head_.CheckSize(); }
+
   template<int field_index = 0>
   void __Init__() {
     list_head_.__Init__();

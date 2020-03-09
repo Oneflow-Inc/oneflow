@@ -93,6 +93,13 @@ class EmbeddedListHead {
     CHECK_EQ(list_empty, size_empty);
     return size_empty;
   }
+  void CheckSize() const {
+    size_t link_size = 0;
+    for (EmbeddedListLink* iter = container_.next(); iter != &container_; iter = iter->next()) {
+      ++link_size;
+    }
+    CHECK_EQ(size_, link_size);
+  }
   const value_type& Begin() const { return Next(End()); }
   const value_type& ReverseBegin() const { return Prev(End()); }
   const value_type& End() const { return *LinkField::StructPtr4FieldPtr(&container()); }
@@ -123,6 +130,7 @@ class EmbeddedListHead {
     CHECK_GT(size_, 0);
     CHECK_NE(elem, End());
     EmbeddedListLink* list_link = LinkField::FieldPtr4StructPtr(elem);
+    CHECK(!list_link->empty());
     list_link->Erase();
     --size_;
   }
