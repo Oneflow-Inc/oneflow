@@ -97,6 +97,22 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
       return ctx.device_type() == DeviceType::kGPU;
+    })
+    .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const int32_t elem_cnt = in_shape->elem_cnt();
+      const int32_t instance_size = 1;
+      const int32_t instance_num = in_shape->elem_cnt();
+
+      /* Sorted In */
+      const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(float));
+      /* Indices */
+      const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));
+      /* CUB Temp Storage */
+      const int32_t temp_storage_bytes =
+          InferTempStorageForSortPairsAscending<float, int32_t>(instance_num, instance_size);
+
+      return sorted_in_aligned_bytes * 2 + indices_aligned_bytes + temp_storage_bytes;
     });
 
 }  // namespace oneflow

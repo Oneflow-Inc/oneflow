@@ -489,7 +489,7 @@ def shuffle(value, seed=None, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
-    return flow.local_gather(
+    return flow.gather(
         value, random_batch_permutation_indices
     )
 
