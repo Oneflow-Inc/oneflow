@@ -5,8 +5,11 @@ namespace oneflow {
 
 namespace {
 
-// Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
-//                                 const Shape& updates_shape) {
+Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
+                                const Shape& updates_shape) {
+  // TODO
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> CheckScatterNdShape(Shape* params_shape, Shape* indices_shape, Shape* updates_shape) {
   int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);

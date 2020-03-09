@@ -4,19 +4,20 @@ namespace oneflow {
 
 template<typename T, typename I>
 struct GatherNdImpl<DeviceType::kCPU, T, I> {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    GatherNdFunctor<T, I>::Invoke(params->num_slices * params->slice_size, params->slice_size,
-                                  params->index_ndims, params->dense_shape, params->indices_dptr,
-                                  params->dense_dptr, params->slices_dptr);
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* dense, T* slices) {
+    GatherNdFunctor<T, I>::Invoke(args.num_slices * args.slice_size, args.slice_size,
+                                  args.index_ndims, args.dense_shape, indices, dense, slices);
   }
 };
 
 template<typename T, typename I, template<DeviceType, typename> class Opt>
 struct ScatterNdImpl<DeviceType::kCPU, T, I, Opt> {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* slices, T* dense) {
     ScatterNdFunctor<T, I, Opt<DeviceType::kCPU, T>>::Invoke(
-        params->num_slices * params->slice_size, params->slice_size, params->index_ndims,
-        params->dense_shape, params->indices_dptr, params->slices_dptr, params->dense_dptr);
+        args.num_slices * args.slice_size, args.slice_size, args.index_ndims, args.dense_shape,
+        indices, slices, dense);
   }
 };
 

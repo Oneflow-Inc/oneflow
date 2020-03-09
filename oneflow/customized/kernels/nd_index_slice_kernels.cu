@@ -6,33 +6,37 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename I>
-__global__ void CudaGatherNd(NdIndexSliceParams<T, I> params) {
-  GatherNdFunctor<T, I>::Invoke(params.num_slices * params.slice_size, params.slice_size,
-                                params.index_ndims, params.dense_shape, params.indices_dptr,
-                                params.dense_dptr, params.slices_dptr);
+__global__ void CudaGatherNd(NdIndexSliceArgs<T, I> args, const I* indices, const T* dense,
+                             T* slices) {
+  GatherNdFunctor<T, I>::Invoke(args.num_slices * args.slice_size, args.slice_size,
+                                args.index_ndims, args.dense_shape, indices, dense, slices);
 }
 
 template<typename T, typename I, template<DeviceType, typename> class Opt>
-__global__ void CudaScatterNd(NdIndexSliceParams<T, I> params) {
+__global__ void CudaScatterNd(NdIndexSliceArgs<T, I> args, const I* indices, const T* slices,
+                              T* dense) {
   ScatterNdFunctor<T, I, Opt<DeviceType::kGPU, T>>::Invoke(
-      params.num_slices * params.slice_size, params.slice_size, params.index_ndims,
-      params.dense_shape, params.indices_dptr, params.slices_dptr, params.dense_dptr);
+      args.num_slices * args.slice_size, args.slice_size, args.index_ndims, args.dense_shape,
+      indices, slices, dense);
 }
 
 }  // namespace
 
 template<typename T, typename I>
 struct GatherNdImpl<DeviceType::kGPU, T, I> {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    RUN_CUDA_KERNEL((CudaGatherNd<T, I>), ctx, params->num_slices * params->slice_size, *params);
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* dense, T* slices) {
+    RUN_CUDA_KERNEL((CudaGatherNd<T, I>), ctx, args.num_slices * args.slice_size, args, indices,
+                    dense, slices);
   }
 };
 
 template<typename T, typename I, template<DeviceType, typename> class Opt>
 struct ScatterNdImpl<DeviceType::kGPU, T, I, Opt> {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    RUN_CUDA_KERNEL((CudaScatterNd<T, I, Opt>), ctx, params->num_slices * params->slice_size,
-                    *params);
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* slices, T* dense) {
+    RUN_CUDA_KERNEL((CudaScatterNd<T, I, Opt>), ctx, args.num_slices * args.slice_size, args,
+                    indices, slices, dense);
   }
 };
 

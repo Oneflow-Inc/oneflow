@@ -7,43 +7,37 @@
 namespace oneflow {
 
 template<typename T, typename I>
-struct NdIndexSliceParams {
+struct NdIndexSliceArgs {
   static const size_t kMaxDims = 8;
   int64_t num_slices;
   int64_t slice_size;
   int64_t index_ndims;
   int64_t dense_shape[kMaxDims];
-  T* dense_dptr;
-  T* slices_dptr;
-  const I* indices_dptr;
 };
 
 template<typename T, typename I>
-inline NdIndexSliceParams<T, I> ConstructNdIndexSliceParams(user_op::Tensor* dense,
-                                                            user_op::Tensor* slices,
-                                                            const user_op::Tensor* indices) {
-  NdIndexSliceParams<T, I> params;
-  std::memset(&params, 0, sizeof(NdIndexSliceParams<T, I>));
-  params.num_slices = indices->shape().Count(0, indices->shape().NumAxes() - 1);
-  params.index_ndims = indices->shape().At(indices->shape().NumAxes() - 1);
-  params.slice_size = slices->shape().Count(indices->shape().NumAxes() - 1);
-  FOR_RANGE(int64_t, i, 0, dense->shape().NumAxes()) {
-    params.dense_shape[i] = dense->shape().At(i);
-  }
-  params.dense_dptr = dense->mut_dptr<T>();
-  params.slices_dptr = slices->mut_dptr<T>();
-  params.indices_dptr = indices->dptr<I>();
-  return params;
+inline NdIndexSliceArgs<T, I> ConstructNdIndexSliceArgs(const user_op::Tensor& dense,
+                                                        const user_op::Tensor& slices,
+                                                        const user_op::Tensor& indices) {
+  NdIndexSliceArgs<T, I> args;
+  std::memset(&args, 0, sizeof(NdIndexSliceArgs<T, I>));
+  args.num_slices = indices.shape().Count(0, indices.shape().NumAxes() - 1);
+  args.index_ndims = indices.shape().At(indices.shape().NumAxes() - 1);
+  args.slice_size = slices.shape().Count(indices.shape().NumAxes() - 1);
+  FOR_RANGE(int64_t, i, 0, dense.shape().NumAxes()) { args.dense_shape[i] = dense.shape().At(i); }
+  return args;
 }
 
 template<DeviceType device_type, typename T, typename I>
 struct GatherNdImpl {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params);
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* dense, T* slices);
 };
 
 template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
 struct ScatterNdImpl {
-  static void Apply(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params);
+  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                    const T* slices, T* dense);
 };
 
 // If values in output is to be updated more than once, because there are duplicate entries in
@@ -60,22 +54,26 @@ struct ScatterNdReduceAdd {
 
 template<DeviceType device_type, typename T, typename I>
 struct NdIndicesSliceUtil final {
-  static void GatherNd(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    GatherNdImpl<device_type, T, I>::Apply(ctx, params);
+  static void GatherNd(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                       const T* dense, T* slices) {
+    GatherNdImpl<device_type, T, I>::Apply(ctx, args, indices, dense, slices);
   }
 
-  static void ScatterNdUpdate(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    ScatterNdReduce<ScatterNdReduceReplace>(ctx, params);
+  static void ScatterNdUpdate(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                              const T* slices, T* dense) {
+    ScatterNdReduce<ScatterNdReduceReplace>(ctx, args, indices, slices, dense);
   }
 
-  static void ScatterNdAdd(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    ScatterNdReduce<ScatterNdReduceAdd>(ctx, params);
+  static void ScatterNdAdd(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                           const T* slices, T* dense) {
+    ScatterNdReduce<ScatterNdReduceAdd>(ctx, args, indices, slices, dense);
   }
 
  private:
   template<template<DeviceType, typename> class Opt>
-  static void ScatterNdReduce(DeviceCtx* ctx, NdIndexSliceParams<T, I>* params) {
-    ScatterNdImpl<device_type, T, I, Opt>::Apply(ctx, params);
+  static void ScatterNdReduce(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                              const T* slices, T* dense) {
+    ScatterNdImpl<device_type, T, I, Opt>::Apply(ctx, args, indices, slices, dense);
   }
 };
 

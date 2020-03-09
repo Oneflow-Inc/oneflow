@@ -52,49 +52,53 @@ class ScatterNdAddKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename I>
 void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-  user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("params", 0);
-  user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-  auto params = ConstructNdIndexSliceParams<T, I>(x, y, indices);
-  NdIndicesSliceUtil<device_type, T, I>::GatherNd(ctx->device_ctx(), &params);
+  const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
+  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
+  NdIndicesSliceUtil<device_type, T, I>::GatherNd(ctx->device_ctx(), args, indices->dptr<I>(),
+                                                  params->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
 void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-  user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
+  const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
-  auto params = ConstructNdIndexSliceParams<T, I>(out, updates, indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), &params);
+  auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
+  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), args, indices->dptr<I>(),
+                                                      updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
 void ScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("params", 0);
+  const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-  user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
+  const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (in->dptr<T>() != out->mut_dptr<T>()) {
+  if (params->dptr<T>() != out->mut_dptr<T>()) {
     size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(), out_bytes_size);
+    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   }
-  auto params = ConstructNdIndexSliceParams<T, I>(out, updates, indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdUpdate(ctx->device_ctx(), &params);
+  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
+  NdIndicesSliceUtil<device_type, T, I>::ScatterNdUpdate(
+      ctx->device_ctx(), args, indices->dptr<I>(), updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
 void ScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("params", 0);
+  const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-  user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
+  const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (in->dptr<T>() != out->mut_dptr<T>()) {
+  if (params->dptr<T>() != out->mut_dptr<T>()) {
     size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(), out_bytes_size);
+    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   }
-  auto params = ConstructNdIndexSliceParams<T, I>(out, updates, indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), &params);
+  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
+  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), args, indices->dptr<I>(),
+                                                      updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 namespace {
