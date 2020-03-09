@@ -153,9 +153,9 @@ MakeGatherScatterNdKernelMatchedPredictor() {
 #define REGISTER_ND_INDEX_SLICE_KERNELS(device_type_v, dtype_pair, itype_pair)                     \
   REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)   \
   REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair) \
-  REGISTER_SCATTER_ND_OPT_KERNELS(scatter_nd_update, Update, device_type_v, dtype_pair,            \
+  REGISTER_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_update, Update, device_type_v, dtype_pair,     \
                                   itype_pair)                                                      \
-  REGISTER_SCATTER_ND_OPT_KERNELS(scatter_nd_add, Add, device_type_v, dtype_pair, itype_pair)
+  REGISTER_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_add, Add, device_type_v, dtype_pair, itype_pair)
 
 }  // namespace oneflow
 

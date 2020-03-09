@@ -133,9 +133,6 @@ def _compare_scatter_nd_update_with_tf(
         dz_dx = t1.gradient(z1, x)
 
     with tf.GradientTape() as t2:
-        # Cannot use tf.compat.v1.scatter_nd_update because it's ref input
-        # and don't work correctly with gradient and it cannot calculate
-        # updates grad
         z2 = tf.tensor_scatter_nd_update(const_x, i, y)
         dz_dy = t2.gradient(z2, y)
 
@@ -178,7 +175,7 @@ def _compare_scatter_nd_update_with_tf(
             )
             x = x + x_def
             y = y + y_def
-            z = flow.scatter_nd_update(x, indices_def, y)
+            z = flow.tensor_scatter_nd_update(x, indices_def, y)
             flow.losses.add_loss(z)
 
         flow.watch_diff(x, compare_dz_dx)
@@ -214,7 +211,7 @@ def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, upda
         updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
     ):
         with flow.device_prior_placement("gpu", "0:0"):
-            return flow.scatter_nd_update(input_def, indices_def, updates_def)
+            return flow.tensor_scatter_nd_update(input_def, indices_def, updates_def)
 
     of_out = scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
     test_case.assertTrue(np.array_equal(tf_out, of_out))

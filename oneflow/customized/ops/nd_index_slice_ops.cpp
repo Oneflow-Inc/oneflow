@@ -5,6 +5,9 @@ namespace oneflow {
 
 namespace {
 
+// Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
+//                                 const Shape& updates_shape) {
+
 Maybe<void> CheckScatterNdShape(Shape* params_shape, Shape* indices_shape, Shape* updates_shape) {
   int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);
   OF_CHECK_LE(index_ndims, params_shape->NumAxes());
@@ -136,7 +139,7 @@ REGISTER_USER_OP("scatter_nd")
     .SetBatchAxisInferFn(InferGatherScatterNdBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { TODO(); });
 
-REGISTER_USER_OP("scatter_nd_update")
+REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("params")
     .Input("updates")
     .Input("indices")
@@ -188,7 +191,7 @@ REGISTER_USER_OP_GRAD("scatter_nd")
       }
     });
 
-REGISTER_USER_OP_GRAD("scatter_nd_update")
+REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
@@ -210,7 +213,7 @@ REGISTER_USER_OP_GRAD("scatter_nd_update")
         AddOp(zero_grad_op);
         user_op::UserOpConfWrapperBuilder grad_builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            grad_builder.Op("scatter_nd_update")
+            grad_builder.Op("tensor_scatter_nd_update")
                 .Input("params", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("updates", zero_grad_op.output("out", 0))
                 .Input("indices", op.input("indices", 0))

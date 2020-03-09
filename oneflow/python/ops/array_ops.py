@@ -342,13 +342,13 @@ def scatter_nd(indices, updates, shape, name=None):
     return op.RemoteBlobList()[0]
 
 
-@oneflow_export("scatter_nd_update")
-def scatter_nd_update(params, indices, updates, name=None):
+@oneflow_export("tensor_scatter_nd_update")
+def tensor_scatter_nd_update(params, indices, updates, name=None):
     if name is None:
         name = id_util.UniqueStr("ScatterNdUpdate_")
     op = (
         flow.user_op_builder(name)
-        .Op("scatter_nd_update")
+        .Op("tensor_scatter_nd_update")
         .Input("params", [params])
         .Input("updates", [updates])
         .Input("indices", [indices])
