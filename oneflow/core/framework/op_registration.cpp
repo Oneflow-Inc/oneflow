@@ -137,12 +137,6 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
-    DtypeInferFn dtype_infer_fn) {
-  wrapper_.reg_val.dtype_infer_fn = std::move(dtype_infer_fn);
-  return *this;
-}
-
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetBatchAxisInferFn(
     BatchAxisInferFn batch_axis_infer_fn) {
   wrapper_.reg_val.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
@@ -170,9 +164,6 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
       << "No ShapeInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
     wrapper_.reg_val.check_fn = CheckAttrFnUtil::NoCheck;
-  }
-  if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
-    wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
   }
   if (wrapper_.reg_val.batch_axis_infer_fn == nullptr) {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
