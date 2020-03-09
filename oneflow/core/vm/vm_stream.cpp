@@ -14,9 +14,11 @@ ObjectMsgPtr<VmInstrChain> VmStream::NewVmInstrChain(VmInstructionMsg* vm_instr_
 
 void VmStream::DeleteVmInstrChain(ObjectMsgPtr<VmInstrChain>&& vm_instr_chain) {
   CHECK(vm_instr_chain->is_pending_chain_link_empty());
+  CHECK(vm_instr_chain->is_vm_instr_chain_link_empty());
   CHECK_EQ(vm_instr_chain->ref_cnt(), 1);
+  auto* vm_instr_chain_ptr = vm_instr_chain.Mutable();
   mut_free_chain_list()->EmplaceBack(std::move(vm_instr_chain));
-  vm_instr_chain->__Delete__();
+  vm_instr_chain_ptr->__Delete__();
 }
 
 }  // namespace oneflow

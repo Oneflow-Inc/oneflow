@@ -12,6 +12,7 @@ void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
     auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
       mirrored_object_accesses->Erase(access);
+      if (access->is_mirrored_object_access_link_empty()) { continue; }
       auto* mirrored_object = access->mut_mirrored_object();
       mirrored_object->mut_access_list()->Erase(access);
       if (mirrored_object->access_list().empty()) {
@@ -20,12 +21,13 @@ void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
       }
     }
   }
+  auto* wait_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
   auto* out_edges = vm_instr_chain->mut_out_edges();
   OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(out_edges, out_edge) {
-    ObjectMsgPtr<VmInstrChain> out_vm_instr_chain(out_edge->dst_vm_instr_chain());
+    VmInstrChain* out_vm_instr_chain = out_edge->dst_vm_instr_chain();
     out_vm_instr_chain->mut_in_edges()->Erase(out_edge);
     if (out_vm_instr_chain->in_edges().empty()) {
-      ready_vm_instr_chain_list->EmplaceBack(std::move(out_vm_instr_chain));
+      wait_vm_instr_chain_list->MoveToDstBack(out_vm_instr_chain, ready_vm_instr_chain_list);
     }
     out_edges->Erase(out_edge);
   }
@@ -37,7 +39,6 @@ void VmScheduler::TryReleaseFinishedVmInstrChains(
   while (true) {
     auto* vm_instr_chain_ptr = running_chain_list->Begin();
     if (vm_instr_chain_ptr == nullptr || !vm_instr_chain_ptr->Done()) { break; }
-    ObjectMsgPtr<VmInstrChain> vm_instr_chain(vm_instr_chain_ptr);
     ReleaseVmInstruction(vm_instr_chain_ptr, /*out*/ ready_vm_instr_chain_list);
     vm_stream->DeleteVmInstrChain(running_chain_list->Erase(vm_instr_chain_ptr));
   }
