@@ -474,17 +474,21 @@ def assign(ref, value, dtype=None, name=None):
 
 @oneflow_export("random_like")
 def random_like(like, seed=None, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.random_like_conf.like = like.logical_blob_name
+    op = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("random_like_"))
+        .Op("random_like")
+        .Input("in", [like])
+        .Output("out")
+    )
     if seed is not None:
-        op_conf.random_like_conf.random_seed = seed
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("RandomLike_"))
-    op_conf.random_like_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+        op.SetAttr("has_seed", 1, "AttrTypeInt32").SetAttr("seed", seed, "AttrTypeInt64")
+    else:
+        op.SetAttr("has_seed", 0, "AttrTypeInt32").SetAttr("seed", -1, "AttrTypeInt64")
+    return (
+        op
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("identity")
 def identity(x, name=None):
