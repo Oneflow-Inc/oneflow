@@ -477,7 +477,7 @@ def random_like(like, seed=None, name=None):
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("random_like_"))
         .Op("random_like")
-        .Input("in", [like])
+        .Input("like", [like])
         .Output("out")
     )
     if seed is not None:
