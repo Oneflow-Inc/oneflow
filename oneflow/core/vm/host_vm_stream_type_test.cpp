@@ -25,6 +25,7 @@ TEST(HostVmStreamType, basic) {
   list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1));
   list.EmplaceBack(HostVmStreamType().CudaMallocHost(symbol_value, 1024));
   list.EmplaceBack(HostVmStreamType().CudaFreeHost(symbol_value));
+  list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();

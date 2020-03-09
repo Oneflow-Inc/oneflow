@@ -108,6 +108,9 @@ class TrivialObjectMsgConditionList {
     mut_cond()->notify_one();
     return kObjectMsgConditionListStatusSuccess;
   }
+  ObjectMsgConditionListStatus PushBack(value_type* ptr) {
+    return EmplaceBack(ObjectMsgPtr<value_type>(ptr));
+  }
   ObjectMsgConditionListStatus PopFront(ObjectMsgPtr<value_type>* ptr) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });

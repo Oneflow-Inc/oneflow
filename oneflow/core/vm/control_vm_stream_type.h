@@ -32,6 +32,7 @@ class ControlVmStreamType final : public VmStreamType {
   void Run(VmInstrChain* vm_instr_chain) const override;
 
   void Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const;
+  void Run(VmScheduler* scheduler, VmInstrChain* vm_instr_chain) const;
 };
 
 }  // namespace oneflow

@@ -7,7 +7,6 @@
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/vm_mem_zone_desc.msg.h"
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
-#include "oneflow/core/vm/free_mirrored_object_handler.h"
 
 namespace oneflow {
 
@@ -70,16 +69,13 @@ OBJECT_MSG_BEGIN(LogicalObject);
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
                        VmScheduler* vm_scheduler) {
     set_logical_object_id(logical_object_id);
-    set_free_mirrored_object_handler(FreeMirroredObjectIgnoreHandler::Singleton());
     set_vm_scheduler(vm_scheduler);
   }
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const FreeMirroredObjectHandler, free_mirrored_object_handler);
   OBJECT_MSG_DEFINE_RAW_PTR(VmScheduler, vm_scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
-  OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on
 
