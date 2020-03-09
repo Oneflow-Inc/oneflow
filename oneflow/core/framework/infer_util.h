@@ -32,6 +32,10 @@ class InferContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
+  virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool* IsTensorList4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool* IsBodyDisabled4ArgNameAndIndex(const std::string&, int32_t) = 0;
+
  protected:
   InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
   InferContext(const InferContext&) = delete;

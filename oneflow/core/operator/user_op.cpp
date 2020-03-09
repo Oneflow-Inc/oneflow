@@ -102,6 +102,11 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
 class UserOpInferContext : public user_op::InferContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+  struct BlobHeaderFlags {
+    bool is_dynamic;
+    bool is_tensor_list;
+    bool is_body_disabled;
+  };
 
   UserOpInferContext(const OperatorConf& op_conf, const ParallelContext* parallel_ctx,
                      const SbpSignature* sbp_signature,
@@ -117,6 +122,11 @@ class UserOpInferContext : public user_op::InferContext {
           BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
           auto key = std::make_pair(arg_name, i);
           arg2tensor_desc_.emplace(key, user_op::TensorDesc(blob->shape(), blob->data_type()));
+          BlobHeaderFlags header_flags;
+          header_flags.is_dynamic = blob->is_dynamic();
+          header_flags.is_tensor_list = blob->is_tensor_list();
+          header_flags.is_body_disabled = blob->is_body_disabled();
+          arg2header_flags_.emplace(key, header_flags);
           arg_vec->emplace_back(std::make_pair(arg_name, i));
         }
       }
@@ -132,6 +142,16 @@ class UserOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return &(arg2header_flags_.at(std::make_pair(arg_name, index)).is_dynamic);
+  }
+  bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return &(arg2header_flags_.at(std::make_pair(arg_name, index)).is_tensor_list);
+  }
+  bool* IsBodyDisabled4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return &(arg2header_flags_.at(std::make_pair(arg_name, index)).is_body_disabled);
+  }
+
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
@@ -149,6 +169,7 @@ class UserOpInferContext : public user_op::InferContext {
   const ParallelContext* parallel_ctx_;
   const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, BlobHeaderFlags> arg2header_flags_;
 };
 
 class UserOpSbpContext : public user_op::SbpContext {
@@ -328,9 +349,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
     std::function<void(OpContext*)> EnrollOpCtx) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
-  // set out blob desc other attr as first input blob desc (if has)
-  // TODO(ChengCheng): infer other attribute in blob desc
+  // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
+  // set out blob desc attr as first input blob desc (if has)
   BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
   if (first_in_blob_desc) {
     for (const std::string& obn : output_bns()) {
@@ -345,6 +365,11 @@ Maybe<void> UserOp::InferOutBlobDescs(
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
     out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+    out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
+    out_blob_desc->set_is_tensor_list(
+        *infer_ctx.IsTensorList4ArgNameAndIndex(pair.first, pair.second));
+    out_blob_desc->set_is_body_disabled(
+        *infer_ctx.IsBodyDisabled4ArgNameAndIndex(pair.first, pair.second));
   }
   return Maybe<void>::Ok();
 }
