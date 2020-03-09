@@ -472,22 +472,25 @@ def assign(ref, value, dtype=None, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("random_like")
-def random_like(like, seed=None, name=None):
+@oneflow_export("random.shuffle")
+def shuffle(value, seed=None, name=None):
     op = (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("random_like_"))
-        .Op("random_like")
-        .Input("like", [like])
+        flow.user_op_builder(name if name is not None else value.op_name + "_random_batch_permutation_indices")
+        .Op("generate_random_batch_permutation_indices")
+        .Input("like", [value])
         .Output("out")
     )
     if seed is not None:
         op.SetAttr("has_seed", 1, "AttrTypeInt32").SetAttr("seed", seed, "AttrTypeInt64")
     else:
         op.SetAttr("has_seed", 0, "AttrTypeInt32").SetAttr("seed", -1, "AttrTypeInt64")
-    return (
+    random_batch_permutation_indices = (
         op
         .Build()
         .RemoteBlobList()[0]
+    )
+    return flow.local_gather(
+        value, random_batch_permutation_indices
     )
 
 @oneflow_export("identity")
