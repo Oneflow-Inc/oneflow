@@ -102,8 +102,7 @@ void VmScheduler::ConnectVmInstruction(VmInstrChain* src_vm_instr_chain,
 }
 
 void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                         NewVmInstrChainList* new_vm_instr_chain_list,
-                                         /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
+                                         NewVmInstrChainList* new_vm_instr_chain_list) {
   auto* begin = new_vm_instr_chain_list->Begin();
   if (begin != nullptr) { CHECK_EQ(begin->vm_instruction_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
@@ -153,6 +152,16 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         }
       }
     }
+  }
+}
+
+void VmScheduler::MergeChains(NewVmInstrChainList* new_vm_instr_chain_list) {
+  // TODO(lixinqi)
+}
+
+void VmScheduler::FilterReadyChains(NewVmInstrChainList* new_vm_instr_chain_list,
+                                    /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
     if (vm_instr_chain->in_edges().empty()) {
       new_vm_instr_chain_list->MoveToDstBack(vm_instr_chain, ready_vm_instr_chain_list);
     }
@@ -209,8 +218,9 @@ void VmScheduler::Schedule() {
     FilterAndRunControlVmInstructions(&tmp_pending_msg_list);
     NewVmInstrChainList new_vm_instr_chain_list;
     MakeVmInstrChains(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list,
-                           /*out*/ &ready_vm_instr_chain_list);
+    ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list);
+    MergeChains(&new_vm_instr_chain_list);
+    FilterReadyChains(&new_vm_instr_chain_list, /*out*/ &ready_vm_instr_chain_list);
     new_vm_instr_chain_list.MoveTo(waiting_vm_instr_chain_list);
   }
   DispatchVmInstruction(&ready_vm_instr_chain_list);
