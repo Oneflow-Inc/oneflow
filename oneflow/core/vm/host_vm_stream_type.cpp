@@ -24,7 +24,7 @@ std::vector<HostInstrFunc> host_instr_table;
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, symbol);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
 FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
 // clang-format on
@@ -40,7 +40,8 @@ void VmCudaMallocHost(VmInstruction* vm_instr) {
     CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->symbol().value(), vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
+                                 vm_stream.parallel_id());
     auto* mirrored_object_access =
         vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
@@ -56,7 +57,7 @@ REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, VmCudaMallocHost);
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, symbol);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
 FLAT_MSG_VIEW_END(CudaFreeHostInstruction);
 // clang-format on
 
@@ -68,7 +69,8 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     FlatMsgView<CudaFreeHostInstruction> view;
     CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->symbol().value(), vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
+                                 vm_stream.parallel_id());
     auto* mirrored_object_access =
         vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
@@ -101,7 +103,7 @@ bool HostVmStreamType::QueryVmInstructionStatusDone(
   return NaiveVmInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
+ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t logical_object_id,
                                                                 size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
@@ -110,13 +112,13 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t symbol,
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_symbol()->set_value(symbol);
+    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
   return vm_instr_msg;
 }
 
-ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) const {
+ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
@@ -124,7 +126,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t symbol) c
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_symbol()->set_value(symbol);
+    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
   return vm_instr_msg;
 }

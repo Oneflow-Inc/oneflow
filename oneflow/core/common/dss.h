@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_DSS_H_
 
 #include <cstddef>
+#include <typeinfo>
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/struct_traits.h"
 

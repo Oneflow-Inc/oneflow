@@ -93,7 +93,7 @@ REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewMirroredObjectSymbol, NewMirrored
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(DeleteMirroredObjectSymbolCtrlInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableLogicalObjectId, mutable_logical_object_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
 FLAT_MSG_VIEW_END(DeleteMirroredObjectSymbolCtrlInstruction);
 // clang-format on
 
@@ -107,7 +107,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteMirroredObjectSymbol);
   {
     FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
-    view->mutable_mutable_logical_object_id()->set_value(logical_object_id);
+    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
   vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
@@ -115,7 +115,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteMirroredObjectSymbol(
 void DeleteMirroredObjectSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<DeleteMirroredObjectSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
-  const auto& logical_objectId = view->mutable_logical_object_id().value();
+  const auto& logical_objectId = view->mirrored_object_operand().operand().logical_object_id();
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
   CHECK_NOTNULL(logical_object);
   CHECK(logical_object->is_zombie_link_empty());
