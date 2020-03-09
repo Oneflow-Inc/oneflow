@@ -26,9 +26,9 @@ struct ScatterNdReduceAdd<DeviceType::kCPU, T> {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_SCATTER_ND_IMPL, (DeviceType::kCPU),
-                                 GATHER_ND_DATA_TYPE_SEQ, GATHER_ND_INDEX_TYPE_SEQ)
+                                 GATHER_ND_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, DEVICE_TYPE_SEQ,
-                                 GATHER_ND_DATA_TYPE_SEQ, GATHER_ND_INDEX_TYPE_SEQ)
+                                 GATHER_ND_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
