@@ -22,9 +22,7 @@ REGISTER_USER_OP("random_like")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
-      if (num_axes > 1) {
-        SbpSignatureBuilder().MakeSplitSignatureListBuilder(num_axes).Build(ctx->sbp_sig_list());
-      }
+      SbpSignatureBuilder().MakeSplitSignatureListBuilder(num_axes).Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
