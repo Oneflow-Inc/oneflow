@@ -92,8 +92,8 @@ def _compare_gather_nd_with_tf(test_case, device_type, params_shape, indices_sha
         y = tf.gather_nd(x, i)
         dy = t.gradient(y, x)
         if isinstance(dy, tf.IndexedSlices):
-            print("tf_sparse_dy:", dy.values.numpy(), dy.values.shape)
-            print("tf_ind:", dy.indices.numpy(), dy.indices.shape)
+            # print("tf_sparse_dy:", dy.values.numpy(), dy.values.shape)
+            # print("tf_ind:", dy.indices.numpy(), dy.indices.shape)
             test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
             zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
             dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
@@ -106,8 +106,6 @@ def _compare_gather_nd_with_tf(test_case, device_type, params_shape, indices_sha
     else:
 
         def compare_dy(params_grad):
-            # print("tf_dy:", dy.numpy())
-            # print("of_dy:", params_grad.ndarray())
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
     gather_nd_fn = _make_gather_nd_fn(params, indices, device_type, mirrored, compare_dy)
@@ -137,7 +135,7 @@ def test_gather_nd(test_case):
         _compare_gather_nd_with_tf(test_case, *arg)
 
 
-def test_gather_nd_many_dims(test_case):
+def test_gather_nd_case_1(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
@@ -146,11 +144,30 @@ def test_gather_nd_many_dims(test_case):
         _compare_gather_nd_with_tf(test_case, *arg)
 
 
-def test_gather_nd_mirrored(test_case):
+def test_gather_nd_case_2(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["params_shape"] = [(10, 8, 4)]
     arg_dict["indices_shape"] = [(2, 2)]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_nd_with_tf(test_case, *arg)
+
+
+def test_gather_nd_case_3(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(32, 60, 80, 25)]
+    arg_dict["indices_shape"] = [(128, 2)]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_nd_with_tf(test_case, *arg)
+
+
+def test_gather_nd_case_4(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(128, 64, 2, 16, 7)]
+    arg_dict["indices_shape"] = [(30, 10, 3)]
     arg_dict["mirrored"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_gather_nd_with_tf(test_case, *arg)

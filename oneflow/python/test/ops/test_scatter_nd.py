@@ -20,19 +20,24 @@ def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_i
         # If values in params is to be updated more than once,
         # because there are duplicate entries in indices,
         # the order at which the updates happen for each value is undefined.
-        if allow_duplicate_index:
-            indices_col = np.random.randint(
-                low=0, high=params_shape[col], size=(indices_rows,), dtype=np.int32
-            ).reshape(indices_shape[:-1])
-        else:
-            assert indices_rows <= params_shape[col], "col=={},{} vs {}".format(
-                col, indices_rows, params_shape[col]
-            )
+        if indices_rows <= params_shape[col] and allow_duplicate_index is False:
             rand_indices = np.arange(params_shape[col], dtype=np.int32)
             np.random.shuffle(rand_indices)
             indices_col = rand_indices[:indices_rows].reshape(indices_shape[:-1])
+        else:
+            indices_col = np.random.randint(
+                low=0, high=params_shape[col], size=(indices_rows,), dtype=np.int32
+            ).reshape(indices_shape[:-1])
         indices.append(indices_col)
     indices = np.stack(indices, axis=len(indices_shape) - 1)
+
+    if allow_duplicate_index is False:
+        existing_nd_index_set = set()
+        for nd_index in indices.reshape(-1, indices.shape[-1]):
+            nd_index_str = "(" + ",".join(map(str, nd_index)) + ")"
+            assert nd_index_str not in existing_nd_index_set
+            existing_nd_index_set.add(nd_index_str)
+
     return params, updates, indices
 
 
@@ -85,7 +90,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 def _compare_scatter_nd_with_tf(
     test_case, device_type, params_shape, indices_shape, updates_shape, mirrored=False
 ):
-    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, True)
 
     with tf.GradientTape() as t:
         x = tf.Variable(updates)
@@ -114,7 +119,12 @@ def _compare_scatter_nd_with_tf(
     else:
         of_y = scatter_nd_fn(indices, updates).get().ndarray()
 
-    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+    # print("device_type:", device_type)
+    # print("indices:", indices)
+    # print("updates:", updates)
+    # print("tf_params:", y.numpy())
+    # print("of_params:", of_y)
+    test_case.assertTrue(np.allclose(y.numpy(), of_y))
 
 
 def _compare_scatter_nd_update_with_tf(
@@ -194,29 +204,6 @@ def _compare_scatter_nd_update_with_tf(
     test_case.assertTrue(np.array_equal(z1.numpy(), of_z.ndarray()))
 
 
-def _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, updates):
-    tf_out = tf.tensor_scatter_nd_update(
-        tf.Variable(params), tf.Variable(indices), tf.Variable(updates)
-    ).numpy()
-
-    flow.clear_default_session()
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
-
-    @flow.function(func_config)
-    def scatter_nd_update_fn(
-        input_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-        indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
-        updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
-    ):
-        with flow.device_prior_placement("gpu", "0:0"):
-            return flow.tensor_scatter_nd_update(input_def, indices_def, updates_def)
-
-    of_out = scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
-    test_case.assertTrue(np.array_equal(tf_out, of_out))
-
-
 def test_scatter_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -228,13 +215,43 @@ def test_scatter_nd(test_case):
         _compare_scatter_nd_with_tf(test_case, *arg)
 
 
-def test_scatter_nd_many_dims(test_case):
+def test_scatter_nd_case_1(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(128,)]
+    arg_dict["indices_shape"] = [(100, 1)]
+    arg_dict["updates_shape"] = [(100,)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(32, 16, 4)]
+    arg_dict["indices_shape"] = [(50, 2)]
+    arg_dict["updates_shape"] = [(50, 4)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_case_3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["params_shape"] = [(24, 25, 32, 10, 12)]
-    arg_dict["indices_shape"] = [(3, 3, 2)]
-    arg_dict["updates_shape"] = [(3, 3, 32, 10, 12)]
-    arg_dict["mirrored"] = [False]
+    arg_dict["indices_shape"] = [(3, 4, 2)]
+    arg_dict["updates_shape"] = [(3, 4, 32, 10, 12)]
+    arg_dict["mirrored"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_case_4(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(8,)]
+    arg_dict["indices_shape"] = [(12, 1)]
+    arg_dict["updates_shape"] = [(12,)]
     for arg in GenArgList(arg_dict):
         _compare_scatter_nd_with_tf(test_case, *arg)
 
@@ -249,20 +266,21 @@ def test_scatter_nd_update(test_case):
         _compare_scatter_nd_update_with_tf(test_case, *arg)
 
 
-def test_scatter_nd_update_many_dims(test_case):
+def test_scatter_nd_update_case_1(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
-    arg_dict["indices_shape"] = [(2, 3, 3)]
-    arg_dict["updates_shape"] = [(2, 3, 3, 3)]
+    arg_dict["params_shape"] = [(256, 64)]
+    arg_dict["indices_shape"] = [(128, 2)]
+    arg_dict["updates_shape"] = [(128,)]
     for arg in GenArgList(arg_dict):
         _compare_scatter_nd_update_with_tf(test_case, *arg)
 
 
-def test_scatter_nd_update_mirrored(test_case):
-    params = np.random.randint(1024, size=(10,)).astype(np.float32)
-    updates = np.random.randint(1024, size=(5)).astype(np.float32)
-    indices = np.arange(10)
-    np.random.shuffle(indices)
-    indices = indices[:5].reshape(5, 1).astype(np.int32)
-    _compare_scatter_nd_update_mirrored_with_tf(test_case, params, indices, updates)
+def test_scatter_nd_update_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(20, 10, 11, 3, 5)]
+    arg_dict["indices_shape"] = [(2, 4, 3)]
+    arg_dict["updates_shape"] = [(2, 4, 3, 5)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_update_with_tf(test_case, *arg)
