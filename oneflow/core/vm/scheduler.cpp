@@ -68,12 +68,13 @@ void VmScheduler::MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
   }
 }
 
-MirroredObject* VmScheduler::FindMirroredObject(Id2LogicalObject* id2logical_object,
-                                                const LogicalObjectId& logical_object_id,
-                                                int64_t parallel_id) {
-  auto* logical_object = id2logical_object->FindPtr(logical_object_id);
+MirroredObject* VmScheduler::FindMirroredObject(
+    Id2LogicalObject* id2logical_object, const MirroredObjectOperand& mirrored_object_operand,
+    int64_t parallel_id) {
+  auto* logical_object = id2logical_object->FindPtr(mirrored_object_operand.logical_object_id());
   CHECK_NOTNULL(logical_object);
-  auto* ret = logical_object->mut_parallel_id2mirrored_object()->FindPtr(parallel_id);
+  auto* ret = logical_object->mut_parallel_id2mirrored_object()->FindPtr(
+      mirrored_object_operand.GetParallelId(parallel_id));
   CHECK_NOTNULL(ret);
   return ret;
 }
@@ -111,27 +112,29 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
     const auto& operands = vm_instruction->vm_instr_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
-      LogicalObjectId logical_object_id = 0;
+      const MirroredObjectOperand* mirrored_object_operand = nullptr;
       if (operand.has_mutable_operand()) {
-        logical_object_id = operand.mutable_operand().value();
+        mirrored_object_operand = &operand.mutable_operand().operand();
       } else if (operand.has_mutable_local_operand()) {
-        logical_object_id = operand.mutable_local_operand().value();
+        mirrored_object_operand = &operand.mutable_local_operand().operand();
       } else {
         continue;
       }
-      auto* mirrored_object = FindMirroredObject(id2logical_object, logical_object_id, parallel_id);
+      auto* mirrored_object =
+          FindMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id);
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, vm_instruction);
     }
     for (const auto& operand : operands) {
-      LogicalObjectId logical_object_id = 0;
+      const MirroredObjectOperand* mirrored_object_operand = nullptr;
       if (operand.has_const_operand()) {
-        logical_object_id = operand.const_operand().value();
+        mirrored_object_operand = &operand.const_operand().operand();
       } else if (operand.has_const_local_operand()) {
-        logical_object_id = operand.const_local_operand().value();
+        mirrored_object_operand = &operand.const_local_operand().operand();
       } else {
         continue;
       }
-      auto* mirrored_object = FindMirroredObject(id2logical_object, logical_object_id, parallel_id);
+      auto* mirrored_object =
+          FindMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id);
       ConsumeMirroredObject(kConstOperandAccess, mirrored_object, vm_instruction);
     }
     auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
