@@ -10,16 +10,21 @@ namespace oneflow {
 FLAT_MSG_BEGIN(MirroredParallelId);
 FLAT_MSG_END(MirroredParallelId);
 
+FLAT_MSG_BEGIN(AllParallelId);
+FLAT_MSG_END(AllParallelId);
+
 FLAT_MSG_BEGIN(MirroredObjectOperand);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, int64_t parallel_id);
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
-  PUBLIC int64_t GetParallelId(int64_t parallel_id) const;
+  PUBLIC int64_t GetParallelId(int64_t default_parallel_id) const;
+
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, logical_object_id);
   FLAT_MSG_DEFINE_ONEOF(operand_type,
     FLAT_MSG_ONEOF_FIELD(int64_t, fixed_parallel_id)
-    FLAT_MSG_ONEOF_FIELD(MirroredParallelId, mirrored_parallel_id));
+    FLAT_MSG_ONEOF_FIELD(MirroredParallelId, mirrored_parallel_id)
+    FLAT_MSG_ONEOF_FIELD(AllParallelId, all_parallel_id));
 FLAT_MSG_END(MirroredObjectOperand);
 // clang-format on
 

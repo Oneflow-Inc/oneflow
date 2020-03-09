@@ -131,4 +131,27 @@ void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }
 
+void ControlVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
+                                                  VmInstructionStatusBuffer* status_buffer) const {
+  UNIMPLEMENTED();
+}
+
+void ControlVmStreamType::DeleteVmInstructionStatus(
+    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
+  UNIMPLEMENTED();
+}
+
+bool ControlVmStreamType::QueryVmInstructionStatusDone(
+    const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const {
+  UNIMPLEMENTED();
+}
+
+bool ControlVmStreamType::IsSourceOpcode(VmInstructionOpcode opcode) const {
+  return opcode == kNewMirroredObjectSymbol;
+}
+
+void ControlVmStreamType::Run(VmInstrChain* vm_instr_chain) const { UNIMPLEMENTED(); }
+
+COMMAND(RegisterVmStreamType<ControlVmStreamType>());
+
 }  // namespace oneflow

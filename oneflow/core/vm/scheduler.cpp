@@ -44,12 +44,13 @@ void VmScheduler::TryReleaseFinishedVmInstrChains(
   }
 }
 
-void VmScheduler::FilterAndRunControlVmInstructions(TmpPendingVmInstrMsgList* vm_instr_msg_list) {
+void VmScheduler::FilterAndRunSourceControlVmInstructions(
+    TmpPendingVmInstrMsgList* vm_instr_msg_list) {
   ControlVmStreamType control_vm_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    const VmStreamTypeId vm_stream_type_id =
-        vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
-    if (vm_stream_type_id != ControlVmStreamType::kVmStreamTypeId) { continue; }
+    const auto& proto = vm_instr_msg->vm_instruction_proto();
+    if (proto.vm_stream_type_id() != ControlVmStreamType::kVmStreamTypeId) { continue; }
+    if (!control_vm_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
     control_vm_stream_type.Run(this, vm_instr_msg);
     vm_instr_msg_list->Erase(vm_instr_msg);
   }
@@ -68,15 +69,20 @@ void VmScheduler::MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
   }
 }
 
-MirroredObject* VmScheduler::FindMirroredObject(
-    Id2LogicalObject* id2logical_object, const MirroredObjectOperand& mirrored_object_operand,
-    int64_t parallel_id) {
+template<typename DoEachT>
+void VmScheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
+                                        const MirroredObjectOperand& mirrored_object_operand,
+                                        int64_t parallel_id, const DoEachT& DoEach) {
   auto* logical_object = id2logical_object->FindPtr(mirrored_object_operand.logical_object_id());
+  auto* map = logical_object->mut_parallel_id2mirrored_object();
+  if (mirrored_object_operand.has_all_parallel_id()) {
+    OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
+    return;
+  }
   CHECK_NOTNULL(logical_object);
-  auto* ret = logical_object->mut_parallel_id2mirrored_object()->FindPtr(
-      mirrored_object_operand.GetParallelId(parallel_id));
+  auto* ret = map->FindPtr(mirrored_object_operand.GetParallelId(parallel_id));
   CHECK_NOTNULL(ret);
-  return ret;
+  DoEach(ret);
 }
 
 void VmScheduler::ConsumeMirroredObject(OperandAccessType access_type,
@@ -120,9 +126,11 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       } else {
         continue;
       }
-      auto* mirrored_object =
-          FindMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id);
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, vm_instruction);
+      ForEachMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id,
+                            [&](MirroredObject* mirrored_object) {
+                              ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
+                                                    vm_instruction);
+                            });
     }
     for (const auto& operand : operands) {
       const MirroredObjectOperand* mirrored_object_operand = nullptr;
@@ -133,9 +141,11 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       } else {
         continue;
       }
-      auto* mirrored_object =
-          FindMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id);
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, vm_instruction);
+      ForEachMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id,
+                            [&](MirroredObject* mirrored_object) {
+                              ConsumeMirroredObject(kConstOperandAccess, mirrored_object,
+                                                    vm_instruction);
+                            });
     }
     auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
@@ -183,7 +193,7 @@ void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_chain_list)
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.vm_stream_type_id2desc(), vm_stream_desc) {
+  auto Init = [&](const VmStreamDesc* vm_stream_desc) {
     auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
     mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
     BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
@@ -200,7 +210,12 @@ void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator)
         vm_thread->mut_vm_stream_list()->PushBack(vm_stream.Mutable());
       }
     }
+  };
+  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.vm_stream_type_id2desc(), vm_stream_desc) {
+    CHECK_NE(vm_stream_desc->vm_stream_type_id(), ControlVmStreamType::kVmStreamTypeId);
+    Init(vm_stream_desc);
   }
+  Init(&ObjectMsgPtr<VmStreamDesc>::New(ControlVmStreamType::kVmStreamTypeId, 1, 1, 1).Get());
 }
 
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
@@ -218,7 +233,7 @@ void VmScheduler::Schedule() {
   if (pending_msg_list().size() > 0) {
     TmpPendingVmInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunControlVmInstructions(&tmp_pending_msg_list);
+    FilterAndRunSourceControlVmInstructions(&tmp_pending_msg_list);
     NewVmInstrChainList new_vm_instr_chain_list;
     MakeVmInstrChains(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list);
