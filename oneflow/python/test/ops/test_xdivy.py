@@ -9,7 +9,7 @@ from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, x_shape, y_shape):
+def compare_with_tensorflow(device_type, x_shape, y_shape, x_is_zero, y_is_zero):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
@@ -21,33 +21,27 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
     @flow.function(func_config)
     def XdivyJob():
         with flow.device_prior_placement(device_type, "0:0"):
-            # x = flow.get_variable(
-            #     "x",
-            #     shape=x_shape,
-            #     dtype=flow.float,
-            #     initializer=flow.random_uniform_initializer(minval=1, maxval=5),
-            #     trainable=True,
-            # )
+            if x_is_zero:
+                Initializer_x = flow.zeros_initializer()
+            else:
+                Initializer_x = flow.random_uniform_initializer(minval=1, maxval=5)
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
                 dtype=flow.float,
-                initializer=flow.zeros_initializer(),
+                initializer=Initializer_x,
                 trainable=True,
             )
 
-            # y = flow.get_variable(
-            #     "y",
-            #     shape=y_shape,
-            #     dtype=flow.float,
-            #     initializer=flow.random_uniform_initializer(minval=1, maxval=5),
-            #     trainable=True,
-            # )
+            if y_is_zero:
+                Initializer_y = flow.zeros_initializer()
+            else:
+                Initializer_y = flow.random_uniform_initializer(minval=1, maxval=5)
             y = flow.get_variable(
                 "y",
                 shape=y_shape,
                 dtype=flow.float,
-                initializer=flow.zeros_initializer(),
+                initializer=Initializer_y,
                 trainable=True,
             )
 
@@ -86,6 +80,23 @@ def test_xdivy(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["x_shape"] = [(5,)]
     arg_dict["y_shape"] = [(5,)]
+
+    arg_dict["x_is_zero"] = [True]
+    arg_dict["y_is_zero"] = [True]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+    arg_dict["x_is_zero"] = [True]
+    arg_dict["y_is_zero"] = [False]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
+
+    arg_dict["x_is_zero"] = [False]
+    arg_dict["y_is_zero"] = [True]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
+
+    arg_dict["x_is_zero"] = [False]
+    arg_dict["y_is_zero"] = [False]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
