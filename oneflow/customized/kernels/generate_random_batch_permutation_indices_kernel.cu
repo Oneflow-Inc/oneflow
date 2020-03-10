@@ -76,10 +76,10 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
                                  tmp_buffer->mut_dptr<void>(), x->shape());
-    random_generator_->Uniform(x->shape().At(0), buf_manager.InPtr());
     const int32_t elem_cnt = x->shape().At(0);
     const int32_t instance_size = 1;
     const int32_t instance_num = x->shape().At(0);
+    random_generator_->Uniform(elem_cnt, buf_manager.InPtr());
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr());
     SortPairsAscending(buf_manager.InPtr(), buf_manager.IndicesPtr(), instance_num, instance_size,
@@ -99,10 +99,10 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
       return ctx.device_type() == DeviceType::kGPU;
     })
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      const int32_t elem_cnt = in_shape->elem_cnt();
+      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const int32_t elem_cnt = x_shape->elem_cnt();
       const int32_t instance_size = 1;
-      const int32_t instance_num = in_shape->elem_cnt();
+      const int32_t instance_num = x_shape->elem_cnt();
 
       /* Sorted In */
       const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(float));
