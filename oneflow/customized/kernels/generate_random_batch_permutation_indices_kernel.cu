@@ -11,9 +11,9 @@ class TmpBufferManager final {
  public:
   TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
-        sorted_in_elem_cnt_{in_shape.At(0)},
-        indices_elem_cnt_{sorted_in_elem_cnt_} {
-    const int32_t in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(float));
+        in_and_sorted_in_elem_cnt_{in_shape.At(0)},
+        indices_elem_cnt_{in_and_sorted_in_elem_cnt_} {
+    const int32_t in_aligned_bytes = GetCudaAlignedSize(in_and_sorted_in_elem_cnt_ * sizeof(float));
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
     in_ptr_ = reinterpret_cast<float*>(ptr);
     sorted_in_ptr_ = reinterpret_cast<float*>(reinterpret_cast<char*>(in_ptr_) + in_aligned_bytes);
@@ -32,7 +32,7 @@ class TmpBufferManager final {
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t SortedInElemCnt() const { return sorted_in_elem_cnt_; }
+  int32_t SortedInElemCnt() const { return in_and_sorted_in_elem_cnt_; }
   int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
@@ -44,7 +44,7 @@ class TmpBufferManager final {
   int32_t* indices_ptr_;
   void* temp_storage_ptr_;
 
-  int32_t sorted_in_elem_cnt_;
+  int32_t in_and_sorted_in_elem_cnt_;
   int32_t indices_elem_cnt_;
   int32_t temp_storage_bytes_;
 };
