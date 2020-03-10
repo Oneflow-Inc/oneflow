@@ -35,6 +35,7 @@ TEST(ControlVmStreamType, new_symbol) {
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(symbol_value);
   ASSERT_NE(logical_object, nullptr);
   ASSERT_EQ(logical_object->parallel_id2mirrored_object().size(), parallel_num);
+  ASSERT_TRUE(scheduler->Empty());
 }
 
 TEST(ControlVmStreamType, delete_symbol) {
@@ -64,6 +65,7 @@ TEST(ControlVmStreamType, delete_symbol) {
   ASSERT_EQ(scheduler->vm_thread_list().size(), 2);
   ASSERT_EQ(scheduler->vm_stream_type_id2vm_stream_rt_desc().size(), 2);
   ASSERT_TRUE(scheduler->id2logical_object().empty());
+  ASSERT_TRUE(scheduler->Empty());
 }
 
 }  // namespace

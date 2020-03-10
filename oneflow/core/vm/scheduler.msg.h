@@ -21,6 +21,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
   PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   PUBLIC void Receive(VmInstructionMsgList* vm_instr_list);
   PUBLIC void Schedule();
+  PUBLIC bool Empty() const;
 
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);

@@ -248,4 +248,9 @@ void VmScheduler::Schedule() {
   DispatchVmInstruction(&ready_vm_instr_chain_list);
 }
 
+bool VmScheduler::Empty() const {
+  return pending_msg_list().empty() && waiting_vm_instr_chain_list().empty()
+         && active_vm_stream_list().empty();
+}
+
 }  // namespace oneflow
