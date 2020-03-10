@@ -201,8 +201,8 @@ void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator)
     auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
     mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
     BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
-    for (int i = 0; i < vm_stream_desc->num_threads(); ++i) {
-      auto vm_thread = ObjectMsgPtr<VmThread>::NewFrom(allocator, vm_stream_rt_desc.Get());
+    for (int64_t i = 0; i < vm_stream_desc->num_threads(); ++i) {
+      auto vm_thread = ObjectMsgPtr<VmThread>::NewFrom(allocator, vm_stream_rt_desc.Get(), i);
       mut_vm_thread_list()->PushBack(vm_thread.Mutable());
       for (int parallel_id = bs.At(i).begin(); parallel_id < bs.At(i).end(); ++parallel_id) {
         FlatMsg<VmStreamId> vm_stream_id;
