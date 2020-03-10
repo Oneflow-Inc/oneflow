@@ -57,6 +57,7 @@ def test_shuffle(_):
 
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         ret = TestJob(x).get().ndarray()
+        assert np.array_equal(x, ret) == False, x_shape
         x.sort(0)
         ret.sort(0)
         assert np.array_equal(x, ret), x_shape
@@ -77,6 +78,7 @@ def test_shuffle(_):
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         ret = TestJob1(x).get().ndarray()
         idx = np.arange(x_shape[0]).astype(np.int32)
+        assert np.array_equal(idx, ret) == False, x_shape
         idx.sort()
         ret.sort()
         assert np.array_equal(idx, ret), x_shape
