@@ -691,14 +691,26 @@ def top_k(input, k=1, sorted=True, name=None):
         .RemoteBlobList()[0]
     )
 
-@oneflow_export("math.clip_by_value, clip_by_value", "clamp")
-def clip_by_value(input, min=None, max=None, name=None):
+
+@oneflow_export("math.clip_by_value", "clip_by_value", "clamp")
+def clip_by_value(values, min_value=None, max_value=None, name=None):
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
-    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("in", [input]).Output("out")
-    if min is not None:
-        op_builder.SetAttr("min", float(min), "AttrTypeFloat")
-    if max is not None:
-        op_builder.SetAttr("max", float(max), "AttrTypeFloat")
-    return op_builder.Build().RemoteBlobList()[0]
+    if min_value is not None:
+        min_tensor = flow.constant(
+            min_value, dtype=values.dtype, shape=(1,), name=name + "_ConstantMin"
+        )
+
+    if max_value is not None:
+        max_tensor = flow.constant(
+            max_value, dtype=values.dtype, shape=(1,), name=name + "_ConstantMax"
+        )
+
+    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("in", [values])
+    if min_tensor:
+        op_builder.Input("min", [min_tensor])
+    if max_tensor:
+        op_builder.Input("max", [max_tensor])
+
+    return op_builder.Output("out").Build().RemoteBlobList()[0]
