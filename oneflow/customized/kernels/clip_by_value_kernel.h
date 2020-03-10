@@ -105,26 +105,25 @@ class ClipByValueGradKernel final : public user_op::OpKernel {
 
 template<DeviceType device_type, typename T>
 void ClipByValueKernel<device_type, T>::Compute(user_op::KernelContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+  const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
   const user_op::Tensor* min = ctx->Tensor4ArgNameAndIndex("min", 0);
   const user_op::Tensor* max = ctx->Tensor4ArgNameAndIndex("max", 0);
-  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-  if (in->dptr<T>() != out->mut_dptr<T>()) {
-    size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>(), out_bytes_size);
+  if (x->dptr<T>() != y->mut_dptr<T>()) {
+    size_t out_bytes_size = y->shape().elem_cnt() * GetSizeOfDataType(y->data_type());
+    Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(), out_bytes_size);
   }
 
   if (min != nullptr && max != nullptr) {
-    ClipValuesUtil<device_type, T>::ByMinMax(ctx->device_ctx(), in->shape().elem_cnt(),
-                                             in->dptr<T>(), min->dptr<T>(), max->dptr<T>(),
-                                             out->mut_dptr<T>());
+    ClipValuesUtil<device_type, T>::ByMinMax(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
+                                             min->dptr<T>(), max->dptr<T>(), y->mut_dptr<T>());
   } else if (min != nullptr) {
-    ClipValuesUtil<device_type, T>::ByMin(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
-                                          min->dptr<T>(), out->mut_dptr<T>());
+    ClipValuesUtil<device_type, T>::ByMin(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
+                                          min->dptr<T>(), y->mut_dptr<T>());
   } else if (max != nullptr) {
-    ClipValuesUtil<device_type, T>::ByMax(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
-                                          max->dptr<T>(), out->mut_dptr<T>());
+    ClipValuesUtil<device_type, T>::ByMax(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
+                                          max->dptr<T>(), y->mut_dptr<T>());
   } else {
     UNIMPLEMENTED();
   }
@@ -177,7 +176,7 @@ void ClipByValueGradKernel<device_type, T>::Compute(user_op::KernelContext* ctx)
       });
 
 #define REGISTER_CLIP_KERNELS(device_type_v, dtype_pair)                                 \
-  REGISTER_CLIP_KERNEL(clip_by_value, ClipByValueKernel, in, out, device_type_v,         \
+  REGISTER_CLIP_KERNEL(clip_by_value, ClipByValueKernel, x, y, device_type_v,            \
                        OF_PP_PAIR_FIRST(dtype_pair))                                     \
   REGISTER_CLIP_KERNEL(clip_by_value_grad, ClipByValueGradKernel, dy, dx, device_type_v, \
                        OF_PP_PAIR_FIRST(dtype_pair))

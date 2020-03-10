@@ -707,10 +707,10 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
             max_value, dtype=values.dtype, shape=(1,), name=name + "_ConstantMax"
         )
 
-    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("in", [values])
+    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("x", [values])
     if min_tensor:
         op_builder.Input("min", [min_tensor])
     if max_tensor:
         op_builder.Input("max", [max_tensor])
 
-    return op_builder.Output("out").Build().RemoteBlobList()[0]
+    return op_builder.Output("y").Build().RemoteBlobList()[0]
