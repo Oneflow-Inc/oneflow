@@ -6,7 +6,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr("seed", UserOpAttrType::kAtInt64)
-    .Attr("has_seed", UserOpAttrType::kAtInt32)
+    .Attr("has_seed", UserOpAttrType::kAtBool)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
       return Maybe<void>::Ok();
@@ -21,10 +21,6 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       GetInputArgModifierFn("x", 0)->set_use_header_only(true);
-    })
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
-                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

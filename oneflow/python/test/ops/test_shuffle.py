@@ -7,7 +7,7 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
 
-def test1(_):
+def test_shuffle(_):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["x_shape"] = [

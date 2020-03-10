@@ -475,15 +475,15 @@ def assign(ref, value, dtype=None, name=None):
 @oneflow_export("random.shuffle")
 def shuffle(value, seed=None, name=None):
     op = (
-        flow.user_op_builder(name if name is not None else value.op_name + "_random_batch_permutation_indices")
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
         .Op("generate_random_batch_permutation_indices")
         .Input("x", [value])
         .Output("y")
     )
     if seed is not None:
-        op.SetAttr("has_seed", 1, "AttrTypeInt32").SetAttr("seed", seed, "AttrTypeInt64")
+        op.SetAttr("has_seed", True, "AttrTypeBool").SetAttr("seed", seed, "AttrTypeInt64")
     else:
-        op.SetAttr("has_seed", 0, "AttrTypeInt32").SetAttr("seed", -1, "AttrTypeInt64")
+        op.SetAttr("has_seed", False, "AttrTypeBool").SetAttr("seed", -1, "AttrTypeInt64")
     random_batch_permutation_indices = (
         op
         .Build()
