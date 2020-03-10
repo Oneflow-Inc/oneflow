@@ -16,7 +16,16 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
+      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->has_value()
+          && ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() == 0) {
+        ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
+      } else {
+        ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      // Broadcast only
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
