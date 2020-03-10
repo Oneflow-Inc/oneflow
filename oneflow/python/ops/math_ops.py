@@ -690,3 +690,15 @@ def top_k(input, k=1, sorted=True, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("math.clip_by_value, clip_by_value", "clamp")
+def clip_by_value(input, min=None, max=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ClipByValue_")
+
+    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("in", [input]).Output("out")
+    if min is not None:
+        op_builder.SetAttr("min", float(min), "AttrTypeFloat")
+    if max is not None:
+        op_builder.SetAttr("max", float(max), "AttrTypeFloat")
+    return op_builder.Build().RemoteBlobList()[0]
