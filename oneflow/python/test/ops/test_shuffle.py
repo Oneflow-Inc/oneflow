@@ -30,7 +30,8 @@ def test1(_):
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
-            return flow.random.shuffle(x)
+            with flow.fixed_placement(device_type, "0:0"):
+                return flow.random.shuffle(x)
 
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         ret = TestJob(x).get()
