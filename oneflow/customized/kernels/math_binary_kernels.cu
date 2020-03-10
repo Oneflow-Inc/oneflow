@@ -20,16 +20,24 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
+__device__ float Xdivy4GpuFloat(float x, float y) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  x / y;
+  }
+}
+
 __device__ float XdivyCalXDiff4GpuFloat(float x, float y, float dz) {
   if (0 == x) {
     return 0;
   } else {
-    return  fdividef(dz, y);
+    return  Xdivy4GpuFloat(dz, y);
   }
 }
 
 __device__ float XdivyCalYDiff4GpuFloat(float x, float y, float dz) {
-    return -dz * fdividef(x, powf(y, 2));
+    return dz * Xdivy4GpuFloat((-x), powf(y, 2));
 }
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
@@ -82,7 +90,7 @@ OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)            \
 OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
-MATH_BINARY_GPU(Xdivy, fdividef, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:

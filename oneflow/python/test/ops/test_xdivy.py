@@ -21,22 +21,36 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
     @flow.function(func_config)
     def XdivyJob():
         with flow.device_prior_placement(device_type, "0:0"):
+            # x = flow.get_variable(
+            #     "x",
+            #     shape=x_shape,
+            #     dtype=flow.float,
+            #     initializer=flow.random_uniform_initializer(minval=1, maxval=5),
+            #     trainable=True,
+            # )
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5),
+                initializer=flow.zeros_initializer(),
                 trainable=True,
             )
+
+            # y = flow.get_variable(
+            #     "y",
+            #     shape=y_shape,
+            #     dtype=flow.float,
+            #     initializer=flow.random_uniform_initializer(minval=1, maxval=5),
+            #     trainable=True,
+            # )
             y = flow.get_variable(
                 "y",
                 shape=y_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=4),
+                initializer=flow.zeros_initializer(),
                 trainable=True,
             )
+
             loss = flow.math.xdivy(x, y)
             flow.losses.add_loss(loss)
 
@@ -63,10 +77,8 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(
-        GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(
-        GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5)
 
 
 def test_xdivy(test_case):
