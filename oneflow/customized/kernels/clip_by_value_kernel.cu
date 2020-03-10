@@ -21,6 +21,24 @@ __global__ void CudaClipByMinMax(int64_t num_values, const T* values, const T* m
   ClipValuesByMinMax<DeviceType::kGPU>(num_values, values, *min_value, *max_value, out_ptr);
 }
 
+template<typename T>
+__global__ void CudaClipGradByMin(int64_t num_values, const T* values, const T* min_value,
+                                  T* grad_ptr) {
+  ClipGradByMin<DeviceType::kGPU>(num_values, values, *min_value, grad_ptr);
+}
+
+template<typename T>
+__global__ void CudaClipGradByMax(int64_t num_values, const T* values, const T* max_value,
+                                  T* grad_ptr) {
+  ClipGradByMax<DeviceType::kGPU>(num_values, values, *max_value, grad_ptr);
+}
+
+template<typename T>
+__global__ void CudaClipGradByMinMax(int64_t num_values, const T* values, const T* min_value,
+                                     const T* max_value, T* grad_ptr) {
+  ClipGradByMinMax<DeviceType::kGPU>(num_values, values, *min_value, *max_value, grad_ptr);
+}
+
 }  // namespace
 
 template<typename T>
@@ -52,10 +70,31 @@ struct ClipValuesUtil<DeviceType::kGPU, T> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CLIP_VALUES_UTIL, (DeviceType::kGPU),
+template<typename T>
+struct ClipGradUtil<DeviceType::kGPU, T> {
+  static void ByMin(DeviceCtx* ctx, int64_t num_values, const T* values, const T* min_value,
+                    T* grad_ptr) {
+    RUN_CUDA_KERNEL((CudaClipGradByMin<T>), ctx, num_values, num_values, values, min_value,
+                    grad_ptr);
+  }
+
+  static void ByMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* max_value,
+                    T* grad_ptr) {
+    RUN_CUDA_KERNEL((CudaClipGradByMax<T>), ctx, num_values, num_values, values, max_value,
+                    grad_ptr);
+  }
+
+  static void ByMinMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* min_value,
+                       const T* max_value, T* grad_ptr) {
+    RUN_CUDA_KERNEL((CudaClipGradByMinMax<T>), ctx, num_values, num_values, values, min_value,
+                    max_value, grad_ptr);
+  }
+};
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CLIP_UTIL, (DeviceType::kGPU),
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_BY_VALUE_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, (DeviceType::kGPU),
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
