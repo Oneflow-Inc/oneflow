@@ -16,7 +16,7 @@ class TmpBufferManager final {
     const int32_t in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(float));
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
     in_ptr_ = reinterpret_cast<float*>(ptr);
-    sorted_in_ptr_ = in_ptr_ + in_aligned_bytes;
+    sorted_in_ptr_ = reinterpret_cast<float*>(reinterpret_cast<char*>(in_ptr_) + in_aligned_bytes);
     indices_ptr_ =
         reinterpret_cast<int32_t*>(reinterpret_cast<char*>(sorted_in_ptr_) + in_aligned_bytes);
     temp_storage_ptr_ =
@@ -27,7 +27,7 @@ class TmpBufferManager final {
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
 
-  float* InPtr() const { return sorted_in_ptr_; }
+  float* InPtr() const { return in_ptr_; }
   float* SortedInPtr() const { return sorted_in_ptr_; }
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
@@ -71,7 +71,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
       if (has_seed) { seed = ctx->GetAttr<int64_t>("seed"); }
       random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, ctx->device_ctx()));
     }
-    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
