@@ -20,6 +20,18 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
+__device__ float FloorDivCalXDiff4GpuFloat(float x, float y, float dz) {
+  return dz * fdiv_rd(1, y)
+}
+
+__device__ float FloorDivCalYDiff4GpuFloat(float x, float y, float dz) {
+  if (x > 0) {
+     return dz * (-1) * fdiv_rd(x, powf(y, 2));
+   } else {
+     return 0;
+   }
+}
+
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
     CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                                    \
@@ -68,6 +80,10 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
 #define MATH_BINARY_GPU_FLOAT_SEQ OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
+
+#define MATH_BINARY_GPU_FLOAT_SEQ OF_PP_MAKE_TUPLE_SEQ("FloorDiv", FloorDiv)
+
+MATH_BINARY_GPU(FloorDiv, fdiv_rd, FloorDivCalXDiff4GpuFloat, FloorDivCalYDiff4GpuFloat, float);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
