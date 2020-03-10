@@ -9,12 +9,14 @@ namespace oneflow {
 // clang-format off
 OBJECT_MSG_BEGIN(VmThread);
   // methods
-  PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc) {
+  PUBLIC void __Init__(const VmStreamRtDesc& vm_stream_rt_desc, int64_t device_id) {
     set_vm_stream_rt_desc(&vm_stream_rt_desc);
+    set_device_id(device_id);
   }
   PUBLIC void LoopRun();
   // fields
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, device_id);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
