@@ -1,5 +1,4 @@
 #include "oneflow/xrt/tvm/tvm_executable.h"
-#include <tvm/runtime/device_api.h>
 #include <dlpack/dlpack.h>
 #include <cstdint>
 
