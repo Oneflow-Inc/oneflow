@@ -16,7 +16,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
