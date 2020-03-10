@@ -361,7 +361,7 @@ def pow(x, y, name=None):
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.xdivy")
-def pow(x, y, name=None):
+def xdivy(x, y, name=None):
     if name is None:
         name = id_util.UniqueStr("Xdivy_")
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
