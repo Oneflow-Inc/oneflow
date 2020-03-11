@@ -291,6 +291,10 @@ def set_use_xla_jit(func_desc, value = True):
 def set_use_tensorrt(func_desc, value = True):
     func_desc.job_config_proto.xrt_config.use_tensorrt = value
 
+@oneflow_function_config('use_tvm')
+def set_use_tvm(func_desc, value=True):
+    func_desc.job_config_proto.xrt_config.use_tvm = value
+
 @oneflow_function_config('tensorrt.use_fp16')
 def set_tensorrt_use_fp16(func_desc, value = True):
     set_use_tensorrt(func_desc, True)
