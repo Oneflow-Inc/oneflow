@@ -6,7 +6,6 @@
 #include "oneflow/core/common/buffer.h"
 #include "oneflow/core/record/example_generated.h"
 
-
 namespace oneflow {
 
 class OneRecExampleWrapper {
