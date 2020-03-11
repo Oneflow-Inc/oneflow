@@ -58,13 +58,12 @@ DLDataType XrtDType2DLDtype(DataType data_type) {
   return dl_type;
 }
 
-DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, int32_t device_id) {
+DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, TVMContext ctx) {
   DLManagedTensor ret;
   auto& tensor = ret.dl_tensor;
   CHECK(IsAligned(para.data(), tvm::runtime::kAllocAlignment));
   tensor.data = para.data();
-  tensor.ctx.device_type = XrtDev2DLDev(XrtDevice::GPU_CUDA); // TODO(niuchong): support more device
-  tensor.ctx.device_id = device_id;
+  tensor.ctx = ctx;
   tensor.ndim = para.shape().NumAxes();
   tensor.shape = const_cast<int64_t*>(para.shape().dim_vec().data());
   tensor.dtype = XrtDType2DLDtype(para.data_type());
@@ -78,28 +77,33 @@ TVMExecutable::TVMExecutable(const std::string& name, const int num_inputs,
     const std::vector<Parameter>& outputs,
     const std::string& json,
     const tvm::runtime::Module& built_mod,
-    TVMContext ctx) :
+    XrtDevice device) :
       Executable(XrtEngine::TVM), name_(name), num_inputs_(num_inputs),
-      outputs_(), ctx_(ctx) {
-  {
-    auto create_fn = tvm::runtime::Registry::Get("tvm.graph_runtime.create");
-    executor_ = (*create_fn)(json, built_mod, (int)ctx_.device_type, (int)ctx_.device_id);
-    run_ = executor_.GetFunction("run", false);
-    set_input_zero_copy_ = executor_.GetFunction("set_input_zero_copy", false);
-    get_output_ = executor_.GetFunction("get_output", false);
-    get_num_outputs_ = executor_.GetFunction("get_num_outputs", false);
-  }
-  for (const auto& output : outputs) {
-    outputs_.emplace_back(XrtParameter2DLManagedTensor(output, ctx_.device_id));
-  }
-}
+      outputs_(outputs), built_mod_(built_mod), graph_json_(json), device_(device),
+    is_inited_(false) {}
 
 bool TVMExecutable::Run(const std::vector<Parameter> &inputs, 
     const ExecutableRunOptions &run_options,
     bool block_until_done) {
+  if (!is_inited_) {
+    ctx_.device_type = XrtDev2DLDev(device_);
+    ctx_.device_id = run_options.device_ordinal;
+
+    auto create_fn = tvm::runtime::Registry::Get("tvm.graph_runtime.create");
+    executor_ = (*create_fn)(graph_json_, built_mod_, (int)ctx_.device_type, (int)ctx_.device_id);
+    run_ = executor_->GetFunction("run", false);
+    set_input_zero_copy_ = executor_->GetFunction("set_input_zero_copy", false);
+    get_output_ = executor_->GetFunction("get_output", false);
+    get_num_outputs_ = executor_->GetFunction("get_num_outputs", false);
+
+    for (const auto& output : outputs_) {
+      output_dltensors_.emplace_back(XrtParameter2DLManagedTensor(output, ctx_));
+    }
+  }
+
   std::vector<DLManagedTensor> dl_managed_tensors;
   for (const auto& input : inputs) {
-    dl_managed_tensors.emplace_back(XrtParameter2DLManagedTensor(input, ctx_.device_id));
+    dl_managed_tensors.emplace_back(XrtParameter2DLManagedTensor(input, ctx_));
     set_input_zero_copy_(input.name(),
         tvm::runtime::NDArray::FromDLPack(&dl_managed_tensors.back()));
   }

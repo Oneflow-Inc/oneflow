@@ -16,7 +16,7 @@ class TVMExecutable final : public Executable {
       const std::vector<Parameter>& outputs,
       const std::string& json,
       const tvm::runtime::Module& built_mod,
-      TVMContext ctx);
+      XrtDevice device);
 
   bool Run(const std::vector<Parameter> &inputs, const ExecutableRunOptions &run_options,
                    bool block_until_done = true) override;
@@ -24,9 +24,14 @@ class TVMExecutable final : public Executable {
  private:
   std::string name_;
   int num_inputs_;
-  std::vector<DLManagedTensor> outputs_;
+  std::vector<Parameter> outputs_;
+  tvm::runtime::Module built_mod_;
+  std::string graph_json_;
+  XrtDevice device_;
 
+  bool is_inited_;
   TVMContext ctx_;
+  std::vector<DLManagedTensor> output_dltensors_;
   tvm::runtime::Module executor_;
   tvm::runtime::PackedFunc set_input_zero_copy_;
   tvm::runtime::PackedFunc run_;
