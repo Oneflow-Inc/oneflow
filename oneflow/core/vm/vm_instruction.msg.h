@@ -24,8 +24,11 @@ FLAT_MSG_BEGIN(VmInstructionProto);
 FLAT_MSG_END(VmInstructionProto);
 // clang-format on
 
+class MirroredObject;
+
 // clang-format off
 OBJECT_MSG_BEGIN(VmInstructionMsg);
+  // methods
   PUBLIC void __Init__() { __Init__(&VmInstructionMsgNoneObserver::NewObserver); }
   PUBLIC template<typename NewObserverT>
   void __Init__(const NewObserverT& NewObserver) { mutable_observer()->__Init__(NewObserver); }
@@ -39,20 +42,6 @@ OBJECT_MSG_BEGIN(VmInstructionMsg);
 OBJECT_MSG_END(VmInstructionMsg);
 // clang-format on
 
-class VmInstrChain;
-// clang-format off
-OBJECT_MSG_BEGIN(VmInstrChainEdge);
-  // methods
-  PUBLIC void __Init__(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain) {
-    set_src_vm_instr_chain(src_vm_instr_chain);
-    set_dst_vm_instr_chain(dst_vm_instr_chain);
-  }
-  // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, src_vm_instr_chain);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, dst_vm_instr_chain);
-OBJECT_MSG_END(VmInstrChainEdge);
-// clang-format on
-
 // clang-format off
 OBJECT_MSG_BEGIN(VmInstruction);
   // methods
@@ -60,6 +49,8 @@ OBJECT_MSG_BEGIN(VmInstruction);
     set_vm_instr_chain(vm_instr_chain);
     reset_vm_instr_msg(vm_instr_msg);
   }
+  PUBLIC MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                     int64_t default_parallel_id);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instr_msg);
   OBJECT_MSG_DEFINE_RAW_PTR(VmInstrChain, vm_instr_chain);
@@ -75,6 +66,20 @@ static const int kVmInstructionStatusBufferBytes = 32;
 FLAT_MSG_BEGIN(VmInstructionStatusBuffer);
   FLAT_MSG_DEFINE_REPEATED(char, buffer, kVmInstructionStatusBufferBytes);
 FLAT_MSG_END(VmInstructionStatusBuffer);
+// clang-format on
+
+class VmInstrChain;
+// clang-format off
+OBJECT_MSG_BEGIN(VmInstrChainEdge);
+  // methods
+  PUBLIC void __Init__(VmInstrChain* src_vm_instr_chain, VmInstrChain* dst_vm_instr_chain) {
+    set_src_vm_instr_chain(src_vm_instr_chain);
+    set_dst_vm_instr_chain(dst_vm_instr_chain);
+  }
+  // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, src_vm_instr_chain);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, VmInstrChain*, dst_vm_instr_chain);
+OBJECT_MSG_END(VmInstrChainEdge);
 // clang-format on
 
 class VmStream;
@@ -94,6 +99,7 @@ OBJECT_MSG_BEGIN(VmInstrChain);
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstruction, vm_instruction_link, vm_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, src_vm_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(VmInstrChainEdge, dst_vm_instr_chain, out_edges);
 OBJECT_MSG_END(VmInstrChain);

@@ -32,6 +32,20 @@ OBJECT_MSG_END(MirroredObjectAccess);
 // clang-format on
 
 // clang-format off
+OBJECT_MSG_BEGIN(HostMemBuffer);
+  // methods
+  PUBLIC void __Init__(size_t size, char* data) {
+    set_size(size);
+    set_data(data);
+  }
+
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
+  OBJECT_MSG_DEFINE_RAW_PTR(char, data);
+OBJECT_MSG_END(HostMemBuffer);
+// clang-format on
+
+// clang-format off
 OBJECT_MSG_BEGIN(CudaMemBuffer);
   // methods
   PUBLIC void __Init__(size_t size, char* data) {
@@ -54,6 +68,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
   OBJECT_MSG_DEFINE_ONEOF(object_type,
+      OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)
       OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
 
   // links
