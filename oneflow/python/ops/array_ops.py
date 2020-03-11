@@ -471,9 +471,9 @@ def assign(ref, value, dtype=None, name=None):
     setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
 
-
-@oneflow_export("random.shuffle")
-def shuffle(value, seed=None, name=None):
+@oneflow_export("random.generate_random_batch_permutation_indices")
+def generate_random_batch_permutation_indices(value, seed=None, name=None):
+    import time
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
         .Op("generate_random_batch_permutation_indices")
@@ -481,16 +481,19 @@ def shuffle(value, seed=None, name=None):
         .Output("y")
     )
     if seed is not None:
-        op.SetAttr("has_seed", True, "AttrTypeBool").SetAttr("seed", seed, "AttrTypeInt64")
+        op.SetAttr("seed", seed, "AttrTypeInt64")
     else:
-        op.SetAttr("has_seed", False, "AttrTypeBool").SetAttr("seed", -1, "AttrTypeInt64")
-    random_batch_permutation_indices = (
+        op.SetAttr("seed", int(time.time() * 1e6), "AttrTypeInt64")
+    return (
         op
         .Build()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("random.shuffle")
+def shuffle(value, seed=None, name=None):
     return flow.gather(
-        value, random_batch_permutation_indices
+        value, generate_random_batch_permutation_indices(value, seed)
     )
 
 @oneflow_export("identity")

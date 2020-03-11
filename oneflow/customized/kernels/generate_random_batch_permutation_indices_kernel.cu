@@ -72,9 +72,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
   void Compute(user_op::KernelContext* ctx) override {
     // TODO: tsai, chengcheng do the initialization in kernel init when interface ready
     if (random_generator_.get() == nullptr) {
-      int64_t seed = GetCurTime();
-      const bool has_seed = ctx->GetAttr<bool>("has_seed");
-      if (has_seed) { seed = ctx->GetAttr<int64_t>("seed"); }
+      int64_t seed = ctx->GetAttr<int64_t>("seed");
       random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, ctx->device_ctx()));
     }
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);

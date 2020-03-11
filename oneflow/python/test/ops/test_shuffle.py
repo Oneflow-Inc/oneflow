@@ -6,29 +6,6 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
-
-def generate_random_batch_permutation_indices(value, seed=None, name=None):
-    op = (
-        flow.user_op_builder(
-            name
-            if name is not None
-            else str(uuid.uuid4()) + value.op_name + "_random_batch_permutation_indices"
-        )
-        .Op("generate_random_batch_permutation_indices")
-        .Input("x", [value])
-        .Output("y")
-    )
-    if seed is not None:
-        op.SetAttr("has_seed", True, "AttrTypeBool").SetAttr(
-            "seed", seed, "AttrTypeInt64"
-        )
-    else:
-        op.SetAttr("has_seed", False, "AttrTypeBool").SetAttr(
-            "seed", -1, "AttrTypeInt64"
-        )
-    return op.Build().RemoteBlobList()[0]
-
-
 def test_shuffle(_):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -73,7 +50,7 @@ def test_shuffle(_):
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             with flow.fixed_placement(device_type, "0:0"):
-                return generate_random_batch_permutation_indices(x)
+                return flow.random.generate_random_batch_permutation_indices(x)
 
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         ret = TestJob1(x).get().ndarray()

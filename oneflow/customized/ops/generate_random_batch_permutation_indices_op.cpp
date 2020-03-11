@@ -6,7 +6,6 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr("seed", UserOpAttrType::kAtInt64)
-    .Attr("has_seed", UserOpAttrType::kAtBool)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
       return Maybe<void>::Ok();
