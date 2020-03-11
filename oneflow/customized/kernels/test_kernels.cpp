@@ -229,7 +229,7 @@ REGISTER_USER_KERNEL("TestMultiInputGrad")
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:
-  TestDynamicSourceKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TestDynamicSourceKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestDynamicSourceKernel() = default;
   ~TestDynamicSourceKernel() = default;
 
@@ -242,9 +242,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestDynamicSource")
-    .SetCreateFn([](const user_op::KernelInitContext& ctx) {
-      return new TestDynamicSourceKernel(ctx);
-    })
+    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDynamicSourceKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
