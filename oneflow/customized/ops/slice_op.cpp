@@ -11,7 +11,7 @@ REGISTER_USER_OP("slice_v2")
     .Attr("stride", UserOpAttrType::kAtListInt64)
     .Attr("has_begin", UserOpAttrType::kAtListInt64)
     .Attr("has_end", UserOpAttrType::kAtListInt64)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
       auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
@@ -82,7 +82,7 @@ REGISTER_USER_OP("slice_grad_v2")
     .Attr("stride", UserOpAttrType::kAtListInt64)
     .Attr("has_begin", UserOpAttrType::kAtListInt64)
     .Attr("has_end", UserOpAttrType::kAtListInt64)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
       auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
