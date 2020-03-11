@@ -16,15 +16,12 @@ class ResourceDesc final {
   size_t TotalMachineNum() const;
   const Machine& machine(int32_t idx) const;
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
-  size_t rdma_mem_block_byte() const { return resource_.rdma_mem_block_mbyte() * kMB; }
-  size_t rdma_recv_msg_buf_byte() const { return resource_.rdma_recv_msg_buf_mbyte() * kMB; }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
-  bool use_rdma() const { return resource_.use_rdma(); }
   bool enable_numa_aware_cuda_malloc_host() const {
     return resource_.enable_numa_aware_cuda_malloc_host();
   }

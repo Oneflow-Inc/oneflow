@@ -2,14 +2,12 @@
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
 
 #include "oneflow/core/common/platform.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
-
-#include <netdb.h>
-#include <arpa/inet.h>
 
 namespace oneflow {
 
@@ -33,10 +31,17 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
+  void CheckIBVerbsConf() const;
+  void InitContext();
+  void QueryDeviceInfo(IBVerbsConf&) const;
+  uint32_t QueryPort(ibv_port_attr*) const;
+  uint32_t QueryGid(uint32_t, ibv_port_attr*, ibv_gid*) const;
+  void ConnectTopo(const IBVerbsConf&);
 
   static const int32_t max_poll_wc_num_;
 
   std::vector<HashMap<void*, IBVerbsMemDescProto>> token2mem_desc_;
+  const IBVerbsConf& ibverbs_conf_;
   ibv_context* context_;
   ibv_pd* pd_;
   ibv_cq* cq_;

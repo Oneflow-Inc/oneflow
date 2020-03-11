@@ -74,7 +74,8 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 
 void JobDesc::Init() {
 #ifndef WITH_RDMA
-  CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+  CHECK_EQ(Global<const CommNetworkConf>::Get()->has_ibverbs_conf(), false)
+      << "Please compile ONEFLOW with RDMA";
 #endif
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.enable_nccl(), false) << "Please compile ONEFLOW with NCCL";

@@ -163,6 +163,7 @@ def _GetDefaultConfigProto():
     config_proto.resource.gpu_device_num = 1
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
+    config_proto.comm_net_conf.ibverbs_conf.SetInParent()
     return config_proto
 
 def _TryInitEnv():

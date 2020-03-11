@@ -93,7 +93,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   }
   if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (Global<ResourceDesc>::Get()->use_rdma()) {
+    if (Global<const CommNetworkConf>::Get()->has_ibverbs_conf()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else
