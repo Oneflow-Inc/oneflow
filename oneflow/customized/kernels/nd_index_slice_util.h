@@ -78,20 +78,19 @@ struct NdIndicesSliceUtil final {
 };
 
 template<typename I>
-struct SliceOffsetInDenseWithNdIndex {
-  OF_DEVICE_FUNC static int64_t Compute(int64_t slice_size, int64_t index_ndims,
-                                        const int64_t* dense_shape, const I* indices, int64_t n) {
-    int64_t slice_idx = n / slice_size;
-    const I* cur_nd_index_ptr = indices + slice_idx * index_ndims;
-    int64_t offset = 0;
-    int64_t product = 1;
-    for (int64_t i = index_ndims - 1; i >= 0; --i) {
-      offset += cur_nd_index_ptr[i] * product;
-      product *= dense_shape[i];
-    }
-    return offset * slice_size + n % slice_size;
+OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t index_ndims,
+                                                    const int64_t* dense_shape, const I* indices,
+                                                    int64_t n) {
+  int64_t slice_idx = n / slice_size;
+  const I* cur_nd_index_ptr = indices + slice_idx * index_ndims;
+  int64_t offset = 0;
+  int64_t product = 1;
+  for (int64_t i = index_ndims - 1; i >= 0; --i) {
+    offset += cur_nd_index_ptr[i] * product;
+    product *= dense_shape[i];
   }
-};
+  return offset * slice_size + n % slice_size;
+}
 
 template<typename T, typename I>
 struct GatherNdFunctor {
@@ -99,8 +98,8 @@ struct GatherNdFunctor {
                                     const int64_t* dense_shape, const I* indices, const T* dense,
                                     T* slices) {
     XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset = SliceOffsetInDenseWithNdIndex<I>::Compute(slice_size, index_ndims,
-                                                                 dense_shape, indices, i);
+      int64_t offset =
+          OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
       slices[i] = dense[offset];
     }
   }
@@ -115,8 +114,8 @@ struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
                                     const int64_t* dense_shape, const I* indices, const T* slices,
                                     T* dense) {
     XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset = SliceOffsetInDenseWithNdIndex<I>::Compute(slice_size, index_ndims,
-                                                                 dense_shape, indices, i);
+      int64_t offset =
+          OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
       Opt<device_type, T>::Invoke(slices + i, dense + offset);
     }
   }
