@@ -20,7 +20,7 @@ OBJECT_MSG_BEGIN(VmStreamRtDesc);
   OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamDesc, vm_stream_desc); 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, parallel_id, parallel_id2vm_stream);
+  OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, vm_stream_id, vm_stream_id2vm_stream);
 OBJECT_MSG_END(VmStreamRtDesc);
 // clang-format on
 
