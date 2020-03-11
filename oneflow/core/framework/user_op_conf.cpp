@@ -70,7 +70,9 @@ UserOpWrapper::UserOpWrapper(
         std::string bn = GenRepeatedBn(pair.first, i);
         const BlobDesc& blob_desc = LogicalBlobDesc4BnInOp(bn);
         CHECK((&blob_desc) != nullptr);
-        TensorDesc tensor_desc(blob_desc.shape(), blob_desc.data_type());
+        BlobDescProto proto;
+        blob_desc.ToProto(&proto);
+        TensorDesc tensor_desc(proto);
         CHECK(bn2tensor_desc_.emplace(bn, tensor_desc).second);
       }
     }

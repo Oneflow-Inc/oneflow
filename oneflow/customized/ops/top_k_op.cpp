@@ -7,7 +7,7 @@ REGISTER_USER_OP("top_k")
     .Output("out")
     .Attr("k", UserOpAttrType::kAtInt32)
     .Attr("sorted", UserOpAttrType::kAtBool)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;

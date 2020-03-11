@@ -132,8 +132,9 @@ OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn shape_infer_fn) {
-  wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetTensorDescInferFn(
+    TensorDescInferFn tensor_desc_infer_fn) {
+  wrapper_.reg_val.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -160,8 +161,8 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
 }
 
 OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
-  CHECK(wrapper_.reg_val.shape_infer_fn != nullptr)
-      << "No ShapeInfer function for " << wrapper_.op_type_name;
+  CHECK(wrapper_.reg_val.tensor_desc_infer_fn != nullptr)
+      << "No TensorDescInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
     wrapper_.reg_val.check_fn = CheckAttrFnUtil::NoCheck;
   }

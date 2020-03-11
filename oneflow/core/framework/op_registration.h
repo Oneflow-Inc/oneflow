@@ -23,7 +23,7 @@ class SbpContext;
 class BatchAxisContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
-using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
+using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using InputArgModifier = InputBlobModifier;
@@ -34,7 +34,7 @@ using InputArgModifyFn = std::function<void(GetInputArgModifier)>;
 struct OpRegistrationVal {
   UserOpDef op_def;
   CheckAttrFn check_fn;
-  ShapeInferFn shape_infer_fn;
+  TensorDescInferFn tensor_desc_infer_fn;
   BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
@@ -70,7 +70,7 @@ class OpRegistryWrapperBuilder final {
   template<typename T>
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
 
-  OpRegistryWrapperBuilder& SetShapeInferFn(ShapeInferFn fn);
+  OpRegistryWrapperBuilder& SetTensorDescInferFn(TensorDescInferFn fn);
   OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
   OpRegistryWrapperBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
