@@ -6,6 +6,15 @@
 
 namespace oneflow {
 
+MirroredObject* VmInstruction::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                           int64_t default_parallel_id) {
+  FlatMsg<MirroredObjectId> mirrored_object_id;
+  mirrored_object_id->__Init__(operand, default_parallel_id);
+  auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+  if (access == nullptr) { return nullptr; }
+  return access->mut_mirrored_object();
+}
+
 void VmInstrChain::__Init__(VmInstructionMsg* vm_instr_msg, VmStream* vm_stream) {
   mutable_status_buffer();
   set_vm_stream(vm_stream);

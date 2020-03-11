@@ -146,7 +146,7 @@ TEST(NopVmStreamType, one_argument_triger_next_chain) {
   list.PushBack(nop1_vm_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();
+  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_vm_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_vm_stream_list().size(), 1);
@@ -190,9 +190,9 @@ TEST(NopVmStreamType, one_argument_triger_all_chains) {
   list.PushBack(nop1_vm_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();
+  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();
+  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_vm_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_vm_stream_list().size(), 0);

@@ -23,7 +23,8 @@ OBJECT_MSG_BEGIN(VmThread);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmStream, vm_thread_vm_stream_link, vm_stream_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(VmInstrChain, pending_chain_link, pending_chain_list);
 
-  PRIVATE ObjectMsgConditionListStatus WaitAndRun();
+  PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();
+  PRIVATE ObjectMsgConditionListStatus TryReceiveAndRun();
 OBJECT_MSG_END(VmThread);
 // clang-format on
 

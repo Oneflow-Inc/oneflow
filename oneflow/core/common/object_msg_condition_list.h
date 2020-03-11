@@ -136,6 +136,16 @@ class TrivialObjectMsgConditionList {
     return kObjectMsgConditionListStatusSuccess;
   }
 
+  ObjectMsgConditionListStatus TryMoveTo(
+      TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
+    std::unique_lock<std::mutex> lock(*mut_mutex());
+    if (list_head_.empty()) { return kObjectMsgConditionListStatusSuccess; }
+    mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
+    if (list_head_.empty()) { return kObjectMsgConditionListStatusErrorClosed; }
+    list_head_.MoveToDstBack(dst);
+    return kObjectMsgConditionListStatusSuccess;
+  }
+
   void Close() {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     is_closed_ = true;

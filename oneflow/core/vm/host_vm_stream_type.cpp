@@ -51,7 +51,7 @@ void VmCudaMallocHost(VmInstruction* vm_instr) {
     CHECK(!mirrored_object->has_object_type());
   }
   CudaCheck(cudaMallocHost(&dptr, size));
-  mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
+  mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, VmCudaMallocHost);
 
@@ -78,8 +78,8 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
   }
-  CudaCheck(cudaFreeHost(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
-  mirrored_object->clear_cuda_mem_buffer();
+  CudaCheck(cudaFreeHost(mirrored_object->mut_host_mem_buffer()->mut_data()));
+  mirrored_object->clear_host_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, VmCudaFreeHost);
 

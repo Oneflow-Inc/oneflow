@@ -57,7 +57,7 @@ TEST(ControlVmStreamType, delete_symbol) {
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->WaitAndRun();
+  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_TRUE(scheduler->waiting_vm_instr_chain_list().empty());

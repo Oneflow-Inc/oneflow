@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
+#define ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
+
 #include <functional>
 #include "oneflow/core/common/object_msg.h"
 
@@ -20,3 +23,5 @@ OBJECT_MSG_END(CallbackMsg);
 using CallbackMsgListPtr = OBJECT_MSG_LIST_PTR(CallbackMsg, callback_link);
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
