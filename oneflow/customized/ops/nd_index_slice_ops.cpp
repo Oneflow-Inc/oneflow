@@ -65,12 +65,7 @@ Maybe<void> GetScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferGatherScatterNdBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("indices", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferScatterNdOptBatchAxis(user_op::BatchAxisContext* ctx) {
+Maybe<void> InferTensorScatterNdOptBatchAxis(user_op::BatchAxisContext* ctx) {
   *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
@@ -95,7 +90,17 @@ REGISTER_USER_OP("gather_nd")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(InferGatherScatterNdBatchAxis)
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("indices", 0);
+      if (indices_batch_axis->has_value()) {
+        OF_CHECK_GE(indices_batch_axis->value(), 0);
+        OF_CHECK_LT(
+            indices_batch_axis->value(),
+            ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes() - 1);
+      }
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *indices_batch_axis;
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& params_desc =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
@@ -126,7 +131,12 @@ REGISTER_USER_OP("scatter_nd")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
-    .SetBatchAxisInferFn(InferGatherScatterNdBatchAxis)
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      OF_CHECK(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
+               == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { TODO(); });
 
 REGISTER_USER_OP("tensor_scatter_nd_update")
@@ -135,7 +145,7 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetBatchAxisInferFn(InferScatterNdOptBatchAxis)
+    .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
     .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP("tensor_scatter_nd_add")
@@ -144,7 +154,7 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetBatchAxisInferFn(InferScatterNdOptBatchAxis)
+    .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
     .SetGetSbpFn(GetScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP_GRAD("gather_nd")
