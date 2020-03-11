@@ -2,6 +2,8 @@
 #define ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
+#include "oneflow/core/common/callback.msg.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
@@ -13,6 +15,9 @@ class VmInstrChain;
 class VmStreamType {
  public:
   virtual ~VmStreamType() = default;
+
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                             CallbackMsgListPtr callback_list) const = 0;
 
   virtual void InitVmInstructionStatus(const VmStream& vm_stream,
                                        VmInstructionStatusBuffer* status_buffer) const = 0;

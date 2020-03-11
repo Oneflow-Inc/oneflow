@@ -18,10 +18,12 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
                                field_name);
 
-#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field)                                      \
-  ObjectMsgList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink,        \
-                            OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, \
-                                                                           _kDssFieldOffset)>>
+#define OBJECT_MSG_LIST(obj_msg_type, obj_msg_field) \
+  ObjectMsgList<_OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>
+
+#define OBJECT_MSG_LIST_PTR(obj_msg_type, obj_msg_field) \
+  TrivialObjectMsgList<kDisableSelfLoopLink,             \
+                       _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)>*
 
 #define OBJECT_MSG_LIST_FOR_EACH(list_ptr, elem) \
   _OBJECT_MSG_LIST_FOR_EACH(std::remove_pointer<decltype(list_ptr)>::type, list_ptr, elem)
@@ -34,6 +36,10 @@ namespace oneflow {
                                        elem)
 
 // details
+
+#define _OBJECT_MSG_LIST_STRUCT_FIELD(obj_msg_type, obj_msg_field)   \
+  StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink, \
+              OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(obj_msg_field, _kDssFieldOffset)>
 
 #define _OBJECT_MSG_DEFINE_LIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
   _OBJECT_MSG_DEFINE_LIST_HEAD_FIELD_TYPE(elem_type, elem_field_name, field_name)              \
