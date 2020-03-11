@@ -349,7 +349,7 @@ def tensor_scatter_nd_update(params, indices, updates, name=None):
     indices, the order at which the updates happen for each value is undefined.
     """
     if name is None:
-        name = id_util.UniqueStr("ScatterNdUpdate_")
+        name = id_util.UniqueStr("TensorScatterNdUpdate_")
     op = (
         flow.user_op_builder(name)
         .Op("tensor_scatter_nd_update")

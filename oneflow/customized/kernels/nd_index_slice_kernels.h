@@ -28,22 +28,22 @@ class ScatterNdKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T, typename I>
-class ScatterNdUpdateKernel final : public user_op::OpKernel {
+class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
  public:
-  ScatterNdUpdateKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
-  ScatterNdUpdateKernel() = default;
-  ~ScatterNdUpdateKernel() = default;
+  TensorScatterNdUpdateKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TensorScatterNdUpdateKernel() = default;
+  ~TensorScatterNdUpdateKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override;
 };
 
 template<DeviceType device_type, typename T, typename I>
-class ScatterNdAddKernel final : public user_op::OpKernel {
+class TensorScatterNdAddKernel final : public user_op::OpKernel {
  public:
-  ScatterNdAddKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
-  ScatterNdAddKernel() = default;
-  ~ScatterNdAddKernel() = default;
+  TensorScatterNdAddKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TensorScatterNdAddKernel() = default;
+  ~TensorScatterNdAddKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override;
@@ -72,7 +72,7 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
 }
 
 template<DeviceType device_type, typename T, typename I>
-void ScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
@@ -87,7 +87,7 @@ void ScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* c
 }
 
 template<DeviceType device_type, typename T, typename I>
-void ScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
@@ -133,8 +133,8 @@ MakeGatherScatterNdKernelMatchedPredictor() {
 #define REGISTER_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair, itype_pair) \
   REGISTER_USER_KERNEL(#op_type_name)                                                             \
       .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                           \
-        return new ScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
-                                          OF_PP_PAIR_FIRST(itype_pair)>(ctx);                     \
+        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
+                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);               \
       })                                                                                          \
       .SetIsMatchedPred(                                                                          \
           MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),  \
