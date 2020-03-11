@@ -101,7 +101,7 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
         && (static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
                 == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
             || static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
-                   == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT) {
+                   == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
       perf_t algo_perf;
       SetAlgo4Perf(args, res, &algo_perf, GetDefaultAlgo<algo_t>());
       return algo_perf;
