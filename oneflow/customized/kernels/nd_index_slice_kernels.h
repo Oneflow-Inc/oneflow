@@ -130,27 +130,41 @@ MakeGatherScatterNdKernelMatchedPredictor() {
           MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                                     OF_PP_PAIR_FIRST(itype_pair)>());
 
-#define REGISTER_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair, itype_pair) \
-  REGISTER_USER_KERNEL(#op_type_name)                                                             \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                           \
-        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
-                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);               \
-      })                                                                                          \
-      .SetIsMatchedPred(                                                                          \
-          MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),  \
-                                                    OF_PP_PAIR_FIRST(itype_pair)>())              \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                      \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {   \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                     \
-        return Maybe<void>::Ok();                                                                 \
+#define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,     \
+                                               itype_pair)                                       \
+  REGISTER_USER_KERNEL(#op_type_name)                                                            \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                          \
+        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
+                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);              \
+      })                                                                                         \
+      .SetIsMatchedPred(                                                                         \
+          MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                                    OF_PP_PAIR_FIRST(itype_pair)>())             \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                    \
+        return Maybe<void>::Ok();                                                                \
       });
 
-#define REGISTER_ND_INDEX_SLICE_KERNELS(device_type_v, dtype_pair, itype_pair)                     \
-  REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)   \
-  REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair) \
-  REGISTER_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_update, Update, device_type_v, dtype_pair,     \
-                                  itype_pair)                                                      \
-  REGISTER_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_add, Add, device_type_v, dtype_pair, itype_pair)
+#define REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
+  REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)
+
+#define REGISTER_SCATTER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
+  REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair)
+
+#define REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS(device_type_v, dtype_pair, itype_pair)   \
+  REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_update, Update, device_type_v, \
+                                         dtype_pair, itype_pair)
+
+#define REGISTER_TENSOR_GATHER_ND_ADD_KERNELS(device_type_v, dtype_pair, itype_pair)            \
+  REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_add, Add, device_type_v, dtype_pair, \
+                                         itype_pair)
+
+#define REGISTER_ND_INDEX_SLICE_KERNELS(device_type_v, dtype_pair, itype_pair)    \
+  REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair)               \
+  REGISTER_SCATTER_ND_KERNELS(device_type_v, dtype_pair, itype_pair)              \
+  REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS(device_type_v, dtype_pair, itype_pair) \
+  REGISTER_TENSOR_GATHER_ND_ADD_KERNELS(device_type_v, dtype_pair, itype_pair)
 
 }  // namespace oneflow
 

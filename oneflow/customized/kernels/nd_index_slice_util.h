@@ -121,13 +121,22 @@ struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
   }
 };
 
-#define INSTANTIATE_GATHER_SCATTER_ND_IMPL(device_type_v, dtype_pair, itype_pair)      \
-  template struct GatherNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
-                               OF_PP_PAIR_FIRST(itype_pair)>;                          \
-  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),           \
-                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceReplace>; \
-  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),           \
+#define INSTANTIATE_GATHER_ND_IMPL(device_type_v, dtype_pair, itype_pair)   \
+  template struct GatherNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                               OF_PP_PAIR_FIRST(itype_pair)>;
+
+#define INSTANTIATE_GATHER_ND_REDUCE_REPLACE_IMPL(device_type_v, dtype_pair, itype_pair) \
+  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),             \
+                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceReplace>;
+
+#define INSTANTIATE_GATHER_ND_REDUCE_ADD_IMPL(device_type_v, dtype_pair, itype_pair) \
+  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),         \
                                 OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceAdd>;
+
+#define INSTANTIATE_GATHER_SCATTER_ND_IMPL(device_type_v, dtype_pair, itype_pair)  \
+  INSTANTIATE_GATHER_ND_IMPL(device_type_v, dtype_pair, itype_pair)                \
+  INSTANTIATE_GATHER_ND_REDUCE_REPLACE_IMPL(device_type_v, dtype_pair, itype_pair) \
+  INSTANTIATE_GATHER_ND_REDUCE_ADD_IMPL(device_type_v, dtype_pair, itype_pair)
 
 }  // namespace oneflow
 
