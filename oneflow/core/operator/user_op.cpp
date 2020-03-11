@@ -21,6 +21,12 @@ BlobDesc* FindValidBlobDescOfBnsInOp(
   return nullptr;
 }
 
+user_op::TensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
+  BlobDescProto proto;
+  blob_desc->ToProto(&proto);
+  return user_op::TensorDesc(proto);
+}
+
 }  // namespace
 
 class UserOp final : public Operator {
@@ -67,12 +73,11 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     parallel_ctx_ = parallel_ctx;
 
     {
-#define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                      \
-  for (const auto& bn : user_op->prefix##_bns()) {                                             \
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                        \
-    if (!blob_desc) { continue; }                                                              \
-    arg2tensor_desc_.emplace(GenUnRepeatedBn(bn),                                              \
-                             user_op::TensorDesc(blob_desc->shape(), blob_desc->data_type())); \
+#define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                \
+  for (const auto& bn : user_op->prefix##_bns()) {                                       \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                  \
+    if (!blob_desc) { continue; }                                                        \
+    arg2tensor_desc_.emplace(GenUnRepeatedBn(bn), GenTensorDescFromBlobDesc(blob_desc)); \
   }
 
       INSERT_TO_ARG2TENSOR_DESC(input)
@@ -116,7 +121,7 @@ class UserOpInferContext : public user_op::InferContext {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
           auto key = std::make_pair(arg_name, i);
-          arg2tensor_desc_.emplace(key, user_op::TensorDesc(blob->shape(), blob->data_type()));
+          arg2tensor_desc_.emplace(key, GenTensorDescFromBlobDesc(blob));
           arg_vec->emplace_back(std::make_pair(arg_name, i));
         }
       }
@@ -126,12 +131,23 @@ class UserOpInferContext : public user_op::InferContext {
   }
   ~UserOpInferContext() = default;
 
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
+    return &(arg2tensor_desc_.at(std::make_pair(arg_name, index)));
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_dynamic();
+  }
+  bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_tensor_list();
+  }
+
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
@@ -165,8 +181,7 @@ class UserOpSbpContext : public user_op::SbpContext {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
         const BlobDesc* blob = CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i), GenTensorDescFromBlobDesc(blob));
         inputs_.emplace_back(std::make_pair(arg_name, i));
       }
     }
@@ -206,8 +221,7 @@ class UserOpBatchAxisContext : public user_op::BatchAxisContext {
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
         std::string ibn = GenRepeatedBn(arg_name, i);
         const BlobDesc& blob = LogicalBlobDesc4Ibn(ibn);
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 user_op::TensorDesc(blob.shape(), blob.data_type()));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i), GenTensorDescFromBlobDesc(&blob));
         arg2batch_axis_.emplace(std::make_pair(arg_name, i), BatchAxis4BnInOp(ibn));
         inputs_.emplace_back(std::make_pair(arg_name, i));
       }
@@ -328,9 +342,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
     std::function<void(OpContext*)> EnrollOpCtx) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
-  // set out blob desc other attr as first input blob desc (if has)
-  // TODO(ChengCheng): infer other attribute in blob desc
+  // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
+  // set out blob desc attr as first input blob desc (if has)
   BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
   if (first_in_blob_desc) {
     for (const std::string& obn : output_bns()) {
@@ -340,12 +353,14 @@ Maybe<void> UserOp::InferOutBlobDescs(
 
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, GetBlobDesc4BnInOp);
 
-  JUST(val_->shape_infer_fn(&infer_ctx));
-  JUST(val_->dtype_infer_fn(&infer_ctx));
+  JUST(val_->tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
     out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+    out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
+    out_blob_desc->set_is_tensor_list(
+        *infer_ctx.IsTensorList4ArgNameAndIndex(pair.first, pair.second));
   }
   return Maybe<void>::Ok();
 }
