@@ -40,7 +40,7 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
+Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& params_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
   const user_op::TensorDesc& indices_desc =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
@@ -146,7 +146,7 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
-    .SetGetSbpFn(GetScatterNdOptSbpSignatures);
+    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP("tensor_scatter_nd_add")
     .Input("params")
@@ -155,7 +155,7 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
-    .SetGetSbpFn(GetScatterNdOptSbpSignatures);
+    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures);
 
 REGISTER_USER_OP_GRAD("gather_nd")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
