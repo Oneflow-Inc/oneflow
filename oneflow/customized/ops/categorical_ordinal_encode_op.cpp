@@ -8,7 +8,12 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Input("in")
     .Output("out")
     .Attr("hash_precomputed", UserOpAttrType::kAtBool)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      CHECK_OR_RETURN(IsIndexDataType(data_type));
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);
       const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
       CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
@@ -17,14 +22,6 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       CHECK_EQ_OR_RETURN(size_shape->NumAxes(), 1);
       CHECK_EQ_OR_RETURN(size_shape->elem_cnt(), 1);
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(IsIndexDataType(data_type));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
