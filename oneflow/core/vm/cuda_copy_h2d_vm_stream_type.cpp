@@ -87,6 +87,7 @@ bool CudaCopyH2DVmStreamType::QueryVmInstructionStatusDone(
 
 void CudaCopyH2DVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
   auto* vm_stream = vm_instr_chain->mut_vm_stream();
+  cudaSetDevice(vm_stream->vm_thread().device_id());
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
     VmCudaCopyH2D(vm_instruction);
   }

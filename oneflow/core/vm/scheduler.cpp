@@ -57,7 +57,7 @@ void VmScheduler::MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
     VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
     auto* vm_stream_rt_desc = mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_parallel_id2vm_stream(),
+    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_vm_stream_id2vm_stream(),
                                             vm_stream) {
       new_vm_instr_chain_list->EmplaceBack(vm_stream->NewVmInstrChain(vm_instr_msg));
     }
@@ -201,16 +201,16 @@ void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator)
     auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
     mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
     BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
-    for (int64_t i = 0; i < vm_stream_desc->num_threads(); ++i) {
+    for (int64_t i = 0, parallel_id = 0; i < vm_stream_desc->num_threads(); ++i) {
       auto vm_thread = ObjectMsgPtr<VmThread>::NewFrom(allocator, vm_stream_rt_desc.Get(), i);
       mut_vm_thread_list()->PushBack(vm_thread.Mutable());
-      for (int parallel_id = bs.At(i).begin(); parallel_id < bs.At(i).end(); ++parallel_id) {
+      for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++parallel_id) {
         FlatMsg<VmStreamId> vm_stream_id;
         vm_stream_id->set_vm_stream_type_id(vm_stream_desc->vm_stream_type_id());
         vm_stream_id->set_parallel_id(parallel_id);
         auto vm_stream = ObjectMsgPtr<VmStream>::NewFrom(mut_allocator(), vm_thread.Mutable(),
                                                          vm_stream_id.Get());
-        vm_stream_rt_desc->mut_parallel_id2vm_stream()->Insert(vm_stream.Mutable());
+        CHECK(vm_stream_rt_desc->mut_vm_stream_id2vm_stream()->Insert(vm_stream.Mutable()).second);
         vm_thread->mut_vm_stream_list()->PushBack(vm_stream.Mutable());
       }
     }

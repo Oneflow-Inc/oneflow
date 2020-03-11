@@ -51,7 +51,7 @@ void VmCudaMalloc(VmInstruction* vm_instr) {
     CHECK(!mirrored_object->has_object_type());
   }
   {
-    CudaCurrentDeviceGuard guard(vm_stream.vm_thread().device_id());
+    cudaSetDevice(vm_stream.vm_thread().device_id());
     CudaCheck(cudaMalloc(&dptr, size));
   }
   mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
@@ -82,7 +82,7 @@ void VmCudaFree(VmInstruction* vm_instr) {
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
   }
   {
-    CudaCurrentDeviceGuard guard(vm_stream.vm_thread().device_id());
+    cudaSetDevice(vm_stream.vm_thread().device_id());
     CudaCheck(cudaFree(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
   }
   mirrored_object->clear_cuda_mem_buffer();
