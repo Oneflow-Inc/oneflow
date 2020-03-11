@@ -20,6 +20,16 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
+  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  Shape params_shape = ctx->GetAttr<Shape>("shape");
+  JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
+  *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
   Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
@@ -115,15 +125,7 @@ REGISTER_USER_OP("scatter_nd")
     .Input("updates")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-      Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-      Shape params_shape = ctx->GetAttr<Shape>("shape");
-      JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
-      *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(InferScatterNdTensorDesc)
     .SetBatchAxisInferFn(InferGatherScatterNdBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { TODO(); });
 
