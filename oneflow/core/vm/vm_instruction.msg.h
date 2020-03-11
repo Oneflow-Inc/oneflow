@@ -8,7 +8,6 @@
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_stream_type.h"
-#include "oneflow/core/vm/vm_instruction_msg_observer.h"
 
 namespace oneflow {
 
@@ -28,14 +27,8 @@ class MirroredObject;
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmInstructionMsg);
-  // methods
-  PUBLIC void __Init__() { __Init__(&VmInstructionMsgNoneObserver::NewObserver); }
-  PUBLIC template<typename NewObserverT>
-  void __Init__(const NewObserverT& NewObserver) { mutable_observer()->__Init__(NewObserver); }
-
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionProto, vm_instruction_proto);
-  OBJECT_MSG_DEFINE_OPTIONAL(Wrapper4CppObject<VmInstructionMsgObserver>, observer);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_msg_link);
