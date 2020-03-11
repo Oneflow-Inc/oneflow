@@ -7,8 +7,8 @@
 #include <tvm/runtime/device_api.h>
 
 namespace oneflow {
-
 namespace xrt {
+namespace of_tvm {
 
 class TVMExecutable final : public Executable {
  public:
@@ -40,7 +40,7 @@ class TVMExecutable final : public Executable {
 };
 
 }
-
+}
 }
 
 #endif // ONEFLOW_XRT_TVM_TVM_EXECUTABLE_H_

@@ -1,10 +1,13 @@
 #include "oneflow/xrt/tvm/tvm_graph_compiler.h"
 #include "oneflow/xrt/tvm/tvm_executable.h"
+#include "oneflow/xrt/tvm/ops/tvm_op_context.h"
+#include "oneflow/xrt/tvm/ops/tvm_op_kernel.h"
 #include <tvm/runtime/device_api.h>
 #include <tuple>
 
 namespace oneflow {
 namespace xrt {
+namespace of_tvm {
 
 namespace {
 
@@ -57,10 +60,6 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& retu
   return tvm::relay::Tuple(n);
 }
 
-tvm::relay::Expr ConvertOpNodeToTVMExpr(const XrtNode* node,
-    const tvm::Array<tvm::relay::Expr>& node_inputs) {
-}
-
 std::tuple<tvm::runtime::Module, std::string>
     BuildGraphModule(tvm::relay::Function graph_function) {
   auto create_fn = tvm::runtime::Registry::Get("relay.build_module._BuildModule");
@@ -98,9 +97,13 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
       CHECK(it != tensor_name2expr.end());
       node_inputs.push_back(it->second);
     }
-    auto expr = ConvertOpNodeToTVMExpr(node, node_inputs);
+
+    TVMOpContext ctx(node, std::move(node_inputs));
+    auto op_kernel = BuildTVMOpKernel(node->type());
+    tvm::relay::Expr op_expr = ctx.op_expr();
+
     for (const auto* out_edge : node->out_edges()) {
-      tensor_name2expr.emplace(out_edge->argument().name(), expr);
+      tensor_name2expr.emplace(out_edge->argument().name(), op_expr);
     }
   });
 
@@ -118,5 +121,6 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TVM, TVMGraphCompiler);
 
+}
 }
 }

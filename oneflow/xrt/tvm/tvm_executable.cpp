@@ -3,8 +3,8 @@
 #include <cstdint>
 
 namespace oneflow {
-
 namespace xrt {
+namespace of_tvm {
 
 namespace {
 
@@ -123,7 +123,7 @@ bool TVMExecutable::Run(const std::vector<Parameter> &inputs,
   this->results_ = run_options.return_params;
   return true;
 }
-
+}
 }
 
 }

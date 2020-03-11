@@ -8,6 +8,7 @@
 
 namespace oneflow {
 namespace xrt {
+namespace of_tvm {
 
 class TVMGraphCompiler final : public GraphCompiler::Impl {
  public:
@@ -25,7 +26,7 @@ class TVMGraphCompiler final : public GraphCompiler::Impl {
 };
 
 }
-
+}
 }
 
 #endif // ONEFLOW_XRT_TVM_TVM_GRAPH_COMPILER_H_
