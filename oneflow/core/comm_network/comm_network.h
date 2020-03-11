@@ -2,19 +2,11 @@
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/common/channel.h"
 
 namespace oneflow {
-
-struct CommNetItem {
-  bool is_read;
-  std::function<void()> callback;
-  CommNetItem() : CommNetItem(false, nullptr) {}
-  CommNetItem(bool read, const std::function<void()>& cb) : is_read(read), callback(cb) {}
-};
 
 class CommNet {
  public:
@@ -29,11 +21,9 @@ class CommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  void* NewActorReadId();
-  void DeleteActorReadId(void* actor_read_id);
-  void Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token);
-  void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
-  void ReadDone(void* read_id);
+  void Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token);
+  void AddReadCallBack(int64_t stream_id, std::function<void()> callback);
+  void ReadDone(int64_t stream_id);
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
@@ -41,23 +31,25 @@ class CommNet {
  protected:
   CommNet(const Plan& plan);
 
-  virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
+  virtual void DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token,
+                      void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
   Channel<std::function<void()>> ready_cbs_;
 
  private:
   friend class Global<CommNet>;
-  void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
-  struct ActorReadContext;
-  struct ReadContext {
-    ActorReadContext* actor_read_ctx;
+  struct CommNetItem {
+    std::function<void()> callback;
+    bool is_read;
+    CommNetItem(const std::function<void()>& callback, bool is_read)
+        : callback(callback), is_read(is_read) {}
   };
-  struct ActorReadContext {
-    std::mutex waiting_list_mtx;
-    std::list<CommNetItem> waiting_list;
-  };
+  void IssueCallBack(const std::function<void()>& cb);
+  void AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read);
   HashSet<int64_t> peer_machine_id_;
+  HashMap<int64_t, std::unique_ptr<std::mutex>> stream_id2stream_mtx_ptr_;
+  HashMap<int64_t, std::queue<CommNetItem>> stream_id2stream_;
   std::thread ready_cb_poller_;
 };
 

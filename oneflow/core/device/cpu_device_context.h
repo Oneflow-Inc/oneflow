@@ -17,7 +17,7 @@ class CpuDeviceCtx final : public DeviceCtx {
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 
  private:
-};  // namespace oneflow
+};
 
 }  // namespace oneflow
 

@@ -4,6 +4,10 @@
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
+#include <fcntl.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
 namespace oneflow {
 
 namespace {
@@ -16,6 +20,46 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
   return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
 }
 
+int32_t NumOfActivePorts(ibv_device* device) {
+  int32_t active_ports = 0;
+  ibv_device_attr device_attr;
+  ibv_port_attr port_attr;
+  ibv_context* context = ibv_open_device(device);
+  PCHECK(context);
+  PCHECK(ibv_query_device(context, &device_attr) == 0);
+  for (int32_t port_index = 1; port_index <= device_attr.phys_port_cnt; ++port_index) {
+    PCHECK(ibv_query_port(context, port_index, &port_attr) == 0);
+    if (port_attr.state == IBV_PORT_ACTIVE) { active_ports++; }
+  }
+  ibv_close_device(context);
+  return active_ports;
+}
+
+int32_t ReadSysfsFile(const char* dir, const char* file, char* buf, size_t size) {
+  char* path;
+  int32_t fd;
+  int32_t len;
+  if (asprintf(&path, "%s%s", dir, file) < 0) { return -1; }
+  fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    free(path);
+    return -1;
+  }
+  len = read(fd, buf, size);
+  close(fd);
+  free(path);
+  if (len > 0 && buf[len - 1] == '\n') { buf[--len] = '\0'; }
+  return len;
+}
+
+bool IsGidTypeRoceV2(const char* dir, uint32_t port_num, uint32_t index) {
+  char name[32];
+  char buff[41];
+  snprintf(name, sizeof(name), "ports/%d/gid_attrs/types/%d", port_num, index);
+  if (ReadSysfsFile(dir, name, buff, sizeof(buff)) <= 0) { return false; }
+  return !strcmp(buff, "RoCE v2");
+}
+
 }  // namespace
 
 IBVerbsCommNet::~IBVerbsCommNet() {
@@ -24,9 +68,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv_close_device(context_), 0);
+  PCHECK(ibv_destroy_cq(cq_) == 0);
+  PCHECK(ibv_dealloc_pd(pd_) == 0);
+  PCHECK(ibv_close_device(context_) == 0);
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
@@ -37,11 +81,11 @@ void IBVerbsCommNet::RegisterMemoryDone() {
         {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
   }
   Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
-  for (int64_t peer_id : peer_machine_id()) {
+  for (int64_t peer_mchn_id : peer_machine_id()) {
     IBVerbsTokensMsg peer_tokens_msg;
-    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_id), &peer_tokens_msg);
+    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_mchn_id), &peer_tokens_msg);
     for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(token2mem_desc_.at(peer_id)
+      CHECK(token2mem_desc_.at(peer_mchn_id)
                 .emplace(reinterpret_cast<void*>(pair.first), pair.second)
                 .second);
     }
@@ -54,58 +98,170 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
+void IBVerbsCommNet::CheckIBVerbsConf() const {
+  auto& ibv_conf = Global<JobDesc>::Get()->ibverbs_conf();
+  CHECK_GE(ibv_conf.port_num(), 0);
+  CHECK_GE(ibv_conf.pkey_index(), 0);
+  CHECK_LE(ibv_conf.pkey_index(), GetMaxVal<uint8_t>());
+  CHECK_GE(ibv_conf.queue_depth(), 0);
+  CHECK_LE(ibv_conf.queue_depth(), GetMaxVal<uint8_t>());
+  CHECK_GE(ibv_conf.timeout(), 0);
+  CHECK_LE(ibv_conf.timeout(), GetMaxVal<uint8_t>());
+  CHECK_GE(ibv_conf.retry_cnt(), 0);
+  CHECK_LE(ibv_conf.retry_cnt(), GetMaxVal<uint8_t>());
+  CHECK_GE(ibv_conf.service_level(), 0);
+  CHECK_LE(ibv_conf.service_level(), 7);
+  CHECK_GE(ibv_conf.traffic_class(), 0);
+  CHECK_LE(ibv_conf.traffic_class(), GetMaxVal<uint8_t>());
+  CHECK_GE(ibv_conf.mem_block_mbyte(), 0);
+}
+
+
+void IBVerbsCommNet::InitContext() {
+  const std::string& device_name = Global<JobDesc>::Get()->ibverbs_conf().device_name();
+  int32_t device_num = 0;
+  int32_t device_index = 0;
+  ibv_device** device_list = ibv_get_device_list(&device_name);
+  PCHECK(device_list);
+  ibv_device* device = nullptr;
+  if (device_name == "") {
+    for (device_index = 0; device_index < device_num; ++device_index) {
+      device = device_list[device_index];
+      if (NumOfActivePorts(device) > 0) { break; }
+    }
+    CHECK_LT(deivce_index, device_num) << "There is no ib_device with active port in the machine.";
+  } else {
+    for (device_index = 0; device_index < device_num; ++device_index) {
+      device = device_list[device_index];
+      if (std::string(ibv_get_device_name(device)) == device_name) {
+        CHECK(NumOfActivePorts(device)) << "Device " << device_name << " has no active port.";
+        break;
+      }
+    }
+    CHECK_LT(device_index, device_num) << "The device " << device_name << " wasn't found.";
+  }
+  PCHECK(device);
+  context_ = ibv_open_device(device);
+  PCHECK(context_);
+  ibv_free_device_list(device_list);
+  pd_ = ibv_alloc_pd(context_);
+  PCHECK(pd_);
+  cq_ = ibv_create_cq(context_, max_poll_wc_num_, nullptr, nullptr, 0);
+  PCHECK(cq_);
+}
+
+void IBVerbsCommNet::QueryDeviceInfo() const {
+  ibv_port_attr port_attr;
+  ibv_gid gid;
+  uint32_t port_num = QueryPort(&port_attr);
+  uint32_t sgid_index = QueryGid(port_num, &port_attr, &gid);
+
+  auto mutable_ibv_conf = Global<JobDesc>::Get()->mutable_ibverbs_conf();
+  mutable_ibv_conf->set_port_num(port_num);
+  mutable_ibv_conf->set_sgid_index(sgid_index);
+}
+
+uint32_t IBVerbsCommNet::QueryPort(ibv_port_attr* port_attr) const {
+  uint32_t port_num = static_cast<uint32_t>(Global<JobDesc>::Get()->ibverbs_conf().port_num());
+  ibv_device_attr device_attr;
+  PCHECK(ibv_query_device(context_, &device_attr) == 0);
+  if (port_num == 0) {
+    for (size_t port_index = 1; port_index <= device_attr.phys_port_cnt; ++port_index) {
+      PCHECK(ibv_query_port(context_, port_index, port_attr) == 0);
+      if (port_attr->state == IBV_PORT_ACTIVE) {
+        port_num = port_index;
+        break;
+      }
+    }
+    CHECK_GT(port_num, 0) << "No active port";
+  } else {
+    CHECK_LE(port_num, device_attr.phys_port_cnt)
+        << "DEVICE_PORT should be less or equal to amount of available ports";
+    PCHECK(ibv_query_port(context_, port_num, port_attr) == 0);
+    CHECK_EQ(port_attr->state, IBV_PORT_ACTIVE) << "Selected DEVICE_PORT is not active";
+  }
+  return port_num;
+}
+
+uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, ibv_gid* gid) const {
+  uint32_t sgid_index = static_cast<uint32_t>(Global<JobDesc>::Get()->ibverbs_conf().sgid_index());
+  uint32_t gids_num = 0;
+  uint32_t v2_ip_num = 0;
+  uint32_t gid_index = 0;
+  for (int32_t i = 0; i < port_attr->gid_tbl_len; i++) {
+    PCHECK(ibv_query_gid(context_, port_num, i, gid) == 0)
+        << "Failed to query gid to port " << port_num << " index " << i;
+    if (gid->global.interface_id) {
+      gids_num++;
+      if (gid->global.subnet_prefix == 0 && IsGidTypeRoceV2(port_num, i)) {
+        if (v2_ip_num == 0) { gid_index = i; }
+        v2_ip_num++;
+      }
+    }
+  }
+  switch (port_attr->link_layer) {
+    case (IBV_LINK_LAYER_ETHERNET):
+      if (sgid_index != 0) {
+        CHECK_LT(sgid_index, gids_num)
+            << "RDMA_GID_INDEX should be less than GIDs amount" << gids_num;
+        gid_index = sgid_index;
+      }
+      if (!IsGidTypeRoceV2(port_num, gid_index)) {
+        LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << gid_index;
+      }
+      break;
+    case (IBV_LINK_LAYER_INFINIBAND):
+      break;
+    default:
+      LOG(INFO) << "Unknown port link layer. Currently supporting Ethernet and InfiniBand only.";
+  }
+  PCHECK(ibv_query_gid(context_, port_num, gid_index, gid) == 0);
+  return gid_index;
+}
+
+void IBVerbsCommNet::ConnectTopo() {
+  int64_t this_mchn_id = Global<MachineCtx>::Get()->this_machine_id();
+  qp_vec_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), nullptr);
+  for (int64_t peer_mchn_id : peer_machine_id()) {
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_);
+    qp_vec_.at(peer_mchn_id) = cur_qp;
+    IBVerbsConnectionInfo conn_info;
+    conn_info.set_local_id(port_attr.lid);
+    conn_info.set_qp_num(cur_qp->qp_num());
+    conn_info.set_subnet_prefix(gid.global.subnet_prefix);
+    conn_info.set_interface_id(gid.global.interface_id);
+    Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_mchn_id, peer_mchn_id), conn_info);
+  }
+  for (int64_t peer_mchn_id : peer_machine_id()) {
+    IBVerbsConnectionInfo conn_info;
+    Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_mchn_id, this_mchn_id), &conn_info);
+    qp_vec_.at(peer_mchn_id)->Connect(conn_info);
+  }
+  OF_BARRIER();
+  for (int64_t peer_mchn_id : peer_machine_id()) {
+    qp_vec_.at(peer_mchn_id)->PostAllRecvRequest();
+    Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_mchn_id, peer_mchn_id));
+  }
+  OF_BARRIER();
+}
+
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
       token2mem_desc_(Global<ResourceDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv_get_device_list(nullptr);
-  PCHECK(device_list);
-  ibv_device* device = device_list[0];
-  context_ = ibv_open_device(device);
-  CHECK(context_);
-  ibv_free_device_list(device_list);
-  pd_ = ibv_alloc_pd(context_);
-  CHECK(pd_);
-  ibv_device_attr device_attr;
-  CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
-  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  CHECK(cq_);
-  ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
-  ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  qp_vec_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), nullptr);
-  for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
-    qp_vec_.at(peer_id) = cur_qp;
-    IBVerbsConnectionInfo conn_info;
-    conn_info.set_lid(port_attr.lid);
-    conn_info.set_qp_num(cur_qp->qp_num());
-    conn_info.set_subnet_prefix(gid.global.subnet_prefix);
-    conn_info.set_interface_id(gid.global.interface_id);
-    Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_id), conn_info);
-  }
-  for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsConnectionInfo conn_info;
-    Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
-    qp_vec_.at(peer_id)->Connect(conn_info);
-  }
-  OF_BARRIER();
-  for (int64_t peer_id : peer_machine_id()) {
-    qp_vec_.at(peer_id)->PostAllRecvRequest();
-    Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
-  }
-  OF_BARRIER();
+  CheckIBVerbsConf();
+  InitContext();
+  QuertDeviceInfo();
+  ConnectTopo();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
   OF_BARRIER();
 }
 
-void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
+void IBVerbsCommNet::DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token,
                             void* dst_token) {
   qp_vec_.at(src_machine_id)
       ->PostReadRequest(token2mem_desc_.at(src_machine_id).at(src_token),
-                        *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
+                        *static_cast<const IBVerbsMemDesc*>(dst_token), stream_id);
 }
 
 void IBVerbsCommNet::PollCQ() {
@@ -116,7 +272,9 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode;
+      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << "Failed status \n"
+                                          << ibv_wc_status_str(wc.status) << " " << wc.status << " "
+                                          << static_cast<int>(wc.wr_id) << " " << wc.vendor_err;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       IBVerbsQP* qp = wr_id->qp;
       switch (wc.opcode) {
@@ -138,7 +296,7 @@ void IBVerbsCommNet::PollCQ() {
   }
 }
 
-const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
+const int32_t IBVerbsCommNet::max_poll_wc_num_ = 128;
 
 }  // namespace oneflow
 

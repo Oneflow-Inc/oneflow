@@ -8,9 +8,6 @@
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
-#include <netdb.h>
-#include <arpa/inet.h>
-
 namespace oneflow {
 
 class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
@@ -31,8 +28,14 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   }
 
   IBVerbsCommNet(const Plan&);
-  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
+  void DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
+  void CheckIBVerbsConf() const;
+  void InitContext();
+  void QueryDeviceInfo() const;
+  uint32_t QueryPort(ibv_port_attr*) const;
+  uint32_t QueryGid(uint32_t, ibv_port_attr*, ibv_gid*) const;
+  void ConnectTopo();
 
   static const int32_t max_poll_wc_num_;
 

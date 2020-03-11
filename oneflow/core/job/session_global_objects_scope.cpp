@@ -55,6 +55,7 @@ SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
+  Global<const CommNetworkConf>::New(config_proto.comm_net_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
@@ -91,6 +92,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
+  Global<const CommNetworkConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
 }

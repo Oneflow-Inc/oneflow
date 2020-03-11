@@ -32,7 +32,7 @@ class IBVerbsQP;
 struct WorkRequestId {
   IBVerbsQP* qp;
   int32_t outstanding_sge_cnt;
-  void* read_id;
+  int64_t stream_id;
   ActorMsgMR* msg_mr;
 };
 
@@ -40,7 +40,7 @@ class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context*, ibv_pd*, ibv_cq* send_cq, ibv_cq* recv_cq);
+  IBVerbsQP(ibv_context*, ibv_pd*, ibv_cq*);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -48,7 +48,7 @@ class IBVerbsQP final {
   void PostAllRecvRequest();
 
   void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
-                       void* read_id);
+                       int64_t stream_id);
   void PostSendRequest(const ActorMsg& msg);
 
   void ReadDone(WorkRequestId*);
@@ -61,6 +61,7 @@ class IBVerbsQP final {
   ActorMsgMR* GetOneSendMsgMRFromBuf();
   void PostRecvRequest(ActorMsgMR*);
 
+  const IBVerbsConf& ibv_conf_;
   ibv_context* ctx_;
   ibv_pd* pd_;
   ibv_qp* qp_;

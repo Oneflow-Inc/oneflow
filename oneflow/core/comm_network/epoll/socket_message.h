@@ -34,13 +34,16 @@ struct RequestWriteMsg {
   void* src_token;
   int64_t dst_machine_id;
   void* dst_token;
-  void* read_id;
+  int64_t stream_id;
 };
 
 struct RequestReadMsg {
   void* src_token;
   void* dst_token;
-  void* read_id;
+  int64_t offset;
+  int64_t byte_size;
+  int64_t stream_id;
+  int32_t part_num;
 };
 
 struct SocketMsg {
