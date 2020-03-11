@@ -40,6 +40,25 @@ __device__ float XdivyCalYDiff4GpuFloat(float x, float y, float dz) {
     return dz * Xdivy4GpuFloat((-x), powf(y, 2));
 }
 
+__device__ float Xlogy4GpuFloat(float x, float y) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  x * logf(y);
+  }
+}
+__device__ float XlogyCalXDiff4GpuFloat(float x, float y, float dz) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  Xlogy4GpuFloat(dz, y);
+  }
+}
+
+__device__ float XlogyCalYDiff4GpuFloat(float x, float y, float dz) {
+    return dz * Xdivy4GpuFloat(x, y);
+}
+
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
     CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                                    \
@@ -87,10 +106,12 @@ __device__ float XdivyCalYDiff4GpuFloat(float x, float y, float dz) {
 
 #define MATH_BINARY_GPU_FLOAT_SEQ           \
 OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)            \
-OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)
+OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)        \
+OF_PP_MAKE_TUPLE_SEQ("Xlogy", Xlogy)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:

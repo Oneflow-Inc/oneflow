@@ -370,3 +370,14 @@ def xdivy(x, y, name=None):
             .Output("z")\
             .SetAttr("binary_math_type", "Xdivy", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.xlogy")
+def xlogy(x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Xlogy_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
+            .Input("x",[x])\
+            .Input("y",[y])\
+            .Output("z")\
+            .SetAttr("binary_math_type", "Xlogy", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
