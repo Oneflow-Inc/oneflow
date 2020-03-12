@@ -29,52 +29,21 @@ inline NdIndexSliceArgs<T, I> ConstructNdIndexSliceArgs(const user_op::Tensor& d
 }
 
 template<DeviceType device_type, typename T, typename I>
-struct GatherNdImpl {
-  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                    const T* dense, T* slices);
-};
-
-template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
-struct ScatterNdImpl {
-  static void Apply(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                    const T* slices, T* dense);
-};
-
-// If values in output is to be updated more than once, because there are duplicate entries in
-// indices, the order at which the updates happen for each value is undefined.
-template<DeviceType device_type, typename T>
-struct ScatterNdReduceReplace {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y = *x; }
-};
-
-template<DeviceType device_type, typename T>
-struct ScatterNdReduceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y);
+struct GatherNdFunctor final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  const T* dense, T* slices) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
-struct NdIndicesSliceUtil final {
-  static void GatherNd(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                       const T* dense, T* slices) {
-    GatherNdImpl<device_type, T, I>::Apply(ctx, args, indices, dense, slices);
-  }
+struct ScatterNdAddFunctor final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  const T* slices, T* dense) const;
+};
 
-  static void ScatterNdUpdate(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                              const T* slices, T* dense) {
-    ScatterNdReduce<ScatterNdReduceReplace>(ctx, args, indices, slices, dense);
-  }
-
-  static void ScatterNdAdd(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                           const T* slices, T* dense) {
-    ScatterNdReduce<ScatterNdReduceAdd>(ctx, args, indices, slices, dense);
-  }
-
- private:
-  template<template<DeviceType, typename> class Opt>
-  static void ScatterNdReduce(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                              const T* slices, T* dense) {
-    ScatterNdImpl<device_type, T, I, Opt>::Apply(ctx, args, indices, slices, dense);
-  }
+template<DeviceType device_type, typename T, typename I>
+struct ZeroByNdIndexFunctor final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  T* dense) const;
 };
 
 template<typename I>
@@ -93,50 +62,55 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
 }
 
 template<typename T, typename I>
-struct GatherNdFunctor {
-  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
-                                    const int64_t* dense_shape, const I* indices, const T* dense,
-                                    T* slices) {
-    XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset =
-          OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
-      slices[i] = dense[offset];
-    }
+OF_DEVICE_FUNC void DoGatherNd(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                               const int64_t* dense_shape, const I* indices, const T* dense,
+                               T* slices) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
+    slices[i] = dense[offset];
   }
+}
+
+template<DeviceType device_type, typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y += *x; }
 };
 
-template<typename T, typename I, typename Opt>
-struct ScatterNdFunctor;
-
-template<DeviceType device_type, typename T, typename I, template<DeviceType, typename> class Opt>
-struct ScatterNdFunctor<T, I, Opt<device_type, T>> {
-  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
-                                    const int64_t* dense_shape, const I* indices, const T* slices,
-                                    T* dense) {
-    XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-      int64_t offset =
-          OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
-      Opt<device_type, T>::Invoke(slices + i, dense + offset);
-    }
+template<DeviceType device_type, typename T, typename I>
+OF_DEVICE_FUNC void DoScatterNdAdd(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                   const int64_t* dense_shape, const I* indices, const T* slices,
+                                   T* dense) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
+    DeviceAdd<device_type, T>::Invoke(slices + i, dense + offset);
   }
-};
+}
 
-#define INSTANTIATE_GATHER_ND_IMPL(device_type_v, dtype_pair, itype_pair)   \
-  template struct GatherNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                               OF_PP_PAIR_FIRST(itype_pair)>;
+template<typename T, typename I>
+OF_DEVICE_FUNC void DoZeroByNdIndex(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                    const int64_t* dense_shape, const I* indices, T* dense) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
+    dense[offset] = static_cast<T>(0);
+  }
+}
 
-#define INSTANTIATE_GATHER_ND_REDUCE_REPLACE_IMPL(device_type_v, dtype_pair, itype_pair) \
-  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),             \
-                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceReplace>;
+#define INSTANTIATE_GATHER_ND_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
+  template struct GatherNdFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                  OF_PP_PAIR_FIRST(itype_pair)>;
 
-#define INSTANTIATE_GATHER_ND_REDUCE_ADD_IMPL(device_type_v, dtype_pair, itype_pair) \
-  template struct ScatterNdImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),         \
-                                OF_PP_PAIR_FIRST(itype_pair), ScatterNdReduceAdd>;
+#define INSTANTIATE_SCATTER_ND_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
+  template struct ScatterNdAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                      OF_PP_PAIR_FIRST(itype_pair)>;
 
-#define INSTANTIATE_GATHER_SCATTER_ND_IMPL(device_type_v, dtype_pair, itype_pair)  \
-  INSTANTIATE_GATHER_ND_IMPL(device_type_v, dtype_pair, itype_pair)                \
-  INSTANTIATE_GATHER_ND_REDUCE_REPLACE_IMPL(device_type_v, dtype_pair, itype_pair) \
-  INSTANTIATE_GATHER_ND_REDUCE_ADD_IMPL(device_type_v, dtype_pair, itype_pair)
+#define INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair) \
+  template struct ZeroByNdIndexFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                       OF_PP_PAIR_FIRST(itype_pair)>;
+
+#define INSTANTIATE_ND_INDEX_SLICE_FUNCTORS(device_type_v, dtype_pair, itype_pair) \
+  INSTANTIATE_GATHER_ND_FUNCTOR(device_type_v, dtype_pair, itype_pair)             \
+  INSTANTIATE_SCATTER_ND_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)        \
+  INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair)
 
 }  // namespace oneflow
 

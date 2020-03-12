@@ -55,8 +55,8 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
-  NdIndicesSliceUtil<device_type, T, I>::GatherNd(ctx->device_ctx(), args, indices->dptr<I>(),
-                                                  params->dptr<T>(), out->mut_dptr<T>());
+  GatherNdFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                       params->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -67,8 +67,8 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), args, indices->dptr<I>(),
-                                                      updates->dptr<T>(), out->mut_dptr<T>());
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                           updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -82,8 +82,10 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelCont
     Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdUpdate(
-      ctx->device_ctx(), args, indices->dptr<I>(), updates->dptr<T>(), out->mut_dptr<T>());
+  ZeroByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                            out->mut_dptr<T>());
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                           updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -97,15 +99,15 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext
     Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  NdIndicesSliceUtil<device_type, T, I>::ScatterNdAdd(ctx->device_ctx(), args, indices->dptr<I>(),
-                                                      updates->dptr<T>(), out->mut_dptr<T>());
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+                                           updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 namespace {
 
 template<DeviceType device_type, typename T, typename I>
 std::function<bool(const oneflow::user_op::KernelRegContext&)>
-MakeGatherScatterNdKernelMatchedPredictor() {
+MakeNdIndexSliceKernelMatchedPredictor() {
   return [](const oneflow::user_op::KernelRegContext& ctx) {
     const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);
     const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
@@ -119,31 +121,31 @@ MakeGatherScatterNdKernelMatchedPredictor() {
 
 }  // namespace
 
-#define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,          \
-                                           itype_pair)                                           \
-  REGISTER_USER_KERNEL(#op_type_name)                                                            \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                          \
-        return new op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                       \
-                              OF_PP_PAIR_FIRST(itype_pair)>(ctx);                                \
-      })                                                                                         \
-      .SetIsMatchedPred(                                                                         \
-          MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                                    OF_PP_PAIR_FIRST(itype_pair)>());
+#define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,       \
+                                           itype_pair)                                        \
+  REGISTER_USER_KERNEL(#op_type_name)                                                         \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                       \
+        return new op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                    \
+                              OF_PP_PAIR_FIRST(itype_pair)>(ctx);                             \
+      })                                                                                      \
+      .SetIsMatchedPred(                                                                      \
+          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                                 OF_PP_PAIR_FIRST(itype_pair)>());
 
-#define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,     \
-                                               itype_pair)                                       \
-  REGISTER_USER_KERNEL(#op_type_name)                                                            \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                          \
-        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
-                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);              \
-      })                                                                                         \
-      .SetIsMatchedPred(                                                                         \
-          MakeGatherScatterNdKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                                    OF_PP_PAIR_FIRST(itype_pair)>())             \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                    \
-        return Maybe<void>::Ok();                                                                \
+#define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,    \
+                                               itype_pair)                                      \
+  REGISTER_USER_KERNEL(#op_type_name)                                                           \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                         \
+        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
+                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);             \
+      })                                                                                        \
+      .SetIsMatchedPred(                                                                        \
+          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),   \
+                                                 OF_PP_PAIR_FIRST(itype_pair)>())               \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                   \
+        return Maybe<void>::Ok();                                                               \
       });
 
 #define REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
