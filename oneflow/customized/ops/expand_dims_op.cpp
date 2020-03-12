@@ -44,7 +44,7 @@ REGISTER_USER_OP("expand_dims")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       int32_t axis = ctx->GetAttr<int32_t>("axis");
       const int32_t in_num_axes = in_desc.shape().NumAxes();
       CHECK_GE(axis, -(in_num_axes + 1));

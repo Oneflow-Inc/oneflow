@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/operator/reshape_op_util.h"
 
 namespace oneflow {
 
@@ -27,8 +28,16 @@ REGISTER_USER_OP("reshape_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO
-      return Maybe<void>::Ok();
+      const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+      const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+      SbpSignatureBuilder().PartialSum("like").Broadcast("in").Broadcast("out").Build(
+          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder().Broadcast("like").PartialSum("in").PartialSum("out").Build(
+          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return ReshapeOpUtil::GetReshapeSbpSignatures(
+          in_shape, like_shape, StdVec2PbRpf<std::string>({"x"}),
+          StdVec2PbRpf<std::string>({"like", "y"}), ctx->parallel_num(),
+          ctx->sbp_sig_list());
     });
 
 }  // namespace oneflow
