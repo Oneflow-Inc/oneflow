@@ -13,7 +13,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    def expand_dims_grad(x_diff_blob):
+    def check_grad(x_diff_blob):
         assert np.array_equal(x_diff_blob.ndarray(), np.ones(x_shape))
 
     @flow.function(func_config)
@@ -26,7 +26,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
                 initializer=flow.ones_initializer(),
                 trainable=True,
             )
-            flow.watch_diff(x, expand_dims_grad)
+            flow.watch_diff(x, check_grad)
             loss = flow.expand_dims(x, axis)
             flow.losses.add_loss(loss)
             return loss

@@ -468,10 +468,16 @@ def identity(x, name=None):
 
 @oneflow_export("squeeze")
 def squeeze(input, axis=None, name=None):
-    assert isinstance(axis, list) or isinstance(axis, tuple)
-    in_num_axes = len(input.shape)
-    for x in axis:
-        assert x >= -in_num_axes and x < in_num_axes
+    if axis is None:
+        axis = []
+        for idx, dim in enumerate(input.shape):
+            if dim is 1:
+                axis.append(idx)
+    else:
+        assert isinstance(axis, list) or isinstance(axis, tuple)
+        in_num_axes = len(input.shape)
+        for x in axis:
+            assert x >= -in_num_axes and x < in_num_axes
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Squeeze_"))
         .Op("squeeze")
@@ -484,7 +490,7 @@ def squeeze(input, axis=None, name=None):
 
 
 @oneflow_export("expand_dims")
-def expand_dims(input, axis=None, name=None):
+def expand_dims(input, axis, name=None):
     in_num_axes = len(input.shape)
     assert axis >= -(in_num_axes + 1) and axis <= in_num_axes
     return (

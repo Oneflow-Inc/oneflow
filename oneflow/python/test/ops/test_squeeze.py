@@ -13,7 +13,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    def squeeze_grad(x_diff_blob):
+    def check_grad(x_diff_blob):
         assert np.array_equal(x_diff_blob.ndarray(), np.ones(x_shape))
 
     @flow.function(func_config)
@@ -26,7 +26,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
                 initializer=flow.ones_initializer(),
                 trainable=True,
             )
-            flow.watch_diff(x, squeeze_grad)
+            flow.watch_diff(x, check_grad)
             loss = flow.squeeze(x, axis)
             flow.losses.add_loss(loss)
             return loss
@@ -46,7 +46,7 @@ def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(1, 10, 1, 10, 1)]
-    arg_dict["axis"] = [[2], [-3], [0, 2, 4], [-1, -3, -5]]
+    arg_dict["axis"] = [None, [2], [-3], [0, 2, 4], [-1, -3, -5]]
 
     return GenArgList(arg_dict)
 
@@ -56,3 +56,5 @@ def test_squeeze(test_case):
         compare_with_tensorflow(*arg)
     compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
     compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
+    compare_with_tensorflow("gpu", (5, 6, 7), None)
+    compare_with_tensorflow("cpu", (5, 6, 7), None)
