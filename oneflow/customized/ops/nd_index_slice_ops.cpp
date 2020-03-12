@@ -61,6 +61,12 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
         .Split("out", 0, i)
         .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
   }
+  SbpSignatureBuilder()
+      .PartialSum("params", 0)
+      .Broadcast("indices", 0)
+      .PartialSum("updates", 0)
+      .PartialSum("out", 0)
+      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
@@ -121,6 +127,11 @@ REGISTER_USER_OP("gather_nd")
             .Split("out", 0, i - index_ndims + indices_num_axes - 1)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
+      SbpSignatureBuilder()
+          .PartialSum("params", 0)
+          .Broadcast("indices", 0)
+          .PartialSum("out", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -136,7 +147,34 @@ REGISTER_USER_OP("scatter_nd")
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { TODO(); });
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& indices_desc =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+      int64_t indices_num_axes = indices_desc.shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+        SbpSignatureBuilder()
+            .Split("indices", 0, i)
+            .Split("updates", 0, i)
+            .Broadcast("out", 0)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
+      Shape out_shape = ctx->GetAttr<Shape>("shape");
+      int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
+      int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
+      FOR_RANGE(int64_t, i, 0, slice_ndims) {
+        SbpSignatureBuilder()
+            .Broadcast("indices", 0)
+            .Split("updates", 0, i + indices_num_axes - 1)
+            .Split("out", 0, i + index_ndims)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
+      SbpSignatureBuilder()
+          .PartialSum("updates", 0)
+          .Broadcast("indices", 0)
+          .PartialSum("out", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("params")
