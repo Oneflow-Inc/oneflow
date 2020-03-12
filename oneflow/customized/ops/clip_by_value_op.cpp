@@ -7,21 +7,23 @@ REGISTER_USER_OP("clip_by_value")
     .OptionalInput("min")
     .OptionalInput("max")
     .Output("y")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+
       Shape* min_shape = ctx->Shape4ArgNameAndIndex("min", 0);
       Shape* max_shape = ctx->Shape4ArgNameAndIndex("max", 0);
       OF_CHECK_EQ(min_shape->NumAxes(), 1);
       OF_CHECK_EQ(max_shape->NumAxes(), 1);
       OF_CHECK_EQ(min_shape->At(0), 1);
       OF_CHECK_EQ(max_shape->At(0), 1);
-      *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *y_desc->mut_shape() = *ctx->Shape4ArgNameAndIndex("x", 0);
+
       DataType x_data_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
       OF_CHECK_EQ(x_data_type, *ctx->Dtype4ArgNameAndIndex("min", 0));
       OF_CHECK_EQ(x_data_type, *ctx->Dtype4ArgNameAndIndex("max", 0));
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = x_data_type;
+      *y_desc->mut_data_type() = x_data_type;
+
+      y_desc->set_is_dynamic(*ctx->IsDynamic4ArgNameAndIndex("x", 0));
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -47,7 +49,9 @@ REGISTER_USER_OP("clip_by_value_grad")
     .OptionalInput("min")
     .OptionalInput("max")
     .Output("dx")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* min_shape = ctx->Shape4ArgNameAndIndex("min", 0);
       Shape* max_shape = ctx->Shape4ArgNameAndIndex("max", 0);
@@ -56,15 +60,15 @@ REGISTER_USER_OP("clip_by_value_grad")
       OF_CHECK_EQ(min_shape->At(0), 1);
       OF_CHECK_EQ(max_shape->At(0), 1);
       OF_CHECK_EQ(*x_shape, *ctx->Shape4ArgNameAndIndex("dy", 0));
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *x_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *dx_desc->mut_shape() = *x_shape;
+
       DataType x_data_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
       OF_CHECK_EQ(x_data_type, *ctx->Dtype4ArgNameAndIndex("min", 0));
       OF_CHECK_EQ(x_data_type, *ctx->Dtype4ArgNameAndIndex("max", 0));
       OF_CHECK_EQ(x_data_type, *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = x_data_type;
+      *dx_desc->mut_data_type() = x_data_type;
+
+      dx_desc->set_is_dynamic(*ctx->IsDynamic4ArgNameAndIndex("x", 0));
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
