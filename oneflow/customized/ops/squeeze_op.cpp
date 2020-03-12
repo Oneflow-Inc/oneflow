@@ -19,7 +19,7 @@ REGISTER_USER_OP("squeeze")
     .Input("in")
     .Output("out")
     .Attr("axes", UserOpAttrType::kAtListInt32)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       auto axes = ctx->GetAttr<std::vector<int32_t>>("axes");
@@ -38,9 +38,6 @@ REGISTER_USER_OP("squeeze")
       } else {
         *out_shape = Shape(dim_vec);
       }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
