@@ -42,7 +42,7 @@ void ConvertEntryParamsToTVMExpr(const std::vector<Parameter>& entry_params,
         ConvertDataTypeToTVM(para.data_type()));
     auto var = tvm::relay::VarNode::make(para.name(),
         tensor_type);
-    tensor_name2expr->emplace(para.name(), var);
+    CHECK(tensor_name2expr->emplace(para.name(), var).second);
     graph_input_vars->push_back(var);
   }
 }
@@ -51,6 +51,8 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& retu
     const util::Map<std::string, tvm::relay::Expr>& tensor_name2expr) {
   tvm::Array<tvm::relay::Expr> fields;
   for (const auto& para : return_params) {
+    LOG(WARNING) << "TVMLOG: "
+      << "return_params name: " << para.name();
     auto it = tensor_name2expr.find(para.name());
     CHECK(it != tensor_name2expr.end());
     fields.push_back(it->second);
@@ -61,7 +63,7 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& retu
 }
 
 std::tuple<tvm::runtime::Module, std::string>
-    BuildGraphModule(tvm::relay::Function graph_function) {
+    BuildGraphModule(tvm::relay::Function graph_func) {
   auto create_fn = tvm::runtime::Registry::Get("relay.build_module._BuildModule");
   tvm::runtime::Module builder = (*create_fn)();
   auto build_fn = builder.GetFunction("build", false);
@@ -70,7 +72,7 @@ std::tuple<tvm::runtime::Module, std::string>
 
   tvm::Map<tvm::Integer, tvm::Target> target_map = {
     {DLDeviceType::kDLGPU, tvm::Target::Create("cuda")}}; //TODO(niuchong): support more devs and targets
-  build_fn(graph_function, target_map, tvm::Target::Create("llvm"));
+  build_fn(graph_func, target_map, tvm::Target::Create("llvm"));
   tvm::runtime::Module built_mod = get_mod_fn();
   std::string graph_json = json_fn();
   return std::make_tuple(std::move(built_mod), std::move(graph_json));
@@ -103,7 +105,12 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
     tvm::relay::Expr op_expr = ctx.op_expr();
 
     for (const auto* out_edge : node->out_edges()) {
-      tensor_name2expr.emplace(out_edge->argument().name(), op_expr);
+      auto out_arg_name = out_edge->argument().name();
+      LOG(WARNING) << "TVMLOG: "
+        << "out_arg_name: " << out_arg_name << " for node: " << node->name();
+      if (tensor_name2expr.find(out_arg_name) == tensor_name2expr.end()) {
+        CHECK(tensor_name2expr.emplace(out_arg_name, op_expr).second);
+      }
     }
   });
 
