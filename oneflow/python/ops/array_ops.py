@@ -344,10 +344,6 @@ def scatter_nd(indices, updates, shape, name=None):
 
 @oneflow_export("tensor_scatter_nd_update")
 def tensor_scatter_nd_update(params, indices, updates, name=None):
-    r"""
-    Note: If values in params is to be updated more than once, because there are duplicate entries in
-    indices, the order at which the updates happen for each value is undefined.
-    """
     if name is None:
         name = id_util.UniqueStr("TensorScatterNdUpdate_")
     op = (
