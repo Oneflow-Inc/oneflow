@@ -42,7 +42,7 @@ class LazyAdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     const float local_learning_rate = *learning_rate * std::sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
     for (int64_t i = 0; i < n; ++i) {
       T model_diff_val = model_diff[i];
-      if (abs(model_diff_val) < 1e-12) { continue; }
+      if (std::abs(model_diff_val) < 1e-12) { continue; }
       m[i] = beta1 * m[i] + (1 - beta1) * model_diff_val;
       v[i] = beta2 * v[i] + (1 - beta2) * model_diff_val * model_diff_val;
       model[i] = model[i] - local_learning_rate * m[i] / (std::sqrt(v[i]) + epsilon);
