@@ -17,19 +17,16 @@ template<typename T>
 struct ClipValuesUtil<DeviceType::kCPU, T> {
   static void ByMin(DeviceCtx* ctx, int64_t num_values, const T* values, const T* min_value,
                     T* out_ptr) {
-    using namespace std;
     ClipValuesByMin<DeviceType::kCPU>(num_values, values, *min_value, out_ptr);
   }
 
   static void ByMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* max_value,
                     T* out_ptr) {
-    using namespace std;
-    ClipValuesByMin<DeviceType::kCPU>(num_values, values, *max_value, out_ptr);
+    ClipValuesByMax<DeviceType::kCPU>(num_values, values, *max_value, out_ptr);
   }
 
   static void ByMinMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* min_value,
                        const T* max_value, T* out_ptr) {
-    using namespace std;
     ClipValuesByMinMax<DeviceType::kCPU>(num_values, values, *min_value, *max_value, out_ptr);
   }
 };
@@ -43,7 +40,7 @@ struct ClipGradUtil<DeviceType::kCPU, T> {
 
   static void ByMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* max_value,
                     T* grad_ptr) {
-    ClipGradByMin<DeviceType::kCPU>(num_values, values, *max_value, grad_ptr);
+    ClipGradByMax<DeviceType::kCPU>(num_values, values, *max_value, grad_ptr);
   }
 
   static void ByMinMax(DeviceCtx* ctx, int64_t num_values, const T* values, const T* min_value,
