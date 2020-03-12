@@ -102,7 +102,7 @@ void IBVerbsCommNet::InitContext() {
   const std::string& device_name = ibverbs_conf_.device_name();
   int32_t device_num = 0;
   int32_t device_index = 0;
-  ibv_device** device_list = ibv_get_device_list(&device_name);
+  ibv_device** device_list = ibv_get_device_list(&device_num);
   PCHECK(device_list);
   ibv_device* device = nullptr;
   if (device_name == "") {
@@ -110,7 +110,7 @@ void IBVerbsCommNet::InitContext() {
       device = device_list[device_index];
       if (NumOfActivePorts(device) > 0) { break; }
     }
-    CHECK_LT(deivce_index, device_num) << "There is no ib_device with active port in the machine.";
+    CHECK_LT(device_index, device_num) << "There is no ib_device with active port in the machine.";
   } else {
     for (device_index = 0; device_index < device_num; ++device_index) {
       device = device_list[device_index];
@@ -129,13 +129,6 @@ void IBVerbsCommNet::InitContext() {
   PCHECK(pd_);
   cq_ = ibv_create_cq(context_, max_poll_wc_num_, nullptr, nullptr, 0);
   PCHECK(cq_);
-}
-
-void IBVerbsCommNet::QueryDeviceInfo(IBVerbsConf& ibv_conf) const {
-  ibv_port_attr port_attr;
-  ibv_gid gid;
-  ibv_conf.set_port_num(QueryPort(&port_attr));
-  ibv_conf.set_sgid_index(QueryGid(port_num, &port_attr, &gid));
 }
 
 uint32_t IBVerbsCommNet::QueryPort(ibv_port_attr* port_attr) const {
@@ -165,12 +158,12 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
   uint32_t gids_num = 0;
   uint32_t v2_ip_num = 0;
   uint32_t gid_index = 0;
-  for (int32_t i = 0; i < port_attr->gid_tbl_len; i++) {
+  for (uint32_t i = 0; i < port_attr->gid_tbl_len; i++) {
     PCHECK(ibv_query_gid(context_, port_num, i, gid) == 0)
         << "Failed to query gid to port " << port_num << " index " << i;
     if (gid->global.interface_id) {
       gids_num++;
-      if (gid->global.subnet_prefix == 0 && IsGidTypeRoceV2(port_num, i)) {
+      if (gid->global.subnet_prefix == 0 && IsGidTypeRoceV2(context_->device->ibdev_path, port_num, i)) {
         if (v2_ip_num == 0) { gid_index = i; }
         v2_ip_num++;
       }
@@ -183,7 +176,7 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
             << "RDMA_GID_INDEX should be less than GIDs amount" << gids_num;
         gid_index = sgid_index;
       }
-      if (!IsGidTypeRoceV2(port_num, gid_index)) {
+      if (!IsGidTypeRoceV2(context_->device->ibdev_path, port_num, gid_index)) {
         LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << gid_index;
       }
       break;
@@ -195,9 +188,17 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
   return gid_index;
 }
 
-void IBVerbsCommNet::ConnectTopo(const IBVerbsConf& ibv_conf) {
+void IBVerbsCommNet::ConnectTopo() {
   int64_t this_mchn_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), nullptr);
+  
+  IBVerbsConf ibv_conf(ibverbs_conf_);
+  ibv_port_attr port_attr;
+  ibv_gid gid;
+  uint32_t port_num = QueryPort(&port_attr);
+  ibv_conf.set_port_num(port_num);
+  ibv_conf.set_sgid_index(QueryGid(port_num, &port_attr, &gid));
+  
   for (int64_t peer_mchn_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(ibv_conf, context_, pd_, cq_);
     qp_vec_.at(peer_mchn_id) = cur_qp;
@@ -208,12 +209,14 @@ void IBVerbsCommNet::ConnectTopo(const IBVerbsConf& ibv_conf) {
     conn_info.set_interface_id(gid.global.interface_id);
     Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_mchn_id, peer_mchn_id), conn_info);
   }
+
   for (int64_t peer_mchn_id : peer_machine_id()) {
     IBVerbsConnectionInfo conn_info;
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_mchn_id, this_mchn_id), &conn_info);
     qp_vec_.at(peer_mchn_id)->Connect(conn_info);
   }
   OF_BARRIER();
+  
   for (int64_t peer_mchn_id : peer_machine_id()) {
     qp_vec_.at(peer_mchn_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_mchn_id, peer_mchn_id));
@@ -227,9 +230,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
       token2mem_desc_(Global<ResourceDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
   InitContext();
-  IBVerbsConf ibv_conf(ibv_conf_);
-  QuertDeviceInfo(ibv_conf);
-  ConnectTopo(ibv_conf);
+  ConnectTopo();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
   OF_BARRIER();
 }

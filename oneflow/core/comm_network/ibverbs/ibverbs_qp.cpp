@@ -53,8 +53,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
   PCHECK(ibv_modify_qp(qp_, &qp_attr,
-                       IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
-         == 0);
+                       IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS) == 0);
   // IBV_QPS_RTR
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_RTR;
@@ -62,8 +61,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.ah_attr.grh.dgid.global.interface_id = peer_info.interface_id();
   qp_attr.ah_attr.grh.flow_label = 0;
   qp_attr.ah_attr.grh.sgid_index = ibv_conf_.sgid_index();
-  qp_attr.ah_attr.gth.traffic_class = ibv_conf_.traffic_class();
-  qp_attr.ah_attr.grh.hop_limit = MaxVal<uint8_t>();
+  qp_attr.ah_attr.grh.traffic_class = ibv_conf_.traffic_class();
+  qp_attr.ah_attr.grh.hop_limit = GetMaxVal<uint8_t>();
   qp_attr.ah_attr.dlid = peer_info.local_id();
   qp_attr.ah_attr.sl = ibv_conf_.service_level();
   qp_attr.ah_attr.src_path_bits = 0;
@@ -77,7 +76,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.min_rnr_timer = 12;
   PCHECK(ibv_modify_qp(qp_, &qp_attr,
                        IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN
-                           | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
+                           | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER)
          == 0);
   // IBV_QPS_RTS
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -89,7 +88,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.timeout = ibv_conf_.timeout();
   PCHECK(ibv_modify_qp(qp_, &qp_attr,
                        IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
-                           | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
+                           | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT)
 
          == 0);
 }

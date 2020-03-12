@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 
