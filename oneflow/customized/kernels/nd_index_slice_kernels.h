@@ -77,10 +77,8 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelCont
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (params->dptr<T>() != out->mut_dptr<T>()) {
-    size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
-  }
+  size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
+  Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ZeroByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                             out->mut_dptr<T>());
@@ -94,10 +92,8 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (params->dptr<T>() != out->mut_dptr<T>()) {
-    size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
-  }
+  size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
+  Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
