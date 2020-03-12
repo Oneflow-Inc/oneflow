@@ -98,23 +98,6 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
-void IBVerbsCommNet::CheckIBVerbsConf() const {
-  CHECK_GE(ibverbs_conf_.port_num(), 0);
-  CHECK_GE(ibverbs_conf_.pkey_index(), 0);
-  CHECK_LE(ibverbs_conf_.pkey_index(), GetMaxVal<uint8_t>());
-  CHECK_GE(ibverbs_conf_.queue_depth(), 0);
-  CHECK_LE(ibverbs_conf_.queue_depth(), GetMaxVal<uint8_t>());
-  CHECK_GE(ibverbs_conf_.timeout(), 0);
-  CHECK_LE(ibverbs_conf_.timeout(), GetMaxVal<uint8_t>());
-  CHECK_GE(ibverbs_conf_.retry_cnt(), 0);
-  CHECK_LE(ibverbs_conf_.retry_cnt(), GetMaxVal<uint8_t>());
-  CHECK_GE(ibverbs_conf_.service_level(), 0);
-  CHECK_LE(ibverbs_conf_.service_level(), 7);
-  CHECK_GE(ibverbs_conf_.traffic_class(), 0);
-  CHECK_LE(ibverbs_conf_.traffic_class(), GetMaxVal<uint8_t>());
-  CHECK_GE(ibverbs_conf_.mem_block_mbyte(), 0);
-}
-
 void IBVerbsCommNet::InitContext() {
   const std::string& device_name = ibverbs_conf_.device_name();
   int32_t device_num = 0;
@@ -243,9 +226,8 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
       ibverbs_conf_(Global<const CommNetworkConf>::Get()->ibverbs_conf()),
       token2mem_desc_(Global<ResourceDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  CheckIBVerbsConf();
   InitContext();
-  IBVerbsConf ibv_conf;
+  IBVerbsConf ibv_conf(ibv_conf_);
   QuertDeviceInfo(ibv_conf);
   ConnectTopo(ibv_conf);
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);

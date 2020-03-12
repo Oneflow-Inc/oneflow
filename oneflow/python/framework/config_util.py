@@ -157,22 +157,30 @@ def ibverbs(device_name = "",
     assert type(device_name) is str
     sess.config_proto.comm_net_conf.ibverbs_conf.device_name = device_name
     assert type(port_num) is int
+    assert port_num >= 0
     sess.config_proto.comm_net_conf.ibverbs_conf.port_num = port_num
     assert type(sgid_index) is int
     sess.config_proto.comm_net_conf.ibverbs_conf.sgid_index = sgid_index
     assert type(pkey_index) is int
+    assert 0 <= pkey_index <= 255
     sess.config_proto.comm_net_conf.ibverbs_conf.pkey_index = pkey_index
     assert type(queue_depth) is int
+    assert 0 <= queue_depth <= 255
     sess.config_proto.comm_net_conf.ibverbs_conf.queue_depth = queue_depth
     assert type(timeout) is int
+    assert 0 <= timeout <= 255
     sess.config_proto.comm_net_conf.ibverbs_conf.timeout = timeout
     assert type(retry_cnt) is int
+    assert 0 <= retry_cnt <= 255
     sess.config_proto.comm_net_conf.ibverbs_conf.retry_cnt = retry_cnt
     assert type(service_level) is int
+    assert 0 <= service_level <= 7
     sess.config_proto.comm_net_conf.ibverbs_conf.service_level = service_level
     assert type(traffic_class) is int
+    assert 0 <= traffic_class <= 255
     sess.config_proto.comm_net_conf.ibverbs_conf.traffic_class = traffic_class
     assert type(mem_block_mbyte) is int
+    assert mem_block_mbyte >= 0
     sess.config_proto.comm_net_conf.ibverbs_conf.mem_block_mbyte = mem_block_mbyte
 
 @oneflow_export('config.epoll')

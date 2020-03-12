@@ -61,7 +61,7 @@ class IBVerbsQP final {
   ActorMsgMR* GetOneSendMsgMRFromBuf();
   void PostRecvRequest(ActorMsgMR*);
 
-  const IBVerbsConf& ibv_conf_;
+  const IBVerbsConf ibv_conf_;
   ibv_context* ctx_;
   ibv_pd* pd_;
   ibv_qp* qp_;

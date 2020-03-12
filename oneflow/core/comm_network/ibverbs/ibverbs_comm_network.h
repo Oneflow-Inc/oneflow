@@ -31,7 +31,6 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
-  void CheckIBVerbsConf() const;
   void InitContext();
   void QueryDeviceInfo(IBVerbsConf&) const;
   uint32_t QueryPort(ibv_port_attr*) const;

@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-IBVerbsQP::IBVerbsQP(IBVerbsConf ibv_conf, ibv_context* ctx, ibv_pd* pd, ibv_cq* cq)
+IBVerbsQP::IBVerbsQP(const IBVerbsConf& ibv_conf, ibv_context* ctx, ibv_pd* pd, ibv_cq* cq)
     : ibv_conf_(ibv_conf), ctx_(ctx), pd_(pd) {
   // qp_
   ibv_device_attr device_attr;
