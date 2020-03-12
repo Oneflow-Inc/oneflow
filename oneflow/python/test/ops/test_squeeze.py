@@ -35,7 +35,7 @@ def gen_arg_list():
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(1, 10, 1, 10, 1)]
     arg_dict["axis"] = [[2], [-3], [0, 2, 4], [-1, -3, -5]]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["data_type"] = ["float32", "double", "int8", "int32", "int64"]
 
     return GenArgList(arg_dict)
 
