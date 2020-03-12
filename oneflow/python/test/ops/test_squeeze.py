@@ -14,6 +14,8 @@ def compare_with_tensorflow(device_type, x_shape, axis, data_type):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.train.primary_lr(1e-3)
+    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def test_squeeze_grad(x_diff_blob):
         x_diff = x_diff_blob.ndarray()
@@ -23,15 +25,16 @@ def compare_with_tensorflow(device_type, x_shape, axis, data_type):
     def SqueezeJob():
         with flow.fixed_placement(device_type, "0:0"):
             x = flow.get_variable(
+                "var",
                 shape=x_shape,
-                dtype=type_name_to_flow_type[data_type],
-                initializer=flow.ones_initializer(type_name_to_flow_type[data_type]),
-                name="variable",
+                dtype=flow.float,
+                initializer=flow.ones_initializer(),
+                trainable=True,
             )
-            x = flow.identity(x)
-            y = flow.squeeze(x, axis)
             flow.watch_diff(x, test_squeeze_grad)
-            return y
+            loss = flow.squeeze(x, axis)
+            flow.losses.add_loss(loss)
+            return loss
 
     # OneFlow
     check_point = flow.train.CheckPoint()
@@ -49,7 +52,7 @@ def gen_arg_list():
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(1, 10, 1, 10, 1)]
     arg_dict["axis"] = [[2], [-3], [0, 2, 4], [-1, -3, -5]]
-    arg_dict["data_type"] = ["float32", "double", "int8", "int32", "int64"]
+    arg_dict["data_type"] = ["float32"]
 
     return GenArgList(arg_dict)
 

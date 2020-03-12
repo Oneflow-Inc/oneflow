@@ -28,7 +28,9 @@ class ReshapeLikeKernel final : public user_op::OpKernel {
         return new ReshapeLikeKernel<dtype, DeviceType::kCPU>(ctx);                     \
       })                                                                                \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
-        return ctx.device_type() == DeviceType::kCPU;                                   \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
+        return ctx.device_type() == DeviceType::kCPU                                    \
+               && out_desc->data_type() == GetDataType<dtype>::value;                   \
       });                                                                               \
   REGISTER_USER_KERNEL("reshape_like")                                                  \
       .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                 \
