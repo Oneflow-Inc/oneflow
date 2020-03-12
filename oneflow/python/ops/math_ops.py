@@ -697,6 +697,9 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
+    if min_value is None and max_value is None:
+        raise ValueError("min_value and max_value cannot be None at the same time")
+
     op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("x", [values])
 
     if min_value is not None:
