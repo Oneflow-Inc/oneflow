@@ -33,7 +33,11 @@ REGISTER_USER_OP("squeeze")
       auto dim_vec = in_shape->dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(axes, &dim_vec);
       dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
-      *out_shape = Shape(dim_vec);
+      if (dim_vec.empty()) {
+        *out_shape = Shape({1});
+      } else {
+        *out_shape = Shape(dim_vec);
+      }
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

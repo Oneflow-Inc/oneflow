@@ -11,9 +11,9 @@ REGISTER_USER_OP("expand_dims")
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       int32_t axis = ctx->GetAttr<int32_t>("axis");
       const int32_t in_num_axes = in_shape->NumAxes();
-      CHECK_GE(axis, -in_num_axes);
-      CHECK_LT(axis, in_num_axes);
-      axis = axis < 0 ? axis + in_num_axes : axis;
+      CHECK_GE(axis, -(in_num_axes + 1));
+      CHECK_LE(axis, in_num_axes);
+      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
 
       auto dim_vec = in_shape->dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
@@ -30,9 +30,9 @@ REGISTER_USER_OP("expand_dims")
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       int32_t axis = ctx->GetAttr<int32_t>("axis");
       const int32_t in_num_axes = in_desc.shape().NumAxes();
-      CHECK_GE(axis, -in_num_axes);
-      CHECK_LT(axis, in_num_axes);
-      axis = axis < 0 ? axis + in_num_axes : axis;
+      CHECK_GE(axis, -(in_num_axes + 1));
+      CHECK_LE(axis, in_num_axes);
+      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
 
       if (in_batch_axis->has_value()) {
         out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
@@ -47,9 +47,9 @@ REGISTER_USER_OP("expand_dims")
       const auto in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       int32_t axis = ctx->GetAttr<int32_t>("axis");
       const int32_t in_num_axes = in_desc.shape().NumAxes();
-      CHECK_GE(axis, -in_num_axes);
-      CHECK_LT(axis, in_num_axes);
-      axis = axis < 0 ? axis + in_num_axes : axis;
+      CHECK_GE(axis, -(in_num_axes + 1));
+      CHECK_LE(axis, in_num_axes);
+      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
 
       auto dim_vec = in_desc.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {

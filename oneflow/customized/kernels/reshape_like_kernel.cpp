@@ -22,24 +22,27 @@ class ReshapeLikeKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_RESHAPE_LIKE_KERNEL(dtype)                                 \
-  REGISTER_USER_KERNEL("reshape_like")                                      \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {     \
-        return new ReshapeLikeKernel<dtype, DeviceType::kCPU>(ctx);         \
-      })                                                                    \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { \
-        return ctx.device_type() == DeviceType::kCPU;                       \
-      });                                                                   \
-  REGISTER_USER_KERNEL("reshape_like")                                      \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {     \
-        return new ReshapeLikeKernel<dtype, DeviceType::kGPU>(ctx);         \
-      })                                                                    \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { \
-        return ctx.device_type() == DeviceType::kGPU;                       \
+#define REGISTER_RESHAPE_LIKE_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("reshape_like")                                                  \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                 \
+        return new ReshapeLikeKernel<dtype, DeviceType::kCPU>(ctx);                     \
+      })                                                                                \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
+        return ctx.device_type() == DeviceType::kCPU;                                   \
+      });                                                                               \
+  REGISTER_USER_KERNEL("reshape_like")                                                  \
+      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                 \
+        return new ReshapeLikeKernel<dtype, DeviceType::kGPU>(ctx);                     \
+      })                                                                                \
+      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                    \
+               && out_desc->data_type() == GetDataType<dtype>::value;                   \
       });
 
 REGISTER_RESHAPE_LIKE_KERNEL(float)
 REGISTER_RESHAPE_LIKE_KERNEL(double)
+REGISTER_RESHAPE_LIKE_KERNEL(int8_t)
 REGISTER_RESHAPE_LIKE_KERNEL(int32_t)
 REGISTER_RESHAPE_LIKE_KERNEL(int64_t)
 

@@ -477,7 +477,7 @@ def squeeze(input, axis=None, name=None):
         .Op("squeeze")
         .Input("in", [input])
         .Output("out")
-        .SetAttr("axis", list(axis), "AttrTypeListInt32")
+        .SetAttr("axes", list(axis), "AttrTypeListInt32")
         .Build()
         .RemoteBlobList()[0]
     )
@@ -486,7 +486,7 @@ def squeeze(input, axis=None, name=None):
 @oneflow_export("expand_dims")
 def expand_dims(input, axis=None, name=None):
     in_num_axes = len(input.shape)
-    assert axis >= -in_num_axes and axis < in_num_axes
+    assert axis >= -(in_num_axes + 1) and axis <= in_num_axes
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ExpandDims_"))
         .Op("expand_dims")
