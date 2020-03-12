@@ -57,7 +57,6 @@ def _of_clip_by_value(values, min=None, max=None, device_type="gpu", dynamic=Fal
         check_point = flow.train.CheckPoint()
         check_point.init()
         return clip_fn([values]).get().ndarray_list()[0]
-        # return clip_fn([values]).get().ndarray()
 
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -88,7 +87,7 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
         max=max,
         device_type=device_type,
         dynamic=dynamic,
-        compare_fn=compare_dy,
+        grad_cb=compare_dy,
     )
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
@@ -102,6 +101,17 @@ def test_clip_by_value(test_case):
     arg_dict["dynamic"] = [True, False]
     for arg in GenArgList(arg_dict):
         of_out = _of_clip_by_value(values, -50, 50, *arg)
+        test_case.assertTrue(np.array_equal(np_out, of_out))
+
+
+def test_clip_by_min(test_case):
+    values = np.random.standard_normal((100, 30)).astype(np.float32)
+    np_out = np.clip(values, a_min=0, a_max=None)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["dynamic"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        of_out = _of_clip_by_value(values, 0, None, *arg)
         test_case.assertTrue(np.array_equal(np_out, of_out))
 
 
