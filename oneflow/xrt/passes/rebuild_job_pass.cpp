@@ -214,6 +214,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       switch (engine) {
         case XrtEngine::XLA: return "XLA";
         case XrtEngine::TENSORRT: return "TENSORRT";
+        case XrtEngine::TVM: return "TVM";
         default: LOG(FATAL) << "Not supported engine " << engine; return "";
       }
     }());
