@@ -42,7 +42,7 @@ __global__ void CudaClipGradByMinMax(int64_t num_values, const T* values, const 
 }  // namespace
 
 template<typename T>
-struct ClipFunctor<DeviceType::kGPU, T> {
+struct DeviceClip<DeviceType::kGPU, T> {
   __device__ __forceinline__ static T Min(const T value, const T min_value) {
     return min(value, min_value);
   }

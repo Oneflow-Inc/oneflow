@@ -27,7 +27,7 @@ struct ClipGradUtil {
 };
 
 template<DeviceType device_type, typename T>
-struct ClipFunctor {
+struct DeviceClip {
   OF_DEVICE_FUNC static T Min(const T value, const T min_value);
   OF_DEVICE_FUNC static T Max(const T value, const T max_value);
 };
@@ -36,8 +36,8 @@ template<DeviceType device_type, typename T>
 OF_DEVICE_FUNC void ClipValuesByMinMax(const int64_t num_values, const T* values, const T min_value,
                                        const T max_value, T* out_ptr) {
   XPU_1D_KERNEL_LOOP(i, num_values) {
-    out_ptr[i] = ClipFunctor<device_type, T>::Min(
-        ClipFunctor<device_type, T>::Max(values[i], min_value), max_value);
+    out_ptr[i] = DeviceClip<device_type, T>::Min(
+        DeviceClip<device_type, T>::Max(values[i], min_value), max_value);
   }
 }
 
@@ -45,7 +45,7 @@ template<DeviceType device_type, typename T>
 OF_DEVICE_FUNC void ClipValuesByMin(const int64_t num_values, const T* values, const T min_value,
                                     T* out_ptr) {
   XPU_1D_KERNEL_LOOP(i, num_values) {
-    out_ptr[i] = ClipFunctor<device_type, T>::Max(values[i], min_value);
+    out_ptr[i] = DeviceClip<device_type, T>::Max(values[i], min_value);
   }
 }
 
@@ -53,7 +53,7 @@ template<DeviceType device_type, typename T>
 OF_DEVICE_FUNC void ClipValuesByMax(const int64_t num_values, const T* values, const T max_value,
                                     T* out_ptr) {
   XPU_1D_KERNEL_LOOP(i, num_values) {
-    out_ptr[i] = ClipFunctor<device_type, T>::Min(values[i], max_value);
+    out_ptr[i] = DeviceClip<device_type, T>::Min(values[i], max_value);
   }
 }
 
@@ -182,7 +182,7 @@ void ClipByValueGradKernel<device_type, T>::Compute(user_op::KernelContext* ctx)
                        OF_PP_PAIR_FIRST(dtype_pair))
 
 #define INSTANTIATE_CLIP_UTIL(device_type_v, dtype_pair)                       \
-  template struct ClipFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;    \
+  template struct DeviceClip<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;     \
   template struct ClipValuesUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ClipGradUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 

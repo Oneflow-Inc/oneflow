@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-struct ClipFunctor<DeviceType::kCPU, T> {
+struct DeviceClip<DeviceType::kCPU, T> {
   OF_DEVICE_FUNC static T Min(const T value, const T min_value) {
     return std::min(value, min_value);
   }
