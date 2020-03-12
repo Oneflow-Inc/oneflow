@@ -32,8 +32,8 @@ REGISTER_USER_OP("reshape_like")
       SbpSignatureBuilder().Broadcast("like").PartialSum("in").PartialSum("out").Build(
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return ReshapeOpUtil::GetReshapeSbpSignatures(
-          in_shape, like_shape, StdVec2PbRpf<std::string>({"x"}),
-          StdVec2PbRpf<std::string>({"like", "y"}), ctx->parallel_num(),
+          in_shape, like_shape, StdVec2PbRpf<std::string>({"in"}),
+          StdVec2PbRpf<std::string>({"like", "out"}), ctx->parallel_num(),
           ctx->sbp_sig_list());
     });
 
