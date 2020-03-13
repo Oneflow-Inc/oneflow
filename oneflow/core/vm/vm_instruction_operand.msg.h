@@ -20,24 +20,10 @@ FLAT_MSG_END(MutableMirroredObjectOperand);
 // clang-format on
 
 // clang-format off
-FLAT_MSG_BEGIN(ConstLocalMirroredObjectOperand);
-  FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(ConstLocalMirroredObjectOperand);
-// clang-format on
-
-// clang-format off
-FLAT_MSG_BEGIN(MutableLocalMirroredObjectOperand);
-  FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(MutableLocalMirroredObjectOperand);
-// clang-format on
-
-// clang-format off
 FLAT_MSG_BEGIN(VmInstructionOperand);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableMirroredObjectOperand, mutable_operand)
-    FLAT_MSG_ONEOF_FIELD(ConstLocalMirroredObjectOperand, const_local_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableLocalMirroredObjectOperand, mutable_local_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
     FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
