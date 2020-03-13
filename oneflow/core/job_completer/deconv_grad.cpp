@@ -25,6 +25,7 @@ void SetNdConvOpConf(
   *conf->mutable_dilation_rate() = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   *conf->mutable_padding_needed() = GetPbRfFromPbMessage<int32_t>(conv_conf, "padding_needed");
   conf->set_use_bias(false);
+  conf->set_torch_style_padding(true);
   op_confs->push_back(data_grad_op);
   in_diff_lbi->set_op_name(data_grad_op.name());
   in_diff_lbi->set_blob_name(conf->out());  

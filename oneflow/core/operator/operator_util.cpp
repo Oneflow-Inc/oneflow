@@ -153,14 +153,14 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
   const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
-  if (padding == "torch") {
+  if (GetValFromPbMessage<bool>(conv_conf, "torch_style_padding")) {
     const PbRf<int32_t>& padding_needed = GetPbRfFromPbMessage<int32_t>(conv_conf, "padding_needed");
     FOR_RANGE(int32_t, i, 0, opkernel_dim) {
-    GetwindowedOutputSizeWithPaddingNeeded(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), 
-                                          dilation_rate.Get(i), strides.Get(i), padding_needed.Get(i), 
-                                          out ? &(out->at(i)) : nullptr,
-                                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
-                                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+      GetwindowedOutputSizeWithPaddingNeeded(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), 
+                                            dilation_rate.Get(i), strides.Get(i), padding_needed.Get(i), 
+                                            out ? &(out->at(i)) : nullptr,
+                                            pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                                            pad_large_side ? &(pad_large_side->at(i)) : nullptr);
     }
   }else{
     FOR_RANGE(int32_t, i, 0, opkernel_dim) {

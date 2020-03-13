@@ -128,6 +128,7 @@ message Conv1DOpConf {
   required string weight = 13;
   optional string bias = 14;
   repeated int32 padding_needed = 15;
+  optional bool torch_style_padding = 16 [default = false];
 }
 
 message Conv2DOpConf {
@@ -143,6 +144,7 @@ message Conv2DOpConf {
   required string weight = 13;
   optional string bias = 14;
   repeated int32 padding_needed = 15;
+  optional bool torch_style_padding = 16 [default = false];
 }
 
 message Conv3DOpConf {
@@ -158,6 +160,7 @@ message Conv3DOpConf {
   required string weight = 13;
   optional string bias = 14;
   repeated int32 padding_needed = 15;
+  optional bool torch_style_padding = 16 [default = false];
 }
 
 message ConvConf {
@@ -167,7 +170,8 @@ message ConvConf {
   repeated int32 kernel_size = 4;
   repeated int32 strides = 5;
   repeated int32 dilation_rate = 6;
-  repeated int32 padding_needed = 7;
+  optional bool torch_style_padding = 7 [default = false];
+  repeated int32 padding_needed = 8;
 }
 
 message ConvDataGradOpConf {
