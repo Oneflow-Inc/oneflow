@@ -21,8 +21,8 @@ OBJECT_MSG_BEGIN(MirroredObjectAccess);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_RAW_PTR(VmInstruction, vm_instruction);
-  OBJECT_MSG_DEFINE_RAW_PTR(MirroredObject, mirrored_object);
+  OBJECT_MSG_DEFINE_PTR(VmInstruction, vm_instruction);
+  OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
@@ -41,7 +41,7 @@ OBJECT_MSG_BEGIN(HostMemBuffer);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
-  OBJECT_MSG_DEFINE_RAW_PTR(char, data);
+  OBJECT_MSG_DEFINE_PTR(char, data);
 OBJECT_MSG_END(HostMemBuffer);
 // clang-format on
 
@@ -55,7 +55,7 @@ OBJECT_MSG_BEGIN(CudaMemBuffer);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
-  OBJECT_MSG_DEFINE_RAW_PTR(char, data);
+  OBJECT_MSG_DEFINE_PTR(char, data);
 OBJECT_MSG_END(CudaMemBuffer);
 // clang-format on
 
@@ -66,7 +66,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
-  OBJECT_MSG_DEFINE_RAW_PTR(LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_PTR(LogicalObject, logical_object);
   OBJECT_MSG_DEFINE_ONEOF(object_type,
       OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)
       OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
@@ -87,7 +87,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
     set_vm_scheduler(vm_scheduler);
   }
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VmScheduler, vm_scheduler);
+  OBJECT_MSG_DEFINE_PTR(VmScheduler, vm_scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);

@@ -24,7 +24,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
   PUBLIC bool Empty() const;
 
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
+  OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, pending_msg_list);

@@ -9,7 +9,7 @@ namespace oneflow {
 // clang-format off
 OBJECT_MSG_BEGIN(VmProcedure);
   // fields
-  OBJECT_MSG_DEFINE_RAW(ParallelConf, parallel_conf);
+  OBJECT_MSG_DEFINE_STRUCT(ParallelConf, parallel_conf);
   // links
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, local_vm_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(VmInstructionMsg, vm_instr_msg_link, remote_vm_instr_list);

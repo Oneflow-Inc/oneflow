@@ -15,7 +15,7 @@ OBJECT_MSG_BEGIN(VmThread);
   }
   PUBLIC void LoopRun();
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
+  OBJECT_MSG_DEFINE_PTR(const VmStreamRtDesc, vm_stream_rt_desc); 
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, device_id);
 
   // links
