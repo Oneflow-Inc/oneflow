@@ -11,7 +11,7 @@ namespace {
 // clang-format off
 OBJECT_MSG_BEGIN(TestListItem)
   OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
-  OBJECT_MSG_DEFINE_RAW_PTR(int, cnt);
+  OBJECT_MSG_DEFINE_PTR(int, cnt);
 
  public:
   void __Delete__() {
@@ -303,7 +303,7 @@ OBJECT_MSG_BEGIN(SelfLoopContainer);
   PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
   PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(bool, deleted);
+  OBJECT_MSG_DEFINE_PTR(bool, deleted);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
   OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);

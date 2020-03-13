@@ -18,7 +18,7 @@ OBJECT_MSG_BEGIN(VmStream);
   PUBLIC int64_t parallel_id() const { return vm_stream_id().parallel_id(); }
 
   // fields
-  OBJECT_MSG_DEFINE_RAW_PTR(VmThread, vm_thread); 
+  OBJECT_MSG_DEFINE_PTR(VmThread, vm_thread); 
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<DeviceCtx>, device_ctx);
   
   // links

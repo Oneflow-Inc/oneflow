@@ -61,8 +61,8 @@ struct TransportRequestDataType<kWriteTransportRequestType> {
 template<TransportRequestType request_type>
 OBJECT_MSG_BEGIN(TransportRequest);
   // fields  
-  OBJECT_MSG_DEFINE_RAW_PTR(typename TransportRequestDataType<request_type>::type, data_ptr);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::atomic<int64_t>, incomplete_cnt);
+  OBJECT_MSG_DEFINE_PTR(typename TransportRequestDataType<request_type>::type, data_ptr);
+  OBJECT_MSG_DEFINE_PTR(std::atomic<int64_t>, incomplete_cnt);
   OBJECT_MSG_DEFINE_FLAT_MSG(TransportSize, size);
 
   // links

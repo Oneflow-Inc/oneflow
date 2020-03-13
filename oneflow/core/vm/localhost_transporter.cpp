@@ -8,7 +8,7 @@ namespace {
 // clang-format off
 OBJECT_MSG_BEGIN(LocalhostTransportRequestHub);
   // fields
-  OBJECT_MSG_DEFINE_RAW(std::mutex, mutex);
+  OBJECT_MSG_DEFINE_STRUCT(std::mutex, mutex);
   
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(ReadTransportRequest, transport_key, transport_key2read_request);

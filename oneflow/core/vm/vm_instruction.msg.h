@@ -46,7 +46,7 @@ OBJECT_MSG_BEGIN(VmInstruction);
                                                      int64_t default_parallel_id);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmInstructionMsg, vm_instr_msg);
-  OBJECT_MSG_DEFINE_RAW_PTR(VmInstrChain, vm_instr_chain);
+  OBJECT_MSG_DEFINE_PTR(VmInstrChain, vm_instr_chain);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instruction_link);
@@ -85,8 +85,8 @@ OBJECT_MSG_BEGIN(VmInstrChain);
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionStatusBuffer, status_buffer);
-  OBJECT_MSG_DEFINE_RAW_PTR(VmStream, vm_stream); 
-  OBJECT_MSG_DEFINE_RAW_PTR(const VmStreamType, vm_stream_type);
+  OBJECT_MSG_DEFINE_PTR(VmStream, vm_stream); 
+  OBJECT_MSG_DEFINE_PTR(const VmStreamType, vm_stream_type);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_chain_link);
