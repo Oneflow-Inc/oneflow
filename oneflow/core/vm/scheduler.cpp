@@ -114,30 +114,18 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
     const auto& operands = vm_instruction->vm_instr_msg().vm_instruction_proto().operand();
     for (const auto& operand : operands) {
-      const MirroredObjectOperand* mirrored_object_operand = nullptr;
-      if (operand.has_mutable_operand()) {
-        mirrored_object_operand = &operand.mutable_operand().operand();
-      } else if (operand.has_mutable_local_operand()) {
-        mirrored_object_operand = &operand.mutable_local_operand().operand();
-      } else {
-        continue;
-      }
-      ForEachMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id,
+      if (!operand.has_mutable_operand()) { continue; }
+      const auto& mirrored_object_operand = operand.mutable_operand().operand();
+      ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
                                                     vm_instruction);
                             });
     }
     for (const auto& operand : operands) {
-      const MirroredObjectOperand* mirrored_object_operand = nullptr;
-      if (operand.has_const_operand()) {
-        mirrored_object_operand = &operand.const_operand().operand();
-      } else if (operand.has_const_local_operand()) {
-        mirrored_object_operand = &operand.const_local_operand().operand();
-      } else {
-        continue;
-      }
-      ForEachMirroredObject(id2logical_object, *mirrored_object_operand, parallel_id,
+      if (!operand.has_const_operand()) { continue; }
+      const auto& mirrored_object_operand = operand.const_operand().operand();
+      ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kConstOperandAccess, mirrored_object,
                                                     vm_instruction);
