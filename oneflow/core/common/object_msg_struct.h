@@ -6,6 +6,9 @@
 
 namespace oneflow {
 
+#define OBJECT_MSG_DEFINE_RAW(field_type, field_name) \
+  OBJECT_MSG_DEFINE_STRUCT(field_type, field_name)
+
 #define OBJECT_MSG_DEFINE_STRUCT(field_type, field_name)                            \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
@@ -40,6 +43,11 @@ namespace oneflow {
     return ptr;                                                                           \
   }                                                                                       \
   field_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(mutable_, field_name)(); } \
+  template<typename T>                                                                    \
+  void OF_PP_CAT(set_, field_name)(T val) {                                               \
+    static_assert(std::is_scalar<T>::value, "only scalar data type supported");           \
+    *OF_PP_CAT(mut_, field_name)() = val;                                                 \
+  }                                                                                       \
                                                                                           \
  private:                                                                                 \
   union OF_PP_CAT(field_name, _ObjectMsgFieldType) {                                      \
