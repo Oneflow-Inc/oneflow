@@ -10,16 +10,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 tf.compat.v1.enable_eager_execution()
 
 
-def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_index=False):
+def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_index=True):
     params = np.random.rand(*params_shape).astype(np.float32)
     updates = np.random.rand(*updates_shape).astype(np.float32)
     indices = []
     indices_rows = np.prod(indices_shape[:-1])
     indices_cols = indices_shape[-1]
     for col in range(indices_cols):
-        # If values in params is to be updated more than once,
-        # because there are duplicate entries in indices,
-        # the order at which the updates happen for each value is undefined.
         if indices_rows <= params_shape[col] and allow_duplicate_index is False:
             rand_indices = np.arange(params_shape[col], dtype=np.int32)
             np.random.shuffle(rand_indices)
@@ -35,7 +32,9 @@ def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_i
         existing_nd_index_set = set()
         for nd_index in indices.reshape(-1, indices.shape[-1]):
             nd_index_str = "(" + ",".join(map(str, nd_index)) + ")"
-            assert nd_index_str not in existing_nd_index_set
+            assert (
+                nd_index_str not in existing_nd_index_set
+            ), "random generated duplicate nd index {}".format(nd_index_str)
             existing_nd_index_set.add(nd_index_str)
 
     return params, updates, indices
@@ -88,9 +87,15 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
 
 def _compare_scatter_nd_with_tf(
-    test_case, device_type, params_shape, indices_shape, updates_shape, mirrored=False
+    test_case,
+    device_type,
+    params_shape,
+    indices_shape,
+    updates_shape,
+    mirrored=False,
+    verbose=False,
 ):
-    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, True)
+    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
 
     with tf.GradientTape() as t:
         x = tf.Variable(updates)
@@ -119,18 +124,28 @@ def _compare_scatter_nd_with_tf(
     else:
         of_y = scatter_nd_fn(indices, updates).get().ndarray()
 
-    # print("device_type:", device_type)
-    # print("indices:", indices)
-    # print("updates:", updates)
-    # print("tf_params:", y.numpy())
-    # print("of_params:", of_y)
+    if verbose is True:
+        print("device_type:", device_type)
+        print("indices:", indices)
+        print("updates:", updates)
+        print("tf_params:", y.numpy())
+        print("of_params:", of_y)
+
     test_case.assertTrue(np.allclose(y.numpy(), of_y))
 
 
 def _compare_scatter_nd_update_with_tf(
-    test_case, device_type, params_shape, indices_shape, updates_shape
+    test_case,
+    device_type,
+    params_shape,
+    indices_shape,
+    updates_shape,
+    allow_duplicate_index=False,
+    verbose=False,
 ):
-    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+    params, updates, indices = _random_inputs(
+        params_shape, indices_shape, updates_shape, allow_duplicate_index
+    )
 
     x = tf.Variable(params)
     y = tf.Variable(updates)
@@ -149,10 +164,10 @@ def _compare_scatter_nd_update_with_tf(
     test_case.assertTrue(np.array_equal(z1.numpy(), z2.numpy()))
 
     def compare_dz_dx(params_grad):
-        test_case.assertTrue(np.array_equal(dz_dx.numpy(), params_grad.ndarray()))
+        test_case.assertTrue(np.allclose(dz_dx.numpy(), params_grad.ndarray()))
 
     def compare_dz_dy(updates_grad):
-        test_case.assertTrue(np.array_equal(dz_dy.numpy(), updates_grad.ndarray()))
+        test_case.assertTrue(np.allclose(dz_dy.numpy(), updates_grad.ndarray()))
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -173,15 +188,12 @@ def _compare_scatter_nd_update_with_tf(
                 shape=params.shape,
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
-                # distribute=flow.distribute.split(axis=0),
             )
-            # x = x.with_split_distribute(axis=0)
             y = flow.get_variable(
                 "updates",
                 shape=updates.shape,
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
-                # distribute=flow.distribute.broadcast(),
             )
             x = x + x_def
             y = y + y_def
@@ -195,12 +207,15 @@ def _compare_scatter_nd_update_with_tf(
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_z = scatter_nd_update_grad_fn(params, indices, updates).get()
-    # print("device_type:", device_type)
-    # print("x:", params)
-    # print("y:", updates)
-    # print("indices:", indices)
-    # print("tf_z:", z1.numpy())
-    # print("of_z:", of_z.ndarray())
+
+    if verbose is True:
+        print("device_type:", device_type)
+        print("x:", params)
+        print("y:", updates)
+        print("indices:", indices)
+        print("tf_z:", z1.numpy())
+        print("of_z:", of_z.ndarray())
+
     test_case.assertTrue(np.array_equal(z1.numpy(), of_z.ndarray()))
 
 
@@ -262,6 +277,8 @@ def test_scatter_nd_update(test_case):
     arg_dict["params_shape"] = [(10,)]
     arg_dict["indices_shape"] = [(5, 1)]
     arg_dict["updates_shape"] = [(5,)]
+    arg_dict["allow_duplicate_index"] = [False]
+    # arg_dict["verbose"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_scatter_nd_update_with_tf(test_case, *arg)
 
@@ -282,5 +299,15 @@ def test_scatter_nd_update_case_2(test_case):
     arg_dict["params_shape"] = [(20, 10, 11, 3, 5)]
     arg_dict["indices_shape"] = [(2, 4, 3)]
     arg_dict["updates_shape"] = [(2, 4, 3, 5)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_update_case_3(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["params_shape"] = [(256, 4)]
+    arg_dict["indices_shape"] = [(10, 25, 1)]
+    arg_dict["updates_shape"] = [(10, 25, 4)]
     for arg in GenArgList(arg_dict):
         _compare_scatter_nd_update_with_tf(test_case, *arg)
