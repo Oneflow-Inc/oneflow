@@ -23,7 +23,7 @@ LocalhostTransportRequestHub* GetTransportRequestHub() {
 
 template<TransportRequestType request_type>
 void MakeTransportRequest(uint64_t data_token,
-                          typename TransportRequestDataPointer<request_type>::type data_ptr,
+                          typename TransportRequestDataType<request_type>::type* data_ptr,
                           size_t data_size, volatile std::atomic<int64_t>* incomplete_cnt,
                           TransportKey2Request<request_type>* transport_key2request) {
   auto read_request = ObjectMsgPtr<TransportRequest<request_type>>::New();
@@ -35,6 +35,18 @@ void MakeTransportRequest(uint64_t data_token,
   read_request->mutable_transport_key()->set_data_token(data_token);
   read_request->mutable_transport_key()->set_data_offset(0);
   CHECK(transport_key2request->Insert(read_request.Mutable()).second);
+}
+
+void CopyAndDecreaseIncompleteCnt(WriteTransportRequest* write_request,
+                                  ReadTransportRequest* read_request) {
+  CHECK(write_request->size() == read_request->size());
+  CHECK(write_request->transport_key() == read_request->transport_key());
+  std::memcpy(write_request->mut_data_ptr(), &read_request->data_ptr(),
+              read_request->size().current_valid_size());
+  CHECK_GT(write_request->incomplete_cnt(), 0);
+  CHECK_GT(read_request->incomplete_cnt(), 0);
+  --*write_request->mut_incomplete_cnt();
+  --*read_request->mut_incomplete_cnt();
 }
 
 }  // namespace
@@ -56,11 +68,39 @@ void LocalhostTransporter::MakeWriteTransportRequest(
 }
 
 void LocalhostTransporter::Transport(TransportKey2ReadRequest* transport_key2read_request) const {
-  TODO();
+  auto* hub = GetTransportRequestHub();
+  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2read_request, read_reqeust) {
+    {
+      std::unique_lock<std::mutex> lock(*hub->mut_mutex());
+      auto* write_request =
+          hub->mut_transport_key2write_request()->FindPtr(read_reqeust->transport_key());
+      if (write_request == nullptr) {
+        CHECK(hub->mut_transport_key2read_request()->Insert(read_reqeust).second);
+      } else {
+        CopyAndDecreaseIncompleteCnt(write_request, read_reqeust);
+        hub->mut_transport_key2write_request()->Erase(write_request);
+      }
+    }
+    transport_key2read_request->Erase(read_reqeust);
+  }
 }
 
 void LocalhostTransporter::Transport(TransportKey2WriteRequest* transport_key2write_request) const {
-  TODO();
+  auto* hub = GetTransportRequestHub();
+  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2write_request, write_request) {
+    {
+      std::unique_lock<std::mutex> lock(*hub->mut_mutex());
+      auto* read_request =
+          hub->mut_transport_key2read_request()->FindPtr(write_request->transport_key());
+      if (read_request == nullptr) {
+        CHECK(hub->mut_transport_key2write_request()->Insert(write_request).second);
+      } else {
+        CopyAndDecreaseIncompleteCnt(write_request, read_request);
+        hub->mut_transport_key2read_request()->Erase(read_request);
+      }
+    }
+    transport_key2write_request->Erase(write_request);
+  }
 }
 
 }  // namespace oneflow
