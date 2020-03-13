@@ -24,7 +24,7 @@ LocalhostTransportRequestHub* GetTransportRequestHub() {
 template<TransportRequestType request_type>
 void MakeTransportRequest(uint64_t data_token,
                           typename TransportRequestDataType<request_type>::type* data_ptr,
-                          size_t data_size, volatile std::atomic<int64_t>* incomplete_cnt,
+                          size_t data_size, std::atomic<int64_t>* incomplete_cnt,
                           TransportKey2Request<request_type>* transport_key2request) {
   auto read_request = ObjectMsgPtr<TransportRequest<request_type>>::New();
   read_request->set_data_ptr(data_ptr);
@@ -53,15 +53,14 @@ void CopyAndDecreaseIncompleteCnt(WriteTransportRequest* write_request,
 
 void LocalhostTransporter::MakeReadTransportRequest(
     uint64_t data_token, const char* data_ptr, size_t data_size,
-    volatile std::atomic<int64_t>* incomplete_cnt,
+    std::atomic<int64_t>* incomplete_cnt,
     TransportKey2ReadRequest* transport_key2read_request) const {
   MakeTransportRequest<kReadTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
                                                   transport_key2read_request);
 }
 
 void LocalhostTransporter::MakeWriteTransportRequest(
-    uint64_t data_token, char* data_ptr, size_t data_size,
-    volatile std::atomic<int64_t>* incomplete_cnt,
+    uint64_t data_token, char* data_ptr, size_t data_size, std::atomic<int64_t>* incomplete_cnt,
     TransportKey2WriteRequest* transport_key2read_request) const {
   MakeTransportRequest<kWriteTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
                                                    transport_key2read_request);
