@@ -8,9 +8,20 @@ namespace oneflow {
 
 // clang-format off
 
+FLAT_MSG_BEGIN(TransportMirroredDataToken);
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, logical_token);
+  FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
+FLAT_MSG_END(TransportMirroredDataToken);
+
+FLAT_MSG_BEGIN(TransportDataToken);
+  FLAT_MSG_DEFINE_ONEOF(type,
+    FLAT_MSG_ONEOF_FIELD(uint64_t, token)
+    FLAT_MSG_ONEOF_FIELD(TransportMirroredDataToken, mirrored_token));
+FLAT_MSG_END(TransportDataToken);
+
 FLAT_MSG_BEGIN(TransportKey);
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, data_token);
+  FLAT_MSG_DEFINE_OPTIONAL(TransportDataToken, data_token);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, data_offset);
 
   // methods

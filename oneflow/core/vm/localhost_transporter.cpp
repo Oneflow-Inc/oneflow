@@ -22,7 +22,7 @@ LocalhostTransportRequestHub* GetTransportRequestHub() {
 }
 
 template<TransportRequestType request_type>
-void MakeTransportRequest(uint64_t data_token,
+void MakeTransportRequest(const TransportDataToken& data_token,
                           typename TransportRequestDataType<request_type>::type* data_ptr,
                           size_t data_size, std::atomic<int64_t>* incomplete_cnt,
                           TransportKey2Request<request_type>* transport_key2request) {
@@ -32,7 +32,7 @@ void MakeTransportRequest(uint64_t data_token,
   read_request->mutable_size()->set_total_data_size(data_size);
   read_request->mutable_size()->set_current_transport_capacity(GetMaxVal<int64_t>());
   read_request->mutable_size()->set_current_valid_size(data_size);
-  read_request->mutable_transport_key()->set_data_token(data_token);
+  read_request->mutable_transport_key()->mutable_data_token()->CopyFrom(data_token);
   read_request->mutable_transport_key()->set_data_offset(0);
   CHECK(transport_key2request->Insert(read_request.Mutable()).second);
 }
@@ -52,7 +52,7 @@ void CopyAndDecreaseIncompleteCnt(WriteTransportRequest* write_request,
 }  // namespace
 
 void LocalhostTransporter::MakeReadTransportRequest(
-    uint64_t data_token, const char* data_ptr, size_t data_size,
+    const TransportDataToken& data_token, const char* data_ptr, size_t data_size,
     std::atomic<int64_t>* incomplete_cnt,
     TransportKey2ReadRequest* transport_key2read_request) const {
   MakeTransportRequest<kReadTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
@@ -60,7 +60,8 @@ void LocalhostTransporter::MakeReadTransportRequest(
 }
 
 void LocalhostTransporter::MakeWriteTransportRequest(
-    uint64_t data_token, char* data_ptr, size_t data_size, std::atomic<int64_t>* incomplete_cnt,
+    const TransportDataToken& data_token, char* data_ptr, size_t data_size,
+    std::atomic<int64_t>* incomplete_cnt,
     TransportKey2WriteRequest* transport_key2read_request) const {
   MakeTransportRequest<kWriteTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
                                                    transport_key2read_request);
