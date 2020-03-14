@@ -55,7 +55,7 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr, int32_
 template<typename T>
 class GpuArgSortKernel final : public user_op::OpKernel {
  public:
-  GpuArgSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GpuArgSortKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GpuArgSortKernel() = default;
   ~GpuArgSortKernel() = default;
 
@@ -92,15 +92,14 @@ class GpuArgSortKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                            \
-        return new GpuArgSortKernel<dtype>(ctx);                                                   \
-      })                                                                                           \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                        \
+      .SetCreateFn(                                                                                \
+          [](user_op::KernelInitContext* ctx) { return new GpuArgSortKernel<dtype>(ctx); })        \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
         return ctx.device_type() == DeviceType::kGPU                                               \
                && in_desc->data_type() == GetDataType<dtype>::value;                               \
       })                                                                                           \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                                 \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
         const int32_t elem_cnt = in_shape->elem_cnt();                                             \
         const int32_t instance_size = in_shape->dim_vec().back();                                  \

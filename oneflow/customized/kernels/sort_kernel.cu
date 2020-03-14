@@ -7,7 +7,7 @@ namespace oneflow {
 template<typename T>
 class GpuSortKernel final : public user_op::OpKernel {
  public:
-  GpuSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GpuSortKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GpuSortKernel() = default;
   ~GpuSortKernel() = default;
 
@@ -36,28 +36,26 @@ class GpuSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("sort")                                                              \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                     \
-        return new GpuSortKernel<dtype>(ctx);                                               \
-      })                                                                                    \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                 \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device_type() == DeviceType::kGPU                                        \
-               && out_desc->data_type() == GetDataType<dtype>::value;                       \
-      })                                                                                    \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                          \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
-        const int32_t instance_size = in_shape->dim_vec().back();                           \
-        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \
-        const std::string& direction = ctx->GetAttr<std::string>("direction");              \
-        if (direction == "ASCENDING") {                                                     \
-          return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
-        } else if (direction == "DESCENDING") {                                             \
-          return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size); \
-        } else {                                                                            \
-          UNIMPLEMENTED();                                                                  \
-        }                                                                                   \
+#define REGISTER_GPU_SORT_KERNEL(dtype)                                                           \
+  REGISTER_USER_KERNEL("sort")                                                                    \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) { return new GpuSortKernel<dtype>(ctx); }) \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
+        return ctx.device_type() == DeviceType::kGPU                                              \
+               && out_desc->data_type() == GetDataType<dtype>::value;                             \
+      })                                                                                          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                              \
+        const int32_t instance_size = in_shape->dim_vec().back();                                 \
+        const int32_t instance_num = in_shape->elem_cnt() / instance_size;                        \
+        const std::string& direction = ctx->GetAttr<std::string>("direction");                    \
+        if (direction == "ASCENDING") {                                                           \
+          return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);        \
+        } else if (direction == "DESCENDING") {                                                   \
+          return InferTempStorageForSortKeysDescending<dtype>(instance_num, instance_size);       \
+        } else {                                                                                  \
+          UNIMPLEMENTED();                                                                        \
+        }                                                                                         \
       });
 
 REGISTER_GPU_SORT_KERNEL(float)
