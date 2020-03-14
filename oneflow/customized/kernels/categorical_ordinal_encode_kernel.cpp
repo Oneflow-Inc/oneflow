@@ -6,7 +6,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
  public:
-  explicit CategoricalOrdinalEncodeKernel(const user_op::KernelInitContext& ctx)
+  explicit CategoricalOrdinalEncodeKernel(user_op::KernelInitContext* ctx)
       : user_op::OpKernel(ctx) {}
   ~CategoricalOrdinalEncodeKernel() override = default;
 
@@ -29,7 +29,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 
 #define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
   REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
-      .SetCreateFn([](const user_op::KernelInitContext& ctx) {                   \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                         \
         return new CategoricalOrdinalEncodeKernel<device, cpp_type>(ctx);        \
       })                                                                         \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {               \

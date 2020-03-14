@@ -62,6 +62,8 @@ class UserOp final : public Operator {
 
 class UserOpKernelRegContext final : public user_op::KernelRegContext {
  public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
   explicit UserOpKernelRegContext(const UserOp* user_op,
                                   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx)
@@ -71,6 +73,17 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
 
     device_type_ = op_conf.device_type();
     parallel_ctx_ = parallel_ctx;
+
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          arg_vec->emplace_back(std::make_pair(it->first, i));
+        }
+      }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
 
     {
 #define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                \
@@ -97,8 +110,12 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; }
     return &(it->second);
   }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
  private:
+  ArgVec inputs_;
+  ArgVec outputs_;
   DeviceType device_type_;
   const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
