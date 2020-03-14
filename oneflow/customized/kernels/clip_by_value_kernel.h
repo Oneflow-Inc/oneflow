@@ -84,7 +84,7 @@ OF_DEVICE_FUNC void ClipGradByMax(const int64_t num_values, const T* values, con
 template<DeviceType device_type, typename T>
 class ClipByValueKernel final : public user_op::OpKernel {
  public:
-  ClipByValueKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  ClipByValueKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByValueKernel() = default;
   ~ClipByValueKernel() = default;
 
@@ -95,7 +95,7 @@ class ClipByValueKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByValueGradKernel final : public user_op::OpKernel {
  public:
-  ClipByValueGradKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  ClipByValueGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByValueGradKernel() = default;
   ~ClipByValueGradKernel() = default;
 
@@ -158,10 +158,9 @@ void ClipByValueGradKernel<device_type, T>::Compute(user_op::KernelContext* ctx)
 
 #define REGISTER_CLIP_KERNEL(op_type_name, kernel, input_name, output_name, device_type_v, dtype) \
   REGISTER_USER_KERNEL(#op_type_name)                                                             \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                           \
-        return new kernel<device_type_v, dtype>(ctx);                                             \
-      })                                                                                          \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                       \
+      .SetCreateFn(                                                                               \
+          [](user_op::KernelInitContext* ctx) { return new kernel<device_type_v, dtype>(ctx); })  \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex(#output_name, 0);    \
         if (ctx.device_type() == device_type_v                                                    \
             && out_desc->data_type() == GetDataType<dtype>::value) {                              \
