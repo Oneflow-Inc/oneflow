@@ -18,8 +18,7 @@ class HostVmStreamType final : public VmStreamType {
   ObjectMsgPtr<VmInstructionMsg> CudaMallocHost(uint64_t logical_object_id, size_t size) const;
   ObjectMsgPtr<VmInstructionMsg> CudaFreeHost(uint64_t logical_object_id) const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                     CallbackMsgListPtr callback_list) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override {}
 
   void InitVmInstructionStatus(const VmStream& vm_stream,
                                VmInstructionStatusBuffer* status_buffer) const override;

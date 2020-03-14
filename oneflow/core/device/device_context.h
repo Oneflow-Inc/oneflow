@@ -20,7 +20,7 @@ class DeviceCtx {
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
-  virtual void AddCallBack(std::function<void()>) const = 0;
+  virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
 
  protected:
   DeviceCtx() = default;

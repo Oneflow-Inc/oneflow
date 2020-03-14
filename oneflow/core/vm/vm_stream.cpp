@@ -8,7 +8,11 @@ void VmStream::__Init__(VmThread* vm_thread, const VmStreamId& vm_stream_id) {
   set_vm_thread(vm_thread);
   mut_vm_stream_id()->CopyFrom(vm_stream_id);
   const auto& vm_stream_type = vm_thread->vm_stream_rt_desc().vm_stream_type();
-  vm_stream_type.InitDeviceCtx(mut_device_ctx(), mut_callback_list());
+  vm_stream_type.InitDeviceCtx(mut_device_ctx(), this);
+}
+
+int64_t VmStream::machine_id() const {
+  return parallel_id() / vm_thread().vm_stream_rt_desc().vm_stream_desc().num_streams_per_machine();
 }
 
 ObjectMsgPtr<VmInstrChain> VmStream::NewVmInstrChain(VmInstructionMsg* vm_instr_msg) {

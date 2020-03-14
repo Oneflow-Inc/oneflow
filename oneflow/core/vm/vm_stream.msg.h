@@ -16,6 +16,7 @@ OBJECT_MSG_BEGIN(VmStream);
   PUBLIC ObjectMsgPtr<VmInstrChain> NewVmInstrChain(VmInstructionMsg* vm_instr_msg);
   PUBLIC void DeleteVmInstrChain(ObjectMsgPtr<VmInstrChain>&&);
   PUBLIC int64_t parallel_id() const { return vm_stream_id().parallel_id(); }
+  PUBLIC int64_t machine_id() const;
 
   // fields
   OBJECT_MSG_DEFINE_PTR(VmThread, vm_thread); 

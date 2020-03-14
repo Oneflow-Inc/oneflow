@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_CUDA_COPY_H2D_VM_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_CUDA_COPY_H2D_VM_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_L2R_SENDER_VM_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_L2R_SENDER_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/vm_stream_type.h"
 
@@ -8,14 +8,14 @@ namespace oneflow {
 class VmScheduler;
 class VmInstructionMsg;
 
-class CudaCopyH2DVmStreamType final : public VmStreamType {
+class L2RSenderVmStreamType final : public VmStreamType {
  public:
-  CudaCopyH2DVmStreamType() = default;
-  ~CudaCopyH2DVmStreamType() = default;
+  L2RSenderVmStreamType() = default;
+  ~L2RSenderVmStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 4;
+  static const VmStreamTypeId kVmStreamTypeId = 6;
 
-  ObjectMsgPtr<VmInstructionMsg> Copy(uint64_t dst, uint64_t src, size_t size) const;
+  ObjectMsgPtr<VmInstructionMsg> Send(uint64_t logical_token, uint64_t src, size_t size) const;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override;
 
@@ -30,4 +30,4 @@ class CudaCopyH2DVmStreamType final : public VmStreamType {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CUDA_COPY_H2D_VM_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_L2R_SENDER_VM_STREAM_TYPE_H_
