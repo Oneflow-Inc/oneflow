@@ -85,8 +85,7 @@ class UserKernelContext final : public user_op::KernelContext {
   explicit UserKernelContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op::KernelContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
-        base_ctx_(std::move(UserKernelBaseContext(kernel_conf))),
-        arg2tensor_() {
+        base_ctx_(std::move(UserKernelBaseContext(kernel_conf))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
