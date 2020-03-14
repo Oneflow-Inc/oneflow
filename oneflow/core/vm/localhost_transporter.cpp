@@ -11,8 +11,8 @@ OBJECT_MSG_BEGIN(LocalhostTransportRequestHub);
   OBJECT_MSG_DEFINE_STRUCT(std::mutex, mutex);
   
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(ReadTransportRequest, transport_key, transport_key2read_request);
-  OBJECT_MSG_DEFINE_MAP_HEAD(WriteTransportRequest, transport_key, transport_key2write_request);
+  OBJECT_MSG_DEFINE_MAP_HEAD(SendTransportRequest, transport_key, transport_key2send_request);
+  OBJECT_MSG_DEFINE_MAP_HEAD(ReceiveTransportRequest, transport_key, transport_key2receive_request);
 OBJECT_MSG_END(LocalhostTransportRequestHub);
 // clang-format on
 
@@ -26,80 +26,81 @@ void MakeTransportRequest(const TransportDataToken& data_token,
                           typename TransportRequestDataType<request_type>::type* data_ptr,
                           size_t data_size, std::atomic<int64_t>* incomplete_cnt,
                           TransportKey2Request<request_type>* transport_key2request) {
-  auto read_request = ObjectMsgPtr<TransportRequest<request_type>>::New();
-  read_request->set_data_ptr(data_ptr);
-  read_request->set_incomplete_cnt(incomplete_cnt);
-  read_request->mutable_size()->set_total_data_size(data_size);
-  read_request->mutable_size()->set_current_transport_capacity(GetMaxVal<int64_t>());
-  read_request->mutable_size()->set_current_valid_size(data_size);
-  read_request->mutable_transport_key()->mutable_data_token()->CopyFrom(data_token);
-  read_request->mutable_transport_key()->set_data_offset(0);
-  CHECK(transport_key2request->Insert(read_request.Mutable()).second);
+  auto request = ObjectMsgPtr<TransportRequest<request_type>>::New();
+  request->set_data_ptr(data_ptr);
+  request->set_incomplete_cnt(incomplete_cnt);
+  request->mutable_size()->set_total_data_size(data_size);
+  request->mutable_size()->set_current_transport_capacity(GetMaxVal<int64_t>());
+  request->mutable_size()->set_current_valid_size(data_size);
+  request->mutable_transport_key()->mutable_data_token()->CopyFrom(data_token);
+  request->mutable_transport_key()->set_data_offset(0);
+  CHECK(transport_key2request->Insert(request.Mutable()).second);
 }
 
-void CopyAndDecreaseIncompleteCnt(WriteTransportRequest* write_request,
-                                  ReadTransportRequest* read_request) {
-  CHECK(write_request->size() == read_request->size());
-  CHECK(write_request->transport_key() == read_request->transport_key());
-  std::memcpy(write_request->mut_data_ptr(), &read_request->data_ptr(),
-              read_request->size().current_valid_size());
-  CHECK_GT(write_request->incomplete_cnt(), 0);
-  CHECK_GT(read_request->incomplete_cnt(), 0);
-  --*write_request->mut_incomplete_cnt();
-  --*read_request->mut_incomplete_cnt();
+void CopyAndDecreaseIncompleteCnt(ReceiveTransportRequest* receive_request,
+                                  SendTransportRequest* send_request) {
+  CHECK(receive_request->size() == send_request->size());
+  CHECK(receive_request->transport_key() == send_request->transport_key());
+  std::memcpy(receive_request->mut_data_ptr(), &send_request->data_ptr(),
+              send_request->size().current_valid_size());
+  CHECK_GT(receive_request->incomplete_cnt(), 0);
+  CHECK_GT(send_request->incomplete_cnt(), 0);
+  --*receive_request->mut_incomplete_cnt();
+  --*send_request->mut_incomplete_cnt();
 }
 
 }  // namespace
 
-void LocalhostTransporter::MakeReadTransportRequest(
+void LocalhostTransporter::MakeSendTransportRequest(
     const TransportDataToken& data_token, const char* data_ptr, size_t data_size,
     std::atomic<int64_t>* incomplete_cnt,
-    TransportKey2ReadRequest* transport_key2read_request) const {
-  MakeTransportRequest<kReadTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
-                                                  transport_key2read_request);
+    TransportKey2SendRequest* transport_key2send_request) const {
+  MakeTransportRequest<kSendTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
+                                                  transport_key2send_request);
 }
 
-void LocalhostTransporter::MakeWriteTransportRequest(
+void LocalhostTransporter::MakeReceiveTransportRequest(
     const TransportDataToken& data_token, char* data_ptr, size_t data_size,
     std::atomic<int64_t>* incomplete_cnt,
-    TransportKey2WriteRequest* transport_key2read_request) const {
-  MakeTransportRequest<kWriteTransportRequestType>(data_token, data_ptr, data_size, incomplete_cnt,
-                                                   transport_key2read_request);
+    TransportKey2ReceiveRequest* transport_key2send_request) const {
+  MakeTransportRequest<kReceiveTransportRequestType>(data_token, data_ptr, data_size,
+                                                     incomplete_cnt, transport_key2send_request);
 }
 
-void LocalhostTransporter::Transport(TransportKey2ReadRequest* transport_key2read_request) const {
+void LocalhostTransporter::Transport(TransportKey2SendRequest* transport_key2send_request) const {
   auto* hub = GetTransportRequestHub();
-  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2read_request, read_reqeust) {
+  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2send_request, send_request) {
     {
       std::unique_lock<std::mutex> lock(*hub->mut_mutex());
-      auto* write_request =
-          hub->mut_transport_key2write_request()->FindPtr(read_reqeust->transport_key());
-      if (write_request == nullptr) {
-        CHECK(hub->mut_transport_key2read_request()->Insert(read_reqeust).second);
+      auto* receive_request =
+          hub->mut_transport_key2receive_request()->FindPtr(send_request->transport_key());
+      if (receive_request == nullptr) {
+        CHECK(hub->mut_transport_key2send_request()->Insert(send_request).second);
       } else {
-        CopyAndDecreaseIncompleteCnt(write_request, read_reqeust);
-        hub->mut_transport_key2write_request()->Erase(write_request);
+        CopyAndDecreaseIncompleteCnt(receive_request, send_request);
+        hub->mut_transport_key2receive_request()->Erase(receive_request);
       }
     }
-    transport_key2read_request->Erase(read_reqeust);
+    transport_key2send_request->Erase(send_request);
   }
 }
 
-void LocalhostTransporter::Transport(TransportKey2WriteRequest* transport_key2write_request) const {
+void LocalhostTransporter::Transport(
+    TransportKey2ReceiveRequest* transport_key2receive_request) const {
   auto* hub = GetTransportRequestHub();
-  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2write_request, write_request) {
+  OBJECT_MSG_MAP_FOR_EACH_PTR(transport_key2receive_request, receive_request) {
     {
       std::unique_lock<std::mutex> lock(*hub->mut_mutex());
-      auto* read_request =
-          hub->mut_transport_key2read_request()->FindPtr(write_request->transport_key());
-      if (read_request == nullptr) {
-        CHECK(hub->mut_transport_key2write_request()->Insert(write_request).second);
+      auto* send_request =
+          hub->mut_transport_key2send_request()->FindPtr(receive_request->transport_key());
+      if (send_request == nullptr) {
+        CHECK(hub->mut_transport_key2receive_request()->Insert(receive_request).second);
       } else {
-        CopyAndDecreaseIncompleteCnt(write_request, read_request);
-        hub->mut_transport_key2read_request()->Erase(read_request);
+        CopyAndDecreaseIncompleteCnt(receive_request, send_request);
+        hub->mut_transport_key2send_request()->Erase(send_request);
       }
     }
-    transport_key2write_request->Erase(write_request);
+    transport_key2receive_request->Erase(receive_request);
   }
 }
 

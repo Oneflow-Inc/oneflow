@@ -43,18 +43,18 @@ FLAT_MSG_BEGIN(TransportHeader);
   FLAT_MSG_DEFINE_OPTIONAL(TransportSize, size);
 FLAT_MSG_END(TransportHeader);
 
-enum TransportRequestType { kReadTransportRequestType = 0, kWriteTransportRequestType };
+enum TransportRequestType { kSendTransportRequestType = 0, kReceiveTransportRequestType };
 
 template<TransportRequestType request_type>
 struct TransportRequestDataType {};
 
 template<>
-struct TransportRequestDataType<kReadTransportRequestType> {
+struct TransportRequestDataType<kSendTransportRequestType> {
   using type = const char;
 };
 
 template<>
-struct TransportRequestDataType<kWriteTransportRequestType> {
+struct TransportRequestDataType<kReceiveTransportRequestType> {
   using type = char;
 };
 
@@ -69,14 +69,14 @@ OBJECT_MSG_BEGIN(TransportRequest);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(TransportKey, transport_key);
 OBJECT_MSG_END(TransportRequest);
 
-using ReadTransportRequest = TransportRequest<kReadTransportRequestType>;
-using WriteTransportRequest = TransportRequest<kWriteTransportRequestType>;
+using SendTransportRequest = TransportRequest<kSendTransportRequestType>;
+using ReceiveTransportRequest = TransportRequest<kReceiveTransportRequestType>;
 
 template<TransportRequestType request_type>
 using TransportKey2Request = OBJECT_MSG_MAP(TransportRequest<request_type>, transport_key);
 
-using TransportKey2ReadRequest = TransportKey2Request<kReadTransportRequestType>;
-using TransportKey2WriteRequest = TransportKey2Request<kWriteTransportRequestType>;
+using TransportKey2SendRequest = TransportKey2Request<kSendTransportRequestType>;
+using TransportKey2ReceiveRequest = TransportKey2Request<kReceiveTransportRequestType>;
 
 // clang-format on
 

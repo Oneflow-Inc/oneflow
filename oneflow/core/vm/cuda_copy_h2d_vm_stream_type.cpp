@@ -64,8 +64,8 @@ ObjectMsgPtr<VmInstructionMsg> CudaCopyH2DVmStreamType::Copy(uint64_t dst, uint6
 }
 
 void CudaCopyH2DVmStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                            CallbackMsgListPtr callback_list) const {
-  device_ctx->reset(new CudaStreamHandleDeviceCtx(callback_list));
+                                            VmStream* vm_stream) const {
+  device_ctx->reset(new CudaStreamHandleDeviceCtx(vm_stream->mut_callback_list()));
 }
 
 void CudaCopyH2DVmStreamType::InitVmInstructionStatus(

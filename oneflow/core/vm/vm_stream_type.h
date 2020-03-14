@@ -16,8 +16,7 @@ class VmStreamType {
  public:
   virtual ~VmStreamType() = default;
 
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                             CallbackMsgListPtr callback_list) const = 0;
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const = 0;
 
   virtual void InitVmInstructionStatus(const VmStream& vm_stream,
                                        VmInstructionStatusBuffer* status_buffer) const = 0;

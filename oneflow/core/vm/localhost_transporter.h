@@ -10,18 +10,18 @@ class LocalhostTransporter final : public Transporter {
   LocalhostTransporter() = default;
   ~LocalhostTransporter() override = default;
 
-  void MakeReadTransportRequest(
+  void MakeSendTransportRequest(
       const TransportDataToken& data_token, const char* data_ptr, size_t data_size,
       std::atomic<int64_t>* incomplete_cnt,
-      TransportKey2ReadRequest* transport_key2read_request) const override;
+      TransportKey2SendRequest* transport_key2send_request) const override;
 
-  void MakeWriteTransportRequest(
+  void MakeReceiveTransportRequest(
       const TransportDataToken& data_token, char* data_ptr, size_t data_size,
       std::atomic<int64_t>* incomplete_cnt,
-      TransportKey2WriteRequest* transport_key2read_request) const override;
+      TransportKey2ReceiveRequest* transport_key2send_request) const override;
 
-  void Transport(TransportKey2ReadRequest* transport_key2read_request) const override;
-  void Transport(TransportKey2WriteRequest* transport_key2write_request) const override;
+  void Transport(TransportKey2SendRequest* transport_key2send_request) const override;
+  void Transport(TransportKey2ReceiveRequest* transport_key2receive_request) const override;
 };
 
 }  // namespace oneflow
