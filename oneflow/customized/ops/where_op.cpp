@@ -4,8 +4,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Shape> GetWhereBroadcastedShape(const ShapeView& cond_shape, const ShapeView& x_shape,
-                                      const ShapeView& y_shape) {
+Maybe<Shape> GetWhereBroadcastedShape(const Shape& cond_shape, const Shape& x_shape,
+                                      const Shape& y_shape) {
   int64_t max_num_axes = std::max(x_shape.NumAxes(), y_shape.NumAxes());
   max_num_axes = std::max(max_num_axes, cond_shape.NumAxes());
   Shape cond_extend_shape = CreateLeftExtendedShape(cond_shape, max_num_axes);
@@ -31,9 +31,13 @@ Maybe<Shape> GetWhereBroadcastedShape(const ShapeView& cond_shape, const ShapeVi
   return broadcasted_shape;
 }
 
-Maybe<Shape> GetWhereBroadcastedShape(const Shape& cond_shape, const Shape& x_shape,
-                                      const Shape& y_shape) {
-  return GetWhereBroadcastedShape(ShapeView(cond_shape), ShapeView(x_shape), ShapeView(y_shape));
+Maybe<void> CheckShapeBroadcastable(const Shape& shape, const Shape& broadcasted_shape) {
+  Shape extend_shape = CreateLeftExtendedShape(shape, broadcasted_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, broadcasted_shape.NumAxes()) {
+    OF_CHECK_LE(extend_shape.At(i), broadcasted_shape.At(i));
+    if (extend_shape.At(i) != 1) { OF_CHECK_EQ(extend_shape.At(i), broadcasted_shape.At(i)); }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
@@ -52,12 +56,46 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferWhereGradTensorDesc(user_op::InferContext* ctx) {
+  // shape infer
+  const Shape* cond_shape = ctx->Shape4ArgNameAndIndex("condition", 0);
+  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+  const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+  const Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
+  CheckShapeBroadcastable(*cond_shape, *dz_shape);
+  CheckShapeBroadcastable(*x_shape, *dz_shape);
+  CheckShapeBroadcastable(*y_shape, *dz_shape);
+  *ctx->Shape4ArgNameAndIndex("dx", 0) = *x_shape;
+  *ctx->Shape4ArgNameAndIndex("dy", 0) = *y_shape;
+  // data_type infer
+  DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
+  OF_CHECK(IsIntegralDataType(cond_dtype));
+  DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  DataType y_dtype = *ctx->Dtype4ArgNameAndIndex("y", 0);
+  DataType dz_dtype = *ctx->Dtype4ArgNameAndIndex("dz", 0);
+  OF_CHECK_EQ(x_dtype, dz_dtype);
+  OF_CHECK_EQ(y_dtype, dz_dtype);
+  *ctx->Dtype4ArgNameAndIndex("dx", 0) = x_dtype;
+  *ctx->Dtype4ArgNameAndIndex("dy", 0) = y_dtype;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferWhereBatchAxis(user_op::BatchAxisContext* ctx) {
   // TODO
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
+  // TODO
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferWhereGradBatchAxis(user_op::BatchAxisContext* ctx) {
+  // TODO
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetWhereGradSbpSignatures(user_op::SbpContext* ctx) {
   // TODO
   return Maybe<void>::Ok();
 }
@@ -72,5 +110,24 @@ REGISTER_USER_OP("where")
     .SetTensorDescInferFn(InferWhereTensorDesc)
     .SetBatchAxisInferFn(InferWhereBatchAxis)
     .SetGetSbpFn(GetWhereSbpSignatures);
+
+REGISTER_USER_OP("where_grad")
+    .Input("condition")
+    .Input("dz")
+    .Input("x")
+    .Input("y")
+    .Output("dx")
+    .Output("dy")
+    .SetTensorDescInferFn(InferWhereGradTensorDesc)
+    .SetBatchAxisInferFn(InferWhereGradBatchAxis)
+    .SetGetSbpFn(GetWhereGradSbpSignatures)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* x_arg_modifier = GetInputArgModifierFn("x", 0);
+      user_op::InputArgModifier* y_arg_modifier = GetInputArgModifierFn("y", 0);
+      CHECK(x_arg_modifier != nullptr);
+      CHECK(y_arg_modifier != nullptr);
+      x_arg_modifier->set_use_header_only(true);
+      y_arg_modifier->set_use_header_only(true);
+    });
 
 }  // namespace oneflow
