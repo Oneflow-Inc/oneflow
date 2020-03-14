@@ -10,7 +10,7 @@ inline const T* GetBroadcastedPtr(DeviceCtx* ctx, const user_op::Tensor* reduced
                                   const ShapeView& broadcasted_shape, void* tmp_ptr,
                                   size_t* tmp_byte_offset) {
   if (reduced_tensor->shape() == broadcasted_shape) { return reduced_tensor->dptr<T>(); }
-  T* cur_tmp_ptr = reinterprete_cast<T*>(tmp_ptr + *tmp_byte_offset);
+  T* cur_tmp_ptr = reinterpret_cast<T*>(tmp_ptr + *tmp_byte_offset);
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx, XpuVarNdarray<T>(broadcasted_shape, cur_tmp_ptr),
       XpuVarNdarray<const T>(reduced_tensor->shape(), reduced_tensor->dptr<T>()));
