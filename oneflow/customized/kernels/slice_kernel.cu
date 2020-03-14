@@ -126,7 +126,7 @@ __global__ void SliceBackwardGpu(const int n, SliceGpuParams params, const T* pa
 template<typename T>
 class SliceGpuKernel final : public user_op::OpKernel {
  public:
-  SliceGpuKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  SliceGpuKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   SliceGpuKernel() = default;
   ~SliceGpuKernel() = default;
 
@@ -145,7 +145,7 @@ class SliceGpuKernel final : public user_op::OpKernel {
 template<typename T>
 class SliceGradGpuKernel final : public user_op::OpKernel {
  public:
-  SliceGradGpuKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  SliceGradGpuKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   SliceGradGpuKernel() = default;
   ~SliceGradGpuKernel() = default;
 
@@ -163,30 +163,27 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_SLICE_GPU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("slice_v2")                                                    \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
-        return new SliceGpuKernel<dtype>(ctx);                                        \
-      })                                                                              \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);   \
-        if (ctx.device_type() == DeviceType::kGPU                                     \
-            && y_desc->data_type() == GetDataType<dtype>::value) {                    \
-          return true;                                                                \
-        }                                                                             \
-        return false;                                                                 \
-      });                                                                             \
-  REGISTER_USER_KERNEL("slice_grad_v2")                                               \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
-        return new SliceGradGpuKernel<dtype>(ctx);                                    \
-      })                                                                              \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        if (ctx.device_type() == DeviceType::kGPU                                     \
-            && dx_desc->data_type() == GetDataType<dtype>::value) {                   \
-          return true;                                                                \
-        }                                                                             \
-        return false;                                                                 \
+#define REGISTER_SLICE_GPU_KERNEL(dtype)                                                           \
+  REGISTER_USER_KERNEL("slice_v2")                                                                 \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) { return new SliceGpuKernel<dtype>(ctx); }) \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);                \
+        if (ctx.device_type() == DeviceType::kGPU                                                  \
+            && y_desc->data_type() == GetDataType<dtype>::value) {                                 \
+          return true;                                                                             \
+        }                                                                                          \
+        return false;                                                                              \
+      });                                                                                          \
+  REGISTER_USER_KERNEL("slice_grad_v2")                                                            \
+      .SetCreateFn(                                                                                \
+          [](user_op::KernelInitContext* ctx) { return new SliceGradGpuKernel<dtype>(ctx); })      \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);              \
+        if (ctx.device_type() == DeviceType::kGPU                                                  \
+            && dx_desc->data_type() == GetDataType<dtype>::value) {                                \
+          return true;                                                                             \
+        }                                                                                          \
+        return false;                                                                              \
       });
 
 REGISTER_SLICE_GPU_KERNEL(float)

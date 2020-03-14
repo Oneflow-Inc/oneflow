@@ -285,4 +285,14 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("TestRandomSource")
+    .Output("out")
+    .Attr("seed", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_tensor->mut_shape() = Shape({5});
+      *out_tensor->mut_data_type() = DataType::kFloat;
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
