@@ -8,7 +8,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T, typename I>
 class GatherNdKernel final : public user_op::OpKernel {
  public:
-  GatherNdKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GatherNdKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GatherNdKernel() = default;
   ~GatherNdKernel() = default;
 
@@ -19,7 +19,7 @@ class GatherNdKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename I>
 class ScatterNdKernel final : public user_op::OpKernel {
  public:
-  ScatterNdKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  ScatterNdKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ScatterNdKernel() = default;
   ~ScatterNdKernel() = default;
 
@@ -30,7 +30,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename I>
 class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
  public:
-  TensorScatterNdUpdateKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TensorScatterNdUpdateKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TensorScatterNdUpdateKernel() = default;
   ~TensorScatterNdUpdateKernel() = default;
 
@@ -41,7 +41,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename I>
 class TensorScatterNdAddKernel final : public user_op::OpKernel {
  public:
-  TensorScatterNdAddKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  TensorScatterNdAddKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TensorScatterNdAddKernel() = default;
   ~TensorScatterNdAddKernel() = default;
 
@@ -120,7 +120,7 @@ MakeNdIndexSliceKernelMatchedPredictor() {
 #define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,       \
                                            itype_pair)                                        \
   REGISTER_USER_KERNEL(#op_type_name)                                                         \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                       \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                      \
         return new op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                    \
                               OF_PP_PAIR_FIRST(itype_pair)>(ctx);                             \
       })                                                                                      \
@@ -131,7 +131,7 @@ MakeNdIndexSliceKernelMatchedPredictor() {
 #define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,    \
                                                itype_pair)                                      \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                         \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
         return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
                                                 OF_PP_PAIR_FIRST(itype_pair)>(ctx);             \
       })                                                                                        \

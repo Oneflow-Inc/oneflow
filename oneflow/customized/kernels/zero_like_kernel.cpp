@@ -6,7 +6,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 class ZeroLikeKernel final : public user_op::OpKernel {
  public:
-  ZeroLikeKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  ZeroLikeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ZeroLikeKernel() = default;
   ~ZeroLikeKernel() = default;
 
@@ -20,7 +20,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
 
 #define REGISTER_ZERO_LIKE_KERNEL(device_type_v, data_type_pair)                         \
   REGISTER_USER_KERNEL("zero_like")                                                      \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                  \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                 \
         return new ZeroLikeKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair)>(ctx); \
       })                                                                                 \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {              \
