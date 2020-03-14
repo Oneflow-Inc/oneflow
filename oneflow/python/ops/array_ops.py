@@ -339,19 +339,36 @@ def local_nonzero(input, name=None):
 
 
 @oneflow_export("where")
-def where(condition, x, y, name=None):
-    assert condition.shape == x.shape and x.shape == y.shape
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Where_"))
-    setattr(op_conf.where_conf, "condition", condition.logical_blob_name)
-    setattr(op_conf.where_conf, "lhs", x.logical_blob_name)
-    setattr(op_conf.where_conf, "rhs", y.logical_blob_name)
-    setattr(op_conf.where_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+def where(condition, x=None, y=None, name=None):
+    if x is None and y is None:
+        raise NotImplementedError("Will be implemented using argwhere or nonzero")
+    elif x is not None and y is not None:
+        if name is None:
+            name = id_util.UniqueStr("Where_")
+
+        def check_broadcastable(shape_list):
+            max_num_dims = max(map(lambda x: len(x), shape_list))
+            extend_shape_list = [
+                [1] * (max_num_dims - len(shape)) + list(shape) for shape in shape_list
+            ]
+            for dims in zip(*extend_shape_list):
+                unique_dims = np.unique(np.array(dims))
+                if len(unique_dims) > 2 or (len(unique_dims) == 2 and 1 not in unique_dims):
+                    raise ValueError("condition, x and y must be broadcastable to the same shape.")
+
+        check_broadcastable([condition.shape, x.shape, y.shape])
+        op = (
+            flow.user_op_builder(name)
+            .Op("where")
+            .Input("condition", [condition])
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("out")
+            .Build()
+        )
+        return op.RemoteBlobList()[0]
+    else:
+        raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
 @oneflow_export("squeeze")
