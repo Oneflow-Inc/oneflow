@@ -39,7 +39,7 @@ void WhereKernel<device_type, T, CondT>::Compute(user_op::KernelContext* ctx) {
                                         y_ptr, out->mut_dptr<T>());
 }
 
-size_t InferWhereTmpBufferSize(oneflow::user_op::InferContext* ctx) {
+size_t InferWhereTmpBufferSize(user_op::InferContext* ctx) {
   const Shape* cond_shape = ctx->Shape4ArgNameAndIndex("condition", 0);
   const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);

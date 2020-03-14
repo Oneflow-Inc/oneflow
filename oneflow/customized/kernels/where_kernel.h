@@ -21,7 +21,7 @@ OF_DEVICE_FUNC void DoWhere(const int64_t elem_cnt, const CondT* condition, cons
 template<DeviceType device_type, typename T, typename CondT>
 class WhereKernel final : public user_op::OpKernel {
  public:
-  WhereKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  WhereKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   WhereKernel() = default;
   ~WhereKernel() = default;
 
@@ -33,10 +33,10 @@ size_t InferWhereTmpBufferSize(oneflow::user_op::InferContext* ctx);
 
 #define REGISTER_WHERE_KERNEL(device_type_v, dtype, ctype)                                     \
   REGISTER_USER_KERNEL("where")                                                                \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                        \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                       \
         return new WhereKernel<device_type_v, dtype, ctype>(ctx);                              \
       })                                                                                       \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                    \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                             \
         const user_op::TensorDesc* cond_desc = ctx.TensorDesc4ArgNameAndIndex("condition", 0); \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);        \
         return ctx.device_type() == device_type_v                                              \
