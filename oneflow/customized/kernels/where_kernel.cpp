@@ -7,6 +7,7 @@ namespace {
 
 template<typename T>
 T* GetTmpPtr(void* tmp_ptr, size_t offset) {
+  CHECK_NOTNULL(tmp_ptr);
   return reinterpret_cast<T*>(static_cast<char*>(tmp_ptr) + offset);
 }
 
@@ -107,14 +108,19 @@ void WhereKernel<device_type, T, CondT>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
   size_t tmp_byte_offset = 0;
-  const CondT* cond_ptr = GetHasBroadcastedPtr<device_type, CondT>(
-      ctx->device_ctx(), out->shape(), cond, tmp->mut_dptr(), &tmp_byte_offset);
-  const T* x_ptr = GetHasBroadcastedPtr<device_type, T>(ctx->device_ctx(), out->shape(), x,
-                                                        tmp->mut_dptr(), &tmp_byte_offset);
-  const T* y_ptr = GetHasBroadcastedPtr<device_type, T>(ctx->device_ctx(), out->shape(), y,
-                                                        tmp->mut_dptr(), &tmp_byte_offset);
-  CHECK_LE(tmp_byte_offset, tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()));
+  const CondT* cond_ptr = GetHasBroadcastedPtr<device_type, CondT>(ctx->device_ctx(), out->shape(),
+                                                                   cond, tmp_ptr, &tmp_byte_offset);
+  const T* x_ptr = GetHasBroadcastedPtr<device_type, T>(ctx->device_ctx(), out->shape(), x, tmp_ptr,
+                                                        &tmp_byte_offset);
+  const T* y_ptr = GetHasBroadcastedPtr<device_type, T>(ctx->device_ctx(), out->shape(), y, tmp_ptr,
+                                                        &tmp_byte_offset);
+  if (tmp) {
+    CHECK_LE(tmp_byte_offset, tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()));
+  } else {
+    CHECK_EQ(tmp_byte_offset, 0);
+  }
   WhereFunctor<device_type, T, CondT>()(ctx->device_ctx(), out->shape().elem_cnt(), cond_ptr, x_ptr,
                                         y_ptr, out->mut_dptr<T>());
 }
@@ -126,21 +132,26 @@ void WhereGradKernel<device_type, T, CondT>::Compute(user_op::KernelContext* ctx
   user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
   user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
   user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
   size_t tmp_byte_offset = 0;
   const CondT* broadcasted_cond_ptr = GetHasBroadcastedPtr<device_type, CondT>(
-      ctx->device_ctx(), dz->shape(), cond, tmp->mut_dptr(), &tmp_byte_offset);
+      ctx->device_ctx(), dz->shape(), cond, tmp_ptr, &tmp_byte_offset);
   T* broadcasted_dx_ptr = GetZeroedBroadcastPtr<device_type, T>(ctx->device_ctx(), dz->shape(), dx,
-                                                                tmp->mut_dptr(), &tmp_byte_offset);
+                                                                tmp_ptr, &tmp_byte_offset);
   T* broadcasted_dy_ptr = GetZeroedBroadcastPtr<device_type, T>(ctx->device_ctx(), dz->shape(), dy,
-                                                                tmp->mut_dptr(), &tmp_byte_offset);
+                                                                tmp_ptr, &tmp_byte_offset);
   WhereGradFunctor<device_type, T, CondT>()(ctx->device_ctx(), dz->shape().elem_cnt(),
                                             broadcasted_cond_ptr, dz->dptr<T>(), broadcasted_dx_ptr,
                                             broadcasted_dy_ptr);
   TryGetTmpPtrAndDoReduceSum<device_type>(ctx->device_ctx(), dz->shape(), broadcasted_dx_ptr, dx,
-                                          tmp->mut_dptr(), &tmp_byte_offset);
+                                          tmp_ptr, &tmp_byte_offset);
   TryGetTmpPtrAndDoReduceSum<device_type>(ctx->device_ctx(), dz->shape(), broadcasted_dy_ptr, dy,
-                                          tmp->mut_dptr(), &tmp_byte_offset);
-  CHECK_LE(tmp_byte_offset, tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()));
+                                          tmp_ptr, &tmp_byte_offset);
+  if (tmp) {
+    CHECK_LE(tmp_byte_offset, tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()));
+  } else {
+    CHECK_EQ(tmp_byte_offset, 0);
+  }
 }
 
 size_t InferWhereTmpBufferSize(user_op::InferContext* ctx) {
