@@ -71,16 +71,19 @@ void LocalhostTransporter::Transport(TransportKey2SendRequest* transport_key2sen
   auto* hub = GetTransportRequestHub();
   OBJECT_MSG_MAP_FOR_EACH(transport_key2send_request, send_request) {
     transport_key2send_request->Erase(send_request.Mutable());
+    ObjectMsgPtr<ReceiveTransportRequest> receive_request;
     {
       std::unique_lock<std::mutex> lock(*hub->mut_mutex());
-      auto* receive_request =
-          hub->mut_transport_key2receive_request()->FindPtr(send_request->transport_key());
-      if (receive_request == nullptr) {
-        CHECK(hub->mut_transport_key2send_request()->Insert(send_request.Mutable()).second);
+      receive_request =
+          hub->mut_transport_key2receive_request()->Find(send_request->transport_key());
+      if (receive_request) {
+        hub->mut_transport_key2receive_request()->Erase(receive_request.Mutable());
       } else {
-        CopyAndDecreaseIncompleteCnt(receive_request, send_request.Mutable());
-        hub->mut_transport_key2receive_request()->Erase(receive_request);
+        CHECK(hub->mut_transport_key2send_request()->Insert(send_request.Mutable()).second);
       }
+    }
+    if (receive_request) {
+      CopyAndDecreaseIncompleteCnt(receive_request.Mutable(), send_request.Mutable());
     }
   }
 }
@@ -90,16 +93,18 @@ void LocalhostTransporter::Transport(
   auto* hub = GetTransportRequestHub();
   OBJECT_MSG_MAP_FOR_EACH(transport_key2receive_request, receive_request) {
     transport_key2receive_request->Erase(receive_request.Mutable());
+    ObjectMsgPtr<SendTransportRequest> send_request;
     {
       std::unique_lock<std::mutex> lock(*hub->mut_mutex());
-      auto* send_request =
-          hub->mut_transport_key2send_request()->FindPtr(receive_request->transport_key());
-      if (send_request == nullptr) {
-        CHECK(hub->mut_transport_key2receive_request()->Insert(receive_request.Mutable()).second);
+      send_request = hub->mut_transport_key2send_request()->Find(receive_request->transport_key());
+      if (send_request) {
+        hub->mut_transport_key2send_request()->Erase(send_request.Mutable());
       } else {
-        CopyAndDecreaseIncompleteCnt(receive_request.Mutable(), send_request);
-        hub->mut_transport_key2send_request()->Erase(send_request);
+        CHECK(hub->mut_transport_key2receive_request()->Insert(receive_request.Mutable()).second);
       }
+    }
+    if (send_request) {
+      CopyAndDecreaseIncompleteCnt(receive_request.Mutable(), send_request.Mutable());
     }
   }
 }
