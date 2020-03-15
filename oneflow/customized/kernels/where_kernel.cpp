@@ -10,6 +10,30 @@ T* GetTmpPtr(void* tmp_ptr, size_t offset) {
   return reinterpret_cast<T*>(static_cast<char*>(tmp_ptr) + offset);
 }
 
+template<typename T>
+XpuVarNdarray<const T> GetReducedXpuVarNdarray(const user_op::Tensor* reduced_tensor,
+                                               const ShapeView& broadcasted_shape) {
+  if (reduced_tensor->shape().NumAxes() == broadcasted_shape.NumAxes()) {
+    return XpuVarNdarray<const T>(reduced_tensor->shape(), reduced_tensor->dptr<T>());
+  } else {
+    Shape extended_reduced_shape =
+        CreateLeftExtendedShape(reduced_tensor->shape(), broadcasted_shape.NumAxes());
+    return XpuVarNdarray<const T>(extended_reduced_shape, reduced_tensor->dptr<T>());
+  }
+}
+
+template<typename T>
+XpuVarNdarray<T> GetMutReducedXpuVarNdarray(user_op::Tensor* reduced_tensor,
+                                            const ShapeView& broadcasted_shape) {
+  if (reduced_tensor->shape().NumAxes() == broadcasted_shape.NumAxes()) {
+    return XpuVarNdarray<T>(reduced_tensor->shape(), reduced_tensor->mut_dptr<T>());
+  } else {
+    Shape extended_reduced_shape =
+        CreateLeftExtendedShape(reduced_tensor->shape(), broadcasted_shape.NumAxes());
+    return XpuVarNdarray<T>(extended_reduced_shape, reduced_tensor->mut_dptr<T>());
+  }
+}
+
 template<DeviceType device_type, typename T>
 const T* GetHasBroadcastedPtr(DeviceCtx* ctx, const ShapeView& broadcasted_shape,
                               const user_op::Tensor* reduced_tensor, void* tmp_ptr,
@@ -18,7 +42,7 @@ const T* GetHasBroadcastedPtr(DeviceCtx* ctx, const ShapeView& broadcasted_shape
   T* cur_tmp_ptr = GetTmpPtr<T>(tmp_ptr, *tmp_byte_offset);
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx, XpuVarNdarray<T>(broadcasted_shape, cur_tmp_ptr),
-      XpuVarNdarray<const T>(reduced_tensor->shape(), reduced_tensor->dptr<T>()));
+      GetReducedXpuVarNdarray<T>(reduced_tensor, broadcasted_shape));
   *tmp_byte_offset += GetCudaAlignedSize(broadcasted_shape.elem_cnt() * sizeof(T));
   return cur_tmp_ptr;
 }
@@ -49,7 +73,7 @@ void TryGetTmpPtrAndDoReduceSum(DeviceCtx* ctx, const ShapeView& broadcasted_sha
   size_t tmp_byte_size = GetCudaAlignedSize(broadcasted_shape.elem_cnt() * sizeof(T));
   *tmp_byte_offset += tmp_byte_size;
   NdarrayUtil<device_type, T>::ReduceSum(
-      ctx, XpuVarNdarray<T>(reduced_tensor->shape(), reduced_tensor->mut_dptr<T>()),
+      ctx, GetMutReducedXpuVarNdarray<T>(reduced_tensor, broadcasted_shape),
       XpuVarNdarray<const T>(broadcasted_shape, broadcasted_ptr),
       XpuVarNdarray<T>(broadcasted_shape, cur_tmp_ptr));
 }
