@@ -15,11 +15,9 @@ static const int kVmInstructionOperandLimit = 64;
 
 // clang-format off
 FLAT_MSG_BEGIN(VmInstructionProto);
-  FLAT_MSG_DEFINE_OPTIONAL(int64_t, vm_instruction_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
   FLAT_MSG_DEFINE_REPEATED(VmInstructionOperand, operand, kVmInstructionOperandLimit);
-  FLAT_MSG_DEFINE_OPTIONAL(VmStreamMask, vm_stream_mask);
 FLAT_MSG_END(VmInstructionProto);
 // clang-format on
 

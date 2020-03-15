@@ -53,7 +53,6 @@ ObjectMsgPtr<VmInstructionMsg> CudaCopyD2HVmStreamType::Copy(uint64_t dst, uint6
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(0);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaCopyD2HInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);

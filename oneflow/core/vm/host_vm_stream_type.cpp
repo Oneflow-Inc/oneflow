@@ -175,7 +175,6 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t logical
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -190,7 +189,6 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Malloc(uint64_t logical_object_
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kMallocOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -204,7 +202,6 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t logical_o
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -217,7 +214,6 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Free(uint64_t logical_object_id
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(HostInstrOpCode::kFreeOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);

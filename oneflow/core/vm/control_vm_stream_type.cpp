@@ -31,7 +31,6 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewSymbol(
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(CtrlInstrOpCode::kNewSymbol);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
     view->set_logical_object_id(logical_object_id);
@@ -75,7 +74,6 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteSymbol(
     mirrored_object_operand->set_logical_object_id(logical_object_id);
     mirrored_object_operand->mutable_all_parallel_id();
   }
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   return vm_instr_msg;
 }
 void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
