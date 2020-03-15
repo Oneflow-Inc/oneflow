@@ -20,6 +20,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
   PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   PUBLIC void Receive(VmInstructionMsgList* vm_instr_list);
+  PUBLIC void Receive(ObjectMsgPtr<VmInstructionMsg>&& vm_instruction_msg);
   PUBLIC void Schedule();
   PUBLIC bool Empty() const;
 

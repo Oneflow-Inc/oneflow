@@ -18,7 +18,7 @@ Transporter* GetTransporter(VmInstrChain* vm_instr_chain) {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(L2RReceiverInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, dst);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
   FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, logical_token);
   FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
 FLAT_MSG_VIEW_END(L2RReceiverInstruction);
