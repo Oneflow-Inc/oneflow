@@ -185,7 +185,7 @@ void VmScheduler::DispatchVmInstruction(ReadyVmInstrChainList* ready_chain_list)
 
 void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
-  auto Init = [&](const VmStreamDesc* vm_stream_desc) {
+  auto Init = [&](VmStreamDesc* vm_stream_desc) {
     auto vm_stream_rt_desc = ObjectMsgPtr<VmStreamRtDesc>::NewFrom(allocator, vm_stream_desc);
     mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
     BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
@@ -207,11 +207,15 @@ void VmScheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator)
     CHECK_NE(vm_stream_desc->vm_stream_type_id(), ControlVmStreamType::kVmStreamTypeId);
     Init(vm_stream_desc);
   }
-  Init(&ObjectMsgPtr<VmStreamDesc>::New(ControlVmStreamType::kVmStreamTypeId, 1, 1, 1).Get());
+  Init(ObjectMsgPtr<VmStreamDesc>::New(ControlVmStreamType::kVmStreamTypeId, 1, 1, 1).Mutable());
 }
 
 void VmScheduler::Receive(VmInstructionMsgList* vm_instr_list) {
   mut_pending_msg_list()->MoveFrom(vm_instr_list);
+}
+
+void VmScheduler::Receive(ObjectMsgPtr<VmInstructionMsg>&& vm_instruction_msg) {
+  mut_pending_msg_list()->EmplaceBack(std::move(vm_instruction_msg));
 }
 
 void VmScheduler::Schedule() {

@@ -15,6 +15,9 @@ class HostVmStreamType final : public VmStreamType {
 
   static const VmStreamTypeId kVmStreamTypeId = 2;
 
+  ObjectMsgPtr<VmInstructionMsg> Malloc(uint64_t logical_object_id, size_t size) const;
+  ObjectMsgPtr<VmInstructionMsg> Free(uint64_t logical_object_id) const;
+
   ObjectMsgPtr<VmInstructionMsg> CudaMallocHost(uint64_t logical_object_id, size_t size) const;
   ObjectMsgPtr<VmInstructionMsg> CudaFreeHost(uint64_t logical_object_id) const;
 
