@@ -64,7 +64,6 @@ ObjectMsgPtr<VmInstructionMsg> L2RReceiverVmStreamType::Receive(uint64_t logical
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(0);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<L2RReceiverInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);

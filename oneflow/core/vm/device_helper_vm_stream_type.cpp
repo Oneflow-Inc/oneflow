@@ -115,7 +115,6 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaMalloc(uint64_t log
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaMallocInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -130,7 +129,6 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaFree(
   auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
   vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
   vm_instr_proto->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
-  vm_instr_proto->mutable_vm_stream_mask()->mutable_all_vm_stream_enabled();
   {
     FlatMsgView<CudaFreeInstruction> view(vm_instr_proto->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
