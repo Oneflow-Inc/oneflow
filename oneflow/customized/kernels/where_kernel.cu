@@ -13,7 +13,7 @@ __global__ void CudaWhere(const int64_t elem_cnt, const CondT* cond, const T* lh
 template<typename T, typename CondT>
 __global__ void CudaWhereGrad(const int64_t elem_cnt, const CondT* cond, const T* grad, T* lhs_grad,
                               T* rhs_grad) {
-  DoWhere(elem_cnt, cond, grad, lhs_grad, rhs_grad);
+  DoWhereGrad(elem_cnt, cond, grad, lhs_grad, rhs_grad);
 }
 
 }  // namespace
