@@ -16,10 +16,9 @@ class ControlVmStreamType final : public VmStreamType {
 
   static const VmStreamTypeId kVmStreamTypeId = 0;
 
-  ObjectMsgPtr<VmInstructionMsg> NewMirroredObjectSymbol(const LogicalObjectId& logical_object_id,
-                                                         int64_t parallel_num) const;
-  ObjectMsgPtr<VmInstructionMsg> DeleteMirroredObjectSymbol(
-      const LogicalObjectId& logical_object_id) const;
+  ObjectMsgPtr<VmInstructionMsg> NewSymbol(const LogicalObjectId& logical_object_id,
+                                           int64_t parallel_num) const;
+  ObjectMsgPtr<VmInstructionMsg> DeleteSymbol(const LogicalObjectId& logical_object_id) const;
 
   bool IsSourceOpcode(VmInstructionOpcode opcode) const;
 

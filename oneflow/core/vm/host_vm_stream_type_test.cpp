@@ -22,10 +22,10 @@ TEST(HostVmStreamType, basic) {
   auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, 1));
   list.EmplaceBack(HostVmStreamType().CudaMallocHost(symbol_value, 1024));
   list.EmplaceBack(HostVmStreamType().CudaFreeHost(symbol_value));
-  list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(symbol_value));
+  list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
@@ -51,7 +51,7 @@ TEST(HostVmStreamType, two_device) {
   auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
   list.EmplaceBack(HostVmStreamType().CudaMallocHost(symbol_value, 1024));
   scheduler->Receive(&list);
   scheduler->Schedule();

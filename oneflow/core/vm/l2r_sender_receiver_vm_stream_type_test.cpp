@@ -34,7 +34,7 @@ ObjectMsgPtr<VmScheduler> NewTestScheduler(uint64_t symbol_value, size_t size) {
   auto vm_desc = NewVmDesc();
   auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
   VmInstructionMsgList list;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, 1));
   list.EmplaceBack(HostVmStreamType().Malloc(symbol_value, size));
   scheduler->Receive(&list);
   return scheduler;

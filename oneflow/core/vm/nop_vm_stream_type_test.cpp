@@ -68,7 +68,7 @@ void TestNopVmStreamTypeOneArgument(
   auto scheduler = NewScheduler(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
   nop0_vm_instr_msg->mut_vm_instruction_proto()
@@ -126,7 +126,7 @@ TEST(NopVmStreamType, one_argument_triger_next_chain) {
   auto scheduler = NaiveNewVmScheduler(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
   nop0_vm_instr_msg->mut_vm_instruction_proto()
@@ -170,7 +170,7 @@ TEST(NopVmStreamType, one_argument_triger_all_chains) {
   auto scheduler = NaiveNewVmScheduler(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
   nop0_vm_instr_msg->mut_vm_instruction_proto()

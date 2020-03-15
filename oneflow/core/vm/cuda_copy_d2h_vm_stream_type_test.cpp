@@ -36,8 +36,8 @@ void TestSimple(int64_t parallel_num) {
   uint64_t src_symbol = 9527;
   uint64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(src_symbol, parallel_num));
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(dst_symbol, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(src_symbol, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(dst_symbol, parallel_num));
   list.EmplaceBack(DeviceHelperVmStreamType().CudaMalloc(src_symbol, size));
   list.EmplaceBack(HostVmStreamType().CudaMallocHost(dst_symbol, size));
   list.EmplaceBack(CudaCopyD2HVmStreamType().Copy(dst_symbol, src_symbol, size));
