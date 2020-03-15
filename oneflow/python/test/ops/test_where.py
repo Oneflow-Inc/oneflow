@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+
 # import tensorflow as tf
 from collections import OrderedDict
 from test_util import GenArgList
@@ -72,6 +73,28 @@ def test_where(test_case):
     arg_dict["cond_shape"] = [[4, 5, 8]]
     arg_dict["x_shape"] = [[1, 5, 8]]
     arg_dict["y_shape"] = [[4, 1, 8]]
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["dynamic"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_with_np(test_case, *arg)
+
+
+def test_where_case_1(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["cond_shape"] = [[10, 7, 9]]
+    arg_dict["x_shape"] = [[20, 10, 7, 9]]
+    arg_dict["y_shape"] = [[20, 10, 1, 1]]
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["dynamic"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_with_np(test_case, *arg)
+
+
+def test_where_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["cond_shape"] = [[12, 25, 6]]
+    arg_dict["x_shape"] = [[12, 1, 6]]
+    arg_dict["y_shape"] = [[25, 1]]
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["dynamic"] = [True, False]
     for arg in GenArgList(arg_dict):
