@@ -24,6 +24,7 @@ class TensorBuffer {
     CHECK(val != DataType::kTensorBuffer) << "TensorBuffer cannot store datatype as itself";
     if (data_type_ == val) { return; }
     data_type_ = val;
+    if (val == DataType::kInvalidDataType) { return; }
     size_t new_num_bytes = elem_cnt() * GetSizeOfDataType(val);
     if (new_num_bytes > num_bytes_) { reserve(new_num_bytes); }
   }
@@ -87,15 +88,42 @@ class TensorBuffer {
 
   void Resize(const Shape& new_shape) { Resize(new_shape, data_type_); }
 
-  void Resize(const Shape& new_shape, DataType new_type) { TODO(); }
+  void Resize(const Shape& new_shape, DataType new_type) {
+    int64_t elem_cnt = new_shape.elem_cnt();
+    if (new_type == DataType::kInvalidDataType || elem_cnt == 0) { return; }
+
+    data_type_ = new_type;
+    shape_ = new_shape;
+
+    size_t new_num_bytes = elem_cnt * GetSizeOfDataType(new_type);
+    if (new_num_bytes > num_bytes_) {
+      new_num_bytes =
+          std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
+      reserve(new_num_bytes);
+    } else if (!MemoryCaseUtil::IsPinnedMemoryCase(mem_case_)
+               && RoundUp(new_num_bytes, kTensorBufferAlignedSize)
+                      < num_bytes_ * shrink_threshold_) {
+      data_.reset();
+      num_bytes_ = 0;
+      reserve(RoundUp(new_num_bytes, kTensorBufferAlignedSize));
+    }
+  }
 
  private:
+  // TODO(chengcheng)
+  static double growth_factor_;
+  static double shrink_threshold_;
+  static constexpr size_t kTensorBufferAlignedSize = 1024;
+
   Shape shape_;
   std::shared_ptr<void> data_;
   DataType data_type_;
   size_t num_bytes_;
   MemoryCase mem_case_;
 };
+
+double TensorBuffer::growth_factor_ = 1.0;
+double TensorBuffer::shrink_threshold_ = 0.9;
 
 }  // namespace oneflow
 

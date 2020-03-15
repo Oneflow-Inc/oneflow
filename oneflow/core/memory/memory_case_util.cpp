@@ -46,4 +46,15 @@ int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase&
   return (machine_id << 32) | mem_zone_id;
 }
 
+bool MemoryCaseUtil::IsPinnedMemoryCase(const MemoryCase& mem_case) {
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().has_cuda_pinned_mem() || mem_case.host_mem().used_by_network()) {
+      return true;
+    }
+  } else if (mem_case.has_device_cuda_mem()) {
+    return true;
+  }
+  return false;
+}
+
 }  // namespace oneflow
