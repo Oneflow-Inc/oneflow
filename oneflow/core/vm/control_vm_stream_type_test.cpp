@@ -21,7 +21,7 @@ TEST(ControlVmStreamType, new_symbol) {
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 1);
@@ -47,12 +47,12 @@ TEST(ControlVmStreamType, delete_symbol) {
   VmInstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
   auto* operand = nop0_vm_instr_msg->mut_vm_instruction_proto()->mut_operand()->Add();
   operand->mutable_mutable_operand()->mutable_operand()->__Init__(symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
-  list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(symbol_value));
+  list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);

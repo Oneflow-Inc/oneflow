@@ -22,10 +22,10 @@ TEST(DeviceHelperVmStreamType, basic) {
   auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
   VmInstructionMsgList list;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(symbol_value, 1));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, 1));
   list.EmplaceBack(DeviceHelperVmStreamType().CudaMalloc(symbol_value, 1024));
   list.EmplaceBack(DeviceHelperVmStreamType().CudaFree(symbol_value));
-  list.EmplaceBack(ControlVmStreamType().DeleteMirroredObjectSymbol(symbol_value));
+  list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();

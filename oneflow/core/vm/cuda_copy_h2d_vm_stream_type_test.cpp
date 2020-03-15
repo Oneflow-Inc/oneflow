@@ -36,8 +36,8 @@ TEST(CudaCopyH2DVmStreamType, basic) {
   uint64_t src_symbol = 9527;
   uint64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(src_symbol, 1));
-  list.EmplaceBack(ControlVmStreamType().NewMirroredObjectSymbol(dst_symbol, 1));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(src_symbol, 1));
+  list.EmplaceBack(ControlVmStreamType().NewSymbol(dst_symbol, 1));
   list.EmplaceBack(HostVmStreamType().CudaMallocHost(src_symbol, size));
   list.EmplaceBack(DeviceHelperVmStreamType().CudaMalloc(dst_symbol, size));
   list.EmplaceBack(CudaCopyH2DVmStreamType().Copy(dst_symbol, src_symbol, size));
