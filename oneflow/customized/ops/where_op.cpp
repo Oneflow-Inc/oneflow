@@ -130,4 +130,24 @@ REGISTER_USER_OP("where_grad")
       y_arg_modifier->set_use_header_only(true);
     });
 
+REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                         user_op::AddOpFn AddOp) {
+  bool x_need_grad = op.NeedGenGradTensor4OpInput("x", 0);
+  bool y_need_grad = op.NeedGenGradTensor4OpInput("y", 0);
+  if (x_need_grad || y_need_grad) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op = builder.Op("where_grad")
+                                             .Input("condition", op.input("condition", 0))
+                                             .Input("x", op.input("x", 0))
+                                             .Input("y", op.input("y", 0))
+                                             .Input("dz", op.GetGradTensorWithOpOutput("out", 0))
+                                             .Output("dx")
+                                             .Output("dy")
+                                             .Build();
+    if (x_need_grad) { op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0); }
+    if (y_need_grad) { op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0); }
+    AddOp(grad_op);
+  }
+});
+
 }  // namespace oneflow
