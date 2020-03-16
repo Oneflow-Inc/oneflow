@@ -19,8 +19,12 @@ FLAT_MSG_BEGIN(MutableMirroredObjectOperand);
 FLAT_MSG_END(MutableMirroredObjectOperand);
 // clang-format on
 
+class VmInstructionOperandProto;
 // clang-format off
 FLAT_MSG_BEGIN(VmInstructionOperand);
+  // methods
+  PUBLIC void __Init__(const VmInstructionOperandProto& proto);
+  // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableMirroredObjectOperand, mutable_operand)

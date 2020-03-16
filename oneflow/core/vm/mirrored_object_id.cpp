@@ -14,6 +14,18 @@ void MirroredObjectOperand::__Init__(const LogicalObjectId& logical_object_id) {
   mutable_mirrored_parallel_id();
 }
 
+void MirroredObjectOperand::__Init__(const MirroredObjectOperandProto& proto) {
+  if (proto.has_fixed_parallel_id()) {
+    set_fixed_parallel_id(fixed_parallel_id());
+  } else if (proto.has_mirrored_parallel_id()) {
+    set_mirrored_parallel_id(mirrored_parallel_id());
+  } else if (proto.has_all_parallel_id()) {
+    set_all_parallel_id(all_parallel_id());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 int64_t MirroredObjectOperand::GetParallelId(int64_t parallel_id) const {
   if (has_fixed_parallel_id()) { return fixed_parallel_id(); }
   CHECK(has_mirrored_parallel_id());

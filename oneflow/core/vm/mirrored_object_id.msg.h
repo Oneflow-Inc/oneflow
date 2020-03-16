@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/vm_instruction.pb.h"
 
 namespace oneflow {
 
@@ -17,6 +18,7 @@ FLAT_MSG_BEGIN(MirroredObjectOperand);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, int64_t parallel_id);
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
+  PUBLIC void __Init__(const MirroredObjectOperandProto& proto);
   PUBLIC int64_t GetParallelId(int64_t default_parallel_id) const;
 
   // fields

@@ -11,6 +11,14 @@ VmInstructionOperand* VmInstructionMsg::add_operand() {
   return mut_operand()->back().Mutable();
 }
 
+void VmInstructionMsg::__Init__(const VmInstructionProto& proto) {
+  mutable_vm_instr_id()->__Init__(proto.vm_instr_type_name());
+  mutable_operand()->resize(proto.operand_size());
+  for (int i = 0; i < proto.operand_size(); ++i) {
+    mutable_operand()->at(i)->__Init__(proto.operand(i));
+  }
+}
+
 MirroredObject* VmInstruction::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                            int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
