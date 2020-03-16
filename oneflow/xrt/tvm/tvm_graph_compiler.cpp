@@ -102,7 +102,9 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
 
     TVMOpContext ctx(node, std::move(node_inputs));
     auto op_kernel = BuildTVMOpKernel(node->type());
+    op_kernel->Compile(&ctx);
     tvm::relay::Expr op_expr = ctx.op_expr();
+    CHECK(op_expr.defined()) << "Get an empty tvm expresion for node: " << node->name();
 
     for (const auto* out_edge : node->out_edges()) {
       auto out_arg_name = out_edge->argument().name();
