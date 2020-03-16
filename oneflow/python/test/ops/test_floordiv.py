@@ -57,18 +57,19 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
         y = tf.Variable(np.load(os.path.join(GetSavePath(), "y.npy")))
-        tf_out = tf.floordiv(x, y)
+        tf_out = tf.math.floordiv(x, y)
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(
-        GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(
-        GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.all(np.load(os.path.join(
+        GetSavePath(), "x_diff.npy")) == 0)
+    assert np.all(np.load(os.path.join(
+        GetSavePath(), "y_diff.npy")) == 0)
+    assert tf_x_diff is None
+    assert tf_y_diff is None
 
- 
 def test_floordiv(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]

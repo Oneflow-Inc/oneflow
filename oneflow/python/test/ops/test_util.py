@@ -19,7 +19,7 @@ def GenArgList(arg_dict):
 
 
 def GetSavePath():
-    return "/tmp/op_unit_test/"
+    return "~/tmp/op_unit_test/"
 
 
 # Save func for flow.watch
