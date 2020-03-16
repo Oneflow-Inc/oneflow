@@ -106,8 +106,7 @@ std::shared_ptr<Executable> OpenvinoGraphCompiler::Compile(
   }
   auto executable_network =
       std::make_unique<InferenceEngine::ExecutableNetwork>(ie.LoadNetwork(cnnNetwork, "CPU"));
-  return std::make_shared<OpenvinoExecutable>(std::move(executable_network),
-                                              in_out_to_param_idx);
+  return std::make_shared<OpenvinoExecutable>(std::move(executable_network), in_out_to_param_idx);
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::OPENVINO, OpenvinoGraphCompiler);
