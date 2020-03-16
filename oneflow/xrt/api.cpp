@@ -67,8 +67,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(MaxPooling2D), "MaxPooling2D"},
     {OP_TYPE_CASE(AveragePooling2D), "AveragePooling2D"},
     {OP_TYPE_CASE(Normalization), "Normalization"},
-    {OP_TYPE_CASE(UpsampleNearest), "UpsampleNearest"},
-    {OP_TYPE_CASE(LeakyRelu), "LeakyRelu"},
+    //{OP_TYPE_CASE(UpsampleNearest), "UpsampleNearest"},
+    //{OP_TYPE_CASE(LeakyRelu), "LeakyRelu"},
     // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
     // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
