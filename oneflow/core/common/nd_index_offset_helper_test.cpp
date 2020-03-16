@@ -89,8 +89,12 @@ TEST(NdIndexOffsetHelper, constructor) {
   const NdIndexOffsetHelper<int64_t, 3> helper1(d0, d1, d2);
   const NdIndexOffsetHelper<int64_t, 3> helper2(dims.data());
   const NdIndexOffsetHelper<int64_t, 3> helper3(dims.data(), dims.size());
-  ASSERT_EQ(helper2.stride_, helper1.stride_);
-  ASSERT_EQ(helper3.stride_, helper1.stride_);
+  std::vector<int64_t> stride({d1 * d2, d2, 1});
+  for (int i = 0; i < 3; ++i) {
+    ASSERT_EQ(helper1.stride_[i], stride[i]);
+    ASSERT_EQ(helper2.stride_[i], stride[i]);
+    ASSERT_EQ(helper3.stride_[i], stride[i]);
+  }
 }
 
 }  // namespace test
