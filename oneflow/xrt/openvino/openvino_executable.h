@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_XRT_OPENVINO_OPENVINO_EXECUTABLE_H_
 #define ONEFLOW_XRT_OPENVINO_OPENVINO_EXECUTABLE_H_
 
-#include <vector>
 #include <inference_engine.hpp>
 
 #include "oneflow/xrt/executable.h"

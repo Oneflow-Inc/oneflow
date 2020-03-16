@@ -1,9 +1,6 @@
 #include "oneflow/xrt/openvino/openvino_executable.h"
 #include "oneflow/xrt/platform.h"
 
-#include <iostream>
-#include <sstream>
-
 namespace oneflow {
 namespace xrt {
 namespace openvino {
