@@ -96,5 +96,7 @@ void CudaCopyH2DVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
 }
 
 COMMAND(RegisterVmStreamType<CudaCopyH2DVmStreamType>());
+COMMAND(RegisterVmInstructionId<CudaCopyH2DVmStreamType>("CopyH2D", 0, kVmRemote));
+COMMAND(RegisterVmInstructionId<CudaCopyH2DVmStreamType>("CudaCopyH2D", 0, kVmRemote));
 
 }  // namespace oneflow

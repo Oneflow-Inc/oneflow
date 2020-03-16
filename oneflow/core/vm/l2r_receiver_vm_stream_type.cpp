@@ -109,5 +109,7 @@ void L2RReceiverVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
 }
 
 COMMAND(RegisterVmStreamType<L2RReceiverVmStreamType>());
+COMMAND(RegisterVmInstructionId<L2RReceiverVmStreamType>("L2RReceive", 0, kVmRemote));
+COMMAND(RegisterVmInstructionId<L2RReceiverVmStreamType>("L2RLocalReceive", 0, kVmLocal));
 
 }  // namespace oneflow

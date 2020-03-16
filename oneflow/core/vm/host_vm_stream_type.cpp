@@ -59,6 +59,8 @@ void VmCudaMallocHost(VmInstruction* vm_instr) {
   mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, VmCudaMallocHost);
+COMMAND(RegisterVmInstructionId<HostVmStreamType>("CudaMallocHost", kCudaMallocHostOpcode,
+                                                  kVmRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(MallocInstruction);
@@ -92,6 +94,7 @@ void VmMalloc(VmInstruction* vm_instr) {
   mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_HOST_INSTRUCTION(kMallocOpcode, VmMalloc);
+COMMAND(RegisterVmInstructionId<HostVmStreamType>("Malloc", kMallocOpcode, kVmRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
@@ -120,6 +123,7 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
   mirrored_object->clear_host_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, VmCudaFreeHost);
+COMMAND(RegisterVmInstructionId<HostVmStreamType>("CudaFreeHost", kCudaFreeHostOpcode, kVmRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(FreeInstruction);
@@ -148,6 +152,7 @@ void VmFree(VmInstruction* vm_instr) {
   mirrored_object->clear_host_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kFreeOpcode, VmFree);
+COMMAND(RegisterVmInstructionId<HostVmStreamType>("Free", kFreeOpcode, kVmRemote));
 
 }  // namespace
 

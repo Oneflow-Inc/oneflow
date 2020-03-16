@@ -8,16 +8,9 @@
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_stream_type.h"
+#include "oneflow/core/vm/vm_instruction_id.msg.h"
 
 namespace oneflow {
-
-// clang-format off
-FLAT_MSG_BEGIN(VmInstructionId);
-  FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
-  FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
-  FLAT_MSG_DEFINE_OPTIONAL(bool, is_local);
-FLAT_MSG_END(VmInstructionId);
-// clang-format on
 
 class MirroredObject;
 
