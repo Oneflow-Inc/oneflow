@@ -13,6 +13,7 @@ namespace oneflow {
 #define FLAT_MSG_BEGIN(struct_name)                        \
   struct struct_name final {                               \
     using self_type = struct_name;                         \
+    using self_value_type = struct_name;                   \
     static const bool __is_flat_message_type__ = true;     \
     PRIVATE DEFINE_STATIC_COUNTER(field_counter);          \
     DSS_BEGIN(STATIC_COUNTER(field_counter), struct_name); \
@@ -95,6 +96,7 @@ struct FlatMsgSelfType<
 template<typename T>
 struct FlatMsg final {
   using value_type = typename FLAT_MSG_TYPE_CHECK(T);
+  using self_value_type = value_type;
   FlatMsg() { msg_.clear(); }
 
   const value_type& operator*() const { return msg_; }
@@ -410,6 +412,7 @@ class FlatMsgRepeatedField final {
   }
 
   const T* data() const { return &Get(0); }
+  T* data() { return Mutable(0); }
   T* mut_data() { return Mutable(0); }
 
   T* Add() {
