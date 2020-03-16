@@ -20,11 +20,18 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
-if (WITH_TENSORRT)
+if (WITH_TENSORRT OR WITH_OPENVINO)
   if (NOT WITH_XLA)
     include(absl)
   endif()
+endif()
+
+if (WITH_TENSORRT)
   include(tensorrt)
+endif()
+
+if (WITH_OPENVINO)
+  include(openvino)
 endif()
 
 if (BUILD_CUDA)
@@ -188,6 +195,10 @@ if(BUILD_RDMA)
   endif()
 endif()
 
+if(WITH_OPENVINO)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${OPENVINO_INCLUDE_DIR})
+endif()
+
 include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
@@ -195,11 +206,18 @@ if(WITH_XLA)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
-if(WITH_TENSORRT)
+if(WITH_TENSORRT OR WITH_OPENVINO)
   if (NOT WITH_XLA)
     list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
   endif()
+endif()
+
+if (WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
+endif()
+
+if (WITH_OPENVINO)
+  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
