@@ -6,7 +6,7 @@ namespace oneflow {
 template<typename T>
 class CpuArgSortKernel final : public user_op::OpKernel {
  public:
-  CpuArgSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  CpuArgSortKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CpuArgSortKernel() = default;
   ~CpuArgSortKernel() = default;
 
@@ -44,15 +44,14 @@ class CpuArgSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("arg_sort")                                                    \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {               \
-        return new CpuArgSortKernel<dtype>(ctx);                                      \
-      })                                                                              \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {           \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && in_desc->data_type() == GetDataType<dtype>::value;                  \
+#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                                 \
+  REGISTER_USER_KERNEL("arg_sort")                                                          \
+      .SetCreateFn(                                                                         \
+          [](user_op::KernelInitContext* ctx) { return new CpuArgSortKernel<dtype>(ctx); }) \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);       \
+        return ctx.device_type() == DeviceType::kCPU                                        \
+               && in_desc->data_type() == GetDataType<dtype>::value;                        \
       });
 
 REGISTER_CPU_ARG_SORT_KERNEL(float)
