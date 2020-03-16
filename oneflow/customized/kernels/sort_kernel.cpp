@@ -6,7 +6,7 @@ namespace oneflow {
 template<typename T>
 class CpuSortKernel final : public user_op::OpKernel {
  public:
-  CpuSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  CpuSortKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CpuSortKernel() = default;
   ~CpuSortKernel() = default;
 
@@ -35,15 +35,13 @@ class CpuSortKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_SORT_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("sort")                                                          \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                 \
-        return new CpuSortKernel<dtype>(ctx);                                           \
-      })                                                                                \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                    \
-               && out_desc->data_type() == GetDataType<dtype>::value;                   \
+#define REGISTER_CPU_SORT_KERNEL(dtype)                                                           \
+  REGISTER_USER_KERNEL("sort")                                                                    \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) { return new CpuSortKernel<dtype>(ctx); }) \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
+        return ctx.device_type() == DeviceType::kCPU                                              \
+               && out_desc->data_type() == GetDataType<dtype>::value;                             \
       });
 
 REGISTER_CPU_SORT_KERNEL(float)

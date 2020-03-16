@@ -162,7 +162,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
                                             pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                                             pad_large_side ? &(pad_large_side->at(i)) : nullptr);
     }
-  }else{
+  } else {
     FOR_RANGE(int32_t, i, 0, opkernel_dim) {
       GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
                             dilation_rate.Get(i), strides.Get(i), padding,
