@@ -6,13 +6,6 @@ namespace oneflow {
 
 namespace {
 
-#define ARGWHERE_SUPPORTED_DATA_TYPE_SEQ        \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8) \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-
-#define ARGWHERE_SUPPORTED_INDEX_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-
 Maybe<size_t> InferArgwhereTmpBufferSize(const BlobDesc* in_desc, DataType out_data_type) {
   int64_t elem_cnt = in_desc->shape().elem_cnt();
   size_t tmp_bytes = 0;
@@ -25,7 +18,7 @@ Maybe<size_t> InferArgwhereTmpBufferSize(const BlobDesc* in_desc, DataType out_d
          nullptr, elem_cnt, tmp_bytes));                                            \
    }},
 
-  static const HashMap<std::string, std::function<cudaError_t(int, size_t&)>> infer_fn_map = {
+  static const HashMap<std::string, std::function<void(int, size_t&)>> infer_fn_map = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_INFER_ARGWHERE_TMP_FN_PAIR_ENTRY,
                                        ARGWHERE_SUPPORTED_DATA_TYPE_SEQ,
                                        ARGWHERE_SUPPORTED_INDEX_TYPE_SEQ)};
@@ -36,7 +29,7 @@ Maybe<size_t> InferArgwhereTmpBufferSize(const BlobDesc* in_desc, DataType out_d
       << "Argwhere op do not support data_type (" << in_desc->data_type() << "), index_type ("
       << out_data_type << ")";
 
-  (*infer_fn_it)(elem_cnt, tmp_bytes);
+  infer_fn_it->second(elem_cnt, tmp_bytes);
   return tmp_bytes;
 }
 
@@ -94,8 +87,8 @@ class ArgwhereOp final : public Operator {
     const BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     kernel_conf->set_data_type(out_desc->data_type());
     kernel_conf->mutable_argwhere_gpu_conf()->set_num_axes(in_desc->shape().NumAxes());
-    kernel_conf->mutable_argwhere_gpu_conf()->set_data_type(in_desc->shape().NumAxes());
-    kernel_conf->mutable_argwhere_gpu_conf()->set_index_type(out_desc->shape().NumAxes());
+    kernel_conf->mutable_argwhere_gpu_conf()->set_data_type(in_desc->data_type());
+    kernel_conf->mutable_argwhere_gpu_conf()->set_index_type(out_desc->data_type());
   }
 
  private:

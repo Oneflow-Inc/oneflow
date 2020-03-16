@@ -36,7 +36,7 @@ __global__ void CudaFlatIndexToNdIndex(const int64_t* num_indices_ptr,
   int32_t num_indices = static_cast<int32_t>(__ldg(num_indices_ptr));
   CUDA_1D_KERNEL_LOOP(i, num_indices) {
     T* cur_indices_ptr = out_ptr + i * NDims;
-    OffsetToNdIndex(__ldg(cur_indices_ptr), cur_indices_ptr);
+    index_convertor.OffsetToNdIndex(__ldg(cur_indices_ptr), cur_indices_ptr);
   }
 }
 
@@ -45,14 +45,26 @@ struct IsNonzero {
   OF_DEVICE_FUNC bool operator()(const T& val) const { return (val != static_cast<T>(0)); }
 };
 
-}  // namespace
+template<typename T, typename I, size_t NDims>
+struct IndexConvertorMaker {
+  NdIndexOffsetHelper<I, NDims> operator()(const ShapeView& shape) {
+    static_assert(std::is_same<std::remove_cv<ShapeView::DimType>::type, T>::value, "");
+    fixed_vector<I, NDims> dims(NDims);
+    std::transform(shape.ptr(), shape.ptr() + shape.NumAxes(), dims.begin(),
+                   [](T dim) { return static_cast<I>(dim); });
+    return NdIndexOffsetHelper<I, NDims>(dims.data(), dims.size());
+  }
+};
 
-template<typename T, typename I>
-cudaError_t InferCubSelectFlaggedTempStorageBytes(DeviceCtx* ctx, int num_items,
-                                                  size_t& tmp_bytes) {
-  return CubSelectFlagged<T, I, I*>(ctx ? ctx->cuda_stream() : 0, num_items, nullptr, tmp_bytes,
-                                    nullptr, nullptr, nullptr)
-}
+template<typename T, size_t NDims>
+struct IndexConvertorMaker<T, T, NDims> {
+  NdIndexOffsetHelper<T, NDims> operator()(const ShapeView& shape) {
+    static_assert(std::is_same<std::remove_cv<ShapeView::DimType>::type, T>::value, "");
+    return NdIndexOffsetHelper<T, NDims>(shape.ptr(), shape.NumAxes());
+  }
+};
+
+}  // namespace
 
 template<typename T, typename I, typename Iter>
 cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
@@ -62,6 +74,13 @@ cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size
   cub::CountingInputIterator<I> flat_index_counter(0);
   return cub::DeviceSelect::Flagged(tmp, tmp_bytes, flat_index_counter, flag_iter, out_iter,
                                     num_selected, num_items, stream, false);
+}
+
+template<typename T, typename I>
+cudaError_t InferCubSelectFlaggedTempStorageBytes(DeviceCtx* ctx, int num_items,
+                                                  size_t& tmp_bytes) {
+  return CubSelectFlagged<T, I, I*>(ctx ? ctx->cuda_stream() : 0, num_items, nullptr, tmp_bytes,
+                                    nullptr, nullptr, nullptr);
 }
 
 template<typename T, typename I, size_t NDims>
@@ -93,10 +112,10 @@ class ArgwhereGpuKernel : public KernelIf<DeviceType::kGPU> {
           ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(), tmp_bytes, in->dptr<T>(),
           out_iter, out_size->mut_dptr<int64_t>()));
 
-      NdIndexOffsetHelper<I, NDims> index_convertor(in->shape().ptr());
+      IndexConvertorMaker<std::remove_cv<ShapeView::DimType>::type, I, NDims> idx_cvt_mkr;
       CudaFlatIndexToNdIndex<I, NDims>
           <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
-             ctx.device_ctx->cuda_stream()>>>(out_size->dptr<int64_t>(), index_convertor,
+             ctx.device_ctx->cuda_stream()>>>(out_size->dptr<int64_t>(), idx_cvt_mkr(in->shape()),
                                               out->mut_dptr<I>());
     }
   }
@@ -117,8 +136,11 @@ class ArgwhereGpuKernel : public KernelIf<DeviceType::kGPU> {
   REGISTER_ARGWHERE_GPU_KERNEL_NDIMS(dtype, itype, 3); \
   REGISTER_ARGWHERE_GPU_KERNEL_NDIMS(dtype, itype, 4);
 
-REGISTER_ARGWHERE_GPU_KERNEL(float, int32_t);
-REGISTER_ARGWHERE_GPU_KERNEL(int8_t, int32_t);
-REGISTER_ARGWHERE_GPU_KERNEL(int32_t, int32_t);
+#define REGISTER_ARGWHERE_GPU_KERNEL_DATA_TYPE_PAIR(dtype_pair, itype_pair) \
+  REGISTER_ARGWHERE_GPU_KERNEL(OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARGWHERE_GPU_KERNEL_DATA_TYPE_PAIR,
+                                 ARGWHERE_SUPPORTED_DATA_TYPE_SEQ,
+                                 ARGWHERE_SUPPORTED_INDEX_TYPE_SEQ)
 
 }  // namespace oneflow
