@@ -31,10 +31,9 @@ void MakeSendRequests(VmInstruction* vm_instr,
   const char* data_ptr = nullptr;
   size_t data_size = 0;
   {
-    auto* vm_instr_proto = vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto();
     const auto& vm_stream = vm_instr_chain->vm_stream();
     FlatMsgView<L2RSenderInstruction> view;
-    CHECK(view->Match(vm_instr_proto->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_parallel_id(vm_stream.parallel_id());
     data_size = view->size();
@@ -61,11 +60,11 @@ const VmStreamTypeId L2RSenderVmStreamType::kVmStreamTypeId;
 ObjectMsgPtr<VmInstructionMsg> L2RSenderVmStreamType::Send(uint64_t logical_token, uint64_t src,
                                                            size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(0);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(0);
   {
-    FlatMsgView<L2RSenderInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<L2RSenderInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_src()->mutable_operand()->__Init__(src);
     view->set_logical_token(logical_token);
     view->set_size(size);

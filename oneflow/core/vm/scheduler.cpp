@@ -44,7 +44,7 @@ void VmScheduler::FilterAndRunSourceControlVmInstructions(
     TmpPendingVmInstrMsgList* vm_instr_msg_list) {
   ControlVmStreamType control_vm_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    const auto& proto = vm_instr_msg->vm_instruction_proto();
+    const auto& proto = vm_instr_msg->vm_instr_id();
     if (proto.vm_stream_type_id() != ControlVmStreamType::kVmStreamTypeId) { continue; }
     if (!control_vm_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
     control_vm_stream_type.Run(this, vm_instr_msg);
@@ -55,7 +55,7 @@ void VmScheduler::FilterAndRunSourceControlVmInstructions(
 void VmScheduler::MakeVmInstrChains(TmpPendingVmInstrMsgList* vm_instr_msg_list,
                                     /*out*/ NewVmInstrChainList* new_vm_instr_chain_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instruction_proto().vm_stream_type_id();
+    VmStreamTypeId vm_stream_type_id = vm_instr_msg->vm_instr_id().vm_stream_type_id();
     auto* vm_stream_rt_desc = mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_vm_stream_id2vm_stream(),
                                             vm_stream) {
@@ -112,10 +112,10 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     int64_t parallel_id = vm_instr_chain->vm_stream().vm_stream_id().parallel_id();
     CHECK_EQ(vm_instr_chain->vm_instruction_list().size(), 1);
     auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
-    const auto& operands = vm_instruction->vm_instr_msg().vm_instruction_proto().operand();
+    const auto& operands = vm_instruction->vm_instr_msg().operand();
     for (const auto& operand : operands) {
-      if (!operand.has_mutable_operand()) { continue; }
-      const auto& mirrored_object_operand = operand.mutable_operand().operand();
+      if (!operand->has_mutable_operand()) { continue; }
+      const auto& mirrored_object_operand = operand->mutable_operand().operand();
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
@@ -123,8 +123,8 @@ void VmScheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                             });
     }
     for (const auto& operand : operands) {
-      if (!operand.has_const_operand()) { continue; }
-      const auto& mirrored_object_operand = operand.const_operand().operand();
+      if (!operand->has_const_operand()) { continue; }
+      const auto& mirrored_object_operand = operand->const_operand().operand();
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kConstOperandAccess, mirrored_object,

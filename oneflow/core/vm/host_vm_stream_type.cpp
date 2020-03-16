@@ -42,7 +42,7 @@ void VmCudaMallocHost(VmInstruction* vm_instr) {
     const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<CudaMallocHostInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
@@ -75,7 +75,7 @@ void VmMalloc(VmInstruction* vm_instr) {
     const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<MallocInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
@@ -105,7 +105,7 @@ void VmCudaFreeHost(VmInstruction* vm_instr) {
     const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<CudaFreeHostInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
                                  vm_stream.parallel_id());
@@ -133,7 +133,7 @@ void VmFree(VmInstruction* vm_instr) {
     const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<FreeInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
                                  vm_stream.parallel_id());
@@ -172,11 +172,11 @@ bool HostVmStreamType::QueryVmInstructionStatusDone(
 ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t logical_object_id,
                                                                 size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
   {
-    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
@@ -186,11 +186,11 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaMallocHost(uint64_t logical
 ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Malloc(uint64_t logical_object_id,
                                                         size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(HostInstrOpCode::kMallocOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(HostInstrOpCode::kMallocOpcode);
   {
-    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
@@ -199,11 +199,11 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Malloc(uint64_t logical_object_
 
 ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
   {
-    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
   return vm_instr_msg;
@@ -211,11 +211,11 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::CudaFreeHost(uint64_t logical_o
 
 ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Free(uint64_t logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(HostInstrOpCode::kFreeOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(HostInstrOpCode::kFreeOpcode);
   {
-    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
   return vm_instr_msg;
@@ -223,7 +223,7 @@ ObjectMsgPtr<VmInstructionMsg> HostVmStreamType::Free(uint64_t logical_object_id
 
 void HostVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
-    auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instruction_proto().opcode();
+    auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instr_id().opcode();
     host_instr_table.at(opcode)(vm_instruction);
   }
   auto* status_buffer = vm_instr_chain->mut_status_buffer();

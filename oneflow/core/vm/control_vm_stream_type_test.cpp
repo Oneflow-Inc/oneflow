@@ -49,7 +49,7 @@ TEST(ControlVmStreamType, delete_symbol) {
   uint64_t symbol_value = 9527;
   list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
   auto nop0_vm_instr_msg = NopVmStreamType().Nop();
-  auto* operand = nop0_vm_instr_msg->mut_vm_instruction_proto()->mut_operand()->Add();
+  auto* operand = nop0_vm_instr_msg->add_operand();
   operand->mutable_mutable_operand()->mutable_operand()->__Init__(symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
   list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));

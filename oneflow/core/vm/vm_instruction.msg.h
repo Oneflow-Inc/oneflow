@@ -11,22 +11,24 @@
 
 namespace oneflow {
 
-static const int kVmInstructionOperandLimit = 64;
-
 // clang-format off
-FLAT_MSG_BEGIN(VmInstructionProto);
+FLAT_MSG_BEGIN(VmInstructionId);
   FLAT_MSG_DEFINE_OPTIONAL(VmStreamTypeId, vm_stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(VmInstructionOpcode, opcode);
-  FLAT_MSG_DEFINE_REPEATED(VmInstructionOperand, operand, kVmInstructionOperandLimit);
-FLAT_MSG_END(VmInstructionProto);
+  FLAT_MSG_DEFINE_OPTIONAL(bool, is_local);
+FLAT_MSG_END(VmInstructionId);
 // clang-format on
 
 class MirroredObject;
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmInstructionMsg);
+  // methods
+  PUBLIC VmInstructionOperand* add_operand();
+
   // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionProto, vm_instruction_proto);
+  OBJECT_MSG_DEFINE_FLAT_MSG(VmInstructionId, vm_instr_id);
+  OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<VmInstructionOperand>>, operand);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(vm_instr_msg_link);

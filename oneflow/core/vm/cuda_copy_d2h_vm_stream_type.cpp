@@ -28,7 +28,7 @@ void VmCudaCopyD2H(VmInstruction* vm_instr) {
   const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
   {
     FlatMsgView<CudaCopyD2HInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     size = view->size();
     auto* dst_mirrored_obj =
         vm_instr->FindMirroredObjectByOperand(view->dst().operand(), vm_stream.parallel_id());
@@ -50,11 +50,11 @@ const VmStreamTypeId CudaCopyD2HVmStreamType::kVmStreamTypeId;
 ObjectMsgPtr<VmInstructionMsg> CudaCopyD2HVmStreamType::Copy(uint64_t dst, uint64_t src,
                                                              size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(0);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(0);
   {
-    FlatMsgView<CudaCopyD2HInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaCopyD2HInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);
     view->mutable_src()->mutable_operand()->__Init__(src);
     view->set_size(size);
