@@ -25,7 +25,7 @@ Maybe<size_t> InferArgwhereTmpBufferSize(const BlobDesc* in_desc, DataType out_d
 #undef MAKE_INFER_ARGWHERE_TMP_FN_PAIR_ENTRY
 
   auto infer_fn_it = infer_fn_map.find(GetHashKey(in_desc->data_type(), out_data_type));
-  OF_CHECK(infer_fn_it == infer_fn_map.end())
+  OF_CHECK(infer_fn_it != infer_fn_map.end())
       << "Argwhere op do not support data_type (" << in_desc->data_type() << "), index_type ("
       << out_data_type << ")";
 
@@ -64,7 +64,7 @@ class ArgwhereOp final : public Operator {
     out_desc->set_data_type(out_data_type);
     BlobDesc* out_size_desc = GetBlobDesc4BnInOp("out_size");
     out_size_desc->mut_shape() = Shape({1});
-    out_size_desc->set_data_type(DataType::kInt64);
+    out_size_desc->set_data_type(DataType::kInt32);
     return Maybe<void>::Ok();
   }
 

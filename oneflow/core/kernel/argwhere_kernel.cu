@@ -31,7 +31,7 @@ struct NDimensionIterator {
 };
 
 template<typename T, size_t NDims>
-__global__ void CudaFlatIndexToNdIndex(const int64_t* num_indices_ptr,
+__global__ void CudaFlatIndexToNdIndex(const int32_t* num_indices_ptr,
                                        NdIndexOffsetHelper<T, NDims> index_convertor, T* out_ptr) {
   int32_t num_indices = static_cast<int32_t>(__ldg(num_indices_ptr));
   CUDA_1D_KERNEL_LOOP(i, num_indices) {
@@ -68,7 +68,7 @@ struct IndexConvertorMaker<T, T, NDims> {
 
 template<typename T, typename I, typename Iter>
 cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
-                             const T* flags, Iter out_iter, int64_t* num_selected) {
+                             const T* flags, Iter out_iter, int32_t* num_selected) {
   IsNonzero<T> is_nonzero;
   cub::TransformInputIterator<bool, IsNonzero<T>, const T*> flag_iter(flags, is_nonzero);
   cub::CountingInputIterator<I> flat_index_counter(0);
@@ -105,17 +105,17 @@ class ArgwhereGpuKernel : public KernelIf<DeviceType::kGPU> {
     if (NDims == 1) {
       CudaCheck(CubSelectFlagged<T, I, I*>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(),
                                            tmp_bytes, in->dptr<T>(), out->mut_dptr<I>(),
-                                           out_size->mut_dptr<int64_t>()));
+                                           out_size->mut_dptr<int32_t>()));
     } else {
       NDimensionIterator<I, NDims> out_iter(out->mut_dptr<I>(), elem_cnt);
       CudaCheck(CubSelectFlagged<T, I, NDimensionIterator<I, NDims>>(
           ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(), tmp_bytes, in->dptr<T>(),
-          out_iter, out_size->mut_dptr<int64_t>()));
+          out_iter, out_size->mut_dptr<int32_t>()));
 
       IndexConvertorMaker<std::remove_cv<ShapeView::DimType>::type, I, NDims> idx_cvt_mkr;
       CudaFlatIndexToNdIndex<I, NDims>
           <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
-             ctx.device_ctx->cuda_stream()>>>(out_size->dptr<int64_t>(), idx_cvt_mkr(in->shape()),
+             ctx.device_ctx->cuda_stream()>>>(out_size->dptr<int32_t>(), idx_cvt_mkr(in->shape()),
                                               out->mut_dptr<I>());
     }
   }

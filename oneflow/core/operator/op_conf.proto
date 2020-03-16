@@ -1778,7 +1778,8 @@ message SyncDynamicResizeOpConf {
 message ArgwhereOpConf {
   required string in = 1;
   required string out = 2;
-  optional DataType data_type = 3 [default = kInt32];
+  required string out_size = 3;
+  optional DataType data_type = 4 [default = kInt64];
 }
 
 message OperatorConf {
