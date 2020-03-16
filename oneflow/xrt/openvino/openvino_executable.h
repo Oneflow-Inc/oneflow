@@ -15,10 +15,9 @@ namespace openvino {
 
 class OpenvinoExecutable : public Executable {
  public:
-  explicit OpenvinoExecutable(const std::string &name,
-                              std::unique_ptr<InferenceEngine::ExecutableNetwork> network,
+  explicit OpenvinoExecutable(std::unique_ptr<InferenceEngine::ExecutableNetwork> network,
                               const util::Map<std::string, int> &in_out_to_param_idx)
-      : Executable(name, XrtEngine::OPENVINO),
+      : Executable(XrtEngine::OPENVINO),
         executable_network_(std::move(network)),
         in_out_to_param_idx_(in_out_to_param_idx) {}
   virtual ~OpenvinoExecutable() = default;
