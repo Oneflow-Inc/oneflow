@@ -36,7 +36,7 @@ class NgraphShape {
  public:
   NgraphShape() = default;
 
-  explicit NgraphShape(const Shape &shape, const DataType &data_type)
+  NgraphShape(const Shape &shape, const DataType &data_type)
       : shape_(ShapeToNgraphShape(shape)), data_type_(DataTypeToNgraphDataType(data_type)) {}
 
   const ngraph::element::Type &data_type() const { return data_type_; }

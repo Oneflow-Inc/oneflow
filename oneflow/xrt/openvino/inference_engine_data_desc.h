@@ -42,7 +42,7 @@ class InferenceEngineDataDesc {
  public:
   InferenceEngineDataDesc() = default;
 
-  explicit InferenceEngineDataDesc(const Shape &shape, const DataType &data_type)
+  InferenceEngineDataDesc(const Shape &shape, const DataType &data_type)
       : precision_(DataTypeToPrecision(data_type)), layout_(ShapeToLayout(shape)) {
     for (int i = 0; i < shape.NumAxes(); ++i) { dim_vec_.push_back(shape.At(i)); }
   }
