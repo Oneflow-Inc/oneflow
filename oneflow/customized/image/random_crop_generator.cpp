@@ -80,7 +80,7 @@ std::vector<CropWindow> RandomCropGenerator::GenerateCropWindows(const Shape& sh
 
   std::vector<CropWindow> crop_windows;
   for (std::size_t i = 0; i < n; i++) {
-    rand_gen_.seed(seeds[i]);
+    rand_gen_.seed(seeds.at(i));
     crop_windows.push_back(GenerateCropWindow(shape));
   }
   return crop_windows;

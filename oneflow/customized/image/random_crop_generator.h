@@ -10,8 +10,8 @@ using AreaRange = std::pair<float, float>;
 
 class RandomCropGenerator {
  public:
-  explicit RandomCropGenerator(AspectRatioRange aspect_ratio_range, AreaRange area_range,
-                               int64_t seed, int32_t num_attempts);
+  RandomCropGenerator(AspectRatioRange aspect_ratio_range, AreaRange area_range, int64_t seed,
+                      int32_t num_attempts);
 
   CropWindow GenerateCropWindow(const Shape& shape);
   std::vector<CropWindow> GenerateCropWindows(const Shape& shape, size_t n);
