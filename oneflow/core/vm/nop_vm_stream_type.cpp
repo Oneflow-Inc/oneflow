@@ -43,5 +43,7 @@ void NopVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
 }
 
 COMMAND(RegisterVmStreamType<NopVmStreamType>());
+COMMAND(RegisterVmInstructionId<NopVmStreamType>("Nop", 0, kVmRemote));
+COMMAND(RegisterVmInstructionId<NopVmStreamType>("LocalNop", 0, kVmLocal));
 
 }  // namespace oneflow

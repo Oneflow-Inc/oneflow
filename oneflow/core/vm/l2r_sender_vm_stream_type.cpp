@@ -109,5 +109,7 @@ void L2RSenderVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
 }
 
 COMMAND(RegisterVmStreamType<L2RSenderVmStreamType>());
+COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RSend", 0, kVmRemote));
+COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RLocalSend", 0, kVmLocal));
 
 }  // namespace oneflow

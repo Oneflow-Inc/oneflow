@@ -1,0 +1,30 @@
+syntax = "proto2";
+package oneflow;
+
+message MirroredParallelIdProto {}
+message AllParallelIdProto {}
+
+message MirroredObjectOperandProto {
+  required uint64 logical_object_id = 1;
+  oneof operand_type {
+    int64 fixed_parallel_id = 2;
+    MirroredParallelIdProto mirrored_parallel_id = 3;
+    AllParallelIdProto all_parallel_id = 4;
+  }
+}
+
+message VmInstructionOperandProto {
+  oneof type {
+    MirroredObjectOperandProto const_operand = 1;
+    MirroredObjectOperandProto mutable_operand = 2;
+    double double_i_operand = 3;
+    int64 int64_id_operand = 4;
+    uint64 uint64_id_operand = 5;
+    bool bool_id_operand = 6;
+  }
+}
+
+message VmInstructionProto {
+  required string vm_instr_type_name = 1;
+  repeated VmInstructionOperandProto operand = 2;
+};

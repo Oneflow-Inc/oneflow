@@ -57,6 +57,8 @@ void VmCudaMalloc(VmInstruction* vm_instr) {
   mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaMallocOpcode, VmCudaMalloc);
+COMMAND(RegisterVmInstructionId<DeviceHelperVmStreamType>("CudaMalloc", kCudaMallocOpcode,
+                                                          kVmRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);
@@ -88,6 +90,7 @@ void VmCudaFree(VmInstruction* vm_instr) {
   mirrored_object->clear_cuda_mem_buffer();
 }
 REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaFreeOpcode, VmCudaFree);
+COMMAND(RegisterVmInstructionId<DeviceHelperVmStreamType>("CudaFree", kCudaFreeOpcode, kVmRemote));
 
 }  // namespace
 

@@ -53,6 +53,8 @@ void NewSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   }
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewSymbol, NewSymbol);
+COMMAND(RegisterVmInstructionId<ControlVmStreamType>("NewSymbol", kNewSymbol, kVmRemote));
+COMMAND(RegisterVmInstructionId<ControlVmStreamType>("LocalNewSymbol", kNewSymbol, kVmLocal));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
@@ -91,6 +93,8 @@ void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   scheduler->mut_id2logical_object()->Erase(logical_object);
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteSymbol, DeleteSymbol);
+COMMAND(RegisterVmInstructionId<ControlVmStreamType>("DeleteSymbol", kDeleteSymbol, kVmRemote));
+COMMAND(RegisterVmInstructionId<ControlVmStreamType>("LocalDeleteSymbol", kDeleteSymbol, kVmLocal));
 
 void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
   VmInstructionOpcode opcode = vm_instr_msg->vm_instr_id().opcode();
