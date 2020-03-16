@@ -153,8 +153,9 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
   const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
-  if (GetValFromPbMessage<bool>(conv_conf, "torch_style_padding")) {
-    const PbRf<int32_t>& padding_needed = GetPbRfFromPbMessage<int32_t>(conv_conf, "padding_needed");
+  if (HasStrFieldInPbFdOrPbRpf(conv_conf, "torch_style_padding_conf")) {
+    const PbMessage& torch_style_padding_conf = GetMessageInPbMessage(conv_conf, "torch_style_padding_conf");
+    const PbRf<int32_t>& padding_needed = GetPbRfFromPbMessage<int32_t>(torch_style_padding_conf, "padding_needed");
     FOR_RANGE(int32_t, i, 0, opkernel_dim) {
       GetwindowedOutputSizeWithPaddingNeeded(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), 
                                             dilation_rate.Get(i), strides.Get(i), padding_needed.Get(i), 

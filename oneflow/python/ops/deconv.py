@@ -136,8 +136,7 @@ def deconv2d(
     op_conf.deconv_conf.conv_conf.strides.extend(strides)
     op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
     op_conf.deconv_conf.conv_conf.num_spatial_dims = 2
-    op_conf.deconv_conf.conv_conf.torch_style_padding = True
-    op_conf.deconv_conf.conv_conf.padding_needed.extend(padding_needed)
+    op_conf.deconv_conf.conv_conf.torch_style_padding_conf.padding_needed.extend(padding_needed)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

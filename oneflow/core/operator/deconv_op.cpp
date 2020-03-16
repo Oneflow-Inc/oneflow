@@ -36,8 +36,9 @@ void GetDeconvOutAndPad(const ShapeView& in_blob_shape, const DeconvOpConf& conf
   const auto& strides = conv_conf.strides();
   const PbRf<int32_t>& dilation_rate = conv_conf.dilation_rate();
   const PbRf<int32_t>& kernel_size = conv_conf.kernel_size();
-  const PbRf<int32_t>& padding_needed = conv_conf.padding_needed();
   const PbRf<int32_t>& output_padding = conf.output_padding();
+  CHECK(conv_conf.has_torch_style_padding_conf());
+  const PbRf<int32_t>& padding_needed = conv_conf.torch_style_padding_conf().padding_needed();
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetDewindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), dilation_rate.Get(i),
                             strides.Get(i), output_padding.Get(i), padding_needed.Get(i), out ? &(out->at(i)) : nullptr,
@@ -74,12 +75,12 @@ class DeconvOp : public Operator {
     const std::string& data_format = conv_conf.data_format();
     const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
     CHECK_EQ_OR_RETURN(x_blob_desc->shape().NumAxes(), NDims() + 2);
-    int64_t data_num = x_blob_desc->shape().At(0);
-    int32_t filters = conf.filters();
+    const int64_t data_num = x_blob_desc->shape().At(0);
+    const int32_t filters = conf.filters();
     DimVector out;
     GetDeconvOutAndPad(x_blob_desc->shape(), conf, &out, nullptr, nullptr);
     DimVector y_shape = {data_num, filters};
-    size_t dhw_offset = DhwOffset(data_format);
+    const size_t dhw_offset = DhwOffset(data_format);
     for (size_t i = 0; i < NDims(); ++i) {
       y_shape.insert(y_shape.begin() + dhw_offset + i, out[i]);
     }
@@ -99,13 +100,13 @@ class DeconvOp : public Operator {
     const std::string& data_format = conv_conf.data_format();
     const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
     CHECK_EQ_OR_RETURN(x_blob_desc->shape().NumAxes(), NDims() + 2);
-    int64_t data_num = x_blob_desc->shape().At(0);
-    int32_t filters = conf.filters();
+    const int64_t data_num = x_blob_desc->shape().At(0);
+    const int32_t filters = conf.filters();
     // y
     DimVector out;
     GetDeconvOutAndPad(x_blob_desc->shape(), conf, &out, nullptr, nullptr);
     DimVector y_shape = {data_num, filters};
-    size_t dhw_offset = DhwOffset(data_format);
+    const size_t dhw_offset = DhwOffset(data_format);
     for (size_t i = 0; i < NDims(); ++i) {
       y_shape.insert(y_shape.begin() + dhw_offset + i, out[i]);
     }
@@ -126,7 +127,7 @@ class DeconvOp : public Operator {
     for (size_t i = 0; i < NDims(); ++i) {
       weight_shape[dhw_offset + i] = conv_conf.kernel_size(i);
     }
-    BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+    const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
 #ifdef WITH_CUDA
