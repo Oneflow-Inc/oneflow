@@ -41,14 +41,14 @@ void RegisterVmStreamType() {
 
 class VmInstructionId;
 
-const VmInstructionId& LookupVmInstructionId(const std::string& vm_instruction_name);
-void RegisterVmInstructionId(const std::string& vm_instruction_name,
+const VmInstructionId& LookupVmInstructionId(const std::string& vm_instr_type_name);
+void RegisterVmInstructionId(const std::string& vm_instr_type_name,
                              VmStreamTypeId vm_stream_type_id, VmInstructionOpcode opcode,
                              VmType vm_type);
 template<typename T>
-void RegisterVmInstructionId(const std::string& vm_instruction_name, VmInstructionOpcode opcode,
+void RegisterVmInstructionId(const std::string& vm_instr_type_name, VmInstructionOpcode opcode,
                              VmType vm_type) {
-  RegisterVmInstructionId(vm_instruction_name, T::kVmStreamTypeId, opcode, vm_type);
+  RegisterVmInstructionId(vm_instr_type_name, T::kVmStreamTypeId, opcode, vm_type);
 }
 
 }  // namespace oneflow
