@@ -37,7 +37,7 @@ void VmCudaMalloc(VmInstruction* vm_instr) {
   {
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<CudaMallocInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
@@ -70,7 +70,7 @@ void VmCudaFree(VmInstruction* vm_instr) {
   {
     auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
     FlatMsgView<CudaFreeInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_vm_instruction_proto()->mut_operand()));
+    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
     mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
                                  vm_stream.parallel_id());
@@ -112,11 +112,11 @@ bool DeviceHelperVmStreamType::QueryVmInstructionStatusDone(
 ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaMalloc(uint64_t logical_object_id,
                                                                     size_t size) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
   {
-    FlatMsgView<CudaMallocInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaMallocInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
@@ -126,11 +126,11 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaMalloc(uint64_t log
 ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaFree(
     uint64_t logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
   {
-    FlatMsgView<CudaFreeInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<CudaFreeInstruction> view(vm_instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
   return vm_instr_msg;
@@ -138,7 +138,7 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaFree(
 
 void DeviceHelperVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
-    auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instruction_proto().opcode();
+    auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instr_id().opcode();
     device_helper_instr_table.at(opcode)(vm_instruction);
   }
   auto* status_buffer = vm_instr_chain->mut_status_buffer();

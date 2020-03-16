@@ -6,6 +6,11 @@
 
 namespace oneflow {
 
+VmInstructionOperand* VmInstructionMsg::add_operand() {
+  mut_operand()->emplace_back();
+  return mut_operand()->back().Mutable();
+}
+
 MirroredObject* VmInstruction::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                            int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;

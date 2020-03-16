@@ -28,11 +28,11 @@ FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewSymbol(
     const LogicalObjectId& logical_object_id, int64_t parallel_num) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(CtrlInstrOpCode::kNewSymbol);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
   {
-    FlatMsgView<NewSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<NewSymbolCtrlInstruction> view(vm_instr_msg->mutable_operand());
     view->set_logical_object_id(logical_object_id);
     view->set_parallel_num(parallel_num);
   }
@@ -41,7 +41,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewSymbol(
 
 void NewSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<NewSymbolCtrlInstruction> view;
-  CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
+  CHECK(view->Match(vm_instr_msg->mut_operand()));
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
       scheduler->mut_scheduler_thread_only_allocator(), view->logical_object_id(), scheduler);
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
@@ -65,11 +65,11 @@ const VmStreamTypeId ControlVmStreamType::kVmStreamTypeId;
 ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
-  auto* vm_instr_proto = vm_instr_msg->mutable_vm_instruction_proto();
-  vm_instr_proto->set_vm_stream_type_id(kVmStreamTypeId);
-  vm_instr_proto->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
+  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
+  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
   {
-    FlatMsgView<DeleteSymbolCtrlInstruction> view(vm_instr_proto->mutable_operand());
+    FlatMsgView<DeleteSymbolCtrlInstruction> view(vm_instr_msg->mutable_operand());
     auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();
     mirrored_object_operand->set_logical_object_id(logical_object_id);
     mirrored_object_operand->mutable_all_parallel_id();
@@ -78,7 +78,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteSymbol(
 }
 void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   FlatMsgView<DeleteSymbolCtrlInstruction> view;
-  CHECK(view->Match(vm_instr_msg->mut_vm_instruction_proto()->mut_operand()));
+  CHECK(view->Match(vm_instr_msg->mut_operand()));
   const auto& logical_objectId = view->mirrored_object_operand().operand().logical_object_id();
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
   CHECK_NOTNULL(logical_object);
@@ -93,7 +93,7 @@ void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteSymbol, DeleteSymbol);
 
 void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
-  VmInstructionOpcode opcode = vm_instr_msg->vm_instruction_proto().opcode();
+  VmInstructionOpcode opcode = vm_instr_msg->vm_instr_id().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }
 
