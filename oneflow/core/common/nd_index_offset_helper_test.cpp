@@ -1,3 +1,4 @@
+#define private public
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -78,6 +79,18 @@ TEST(NdIndexOffsetHelper, static_3d) { test_3d<3>(); }
 TEST(NdIndexOffsetHelper, dynamic_3d) {
   test_3d<4>();
   test_3d<8>();
+}
+
+TEST(NdIndexOffsetHelper, constructor) {
+  const int64_t d0 = 3;
+  const int64_t d1 = 4;
+  const int64_t d2 = 5;
+  std::vector<int64_t> dims({d0, d1, d2});
+  const NdIndexOffsetHelper<int64_t, 3> helper1(d0, d1, d2);
+  const NdIndexOffsetHelper<int64_t, 3> helper2(dims.data());
+  const NdIndexOffsetHelper<int64_t, 3> helper3(dims.data(), dims.size());
+  ASSERT_EQ(helper2.stride_, helper1.stride_);
+  ASSERT_EQ(helper3.stride_, helper1.stride_);
 }
 
 }  // namespace test
