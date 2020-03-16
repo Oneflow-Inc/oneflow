@@ -10,9 +10,9 @@ bool OpenvinoExecutable::Run(const std::vector<Parameter> &inputs,
                              bool block_until_done) {
   InferenceEngine::InferRequest::Ptr infer_request = executable_network_->CreateInferRequestPtr();
 
-  InferenceEngine::ConstInputsDataMap inputInfo(executable_network_->GetInputsInfo());
-  InferenceEngine::ConstOutputsDataMap outputInfo(executable_network_->GetOutputsInfo());
-  for (auto input_info_iter = inputInfo.begin(); input_info_iter != inputInfo.end();
+  InferenceEngine::ConstInputsDataMap input_info(executable_network_->GetInputsInfo());
+  InferenceEngine::ConstOutputsDataMap output_info(executable_network_->GetOutputsInfo());
+  for (auto input_info_iter = input_info.begin(); input_info_iter != input_info.end();
        ++input_info_iter) {
     auto it = in_out_to_param_idx_.find(input_info_iter->first);
     CHECK(it != in_out_to_param_idx_.end());
@@ -31,7 +31,7 @@ bool OpenvinoExecutable::Run(const std::vector<Parameter> &inputs,
   // All return params are the results of the executable.
   this->results_ = run_options.return_params;
 
-  for (auto output_info_iter = outputInfo.begin(); output_info_iter != outputInfo.end();
+  for (auto output_info_iter = output_info.begin(); output_info_iter != output_info.end();
        ++output_info_iter) {
     auto it = in_out_to_param_idx_.find(output_info_iter->first);
     CHECK(it != in_out_to_param_idx_.end());

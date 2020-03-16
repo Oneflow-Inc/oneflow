@@ -90,12 +90,12 @@ std::shared_ptr<Executable> OpenvinoGraphCompiler::Compile(
     result_nodes.push_back(result);
   }
 
-  std::shared_ptr<ngraph::Function> ngraph =
+  std::shared_ptr<ngraph::Function> ngraph_func =
       std::make_shared<ngraph::Function>(result_nodes, parameter_nodes);
-  InferenceEngine::CNNNetwork cnnNetwork(ngraph);
+  InferenceEngine::CNNNetwork cnn_network(ngraph_func);
   InferenceEngine::Core ie;
-  InferenceEngine::InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
-  for (auto &input : inputInfo) {
+  InferenceEngine::InputsDataMap input_info(cnn_network.getInputsInfo());
+  for (auto &input : input_info) {
     auto it = in_out_to_param_idx.find(input.first);
     CHECK(it != in_out_to_param_idx.end());
     const int input_idx = it->second;
@@ -105,7 +105,7 @@ std::shared_ptr<Executable> OpenvinoGraphCompiler::Compile(
     input.second->setLayout(data_desc.layout());
   }
   auto executable_network =
-      std::make_unique<InferenceEngine::ExecutableNetwork>(ie.LoadNetwork(cnnNetwork, "CPU"));
+      std::make_unique<InferenceEngine::ExecutableNetwork>(ie.LoadNetwork(cnn_network, "CPU"));
   return std::make_shared<OpenvinoExecutable>(std::move(executable_network), in_out_to_param_idx);
 }
 
