@@ -1,5 +1,4 @@
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

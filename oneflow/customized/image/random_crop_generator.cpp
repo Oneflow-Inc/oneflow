@@ -26,10 +26,8 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
   int maxH = std::max<int>(1, static_cast<int>(W * max_hw_ratio));
 
   if (H * maxW < min_area) {
-    // image too wide
     crop.shape = Shape({H, maxW});
   } else if (W * maxH < min_area) {
-    // image too tall
     crop.shape = Shape({maxH, W});
   } else {
     int attempts_left = num_attempts_;

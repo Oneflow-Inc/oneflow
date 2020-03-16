@@ -1,8 +1,34 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/random_crop_generator.h"
 
+#include <opencv2/opencv.hpp>
+
 namespace oneflow {
+
+bool IsColor(const std::string& color_space) {
+  if (color_space == "RGB" || color_space == "BGR") {
+    return true;
+  } else if (color_space == "GRAY") {
+    return false;
+  } else {
+    UNIMPLEMENTED();
+    return false;
+  }
+}
+
+void ConvertColor(const std::string& input_color, const cv::Mat& input_img,
+                  const std::string& output_color, cv::Mat& output_img) {
+  if (input_color == "BGR" && output_color == "RGB") {
+    cv::cvtColor(input_img, output_img, cv::COLOR_BGR2RGB);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  public:
@@ -29,24 +55,101 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
     crop_window_generators_.resize(batch_size);
     for (int32_t i = 0; i < batch_size; ++i) {
-      std::shared_ptr<RandomCropGenerator> random_crop_generator(new RandomCropGenerator(
+      crop_window_generators_.at(i).reset(new RandomCropGenerator(
           {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
           {random_area.at(0), random_area.at(1)}, seeds.at(i), num_attempts));
-      crop_window_generators_.at(i) = std::bind(&RandomCropGenerator::GenerateCropWindow,
-                                                random_crop_generator, std::placeholders::_1);
     }
   }
   OFRecordImageDecoderRandomCropKernel() = default;
   ~OFRecordImageDecoderRandomCropKernel() = default;
 
  private:
+  void DecodePartRecords(int32_t part_id, int32_t part_num, OFRecord* records, int64_t record_num,
+                         TensorBuffer* buffers, const std::string& name,
+                         const std::string& color_space) {
+    BalancedSplitter bs(record_num, part_num);
+    Range range = bs.At(part_id);
+    FOR_RANGE(int32_t, i, range.begin(), range.end()) {
+      const OFRecord& record = *(records + i);
+      TensorBuffer* buffer = buffers + i;
+      CHECK(record.feature().find(name) != record.feature().end())
+          << "Field " << name << " not found";
+      const Feature& feature = record.feature().at(name);
+      CHECK(feature.has_bytes_list());
+      CHECK(feature.bytes_list().value_size() == 1);
+      const std::string& src_data = feature.bytes_list().value(0);
+      // cv::_InputArray image_data(src_data.data(), src_data.size());
+      // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
+      cv::Mat image =
+          cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
+                       IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
+      int W = image.cols;
+      int H = image.rows;
+
+      // random crop
+      CHECK(image.data != nullptr);
+      cv::Mat image_roi;
+      CropWindow crop = crop_window_generators_.at(i)->GenerateCropWindow({H, W});
+      const int y = crop.anchor.At(0);
+      const int x = crop.anchor.At(1);
+      const int newH = crop.shape.At(0);
+      const int newW = crop.shape.At(1);
+      CHECK(newW > 0 && newW <= W);
+      CHECK(newH > 0 && newH <= H);
+      cv::Rect roi(x, y, newW, newH);
+      image(roi).copyTo(image_roi);
+      image = image_roi;
+      W = image.cols;
+      H = image.rows;
+      CHECK(W == newW);
+      CHECK(H == newH);
+
+      // convert color space
+      if (IsColor(color_space) && color_space != "BGR") {
+        ConvertColor("BGR", image, color_space, image);
+      }
+
+      CHECK(image.isContinuous());
+      const int c = IsColor(color_space) ? 3 : 1;
+      CHECK_EQ(c, image.channels());
+      Shape image_shape({H, W, c});
+      buffer->Resize(image_shape, DataType::kUInt8);
+      CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
+      CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
+      memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
+    }
+  }
+
   void Compute(user_op::KernelContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
+    int64_t record_num = out_blob->shape().At(0);
+    CHECK(record_num > 0);
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    OFRecord* records = in_blob->mut_dptr<OFRecord>();
+    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
+    std::string name = ctx->GetAttr<std::string>("name");
+    std::string color_space = ctx->GetAttr<std::string>("color_space");
+
+    ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+    int32_t thread_num = thread_pool->thread_num();
+    int32_t part_num = std::min(static_cast<int32_t>(record_num), thread_num);
+    BlockingCounter bc(part_num);
+    FOR_RANGE(int32_t, part_id, 0, part_num) {
+      thread_pool->AddWork(
+          [&bc, part_id, part_num, records, record_num, buffers, &name, &color_space, this]() {
+            DecodePartRecords(part_id, part_num, records, record_num, buffers, name, color_space);
+            bc.Decrease();
+          });
+    }
+    bc.WaitUntilCntEqualZero();
+
     // random_generator_->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
     //                                  out_blob->mut_dptr<float>());
   }
 
-  std::vector<CropWindowGenerator> crop_window_generators_;
+  std::vector<std::shared_ptr<RandomCropGenerator>> crop_window_generators_;
 };
 
 REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")
@@ -54,8 +157,11 @@ REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")
       return new OFRecordImageDecoderRandomCropKernel(ctx);
     })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kCPU
+          && out_tensor->data_type() == DataType::kTensorBuffer
+          && in_tensor->data_type() == DataType::kOFRecord) {
         return true;
       }
       return false;
