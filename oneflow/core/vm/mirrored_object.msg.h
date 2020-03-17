@@ -12,18 +12,18 @@ namespace oneflow {
 
 namespace vm {
 
-class VmInstruction;
+class Instruction;
 class MirroredObject;
 
 // clang-format off
 OBJECT_MSG_BEGIN(MirroredObjectAccess);
   // methods
-  PUBLIC void __Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
+  PUBLIC void __Init__(Instruction* vm_instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_PTR(VmInstruction, vm_instruction);
+  OBJECT_MSG_DEFINE_PTR(Instruction, vm_instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
 
   // links
@@ -79,17 +79,17 @@ OBJECT_MSG_BEGIN(MirroredObject);
 OBJECT_MSG_END(MirroredObject);
 // clang-format on
 
-class VmScheduler;
+class Scheduler;
 // clang-format off
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
-                       VmScheduler* vm_scheduler) {
+                       Scheduler* vm_scheduler) {
     set_logical_object_id(logical_object_id);
     set_vm_scheduler(vm_scheduler);
   }
   // fields
-  OBJECT_MSG_DEFINE_PTR(VmScheduler, vm_scheduler);
+  OBJECT_MSG_DEFINE_PTR(Scheduler, vm_scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);

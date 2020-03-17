@@ -13,44 +13,44 @@ class ObjectMsgAllocator;
 
 namespace vm {
 
-class VmStream;
-class VmInstructionStatusBuffer;
-class VmInstrChain;
+class Stream;
+class InstructionStatusBuffer;
+class InstrChain;
 
-class VmStreamType {
+class StreamType {
  public:
-  virtual ~VmStreamType() = default;
+  virtual ~StreamType() = default;
 
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const = 0;
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const = 0;
 
-  virtual void InitVmInstructionStatus(const VmStream& vm_stream,
-                                       VmInstructionStatusBuffer* status_buffer) const = 0;
-  virtual void DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                         VmInstructionStatusBuffer* status_buffer) const = 0;
-  virtual bool QueryVmInstructionStatusDone(
-      const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Run(VmInstrChain* vm_instr_chain) const = 0;
+  virtual void InitInstructionStatus(const Stream& vm_stream,
+                                     InstructionStatusBuffer* status_buffer) const = 0;
+  virtual void DeleteInstructionStatus(const Stream& vm_stream,
+                                       InstructionStatusBuffer* status_buffer) const = 0;
+  virtual bool QueryInstructionStatusDone(const Stream& vm_stream,
+                                          const InstructionStatusBuffer& status_buffer) const = 0;
+  virtual void Run(InstrChain* vm_instr_chain) const = 0;
 
  protected:
-  VmStreamType() = default;
+  StreamType() = default;
 };
 
-const VmStreamType* LookupVmStreamType(VmStreamTypeId);
-void RegisterVmStreamType(VmStreamTypeId, const VmStreamType*);
+const StreamType* LookupStreamType(StreamTypeId);
+void RegisterStreamType(StreamTypeId, const StreamType*);
 template<typename T>
-void RegisterVmStreamType() {
-  RegisterVmStreamType(T::kVmStreamTypeId, new T());
+void RegisterStreamType() {
+  RegisterStreamType(T::kStreamTypeId, new T());
 }
 
-class VmInstructionId;
+class InstructionId;
 
-const VmInstructionId& LookupVmInstructionId(const std::string& instr_type_name);
-void RegisterVmInstructionId(const std::string& instr_type_name, VmStreamTypeId vm_stream_type_id,
-                             VmInstructionOpcode opcode, VmType vm_type);
+const InstructionId& LookupInstructionId(const std::string& instr_type_name);
+void RegisterInstructionId(const std::string& instr_type_name, StreamTypeId vm_stream_type_id,
+                           InstructionOpcode opcode, VmType vm_type);
 template<typename T>
-void RegisterVmInstructionId(const std::string& instr_type_name, VmInstructionOpcode opcode,
-                             VmType vm_type) {
-  RegisterVmInstructionId(instr_type_name, T::kVmStreamTypeId, opcode, vm_type);
+void RegisterInstructionId(const std::string& instr_type_name, InstructionOpcode opcode,
+                           VmType vm_type) {
+  RegisterInstructionId(instr_type_name, T::kStreamTypeId, opcode, vm_type);
 }
 
 }  // namespace vm

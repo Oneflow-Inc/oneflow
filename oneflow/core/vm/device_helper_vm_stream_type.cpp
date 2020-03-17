@@ -14,7 +14,7 @@ namespace {
 
 enum DeviceHelperInstrOpCode { kCudaMallocOpcode = 0, kCudaFreeOpcode };
 
-typedef void (*DeviceHelperInstrFunc)(VmInstruction*);
+typedef void (*DeviceHelperInstrFunc)(Instruction*);
 std::vector<DeviceHelperInstrFunc> device_helper_instr_table;
 
 #define REGISTER_DEVICE_HELPER_INSTRUCTION(op_code, function_name) \
@@ -30,7 +30,7 @@ FLAT_MSG_VIEW_BEGIN(CudaMallocInstruction);
 FLAT_MSG_VIEW_END(CudaMallocInstruction);
 // clang-format on
 
-void VmCudaMalloc(VmInstruction* vm_instr) {
+void CudaMalloc(Instruction* vm_instr) {
   MirroredObject* mirrored_object = nullptr;
   char* dptr = nullptr;
   size_t size = 0;
@@ -57,9 +57,8 @@ void VmCudaMalloc(VmInstruction* vm_instr) {
   }
   mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
 }
-REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaMallocOpcode, VmCudaMalloc);
-COMMAND(RegisterVmInstructionId<DeviceHelperVmStreamType>("CudaMalloc", kCudaMallocOpcode,
-                                                          kVmRemote));
+REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaMallocOpcode, CudaMalloc);
+COMMAND(RegisterInstructionId<DeviceHelperStreamType>("CudaMalloc", kCudaMallocOpcode, kRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);
@@ -67,7 +66,7 @@ FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);
 FLAT_MSG_VIEW_END(CudaFreeInstruction);
 // clang-format on
 
-void VmCudaFree(VmInstruction* vm_instr) {
+void CudaFree(Instruction* vm_instr) {
   MirroredObject* mirrored_object = nullptr;
   const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
   {
@@ -90,34 +89,34 @@ void VmCudaFree(VmInstruction* vm_instr) {
   }
   mirrored_object->clear_cuda_mem_buffer();
 }
-REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaFreeOpcode, VmCudaFree);
-COMMAND(RegisterVmInstructionId<DeviceHelperVmStreamType>("CudaFree", kCudaFreeOpcode, kVmRemote));
+REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaFreeOpcode, CudaFree);
+COMMAND(RegisterInstructionId<DeviceHelperStreamType>("CudaFree", kCudaFreeOpcode, kRemote));
 
 }  // namespace
 
-const VmStreamTypeId DeviceHelperVmStreamType::kVmStreamTypeId;
+const StreamTypeId DeviceHelperStreamType::kStreamTypeId;
 
-void DeviceHelperVmStreamType::InitVmInstructionStatus(
-    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(NaiveVmInstrStatusQuerier) < kVmInstructionStatusBufferBytes, "");
-  NaiveVmInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+void DeviceHelperStreamType::InitInstructionStatus(const Stream& vm_stream,
+                                                   InstructionStatusBuffer* status_buffer) const {
+  static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void DeviceHelperVmStreamType::DeleteVmInstructionStatus(
-    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
+void DeviceHelperStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+                                                     InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool DeviceHelperVmStreamType::QueryVmInstructionStatusDone(
-    const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const {
-  return NaiveVmInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+bool DeviceHelperStreamType::QueryInstructionStatusDone(
+    const Stream& vm_stream, const InstructionStatusBuffer& status_buffer) const {
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaMalloc(uint64_t logical_object_id,
-                                                                    size_t size) const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaMalloc(uint64_t logical_object_id,
+                                                                size_t size) const {
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
   {
     FlatMsgView<CudaMallocInstruction> view(vm_instr_msg->mutable_operand());
@@ -127,11 +126,10 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaMalloc(uint64_t log
   return vm_instr_msg;
 }
 
-ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaFree(
-    uint64_t logical_object_id) const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaFree(uint64_t logical_object_id) const {
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
   {
     FlatMsgView<CudaFreeInstruction> view(vm_instr_msg->mutable_operand());
@@ -140,16 +138,16 @@ ObjectMsgPtr<VmInstructionMsg> DeviceHelperVmStreamType::CudaFree(
   return vm_instr_msg;
 }
 
-void DeviceHelperVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
+void DeviceHelperStreamType::Run(InstrChain* vm_instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
     auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instr_id().opcode();
     device_helper_instr_table.at(opcode)(vm_instruction);
   }
   auto* status_buffer = vm_instr_chain->mut_status_buffer();
-  NaiveVmInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-COMMAND(RegisterVmStreamType<DeviceHelperVmStreamType>());
+COMMAND(RegisterStreamType<DeviceHelperStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

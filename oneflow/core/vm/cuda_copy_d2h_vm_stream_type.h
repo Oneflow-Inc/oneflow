@@ -6,27 +6,27 @@
 namespace oneflow {
 namespace vm {
 
-class VmScheduler;
-class VmInstructionMsg;
+class Scheduler;
+class InstructionMsg;
 
-class CudaCopyD2HVmStreamType final : public VmStreamType {
+class CudaCopyD2HStreamType final : public StreamType {
  public:
-  CudaCopyD2HVmStreamType() = default;
-  ~CudaCopyD2HVmStreamType() = default;
+  CudaCopyD2HStreamType() = default;
+  ~CudaCopyD2HStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 5;
+  static const StreamTypeId kStreamTypeId = 5;
 
-  ObjectMsgPtr<VmInstructionMsg> Copy(uint64_t dst, uint64_t src, size_t size) const;
+  ObjectMsgPtr<InstructionMsg> Copy(uint64_t dst, uint64_t src, size_t size) const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override;
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const override;
 
-  void InitVmInstructionStatus(const VmStream& vm_stream,
-                               VmInstructionStatusBuffer* status_buffer) const override;
-  void DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                 VmInstructionStatusBuffer* status_buffer) const override;
-  bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
-                                    const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmInstrChain* vm_instr_chain) const override;
+  void InitInstructionStatus(const Stream& vm_stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& vm_stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& vm_stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* vm_instr_chain) const override;
 };
 
 }  // namespace vm

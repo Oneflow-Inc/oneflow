@@ -22,7 +22,7 @@ FLAT_MSG_END(MutableMirroredObjectOperand);
 
 class InstructionOperandProto;
 // clang-format off
-FLAT_MSG_BEGIN(VmInstructionOperand);
+FLAT_MSG_BEGIN(InstructionOperand);
   // methods
   PUBLIC void __Init__(const InstructionOperandProto& proto);
   // fields
@@ -33,7 +33,7 @@ FLAT_MSG_BEGIN(VmInstructionOperand);
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
     FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
     FLAT_MSG_ONEOF_FIELD(bool, bool_i_operand));
-FLAT_MSG_END(VmInstructionOperand);
+FLAT_MSG_END(InstructionOperand);
 // clang-format on
 
 }  // namespace vm

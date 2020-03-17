@@ -10,7 +10,7 @@ namespace vm {
 
 namespace {
 
-Transporter* GetTransporter(VmInstrChain* vm_instr_chain) {
+Transporter* GetTransporter(InstrChain* vm_instr_chain) {
   auto* device_ctx =
       dynamic_cast<TransporterDeviceCtx*>(vm_instr_chain->mut_vm_stream()->device_ctx().get());
   CHECK_NOTNULL(device_ctx);
@@ -25,8 +25,7 @@ FLAT_MSG_VIEW_BEGIN(L2RSenderInstruction);
 FLAT_MSG_VIEW_END(L2RSenderInstruction);
 // clang-format on
 
-void MakeSendRequests(VmInstruction* vm_instr,
-                      TransportKey2SendRequest* transport_key2send_request) {
+void MakeSendRequests(Instruction* vm_instr, TransportKey2SendRequest* transport_key2send_request) {
   auto* vm_instr_chain = vm_instr->mut_vm_instr_chain();
   FlatMsg<TransportDataToken> data_token;
   const char* data_ptr = nullptr;
@@ -56,13 +55,13 @@ void MakeSendRequests(VmInstruction* vm_instr,
 
 }  // namespace
 
-const VmStreamTypeId L2RSenderVmStreamType::kVmStreamTypeId;
+const StreamTypeId L2RSenderStreamType::kStreamTypeId;
 
-ObjectMsgPtr<VmInstructionMsg> L2RSenderVmStreamType::Send(uint64_t logical_token, uint64_t src,
-                                                           size_t size) const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+ObjectMsgPtr<InstructionMsg> L2RSenderStreamType::Send(uint64_t logical_token, uint64_t src,
+                                                       size_t size) const {
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(0);
   {
     FlatMsgView<L2RSenderInstruction> view(vm_instr_msg->mutable_operand());
@@ -73,31 +72,31 @@ ObjectMsgPtr<VmInstructionMsg> L2RSenderVmStreamType::Send(uint64_t logical_toke
   return vm_instr_msg;
 }
 
-void L2RSenderVmStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                          VmStream* vm_stream) const {
+void L2RSenderStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                                        Stream* vm_stream) const {
   if (vm_stream->machine_id() != 0) { TODO(); }
   device_ctx->reset(new TransporterDeviceCtx(new LocalhostTransporter()));
 }
 
 static const int64_t kRefCntInitVal = 1;
 
-void L2RSenderVmStreamType::InitVmInstructionStatus(
-    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(std::atomic<int64_t>) < kVmInstructionStatusBufferBytes, "");
+void L2RSenderStreamType::InitInstructionStatus(const Stream& vm_stream,
+                                                InstructionStatusBuffer* status_buffer) const {
+  static_assert(sizeof(std::atomic<int64_t>) < kInstructionStatusBufferBytes, "");
   new (status_buffer->mut_buffer()->mut_data()) std::atomic<int64_t>(kRefCntInitVal);
 }
 
-void L2RSenderVmStreamType::DeleteVmInstructionStatus(
-    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
+void L2RSenderStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+                                                  InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool L2RSenderVmStreamType::QueryVmInstructionStatusDone(
-    const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const {
+bool L2RSenderStreamType::QueryInstructionStatusDone(
+    const Stream& vm_stream, const InstructionStatusBuffer& status_buffer) const {
   return *reinterpret_cast<const std::atomic<int64_t>*>(status_buffer.buffer().data()) == 0;
 }
 
-void L2RSenderVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
+void L2RSenderStreamType::Run(InstrChain* vm_instr_chain) const {
   char* data_ptr = vm_instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
   TransportKey2SendRequest transport_key2send_request;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
@@ -109,9 +108,9 @@ void L2RSenderVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
   GetTransporter(vm_instr_chain)->Transport(&transport_key2send_request);
 }
 
-COMMAND(RegisterVmStreamType<L2RSenderVmStreamType>());
-COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RSend", 0, kVmRemote));
-COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RLocalSend", 0, kVmLocal));
+COMMAND(RegisterStreamType<L2RSenderStreamType>());
+COMMAND(RegisterInstructionId<L2RSenderStreamType>("L2RSend", 0, kRemote));
+COMMAND(RegisterInstructionId<L2RSenderStreamType>("L2RLocalSend", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow

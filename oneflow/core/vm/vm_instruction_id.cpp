@@ -4,8 +4,8 @@
 namespace oneflow {
 namespace vm {
 
-void VmInstructionId::__Init__(const std::string& instr_type_name) {
-  CopyFrom(LookupVmInstructionId(instr_type_name));
+void InstructionId::__Init__(const std::string& instr_type_name) {
+  CopyFrom(LookupInstructionId(instr_type_name));
 }
 
 }  // namespace vm

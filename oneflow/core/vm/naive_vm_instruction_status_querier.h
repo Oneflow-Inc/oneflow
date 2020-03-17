@@ -4,25 +4,25 @@
 namespace oneflow {
 namespace vm {
 
-class NaiveVmInstrStatusQuerier {
+class NaiveInstrStatusQuerier {
  public:
-  ~NaiveVmInstrStatusQuerier() = default;
+  ~NaiveInstrStatusQuerier() = default;
 
   bool done() const { return done_; }
   void set_done() { done_ = true; }
 
-  static const NaiveVmInstrStatusQuerier* Cast(const char* mem_ptr) {
-    return reinterpret_cast<const NaiveVmInstrStatusQuerier*>(mem_ptr);
+  static const NaiveInstrStatusQuerier* Cast(const char* mem_ptr) {
+    return reinterpret_cast<const NaiveInstrStatusQuerier*>(mem_ptr);
   }
-  static NaiveVmInstrStatusQuerier* MutCast(char* mem_ptr) {
-    return reinterpret_cast<NaiveVmInstrStatusQuerier*>(mem_ptr);
+  static NaiveInstrStatusQuerier* MutCast(char* mem_ptr) {
+    return reinterpret_cast<NaiveInstrStatusQuerier*>(mem_ptr);
   }
-  static NaiveVmInstrStatusQuerier* PlacementNew(char* mem_ptr) {
-    return new (mem_ptr) NaiveVmInstrStatusQuerier();
+  static NaiveInstrStatusQuerier* PlacementNew(char* mem_ptr) {
+    return new (mem_ptr) NaiveInstrStatusQuerier();
   }
 
  private:
-  NaiveVmInstrStatusQuerier() : done_(false) {}
+  NaiveInstrStatusQuerier() : done_(false) {}
   volatile bool done_;
 };
 

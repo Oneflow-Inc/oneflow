@@ -6,28 +6,28 @@
 namespace oneflow {
 namespace vm {
 
-class VmScheduler;
-class VmInstructionMsg;
+class Scheduler;
+class InstructionMsg;
 
-class DeviceHelperVmStreamType final : public VmStreamType {
+class DeviceHelperStreamType final : public StreamType {
  public:
-  DeviceHelperVmStreamType() = default;
-  ~DeviceHelperVmStreamType() = default;
+  DeviceHelperStreamType() = default;
+  ~DeviceHelperStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 3;
+  static const StreamTypeId kStreamTypeId = 3;
 
-  ObjectMsgPtr<VmInstructionMsg> CudaMalloc(uint64_t logical_object_id, size_t size) const;
-  ObjectMsgPtr<VmInstructionMsg> CudaFree(uint64_t logical_object_id) const;
+  ObjectMsgPtr<InstructionMsg> CudaMalloc(uint64_t logical_object_id, size_t size) const;
+  ObjectMsgPtr<InstructionMsg> CudaFree(uint64_t logical_object_id) const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const override {}
 
-  void InitVmInstructionStatus(const VmStream& vm_stream,
-                               VmInstructionStatusBuffer* status_buffer) const override;
-  void DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                 VmInstructionStatusBuffer* status_buffer) const override;
-  bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
-                                    const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmInstrChain* vm_instr_chain) const override;
+  void InitInstructionStatus(const Stream& vm_stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& vm_stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& vm_stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* vm_instr_chain) const override;
 };
 
 }  // namespace vm

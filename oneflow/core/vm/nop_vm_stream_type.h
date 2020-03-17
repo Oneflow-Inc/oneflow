@@ -6,27 +6,27 @@
 namespace oneflow {
 namespace vm {
 
-class VmScheduler;
-class VmInstructionMsg;
+class Scheduler;
+class InstructionMsg;
 
-class NopVmStreamType final : public VmStreamType {
+class NopStreamType final : public StreamType {
  public:
-  NopVmStreamType() = default;
-  ~NopVmStreamType() = default;
+  NopStreamType() = default;
+  ~NopStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 1;
+  static const StreamTypeId kStreamTypeId = 1;
 
-  ObjectMsgPtr<VmInstructionMsg> Nop() const;
+  ObjectMsgPtr<InstructionMsg> Nop() const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const override {}
 
-  void InitVmInstructionStatus(const VmStream& vm_stream,
-                               VmInstructionStatusBuffer* status_buffer) const override;
-  void DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                 VmInstructionStatusBuffer* status_buffer) const override;
-  bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
-                                    const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmInstrChain* vm_instr_chain) const override;
+  void InitInstructionStatus(const Stream& vm_stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& vm_stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& vm_stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* vm_instr_chain) const override;
 };
 }  // namespace vm
 }  // namespace oneflow

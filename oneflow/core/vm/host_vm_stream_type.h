@@ -6,31 +6,31 @@
 namespace oneflow {
 namespace vm {
 
-class VmScheduler;
-class VmInstructionMsg;
+class Scheduler;
+class InstructionMsg;
 
-class HostVmStreamType final : public VmStreamType {
+class HostStreamType final : public StreamType {
  public:
-  HostVmStreamType() = default;
-  ~HostVmStreamType() = default;
+  HostStreamType() = default;
+  ~HostStreamType() = default;
 
-  static const VmStreamTypeId kVmStreamTypeId = 2;
+  static const StreamTypeId kStreamTypeId = 2;
 
-  ObjectMsgPtr<VmInstructionMsg> Malloc(uint64_t logical_object_id, size_t size) const;
-  ObjectMsgPtr<VmInstructionMsg> Free(uint64_t logical_object_id) const;
+  ObjectMsgPtr<InstructionMsg> Malloc(uint64_t logical_object_id, size_t size) const;
+  ObjectMsgPtr<InstructionMsg> Free(uint64_t logical_object_id) const;
 
-  ObjectMsgPtr<VmInstructionMsg> CudaMallocHost(uint64_t logical_object_id, size_t size) const;
-  ObjectMsgPtr<VmInstructionMsg> CudaFreeHost(uint64_t logical_object_id) const;
+  ObjectMsgPtr<InstructionMsg> CudaMallocHost(uint64_t logical_object_id, size_t size) const;
+  ObjectMsgPtr<InstructionMsg> CudaFreeHost(uint64_t logical_object_id) const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, VmStream* vm_stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const override {}
 
-  void InitVmInstructionStatus(const VmStream& vm_stream,
-                               VmInstructionStatusBuffer* status_buffer) const override;
-  void DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                 VmInstructionStatusBuffer* status_buffer) const override;
-  bool QueryVmInstructionStatusDone(const VmStream& vm_stream,
-                                    const VmInstructionStatusBuffer& status_buffer) const override;
-  void Run(VmInstrChain* vm_instr_chain) const override;
+  void InitInstructionStatus(const Stream& vm_stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& vm_stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& vm_stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* vm_instr_chain) const override;
 };
 
 }  // namespace vm

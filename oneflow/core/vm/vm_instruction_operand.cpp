@@ -5,7 +5,7 @@
 namespace oneflow {
 namespace vm {
 
-void VmInstructionOperand::__Init__(const InstructionOperandProto& proto) {
+void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mutable_operand()) {

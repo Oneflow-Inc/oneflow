@@ -12,40 +12,40 @@ namespace vm {
 
 namespace {}  // namespace
 
-void NopVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
-                                              VmInstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(NaiveVmInstrStatusQuerier) < kVmInstructionStatusBufferBytes, "");
-  NaiveVmInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+void NopStreamType::InitInstructionStatus(const Stream& vm_stream,
+                                          InstructionStatusBuffer* status_buffer) const {
+  static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void NopVmStreamType::DeleteVmInstructionStatus(const VmStream& vm_stream,
-                                                VmInstructionStatusBuffer* status_buffer) const {
+void NopStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+                                            InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool NopVmStreamType::QueryVmInstructionStatusDone(
-    const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const {
-  return NaiveVmInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+bool NopStreamType::QueryInstructionStatusDone(const Stream& vm_stream,
+                                               const InstructionStatusBuffer& status_buffer) const {
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-const VmStreamTypeId NopVmStreamType::kVmStreamTypeId;
+const StreamTypeId NopStreamType::kStreamTypeId;
 
-ObjectMsgPtr<VmInstructionMsg> NopVmStreamType::Nop() const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+ObjectMsgPtr<InstructionMsg> NopStreamType::Nop() const {
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(0);
   return vm_instr_msg;
 }
 
-void NopVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
+void NopStreamType::Run(InstrChain* vm_instr_chain) const {
   auto* status_buffer = vm_instr_chain->mut_status_buffer();
-  NaiveVmInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-COMMAND(RegisterVmStreamType<NopVmStreamType>());
-COMMAND(RegisterVmInstructionId<NopVmStreamType>("Nop", 0, kVmRemote));
-COMMAND(RegisterVmInstructionId<NopVmStreamType>("LocalNop", 0, kVmLocal));
+COMMAND(RegisterStreamType<NopStreamType>());
+COMMAND(RegisterInstructionId<NopStreamType>("Nop", 0, kRemote));
+COMMAND(RegisterInstructionId<NopStreamType>("LocalNop", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow
