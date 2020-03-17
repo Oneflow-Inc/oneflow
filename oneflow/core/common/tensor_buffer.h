@@ -10,6 +10,7 @@ namespace oneflow {
 
 class TensorBuffer {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
   TensorBuffer()
       : shape_(Shape()), data_(nullptr), data_type_(DataType::kInvalidDataType), num_bytes_(0) {
     mem_case_.mutable_host_mem();
@@ -122,8 +123,13 @@ class TensorBuffer {
   MemoryCase mem_case_;
 };
 
-double TensorBuffer::growth_factor_ = 1.0;
-double TensorBuffer::shrink_threshold_ = 0.9;
+#define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
+
+template<>
+struct GetDataType<TensorBuffer> : std::integral_constant<DataType, DataType::kTensorBuffer> {};
+inline TensorBuffer GetTypeByDataType(std::integral_constant<DataType, DataType::kTensorBuffer>) {
+  return {};
+}
 
 }  // namespace oneflow
 
