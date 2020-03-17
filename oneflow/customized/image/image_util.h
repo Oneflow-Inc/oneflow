@@ -13,6 +13,12 @@ struct ImageUtil {
                            const std::string& output_color, cv::Mat& output_img);
 };
 
+template<typename T>
+inline cv::Mat CreateMatFromPtr(int H, int W, int type, const T* ptr,
+                                size_t step = cv::Mat::AUTO_STEP) {
+  return cv::Mat(H, W, type, const_cast<T*>(ptr), step);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_IMAGE_IMAGE_UTIL_H_

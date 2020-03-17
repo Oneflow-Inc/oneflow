@@ -137,9 +137,8 @@ REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU
-          && out_tensor->data_type() == DataType::kTensorBuffer
-          && in_tensor->data_type() == DataType::kOFRecord) {
+      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord
+          && out_tensor->data_type() == DataType::kTensorBuffer) {
         return true;
       }
       return false;
