@@ -21,7 +21,16 @@ def load_libray(val):
     sess.config_proto.load_lib_path.append(val)
 
 @oneflow_export('config.machine_num')
-def machine_num(val):
+def machine_num(*args):
+    if len(args) == 0: return get_machine_num()
+    if len(args) == 1: return set_machine_num(args[0])
+    raise NotImplementedError
+
+def get_machine_num():
+    sess = session_ctx.GetDefaultSession()
+    return sess.config_proto.resource.machine_num;
+
+def set_machine_num(val):
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
@@ -46,6 +55,13 @@ def cpu_device_num(val):
         return
     assert type(val) is int
     sess.config_proto.resource.cpu_device_num = val
+
+@oneflow_export('config.device_num')
+def device_num():
+    resource = session_ctx.GetDefaultSession().config_proto.resource.cpu_device_num
+    if resource.HasField('cpu_device_num'): return resource.cpu_device_num
+    if resource.HasField('gpu_device_num'): return resource.bpu_device_num
+    raise NotImplementedError
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
