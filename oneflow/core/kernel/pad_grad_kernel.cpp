@@ -2,23 +2,19 @@
 #include "oneflow/core/device/memory_copier.h"
 namespace oneflow {
 
-namespace{
+namespace {
 
-  void SetShapeDimVector(const ShapeView& blob_shape, const int64_t ndims, 
-                      const int64_t size_of_data_type, DimVector& shape_vec){
-    const int64_t offset = blob_shape.NumAxes() - ndims;
-    for (int64_t i = 0; i < ndims; ++i){
-      shape_vec[i] = blob_shape.At(i + offset);
-    }
-    if (offset > 0){
-      for (int64_t j = 0; j < offset; ++j){
-        shape_vec[0] = shape_vec[0] * blob_shape.At(j);
-      }
-    }
-    shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
+void SetShapeDimVector(const ShapeView& blob_shape, const int64_t ndims,
+                       const int64_t size_of_data_type, DimVector& shape_vec) {
+  const int64_t offset = blob_shape.NumAxes() - ndims;
+  for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = blob_shape.At(i + offset); }
+  if (offset > 0) {
+    for (int64_t j = 0; j < offset; ++j) { shape_vec[0] = shape_vec[0] * blob_shape.At(j); }
   }
+  shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
+}
 
-}//namespace
+}  // namespace
 
 template<DeviceType device_type, typename T>
 class PadGradKernel final : public KernelIf<device_type> {
@@ -46,11 +42,11 @@ class PadGradKernel final : public KernelIf<device_type> {
     memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
     memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
 
-    DimVector src_pos_vec(ndims) ;
+    DimVector src_pos_vec(ndims);
     for (int64_t i = 0; i < ndims; ++i) {
-        src_pos_vec[i] = this->op_conf().pad_grad_conf().paddings()[2*i];
+      src_pos_vec[i] = this->op_conf().pad_grad_conf().paddings()[2 * i];
     }
-    src_pos_vec[ndims - 1] = src_pos_vec[ndims - 1] * size_of_data_type; 
+    src_pos_vec[ndims - 1] = src_pos_vec[ndims - 1] * size_of_data_type;
     DimVector dst_pos_vec(ndims, 0);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);

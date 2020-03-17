@@ -4,13 +4,12 @@ namespace oneflow {
 
 namespace {
 
-template <typename ConvNdOpConf>
+template<typename ConvNdOpConf>
 void SetNdConvOpConf(
     ConvNdOpConf* conf, const ConvConf& conv_conf, const Operator& op,
-    const std::string out_diff_lbn, LogicalBlobId* in_diff_lbi,
-    OperatorConf& data_grad_op, std::vector<OperatorConf>* op_confs,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp){
-
+    const std::string out_diff_lbn, LogicalBlobId* in_diff_lbi, OperatorConf& data_grad_op,
+    std::vector<OperatorConf>* op_confs,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   conf->set_in(out_diff_lbn);
   conf->set_weight(GenLogicalBlobName(op.BnInOp2Lbi("weight")));
   conf->set_out("y");
@@ -24,12 +23,12 @@ void SetNdConvOpConf(
   *conf->mutable_strides() = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
   *conf->mutable_dilation_rate() = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   CHECK(conv_conf.has_torch_style_padding_conf());
-  *conf->mutable_torch_style_padding_conf()->mutable_padding_needed() = 
-        GetPbRfFromPbMessage<int32_t>(conv_conf.torch_style_padding_conf(), "padding_needed");
+  *conf->mutable_torch_style_padding_conf()->mutable_padding_needed() =
+      GetPbRfFromPbMessage<int32_t>(conv_conf.torch_style_padding_conf(), "padding_needed");
   conf->set_use_bias(false);
   op_confs->push_back(data_grad_op);
   in_diff_lbi->set_op_name(data_grad_op.name());
-  in_diff_lbi->set_blob_name(conf->out());  
+  in_diff_lbi->set_blob_name(conf->out());
 }
 
 void GenerateBackwardOpConf(
@@ -62,16 +61,16 @@ void GenerateBackwardOpConf(
 
     if (Ndims == 1) {
       Conv1DOpConf* conf = data_grad_op.mutable_conv_1d_conf();
-      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi,
-                      data_grad_op, op_confs, LogicalBlobDesc4BnInOp);
+      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi, data_grad_op, op_confs,
+                      LogicalBlobDesc4BnInOp);
     } else if (Ndims == 2) {
       Conv2DOpConf* conf = data_grad_op.mutable_conv_2d_conf();
-      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi,
-                      data_grad_op, op_confs, LogicalBlobDesc4BnInOp);
+      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi, data_grad_op, op_confs,
+                      LogicalBlobDesc4BnInOp);
     } else if (Ndims == 3) {
       Conv3DOpConf* conf = data_grad_op.mutable_conv_3d_conf();
-      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi,
-                      data_grad_op, op_confs, LogicalBlobDesc4BnInOp);
+      SetNdConvOpConf(conf, conv_conf, op, out_diff_lbn, in_diff_lbi, data_grad_op, op_confs,
+                      LogicalBlobDesc4BnInOp);
     } else {
       UNIMPLEMENTED();
     }

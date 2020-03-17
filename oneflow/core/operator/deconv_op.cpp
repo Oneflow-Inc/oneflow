@@ -11,22 +11,25 @@ namespace oneflow {
 namespace {
 
 void GetDewindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                           int32_t stride, int32_t output_padding, const int32_t padding_needed, int64_t* output_size,
-                           int32_t* padding_before, int32_t* padding_after) {
+                             int32_t stride, int32_t output_padding, const int32_t padding_needed,
+                             int64_t* output_size, int32_t* padding_before,
+                             int32_t* padding_after) {
   CHECK_GT(stride, 0);
   CHECK_GE(dilation_rate, 1);
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
-  if (output_size) { 
-    *output_size = (input_size - 1) * stride + effective_filter_size + output_padding - padding_needed;
-    CHECK_GE((*output_size), 0); 
+  if (output_size) {
+    *output_size =
+        (input_size - 1) * stride + effective_filter_size + output_padding - padding_needed;
+    CHECK_GE((*output_size), 0);
   }
-  if (padding_before) { *padding_before = padding_needed / 2; } // not used in deconv
-  if (padding_after) { *padding_after = padding_needed - padding_needed / 2;}
+  if (padding_before) { *padding_before = padding_needed / 2; }  // not used in deconv
+  if (padding_after) { *padding_after = padding_needed - padding_needed / 2; }
 }
 
 void GetDeconvOutAndPad(const ShapeView& in_blob_shape, const DeconvOpConf& conf, DimVector* out,
-                  std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
+                        std::vector<int32_t>* pad_small_side,
+                        std::vector<int32_t>* pad_large_side) {
   const ConvConf& conv_conf = conf.conv_conf();
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
@@ -40,15 +43,15 @@ void GetDeconvOutAndPad(const ShapeView& in_blob_shape, const DeconvOpConf& conf
   CHECK(conv_conf.has_torch_style_padding_conf());
   const PbRf<int32_t>& padding_needed = conv_conf.torch_style_padding_conf().padding_needed();
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
-    GetDewindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i), dilation_rate.Get(i),
-                            strides.Get(i), output_padding.Get(i), padding_needed.Get(i), out ? &(out->at(i)) : nullptr,
+    GetDewindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
+                            dilation_rate.Get(i), strides.Get(i), output_padding.Get(i),
+                            padding_needed.Get(i), out ? &(out->at(i)) : nullptr,
                             pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                             pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }
 }
 
 }  // namespace
-
 
 class DeconvOp : public Operator {
  public:
@@ -132,36 +135,36 @@ class DeconvOp : public Operator {
 
 #ifdef WITH_CUDA
     if (DevIsGpuAndEnableCudnn()) {
-        // cudnn_buf
-        size_t workspace_size = cudnn_buf_limit_byte();
-        CudnnConvArgs args(conv_conf, y_blob_desc->data_type(),
-                         ShapeView(y_blob_desc->shape()), weight_blob_desc->data_type(),
-                         ShapeView(weight_blob_desc->shape()), x_blob_desc->data_type(),
-                         ShapeView(x_blob_desc->shape()),
-                         GetValFromPbMessage<std::string>(conv_conf, "data_format"),
-                         workspace_size, job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+      // cudnn_buf
+      size_t workspace_size = cudnn_buf_limit_byte();
+      CudnnConvArgs args(conv_conf, y_blob_desc->data_type(), ShapeView(y_blob_desc->shape()),
+                         weight_blob_desc->data_type(), ShapeView(weight_blob_desc->shape()),
+                         x_blob_desc->data_type(), ShapeView(x_blob_desc->shape()),
+                         GetValFromPbMessage<std::string>(conv_conf, "data_format"), workspace_size,
+                         job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
                          job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                          job_desc().job_conf().cudnn_conv_enable_pseudo_half());
-        using perf_t = cudnnConvolutionBwdDataAlgoPerf_t;
-        using algo_t = cudnnConvolutionBwdDataAlgo_t;
-        perf_t algo_perf;
-        if (job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
-            algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
-                &args, static_cast<algo_t>(this->job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()));
-        } else {
-            algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
-        }
-        CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS)
-            << "op (" << op_conf().name()
-            << ") find algorithm perference failed. algo: " << algo_perf.algo;
-        CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size)
-            << "op (" << op_conf().name() << ") find algorithm " << algo_perf.algo << ", need memory "
-            << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
-        workspace_size = algo_perf.memory;
-        workspace_size = std::max(size_t(1), workspace_size);
-        BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("cudnn_buf");
-        cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(workspace_size)});
-        cudnn_buf->set_data_type(DataType::kChar);
+      using perf_t = cudnnConvolutionBwdDataAlgoPerf_t;
+      using algo_t = cudnnConvolutionBwdDataAlgo_t;
+      perf_t algo_perf;
+      if (job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
+        algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
+            &args,
+            static_cast<algo_t>(this->job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()));
+      } else {
+        algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
+      }
+      CHECK_EQ_OR_RETURN(algo_perf.status, CUDNN_STATUS_SUCCESS)
+          << "op (" << op_conf().name()
+          << ") find algorithm perference failed. algo: " << algo_perf.algo;
+      CHECK_LE_OR_RETURN(algo_perf.memory, workspace_size)
+          << "op (" << op_conf().name() << ") find algorithm " << algo_perf.algo << ", need memory "
+          << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
+      workspace_size = algo_perf.memory;
+      workspace_size = std::max(size_t(1), workspace_size);
+      BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("cudnn_buf");
+      cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(workspace_size)});
+      cudnn_buf->set_data_type(DataType::kChar);
     }
 #endif  // WITH_CUDA
     return Maybe<void>::Ok();

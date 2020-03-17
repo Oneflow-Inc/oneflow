@@ -26,14 +26,14 @@ class PadGradOp final : public Operator {
     const int64_t ndims = op_conf().pad_grad_conf().paddings_size() / 2;
     const int64_t offset = in_blob_desc->shape().NumAxes() - ndims;
     for (int64_t i = 0; i < in_blob_desc->shape().NumAxes(); ++i) {
-        if (i >= offset){
-          int64_t j = i - offset;
-          int64_t padding_before = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2*j);
-          int64_t padding_after = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2*j + 1);
-          out_shape[i] = in_blob_desc->shape().At(i) - padding_before - padding_after;
-        }else{
-          out_shape[i] = in_blob_desc->shape().At(i);
-        }
+      if (i >= offset) {
+        int64_t j = i - offset;
+        int64_t padding_before = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2 * j);
+        int64_t padding_after = GetPbRfFromCustomizedConf<int32_t>("paddings").Get(2 * j + 1);
+        out_shape[i] = in_blob_desc->shape().At(i) - padding_before - padding_after;
+      } else {
+        out_shape[i] = in_blob_desc->shape().At(i);
+      }
     }
     out_blob_desc->mut_shape() = Shape(out_shape);
     return Maybe<void>::Ok();

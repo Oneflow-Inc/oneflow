@@ -10,10 +10,10 @@ template<typename T, int N>
 class NdIndexOffsetHelper {
  public:
   template<class... Ts>
-  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(Ts... dims) {
-    constexpr int n = sizeof...(dims);
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(T d0, Ts... dims) {
+    constexpr int n = 1 + sizeof...(dims);
     static_assert(n <= N, "");
-    T dims_arr[n] = {dims...};
+    T dims_arr[n] = {d0, static_cast<T>(dims)...};
     InitStrides(dims_arr, n);
   }
 
@@ -52,7 +52,12 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n; ++i) { offset += index[i] * stride_[i]; }
+    for (int i = 0; i < n - 1; ++i) { offset += index[i] * stride_[i]; }
+    if (n == N) {
+      offset += index[n - 1];
+    } else {
+      offset += index[n - 1] * stride_[n - 1];
+    }
     return offset;
   }
 

@@ -62,14 +62,6 @@ def deconv2d(
     else:
         raise ValueError("strides must be an int or a list.")
 
-    # data format
-    if data_format.upper() == "NCHW":
-        channel_pos = "channels_first"
-    elif data_format.upper() == "NHWC":
-        channel_pos = "channels_last"
-    else:
-        raise ValueError('data_format must be "NHWC" or "NCHW".')
-
     # dilations
     if dilations is None:
         dilations = [1, 1]
@@ -82,6 +74,18 @@ def deconv2d(
             dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
+
+    # data format
+    if data_format.upper() == "NCHW":
+        channel_pos = "channels_first"
+    elif data_format.upper() == "NHWC":
+        channel_pos = "channels_last"
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
+    else:
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
 
     # output_padding
     assert output_padding is not None
@@ -171,6 +175,19 @@ def deconv2d_tf(
     else:
         raise ValueError("strides must be an int or a list.")
 
+    # dilations
+    if dilations is None:
+        dilations = [1, 1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 2, ValueError(
+                "dilations length must be 2 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations, dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
     # data format
     if data_format.upper() == "NCHW":
         input_shape = input.static_shape[2:]
@@ -184,21 +201,12 @@ def deconv2d_tf(
         assert output_shape is not None
         assert len(output_shape) == 4
         output_shape = output_shape[1:3]
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
-    # dilations
-    if dilations is None:
-        dilations = [1, 1]
-    else:
-        if isinstance(dilations, (list, tuple)):
-            assert len(dilations) == 2, ValueError(
-                "dilations length must be 2 when passed as a list."
-            )
-        elif isinstance(dilations, int):
-            dilations = [dilations, dilations]
-        else:
-            raise ValueError("dilations must be an int or a list.")
     # output_padding
     output_padding = [0, 0]
     if padding.upper() == "SAME":

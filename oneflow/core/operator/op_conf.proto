@@ -1198,6 +1198,14 @@ message UnsortedSegmentSumOpConf {
   required int64 num_segments = 5;
 }
 
+message UnsortedSegmentSumLikeOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string like = 3;
+  required string out = 4;
+  required int64 axis = 5;
+}
+
 message GatherMs0GradOpConf {
   required string out_diff = 1;
   required string indices = 2;
@@ -1972,9 +1980,10 @@ message OperatorConf {
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-    PadOpConf pad_conf = 341;
-    PadGradOpConf pad_grad_conf = 342;
-    DeconvOpConf deconv_conf = 343;
+    UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
+    PadOpConf pad_conf = 342;
+    PadGradOpConf pad_grad_conf = 343;
+    DeconvOpConf deconv_conf = 344;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
