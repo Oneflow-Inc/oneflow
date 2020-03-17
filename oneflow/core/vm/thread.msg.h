@@ -10,18 +10,18 @@ namespace vm {
 // clang-format off
 OBJECT_MSG_BEGIN(Thread);
   // methods
-  PUBLIC void __Init__(const StreamRtDesc& vm_stream_rt_desc, int64_t device_id) {
-    set_vm_stream_rt_desc(&vm_stream_rt_desc);
+  PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc, int64_t device_id) {
+    set_stream_rt_desc(&stream_rt_desc);
     set_device_id(device_id);
   }
   PUBLIC void LoopRun();
   // fields
-  OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, vm_stream_rt_desc); 
+  OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, stream_rt_desc); 
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, device_id);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(vm_thread_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, vm_thread_vm_stream_link, vm_stream_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(thread_link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_stream_link, stream_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(InstrChain, pending_chain_link, pending_chain_list);
 
   PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();

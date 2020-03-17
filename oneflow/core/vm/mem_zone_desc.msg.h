@@ -13,7 +13,7 @@ static const MemZoneTypeId kGpuMemTypeId = 1;
 
 // clang-format off
 FLAT_MSG_BEGIN(MemZoneId);
-  FLAT_MSG_DEFINE_OPTIONAL(MemZoneTypeId, vm_mem_zone_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(MemZoneTypeId, mem_zone_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
 
   // methods
@@ -28,7 +28,7 @@ OBJECT_MSG_BEGIN(MemZoneDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_device);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(4, MemZoneTypeId, vm_mem_zone_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(4, MemZoneTypeId, mem_zone_type_id);
 OBJECT_MSG_END(MemZoneDesc);
 // clang-format on
 

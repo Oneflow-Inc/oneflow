@@ -13,7 +13,7 @@ InstructionOperand* InstructionMsg::add_operand() {
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) {
-  mutable_vm_instr_id()->__Init__(proto.instr_type_name());
+  mutable_instr_id()->__Init__(proto.instr_type_name());
   mutable_operand()->resize(proto.operand_size());
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));
@@ -29,25 +29,25 @@ MirroredObject* Instruction::FindMirroredObjectByOperand(const MirroredObjectOpe
   return access->mut_mirrored_object();
 }
 
-void InstrChain::__Init__(InstructionMsg* vm_instr_msg, Stream* vm_stream) {
+void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
-  set_vm_stream(vm_stream);
-  set_vm_stream_type(&vm_stream->vm_thread().vm_stream_rt_desc().vm_stream_type());
-  vm_stream_type().InitInstructionStatus(*vm_stream, mutable_status_buffer());
-  auto vm_instruction = ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), this, vm_instr_msg);
-  mut_vm_instruction_list()->EmplaceBack(std::move(vm_instruction));
-  CHECK_EQ(vm_instruction_list().size(), 1);
+  set_stream(stream);
+  set_stream_type(&stream->thread().stream_rt_desc().stream_type());
+  stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
+  auto instruction = ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), this, instr_msg);
+  mut_instruction_list()->EmplaceBack(std::move(instruction));
+  CHECK_EQ(instruction_list().size(), 1);
 }
 
 void InstrChain::__Delete__() {
-  vm_stream_type().DeleteInstructionStatus(vm_stream(), mut_status_buffer());
-  mut_vm_instruction_list()->Clear();
+  stream_type().DeleteInstructionStatus(stream(), mut_status_buffer());
+  mut_instruction_list()->Clear();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
 
 bool InstrChain::Done() const {
-  return vm_stream_type().QueryInstructionStatusDone(vm_stream(), status_buffer());
+  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
 }  // namespace vm

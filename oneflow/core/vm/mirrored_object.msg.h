@@ -18,12 +18,12 @@ class MirroredObject;
 // clang-format off
 OBJECT_MSG_BEGIN(MirroredObjectAccess);
   // methods
-  PUBLIC void __Init__(Instruction* vm_instruction, MirroredObject* mirrored_object,
+  PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_PTR(Instruction, vm_instruction);
+  OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
 
   // links
@@ -84,12 +84,12 @@ class Scheduler;
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
-                       Scheduler* vm_scheduler) {
+                       Scheduler* scheduler) {
     set_logical_object_id(logical_object_id);
-    set_vm_scheduler(vm_scheduler);
+    set_scheduler(scheduler);
   }
   // fields
-  OBJECT_MSG_DEFINE_PTR(Scheduler, vm_scheduler);
+  OBJECT_MSG_DEFINE_PTR(Scheduler, scheduler);
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);

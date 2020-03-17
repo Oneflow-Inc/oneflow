@@ -13,9 +13,9 @@ enum VmType { kRemote = 0, kLocal };
 FLAT_MSG_BEGIN(InstructionId);
   PUBLIC void __Init__(const std::string& instr_type_name);
 
-  FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, vm_stream_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(InstructionOpcode, opcode);
-  FLAT_MSG_DEFINE_OPTIONAL(VmType, vm_type);
+  FLAT_MSG_DEFINE_OPTIONAL(VmType, type);
 FLAT_MSG_END(InstructionId);
 // clang-format on
 

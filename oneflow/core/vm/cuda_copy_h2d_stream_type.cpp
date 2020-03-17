@@ -22,25 +22,25 @@ FLAT_MSG_VIEW_BEGIN(CudaCopyH2DInstruction);
 FLAT_MSG_VIEW_END(CudaCopyH2DInstruction);
 // clang-format on
 
-void CudaCopyH2D(Instruction* vm_instr) {
+void CudaCopyH2D(Instruction* instr) {
   void* dst = nullptr;
   const void* src = nullptr;
   size_t size = 0;
-  const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
+  const auto& stream = instr->mut_instr_chain()->stream();
   {
     FlatMsgView<CudaCopyH2DInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
     auto* dst_mirrored_obj =
-        vm_instr->FindMirroredObjectByOperand(view->dst().operand(), vm_stream.parallel_id());
+        instr->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
     CHECK_NOTNULL(dst_mirrored_obj);
     dst = dst_mirrored_obj->mut_cuda_mem_buffer()->mut_data();
     auto* src_mirrored_obj =
-        vm_instr->FindMirroredObjectByOperand(view->src().operand(), vm_stream.parallel_id());
+        instr->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
     CHECK_NOTNULL(src_mirrored_obj);
     src = src_mirrored_obj->mut_host_mem_buffer()->mut_data();
   }
-  Memcpy<DeviceType::kGPU>(vm_stream.device_ctx().get(), dst, src, size,
+  Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,
                            cudaMemcpyKind::cudaMemcpyHostToDevice);
 }
 
@@ -50,50 +50,50 @@ const StreamTypeId CudaCopyH2DStreamType::kStreamTypeId;
 
 ObjectMsgPtr<InstructionMsg> CudaCopyH2DStreamType::Copy(uint64_t dst, uint64_t src,
                                                          size_t size) const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(0);
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(0);
   {
-    FlatMsgView<CudaCopyH2DInstruction> view(vm_instr_msg->mutable_operand());
+    FlatMsgView<CudaCopyH2DInstruction> view(instr_msg->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);
     view->mutable_src()->mutable_operand()->__Init__(src);
     view->set_size(size);
   }
-  return vm_instr_msg;
+  return instr_msg;
 }
 
 void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                          Stream* vm_stream) const {
-  device_ctx->reset(new CudaStreamHandleDeviceCtx(vm_stream->mut_callback_list()));
+                                          Stream* stream) const {
+  device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->mut_callback_list()));
 }
 
-void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& vm_stream,
+void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                       vm_stream.vm_thread().device_id());
+                                       stream.thread().device_id());
 }
 
-void CudaCopyH2DStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+void CudaCopyH2DStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
 bool CudaCopyH2DStreamType::QueryInstructionStatusDone(
-    const Stream& vm_stream, const InstructionStatusBuffer& status_buffer) const {
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaCopyH2DStreamType::Run(InstrChain* vm_instr_chain) const {
-  auto* vm_stream = vm_instr_chain->mut_vm_stream();
-  cudaSetDevice(vm_stream->vm_thread().device_id());
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
-    CudaCopyH2D(vm_instruction);
+void CudaCopyH2DStreamType::Run(InstrChain* instr_chain) const {
+  auto* stream = instr_chain->mut_stream();
+  cudaSetDevice(stream->thread().device_id());
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
+    CudaCopyH2D(instruction);
   }
-  vm_stream->mut_callback_list()->MoveTo(vm_instr_chain->mut_callback_list());
-  char* data_ptr = vm_instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(vm_stream->device_ctx().get());
+  stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
+  char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
+  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
 COMMAND(RegisterStreamType<CudaCopyH2DStreamType>());

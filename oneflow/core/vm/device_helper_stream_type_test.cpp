@@ -13,13 +13,13 @@ namespace test {
 
 namespace {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(DeviceHelperStreamType, basic) {
-  auto device_helper_vm_stream_desc =
+  auto device_helper_stream_desc =
       ObjectMsgPtr<StreamDesc>::New(DeviceHelperStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
-  vm_desc->mut_vm_stream_type_id2desc()->Insert(device_helper_vm_stream_desc.Mutable());
+  vm_desc->mut_stream_type_id2desc()->Insert(device_helper_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -29,18 +29,18 @@ TEST(DeviceHelperStreamType, basic) {
   list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
+  scheduler->mut_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
-  scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();
+  scheduler->mut_thread_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
-  ASSERT_EQ(scheduler->waiting_vm_instr_chain_list().size(), 0);
-  ASSERT_EQ(scheduler->active_vm_stream_list().size(), 0);
-  auto* vm_thread = scheduler->mut_vm_thread_list()->Begin();
-  ASSERT_TRUE(vm_thread != nullptr);
-  auto* vm_stream = vm_thread->mut_vm_stream_list()->Begin();
-  ASSERT_TRUE(vm_stream != nullptr);
-  auto* vm_instr_chain = vm_stream->mut_running_chain_list()->Begin();
-  ASSERT_TRUE(vm_instr_chain == nullptr);
+  ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
+  ASSERT_EQ(scheduler->active_stream_list().size(), 0);
+  auto* thread = scheduler->mut_thread_list()->Begin();
+  ASSERT_TRUE(thread != nullptr);
+  auto* stream = thread->mut_stream_list()->Begin();
+  ASSERT_TRUE(stream != nullptr);
+  auto* instr_chain = stream->mut_running_chain_list()->Begin();
+  ASSERT_TRUE(instr_chain == nullptr);
 }
 
 }  // namespace

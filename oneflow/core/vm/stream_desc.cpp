@@ -3,9 +3,9 @@
 namespace oneflow {
 namespace vm {
 
-void StreamDesc::__Init__(StreamTypeId vm_stream_type_id, int32_t num_machines,
+void StreamDesc::__Init__(StreamTypeId stream_type_id, int32_t num_machines,
                           int32_t num_streams_per_machine, int32_t num_streams_per_thread) {
-  set_vm_stream_type_id(vm_stream_type_id);
+  set_stream_type_id(stream_type_id);
   set_num_machines(num_machines);
   set_num_streams_per_machine(num_streams_per_machine);
   set_num_streams_per_thread(num_streams_per_thread);

@@ -21,15 +21,15 @@ class StreamType {
  public:
   virtual ~StreamType() = default;
 
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const = 0;
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
-  virtual void InitInstructionStatus(const Stream& vm_stream,
+  virtual void InitInstructionStatus(const Stream& stream,
                                      InstructionStatusBuffer* status_buffer) const = 0;
-  virtual void DeleteInstructionStatus(const Stream& vm_stream,
+  virtual void DeleteInstructionStatus(const Stream& stream,
                                        InstructionStatusBuffer* status_buffer) const = 0;
-  virtual bool QueryInstructionStatusDone(const Stream& vm_stream,
+  virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Run(InstrChain* vm_instr_chain) const = 0;
+  virtual void Run(InstrChain* instr_chain) const = 0;
 
  protected:
   StreamType() = default;
@@ -45,12 +45,12 @@ void RegisterStreamType() {
 class InstructionId;
 
 const InstructionId& LookupInstructionId(const std::string& instr_type_name);
-void RegisterInstructionId(const std::string& instr_type_name, StreamTypeId vm_stream_type_id,
-                           InstructionOpcode opcode, VmType vm_type);
+void RegisterInstructionId(const std::string& instr_type_name, StreamTypeId stream_type_id,
+                           InstructionOpcode opcode, VmType type);
 template<typename T>
 void RegisterInstructionId(const std::string& instr_type_name, InstructionOpcode opcode,
-                           VmType vm_type) {
-  RegisterInstructionId(instr_type_name, T::kStreamTypeId, opcode, vm_type);
+                           VmType type) {
+  RegisterInstructionId(instr_type_name, T::kStreamTypeId, opcode, type);
 }
 
 }  // namespace vm

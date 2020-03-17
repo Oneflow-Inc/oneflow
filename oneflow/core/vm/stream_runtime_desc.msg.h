@@ -14,15 +14,15 @@ class StreamDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(StreamRtDesc);
   // methods
-  PUBLIC void __Init__(StreamDesc* vm_stream_desc);
+  PUBLIC void __Init__(StreamDesc* stream_desc);
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(const StreamType, vm_stream_type); 
-  OBJECT_MSG_DEFINE_OPTIONAL(StreamDesc, vm_stream_desc); 
+  OBJECT_MSG_DEFINE_PTR(const StreamType, stream_type); 
+  OBJECT_MSG_DEFINE_OPTIONAL(StreamDesc, stream_desc); 
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_MAP_HEAD(Stream, vm_stream_id, vm_stream_id2vm_stream);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
+  OBJECT_MSG_DEFINE_MAP_HEAD(Stream, stream_id, stream_id2stream);
 OBJECT_MSG_END(StreamRtDesc);
 // clang-format on
 

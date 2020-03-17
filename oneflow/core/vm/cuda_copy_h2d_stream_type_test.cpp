@@ -16,21 +16,20 @@ namespace test {
 
 namespace {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(CudaCopyH2DStreamType, basic) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   {
-    auto* map = vm_desc->mut_vm_stream_type_id2desc();
-    auto host_vm_stream_desc =
-        ObjectMsgPtr<StreamDesc>::New(HostStreamType::kStreamTypeId, 1, 1, 1);
-    map->Insert(host_vm_stream_desc.Mutable());
-    auto device_helper_vm_stream_desc =
+    auto* map = vm_desc->mut_stream_type_id2desc();
+    auto host_stream_desc = ObjectMsgPtr<StreamDesc>::New(HostStreamType::kStreamTypeId, 1, 1, 1);
+    map->Insert(host_stream_desc.Mutable());
+    auto device_helper_stream_desc =
         ObjectMsgPtr<StreamDesc>::New(DeviceHelperStreamType::kStreamTypeId, 1, 1, 1);
-    map->Insert(device_helper_vm_stream_desc.Mutable());
-    auto cuda_copy_h2d_vm_stream_desc =
+    map->Insert(device_helper_stream_desc.Mutable());
+    auto cuda_copy_h2d_stream_desc =
         ObjectMsgPtr<StreamDesc>::New(CudaCopyH2DStreamType::kStreamTypeId, 1, 1, 1);
-    map->Insert(cuda_copy_h2d_vm_stream_desc.Mutable());
+    map->Insert(cuda_copy_h2d_stream_desc.Mutable());
   }
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
@@ -46,7 +45,7 @@ TEST(CudaCopyH2DStreamType, basic) {
   size_t count = 0;
   while (!scheduler->Empty()) {
     scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_vm_thread_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_list(), t) { t->TryReceiveAndRun(); }
     ++count;
   }
   // std::cout << count << std::endl;
