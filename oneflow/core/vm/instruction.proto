@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow;
+package oneflow.vm;
 
 message MirroredParallelIdProto {}
 message AllParallelIdProto {}
@@ -13,7 +13,7 @@ message MirroredObjectOperandProto {
   }
 }
 
-message VmInstructionOperandProto {
+message InstructionOperandProto {
   oneof type {
     MirroredObjectOperandProto const_operand = 1;
     MirroredObjectOperandProto mutable_operand = 2;
@@ -24,11 +24,11 @@ message VmInstructionOperandProto {
   }
 }
 
-message VmInstructionProto {
-  required string vm_instr_type_name = 1;
-  repeated VmInstructionOperandProto operand = 2;
+message InstructionProto {
+  required string instr_type_name = 1;
+  repeated InstructionOperandProto operand = 2;
 };
 
-message VmInstructionListProto {
-  repeated VmInstructionProto vm_instruction = 1;
+message InstructionListProto {
+  repeated InstructionProto instruction = 1;
 }

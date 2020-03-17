@@ -5,6 +5,7 @@
 #include "oneflow/core/common/object_msg.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 
@@ -80,6 +81,7 @@ using TransportKey2ReceiveRequest = TransportKey2Request<kReceiveTransportReques
 
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_

@@ -9,6 +9,7 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 class VmDesc;
 
@@ -73,6 +74,7 @@ OBJECT_MSG_BEGIN(VmScheduler);
 OBJECT_MSG_END(VmScheduler);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_SCHEDULER_MSG_H_

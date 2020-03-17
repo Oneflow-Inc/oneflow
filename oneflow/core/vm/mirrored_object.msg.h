@@ -10,6 +10,8 @@
 
 namespace oneflow {
 
+namespace vm {
+
 class VmInstruction;
 class MirroredObject;
 
@@ -93,6 +95,8 @@ OBJECT_MSG_BEGIN(LogicalObject);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on
+
+}  // namespace vm
 
 }  // namespace oneflow
 

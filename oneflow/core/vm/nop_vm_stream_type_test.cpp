@@ -7,6 +7,7 @@
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace test {
 
@@ -184,4 +185,5 @@ TEST(NopVmStreamType, one_argument_triger_all_chains) {
 
 }  // namespace test
 
+}  // namespace vm
 }  // namespace oneflow

@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmDesc);
@@ -17,6 +18,7 @@ OBJECT_MSG_BEGIN(VmDesc);
 OBJECT_MSG_END(VmDesc);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_MEM_ZONE_TYPE_DESC_MSG_H_

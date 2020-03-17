@@ -1,10 +1,11 @@
 #include "oneflow/core/vm/vm_instruction_operand.msg.h"
-#include "oneflow/core/vm/vm_instruction.pb.h"
+#include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
-void VmInstructionOperand::__Init__(const VmInstructionOperandProto& proto) {
+void VmInstructionOperand::__Init__(const InstructionOperandProto& proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mutable_operand()) {
@@ -22,4 +23,5 @@ void VmInstructionOperand::__Init__(const VmInstructionOperandProto& proto) {
   }
 }
 
+}  // namespace vm
 }  // namespace oneflow

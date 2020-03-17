@@ -4,6 +4,7 @@
 #include "oneflow/core/common/object_msg.h"
 
 namespace oneflow {
+namespace vm {
 
 using VmMemZoneTypeId = int32_t;
 
@@ -31,6 +32,7 @@ OBJECT_MSG_BEGIN(VmMemZoneDesc);
 OBJECT_MSG_END(VmMemZoneDesc);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_MEM_ZONE_DESC_MSG_H_

@@ -5,6 +5,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+namespace vm {
 
 void VmScheduler::ReleaseVmInstruction(VmInstrChain* vm_instr_chain,
                                        /*out*/ ReadyVmInstrChainList* ready_vm_instr_chain_list) {
@@ -245,4 +246,5 @@ bool VmScheduler::Empty() const {
          && active_vm_stream_list().empty();
 }
 
+}  // namespace vm
 }  // namespace oneflow

@@ -3,6 +3,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {
 
@@ -46,4 +47,5 @@ void RegisterVmInstructionId(const std::string& vm_instruction_name,
   CHECK(VmInstructionId4VmInstructionName()->emplace(vm_instruction_name, vm_instr_id).second);
 }
 
+}  // namespace vm
 }  // namespace oneflow

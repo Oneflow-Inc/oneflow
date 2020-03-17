@@ -9,9 +9,10 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_stream_type.h"
 #include "oneflow/core/vm/vm_instruction_id.msg.h"
-#include "oneflow/core/vm/vm_instruction.pb.h"
+#include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
+namespace vm {
 
 class MirroredObject;
 
@@ -19,7 +20,7 @@ class MirroredObject;
 OBJECT_MSG_BEGIN(VmInstructionMsg);
   // methods
   PUBLIC void __Init__() {}
-  PUBLIC void __Init__(const VmInstructionProto& proto);
+  PUBLIC void __Init__(const InstructionProto& proto);
   PUBLIC VmInstructionOperand* add_operand();
 
   // fields
@@ -94,6 +95,7 @@ OBJECT_MSG_BEGIN(VmInstrChain);
 OBJECT_MSG_END(VmInstrChain);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_

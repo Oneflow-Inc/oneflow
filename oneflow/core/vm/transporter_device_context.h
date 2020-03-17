@@ -1,10 +1,11 @@
-#ifndef ONEFLOW_CORE_DEVICE_TRANSPORTER_DEVICE_CONTEXT_H_
-#define ONEFLOW_CORE_DEVICE_TRANSPORTER_DEVICE_CONTEXT_H_
+#ifndef ONEFLOW_CORE_VM_TRANSPORTER_DEVICE_CONTEXT_H_
+#define ONEFLOW_CORE_VM_TRANSPORTER_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/transporter.h"
 
 namespace oneflow {
+namespace vm {
 
 class TransporterDeviceCtx final : public DeviceCtx {
  public:
@@ -16,9 +17,10 @@ class TransporterDeviceCtx final : public DeviceCtx {
   Transporter* mut_transporter() { return transporter_.get(); }
 
  private:
-  std::unique_ptr<Transporter> transporter_;
+  std::unique_ptr<vm::Transporter> transporter_;
 };
 
+}  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_TRANSPORTER_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_VM_TRANSPORTER_DEVICE_CONTEXT_H_

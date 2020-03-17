@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/vm_stream.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 class VmStreamType;
 class VmStreamDesc;
@@ -25,6 +26,7 @@ OBJECT_MSG_BEGIN(VmStreamRtDesc);
 OBJECT_MSG_END(VmStreamRtDesc);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_STREAM_RUNTIME_DESC_MSG_H_

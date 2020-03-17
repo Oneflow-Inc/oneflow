@@ -3,6 +3,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 void MirroredObjectAccess::__Init__(VmInstruction* vm_instruction, MirroredObject* mirrored_object,
                                     bool is_const_operand) {
@@ -18,4 +19,5 @@ void MirroredObject::__Init__(LogicalObject* logical_object, int64_t parallel_id
   set_parallel_id(parallel_id);
 }
 
+}  // namespace vm
 }  // namespace oneflow

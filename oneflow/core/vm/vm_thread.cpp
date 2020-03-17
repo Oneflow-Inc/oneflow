@@ -2,6 +2,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 void VmThread::LoopRun() {
   while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess)
@@ -30,4 +31,5 @@ ObjectMsgConditionListStatus VmThread::TryReceiveAndRun() {
   return status;
 }
 
+}  // namespace vm
 }  // namespace oneflow

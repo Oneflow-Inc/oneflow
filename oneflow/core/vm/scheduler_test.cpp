@@ -7,6 +7,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace test {
 
@@ -33,4 +34,5 @@ TEST(VmScheduler, ToDot) {
 
 }  // namespace test
 
+}  // namespace vm
 }  // namespace oneflow

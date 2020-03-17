@@ -8,6 +8,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {
 
@@ -237,4 +238,5 @@ void HostVmStreamType::Run(VmInstrChain* vm_instr_chain) const {
 
 COMMAND(RegisterVmStreamType<HostVmStreamType>());
 
+}  // namespace vm
 }  // namespace oneflow

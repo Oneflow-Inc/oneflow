@@ -7,6 +7,7 @@
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace test {
 
@@ -46,4 +47,5 @@ TEST(DeviceHelperVmStreamType, basic) {
 
 }  // namespace test
 
+}  // namespace vm
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #include "oneflow/core/vm/vm_stream_desc.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 void VmStreamDesc::__Init__(VmStreamTypeId vm_stream_type_id, int32_t num_machines,
                             int32_t num_streams_per_machine, int32_t num_streams_per_thread) {
@@ -16,4 +17,5 @@ int32_t VmStreamDesc::num_threads() const {
   return num_devices / num_streams_per_thread();
 }
 
+}  // namespace vm
 }  // namespace oneflow

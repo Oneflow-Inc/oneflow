@@ -7,6 +7,7 @@
 #include "oneflow/core/common/callback.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 #ifdef WITH_CUDA
 
@@ -43,7 +44,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
 };
 
 #endif  // WITH_CUDA
-
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_

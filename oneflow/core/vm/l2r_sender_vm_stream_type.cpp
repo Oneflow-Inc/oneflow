@@ -3,9 +3,10 @@
 #include "oneflow/core/vm/vm_instruction.msg.h"
 #include "oneflow/core/vm/vm_stream.msg.h"
 #include "oneflow/core/vm/localhost_transporter.h"
-#include "oneflow/core/device/transporter_device_context.h"
+#include "oneflow/core/vm/transporter_device_context.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {
 
@@ -112,4 +113,5 @@ COMMAND(RegisterVmStreamType<L2RSenderVmStreamType>());
 COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RSend", 0, kVmRemote));
 COMMAND(RegisterVmInstructionId<L2RSenderVmStreamType>("L2RLocalSend", 0, kVmLocal));
 
+}  // namespace vm
 }  // namespace oneflow

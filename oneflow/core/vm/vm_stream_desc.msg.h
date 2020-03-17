@@ -8,6 +8,7 @@
 #include "oneflow/core/vm/logical_object_id.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 using VmStreamTypeId = int;
 using VmInstructionOpcode = int32_t;
@@ -54,6 +55,7 @@ OBJECT_MSG_BEGIN(VmStreamDesc);
 OBJECT_MSG_END(VmStreamDesc);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VPU_DESC_MSG_H_

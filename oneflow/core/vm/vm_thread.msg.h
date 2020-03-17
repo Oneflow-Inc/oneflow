@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/vm_stream_runtime_desc.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmThread);
@@ -28,6 +29,7 @@ OBJECT_MSG_BEGIN(VmThread);
 OBJECT_MSG_END(VmThread);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_THREAD_MSG_H_

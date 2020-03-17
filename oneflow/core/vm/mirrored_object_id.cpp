@@ -2,6 +2,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 void MirroredObjectOperand::__Init__(const LogicalObjectId& logical_object_id,
                                      int64_t parallel_id) {
@@ -41,4 +42,5 @@ void MirroredObjectId::__Init__(const MirroredObjectOperand& operand, int64_t pa
   __Init__(operand.logical_object_id(), operand.GetParallelId(parallel_id));
 }
 
+}  // namespace vm
 }  // namespace oneflow
