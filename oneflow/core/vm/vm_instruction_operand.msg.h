@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 FLAT_MSG_BEGIN(ConstMirroredObjectOperand);
@@ -19,11 +20,11 @@ FLAT_MSG_BEGIN(MutableMirroredObjectOperand);
 FLAT_MSG_END(MutableMirroredObjectOperand);
 // clang-format on
 
-class VmInstructionOperandProto;
+class InstructionOperandProto;
 // clang-format off
 FLAT_MSG_BEGIN(VmInstructionOperand);
   // methods
-  PUBLIC void __Init__(const VmInstructionOperandProto& proto);
+  PUBLIC void __Init__(const InstructionOperandProto& proto);
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
@@ -35,6 +36,7 @@ FLAT_MSG_BEGIN(VmInstructionOperand);
 FLAT_MSG_END(VmInstructionOperand);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_INSTRUCTION_OPERAND_H_

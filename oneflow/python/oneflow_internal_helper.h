@@ -20,6 +20,8 @@
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/vm.h"
 
 namespace oneflow {
 
@@ -152,6 +154,13 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   ParallelConf parallel_conf;
   OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
+Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
+  vm::InstructionListProto instruction_list;
+  OF_CHECK(TxtString2PbMessage(instruction_list_str, &instruction_list))
+      << "InstructionListProto parse failed";
+  return vm::Run(instruction_list);
 }
 
 }  // namespace oneflow

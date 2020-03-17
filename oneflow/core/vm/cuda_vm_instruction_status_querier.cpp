@@ -2,6 +2,7 @@
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
+namespace vm {
 
 bool CudaVmInstrStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
@@ -15,4 +16,5 @@ void CudaVmInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   launched_ = true;
 }
 
+}  // namespace vm
 }  // namespace oneflow

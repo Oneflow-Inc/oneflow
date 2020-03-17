@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/vm_stream_type.h"
 
 namespace oneflow {
+namespace vm {
 
 class VmScheduler;
 class VmInstructionMsg;
@@ -27,7 +28,7 @@ class NopVmStreamType final : public VmStreamType {
                                     const VmInstructionStatusBuffer& status_buffer) const override;
   void Run(VmInstrChain* vm_instr_chain) const override;
 };
-
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_NOP_VM_STREAM_TYPE_H_

@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/transporter.h"
 
 namespace oneflow {
+namespace vm {
 
 class LocalhostTransporter final : public Transporter {
  public:
@@ -24,6 +25,7 @@ class LocalhostTransporter final : public Transporter {
   void Transport(TransportKey2ReceiveRequest* transport_key2receive_request) const override;
 };
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_LOCALHOST_TRANSPORTER_H_

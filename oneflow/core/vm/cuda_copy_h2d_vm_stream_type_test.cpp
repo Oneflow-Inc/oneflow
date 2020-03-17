@@ -10,6 +10,7 @@
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace test {
 
@@ -55,4 +56,5 @@ TEST(CudaCopyH2DVmStreamType, basic) {
 
 }  // namespace test
 
+}  // namespace vm
 }  // namespace oneflow

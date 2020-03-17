@@ -9,8 +9,11 @@
 
 namespace oneflow {
 
-class VmStream;
 class ObjectMsgAllocator;
+
+namespace vm {
+
+class VmStream;
 class VmInstructionStatusBuffer;
 class VmInstrChain;
 
@@ -41,16 +44,16 @@ void RegisterVmStreamType() {
 
 class VmInstructionId;
 
-const VmInstructionId& LookupVmInstructionId(const std::string& vm_instr_type_name);
-void RegisterVmInstructionId(const std::string& vm_instr_type_name,
-                             VmStreamTypeId vm_stream_type_id, VmInstructionOpcode opcode,
-                             VmType vm_type);
+const VmInstructionId& LookupVmInstructionId(const std::string& instr_type_name);
+void RegisterVmInstructionId(const std::string& instr_type_name, VmStreamTypeId vm_stream_type_id,
+                             VmInstructionOpcode opcode, VmType vm_type);
 template<typename T>
-void RegisterVmInstructionId(const std::string& vm_instr_type_name, VmInstructionOpcode opcode,
+void RegisterVmInstructionId(const std::string& instr_type_name, VmInstructionOpcode opcode,
                              VmType vm_type) {
-  RegisterVmInstructionId(vm_instr_type_name, T::kVmStreamTypeId, opcode, vm_type);
+  RegisterVmInstructionId(instr_type_name, T::kVmStreamTypeId, opcode, vm_type);
 }
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_

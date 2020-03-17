@@ -346,3 +346,9 @@ def GetFunctionConfigDef():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(func_config_def, ConfigDef())
+
+def RunVmInstructionList(vm_instruction_list):
+    serialized_vm_instruction_list = str(text_format.MessageToString(vm_instruction_list))
+    error_str = oneflow_internal.RunVmInstructionList(serialized_vm_instruction_list)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)

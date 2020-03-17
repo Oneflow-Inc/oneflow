@@ -2,6 +2,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {
 
@@ -109,4 +110,5 @@ void LocalhostTransporter::Transport(
   }
 }
 
+}  // namespace vm
 }  // namespace oneflow

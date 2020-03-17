@@ -3,9 +3,10 @@
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
-#include "oneflow/core/vm/vm_instruction.pb.h"
+#include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 FLAT_MSG_BEGIN(MirroredParallelId);
@@ -44,6 +45,7 @@ FLAT_MSG_BEGIN(MirroredObjectId);
 FLAT_MSG_END(MirroredObjectId);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_

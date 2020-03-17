@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/vm_instruction.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 class VmScheduler;
 class VmInstructionMsg;
@@ -36,6 +37,7 @@ class ControlVmStreamType final : public VmStreamType {
   void Run(VmScheduler* scheduler, VmInstrChain* vm_instr_chain) const;
 };
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_

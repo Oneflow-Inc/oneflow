@@ -4,12 +4,13 @@
 #include "oneflow/core/vm/vm_stream.msg.h"
 #include "oneflow/core/vm/vm_thread.msg.h"
 #include "oneflow/core/vm/cuda_vm_instruction_status_querier.h"
-#include "oneflow/core/device/cuda_stream_handle_device_context.h"
+#include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {
 
@@ -99,4 +100,5 @@ COMMAND(RegisterVmStreamType<CudaCopyH2DVmStreamType>());
 COMMAND(RegisterVmInstructionId<CudaCopyH2DVmStreamType>("CopyH2D", 0, kVmRemote));
 COMMAND(RegisterVmInstructionId<CudaCopyH2DVmStreamType>("CudaCopyH2D", 0, kVmRemote));
 
+}  // namespace vm
 }  // namespace oneflow

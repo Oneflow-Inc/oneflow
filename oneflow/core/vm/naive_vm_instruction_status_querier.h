@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_VM_NAIVE_VM_INSTRUCTION_STATUS_QUERIER_H_
 
 namespace oneflow {
+namespace vm {
 
 class NaiveVmInstrStatusQuerier {
  public:
@@ -25,6 +26,7 @@ class NaiveVmInstrStatusQuerier {
   volatile bool done_;
 };
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_NAIVE_VM_INSTRUCTION_STATUS_QUERIER_H_

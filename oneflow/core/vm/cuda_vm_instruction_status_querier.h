@@ -7,6 +7,8 @@ namespace oneflow {
 
 class DeviceCtx;
 
+namespace vm {
+
 class CudaVmInstrStatusQuerier {
  public:
   ~CudaVmInstrStatusQuerier() = default;
@@ -33,6 +35,7 @@ class CudaVmInstrStatusQuerier {
   cudaEvent_t event_;
 };
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_

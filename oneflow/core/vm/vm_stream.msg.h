@@ -6,6 +6,7 @@
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
+namespace vm {
 
 class VmThread;
 
@@ -32,6 +33,7 @@ OBJECT_MSG_BEGIN(VmStream);
 OBJECT_MSG_END(VmStream);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_STREAM_H_

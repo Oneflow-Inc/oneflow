@@ -6,6 +6,7 @@
 #include "oneflow/core/common/flat_msg_view.h"
 
 namespace oneflow {
+namespace vm {
 
 enum CtrlInstrOpCode { kNewSymbol = 0, kDeleteSymbol };
 
@@ -130,4 +131,5 @@ void ControlVmStreamType::Run(VmInstrChain* vm_instr_chain) const { UNIMPLEMENTE
 
 COMMAND(RegisterVmStreamType<ControlVmStreamType>());
 
+}  // namespace vm
 }  // namespace oneflow

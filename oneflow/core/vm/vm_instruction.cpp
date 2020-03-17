@@ -5,14 +5,15 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 VmInstructionOperand* VmInstructionMsg::add_operand() {
   mut_operand()->emplace_back();
   return mut_operand()->back().Mutable();
 }
 
-void VmInstructionMsg::__Init__(const VmInstructionProto& proto) {
-  mutable_vm_instr_id()->__Init__(proto.vm_instr_type_name());
+void VmInstructionMsg::__Init__(const InstructionProto& proto) {
+  mutable_vm_instr_id()->__Init__(proto.instr_type_name());
   mutable_operand()->resize(proto.operand_size());
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));
@@ -49,4 +50,5 @@ bool VmInstrChain::Done() const {
   return vm_stream_type().QueryVmInstructionStatusDone(vm_stream(), status_buffer());
 }
 
+}  // namespace vm
 }  // namespace oneflow

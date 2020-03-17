@@ -8,6 +8,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace {}  // namespace
 
@@ -46,4 +47,5 @@ COMMAND(RegisterVmStreamType<NopVmStreamType>());
 COMMAND(RegisterVmInstructionId<NopVmStreamType>("Nop", 0, kVmRemote));
 COMMAND(RegisterVmInstructionId<NopVmStreamType>("LocalNop", 0, kVmLocal));
 
+}  // namespace vm
 }  // namespace oneflow

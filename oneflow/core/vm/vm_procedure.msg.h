@@ -5,6 +5,7 @@
 #include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
+namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(VmProcedure);
@@ -16,6 +17,7 @@ OBJECT_MSG_BEGIN(VmProcedure);
 OBJECT_MSG_END(VmProcedure);
 // clang-format on
 
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_VM_PROCEDURE_H_

@@ -3,6 +3,7 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace vm {
 
 void VmStream::__Init__(VmThread* vm_thread, const VmStreamId& vm_stream_id) {
   set_vm_thread(vm_thread);
@@ -33,4 +34,5 @@ void VmStream::DeleteVmInstrChain(ObjectMsgPtr<VmInstrChain>&& vm_instr_chain) {
   vm_instr_chain_ptr->__Delete__();
 }
 
+}  // namespace vm
 }  // namespace oneflow

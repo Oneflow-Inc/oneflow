@@ -3,6 +3,7 @@
 #include "oneflow/core/common/object_msg_reflection.h"
 
 namespace oneflow {
+namespace vm {
 
 namespace test {
 
@@ -15,4 +16,5 @@ TEST(VmDesc, ToDot) {
 
 }  // namespace test
 
+}  // namespace vm
 }  // namespace oneflow

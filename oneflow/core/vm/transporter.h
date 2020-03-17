@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/transport_request.msg.h"
 
 namespace oneflow {
+namespace vm {
 
 class Transporter {
  public:
@@ -27,6 +28,8 @@ class Transporter {
  protected:
   Transporter() = default;
 };
+
+}  // namespace vm
 
 }  // namespace oneflow
 
