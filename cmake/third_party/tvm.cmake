@@ -20,13 +20,14 @@ if (THIRD_PARTY)
         -DINSTALL_DEV:BOOL=ON
         -DUSE_CUDA:BOOL=ON
         -DUSE_LLVM:BOOL=ON
+        -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
     BUILD_COMMAND cd ${TVM_SOURCES_DIR} && mkdir -p build
-      && cp cmake/config.cmake build && cd build && cmake .. && make -j32
-    LOG_DOWNLOAD ON)
+      && cp cmake/config.cmake build && cd build && cmake .. && make -j32)
 
 endif(THIRD_PARTY)
 
 set(TVM_INCLUDE_DIR ${TVM_INSTALL_DIR}/include CACHE PATH "" FORCE)
 list(APPEND TVM_LIBRARIES ${TVM_INSTALL_DIR}/lib/libtvm.so)
+list(APPEND TVM_LIBRARIES ${TVM_INSTALL_DIR}/lib/libtvm_topi.so)
 
 endif(WITH_TVM)
