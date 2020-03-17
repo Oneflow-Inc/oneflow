@@ -28,3 +28,7 @@ message VmInstructionProto {
   required string vm_instr_type_name = 1;
   repeated VmInstructionOperandProto operand = 2;
 };
+
+message VmInstructionListProto {
+  repeated VmInstructionProto vm_instruction = 1;
+}
