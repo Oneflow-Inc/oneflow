@@ -13,43 +13,15 @@
 
 namespace oneflow {
 
-class OFRecord;
-class TensorBuffer;
-
-// SEQ
+#if defined(WITH_CUDA)
+#define DEVICE_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
+#else
+#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
+#endif
 
 typedef half_float::half float16;
-
-#define FLOATING_DATA_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-
-#define SIGNED_INT_DATA_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)   \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
-
-#define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
-
-#define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
-
-#define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
-
-#define ARITHMETIC_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ         \
-  INT_DATA_TYPE_SEQ
-
-#define POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
-#define PB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
-#define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
-
-#define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
-
-#define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
-
-#if defined(WITH_CUDA)
-#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
-#endif
 
 // Type Trait: IsFloating
 
@@ -95,8 +67,7 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
-                     ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<DataType type>
