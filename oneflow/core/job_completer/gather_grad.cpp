@@ -12,11 +12,11 @@ void GenerateBackwardOpConf(
   if (DiffLbi4BnInOp("in") != nullptr) {
     const BlobDesc& in_logical_blob_desc = LogicalBlobDesc4BnInOp("in");
     const GatherOpConf& gather_conf = op.op_conf().gather_conf();
-    const int64_t axis = gather_conf.axis() < 0
-                             ? in_logical_blob_desc.shape().NumAxes() + gather_conf.axis()
-                             : gather_conf.axis();
+    const int64_t num_in_axes = in_logical_blob_desc.shape().NumAxes();
+    const int64_t axis =
+        gather_conf.axis() < 0 ? num_in_axes + gather_conf.axis() : gather_conf.axis();
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, in_logical_blob_desc.shape().NumAxes());
+    CHECK_LT(axis, num_in_axes);
     OperatorConf unsorted_segment_sum_like_op;
     unsorted_segment_sum_like_op.set_name("System-AutoGrad-" + op.op_name());
     UnsortedSegmentSumLikeOpConf* conf =
