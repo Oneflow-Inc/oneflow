@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_RECORD_OFRECORD_READER_H_
 
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
 namespace oneflow {

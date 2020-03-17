@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_META_UTIL_HPP
-#define ONEFLOW_CORE_COMMON_META_UTIL_HPP
+#ifndef ONEFLOW_CORE_COMMON_META_UTIL_HPP_
+#define ONEFLOW_CORE_COMMON_META_UTIL_HPP_
 
 #include "oneflow/core/common/cplusplus_14.h"
 
@@ -47,4 +47,4 @@ inline void tuple_switch(const std::size_t i, Tuple&& t, F&& f) {
 }
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_META_UTIL_HPP
+#endif  // ONEFLOW_CORE_COMMON_META_UTIL_HPP_

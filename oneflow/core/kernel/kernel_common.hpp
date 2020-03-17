@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP
-#define ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP_
+#define ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP_
 
 #include "oneflow/core/common/util.h"
 
@@ -45,4 +45,4 @@ struct AdditionFunction {
   U u_;
 };
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_COMMON_HPP_
