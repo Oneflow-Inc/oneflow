@@ -76,7 +76,7 @@ class ArgwhereOp final : public Operator {
     size_t tmp_bytes = JUST(InferArgwhereTmpBufferSize(GetBlobDesc4BnInOp("in"),
                                                        op_conf().argwhere_conf().data_type()));
     OF_CHECK_GT(tmp_bytes, 0) << "tmp buffer bytes should be greater than zero";
-    tmp_desc->mut_shape() = Shape(DimVector{static_cast<int64_t>(tmp_bytes)});
+    tmp_desc->mut_shape() = Shape({tmp_bytes});
     tmp_desc->set_data_type(DataType::kChar);
     return Maybe<void>::Ok();
   }
