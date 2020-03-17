@@ -18,7 +18,7 @@ def test_sync_dynamic_resize(_):
         (10, 10000),
     ]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-    arg_dict["size_type"] = ["int8", "int32", "int64"]
+    arg_dict["size_type"] = ["int32", "int64"]
 
     for device_type, x_shape, data_type, size_type in GenArgList(arg_dict):
         flow.clear_default_session()

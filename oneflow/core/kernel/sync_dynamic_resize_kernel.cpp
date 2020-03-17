@@ -53,7 +53,7 @@ class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* out = BnInOp2Blob("out");
     AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
-    AutoMemcpy(ctx.device_ctx, cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(int32_t),
+    AutoMemcpy(ctx.device_ctx, cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
                MakeHostMemCase(), size->mem_case());
     ctx.device_ctx->AddCallBack([out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
