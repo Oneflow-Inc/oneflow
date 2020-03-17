@@ -60,6 +60,8 @@ DLDataType XrtDType2DLDtype(DataType data_type) {
 
 DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, TVMContext ctx) {
   DLManagedTensor ret;
+  ret.manager_ctx = nullptr;
+  ret.deleter = nullptr;
   auto& tensor = ret.dl_tensor;
   CHECK(IsAligned(para.data(), tvm::runtime::kAllocAlignment));
   tensor.data = para.data();
@@ -113,7 +115,7 @@ bool TVMExecutable::Run(const std::vector<Parameter> &inputs,
   int num_outputs = get_num_outputs_();
   CHECK_EQ(num_outputs, outputs_.size());
   for (int i = 0;i < outputs_.size(); ++i) {
-    get_output_(i, &outputs_.at(i));
+    get_output_(i, &(output_dltensors_.at(i).dl_tensor));
   }
 
   if (block_until_done) {
