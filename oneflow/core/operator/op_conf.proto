@@ -1773,6 +1773,7 @@ message SyncDynamicResizeOpConf {
   required string size = 2;
   required string out = 3;
   required int64 axis = 4;
+  required DataType size_data_type = 5;
 }
 
 message OperatorConf {
