@@ -1,4 +1,6 @@
-# This File better be run with 'develop' cmd other than 'install'
+###
+### Run setup.py with 'develop' cmd other than 'install'
+###
 from __future__ import absolute_import
 
 import os
