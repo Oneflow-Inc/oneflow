@@ -17,8 +17,9 @@ cudaError_t InferCubSelectFlaggedTempStorageBytes(DeviceCtx* ctx, int num_items,
   OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define ARGWHERE_SUPPORTED_INDEX_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-// OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+#define ARGWHERE_SUPPORTED_INDEX_TYPE_SEQ         \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 }  // namespace oneflow
 

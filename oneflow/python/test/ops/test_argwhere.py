@@ -1,5 +1,7 @@
 import numpy as np
 import oneflow as flow
+from collections import OrderedDict
+from test_util import GenArgList
 
 
 def _np_dtype_to_of_dtype(np_dtype):
@@ -13,9 +15,11 @@ def _np_dtype_to_of_dtype(np_dtype):
 
 def _random_input(shape, dtype):
     if dtype == np.float32:
-        return np.random.standard_normal(shape).astype(np.float32)
+        rand_ = np.random.random_sample(shape).astype(np.float32)
+        rand_[np.nonzero(rand_ < 0.5)] = 0.0
+        return rand_
     elif dtype == np.int32:
-        return np.random.randint(low=0, high=10, size=shape).astype(np.int32)
+        return np.random.randint(low=0, high=2, size=shape).astype(np.int32)
     else:
         raise NotImplementedError
 
@@ -47,10 +51,25 @@ def _of_argwhere(x, device_type="gpu", dynamic=False):
         def argwhere_fn(x_def=flow.FixedTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
-        return argwhere_fn(x).get().ndarray()
+        return argwhere_fn(x).get().ndarray_list()[0]
+
+
+def _compare_with_np(test_case, shape, dtype, dynamic, verbose=False):
+    x = _random_input(shape, dtype)
+    y = np.argwhere(x)
+    of_y = _of_argwhere(x, dynamic=dynamic)
+    if verbose is True:
+        print("input:", x)
+        print("np result:", y)
+        print("of result:", of_y)
+    test_case.assertTrue(np.array_equal(y, of_y))
 
 
 def test_argwhere(test_case):
-    x = _random_input((30, 4), np.float32)
-    of_y = _of_argwhere(x, dynamic=False)
-    test_case(np.argwhere(x), of_y)
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+    arg_dict["dtype"] = [np.float32, np.int32]
+    arg_dict["dynamic"] = [True, False]
+    arg_dict["verbose"] = [False]
+    for arg in GenArgList(arg_dict):
+        _compare_with_np(test_case, *arg)
