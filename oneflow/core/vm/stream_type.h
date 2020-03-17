@@ -76,6 +76,7 @@ void RegisterStreamType() {
 class InstrTypeId;
 
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
+void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
 void RegisterInstrTypeId(const std::string& instr_type_name, StreamTypeId stream_type_id,
                          InstructionOpcode opcode, VmType type);
 template<typename T>

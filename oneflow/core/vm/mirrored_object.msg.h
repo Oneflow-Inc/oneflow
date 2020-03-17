@@ -5,7 +5,6 @@
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
-#include "oneflow/core/vm/mem_zone_desc.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 
 namespace oneflow {
