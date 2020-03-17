@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
@@ -128,6 +129,27 @@ bool ControlStreamType::IsSourceOpcode(InstructionOpcode opcode) const {
 }
 
 void ControlStreamType::Run(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
+
+ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
+                                                                 int64_t this_machine_id) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(this_machine_id);
+  return ret;
+}
+
+ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(0);
+  return ret;
+}
 
 COMMAND(RegisterStreamType<ControlStreamType>());
 

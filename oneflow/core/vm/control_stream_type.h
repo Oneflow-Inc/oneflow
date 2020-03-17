@@ -32,6 +32,9 @@ class ControlStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
+  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
 
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
   void Run(Scheduler* scheduler, InstrChain* instr_chain) const;

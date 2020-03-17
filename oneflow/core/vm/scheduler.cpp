@@ -183,13 +183,13 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
-    for (int64_t i = 0, parallel_id = 0; i < stream_desc->num_threads(); ++i) {
+    for (int64_t i = 0, rel_parallel_id = 0; i < stream_desc->num_threads(); ++i) {
       auto thread_ctx = ObjectMsgPtr<ThreadCtx>::NewFrom(allocator, stream_rt_desc.Get(), i);
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
-      for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++parallel_id) {
+      for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_parallel_id) {
         FlatMsg<StreamId> stream_id;
         stream_id->set_stream_type_id(stream_desc->stream_type_id());
-        stream_id->set_parallel_id(parallel_id);
+        stream_id->set_parallel_id(stream_desc->start_parallel_id() + rel_parallel_id);
         auto stream =
             ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id.Get());
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);

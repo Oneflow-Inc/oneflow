@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,6 +42,27 @@ ObjectMsgPtr<InstructionMsg> NopStreamType::Nop() const {
 void NopStreamType::Run(InstrChain* instr_chain) const {
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+}
+
+ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& resource,
+                                                             int64_t this_machine_id) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(this_machine_id);
+  return ret;
+}
+
+ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(0);
+  return ret;
 }
 
 COMMAND(RegisterStreamType<NopStreamType>());

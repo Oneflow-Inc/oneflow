@@ -40,6 +40,7 @@ FLAT_MSG_END(StreamId);
 // clang-format off
 OBJECT_MSG_BEGIN(StreamDesc);
   // methods
+  PUBLIC void __Init__() {}
   PUBLIC void __Init__(StreamTypeId stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
                        int32_t num_streams_per_thread);
   PUBLIC int32_t num_threads() const;
@@ -49,6 +50,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_machine);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_parallel_id);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
