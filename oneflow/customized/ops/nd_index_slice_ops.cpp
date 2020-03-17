@@ -29,6 +29,16 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
+  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+  JUST(CheckScatterNdShape(*like_shape, *indices_shape, *updates_shape));
+  *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
   Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
@@ -176,6 +186,55 @@ REGISTER_USER_OP("scatter_nd")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("scatter_nd_like")
+    .Input("like")
+    .Input("indices")
+    .Input("updates")
+    .Output("out")
+    .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      OF_CHECK(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
+               == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& indices_desc =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+      int64_t indices_num_axes = indices_desc.shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+        SbpSignatureBuilder()
+            .Broadcast("like", 0)
+            .Split("indices", 0, i)
+            .Split("updates", 0, i)
+            .Broadcast("out", 0)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
+      Shape out_shape = ctx->GetAttr<Shape>("shape");
+      int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
+      int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
+      FOR_RANGE(int64_t, i, 0, slice_ndims) {
+        SbpSignatureBuilder()
+            .Split("like", 0, i + index_ndims)
+            .Broadcast("indices", 0)
+            .Split("updates", 0, i + indices_num_axes - 1)
+            .Split("out", 0, i + index_ndims)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
+      SbpSignatureBuilder()
+          .PartialSum("like", 0)
+          .PartialSum("updates", 0)
+          .Broadcast("indices", 0)
+          .PartialSum("out", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_arg_modifier != nullptr);
+      like_arg_modifier->set_use_header_only(true);
+    });
+
 REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("params")
     .Input("updates")
@@ -197,13 +256,12 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
 REGISTER_USER_OP_GRAD("gather_nd")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        const user_op::TensorDesc& params_desc = op.TensorDesc4ArgNameAndIndex("params", 0);
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("scatter_nd")
+            builder.Op("scatter_nd_like")
+                .Input("like", op.input("params", 0))
                 .Input("updates", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("indices", op.input("indices", 0))
-                .Attr("shape", params_desc.shape())
                 .Output("out")
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);

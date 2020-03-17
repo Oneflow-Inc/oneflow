@@ -150,6 +150,10 @@ MakeNdIndexSliceKernelMatchedPredictor() {
 #define REGISTER_SCATTER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
   REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair)
 
+#define REGISTER_SCATTER_ND_LIKE_KERNELS(device_type_v, dtype_pair, itype_pair)             \
+  REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd_like, ScatterNd, device_type_v, dtype_pair, \
+                                     itype_pair)
+
 #define REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS(device_type_v, dtype_pair, itype_pair)   \
   REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_update, Update, device_type_v, \
                                          dtype_pair, itype_pair)
@@ -161,6 +165,7 @@ MakeNdIndexSliceKernelMatchedPredictor() {
 #define REGISTER_ND_INDEX_SLICE_KERNELS(device_type_v, dtype_pair, itype_pair)    \
   REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair)               \
   REGISTER_SCATTER_ND_KERNELS(device_type_v, dtype_pair, itype_pair)              \
+  REGISTER_SCATTER_ND_LIKE_KERNELS(device_type_v, dtype_pair, itype_pair)         \
   REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS(device_type_v, dtype_pair, itype_pair) \
   REGISTER_TENSOR_GATHER_ND_ADD_KERNELS(device_type_v, dtype_pair, itype_pair)
 
