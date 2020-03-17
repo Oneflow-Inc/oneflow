@@ -8,7 +8,7 @@
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_id.msg.h"
+#include "oneflow/core/vm/instr_type_id.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
@@ -24,7 +24,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC InstructionOperand* add_operand();
 
   // fields
-  OBJECT_MSG_DEFINE_FLAT_MSG(InstructionId, instr_id);
+  OBJECT_MSG_DEFINE_FLAT_MSG(InstrTypeId, instr_type_id);
   OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
 
   // links

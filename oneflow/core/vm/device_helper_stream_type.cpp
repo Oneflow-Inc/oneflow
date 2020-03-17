@@ -57,7 +57,7 @@ void CudaMalloc(Instruction* instr) {
   mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaMallocOpcode, CudaMalloc);
-COMMAND(RegisterInstructionId<DeviceHelperStreamType>("CudaMalloc", kCudaMallocOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<DeviceHelperStreamType>("CudaMalloc", kCudaMallocOpcode, kRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);
@@ -88,7 +88,7 @@ void CudaFree(Instruction* instr) {
   mirrored_object->clear_cuda_mem_buffer();
 }
 REGISTER_DEVICE_HELPER_INSTRUCTION(kCudaFreeOpcode, CudaFree);
-COMMAND(RegisterInstructionId<DeviceHelperStreamType>("CudaFree", kCudaFreeOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<DeviceHelperStreamType>("CudaFree", kCudaFreeOpcode, kRemote));
 
 }  // namespace
 
@@ -113,9 +113,9 @@ bool DeviceHelperStreamType::QueryInstructionStatusDone(
 ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaMalloc(uint64_t logical_object_id,
                                                                 size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
   {
     FlatMsgView<CudaMallocInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -126,9 +126,9 @@ ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaMalloc(uint64_t logical
 
 ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaFree(uint64_t logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
   {
     FlatMsgView<CudaFreeInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -138,7 +138,7 @@ ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaFree(uint64_t logical_o
 
 void DeviceHelperStreamType::Run(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
-    auto opcode = instruction->mut_instr_msg()->instr_id().opcode();
+    auto opcode = instruction->mut_instr_msg()->instr_type_id().opcode();
     device_helper_instr_table.at(opcode)(instruction);
   }
   auto* status_buffer = instr_chain->mut_status_buffer();

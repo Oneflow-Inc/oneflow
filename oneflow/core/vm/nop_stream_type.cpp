@@ -32,9 +32,9 @@ const StreamTypeId NopStreamType::kStreamTypeId;
 
 ObjectMsgPtr<InstructionMsg> NopStreamType::Nop() const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(0);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(0);
   return instr_msg;
 }
 
@@ -44,8 +44,8 @@ void NopStreamType::Run(InstrChain* instr_chain) const {
 }
 
 COMMAND(RegisterStreamType<NopStreamType>());
-COMMAND(RegisterInstructionId<NopStreamType>("Nop", 0, kRemote));
-COMMAND(RegisterInstructionId<NopStreamType>("LocalNop", 0, kLocal));
+COMMAND(RegisterInstrTypeId<NopStreamType>("Nop", 0, kRemote));
+COMMAND(RegisterInstrTypeId<NopStreamType>("LocalNop", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow

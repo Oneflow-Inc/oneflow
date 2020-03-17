@@ -60,9 +60,9 @@ const StreamTypeId L2RSenderStreamType::kStreamTypeId;
 ObjectMsgPtr<InstructionMsg> L2RSenderStreamType::Send(uint64_t logical_token, uint64_t src,
                                                        size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(0);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(0);
   {
     FlatMsgView<L2RSenderInstruction> view(instr_msg->mutable_operand());
     view->mutable_src()->mutable_operand()->__Init__(src);
@@ -109,8 +109,8 @@ void L2RSenderStreamType::Run(InstrChain* instr_chain) const {
 }
 
 COMMAND(RegisterStreamType<L2RSenderStreamType>());
-COMMAND(RegisterInstructionId<L2RSenderStreamType>("L2RSend", 0, kRemote));
-COMMAND(RegisterInstructionId<L2RSenderStreamType>("L2RLocalSend", 0, kLocal));
+COMMAND(RegisterInstrTypeId<L2RSenderStreamType>("L2RSend", 0, kRemote));
+COMMAND(RegisterInstrTypeId<L2RSenderStreamType>("L2RLocalSend", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow

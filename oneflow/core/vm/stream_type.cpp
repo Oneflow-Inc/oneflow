@@ -12,8 +12,8 @@ HashMap<StreamTypeId, const StreamType*>* StreamType4StreamTypeId() {
   return &map;
 }
 
-HashMap<std::string, FlatMsg<InstructionId>>* InstructionId4InstructionName() {
-  static HashMap<std::string, FlatMsg<InstructionId>> map;
+HashMap<std::string, FlatMsg<InstrTypeId>>* InstrTypeId4InstructionName() {
+  static HashMap<std::string, FlatMsg<InstrTypeId>> map;
   return &map;
 }
 
@@ -30,20 +30,20 @@ void RegisterStreamType(StreamTypeId stream_type_id, const StreamType* stream_ty
   CHECK(StreamType4StreamTypeId()->emplace(stream_type_id, stream_type).second);
 }
 
-const InstructionId& LookupInstructionId(const std::string& name) {
-  const auto& map = *InstructionId4InstructionName();
+const InstrTypeId& LookupInstrTypeId(const std::string& name) {
+  const auto& map = *InstrTypeId4InstructionName();
   const auto& iter = map.find(name);
   CHECK(iter != map.end());
   return iter->second.Get();
 }
 
-void RegisterInstructionId(const std::string& instruction_name, StreamTypeId stream_type_id,
-                           InstructionOpcode opcode, VmType type) {
-  FlatMsg<InstructionId> instr_id;
-  instr_id->set_stream_type_id(stream_type_id);
-  instr_id->set_opcode(opcode);
-  instr_id->set_type(type);
-  CHECK(InstructionId4InstructionName()->emplace(instruction_name, instr_id).second);
+void RegisterInstrTypeId(const std::string& instruction_name, StreamTypeId stream_type_id,
+                         InstructionOpcode opcode, VmType type) {
+  FlatMsg<InstrTypeId> instr_type_id;
+  instr_type_id->set_stream_type_id(stream_type_id);
+  instr_type_id->set_opcode(opcode);
+  instr_type_id->set_type(type);
+  CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
 }
 
 }  // namespace vm

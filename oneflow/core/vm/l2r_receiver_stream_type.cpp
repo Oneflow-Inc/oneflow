@@ -61,9 +61,9 @@ const StreamTypeId L2RReceiverStreamType::kStreamTypeId;
 ObjectMsgPtr<InstructionMsg> L2RReceiverStreamType::Receive(uint64_t logical_token, uint64_t dst,
                                                             size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(0);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(0);
   {
     FlatMsgView<L2RReceiverInstruction> view(instr_msg->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);
@@ -110,8 +110,8 @@ void L2RReceiverStreamType::Run(InstrChain* instr_chain) const {
 }
 
 COMMAND(RegisterStreamType<L2RReceiverStreamType>());
-COMMAND(RegisterInstructionId<L2RReceiverStreamType>("L2RReceive", 0, kRemote));
-COMMAND(RegisterInstructionId<L2RReceiverStreamType>("L2RLocalReceive", 0, kLocal));
+COMMAND(RegisterInstrTypeId<L2RReceiverStreamType>("L2RReceive", 0, kRemote));
+COMMAND(RegisterInstrTypeId<L2RReceiverStreamType>("L2RLocalReceive", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow
