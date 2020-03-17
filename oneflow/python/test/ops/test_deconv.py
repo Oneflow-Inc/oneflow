@@ -8,23 +8,23 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
-def compare_with_tensorflow(device_type, input_shape, padding, output_shape, 
-                            strides, kernel_size, dilations, out_channels, data_format):
+def compare_with_tensorflow(device_type, params_case, dilations, data_format):
+    input_shape, output_shape, padding, strides, kernel_size = params_case
+    assert data_format in ['NCHW', 'NHWC']
+    out_channels = output_shape[1] if data_format == 'NCHW' else output_shape[3]
+    in_channels = input_shape[1] if data_format == "NCHW" else input_shape[3]
     assert device_type in ["gpu", "cpu"]
-    flow.clear_default_session()
 
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    func_config.cudnn_conv_force_fwd_algo(0)
-    func_config.cudnn_conv_force_bwd_data_algo(1)
-    func_config.cudnn_conv_force_bwd_filter_algo(1)
+    if data_format == 'NHWC':
+        func_config.cudnn_conv_force_fwd_algo(0)
+        func_config.cudnn_conv_force_bwd_data_algo(1)
+        func_config.cudnn_conv_force_bwd_filter_algo(1)
 
-    if data_format == 'NCHW':
-        in_channels = input_shape[1]
-    else:
-        in_channels = input_shape[3]
     @flow.function(func_config)
     def DeconvJob():
         with flow.device_prior_placement(device_type, "0:0"):
@@ -71,30 +71,31 @@ def compare_with_tensorflow(device_type, input_shape, padding, output_shape,
     tf.enable_eager_execution()
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        if data_format == 'NCHW':
-            w = tf.Variable(np.load(os.path.join(GetSavePath(), "weight.npy")).transpose((2,3,1,0)))
-        else:
-            w = tf.Variable(np.load(os.path.join(GetSavePath(), "weight.npy")).transpose((1,2,3,0)))
-        tf_out = tf.nn.conv2d_transpose(x, w, output_shape=output_shape, strides=[1,1,strides,strides], padding="SAME",
+        w = np.load(os.path.join(GetSavePath(), "weight.npy"))
+        w = tf.Variable(w.transpose((2,3,1,0))) if data_format == 'NCHW' else tf.Variable(w.transpose((1,2,3,0))) 
+        strides = [1, 1, strides, strides] if data_format == 'NCHW' else [1, strides, strides, 1]
+        tf_out = tf.nn.conv2d_transpose(x, w, output_shape=output_shape, strides=strides, padding=padding,
                                         data_format=data_format)
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-4, atol=1e-4)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-4, atol=1e-4
     )
 
 def test_deconv_with_tf_NHWC(test_case):
+    # mention NHWC does not support odd pad!
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2, 3, 3, 4)]
-    arg_dict["padding"] = ["SAME"]   
-    arg_dict["output_shape"] = [(2, 3, 3, 8)]   
-    arg_dict["strides"] = [1]   
-    arg_dict["kernel_size"] = [3]   
+    # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
+    arg_dict["params_case"] = [
+        ((2, 3, 3, 4), (2, 3, 3, 8), 'SAME', 1, 3),
+        ((2, 3, 3, 2), (2, 6, 6, 8), 'SAME', 2, 4),
+        ((3, 2, 2, 1), (3, 5, 5, 2), 'VALID', 2, 2),
+        ((3, 2, 2, 16), (3, 8, 8, 4), 'VALID', 2, 5),
+        ]  
     arg_dict["dilations"] = [1]   
-    arg_dict["out_channels"] = [8]
     arg_dict["data_format"] = ['NHWC']   
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
@@ -102,13 +103,14 @@ def test_deconv_with_tf_NHWC(test_case):
 def test_deconv_with_tf_NCHW(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2, 4, 3, 3)]
-    arg_dict["padding"] = ["SAME"]   
-    arg_dict["output_shape"] = [(2, 8, 6, 6)]   
-    arg_dict["strides"] = [2]   
-    arg_dict["kernel_size"] = [3, 4, 5]   
+    # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
+    arg_dict["params_case"] = [
+        ((2, 4, 3, 3), (2, 8, 3, 3), 'SAME', 1, 3),
+        ((2, 4, 3, 3), (2, 8, 6, 6), 'SAME', 2, 5),
+        ((3, 1, 2, 2), (3, 2, 5, 5), 'VALID', 2, 2),
+        ((3, 16, 2, 2), (3, 4, 8, 8), 'VALID', 2, 5),
+        ]
     arg_dict["dilations"] = [1]   
-    arg_dict["out_channels"] = [8]
     arg_dict["data_format"] = ['NCHW']   
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
