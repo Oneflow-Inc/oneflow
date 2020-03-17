@@ -27,6 +27,8 @@ class CudaCopyD2HStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

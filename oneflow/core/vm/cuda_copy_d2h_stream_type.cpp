@@ -8,6 +8,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
@@ -94,6 +95,18 @@ void CudaCopyD2HStreamType::Run(InstrChain* instr_chain) const {
   stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+}
+
+ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeRemoteStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
+  std::size_t device_num = resource.gpu_device_num();
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(device_num);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(this_machine_id * device_num);
+  return ret;
 }
 
 COMMAND(RegisterStreamType<CudaCopyD2HStreamType>());

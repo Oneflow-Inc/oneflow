@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/localhost_transporter.h"
 #include "oneflow/core/vm/transporter_device_context.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
@@ -106,6 +107,27 @@ void L2RSenderStreamType::Run(InstrChain* instr_chain) const {
   *reinterpret_cast<std::atomic<int64_t>*>(data_ptr) +=
       transport_key2send_request.size() - kRefCntInitVal;
   GetTransporter(instr_chain)->Transport(&transport_key2send_request);
+}
+
+ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeRemoteStreamDesc(const Resource& resource,
+                                                                   int64_t this_machine_id) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(this_machine_id);
+  return ret;
+}
+
+ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(resource.machine_num());
+  ret->set_num_streams_per_machine(1);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(0);
+  return ret;
 }
 
 COMMAND(RegisterStreamType<L2RSenderStreamType>());

@@ -3,11 +3,10 @@
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/vm_type.h"
 
 namespace oneflow {
 namespace vm {
-
-enum VmType { kRemote = 0, kLocal };
 
 // clang-format off
 FLAT_MSG_BEGIN(InstrTypeId);

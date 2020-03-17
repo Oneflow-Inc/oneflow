@@ -96,6 +96,18 @@ void CudaCopyH2DStreamType::Run(InstrChain* instr_chain) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
+ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeRemoteStreamDesc(
+    const Resource& resource, int64_t this_machine_id) const {
+  std::size_t device_num = resource.gpu_device_num();
+  auto ret = ObjectMsgPtr<StreamDesc>::New();
+  ret->set_stream_type_id(kStreamTypeId);
+  ret->set_num_machines(1);
+  ret->set_num_streams_per_machine(device_num);
+  ret->set_num_streams_per_thread(1);
+  ret->set_start_parallel_id(this_machine_id * device_num);
+  return ret;
+}
+
 COMMAND(RegisterStreamType<CudaCopyH2DStreamType>());
 COMMAND(RegisterInstrTypeId<CudaCopyH2DStreamType>("CopyH2D", 0, kRemote));
 COMMAND(RegisterInstrTypeId<CudaCopyH2DStreamType>("CudaCopyH2D", 0, kRemote));
