@@ -29,9 +29,9 @@ FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId& logical_object_id,
                                                           int64_t parallel_num) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     view->set_logical_object_id(logical_object_id);
@@ -54,8 +54,8 @@ void NewSymbol(Scheduler* scheduler, InstructionMsg* instr_msg) {
   }
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewSymbol, NewSymbol);
-COMMAND(RegisterInstructionId<ControlStreamType>("NewSymbol", kNewSymbol, kRemote));
-COMMAND(RegisterInstructionId<ControlStreamType>("LocalNewSymbol", kNewSymbol, kLocal));
+COMMAND(RegisterInstrTypeId<ControlStreamType>("NewSymbol", kNewSymbol, kRemote));
+COMMAND(RegisterInstrTypeId<ControlStreamType>("LocalNewSymbol", kNewSymbol, kLocal));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
@@ -68,9 +68,9 @@ const StreamTypeId ControlStreamType::kStreamTypeId;
 ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
   {
     FlatMsgView<DeleteSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();
@@ -94,11 +94,11 @@ void DeleteSymbol(Scheduler* scheduler, InstructionMsg* instr_msg) {
   scheduler->mut_id2logical_object()->Erase(logical_object);
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteSymbol, DeleteSymbol);
-COMMAND(RegisterInstructionId<ControlStreamType>("DeleteSymbol", kDeleteSymbol, kRemote));
-COMMAND(RegisterInstructionId<ControlStreamType>("LocalDeleteSymbol", kDeleteSymbol, kLocal));
+COMMAND(RegisterInstrTypeId<ControlStreamType>("DeleteSymbol", kDeleteSymbol, kRemote));
+COMMAND(RegisterInstrTypeId<ControlStreamType>("LocalDeleteSymbol", kDeleteSymbol, kLocal));
 
 void ControlStreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
-  InstructionOpcode opcode = instr_msg->instr_id().opcode();
+  InstructionOpcode opcode = instr_msg->instr_type_id().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, instr_msg);
 }
 

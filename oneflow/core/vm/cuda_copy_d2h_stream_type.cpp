@@ -51,9 +51,9 @@ const StreamTypeId CudaCopyD2HStreamType::kStreamTypeId;
 ObjectMsgPtr<InstructionMsg> CudaCopyD2HStreamType::Copy(uint64_t dst, uint64_t src,
                                                          size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(0);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(0);
   {
     FlatMsgView<CudaCopyD2HInstruction> view(instr_msg->mutable_operand());
     view->mutable_dst()->mutable_operand()->__Init__(dst);
@@ -97,8 +97,8 @@ void CudaCopyD2HStreamType::Run(InstrChain* instr_chain) const {
 }
 
 COMMAND(RegisterStreamType<CudaCopyD2HStreamType>());
-COMMAND(RegisterInstructionId<CudaCopyD2HStreamType>("CopyD2H", 0, kRemote));
-COMMAND(RegisterInstructionId<CudaCopyD2HStreamType>("CudaCopyD2H", 0, kRemote));
+COMMAND(RegisterInstrTypeId<CudaCopyD2HStreamType>("CopyD2H", 0, kRemote));
+COMMAND(RegisterInstrTypeId<CudaCopyD2HStreamType>("CudaCopyD2H", 0, kRemote));
 
 }  // namespace vm
 }  // namespace oneflow

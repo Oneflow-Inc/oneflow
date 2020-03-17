@@ -59,7 +59,7 @@ void CudaMallocHost(Instruction* instr) {
   mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, CudaMallocHost);
-COMMAND(RegisterInstructionId<HostStreamType>("CudaMallocHost", kCudaMallocHostOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("CudaMallocHost", kCudaMallocHostOpcode, kRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(MallocInstruction);
@@ -92,7 +92,7 @@ void Malloc(Instruction* instr) {
   mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
 }
 REGISTER_HOST_INSTRUCTION(kMallocOpcode, Malloc);
-COMMAND(RegisterInstructionId<HostStreamType>("Malloc", kMallocOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("Malloc", kMallocOpcode, kRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
@@ -120,7 +120,7 @@ void CudaFreeHost(Instruction* instr) {
   mirrored_object->clear_host_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kCudaFreeHostOpcode, CudaFreeHost);
-COMMAND(RegisterInstructionId<HostStreamType>("CudaFreeHost", kCudaFreeHostOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("CudaFreeHost", kCudaFreeHostOpcode, kRemote));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(FreeInstruction);
@@ -148,7 +148,7 @@ void Free(Instruction* instr) {
   mirrored_object->clear_host_mem_buffer();
 }
 REGISTER_HOST_INSTRUCTION(kFreeOpcode, Free);
-COMMAND(RegisterInstructionId<HostStreamType>("Free", kFreeOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("Free", kFreeOpcode, kRemote));
 
 }  // namespace
 
@@ -173,9 +173,9 @@ bool HostStreamType::QueryInstructionStatusDone(
 ObjectMsgPtr<InstructionMsg> HostStreamType::CudaMallocHost(uint64_t logical_object_id,
                                                             size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
   {
     FlatMsgView<CudaMallocHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -186,9 +186,9 @@ ObjectMsgPtr<InstructionMsg> HostStreamType::CudaMallocHost(uint64_t logical_obj
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::Malloc(uint64_t logical_object_id, size_t size) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(HostInstrOpCode::kMallocOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(HostInstrOpCode::kMallocOpcode);
   {
     FlatMsgView<CudaMallocHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -199,9 +199,9 @@ ObjectMsgPtr<InstructionMsg> HostStreamType::Malloc(uint64_t logical_object_id, 
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::CudaFreeHost(uint64_t logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
   {
     FlatMsgView<CudaFreeHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -211,9 +211,9 @@ ObjectMsgPtr<InstructionMsg> HostStreamType::CudaFreeHost(uint64_t logical_objec
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::Free(uint64_t logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_id = instr_msg->mutable_instr_id();
-  instr_id->set_stream_type_id(kStreamTypeId);
-  instr_id->set_opcode(HostInstrOpCode::kFreeOpcode);
+  auto* instr_type_id = instr_msg->mutable_instr_type_id();
+  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->set_opcode(HostInstrOpCode::kFreeOpcode);
   {
     FlatMsgView<CudaFreeHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
@@ -223,7 +223,7 @@ ObjectMsgPtr<InstructionMsg> HostStreamType::Free(uint64_t logical_object_id) co
 
 void HostStreamType::Run(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
-    auto opcode = instruction->mut_instr_msg()->instr_id().opcode();
+    auto opcode = instruction->mut_instr_msg()->instr_type_id().opcode();
     host_instr_table.at(opcode)(instruction);
   }
   auto* status_buffer = instr_chain->mut_status_buffer();

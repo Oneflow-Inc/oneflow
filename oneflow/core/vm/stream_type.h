@@ -3,7 +3,7 @@
 
 #include <string>
 #include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/instruction_id.msg.h"
+#include "oneflow/core/vm/instr_type_id.msg.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/device/device_context.h"
 
@@ -42,15 +42,15 @@ void RegisterStreamType() {
   RegisterStreamType(T::kStreamTypeId, new T());
 }
 
-class InstructionId;
+class InstrTypeId;
 
-const InstructionId& LookupInstructionId(const std::string& instr_type_name);
-void RegisterInstructionId(const std::string& instr_type_name, StreamTypeId stream_type_id,
-                           InstructionOpcode opcode, VmType type);
+const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
+void RegisterInstrTypeId(const std::string& instr_type_name, StreamTypeId stream_type_id,
+                         InstructionOpcode opcode, VmType type);
 template<typename T>
-void RegisterInstructionId(const std::string& instr_type_name, InstructionOpcode opcode,
-                           VmType type) {
-  RegisterInstructionId(instr_type_name, T::kStreamTypeId, opcode, type);
+void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode opcode,
+                         VmType type) {
+  RegisterInstrTypeId(instr_type_name, T::kStreamTypeId, opcode, type);
 }
 
 }  // namespace vm

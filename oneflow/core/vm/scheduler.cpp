@@ -44,7 +44,7 @@ void Scheduler::TryReleaseFinishedInstrChains(Stream* stream,
 void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* instr_msg_list) {
   ControlStreamType control_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    const auto& proto = instr_msg->instr_id();
+    const auto& proto = instr_msg->instr_type_id();
     if (proto.stream_type_id() != ControlStreamType::kStreamTypeId) { continue; }
     if (!control_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
     control_stream_type.Run(this, instr_msg);
@@ -55,7 +55,7 @@ void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* in
 void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
                                 /*out*/ NewInstrChainList* new_instr_chain_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    StreamTypeId stream_type_id = instr_msg->instr_id().stream_type_id();
+    StreamTypeId stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       new_instr_chain_list->EmplaceBack(stream->NewInstrChain(instr_msg));

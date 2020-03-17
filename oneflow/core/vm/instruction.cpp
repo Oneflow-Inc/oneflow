@@ -13,7 +13,7 @@ InstructionOperand* InstructionMsg::add_operand() {
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) {
-  mutable_instr_id()->__Init__(proto.instr_type_name());
+  mutable_instr_type_id()->__Init__(proto.instr_type_name());
   mutable_operand()->resize(proto.operand_size());
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));

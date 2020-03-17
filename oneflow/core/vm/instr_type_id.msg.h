@@ -10,13 +10,13 @@ namespace vm {
 enum VmType { kRemote = 0, kLocal };
 
 // clang-format off
-FLAT_MSG_BEGIN(InstructionId);
+FLAT_MSG_BEGIN(InstrTypeId);
   PUBLIC void __Init__(const std::string& instr_type_name);
 
   FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(InstructionOpcode, opcode);
   FLAT_MSG_DEFINE_OPTIONAL(VmType, type);
-FLAT_MSG_END(InstructionId);
+FLAT_MSG_END(InstrTypeId);
 // clang-format on
 
 }  // namespace vm
