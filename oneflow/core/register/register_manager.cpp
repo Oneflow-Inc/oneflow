@@ -2,6 +2,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
@@ -154,6 +155,12 @@ void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
     int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
+    }
+  }
+  if (blob_desc.data_type() == kTensorBuffer) {
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
     }
   }
 }

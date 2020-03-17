@@ -144,9 +144,6 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
           });
     }
     bc.WaitUntilCntEqualZero();
-
-    // random_generator_->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
-    //                                  out_blob->mut_dptr<float>());
   }
 
   std::vector<std::shared_ptr<RandomCropGenerator>> crop_window_generators_;
