@@ -12,18 +12,18 @@ namespace vm {
 
 namespace {}  // namespace
 
-void NopStreamType::InitInstructionStatus(const Stream& vm_stream,
+void NopStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void NopStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+void NopStreamType::DeleteInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool NopStreamType::QueryInstructionStatusDone(const Stream& vm_stream,
+bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
                                                const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
@@ -31,15 +31,15 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& vm_stream,
 const StreamTypeId NopStreamType::kStreamTypeId;
 
 ObjectMsgPtr<InstructionMsg> NopStreamType::Nop() const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(0);
-  return vm_instr_msg;
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(0);
+  return instr_msg;
 }
 
-void NopStreamType::Run(InstrChain* vm_instr_chain) const {
-  auto* status_buffer = vm_instr_chain->mut_status_buffer();
+void NopStreamType::Run(InstrChain* instr_chain) const {
+  auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 

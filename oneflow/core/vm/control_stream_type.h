@@ -23,18 +23,18 @@ class ControlStreamType final : public StreamType {
 
   bool IsSourceOpcode(InstructionOpcode opcode) const;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* vm_stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
-  void InitInstructionStatus(const Stream& vm_stream,
+  void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
-  void DeleteInstructionStatus(const Stream& vm_stream,
+  void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& vm_stream,
+  bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* vm_instr_chain) const override;
+  void Run(InstrChain* instr_chain) const override;
 
-  void Run(Scheduler* scheduler, InstructionMsg* vm_instr_msg) const;
-  void Run(Scheduler* scheduler, InstrChain* vm_instr_chain) const;
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
+  void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
 };
 
 }  // namespace vm

@@ -7,10 +7,10 @@
 namespace oneflow {
 namespace vm {
 
-void Scheduler::ReleaseInstruction(InstrChain* vm_instr_chain,
-                                   /*out*/ ReadyInstrChainList* ready_vm_instr_chain_list) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
-    auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
+void Scheduler::ReleaseInstruction(InstrChain* instr_chain,
+                                   /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
+    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
       mirrored_object_accesses->Erase(access);
       if (access->is_mirrored_object_access_link_empty()) { continue; }
@@ -18,50 +18,49 @@ void Scheduler::ReleaseInstruction(InstrChain* vm_instr_chain,
       mirrored_object->mut_access_list()->Erase(access);
     }
   }
-  auto* wait_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
-  auto* out_edges = vm_instr_chain->mut_out_edges();
+  auto* wait_instr_chain_list = mut_waiting_instr_chain_list();
+  auto* out_edges = instr_chain->mut_out_edges();
   OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(out_edges, out_edge) {
-    InstrChain* out_vm_instr_chain = out_edge->dst_vm_instr_chain();
-    out_vm_instr_chain->mut_in_edges()->Erase(out_edge);
-    if (out_vm_instr_chain->in_edges().empty()) {
-      wait_vm_instr_chain_list->MoveToDstBack(out_vm_instr_chain, ready_vm_instr_chain_list);
+    InstrChain* out_instr_chain = out_edge->dst_instr_chain();
+    out_instr_chain->mut_in_edges()->Erase(out_edge);
+    if (out_instr_chain->in_edges().empty()) {
+      wait_instr_chain_list->MoveToDstBack(out_instr_chain, ready_instr_chain_list);
     }
     out_edges->Erase(out_edge);
   }
 }
 
-void Scheduler::TryReleaseFinishedInstrChains(
-    Stream* vm_stream, /*out*/ ReadyInstrChainList* ready_vm_instr_chain_list) {
-  auto* running_chain_list = vm_stream->mut_running_chain_list();
+void Scheduler::TryReleaseFinishedInstrChains(Stream* stream,
+                                              /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
+  auto* running_chain_list = stream->mut_running_chain_list();
   while (true) {
-    auto* vm_instr_chain_ptr = running_chain_list->Begin();
-    if (vm_instr_chain_ptr == nullptr || !vm_instr_chain_ptr->Done()) { break; }
-    ReleaseInstruction(vm_instr_chain_ptr, /*out*/ ready_vm_instr_chain_list);
-    vm_stream->DeleteInstrChain(running_chain_list->Erase(vm_instr_chain_ptr));
+    auto* instr_chain_ptr = running_chain_list->Begin();
+    if (instr_chain_ptr == nullptr || !instr_chain_ptr->Done()) { break; }
+    ReleaseInstruction(instr_chain_ptr, /*out*/ ready_instr_chain_list);
+    stream->DeleteInstrChain(running_chain_list->Erase(instr_chain_ptr));
   }
 }
 
-void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* vm_instr_msg_list) {
-  ControlStreamType control_vm_stream_type;
-  OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    const auto& proto = vm_instr_msg->vm_instr_id();
-    if (proto.vm_stream_type_id() != ControlStreamType::kStreamTypeId) { continue; }
-    if (!control_vm_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
-    control_vm_stream_type.Run(this, vm_instr_msg);
-    vm_instr_msg_list->Erase(vm_instr_msg);
+void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* instr_msg_list) {
+  ControlStreamType control_stream_type;
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
+    const auto& proto = instr_msg->instr_id();
+    if (proto.stream_type_id() != ControlStreamType::kStreamTypeId) { continue; }
+    if (!control_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
+    control_stream_type.Run(this, instr_msg);
+    instr_msg_list->Erase(instr_msg);
   }
 }
 
-void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* vm_instr_msg_list,
-                                /*out*/ NewInstrChainList* new_vm_instr_chain_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(vm_instr_msg_list, vm_instr_msg) {
-    StreamTypeId vm_stream_type_id = vm_instr_msg->vm_instr_id().vm_stream_type_id();
-    auto* vm_stream_rt_desc = mut_vm_stream_type_id2vm_stream_rt_desc()->FindPtr(vm_stream_type_id);
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(vm_stream_rt_desc->mut_vm_stream_id2vm_stream(),
-                                            vm_stream) {
-      new_vm_instr_chain_list->EmplaceBack(vm_stream->NewInstrChain(vm_instr_msg));
+void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
+                                /*out*/ NewInstrChainList* new_instr_chain_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
+    StreamTypeId stream_type_id = instr_msg->instr_id().stream_type_id();
+    auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
+      new_instr_chain_list->EmplaceBack(stream->NewInstrChain(instr_msg));
     }
-    vm_instr_msg_list->Erase(vm_instr_msg);
+    instr_msg_list->Erase(instr_msg);
   }
 }
 
@@ -82,43 +81,41 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
 }
 
 void Scheduler::ConsumeMirroredObject(OperandAccessType access_type,
-                                      MirroredObject* mirrored_object,
-                                      Instruction* vm_instruction) {
+                                      MirroredObject* mirrored_object, Instruction* instruction) {
   bool is_const_operand = (access_type == kConstOperandAccess);
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      vm_instruction->mut_allocator(), vm_instruction, mirrored_object, is_const_operand);
-  bool success = vm_instruction->mut_mirrored_object_id2access()
-                     ->Insert(mirrored_object_access.Mutable())
-                     .second;
+      instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
+  bool success =
+      instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
   if (success) {
     mirrored_object->mut_access_list()->EmplaceBack(std::move(mirrored_object_access));
   }
 }
 
-void Scheduler::ConnectInstruction(InstrChain* src_vm_instr_chain, InstrChain* dst_vm_instr_chain) {
+void Scheduler::ConnectInstruction(InstrChain* src_instr_chain, InstrChain* dst_instr_chain) {
   auto edge = ObjectMsgPtr<InstrChainEdge>::NewFrom(mut_scheduler_thread_only_allocator(),
-                                                    src_vm_instr_chain, dst_vm_instr_chain);
-  bool src_inserted = src_vm_instr_chain->mut_out_edges()->Insert(edge.Mutable()).second;
-  bool dst_inserted = dst_vm_instr_chain->mut_in_edges()->Insert(edge.Mutable()).second;
+                                                    src_instr_chain, dst_instr_chain);
+  bool src_inserted = src_instr_chain->mut_out_edges()->Insert(edge.Mutable()).second;
+  bool dst_inserted = dst_instr_chain->mut_in_edges()->Insert(edge.Mutable()).second;
   CHECK_EQ(src_inserted, dst_inserted);
 }
 
 void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                       NewInstrChainList* new_vm_instr_chain_list) {
-  auto* begin = new_vm_instr_chain_list->Begin();
-  if (begin != nullptr) { CHECK_EQ(begin->vm_instruction_list().size(), 1); }
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
-    int64_t parallel_id = vm_instr_chain->vm_stream().vm_stream_id().parallel_id();
-    CHECK_EQ(vm_instr_chain->vm_instruction_list().size(), 1);
-    auto* vm_instruction = vm_instr_chain->mut_vm_instruction_list()->Begin();
-    const auto& operands = vm_instruction->vm_instr_msg().operand();
+                                       NewInstrChainList* new_instr_chain_list) {
+  auto* begin = new_instr_chain_list->Begin();
+  if (begin != nullptr) { CHECK_EQ(begin->instruction_list().size(), 1); }
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
+    int64_t parallel_id = instr_chain->stream().stream_id().parallel_id();
+    CHECK_EQ(instr_chain->instruction_list().size(), 1);
+    auto* instruction = instr_chain->mut_instruction_list()->Begin();
+    const auto& operands = instruction->instr_msg().operand();
     for (const auto& operand : operands) {
       if (!operand->has_mutable_operand()) { continue; }
       const auto& mirrored_object_operand = operand->mutable_operand().operand();
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
-                                                    vm_instruction);
+                                                    instruction);
                             });
     }
     for (const auto& operand : operands) {
@@ -127,23 +124,23 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kConstOperandAccess, mirrored_object,
-                                                    vm_instruction);
+                                                    instruction);
                             });
     }
-    auto* mirrored_object_accesses = vm_instruction->mut_mirrored_object_id2access();
+    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
       auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
       if (mirrored_object->access_list().size() == 1) { continue; }
       if (mirrored_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
-          ConnectInstruction(first->mut_vm_instruction()->mut_vm_instr_chain(), vm_instr_chain);
+          ConnectInstruction(first->mut_instruction()->mut_instr_chain(), instr_chain);
         }
       } else {
         auto* access_list = mirrored_object->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == mirrored_object_access) { break; }
-          ConnectInstruction(access->mut_vm_instruction()->mut_vm_instr_chain(), vm_instr_chain);
+          ConnectInstruction(access->mut_instruction()->mut_instr_chain(), instr_chain);
           access_list->Erase(access);
         }
       }
@@ -151,32 +148,30 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void Scheduler::MergeChains(NewInstrChainList* new_vm_instr_chain_list) {
+void Scheduler::MergeChains(NewInstrChainList* new_instr_chain_list) {
   // TODO(lixinqi)
 }
 
-void Scheduler::FilterReadyChains(NewInstrChainList* new_vm_instr_chain_list,
-                                  /*out*/ ReadyInstrChainList* ready_vm_instr_chain_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_vm_instr_chain_list, vm_instr_chain) {
-    if (vm_instr_chain->in_edges().empty()) {
-      new_vm_instr_chain_list->MoveToDstBack(vm_instr_chain, ready_vm_instr_chain_list);
+void Scheduler::FilterReadyChains(NewInstrChainList* new_instr_chain_list,
+                                  /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
+    if (instr_chain->in_edges().empty()) {
+      new_instr_chain_list->MoveToDstBack(instr_chain, ready_instr_chain_list);
     }
   }
 }
 
 void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
-  auto* active_vm_stream_list = mut_active_vm_stream_list();
-  ControlStreamType control_vm_stream_type;
-  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, vm_instr_chain) {
-    auto* vm_stream = vm_instr_chain->mut_vm_stream();
-    if (vm_stream->vm_stream_id().vm_stream_type_id() == ControlStreamType::kStreamTypeId) {
-      control_vm_stream_type.Run(this, vm_instr_chain);
+  auto* active_stream_list = mut_active_stream_list();
+  ControlStreamType control_stream_type;
+  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instr_chain) {
+    auto* stream = instr_chain->mut_stream();
+    if (stream->stream_id().stream_type_id() == ControlStreamType::kStreamTypeId) {
+      control_stream_type.Run(this, instr_chain);
     } else {
-      ready_chain_list->MoveToDstBack(vm_instr_chain, vm_stream->mut_running_chain_list());
-      if (vm_stream->is_active_vm_stream_link_empty()) {
-        active_vm_stream_list->PushBack(vm_stream);
-      }
-      vm_stream->mut_vm_thread()->mut_pending_chain_list()->PushBack(vm_instr_chain);
+      ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
+      if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
+      stream->mut_thread()->mut_pending_chain_list()->PushBack(instr_chain);
     }
   }
   ready_chain_list->Clear();
@@ -184,64 +179,64 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
 
 void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
-  auto Init = [&](StreamDesc* vm_stream_desc) {
-    auto vm_stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, vm_stream_desc);
-    mut_vm_stream_type_id2vm_stream_rt_desc()->Insert(vm_stream_rt_desc.Mutable());
-    BalancedSplitter bs(vm_stream_desc->parallel_num(), vm_stream_desc->num_threads());
-    for (int64_t i = 0, parallel_id = 0; i < vm_stream_desc->num_threads(); ++i) {
-      auto vm_thread = ObjectMsgPtr<Thread>::NewFrom(allocator, vm_stream_rt_desc.Get(), i);
-      mut_vm_thread_list()->PushBack(vm_thread.Mutable());
+  auto Init = [&](StreamDesc* stream_desc) {
+    auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
+    mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
+    BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
+    for (int64_t i = 0, parallel_id = 0; i < stream_desc->num_threads(); ++i) {
+      auto thread = ObjectMsgPtr<Thread>::NewFrom(allocator, stream_rt_desc.Get(), i);
+      mut_thread_list()->PushBack(thread.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++parallel_id) {
-        FlatMsg<StreamId> vm_stream_id;
-        vm_stream_id->set_vm_stream_type_id(vm_stream_desc->vm_stream_type_id());
-        vm_stream_id->set_parallel_id(parallel_id);
-        auto vm_stream =
-            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), vm_thread.Mutable(), vm_stream_id.Get());
-        CHECK(vm_stream_rt_desc->mut_vm_stream_id2vm_stream()->Insert(vm_stream.Mutable()).second);
-        vm_thread->mut_vm_stream_list()->PushBack(vm_stream.Mutable());
+        FlatMsg<StreamId> stream_id;
+        stream_id->set_stream_type_id(stream_desc->stream_type_id());
+        stream_id->set_parallel_id(parallel_id);
+        auto stream =
+            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread.Mutable(), stream_id.Get());
+        CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
+        thread->mut_stream_list()->PushBack(stream.Mutable());
       }
     }
   };
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.vm_stream_type_id2desc(), vm_stream_desc) {
-    CHECK_NE(vm_stream_desc->vm_stream_type_id(), ControlStreamType::kStreamTypeId);
-    Init(vm_stream_desc);
+  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
+    CHECK_NE(stream_desc->stream_type_id(), ControlStreamType::kStreamTypeId);
+    Init(stream_desc);
   }
   Init(ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
 }
 
-void Scheduler::Receive(InstructionMsgList* vm_instr_list) {
-  mut_pending_msg_list()->MoveFrom(vm_instr_list);
+void Scheduler::Receive(InstructionMsgList* instr_list) {
+  mut_pending_msg_list()->MoveFrom(instr_list);
 }
 
-void Scheduler::Receive(ObjectMsgPtr<InstructionMsg>&& vm_instruction_msg) {
-  mut_pending_msg_list()->EmplaceBack(std::move(vm_instruction_msg));
+void Scheduler::Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg) {
+  mut_pending_msg_list()->EmplaceBack(std::move(instruction_msg));
 }
 
 void Scheduler::Schedule() {
-  ReadyInstrChainList ready_vm_instr_chain_list;
-  auto* active_vm_stream_list = mut_active_vm_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(active_vm_stream_list, vm_stream) {
-    TryReleaseFinishedInstrChains(vm_stream, /*out*/ &ready_vm_instr_chain_list);
-    if (vm_stream->running_chain_list().empty()) { active_vm_stream_list->Erase(vm_stream); }
+  ReadyInstrChainList ready_instr_chain_list;
+  auto* active_stream_list = mut_active_stream_list();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
+    TryReleaseFinishedInstrChains(stream, /*out*/ &ready_instr_chain_list);
+    if (stream->running_chain_list().empty()) { active_stream_list->Erase(stream); }
   };
-  auto* waiting_vm_instr_chain_list = mut_waiting_vm_instr_chain_list();
+  auto* waiting_instr_chain_list = mut_waiting_instr_chain_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunSourceControlInstructions(&tmp_pending_msg_list);
-    NewInstrChainList new_vm_instr_chain_list;
-    MakeInstrChains(&tmp_pending_msg_list, /*out*/ &new_vm_instr_chain_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), &new_vm_instr_chain_list);
-    MergeChains(&new_vm_instr_chain_list);
-    FilterReadyChains(&new_vm_instr_chain_list, /*out*/ &ready_vm_instr_chain_list);
-    new_vm_instr_chain_list.MoveTo(waiting_vm_instr_chain_list);
+    NewInstrChainList new_instr_chain_list;
+    MakeInstrChains(&tmp_pending_msg_list, /*out*/ &new_instr_chain_list);
+    ConsumeMirroredObjects(mut_id2logical_object(), &new_instr_chain_list);
+    MergeChains(&new_instr_chain_list);
+    FilterReadyChains(&new_instr_chain_list, /*out*/ &ready_instr_chain_list);
+    new_instr_chain_list.MoveTo(waiting_instr_chain_list);
   }
-  DispatchInstruction(&ready_vm_instr_chain_list);
+  DispatchInstruction(&ready_instr_chain_list);
 }
 
 bool Scheduler::Empty() const {
-  return pending_msg_list().empty() && waiting_vm_instr_chain_list().empty()
-         && active_vm_stream_list().empty();
+  return pending_msg_list().empty() && waiting_instr_chain_list().empty()
+         && active_stream_list().empty();
 }
 
 }  // namespace vm

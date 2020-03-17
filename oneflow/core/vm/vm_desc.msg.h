@@ -13,8 +13,8 @@ OBJECT_MSG_BEGIN(VmDesc);
   // methods
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MemZoneDesc, vm_mem_zone_type_id, mem_zone_type_id2desc);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, vm_stream_type_id, vm_stream_type_id2desc);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MemZoneDesc, mem_zone_type_id, mem_zone_type_id2desc);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);
 OBJECT_MSG_END(VmDesc);
 // clang-format on
 

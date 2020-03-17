@@ -12,8 +12,8 @@ OBJECT_MSG_BEGIN(Procedure);
   // fields
   OBJECT_MSG_DEFINE_STRUCT(ParallelConf, parallel_conf);
   // links
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionMsg, vm_instr_msg_link, local_vm_instr_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionMsg, vm_instr_msg_link, remote_vm_instr_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionMsg, instr_msg_link, local_instr_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstructionMsg, instr_msg_link, remote_instr_list);
 OBJECT_MSG_END(Procedure);
 // clang-format on
 

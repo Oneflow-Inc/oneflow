@@ -35,24 +35,23 @@ FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
 FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
 // clang-format on
 
-void CudaMallocHost(Instruction* vm_instr) {
+void CudaMallocHost(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   char* dptr = nullptr;
   size_t size = 0;
   {
-    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
-    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    const auto& stream = instr->mut_instr_chain()->stream();
+    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaMallocHostInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
-                                 vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
     auto* mirrored_object_access =
-        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+        instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
     mirrored_object = mirrored_object_access->mut_mirrored_object();
-    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
     CHECK(!mirrored_object->has_object_type());
   }
@@ -69,24 +68,23 @@ FLAT_MSG_VIEW_BEGIN(MallocInstruction);
 FLAT_MSG_VIEW_END(MallocInstruction);
 // clang-format on
 
-void Malloc(Instruction* vm_instr) {
+void Malloc(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   char* dptr = nullptr;
   size_t size = 0;
   {
-    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
-    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    const auto& stream = instr->mut_instr_chain()->stream();
+    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<MallocInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
-                                 vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
     auto* mirrored_object_access =
-        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+        instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
     mirrored_object = mirrored_object_access->mut_mirrored_object();
-    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
     CHECK(!mirrored_object->has_object_type());
   }
@@ -102,21 +100,20 @@ FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
 FLAT_MSG_VIEW_END(CudaFreeHostInstruction);
 // clang-format on
 
-void CudaFreeHost(Instruction* vm_instr) {
+void CudaFreeHost(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   {
-    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
-    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    const auto& stream = instr->mut_instr_chain()->stream();
+    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaFreeHostInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
-                                 vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
     auto* mirrored_object_access =
-        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+        instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
     mirrored_object = mirrored_object_access->mut_mirrored_object();
-    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
   }
   CudaCheck(cudaFreeHost(mirrored_object->mut_host_mem_buffer()->mut_data()));
@@ -131,21 +128,20 @@ FLAT_MSG_VIEW_BEGIN(FreeInstruction);
 FLAT_MSG_VIEW_END(FreeInstruction);
 // clang-format on
 
-void Free(Instruction* vm_instr) {
+void Free(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   {
-    const auto& vm_stream = vm_instr->mut_vm_instr_chain()->vm_stream();
-    auto parallel_num = vm_stream.vm_thread().vm_stream_rt_desc().vm_stream_desc().parallel_num();
+    const auto& stream = instr->mut_instr_chain()->stream();
+    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<FreeInstruction> view;
-    CHECK(view->Match(vm_instr->mut_vm_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(),
-                                 vm_stream.parallel_id());
+    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
     auto* mirrored_object_access =
-        vm_instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+        instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
     CHECK_NOTNULL(mirrored_object_access);
     mirrored_object = mirrored_object_access->mut_mirrored_object();
-    CHECK_EQ(mirrored_object->parallel_id(), vm_stream.parallel_id());
+    CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
   }
   std::free(mirrored_object->mut_host_mem_buffer()->mut_data());
@@ -158,79 +154,79 @@ COMMAND(RegisterInstructionId<HostStreamType>("Free", kFreeOpcode, kRemote));
 
 const StreamTypeId HostStreamType::kStreamTypeId;
 
-void HostStreamType::InitInstructionStatus(const Stream& vm_stream,
+void HostStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void HostStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+void HostStreamType::DeleteInstructionStatus(const Stream& stream,
                                              InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
 bool HostStreamType::QueryInstructionStatusDone(
-    const Stream& vm_stream, const InstructionStatusBuffer& status_buffer) const {
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::CudaMallocHost(uint64_t logical_object_id,
                                                             size_t size) const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(HostInstrOpCode::kCudaMallocHostOpcode);
   {
-    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_msg->mutable_operand());
+    FlatMsgView<CudaMallocHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
-  return vm_instr_msg;
+  return instr_msg;
 }
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::Malloc(uint64_t logical_object_id, size_t size) const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(HostInstrOpCode::kMallocOpcode);
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(HostInstrOpCode::kMallocOpcode);
   {
-    FlatMsgView<CudaMallocHostInstruction> view(vm_instr_msg->mutable_operand());
+    FlatMsgView<CudaMallocHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
     view->set_size(size);
   }
-  return vm_instr_msg;
+  return instr_msg;
 }
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::CudaFreeHost(uint64_t logical_object_id) const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(HostInstrOpCode::kCudaFreeHostOpcode);
   {
-    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_msg->mutable_operand());
+    FlatMsgView<CudaFreeHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
-  return vm_instr_msg;
+  return instr_msg;
 }
 
 ObjectMsgPtr<InstructionMsg> HostStreamType::Free(uint64_t logical_object_id) const {
-  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
-  vm_instr_id->set_opcode(HostInstrOpCode::kFreeOpcode);
+  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
+  auto* instr_id = instr_msg->mutable_instr_id();
+  instr_id->set_stream_type_id(kStreamTypeId);
+  instr_id->set_opcode(HostInstrOpCode::kFreeOpcode);
   {
-    FlatMsgView<CudaFreeHostInstruction> view(vm_instr_msg->mutable_operand());
+    FlatMsgView<CudaFreeHostInstruction> view(instr_msg->mutable_operand());
     view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
   }
-  return vm_instr_msg;
+  return instr_msg;
 }
 
-void HostStreamType::Run(InstrChain* vm_instr_chain) const {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instruction) {
-    auto opcode = vm_instruction->mut_vm_instr_msg()->vm_instr_id().opcode();
-    host_instr_table.at(opcode)(vm_instruction);
+void HostStreamType::Run(InstrChain* instr_chain) const {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
+    auto opcode = instruction->mut_instr_msg()->instr_id().opcode();
+    host_instr_table.at(opcode)(instruction);
   }
-  auto* status_buffer = vm_instr_chain->mut_status_buffer();
+  auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 

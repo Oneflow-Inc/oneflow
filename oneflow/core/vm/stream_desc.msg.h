@@ -21,7 +21,7 @@ FLAT_MSG_END(AllStreamEnabledMask);
 // clang-format off
 FLAT_MSG_BEGIN(StreamMask);
   FLAT_MSG_DEFINE_ONEOF(mask_type,
-    FLAT_MSG_ONEOF_FIELD(AllStreamEnabledMask, all_vm_stream_enabled)
+    FLAT_MSG_ONEOF_FIELD(AllStreamEnabledMask, all_stream_enabled)
     FLAT_MSG_ONEOF_FIELD(LogicalObjectId, enabled_parallel_desc_symbol));
 FLAT_MSG_END(StreamMask);
 // clang-format on
@@ -29,7 +29,7 @@ FLAT_MSG_END(StreamMask);
 // clang-format off
 FLAT_MSG_BEGIN(StreamId);
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, vm_stream_type_id);
+  FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, stream_type_id);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
 
   // methods
@@ -40,7 +40,7 @@ FLAT_MSG_END(StreamId);
 // clang-format off
 OBJECT_MSG_BEGIN(StreamDesc);
   // methods
-  PUBLIC void __Init__(StreamTypeId vm_stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+  PUBLIC void __Init__(StreamTypeId stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
                        int32_t num_streams_per_thread);
   PUBLIC int32_t num_threads() const;
   PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
@@ -51,7 +51,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, vm_stream_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on
 
