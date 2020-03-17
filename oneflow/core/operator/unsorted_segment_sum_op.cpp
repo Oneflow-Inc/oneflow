@@ -154,11 +154,11 @@ Maybe<void> UnsortedSegmentSumLikeOp::InferBlobDescs(
   }
   CHECK_EQ_OR_RETURN(data->shape().NumAxes() - segment_ids->shape().NumAxes() + 1,
                      like->shape().NumAxes());
-  FOR_RANGE(int64_t, i, conf.axis(), like->shape().NumAxes()) {
+  FOR_RANGE(int64_t, i, conf.axis() + 1, like->shape().NumAxes()) {
     CHECK_EQ_OR_RETURN(like->shape().At(i),
                        data->shape().At(i + segment_ids->shape().NumAxes() - 1));
   }
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("like");
+  GetBlobDesc4BnInOp("out")->CopyMetaFrom(*like);
   return Maybe<void>::Ok();
 }
 
