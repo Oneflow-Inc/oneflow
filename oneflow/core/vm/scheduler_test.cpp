@@ -1,8 +1,8 @@
 #include <iostream>
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/vm_stream_desc.msg.h"
-#include "oneflow/core/vm/nop_vm_stream_type.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/nop_stream_type.h"
 #include "oneflow/core/common/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 
