@@ -51,9 +51,9 @@ TEST(L2RSenderReceiverStreamType, basic) {
   scheduler1->Receive(L2RReceiverStreamType().Receive(logical_token, dst_symbol, size));
   while (!(scheduler0->Empty() && scheduler1->Empty())) {
     scheduler0->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(scheduler0->mut_thread_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(scheduler0->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
     scheduler1->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(scheduler1->mut_thread_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(scheduler1->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 

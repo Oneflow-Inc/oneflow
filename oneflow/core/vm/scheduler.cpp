@@ -171,7 +171,7 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
     } else {
       ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
       if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
-      stream->mut_thread()->mut_pending_chain_list()->PushBack(instr_chain);
+      stream->mut_thread_ctx()->mut_pending_chain_list()->PushBack(instr_chain);
     }
   }
   ready_chain_list->Clear();
@@ -184,16 +184,16 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
     for (int64_t i = 0, parallel_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread = ObjectMsgPtr<Thread>::NewFrom(allocator, stream_rt_desc.Get(), i);
-      mut_thread_list()->PushBack(thread.Mutable());
+      auto thread_ctx = ObjectMsgPtr<ThreadCtx>::NewFrom(allocator, stream_rt_desc.Get(), i);
+      mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++parallel_id) {
         FlatMsg<StreamId> stream_id;
         stream_id->set_stream_type_id(stream_desc->stream_type_id());
         stream_id->set_parallel_id(parallel_id);
         auto stream =
-            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread.Mutable(), stream_id.Get());
+            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id.Get());
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
-        thread->mut_stream_list()->PushBack(stream.Mutable());
+        thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
     }
   };

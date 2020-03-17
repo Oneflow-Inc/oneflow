@@ -1,19 +1,19 @@
 #include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
-void Stream::__Init__(Thread* thread, const StreamId& stream_id) {
-  set_thread(thread);
+void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id) {
+  set_thread_ctx(thread_ctx);
   mut_stream_id()->CopyFrom(stream_id);
-  const auto& stream_type = thread->stream_rt_desc().stream_type();
+  const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
   stream_type.InitDeviceCtx(mut_device_ctx(), this);
 }
 
 int64_t Stream::machine_id() const {
-  return parallel_id() / thread().stream_rt_desc().stream_desc().num_streams_per_machine();
+  return parallel_id() / thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
 }
 
 ObjectMsgPtr<InstrChain> Stream::NewInstrChain(InstructionMsg* instr_msg) {

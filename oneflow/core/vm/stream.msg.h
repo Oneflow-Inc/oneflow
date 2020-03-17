@@ -8,24 +8,24 @@
 namespace oneflow {
 namespace vm {
 
-class Thread;
+class ThreadCtx;
 
 // clang-format off
 OBJECT_MSG_BEGIN(Stream);
   // methods
-  PUBLIC void __Init__(Thread* thread, const StreamId& stream_id);
+  PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
   PUBLIC ObjectMsgPtr<InstrChain> NewInstrChain(InstructionMsg* instr_msg);
   PUBLIC void DeleteInstrChain(ObjectMsgPtr<InstrChain>&&);
   PUBLIC int64_t parallel_id() const { return stream_id().parallel_id(); }
   PUBLIC int64_t machine_id() const;
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(Thread, thread); 
+  OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<DeviceCtx>, device_ctx);
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(thread_stream_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_link);
   OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(StreamId, stream_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstrChain, instr_chain_link, running_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(InstrChain, instr_chain_link, free_chain_list);

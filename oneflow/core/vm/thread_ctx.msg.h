@@ -8,7 +8,7 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
-OBJECT_MSG_BEGIN(Thread);
+OBJECT_MSG_BEGIN(ThreadCtx);
   // methods
   PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc, int64_t device_id) {
     set_stream_rt_desc(&stream_rt_desc);
@@ -20,13 +20,13 @@ OBJECT_MSG_BEGIN(Thread);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, device_id);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(thread_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_stream_link, stream_list);
+  OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Stream, thread_ctx_stream_link, stream_list);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(InstrChain, pending_chain_link, pending_chain_list);
 
   PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();
   PRIVATE ObjectMsgConditionListStatus TryReceiveAndRun();
-OBJECT_MSG_END(Thread);
+OBJECT_MSG_END(ThreadCtx);
 // clang-format on
 
 }  // namespace vm
