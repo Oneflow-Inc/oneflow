@@ -28,15 +28,15 @@ TEST(HostStreamType, basic) {
   list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_thread_list()->Begin()->ReceiveAndRun();
+  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
-  scheduler->mut_thread_list()->Begin()->ReceiveAndRun();
+  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_stream_list().size(), 0);
-  auto* thread = scheduler->mut_thread_list()->Begin();
-  ASSERT_TRUE(thread != nullptr);
-  auto* stream = thread->mut_stream_list()->Begin();
+  auto* thread_ctx = scheduler->mut_thread_ctx_list()->Begin();
+  ASSERT_TRUE(thread_ctx != nullptr);
+  auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
   auto* instr_chain = stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(instr_chain == nullptr);
@@ -55,7 +55,7 @@ TEST(HostStreamType, two_device) {
   list.EmplaceBack(HostStreamType().CudaMallocHost(symbol_value, 1024));
   scheduler->Receive(&list);
   scheduler->Schedule();
-  OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_list(), t) { t->TryReceiveAndRun(); }
+  OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
 }
 
 }  // namespace

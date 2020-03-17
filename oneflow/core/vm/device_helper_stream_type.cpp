@@ -2,7 +2,7 @@
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
@@ -36,7 +36,7 @@ void CudaMalloc(Instruction* instr) {
   size_t size = 0;
   const auto& stream = instr->mut_instr_chain()->stream();
   {
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaMallocInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
@@ -51,7 +51,7 @@ void CudaMalloc(Instruction* instr) {
     CHECK(!mirrored_object->has_object_type());
   }
   {
-    cudaSetDevice(stream.thread().device_id());
+    cudaSetDevice(stream.thread_ctx().device_id());
     CudaCheck(cudaMalloc(&dptr, size));
   }
   mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
@@ -69,7 +69,7 @@ void CudaFree(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   const auto& stream = instr->mut_instr_chain()->stream();
   {
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaFreeInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
@@ -82,7 +82,7 @@ void CudaFree(Instruction* instr) {
     CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
   }
   {
-    cudaSetDevice(stream.thread().device_id());
+    cudaSetDevice(stream.thread_ctx().device_id());
     CudaCheck(cudaFree(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
   }
   mirrored_object->clear_cuda_mem_buffer();

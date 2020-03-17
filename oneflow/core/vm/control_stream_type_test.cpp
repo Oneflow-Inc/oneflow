@@ -30,7 +30,7 @@ TEST(ControlStreamType, new_symbol) {
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_TRUE(scheduler->waiting_instr_chain_list().empty());
   ASSERT_TRUE(scheduler->active_stream_list().empty());
-  ASSERT_EQ(scheduler->thread_list().size(), 1);
+  ASSERT_EQ(scheduler->thread_ctx_list().size(), 1);
   ASSERT_EQ(scheduler->stream_type_id2stream_rt_desc().size(), 1);
   ASSERT_EQ(scheduler->id2logical_object().size(), 1);
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(symbol_value);
@@ -57,12 +57,12 @@ TEST(ControlStreamType, delete_symbol) {
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);
   scheduler->Schedule();
-  scheduler->mut_thread_list()->Begin()->ReceiveAndRun();
+  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_TRUE(scheduler->waiting_instr_chain_list().empty());
   ASSERT_TRUE(scheduler->active_stream_list().empty());
-  ASSERT_EQ(scheduler->thread_list().size(), 2);
+  ASSERT_EQ(scheduler->thread_ctx_list().size(), 2);
   ASSERT_EQ(scheduler->stream_type_id2stream_rt_desc().size(), 2);
   ASSERT_TRUE(scheduler->id2logical_object().empty());
   ASSERT_TRUE(scheduler->Empty());

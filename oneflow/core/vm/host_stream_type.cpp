@@ -2,7 +2,7 @@
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
@@ -41,7 +41,7 @@ void CudaMallocHost(Instruction* instr) {
   size_t size = 0;
   {
     const auto& stream = instr->mut_instr_chain()->stream();
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaMallocHostInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
@@ -74,7 +74,7 @@ void Malloc(Instruction* instr) {
   size_t size = 0;
   {
     const auto& stream = instr->mut_instr_chain()->stream();
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<MallocInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     size = view->size();
@@ -104,7 +104,7 @@ void CudaFreeHost(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   {
     const auto& stream = instr->mut_instr_chain()->stream();
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<CudaFreeHostInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;
@@ -132,7 +132,7 @@ void Free(Instruction* instr) {
   MirroredObject* mirrored_object = nullptr;
   {
     const auto& stream = instr->mut_instr_chain()->stream();
-    auto parallel_num = stream.thread().stream_rt_desc().stream_desc().parallel_num();
+    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
     FlatMsgView<FreeInstruction> view;
     CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
     FlatMsg<MirroredObjectId> mirrored_object_id;

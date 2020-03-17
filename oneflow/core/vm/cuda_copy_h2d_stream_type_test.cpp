@@ -45,7 +45,7 @@ TEST(CudaCopyH2DStreamType, basic) {
   size_t count = 0;
   while (!scheduler->Empty()) {
     scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
     ++count;
   }
   // std::cout << count << std::endl;

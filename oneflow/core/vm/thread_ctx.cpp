@@ -1,15 +1,15 @@
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
-void Thread::LoopRun() {
+void ThreadCtx::LoopRun() {
   while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess)
     ;
 }
 
-ObjectMsgConditionListStatus Thread::ReceiveAndRun() {
+ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
   OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->MoveTo(&tmp_list);
@@ -20,7 +20,7 @@ ObjectMsgConditionListStatus Thread::ReceiveAndRun() {
   return status;
 }
 
-ObjectMsgConditionListStatus Thread::TryReceiveAndRun() {
+ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
   OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->TryMoveTo(&tmp_list);

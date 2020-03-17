@@ -2,7 +2,7 @@
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -72,7 +72,7 @@ void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                       stream.thread().device_id());
+                                       stream.thread_ctx().device_id());
 }
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -87,7 +87,7 @@ bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
 
 void CudaCopyD2HStreamType::Run(InstrChain* instr_chain) const {
   auto* stream = instr_chain->mut_stream();
-  cudaSetDevice(stream->thread().device_id());
+  cudaSetDevice(stream->thread_ctx().device_id());
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
     CudaCopyD2H(instruction);
   }

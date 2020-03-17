@@ -1,7 +1,7 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/stream.msg.h"
-#include "oneflow/core/vm/thread.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -32,7 +32,7 @@ MirroredObject* Instruction::FindMirroredObjectByOperand(const MirroredObjectOpe
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
   set_stream(stream);
-  set_stream_type(&stream->thread().stream_rt_desc().stream_type());
+  set_stream_type(&stream->thread_ctx().stream_rt_desc().stream_type());
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
   auto instruction = ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), this, instr_msg);
   mut_instruction_list()->EmplaceBack(std::move(instruction));
