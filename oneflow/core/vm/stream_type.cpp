@@ -37,6 +37,10 @@ const InstrTypeId& LookupInstrTypeId(const std::string& name) {
   return iter->second.Get();
 }
 
+void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
+  for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second.Get()); }
+}
+
 void RegisterInstrTypeId(const std::string& instruction_name, StreamTypeId stream_type_id,
                          InstructionOpcode opcode, VmType type) {
   FlatMsg<InstrTypeId> instr_type_id;
