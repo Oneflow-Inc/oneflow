@@ -10,7 +10,7 @@ namespace vm {
 
 enum CtrlInstrOpCode { kNewSymbol = 0, kDeleteSymbol };
 
-typedef void (*CtrlInstrFunc)(VmScheduler*, VmInstructionMsg*);
+typedef void (*CtrlInstrFunc)(Scheduler*, InstructionMsg*);
 std::vector<CtrlInstrFunc> ctrl_instr_table;
 
 #define REGISTER_CTRL_INSTRUCTION(op_code, function_name) \
@@ -26,11 +26,11 @@ FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 // clang-format on
 
-ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewSymbol(
-    const LogicalObjectId& logical_object_id, int64_t parallel_num) const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId& logical_object_id,
+                                                          int64_t parallel_num) const {
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(vm_instr_msg->mutable_operand());
@@ -40,7 +40,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::NewSymbol(
   return vm_instr_msg;
 }
 
-void NewSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
+void NewSymbol(Scheduler* scheduler, InstructionMsg* vm_instr_msg) {
   FlatMsgView<NewSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_operand()));
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
@@ -54,8 +54,8 @@ void NewSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   }
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kNewSymbol, NewSymbol);
-COMMAND(RegisterVmInstructionId<ControlVmStreamType>("NewSymbol", kNewSymbol, kVmRemote));
-COMMAND(RegisterVmInstructionId<ControlVmStreamType>("LocalNewSymbol", kNewSymbol, kVmLocal));
+COMMAND(RegisterInstructionId<ControlStreamType>("NewSymbol", kNewSymbol, kRemote));
+COMMAND(RegisterInstructionId<ControlStreamType>("LocalNewSymbol", kNewSymbol, kLocal));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
@@ -63,13 +63,13 @@ FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 // clang-format on
 
-const VmStreamTypeId ControlVmStreamType::kVmStreamTypeId;
+const StreamTypeId ControlStreamType::kStreamTypeId;
 
-ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteSymbol(
+ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
-  auto vm_instr_msg = ObjectMsgPtr<VmInstructionMsg>::New();
+  auto vm_instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* vm_instr_id = vm_instr_msg->mutable_vm_instr_id();
-  vm_instr_id->set_vm_stream_type_id(kVmStreamTypeId);
+  vm_instr_id->set_vm_stream_type_id(kStreamTypeId);
   vm_instr_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
   {
     FlatMsgView<DeleteSymbolCtrlInstruction> view(vm_instr_msg->mutable_operand());
@@ -79,7 +79,7 @@ ObjectMsgPtr<VmInstructionMsg> ControlVmStreamType::DeleteSymbol(
   }
   return vm_instr_msg;
 }
-void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
+void DeleteSymbol(Scheduler* scheduler, InstructionMsg* vm_instr_msg) {
   FlatMsgView<DeleteSymbolCtrlInstruction> view;
   CHECK(view->Match(vm_instr_msg->mut_operand()));
   const auto& logical_objectId = view->mirrored_object_operand().operand().logical_object_id();
@@ -94,42 +94,42 @@ void DeleteSymbol(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) {
   scheduler->mut_id2logical_object()->Erase(logical_object);
 }
 REGISTER_CTRL_INSTRUCTION(CtrlInstrOpCode::kDeleteSymbol, DeleteSymbol);
-COMMAND(RegisterVmInstructionId<ControlVmStreamType>("DeleteSymbol", kDeleteSymbol, kVmRemote));
-COMMAND(RegisterVmInstructionId<ControlVmStreamType>("LocalDeleteSymbol", kDeleteSymbol, kVmLocal));
+COMMAND(RegisterInstructionId<ControlStreamType>("DeleteSymbol", kDeleteSymbol, kRemote));
+COMMAND(RegisterInstructionId<ControlStreamType>("LocalDeleteSymbol", kDeleteSymbol, kLocal));
 
-void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstructionMsg* vm_instr_msg) const {
-  VmInstructionOpcode opcode = vm_instr_msg->vm_instr_id().opcode();
+void ControlStreamType::Run(Scheduler* scheduler, InstructionMsg* vm_instr_msg) const {
+  InstructionOpcode opcode = vm_instr_msg->vm_instr_id().opcode();
   return ctrl_instr_table.at(opcode)(scheduler, vm_instr_msg);
 }
 
-void ControlVmStreamType::Run(VmScheduler* scheduler, VmInstrChain* vm_instr_chain) const {
+void ControlStreamType::Run(Scheduler* scheduler, InstrChain* vm_instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_instr_chain->mut_vm_instruction_list(), vm_instr) {
     Run(scheduler, vm_instr->mut_vm_instr_msg());
   }
 }
 
-void ControlVmStreamType::InitVmInstructionStatus(const VmStream& vm_stream,
-                                                  VmInstructionStatusBuffer* status_buffer) const {
+void ControlStreamType::InitInstructionStatus(const Stream& vm_stream,
+                                              InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-void ControlVmStreamType::DeleteVmInstructionStatus(
-    const VmStream& vm_stream, VmInstructionStatusBuffer* status_buffer) const {
+void ControlStreamType::DeleteInstructionStatus(const Stream& vm_stream,
+                                                InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool ControlVmStreamType::QueryVmInstructionStatusDone(
-    const VmStream& vm_stream, const VmInstructionStatusBuffer& status_buffer) const {
+bool ControlStreamType::QueryInstructionStatusDone(
+    const Stream& vm_stream, const InstructionStatusBuffer& status_buffer) const {
   UNIMPLEMENTED();
 }
 
-bool ControlVmStreamType::IsSourceOpcode(VmInstructionOpcode opcode) const {
+bool ControlStreamType::IsSourceOpcode(InstructionOpcode opcode) const {
   return opcode == kNewSymbol;
 }
 
-void ControlVmStreamType::Run(VmInstrChain* vm_instr_chain) const { UNIMPLEMENTED(); }
+void ControlStreamType::Run(InstrChain* vm_instr_chain) const { UNIMPLEMENTED(); }
 
-COMMAND(RegisterVmStreamType<ControlVmStreamType>());
+COMMAND(RegisterStreamType<ControlStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

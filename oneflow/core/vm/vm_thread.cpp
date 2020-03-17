@@ -4,14 +4,14 @@
 namespace oneflow {
 namespace vm {
 
-void VmThread::LoopRun() {
+void Thread::LoopRun() {
   while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess)
     ;
 }
 
-ObjectMsgConditionListStatus VmThread::ReceiveAndRun() {
-  const VmStreamType& vm_stream_type = vm_stream_rt_desc().vm_stream_type();
-  OBJECT_MSG_LIST(VmInstrChain, pending_chain_link) tmp_list;
+ObjectMsgConditionListStatus Thread::ReceiveAndRun() {
+  const StreamType& vm_stream_type = vm_stream_rt_desc().vm_stream_type();
+  OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->MoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, vm_instr_chain) {
     vm_stream_type.Run(vm_instr_chain);
@@ -20,9 +20,9 @@ ObjectMsgConditionListStatus VmThread::ReceiveAndRun() {
   return status;
 }
 
-ObjectMsgConditionListStatus VmThread::TryReceiveAndRun() {
-  const VmStreamType& vm_stream_type = vm_stream_rt_desc().vm_stream_type();
-  OBJECT_MSG_LIST(VmInstrChain, pending_chain_link) tmp_list;
+ObjectMsgConditionListStatus Thread::TryReceiveAndRun() {
+  const StreamType& vm_stream_type = vm_stream_rt_desc().vm_stream_type();
+  OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->TryMoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, vm_instr_chain) {
     vm_stream_type.Run(vm_instr_chain);

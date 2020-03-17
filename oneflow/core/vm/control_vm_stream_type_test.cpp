@@ -13,16 +13,16 @@ namespace test {
 
 namespace {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
 
-TEST(ControlVmStreamType, new_symbol) {
+TEST(ControlStreamType, new_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   CachedObjectMsgAllocator allocator(20, 100);
-  auto scheduler = ObjectMsgPtr<VmScheduler>::NewFrom(&allocator, vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
+  InstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 1);
@@ -39,21 +39,20 @@ TEST(ControlVmStreamType, new_symbol) {
   ASSERT_TRUE(scheduler->Empty());
 }
 
-TEST(ControlVmStreamType, delete_symbol) {
-  auto nop_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
+TEST(ControlStreamType, delete_symbol) {
+  auto nop_vm_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
-  auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
+  InstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, parallel_num));
-  auto nop0_vm_instr_msg = NopVmStreamType().Nop();
+  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
+  auto nop0_vm_instr_msg = NopStreamType().Nop();
   auto* operand = nop0_vm_instr_msg->add_operand();
   operand->mutable_mutable_operand()->mutable_operand()->__Init__(symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
-  list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));
+  list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);

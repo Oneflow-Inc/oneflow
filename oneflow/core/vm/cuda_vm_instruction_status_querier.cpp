@@ -4,12 +4,12 @@
 namespace oneflow {
 namespace vm {
 
-bool CudaVmInstrStatusQuerier::event_completed() const {
+bool CudaInstrStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
   return cudaEventQuery(event_) == cudaSuccess;
 }
 
-void CudaVmInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
+void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   cudaSetDevice(device_id_);
   CudaCheck(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
   CudaCheck(cudaEventRecord(event_, device_ctx->cuda_stream()));

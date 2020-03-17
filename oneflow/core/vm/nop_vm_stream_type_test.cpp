@@ -13,28 +13,27 @@ namespace test {
 
 namespace {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
 
-ObjectMsgPtr<VmScheduler> NaiveNewVmScheduler(const VmDesc& vm_desc) {
-  return ObjectMsgPtr<VmScheduler>::New(vm_desc);
+ObjectMsgPtr<Scheduler> NaiveNewScheduler(const VmDesc& vm_desc) {
+  return ObjectMsgPtr<Scheduler>::New(vm_desc);
 }
 
-std::function<ObjectMsgPtr<VmScheduler>(const VmDesc&)> CachedAllocatorNewVmScheduler() {
+std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> CachedAllocatorNewScheduler() {
   auto allocator = std::make_shared<CachedObjectMsgAllocator>(20, 100);
-  return [allocator](const VmDesc& vm_desc) -> ObjectMsgPtr<VmScheduler> {
-    return ObjectMsgPtr<VmScheduler>::NewFrom(allocator.get(), vm_desc);
+  return [allocator](const VmDesc& vm_desc) -> ObjectMsgPtr<Scheduler> {
+    return ObjectMsgPtr<Scheduler>::NewFrom(allocator.get(), vm_desc);
   };
 }
 
-void TestNopVmStreamTypeNoArgument(
-    std::function<ObjectMsgPtr<VmScheduler>(const VmDesc&)> NewScheduler) {
-  auto nop_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
+void TestNopStreamTypeNoArgument(
+    std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
+  auto nop_vm_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
-  VmInstructionMsgList list;
-  auto nop_vm_instr_msg = NopVmStreamType().Nop();
+  InstructionMsgList list;
+  auto nop_vm_instr_msg = NopStreamType().Nop();
   list.PushBack(nop_vm_instr_msg.Mutable());
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
@@ -54,28 +53,27 @@ void TestNopVmStreamTypeNoArgument(
   ASSERT_EQ(vm_instruction->mut_vm_instr_msg(), nop_vm_instr_msg.Mutable());
 }
 
-TEST(NopVmStreamType, no_argument) { TestNopVmStreamTypeNoArgument(&NaiveNewVmScheduler); }
+TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewScheduler); }
 
-TEST(NopVmStreamType, cached_allocator_no_argument) {
-  TestNopVmStreamTypeNoArgument(CachedAllocatorNewVmScheduler());
+TEST(NopStreamType, cached_allocator_no_argument) {
+  TestNopStreamTypeNoArgument(CachedAllocatorNewScheduler());
 }
 
-void TestNopVmStreamTypeOneArgument(
-    std::function<ObjectMsgPtr<VmScheduler>(const VmDesc&)> NewScheduler) {
-  auto nop_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
+void TestNopStreamTypeOneArgument(
+    std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
+  auto nop_vm_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
-  VmInstructionMsgList list;
+  InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
-  auto nop0_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop0_vm_instr_msg = NopStreamType().Nop();
   nop0_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
-  auto nop1_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop1_vm_instr_msg = NopStreamType().Nop();
   nop1_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop1_vm_instr_msg.Mutable());
@@ -103,29 +101,26 @@ void TestNopVmStreamTypeOneArgument(
   ASSERT_EQ(vm_instruction->mut_vm_instr_msg(), nop1_vm_instr_msg.Mutable());
 }
 
-TEST(NopVmStreamType, one_argument_dispatch) {
-  TestNopVmStreamTypeOneArgument(&NaiveNewVmScheduler);
+TEST(NopStreamType, one_argument_dispatch) { TestNopStreamTypeOneArgument(&NaiveNewScheduler); }
+
+TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
+  TestNopStreamTypeOneArgument(CachedAllocatorNewScheduler());
 }
 
-TEST(NopVmStreamType, cached_allocator_one_argument_dispatch) {
-  TestNopVmStreamTypeOneArgument(CachedAllocatorNewVmScheduler());
-}
-
-TEST(NopVmStreamType, one_argument_triger_next_chain) {
-  auto nop_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
+TEST(NopStreamType, one_argument_triger_next_chain) {
+  auto nop_vm_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
-  auto scheduler = NaiveNewVmScheduler(vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = NaiveNewScheduler(vm_desc.Get());
+  InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
-  auto nop0_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop0_vm_instr_msg = NopStreamType().Nop();
   nop0_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
-  auto nop1_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop1_vm_instr_msg = NopStreamType().Nop();
   nop1_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop1_vm_instr_msg.Mutable());
@@ -147,21 +142,20 @@ TEST(NopVmStreamType, one_argument_triger_next_chain) {
   ASSERT_EQ(vm_instruction->mut_vm_instr_msg(), nop1_vm_instr_msg.Mutable());
 }
 
-TEST(NopVmStreamType, one_argument_triger_all_chains) {
-  auto nop_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(NopVmStreamType::kVmStreamTypeId, 1, 1, 1);
+TEST(NopStreamType, one_argument_triger_all_chains) {
+  auto nop_vm_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(nop_vm_stream_desc.Mutable());
-  auto scheduler = NaiveNewVmScheduler(vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = NaiveNewScheduler(vm_desc.Get());
+  InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_vm_instr_msg = ControlVmStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_vm_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_vm_instr_msg.Mutable());
-  auto nop0_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop0_vm_instr_msg = NopStreamType().Nop();
   nop0_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop0_vm_instr_msg.Mutable());
-  auto nop1_vm_instr_msg = NopVmStreamType().Nop();
+  auto nop1_vm_instr_msg = NopStreamType().Nop();
   nop1_vm_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
       symbol_value);
   list.PushBack(nop1_vm_instr_msg.Mutable());

@@ -13,20 +13,20 @@ namespace test {
 
 namespace {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
 
-TEST(DeviceHelperVmStreamType, basic) {
+TEST(DeviceHelperStreamType, basic) {
   auto device_helper_vm_stream_desc =
-      ObjectMsgPtr<VmStreamDesc>::New(DeviceHelperVmStreamType::kVmStreamTypeId, 1, 1, 1);
+      ObjectMsgPtr<StreamDesc>::New(DeviceHelperStreamType::kStreamTypeId, 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_vm_stream_type_id2desc()->Insert(device_helper_vm_stream_desc.Mutable());
-  auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
+  InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlVmStreamType().NewSymbol(symbol_value, 1));
-  list.EmplaceBack(DeviceHelperVmStreamType().CudaMalloc(symbol_value, 1024));
-  list.EmplaceBack(DeviceHelperVmStreamType().CudaFree(symbol_value));
-  list.EmplaceBack(ControlVmStreamType().DeleteSymbol(symbol_value));
+  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, 1));
+  list.EmplaceBack(DeviceHelperStreamType().CudaMalloc(symbol_value, 1024));
+  list.EmplaceBack(DeviceHelperStreamType().CudaFree(symbol_value));
+  list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   scheduler->mut_vm_thread_list()->Begin()->ReceiveAndRun();

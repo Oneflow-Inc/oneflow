@@ -9,25 +9,25 @@ class DeviceCtx;
 
 namespace vm {
 
-class CudaVmInstrStatusQuerier {
+class CudaInstrStatusQuerier {
  public:
-  ~CudaVmInstrStatusQuerier() = default;
+  ~CudaInstrStatusQuerier() = default;
 
   bool done() const { return launched_ && event_completed(); }
   void SetLaunched(DeviceCtx* device_ctx);
 
-  static const CudaVmInstrStatusQuerier* Cast(const char* mem_ptr) {
-    return reinterpret_cast<const CudaVmInstrStatusQuerier*>(mem_ptr);
+  static const CudaInstrStatusQuerier* Cast(const char* mem_ptr) {
+    return reinterpret_cast<const CudaInstrStatusQuerier*>(mem_ptr);
   }
-  static CudaVmInstrStatusQuerier* MutCast(char* mem_ptr) {
-    return reinterpret_cast<CudaVmInstrStatusQuerier*>(mem_ptr);
+  static CudaInstrStatusQuerier* MutCast(char* mem_ptr) {
+    return reinterpret_cast<CudaInstrStatusQuerier*>(mem_ptr);
   }
-  static CudaVmInstrStatusQuerier* PlacementNew(char* mem_ptr, int64_t device_id) {
-    return new (mem_ptr) CudaVmInstrStatusQuerier(device_id);
+  static CudaInstrStatusQuerier* PlacementNew(char* mem_ptr, int64_t device_id) {
+    return new (mem_ptr) CudaInstrStatusQuerier(device_id);
   }
 
  private:
-  explicit CudaVmInstrStatusQuerier(int64_t device_id) : launched_(false), device_id_(device_id) {}
+  explicit CudaInstrStatusQuerier(int64_t device_id) : launched_(false), device_id_(device_id) {}
   bool event_completed() const;
 
   volatile bool launched_;

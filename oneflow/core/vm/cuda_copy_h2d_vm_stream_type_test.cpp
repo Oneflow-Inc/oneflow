@@ -16,32 +16,32 @@ namespace test {
 
 namespace {
 
-using VmInstructionMsgList = OBJECT_MSG_LIST(VmInstructionMsg, vm_instr_msg_link);
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, vm_instr_msg_link);
 
-TEST(CudaCopyH2DVmStreamType, basic) {
+TEST(CudaCopyH2DStreamType, basic) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   {
     auto* map = vm_desc->mut_vm_stream_type_id2desc();
     auto host_vm_stream_desc =
-        ObjectMsgPtr<VmStreamDesc>::New(HostVmStreamType::kVmStreamTypeId, 1, 1, 1);
+        ObjectMsgPtr<StreamDesc>::New(HostStreamType::kStreamTypeId, 1, 1, 1);
     map->Insert(host_vm_stream_desc.Mutable());
     auto device_helper_vm_stream_desc =
-        ObjectMsgPtr<VmStreamDesc>::New(DeviceHelperVmStreamType::kVmStreamTypeId, 1, 1, 1);
+        ObjectMsgPtr<StreamDesc>::New(DeviceHelperStreamType::kStreamTypeId, 1, 1, 1);
     map->Insert(device_helper_vm_stream_desc.Mutable());
     auto cuda_copy_h2d_vm_stream_desc =
-        ObjectMsgPtr<VmStreamDesc>::New(CudaCopyH2DVmStreamType::kVmStreamTypeId, 1, 1, 1);
+        ObjectMsgPtr<StreamDesc>::New(CudaCopyH2DStreamType::kStreamTypeId, 1, 1, 1);
     map->Insert(cuda_copy_h2d_vm_stream_desc.Mutable());
   }
-  auto scheduler = ObjectMsgPtr<VmScheduler>::New(vm_desc.Get());
-  VmInstructionMsgList list;
+  auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
+  InstructionMsgList list;
   uint64_t src_symbol = 9527;
   uint64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
-  list.EmplaceBack(ControlVmStreamType().NewSymbol(src_symbol, 1));
-  list.EmplaceBack(ControlVmStreamType().NewSymbol(dst_symbol, 1));
-  list.EmplaceBack(HostVmStreamType().CudaMallocHost(src_symbol, size));
-  list.EmplaceBack(DeviceHelperVmStreamType().CudaMalloc(dst_symbol, size));
-  list.EmplaceBack(CudaCopyH2DVmStreamType().Copy(dst_symbol, src_symbol, size));
+  list.EmplaceBack(ControlStreamType().NewSymbol(src_symbol, 1));
+  list.EmplaceBack(ControlStreamType().NewSymbol(dst_symbol, 1));
+  list.EmplaceBack(HostStreamType().CudaMallocHost(src_symbol, size));
+  list.EmplaceBack(DeviceHelperStreamType().CudaMalloc(dst_symbol, size));
+  list.EmplaceBack(CudaCopyH2DStreamType().Copy(dst_symbol, src_symbol, size));
   scheduler->Receive(&list);
   size_t count = 0;
   while (!scheduler->Empty()) {

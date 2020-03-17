@@ -7,23 +7,23 @@
 namespace oneflow {
 namespace vm {
 
-class VmStreamType;
-class VmStreamDesc;
+class StreamType;
+class StreamDesc;
 
 // Rt is short for Runtime
 // clang-format off
-OBJECT_MSG_BEGIN(VmStreamRtDesc);
+OBJECT_MSG_BEGIN(StreamRtDesc);
   // methods
-  PUBLIC void __Init__(VmStreamDesc* vm_stream_desc);
+  PUBLIC void __Init__(StreamDesc* vm_stream_desc);
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(const VmStreamType, vm_stream_type); 
-  OBJECT_MSG_DEFINE_OPTIONAL(VmStreamDesc, vm_stream_desc); 
+  OBJECT_MSG_DEFINE_PTR(const StreamType, vm_stream_type); 
+  OBJECT_MSG_DEFINE_OPTIONAL(StreamDesc, vm_stream_desc); 
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, VmStreamTypeId, vm_stream_type_id);
-  OBJECT_MSG_DEFINE_MAP_HEAD(VmStream, vm_stream_id, vm_stream_id2vm_stream);
-OBJECT_MSG_END(VmStreamRtDesc);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, vm_stream_type_id);
+  OBJECT_MSG_DEFINE_MAP_HEAD(Stream, vm_stream_id, vm_stream_id2vm_stream);
+OBJECT_MSG_END(StreamRtDesc);
 // clang-format on
 
 }  // namespace vm
