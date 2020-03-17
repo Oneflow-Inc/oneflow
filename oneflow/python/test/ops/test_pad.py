@@ -43,6 +43,7 @@ def compare_with_tensorflow(device_type, input_shape, paddings):
     check_point.init()
     of_out = PadJob().get()
     # TensorFlow
+    tf.enable_eager_execution()
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
         tf_out = tf.pad(x, tf.constant(paddings))
@@ -54,16 +55,10 @@ def compare_with_tensorflow(device_type, input_shape, paddings):
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
-
-
-def test_pad():
+def test_pad(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(2, 1, 3, 3)]
     arg_dict["output_shape"] = [([0, 0], [0, 0], [1, 2], [1, 1])]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-
-if __name__ == "__main__":
-    tf.enable_eager_execution()
-    test_pad()

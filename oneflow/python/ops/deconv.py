@@ -64,12 +64,8 @@ def deconv2d(
 
     # data format
     if data_format.upper() == "NCHW":
-        input_shape = input.static_shape[2:]
-        kernel_size = filters.static_shape[2:4]
         channel_pos = "channels_first"
     elif data_format.upper() == "NHWC":
-        input_shape = input.static_shape[1:3]
-        kernel_size = filters.static_shape[-3:-1]
         channel_pos = "channels_last"
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
@@ -182,8 +178,14 @@ def deconv2d_tf(
         assert output_shape is not None
         assert len(output_shape) == 4
         output_shape = output_shape[2:4]
+    elif data_format.upper() == "NHWC":
+        input_shape = input.static_shape[1:3]
+        kernel_size = filters.static_shape[-3:-1]
+        assert output_shape is not None
+        assert len(output_shape) == 4
+        output_shape = output_shape[1:3]
     else:
-        raise ValueError('data_format must be NCHW".')
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
 
     # dilations
     if dilations is None:
@@ -228,10 +230,11 @@ def deconv2d_tf(
         else:
             padding_needed[i] = padding_needed[i] / 2  
     if need_pad:
+        assert data_format == "NCHW", ValueError("NHWC not supported when need odd pad!")
         out = oneflow.nn.conv2d_transpose(input, filters, strides=strides, output_padding=output_padding, 
                                        dilations=dilations, padding=padding_needed, data_format="NCHW")
         out = oneflow.pad_grad(out, [(0,0),(0,0),(0,padding_one[0]),(0,padding_one[1])])
     else:
         out = oneflow.nn.conv2d_transpose(input, filters, strides=strides, output_padding=output_padding, 
-                                       dilations=dilations, padding=padding_needed, data_format="NCHW")
+                                       dilations=dilations, padding=padding_needed, data_format=data_format.upper())
     return out

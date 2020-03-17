@@ -153,7 +153,7 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf
   const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
   const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
-  if (HasStrFieldInPbFdOrPbRpf(conv_conf, "torch_style_padding_conf")) {
+  if (TryGetMsgPtrFromPbMessage(conv_conf, "torch_style_padding_conf")) {
     const PbMessage& torch_style_padding_conf = GetMessageInPbMessage(conv_conf, "torch_style_padding_conf");
     const PbRf<int32_t>& padding_needed = GetPbRfFromPbMessage<int32_t>(torch_style_padding_conf, "padding_needed");
     FOR_RANGE(int32_t, i, 0, opkernel_dim) {
