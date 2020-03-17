@@ -5,30 +5,11 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/random_crop_generator.h"
+#include "oneflow/customized/image/image_util.h"
 
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
-
-bool IsColor(const std::string& color_space) {
-  if (color_space == "RGB" || color_space == "BGR") {
-    return true;
-  } else if (color_space == "GRAY") {
-    return false;
-  } else {
-    UNIMPLEMENTED();
-    return false;
-  }
-}
-
-void ConvertColor(const std::string& input_color, const cv::Mat& input_img,
-                  const std::string& output_color, cv::Mat& output_img) {
-  if (input_color == "BGR" && output_color == "RGB") {
-    cv::cvtColor(input_img, output_img, cv::COLOR_BGR2RGB);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
 
 class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  public:
@@ -82,7 +63,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
       cv::Mat image =
           cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
-                       IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
+                       ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
       int W = image.cols;
       int H = image.rows;
 
@@ -105,12 +86,12 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       CHECK(H == newH);
 
       // convert color space
-      if (IsColor(color_space) && color_space != "BGR") {
-        ConvertColor("BGR", image, color_space, image);
+      if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
+        ImageUtil::ConvertColor("BGR", image, color_space, image);
       }
 
       CHECK(image.isContinuous());
-      const int c = IsColor(color_space) ? 3 : 1;
+      const int c = ImageUtil::IsColor(color_space) ? 3 : 1;
       CHECK_EQ(c, image.channels());
       Shape image_shape({H, W, c});
       buffer->Resize(image_shape, DataType::kUInt8);
