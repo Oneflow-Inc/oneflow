@@ -18,6 +18,8 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(ControlStreamType, new_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
@@ -44,6 +46,8 @@ TEST(ControlStreamType, delete_symbol) {
   auto nop_stream_desc =
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
@@ -58,7 +62,7 @@ TEST(ControlStreamType, delete_symbol) {
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_TRUE(scheduler->waiting_instr_chain_list().empty());

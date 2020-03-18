@@ -115,6 +115,7 @@ void Malloc(Instruction* instr) {
 }
 REGISTER_HOST_INSTRUCTION(kMallocOpcode, Malloc);
 COMMAND(RegisterInstrTypeId<HostStreamType>("Malloc", kMallocOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("LocalMalloc", kMallocOpcode, kLocal));
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
@@ -171,6 +172,7 @@ void Free(Instruction* instr) {
 }
 REGISTER_HOST_INSTRUCTION(kFreeOpcode, Free);
 COMMAND(RegisterInstrTypeId<HostStreamType>("Free", kFreeOpcode, kRemote));
+COMMAND(RegisterInstrTypeId<HostStreamType>("LocalFree", kFreeOpcode, kLocal));
 
 }  // namespace
 

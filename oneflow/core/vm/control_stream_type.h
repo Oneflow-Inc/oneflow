@@ -36,8 +36,10 @@ class ControlStreamType final : public StreamType {
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
 
+  bool SharingSchedulerThread() const override { return true; }
+  void Run(Scheduler* scheduler, InstrChain* instr_chain) const override;
+
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
-  void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
 };
 
 }  // namespace vm

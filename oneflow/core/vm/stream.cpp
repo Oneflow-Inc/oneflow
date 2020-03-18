@@ -16,6 +16,10 @@ int64_t Stream::machine_id() const {
   return parallel_id() / thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
 }
 
+const StreamType& Stream::stream_type() const {
+  return thread_ctx().stream_rt_desc().stream_type();
+}
+
 ObjectMsgPtr<InstrChain> Stream::NewInstrChain(InstructionMsg* instr_msg) {
   if (free_chain_list().empty()) {
     return ObjectMsgPtr<InstrChain>::NewFrom(mut_allocator(), instr_msg, this);
