@@ -50,22 +50,11 @@ LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> ReduceGatherOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& ibn : input_bns()) {
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
-  }
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 Symbol<OperatorConf> ReduceGatherOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
   op_conf.set_name("");
   CHECK(op_conf.has_reduce_gather_conf());
-  auto* reduce_gather_conf = op_conf.mutable_reduce_gather_conf();
-  LogicalBlobId empty_logical_blob_id;
-  *reduce_gather_conf->mutable_lbi() = empty_logical_blob_id;
+  op_conf.mutable_reduce_gather_conf();
   return SymbolOf(op_conf);
 }
 

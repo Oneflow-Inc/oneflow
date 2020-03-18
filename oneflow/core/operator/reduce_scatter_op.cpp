@@ -40,20 +40,11 @@ Maybe<void> ReduceScatterOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceScatterOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->has_value(), false);
-  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
-  return Maybe<void>::Ok();
-}
-
 Symbol<OperatorConf> ReduceScatterOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
   op_conf.set_name("");
   CHECK(op_conf.has_reduce_scatter_conf());
-  auto* reduce_scatter_conf = op_conf.mutable_reduce_scatter_conf();
-  LogicalBlobId empty_logical_blob_id;
-  *reduce_scatter_conf->mutable_lbi() = empty_logical_blob_id;
+  op_conf.mutable_reduce_scatter_conf();
   return SymbolOf(op_conf);
 }
 

@@ -1071,18 +1071,15 @@ message ReduceSplitOpConf {
 }
 
 message ReduceScatterOpConf {
-  optional LogicalBlobId lbi = 1;
-  optional int32 out_num = 2 [default = 0];
+  optional int32 out_num = 1 [default = 0];
 }
 
 message ReduceAddOpConf {
-  optional LogicalBlobId lbi = 1;
-  optional int32 in_num = 2 [default = 0];
+  optional int32 in_num = 1 [default = 0];
 }
 
 message ReduceGatherOpConf {
-  optional LogicalBlobId lbi = 1;
-  optional int32 in_num = 2 [default = 0];
+  optional int32 in_num = 1 [default = 0];
 }
 
 message AccuracyOpConf {
