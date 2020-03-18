@@ -50,6 +50,12 @@ LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
+Symbol<OperatorConf> ReduceGatherOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  return SymbolOf(op_conf);
+}
+
 REGISTER_OP(OperatorConf::kReduceGatherConf, ReduceGatherOp);
 
 }  // namespace oneflow
