@@ -20,6 +20,7 @@ class MirroredObject;
 OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
   PUBLIC void __Init__() {}
+  PUBLIC void __Init__(const InstrTypeId& type_id) { mutable_instr_type_id()->CopyFrom(type_id); }
   PUBLIC void __Init__(const InstructionProto& proto);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_i_operand);
