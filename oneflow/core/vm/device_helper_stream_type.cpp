@@ -1,5 +1,5 @@
 #include "oneflow/core/common/flat_msg_view.h"
-#include "oneflow/core/vm/device_helper_stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
@@ -10,6 +10,26 @@
 
 namespace oneflow {
 namespace vm {
+
+class DeviceHelperStreamType final : public StreamType {
+ public:
+  DeviceHelperStreamType() = default;
+  ~DeviceHelperStreamType() = default;
+
+  static const StreamTypeId kStreamTypeId = 3;
+
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
+
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
+};
 
 namespace {
 
@@ -109,32 +129,6 @@ void DeviceHelperStreamType::DeleteInstructionStatus(const Stream& stream,
 bool DeviceHelperStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
-}
-
-ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaMalloc(uint64_t logical_object_id,
-                                                                size_t size) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
-  instr_type_id->set_opcode(DeviceHelperInstrOpCode::kCudaMallocOpcode);
-  {
-    FlatMsgView<CudaMallocInstruction> view(instr_msg->mutable_operand());
-    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
-    view->set_size(size);
-  }
-  return instr_msg;
-}
-
-ObjectMsgPtr<InstructionMsg> DeviceHelperStreamType::CudaFree(uint64_t logical_object_id) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
-  instr_type_id->set_opcode(DeviceHelperInstrOpCode::kCudaFreeOpcode);
-  {
-    FlatMsgView<CudaFreeInstruction> view(instr_msg->mutable_operand());
-    view->mutable_mirrored_object_operand()->mutable_operand()->__Init__(logical_object_id);
-  }
-  return instr_msg;
 }
 
 void DeviceHelperStreamType::Run(InstrChain* instr_chain) const {
