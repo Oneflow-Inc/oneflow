@@ -274,6 +274,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 
@@ -286,6 +288,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -307,6 +311,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 
@@ -319,6 +325,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -341,6 +349,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 
@@ -353,6 +363,8 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // this resize is from max_algo_cnt to found_algo_cnt (max_algo_cnt >= found_algo_cnt)
+    // that don't affect the existing elements in perf_vec
     perf_vec->resize(found_algo_cnt);
   }
 };
