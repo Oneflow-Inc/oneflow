@@ -20,6 +20,7 @@ void TestSimple(int64_t parallel_num) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   {
     auto* map = vm_desc->mut_stream_type_id2desc();
+    map->Insert(ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
     auto host_stream_desc = ObjectMsgPtr<StreamDesc>::New(
         LookupInstrTypeId("Malloc").stream_type_id(), 1, parallel_num, 1);
     map->Insert(host_stream_desc.Mutable());

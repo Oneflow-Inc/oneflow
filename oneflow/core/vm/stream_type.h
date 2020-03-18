@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
 
 #include <string>
+#include <glog/logging.h>
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/instr_type_id.msg.h"
 #include "oneflow/core/vm/vm_type.h"
@@ -18,6 +19,7 @@ namespace vm {
 class Stream;
 class InstructionStatusBuffer;
 class InstrChain;
+class Scheduler;
 
 class StreamType {
  public:
@@ -37,6 +39,11 @@ class StreamType {
                                                         int64_t this_machine_id) const = 0;
   virtual ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const {
     return ObjectMsgPtr<StreamDesc>();
+  }
+
+  virtual bool SharingSchedulerThread() const { return false; }
+  virtual void Run(Scheduler* scheduler, InstrChain* instr_chain) const {
+    LOG(FATAL) << "UNIMPLEMENTED";
   }
 
   template<VmType vm_type, typename Enabled = void>

@@ -13,7 +13,7 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
     if (instr_type_id.type() != vm_type) { return; }
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
-  ObjectMsgPtr<VmDesc> vm_desc;
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   for (StreamTypeId stream_type_id : stream_type_ids) {
     const StreamType* stream_type = LookupStreamType(stream_type_id);
     auto stream_desc = stream_type->template MakeStreamDesc<vm_type>(resource, this_machine_id);

@@ -18,6 +18,7 @@ OBJECT_MSG_BEGIN(Stream);
   PUBLIC void DeleteInstrChain(ObjectMsgPtr<InstrChain>&&);
   PUBLIC int64_t parallel_id() const { return stream_id().parallel_id(); }
   PUBLIC int64_t machine_id() const;
+  PUBLIC const StreamType& stream_type() const;
 
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 

@@ -26,12 +26,24 @@ std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> CachedAllocatorNewSchedule
   };
 }
 
+ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
+  StreamTypeId nop_stream_type_id = LookupInstrTypeId("Nop").stream_type_id();
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), thread_ctx) {
+    if (nop_stream_type_id == thread_ctx->stream_rt_desc().stream_desc().stream_type_id()) {
+      return thread_ctx;
+    }
+  }
+  return nullptr;
+}
+
 void TestNopStreamTypeNoArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
   auto nop_stream_desc =
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   auto nop_instr_msg = NewInstruction("Nop");
@@ -43,7 +55,7 @@ void TestNopStreamTypeNoArgument(
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_stream_list().size(), 1);
-  auto* thread_ctx = scheduler->mut_thread_ctx_list()->Begin();
+  auto* thread_ctx = FindNopThreadCtx(scheduler.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
@@ -66,6 +78,8 @@ void TestNopStreamTypeOneArgument(
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -84,7 +98,7 @@ void TestNopStreamTypeOneArgument(
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 1);
   ASSERT_EQ(scheduler->active_stream_list().size(), 1);
-  auto* thread_ctx = scheduler->mut_thread_ctx_list()->Begin();
+  auto* thread_ctx = FindNopThreadCtx(scheduler.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
@@ -112,6 +126,8 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -125,11 +141,11 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_stream_list().size(), 1);
-  auto* thread_ctx = scheduler->mut_thread_ctx_list()->Begin();
+  auto* thread_ctx = FindNopThreadCtx(scheduler.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
@@ -146,6 +162,8 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -159,13 +177,13 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_stream_list().size(), 0);
-  auto* thread_ctx = scheduler->mut_thread_ctx_list()->Begin();
+  auto* thread_ctx = FindNopThreadCtx(scheduler.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);

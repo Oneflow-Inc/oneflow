@@ -163,11 +163,11 @@ void Scheduler::FilterReadyChains(NewInstrChainList* new_instr_chain_list,
 
 void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
   auto* active_stream_list = mut_active_stream_list();
-  ControlStreamType control_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instr_chain) {
     auto* stream = instr_chain->mut_stream();
-    if (stream->stream_id().stream_type_id() == ControlStreamType::kStreamTypeId) {
-      control_stream_type.Run(this, instr_chain);
+    const auto& stream_type = stream->stream_type();
+    if (stream_type.SharingSchedulerThread()) {
+      stream_type.Run(this, instr_chain);
     } else {
       ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
       if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
@@ -179,7 +179,15 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
 
 void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
-  auto Init = [&](StreamDesc* stream_desc) {
+  bool has_control_stream_type = false;
+  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
+    if (stream_desc->stream_type_id() == ControlStreamType::kStreamTypeId) {
+      CHECK_EQ(stream_desc->num_machines(), 1);
+      CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
+      CHECK_EQ(stream_desc->num_streams_per_thread(), 1);
+      CHECK_EQ(stream_desc->start_parallel_id(), 0);
+      has_control_stream_type = true;
+    }
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
@@ -196,12 +204,8 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
     }
-  };
-  OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    CHECK_NE(stream_desc->stream_type_id(), ControlStreamType::kStreamTypeId);
-    Init(stream_desc);
   }
-  Init(ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+  CHECK(has_control_stream_type);
 }
 
 void Scheduler::Receive(InstructionMsgList* instr_list) {

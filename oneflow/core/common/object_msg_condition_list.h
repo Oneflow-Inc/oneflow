@@ -86,7 +86,7 @@ struct ObjectMsgEmbeddedConditionListHeadDelete {
 
 enum ObjectMsgConditionListStatus {
   kObjectMsgConditionListStatusSuccess = 0,
-  kObjectMsgConditionListStatusErrorClosed
+  kObjectMsgConditionListStatusErrorClosed,
 };
 
 template<typename LinkField>

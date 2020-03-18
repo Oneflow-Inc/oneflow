@@ -20,6 +20,8 @@ TEST(DeviceHelperStreamType, basic) {
   auto device_helper_stream_desc =
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("CudaMalloc").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  vm_desc->mut_stream_type_id2desc()->Insert(
+      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(device_helper_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
@@ -31,9 +33,9 @@ TEST(DeviceHelperStreamType, basic) {
   list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
-  scheduler->mut_thread_ctx_list()->Begin()->ReceiveAndRun();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   scheduler->Schedule();
   ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
   ASSERT_EQ(scheduler->active_stream_list().size(), 0);
