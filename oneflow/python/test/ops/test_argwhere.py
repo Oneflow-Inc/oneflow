@@ -9,6 +9,8 @@ def _np_dtype_to_of_dtype(np_dtype):
         return flow.float
     elif np_dtype == np.int32:
         return flow.int32
+    elif np_dtype == np.int64:
+        return flow.int64
     else:
         raise NotImplementedError
 

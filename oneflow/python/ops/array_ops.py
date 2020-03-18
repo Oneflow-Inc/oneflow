@@ -324,7 +324,7 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
 @oneflow_export("argwhere")
 def argwhere(condition, dtype=None, name=None):
     if name is None:
-        name = id_util.UniqueStr("Argwhere_")
+        name = id_util.UniqueStr("ArgWhere_")
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
@@ -335,27 +335,30 @@ def argwhere(condition, dtype=None, name=None):
         setattr(op_conf.arg_where_conf, "data_type", dtype)
     compile_context.CurJobAddOp(op_conf)
 
-    argwhere_out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(argwhere_out_lbi, "op_name", op_conf.name)
-    setattr(argwhere_out_lbi, "blob_name", "out")
+    arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_lbi, "blob_name", "out")
 
-    argwhere_out_size_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(argwhere_out_size_lbi, "op_name", op_conf.name)
-    setattr(argwhere_out_size_lbi, "blob_name", "out_size")
+    arg_where_out_size_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_size_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_size_lbi, "blob_name", "out_size")
 
-    return sync_dynamic_resize(
-        remote_blob_util.RemoteBlob(argwhere_out_lbi),
-        remote_blob_util.RemoteBlob(argwhere_out_size_lbi),
-    )
+    arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
+    arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
+    # sync_dynamic_resize only support int32 for now
+    if arg_where_out_size.dtype != flow.int32:
+        arg_where_out_size = flow.cast(arg_where_out_size, flow.int32)
+
+    return sync_dynamic_resize(arg_where_out, arg_where_out_size)
 
 
 @oneflow_export("nonzero")
 def nonzero(a, name=None):
     if name is None:
-        argwhere_name = id_util.UniqueStr("Nonzero_Argwhere_")
+        argwhere_name = id_util.UniqueStr("Nonzero_ArgWhere_")
         tranpose_name = id_util.UniqueStr("Nonzero_Transpose_")
     else:
-        argwhere_name = name + "_Argwhere"
+        argwhere_name = name + "_ArgWhere"
         tranpose_name = name + "_Transpose"
     indices = argwhere(a, name=argwhere_name)
     return transpose(indices, perm=(1, 0), name=tranpose_name)
