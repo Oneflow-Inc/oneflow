@@ -32,6 +32,12 @@ Maybe<void> ReduceAddOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> ReduceAddOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  return SymbolOf(op_conf);
+}
+
 REGISTER_OP(OperatorConf::kReduceAddConf, ReduceAddOp);
 
 }  // namespace oneflow
