@@ -270,22 +270,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -303,22 +305,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -337,22 +341,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
