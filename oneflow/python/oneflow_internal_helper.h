@@ -157,10 +157,7 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
 }
 
 Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
-  vm::InstructionListProto instruction_list;
-  OF_CHECK(TxtString2PbMessage(instruction_list_str, &instruction_list))
-      << "InstructionListProto parse failed";
-  return vm::Run(instruction_list);
+  return vm::Run(instruction_list_str);
 }
 
 }  // namespace oneflow

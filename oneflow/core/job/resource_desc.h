@@ -38,6 +38,7 @@ class ResourceDesc final {
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
+  const Resource& resource() const { return resource_; }
 
  private:
   friend class Global<ResourceDesc>;
