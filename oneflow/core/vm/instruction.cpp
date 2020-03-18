@@ -7,7 +7,7 @@
 namespace oneflow {
 namespace vm {
 
-InstructionOperand* InstructionMsg::add_operand() {
+InstructionOperand* InstructionMsg::add_instr_operand() {
   mut_operand()->emplace_back();
   return mut_operand()->back().Mutable();
 }
@@ -18,6 +18,50 @@ void InstructionMsg::__Init__(const InstructionProto& proto) {
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));
   }
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_i_operand) {
+  add_instr_operand()->set_double_i_operand(double_i_operand);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_i_operand) {
+  add_instr_operand()->set_int64_i_operand(int64_i_operand);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_i_operand) {
+  add_instr_operand()->set_uint64_i_operand(uint64_i_operand);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_i_operand) {
+  add_instr_operand()->set_bool_i_operand(bool_i_operand);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_operand(LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_operand(LogicalObjectId logical_object_id,
+                                                         int64_t parallel_id) {
+  add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                            parallel_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
+                                                             int64_t parallel_id) {
+  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                              parallel_id);
+  return this;
 }
 
 MirroredObject* Instruction::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,

@@ -21,7 +21,14 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
   PUBLIC void __Init__() {}
   PUBLIC void __Init__(const InstructionProto& proto);
-  PUBLIC InstructionOperand* add_operand();
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_i_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_i_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_i_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_i_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstrTypeId, instr_type_id);
@@ -29,6 +36,9 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);
+
+  // private methods
+  PRIVATE InstructionOperand* add_instr_operand();
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 

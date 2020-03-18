@@ -49,8 +49,7 @@ TEST(ControlStreamType, delete_symbol) {
   uint64_t symbol_value = 9527;
   list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
   auto nop0_instr_msg = NopStreamType().Nop();
-  auto* operand = nop0_instr_msg->add_operand();
-  operand->mutable_mutable_operand()->mutable_operand()->__Init__(symbol_value);
+  nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
   list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
