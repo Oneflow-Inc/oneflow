@@ -1,5 +1,5 @@
 #include "oneflow/core/common/flat_msg_view.h"
-#include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
@@ -11,6 +11,26 @@
 
 namespace oneflow {
 namespace vm {
+
+class CudaCopyH2DStreamType final : public StreamType {
+ public:
+  CudaCopyH2DStreamType() = default;
+  ~CudaCopyH2DStreamType() = default;
+
+  static const StreamTypeId kStreamTypeId = 4;
+
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
+
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
+};
 
 namespace {
 
@@ -47,21 +67,6 @@ void CudaCopyH2D(Instruction* instr) {
 }  // namespace
 
 const StreamTypeId CudaCopyH2DStreamType::kStreamTypeId;
-
-ObjectMsgPtr<InstructionMsg> CudaCopyH2DStreamType::Copy(uint64_t dst, uint64_t src,
-                                                         size_t size) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
-  instr_type_id->set_opcode(0);
-  {
-    FlatMsgView<CudaCopyH2DInstruction> view(instr_msg->mutable_operand());
-    view->mutable_dst()->mutable_operand()->__Init__(dst);
-    view->mutable_src()->mutable_operand()->__Init__(src);
-    view->set_size(size);
-  }
-  return instr_msg;
-}
 
 void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
