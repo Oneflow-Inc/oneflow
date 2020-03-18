@@ -1,7 +1,6 @@
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -24,8 +23,8 @@ void TestSimple(int64_t parallel_num) {
     auto host_stream_desc = ObjectMsgPtr<StreamDesc>::New(
         LookupInstrTypeId("Malloc").stream_type_id(), 1, parallel_num, 1);
     map->Insert(host_stream_desc.Mutable());
-    auto device_helper_stream_desc =
-        ObjectMsgPtr<StreamDesc>::New(DeviceHelperStreamType::kStreamTypeId, 1, parallel_num, 1);
+    auto device_helper_stream_desc = ObjectMsgPtr<StreamDesc>::New(
+        LookupInstrTypeId("CudaMalloc").stream_type_id(), 1, parallel_num, 1);
     map->Insert(device_helper_stream_desc.Mutable());
     auto cuda_copy_d2h_stream_desc =
         ObjectMsgPtr<StreamDesc>::New(CudaCopyD2HStreamType::kStreamTypeId, 1, parallel_num, 1);
@@ -38,7 +37,8 @@ void TestSimple(int64_t parallel_num) {
   std::size_t size = 1024 * 1024;
   list.EmplaceBack(ControlStreamType().NewSymbol(src_symbol, parallel_num));
   list.EmplaceBack(ControlStreamType().NewSymbol(dst_symbol, parallel_num));
-  list.EmplaceBack(DeviceHelperStreamType().CudaMalloc(src_symbol, size));
+  list.EmplaceBack(
+      NewInstruction("CudaMalloc")->add_mut_operand(src_symbol)->add_uint64_operand(size));
   list.EmplaceBack(
       NewInstruction("CudaMallocHost")->add_mut_operand(dst_symbol)->add_uint64_operand(size));
   list.EmplaceBack(CudaCopyD2HStreamType().Copy(dst_symbol, src_symbol, size));
