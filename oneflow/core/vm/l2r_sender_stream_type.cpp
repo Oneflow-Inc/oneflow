@@ -1,5 +1,5 @@
 #include "oneflow/core/common/flat_msg_view.h"
-#include "oneflow/core/vm/l2r_sender_stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/localhost_transporter.h"
@@ -8,6 +8,27 @@
 
 namespace oneflow {
 namespace vm {
+
+class L2RSenderStreamType final : public StreamType {
+ public:
+  L2RSenderStreamType() = default;
+  ~L2RSenderStreamType() = default;
+
+  static const StreamTypeId kStreamTypeId = 6;
+
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
+
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
+  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
+};
 
 namespace {
 
@@ -57,21 +78,6 @@ void MakeSendRequests(Instruction* instr, TransportKey2SendRequest* transport_ke
 }  // namespace
 
 const StreamTypeId L2RSenderStreamType::kStreamTypeId;
-
-ObjectMsgPtr<InstructionMsg> L2RSenderStreamType::Send(uint64_t logical_token, uint64_t src,
-                                                       size_t size) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
-  instr_type_id->set_opcode(0);
-  {
-    FlatMsgView<L2RSenderInstruction> view(instr_msg->mutable_operand());
-    view->mutable_src()->mutable_operand()->__Init__(src);
-    view->set_logical_token(logical_token);
-    view->set_size(size);
-  }
-  return instr_msg;
-}
 
 void L2RSenderStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
