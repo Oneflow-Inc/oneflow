@@ -15,6 +15,12 @@ void MirroredObjectOperand::__Init__(const LogicalObjectId& logical_object_id) {
   mutable_mirrored_parallel_id();
 }
 
+void MirroredObjectOperand::__Init__(const LogicalObjectId& logical_object_id,
+                                     const AllParallelId&) {
+  set_logical_object_id(logical_object_id);
+  mutable_all_parallel_id();
+}
+
 void MirroredObjectOperand::__Init__(const MirroredObjectOperandProto& proto) {
   if (proto.has_fixed_parallel_id()) {
     set_fixed_parallel_id(fixed_parallel_id());

@@ -70,12 +70,10 @@ void TestNopStreamTypeOneArgument(
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NopStreamType().Nop();
-  nop0_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NopStreamType().Nop();
-  nop1_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
@@ -117,12 +115,10 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NopStreamType().Nop();
-  nop0_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NopStreamType().Nop();
-  nop1_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
@@ -152,12 +148,10 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NopStreamType().Nop();
-  nop0_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NopStreamType().Nop();
-  nop1_instr_msg->add_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(
-      symbol_value);
+  nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   scheduler->Schedule();
