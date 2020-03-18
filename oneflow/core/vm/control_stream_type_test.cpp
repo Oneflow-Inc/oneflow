@@ -1,9 +1,10 @@
 #define private public
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/nop_stream_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
@@ -40,7 +41,8 @@ TEST(ControlStreamType, new_symbol) {
 }
 
 TEST(ControlStreamType, delete_symbol) {
-  auto nop_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
+  auto nop_stream_desc =
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
@@ -48,7 +50,7 @@ TEST(ControlStreamType, delete_symbol) {
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
   list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
-  auto nop0_instr_msg = NopStreamType().Nop();
+  auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
   list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));

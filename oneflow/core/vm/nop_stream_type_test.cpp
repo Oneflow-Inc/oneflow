@@ -1,6 +1,6 @@
 #define private public
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/nop_stream_type.h"
+#include "oneflow/core/vm/vm.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -28,12 +28,13 @@ std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> CachedAllocatorNewSchedule
 
 void TestNopStreamTypeNoArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
-  auto nop_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
+  auto nop_stream_desc =
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
-  auto nop_instr_msg = NopStreamType().Nop();
+  auto nop_instr_msg = NewInstruction("Nop");
   list.PushBack(nop_instr_msg.Mutable());
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
@@ -61,7 +62,8 @@ TEST(NopStreamType, cached_allocator_no_argument) {
 
 void TestNopStreamTypeOneArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
-  auto nop_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
+  auto nop_stream_desc =
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
@@ -69,10 +71,10 @@ void TestNopStreamTypeOneArgument(
   uint64_t symbol_value = 9527;
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
-  auto nop0_instr_msg = NopStreamType().Nop();
+  auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  auto nop1_instr_msg = NopStreamType().Nop();
+  auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
@@ -106,7 +108,8 @@ TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
 }
 
 TEST(NopStreamType, one_argument_triger_next_chain) {
-  auto nop_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
+  auto nop_stream_desc =
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
@@ -114,10 +117,10 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   uint64_t symbol_value = 9527;
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
-  auto nop0_instr_msg = NopStreamType().Nop();
+  auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  auto nop1_instr_msg = NopStreamType().Nop();
+  auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
@@ -139,7 +142,8 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
 }
 
 TEST(NopStreamType, one_argument_triger_all_chains) {
-  auto nop_stream_desc = ObjectMsgPtr<StreamDesc>::New(NopStreamType::kStreamTypeId, 1, 1, 1);
+  auto nop_stream_desc =
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
@@ -147,10 +151,10 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   uint64_t symbol_value = 9527;
   auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
   list.PushBack(ctrl_instr_msg.Mutable());
-  auto nop0_instr_msg = NopStreamType().Nop();
+  auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  auto nop1_instr_msg = NopStreamType().Nop();
+  auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
