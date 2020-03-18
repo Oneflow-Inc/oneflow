@@ -57,10 +57,12 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
         return argwhere_fn(x).get().ndarray_list()[0]
 
 
-def _compare_with_np(test_case, shape, value_dtype, index_dtype, dynamic, verbose=False):
+def _compare_with_np(
+    test_case, shape, value_dtype, index_dtype, device_type, dynamic, verbose=False
+):
     x = _random_input(shape, value_dtype)
     y = np.argwhere(x)
-    of_y = _of_argwhere(x, index_dtype, dynamic=dynamic)
+    of_y = _of_argwhere(x, index_dtype, device_type, dynamic)
     if verbose is True:
         print("input:", x)
         print("np result:", y)
@@ -73,6 +75,7 @@ def test_argwhere(test_case):
     arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
     arg_dict["value_dtype"] = [np.float32, np.int32]
     arg_dict["index_dtype"] = [np.int32, np.int64]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["dynamic"] = [True, False]
     arg_dict["verbose"] = [False]
     for arg in GenArgList(arg_dict):

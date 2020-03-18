@@ -105,29 +105,12 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, ndims)                           \
-  NEW_REGISTER_KERNEL(OperatorConf::kArgWhereConf, ArgWhereGpuKernel<dtype, itype, ndims>) \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                       \
-        return (DeviceType::kGPU == conf.op_attribute().op_conf().device_type())           \
-               && (GetDataType<itype>::value == conf.data_type())                          \
-               && (GetDataType<dtype>::value == conf.arg_where_conf().in_data_type())      \
-               && (ndims == conf.arg_where_conf().num_axes());                             \
-      });
+#define REGISTER_ARG_WHERE_GPU_KERNELS(dtype_pair, itype_pair)               \
+  REGISTER_ARG_WHERE_KERNELS_WITH_NDIMS(ArgWhereGpuKernel, DeviceType::kGPU, \
+                                        OF_PP_PAIR_FIRST(dtype_pair),        \
+                                        OF_PP_PAIR_FIRST(itype_pair))
 
-#define REGISTER_ARG_WHERE_GPU_KERNEL(dtype, itype)     \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 1); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 2); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 3); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 4); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 5); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 6); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 7); \
-  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 8);
-
-#define REGISTER_ARG_WHERE_GPU_KERNEL_DATA_TYPE_PAIR(dtype_pair, itype_pair) \
-  REGISTER_ARG_WHERE_GPU_KERNEL(OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_GPU_KERNEL_DATA_TYPE_PAIR,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_GPU_KERNELS, ARITHMETIC_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
