@@ -43,8 +43,6 @@ Maybe<void> ReduceScatterOp::InferBlobDescs(
 Symbol<OperatorConf> ReduceScatterOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
   op_conf.set_name("");
-  CHECK(op_conf.has_reduce_scatter_conf());
-  op_conf.mutable_reduce_scatter_conf();
   return SymbolOf(op_conf);
 }
 

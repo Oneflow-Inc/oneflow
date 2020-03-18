@@ -35,8 +35,6 @@ Maybe<void> ReduceAddOp::InferBlobDescs(
 Symbol<OperatorConf> ReduceAddOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
   op_conf.set_name("");
-  CHECK(op_conf.has_reduce_add_conf());
-  op_conf.mutable_reduce_add_conf();
   return SymbolOf(op_conf);
 }
 
