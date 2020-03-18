@@ -11,23 +11,27 @@ namespace oneflow {
 namespace xrt {
 namespace of_tvm {
 
-class TVMOpContext final {
+class TVMOpContext final : public OpContext {
  public:
-  TVMOpContext(const XrtNode* node, tvm::Array<tvm::relay::Expr>&& node_inputs);
+  TVMOpContext(const XrtNode* node, 
+      const PbMessage* message,
+      util::Map<std::string, tvm::relay::Expr>&& input_name2expr) : 
+    OpContext(*message), node_(node), input_name2expr_(input_name2expr) {}
   ~TVMOpContext() = default;
 
   const XrtNode* node() const { return node_; }
-  const tvm::Array<tvm::relay::Expr> node_inputs() const { return node_inputs_; }
   tvm::relay::Expr op_expr() const { return op_expr_; }
 
   void set_op_expr(tvm::relay::Expr op_expr);
+
+  tvm::relay::Expr GetExpr4InputName(const std::string& name);
 
  private:
   TVMOpContext(const TVMOpContext&) = delete;
   TVMOpContext& operator=(const TVMOpContext&) = delete;
 
   const XrtNode* node_;
-  tvm::Array<tvm::relay::Expr> node_inputs_;
+  util::Map<std::string, tvm::relay::Expr> input_name2expr_;
   tvm::relay::Expr op_expr_;
 };
 

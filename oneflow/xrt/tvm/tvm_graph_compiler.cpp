@@ -2,6 +2,7 @@
 #include "oneflow/xrt/tvm/tvm_executable.h"
 #include "oneflow/xrt/tvm/ops/tvm_op_context.h"
 #include "oneflow/xrt/tvm/ops/tvm_op_kernel.h"
+#include "oneflow/xrt/node_util.h"
 #include <tvm/runtime/device_api.h>
 #include <tuple>
 
@@ -93,14 +94,15 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode* node) {
     if (node->IsArgumentNode()) { return; }
-    tvm::Array<tvm::relay::Expr> node_inputs;
+    util::Map<std::string, tvm::relay::Expr> input_name2expr;
     for (const auto* in_edge : node->in_edges()) {
-      auto it = tensor_name2expr.find(in_edge->argument().name());
+      const Argument& in_arg = in_edge->argument();
+      auto it = tensor_name2expr.find(in_arg.name());
       CHECK(it != tensor_name2expr.end());
-      node_inputs.push_back(it->second);
+      input_name2expr.emplace(in_arg.meta_data().consume_key, it->second);
     }
 
-    TVMOpContext ctx(node, std::move(node_inputs));
+    TVMOpContext ctx(node, OpMessage(node), std::move(input_name2expr));
     auto op_kernel = BuildTVMOpKernel(node->type());
     op_kernel->Compile(&ctx);
     tvm::relay::Expr op_expr = ctx.op_expr();

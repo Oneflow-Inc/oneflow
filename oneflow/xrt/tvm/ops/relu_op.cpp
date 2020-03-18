@@ -7,8 +7,11 @@ namespace of_tvm {
 class ReluOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    tvm::Array<tvm::relay::Expr> node_inputs;
+    node_inputs.push_back(ctx->GetExpr4InputName("in"));
+
     auto op = tvm::relay::Op::Get("nn.relu");
-    auto expr = tvm::relay::CallNode::make(op, ctx->node_inputs(), tvm::Attrs(), {});
+    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(), {});
     ctx->set_op_expr(expr);
   }
 };
