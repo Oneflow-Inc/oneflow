@@ -1,8 +1,6 @@
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/l2r_sender_stream_type.h"
-#include "oneflow/core/vm/l2r_receiver_stream_type.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm.h"
@@ -23,10 +21,10 @@ ObjectMsgPtr<VmDesc> NewVmDesc() {
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Malloc").stream_type_id(), 1, 1, 1);
   vm_desc->mut_stream_type_id2desc()->Insert(host_stream_desc.Mutable());
   auto l2r_sender_stream_desc =
-      ObjectMsgPtr<StreamDesc>::New(L2RSenderStreamType::kStreamTypeId, 1, 1, 1);
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("L2RSend").stream_type_id(), 1, 1, 1);
   vm_desc->mut_stream_type_id2desc()->Insert(l2r_sender_stream_desc.Mutable());
   auto l2r_receiver_stream_desc =
-      ObjectMsgPtr<StreamDesc>::New(L2RReceiverStreamType::kStreamTypeId, 1, 1, 1);
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("L2RReceive").stream_type_id(), 1, 1, 1);
   vm_desc->mut_stream_type_id2desc()->Insert(l2r_receiver_stream_desc.Mutable());
   return vm_desc;
 }
@@ -49,8 +47,14 @@ TEST(L2RSenderReceiverStreamType, basic) {
   size_t size = 1024;
   auto scheduler0 = NewTestScheduler(src_symbol, size);
   auto scheduler1 = NewTestScheduler(dst_symbol, size);
-  scheduler0->Receive(L2RSenderStreamType().Send(logical_token, src_symbol, size));
-  scheduler1->Receive(L2RReceiverStreamType().Receive(logical_token, dst_symbol, size));
+  scheduler0->Receive(NewInstruction("L2RSend")
+                          ->add_operand(src_symbol)
+                          ->add_uint64_operand(logical_token)
+                          ->add_uint64_operand(size));
+  scheduler1->Receive(NewInstruction("L2RReceive")
+                          ->add_mut_operand(dst_symbol)
+                          ->add_uint64_operand(logical_token)
+                          ->add_uint64_operand(size));
   while (!(scheduler0->Empty() && scheduler1->Empty())) {
     scheduler0->Schedule();
     OBJECT_MSG_LIST_FOR_EACH(scheduler0->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
