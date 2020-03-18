@@ -328,11 +328,11 @@ def argwhere(condition, index_data_type=None, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.argwhere_conf, "in", condition.logical_blob_name)
-    setattr(op_conf.argwhere_conf, "out", "out")
-    setattr(op_conf.argwhere_conf, "out_size", "out_size")
+    setattr(op_conf.arg_where_conf, "in", condition.logical_blob_name)
+    setattr(op_conf.arg_where_conf, "out", "out")
+    setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if index_data_type is not None:
-        setattr(op_conf.argwhere_conf, "data_type", index_data_type)
+        setattr(op_conf.arg_where_conf, "data_type", index_data_type)
     compile_context.CurJobAddOp(op_conf)
 
     argwhere_out_lbi = logical_blob_id_util.LogicalBlobId()

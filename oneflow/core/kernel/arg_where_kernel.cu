@@ -1,0 +1,133 @@
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/arg_where_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
+#include <cub/cub.cuh>
+
+namespace oneflow {
+
+namespace {
+
+constexpr int kFlatIndexToNdIndexProposedLaunchBlocks = 128;
+
+template<typename T, size_t NDims>
+struct StrideIterator {
+  typedef StrideIterator self_type;
+  typedef std::ptrdiff_t difference_type;
+  typedef T value_type;
+  typedef T* pointer;
+  typedef T& reference;
+  typedef std::random_access_iterator_tag iterator_category;
+
+  explicit StrideIterator(T* ptr, size_t max_iters) : ptr_(ptr), max_iters_(max_iters) {}
+
+  OF_DEVICE_FUNC reference operator[](int i) {
+    assert(0 <= i && i < max_iters_);
+    return *(ptr_ + (i * NDims));
+  }
+
+ private:
+  T* ptr_;
+  size_t max_iters_;
+};
+
+template<typename T, size_t NDims>
+__global__ void CudaOffsetToNdIndexInplace(NdIndexOffsetHelper<T, NDims> index_converter,
+                                           const T* num_indices_ptr, T* indices_ptr) {
+  // TODO: test if ldg can improve effect
+  CUDA_1D_KERNEL_LOOP_T(T, i, *num_indices_ptr) {
+    T* cur_indices_ptr = indices_ptr + i * NDims;
+    index_converter.OffsetToNdIndex(*cur_indices_ptr, cur_indices_ptr);
+  }
+}
+
+template<typename T>
+struct IsNonzero {
+  OF_DEVICE_FUNC bool operator()(const T& val) const { return static_cast<bool>(val); }
+};
+
+template<typename T, typename I, typename Iter>
+cudaError_t SelectNonzero(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
+                          const T* flags, Iter out_iter, I* num_selected) {
+  IsNonzero<T> is_nonzero;
+  cub::TransformInputIterator<bool, IsNonzero<T>, const T*> flag_iter(flags, is_nonzero);
+  cub::CountingInputIterator<I> offset_counter(0);
+  return cub::DeviceSelect::Flagged(tmp, tmp_bytes, offset_counter, flag_iter, out_iter,
+                                    num_selected, num_items, stream, false);
+}
+
+}  // namespace
+
+template<typename T, typename I>
+cudaError_t InferSelectNonzeroTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes) {
+  return SelectNonzero<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr);
+}
+
+template<typename T, typename I, size_t NDims>
+class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ArgWhereGpuKernel);
+  ArgWhereGpuKernel() = default;
+  ~ArgWhereGpuKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in = BnInOp2Blob("in");
+    Blob* out = BnInOp2Blob("out");
+    Blob* out_size = BnInOp2Blob("out_size");
+    Blob* tmp = BnInOp2Blob("tmp");
+    const int64_t elem_cnt = in->shape().elem_cnt();
+    CHECK_LE(elem_cnt, std::numeric_limits<I>::max());
+    size_t tmp_bytes = 0;
+    CudaCheck(
+        InferSelectNonzeroTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp_bytes));
+    CHECK_LE(tmp_bytes, tmp->shape().elem_cnt());
+
+    if (NDims == 1) {
+      CudaCheck(SelectNonzero<T, I, I*>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(),
+                                        tmp_bytes, in->dptr<T>(), out->mut_dptr<I>(),
+                                        out_size->mut_dptr<I>()));
+    } else {
+      StrideIterator<I, NDims> out_iter(out->mut_dptr<I>(), elem_cnt);
+      CudaCheck(SelectNonzero<T, I, StrideIterator<I, NDims>>(
+          ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(), tmp_bytes, in->dptr<T>(),
+          out_iter, out_size->mut_dptr<I>()));
+
+      fixed_vector<I, NDims> dims(NDims);
+      std::transform(in->shape().ptr(), in->shape().ptr() + in->shape().NumAxes(), dims.begin(),
+                     [](int64_t dim) { return static_cast<I>(dim); });
+      NdIndexOffsetHelper<I, NDims> index_converter(dims.data(), dims.size());
+      CudaOffsetToNdIndexInplace<I, NDims>
+          <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
+             ctx.device_ctx->cuda_stream()>>>(index_converter, out_size->dptr<I>(),
+                                              out->mut_dptr<I>());
+    }
+  }
+};
+
+#define REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, ndims)                           \
+  NEW_REGISTER_KERNEL(OperatorConf::kArgWhereConf, ArgWhereGpuKernel<dtype, itype, ndims>) \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                       \
+        return (DeviceType::kGPU == conf.op_attribute().op_conf().device_type())           \
+               && (GetDataType<itype>::value == conf.data_type())                          \
+               && (GetDataType<dtype>::value == conf.arg_where_conf().in_data_type())      \
+               && (ndims == conf.arg_where_conf().num_axes());                             \
+      });
+
+#define REGISTER_ARG_WHERE_GPU_KERNEL(dtype, itype)     \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 1); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 2); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 3); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 4); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 5); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 6); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 7); \
+  REGISTER_ARG_WHERE_GPU_KERNEL_NDIMS(dtype, itype, 8);
+
+#define REGISTER_ARG_WHERE_GPU_KERNEL_DATA_TYPE_PAIR(dtype_pair, itype_pair) \
+  REGISTER_ARG_WHERE_GPU_KERNEL(OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_GPU_KERNEL_DATA_TYPE_PAIR,
+                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+}  // namespace oneflow
