@@ -322,7 +322,7 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
 
 
 @oneflow_export("argwhere")
-def argwhere(condition, index_data_type=None, name=None):
+def argwhere(condition, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Argwhere_")
 
@@ -331,8 +331,8 @@ def argwhere(condition, index_data_type=None, name=None):
     setattr(op_conf.arg_where_conf, "in", condition.logical_blob_name)
     setattr(op_conf.arg_where_conf, "out", "out")
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
-    if index_data_type is not None:
-        setattr(op_conf.arg_where_conf, "data_type", index_data_type)
+    if dtype is not None:
+        setattr(op_conf.arg_where_conf, "data_type", dtype)
     compile_context.CurJobAddOp(op_conf)
 
     argwhere_out_lbi = logical_blob_id_util.LogicalBlobId()

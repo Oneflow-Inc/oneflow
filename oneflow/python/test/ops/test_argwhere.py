@@ -24,8 +24,9 @@ def _random_input(shape, dtype):
         raise NotImplementedError
 
 
-def _of_argwhere(x, device_type="gpu", dynamic=False):
+def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     data_type = _np_dtype_to_of_dtype(x.dtype)
+    out_data_type = _np_dtype_to_of_dtype(index_dtype)
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -33,7 +34,7 @@ def _of_argwhere(x, device_type="gpu", dynamic=False):
 
     def do_argwhere(x_blob):
         with flow.device_prior_placement(device_type, "0:0"):
-            return flow.argwhere(x_blob, index_data_type=flow.int32)
+            return flow.argwhere(x_blob, dtype=out_data_type)
 
     if dynamic is True:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
@@ -54,10 +55,10 @@ def _of_argwhere(x, device_type="gpu", dynamic=False):
         return argwhere_fn(x).get().ndarray_list()[0]
 
 
-def _compare_with_np(test_case, shape, dtype, dynamic, verbose=False):
-    x = _random_input(shape, dtype)
+def _compare_with_np(test_case, shape, value_dtype, index_dtype, dynamic, verbose=False):
+    x = _random_input(shape, value_dtype)
     y = np.argwhere(x)
-    of_y = _of_argwhere(x, dynamic=dynamic)
+    of_y = _of_argwhere(x, index_dtype, dynamic=dynamic)
     if verbose is True:
         print("input:", x)
         print("np result:", y)
@@ -68,7 +69,8 @@ def _compare_with_np(test_case, shape, dtype, dynamic, verbose=False):
 def test_argwhere(test_case):
     arg_dict = OrderedDict()
     arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["dtype"] = [np.float32, np.int32]
+    arg_dict["value_dtype"] = [np.float32, np.int32]
+    arg_dict["index_dtype"] = [np.int32, np.int64]
     arg_dict["dynamic"] = [True, False]
     arg_dict["verbose"] = [False]
     for arg in GenArgList(arg_dict):
