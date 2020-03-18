@@ -1,7 +1,7 @@
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm.h"
@@ -26,8 +26,8 @@ void TestSimple(int64_t parallel_num) {
     auto device_helper_stream_desc = ObjectMsgPtr<StreamDesc>::New(
         LookupInstrTypeId("CudaMalloc").stream_type_id(), 1, parallel_num, 1);
     map->Insert(device_helper_stream_desc.Mutable());
-    auto cuda_copy_d2h_stream_desc =
-        ObjectMsgPtr<StreamDesc>::New(CudaCopyD2HStreamType::kStreamTypeId, 1, parallel_num, 1);
+    auto cuda_copy_d2h_stream_desc = ObjectMsgPtr<StreamDesc>::New(
+        LookupInstrTypeId("CudaCopyD2H").stream_type_id(), 1, parallel_num, 1);
     map->Insert(cuda_copy_d2h_stream_desc.Mutable());
   }
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
@@ -41,7 +41,10 @@ void TestSimple(int64_t parallel_num) {
       NewInstruction("CudaMalloc")->add_mut_operand(src_symbol)->add_uint64_operand(size));
   list.EmplaceBack(
       NewInstruction("CudaMallocHost")->add_mut_operand(dst_symbol)->add_uint64_operand(size));
-  list.EmplaceBack(CudaCopyD2HStreamType().Copy(dst_symbol, src_symbol, size));
+  list.EmplaceBack(NewInstruction("CudaCopyD2H")
+                       ->add_mut_operand(dst_symbol)
+                       ->add_operand(src_symbol)
+                       ->add_int64_operand(size));
   scheduler->Receive(&list);
   size_t count = 0;
   while (!scheduler->Empty()) {
