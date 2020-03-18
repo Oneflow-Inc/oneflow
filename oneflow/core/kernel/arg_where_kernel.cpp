@@ -40,10 +40,9 @@ class ArgWhereCpuKernel : public KernelIf<DeviceType::kCPU> {
   }
 };
 
-#define REGISTER_ARG_WHERE_CPU_KERNELS(dtype_pair, itype_pair)               \
-  REGISTER_ARG_WHERE_KERNELS_WITH_NDIMS(ArgWhereCpuKernel, DeviceType::kCPU, \
-                                        OF_PP_PAIR_FIRST(dtype_pair),        \
-                                        OF_PP_PAIR_FIRST(itype_pair))
+#define REGISTER_ARG_WHERE_CPU_KERNELS(dtype_pair, itype_pair)             \
+  REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(ArgWhereCpuKernel, DeviceType::kCPU, \
+                                      OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_CPU_KERNELS, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

@@ -105,10 +105,12 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_ARG_WHERE_GPU_KERNELS(dtype_pair, itype_pair)               \
-  REGISTER_ARG_WHERE_KERNELS_WITH_NDIMS(ArgWhereGpuKernel, DeviceType::kGPU, \
-                                        OF_PP_PAIR_FIRST(dtype_pair),        \
-                                        OF_PP_PAIR_FIRST(itype_pair))
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INFER_SELECT_NONZERO_TMP_BUFFER_SIZE,
+                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#define REGISTER_ARG_WHERE_GPU_KERNELS(dtype_pair, itype_pair)             \
+  REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(ArgWhereGpuKernel, DeviceType::kGPU, \
+                                      OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_GPU_KERNELS, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

@@ -8,6 +8,11 @@ namespace oneflow {
 template<typename T, typename I>
 cudaError_t InferSelectNonzeroTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes);
 
+#define INSTANTIATE_INFER_SELECT_NONZERO_TMP_BUFFER_SIZE(dtype_pair, itype_pair)               \
+  template cudaError_t                                                                         \
+  InferSelectNonzeroTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>( \
+      cudaStream_t, int, size_t&);
+
 #define REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, ndims)         \
   NEW_REGISTER_KERNEL(OperatorConf::kArgWhereConf, kernel<dtype, itype, ndims>)       \
       .SetIsMatchedPred([](const KernelConf& conf) {                                  \
@@ -17,14 +22,14 @@ cudaError_t InferSelectNonzeroTmpBufferSize(cudaStream_t stream, int num_items, 
                && (ndims == conf.arg_where_conf().num_axes());                        \
       });
 
-#define REGISTER_ARG_WHERE_KERNELS_WITH_NDIMS(kernel, device_type_v, dtype, itype) \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 1);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 2);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 3);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 4);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 5);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 6);               \
-  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 7);               \
+#define REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(kernel, device_type_v, dtype, itype) \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 1);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 2);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 3);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 4);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 5);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 6);             \
+  REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 7);             \
   REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, 8);
 
 }  // namespace oneflow
