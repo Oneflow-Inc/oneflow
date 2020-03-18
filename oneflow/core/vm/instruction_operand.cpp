@@ -9,7 +9,7 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mutable_operand()) {
-    mutable_mutable_operand()->mutable_operand()->__Init__(proto.const_operand());
+    mutable_mutable_operand()->mutable_operand()->__Init__(proto.mutable_operand());
   } else if (proto.has_double_i_operand()) {
     set_double_i_operand(proto.double_i_operand());
   } else if (proto.has_int64_i_operand()) {

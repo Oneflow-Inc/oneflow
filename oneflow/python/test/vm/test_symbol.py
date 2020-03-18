@@ -16,3 +16,4 @@ with flow.vm.instruction_build_scope(vm_instr_list):
     flow.vm.delete_host_symbol(9527)
 
 print(vm_instr_list)
+flow.vm.run_instruction_list(vm_instr_list)

@@ -22,6 +22,7 @@ void MirroredObjectOperand::__Init__(const LogicalObjectId& logical_object_id,
 }
 
 void MirroredObjectOperand::__Init__(const MirroredObjectOperandProto& proto) {
+  set_logical_object_id(proto.logical_object_id());
   if (proto.has_fixed_parallel_id()) {
     set_fixed_parallel_id(fixed_parallel_id());
   } else if (proto.has_mirrored_parallel_id()) {
