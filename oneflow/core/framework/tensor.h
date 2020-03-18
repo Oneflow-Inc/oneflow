@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
-#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {

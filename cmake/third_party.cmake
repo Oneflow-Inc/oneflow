@@ -13,7 +13,6 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
-include(json)
 include(re2)
 include(flatbuffers)
 include(lz4)
@@ -125,7 +124,6 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
-  json_copy_headers_to_destination
   re2
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
@@ -145,7 +143,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
     ${RE2_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
