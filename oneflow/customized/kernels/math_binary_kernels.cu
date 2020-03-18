@@ -20,14 +20,16 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
-__attribute__((device)) float FloordivFuc(float x, float y) { return floor(fdividef(x, y)); }
+__device__ float FloordivFuc(float x, float y) { 
+  return floor(fdividef(x, y)); 
+}
 
 __device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) {
-  return y == 0 ? 0 : dz * FloordivFuc(1, y);
+  return 0;
 }
 
 __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) {
-  return y == 0 ? 0 : dz * (-1) * FloordivFuc(x, powf(y, 2));
+  return 0;
 }
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
