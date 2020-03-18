@@ -250,9 +250,9 @@ def set_enable_float_compute_for_half_gemm(func_desc, value = True):
 def set_enable_auto_mixed_precision(func_desc, value = True):
     func_desc.job_config_proto.enable_auto_mixed_precision = value
 
-@oneflow_function_config('enable_add_keep_header_only_op_pass')
-def set_enable_add_keep_header_only_op_pass(func_desc, value = True):
-    func_desc.job_config_proto.enable_add_keep_header_only_op_pass = value
+@oneflow_function_config('enable_keep_header_only')
+def set_enable_keep_header_only(func_desc, value = True):
+    func_desc.job_config_proto.enable_keep_header_only = value
 
 @oneflow_function_config('concurrency_width')
 def set_concurrency_width(func_desc, value):
