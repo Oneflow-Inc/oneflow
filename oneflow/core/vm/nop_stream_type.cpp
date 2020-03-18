@@ -1,5 +1,5 @@
 #include "oneflow/core/common/flat_msg_view.h"
-#include "oneflow/core/vm/nop_stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
@@ -11,7 +11,26 @@
 namespace oneflow {
 namespace vm {
 
-namespace {}  // namespace
+class NopStreamType final : public StreamType {
+ public:
+  NopStreamType() = default;
+  ~NopStreamType() = default;
+
+  static const StreamTypeId kStreamTypeId = 1;
+
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
+
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+  void Run(InstrChain* instr_chain) const override;
+  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+                                                int64_t this_machine_id) const override;
+  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
+};
 
 void NopStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
@@ -30,14 +49,6 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 const StreamTypeId NopStreamType::kStreamTypeId;
-
-ObjectMsgPtr<InstructionMsg> NopStreamType::Nop() const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
-  instr_type_id->set_opcode(0);
-  return instr_msg;
-}
 
 void NopStreamType::Run(InstrChain* instr_chain) const {
   auto* status_buffer = instr_chain->mut_status_buffer();
