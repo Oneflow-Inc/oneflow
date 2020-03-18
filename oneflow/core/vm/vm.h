@@ -3,8 +3,26 @@
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/scheduler.msg.h"
 
 namespace oneflow {
+
+template<vm::VmType vm_type>
+class OneflowVM final {
+ public:
+  OneflowVM(const Resource& resource, int64_t this_machine_id)
+      : scheduler_(ObjectMsgPtr<vm::Scheduler>::New(
+            vm::MakeVmDesc<vm_type>(resource, this_machine_id).Get())) {}
+  ~OneflowVM() = default;
+
+  vm::Scheduler* mut_scheduler() { return scheduler_.Mutable(); }
+
+ private:
+  ObjectMsgPtr<vm::Scheduler> scheduler_;
+};
+
 namespace vm {
 
 class InstructionListProto;

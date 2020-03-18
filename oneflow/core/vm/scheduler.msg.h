@@ -7,6 +7,7 @@
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
+#include "oneflow/core/vm/vm_type.h"
 
 namespace oneflow {
 namespace vm {
