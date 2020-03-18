@@ -32,6 +32,25 @@ Maybe<void> ReduceAddOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ReduceAddOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
+  BatchAxis4BnInOp("out")->clear_value();
+  return Maybe<void>::Ok();
+}
+
+Symbol<OperatorConf> ReduceAddOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  CHECK(op_conf.has_reduce_add_conf());
+  auto* reduce_add_conf = op_conf.mutable_reduce_add_conf();
+  LogicalBlobId empty_logical_blob_id;
+  *reduce_add_conf->mutable_lbi() = empty_logical_blob_id;
+  return SymbolOf(op_conf);
+}
+
 REGISTER_OP(OperatorConf::kReduceAddConf, ReduceAddOp);
 
 }  // namespace oneflow
