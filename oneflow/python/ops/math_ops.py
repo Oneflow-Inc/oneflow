@@ -8,6 +8,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
+import oneflow as flow
 
 @oneflow_export("math.add")
 def add(x, y, name=None):
@@ -368,7 +369,7 @@ def sigmoid(x, name=None):
 
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
-def unsorted_segment_sum(data, segment_ids, num_segments, name=None):
+def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSum_")
     op_conf = op_conf_util.OperatorConf()
@@ -376,8 +377,27 @@ def unsorted_segment_sum(data, segment_ids, num_segments, name=None):
     op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
     op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
     op_conf.unsorted_segment_sum_conf.num_segments = num_segments
-    op_conf.unsorted_segment_sum_conf.axis = 0
+    op_conf.unsorted_segment_sum_conf.axis = axis
     op_conf.unsorted_segment_sum_conf.out = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
+def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
+    if name is None:
+        name = id_util.UniqueStr("UnsortedSegmentSumLike_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.unsorted_segment_sum_like_conf.data = data.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.like = like.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.axis = axis
+    op_conf.unsorted_segment_sum_like_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -447,21 +467,6 @@ def cast(x, dtype, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.top_k")
-def top_k(input, k=1, sorted=True, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("TopK_"))
-    setattr(op_conf.top_k_conf, "in", input.logical_blob_name)
-    setattr(op_conf.top_k_conf, "k", k)
-    setattr(op_conf.top_k_conf, "sorted", sorted)
-    setattr(op_conf.top_k_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
 @oneflow_export("math.naive_logical_and")
 def naive_logical_and(lhs, rhs, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -471,36 +476,6 @@ def naive_logical_and(lhs, rhs, name=None):
     setattr(op_conf.logical_and_conf, "lhs", lhs.logical_blob_name)
     setattr(op_conf.logical_and_conf, "rhs", rhs.logical_blob_name)
     setattr(op_conf.logical_and_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("sort")
-def sort(values, direction="ASCENDING", name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sort_"))
-    setattr(op_conf.sort_conf, "in", values.logical_blob_name)
-    setattr(op_conf.sort_conf, "dir", direction)  # "ASCENDING" or "DESCENDING"
-    setattr(op_conf.sort_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("argsort")
-def argsort(values, direction="ASCENDING", name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Argsort_")
-    )
-    setattr(op_conf.arg_sort_conf, "in", values.logical_blob_name)
-    setattr(op_conf.arg_sort_conf, "dir", direction)  # "ASCENDING" or "DESCENDING"
-    setattr(op_conf.arg_sort_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
@@ -721,3 +696,16 @@ def square(x, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.top_k")
+def top_k(input, k=1, sorted=True, name=None):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .SetAttr("k", k, "AttrTypeInt32",)
+        .SetAttr("sorted", sorted, "AttrTypeBool",)
+        .Build()
+        .RemoteBlobList()[0]
+    )
