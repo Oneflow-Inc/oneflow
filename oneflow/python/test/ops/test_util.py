@@ -1,8 +1,10 @@
-import itertools
-from collections import OrderedDict 
-from collections.abc import Iterable
 import os
 import numpy as np
+import itertools
+from collections import OrderedDict
+from collections.abc import Iterable
+
+import oneflow as flow
 
 
 def GenCartesianProduct(sets):
@@ -32,3 +34,20 @@ def Save(name):
         np.save(os.path.join(path, name), x.ndarray())
 
     return _save
+
+
+type_name_to_flow_type = {
+    "float32": flow.float32,
+    "double": flow.double,
+    "int8": flow.int8,
+    "int32": flow.int32,
+    "int64": flow.int64,
+}
+
+type_name_to_np_type = {
+    "float32": np.float32,
+    "double": np.float64,
+    "int8": np.int8,
+    "int32": np.int32,
+    "int64": np.int64,
+}
