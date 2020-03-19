@@ -21,13 +21,15 @@ void TVMOpContext::set_op_expr(tvm::relay::Expr op_expr) {
 
 tvm::relay::Expr TVMOpContext::GetExpr4InputName(const std::string& name) {
   auto it = input_name2expr_.find(name);
-  CHECK(it != input_name2expr_.end());
+  CHECK(it != input_name2expr_.end())
+    << "Cannot find " << name << " in TVMOpContext of node: " << node_->name();
   return it->second;
 }
 
 const Shape& TVMOpContext::GetShape4InputName(const std::string& name) {
   auto it = input_name2arg_.find(name);
-  CHECK(it != input_name2arg_.end());
+  CHECK(it != input_name2arg_.end())
+    << "Cannot find " << name << " in TVMOpContext of node: " << node_->name();
   return it->second.shape();
 }
 
