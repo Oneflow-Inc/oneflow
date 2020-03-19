@@ -219,6 +219,109 @@ def _compare_scatter_nd_update_with_tf(
     test_case.assertTrue(np.array_equal(z1.numpy(), of_z.ndarray()))
 
 
+def _of_tensor_scatter_nd_add(
+    params, indices, updates, device_type, mirrored, params_grad_watcher, updates_grad_watcher
+):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.train.primary_lr(1e-3)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+
+    def do_tensor_scatter_nd_add(params_blob, indices_blob, updates_blob):
+        with flow.device_prior_placement(device_type, "0:0"):
+            params_var = flow.get_variable(
+                "params",
+                shape=params_blob.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+            )
+            updates_var = flow.get_variable(
+                "updates",
+                shape=updates_blob.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+            )
+            params_var = params_var + params_blob
+            updates_var = updates_var + updates_blob
+            out = flow.tensor_scatter_nd_add(params_var, indices_blob, updates_var)
+            flow.losses.add_loss(out)
+
+        flow.watch_diff(params_var, params_grad_watcher)
+        flow.watch_diff(updates_var, updates_grad_watcher)
+        return out
+
+    if mirrored:
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+        @flow.function(func_config)
+        def tensor_scatter_nd_add_fn(
+            params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
+            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
+            updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
+        ):
+            return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
+
+        check_point = flow.train.CheckPoint()
+        check_point.init()
+        return tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+
+    else:
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+
+        @flow.function(func_config)
+        def tensor_scatter_nd_add_fn(
+            params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
+            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
+            updates_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
+        ):
+            return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
+
+        check_point = flow.train.CheckPoint()
+        check_point.init()
+        return tensor_scatter_nd_add_fn(params, indices, updates).get().ndarray()
+
+
+def _compare_tensor_scatter_nd_add_with_tf(
+    test_case, params_shape, indices_shape, updates_shape, device_type, mirrored
+):
+    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, True)
+
+    params_const = tf.constant(params)
+    indices_const = tf.constant(indices)
+    updates_const = tf.constant(updates)
+    with tf.GradientTape() as t1:
+        params_var = tf.Variable(params)
+        tf_out1 = tf.tensor_scatter_nd_add(params_var, indices_const, updates_const)
+    tf_params_grad = t1.gradient(tf_out1, params_var)
+
+    with tf.GradientTape() as t2:
+        updates_var = tf.Variable(updates)
+        tf_out2 = tf.tensor_scatter_nd_add(params_const, indices_const, updates_var)
+    tf_updates_grad = t2.gradient(tf_out2, updates_var)
+
+    test_case.assertTrue(np.array_equal(tf_out1.numpy(), tf_out2.numpy()))
+
+    def compare_params_grad(of_params_grad):
+        tf_params_grad_np = tf_params_grad.numpy()
+        of_params_grad_np = (
+            of_params_grad.ndarray_list()[0] if mirrored else of_params_grad.ndarray()
+        )
+        test_case.assertTrue(np.allclose(tf_params_grad_np, of_params_grad_np))
+
+    def compare_updates_grad(of_updates_grad):
+        tf_updates_grad_np = tf_updates_grad.numpy()
+        of_updates_grad_np = (
+            of_updates_grad.ndarray_list()[0] if mirrored else of_updates_grad.ndarray()
+        )
+        test_case.assertTrue(np.allclose(tf_updates_grad_np, of_updates_grad_np))
+
+    of_out = _of_tensor_scatter_nd_add(
+        params, indices, updates, device_type, mirrored, compare_params_grad, compare_updates_grad
+    )
+    test_case.assertTrue(np.array_equal(tf_out1.numpy(), of_out))
+
+
 def test_scatter_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -311,3 +414,14 @@ def test_scatter_nd_update_case_3(test_case):
     arg_dict["updates_shape"] = [(10, 25, 4)]
     for arg in GenArgList(arg_dict):
         _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_add(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(12,)]
+    arg_dict["indices_shape"] = [(7, 1)]
+    arg_dict["updates_shape"] = [(7,)]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["mirrored"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
