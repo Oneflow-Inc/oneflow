@@ -317,4 +317,28 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
       }
     });
 
+REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("updates", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("gather_nd")
+                .Input("params", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("indices", op.input("indices", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "updates", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("params", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("identity")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
+        AddOp(grad_op);
+      }
+    });
 }  // namespace oneflow
