@@ -36,6 +36,7 @@ class AveragePooling2DOp final : public TVMOpKernel {
           ctx->GetShape4InputName("in"), pool_size, strides);
 
       attrs->ceil_mode = false;
+      // corresponding to CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING
       attrs->count_include_pad = false;
     }
 
