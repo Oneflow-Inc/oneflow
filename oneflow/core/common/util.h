@@ -24,7 +24,6 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
-#include "oneflow/core/common/data_type.h"
 
 DECLARE_string(log_dir);
 
@@ -152,14 +151,6 @@ inline uint32_t NewRandomSeed() {
   return gen();
 }
 
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
-
 #define DIM_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(1) \
   OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5)
@@ -203,12 +194,6 @@ template<typename T>
 void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
-
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
 
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
