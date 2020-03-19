@@ -81,15 +81,15 @@ Maybe<void> InferWhereGradTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferWhereBatchAxis(user_op::BatchAxisContext* ctx) {
-  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
-  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
-  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  const int64_t cond_num_axes = cond_shape.NumAxes();
-  const int64_t x_num_axes = x_shape.NumAxes();
-  const int64_t y_num_axes = y_shape.NumAxes();
-  int64_t max_num_axes = std::max(x_shape.NumAxes(), y_shape.NumAxes());
-  max_num_axes = std::max(max_num_axes, cond_shape.NumAxes());
-  // TODO check?
+  OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
+  OptInt64* y_batch_axis = ctx->BatchAxis4ArgNameAndIndex("y", 0);
+  OF_CHECK((x_batch_axis->has_value() && y_batch_axis->has_value())
+           || (!x_batch_axis->has_value() && !y_batch_axis->has_value()));
+  if (x_batch_axis->has_value()) {
+    ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+  } else {
+    ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -168,12 +168,96 @@ Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferWhereGradBatchAxis(user_op::BatchAxisContext* ctx) {
-  // TODO
+  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+  *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *ctx->BatchAxis4ArgNameAndIndex("y", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetWhereGradSbpSignatures(user_op::SbpContext* ctx) {
-  // TODO
+  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
+  const Shape& dz_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape();
+  Shape cond_extend_shape = CreateLeftExtendedShape(ShapeView(cond_shape), dz_shape.NumAxes());
+  Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), dz_shape.NumAxes());
+  Shape y_extend_shape = CreateLeftExtendedShape(ShapeView(y_shape), dz_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, dz_shape.NumAxes()) {
+    int64_t cond_origin_axis = i - (dz_shape.NumAxes() - cond_shape.NumAxes());
+    int64_t x_origin_axis = i - (dz_shape.NumAxes() - x_shape.NumAxes());
+    int64_t y_origin_axis = i - (dz_shape.NumAxes() - y_shape.NumAxes());
+    if (cond_extend_shape.At(i) != 1 && x_extend_shape.At(i) != 1 && y_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Split("condition", 0, cond_origin_axis)
+          .Split("x", 0, x_origin_axis)
+          .Split("y", 0, y_origin_axis)
+          .Split("dx", 0, x_origin_axis)
+          .Split("dy", 0, y_origin_axis)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (cond_extend_shape.At(i) != 1 && x_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Split("condition", 0, cond_origin_axis)
+          .Split("x", 0, x_origin_axis)
+          .Broadcast("y", 0)
+          .Split("dx", 0, x_origin_axis)
+          .Broadcast("dy", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (cond_extend_shape.At(i) != 1 && y_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Split("condition", 0, cond_origin_axis)
+          .Broadcast("x", 0)
+          .Split("y", 0, y_origin_axis)
+          .Broadcast("dx", 0)
+          .Split("dy", 0, y_origin_axis)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (x_extend_shape.At(i) != 1 && y_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Broadcast("condition", 0)
+          .Split("x", 0, x_origin_axis)
+          .Split("y", 0, y_origin_axis)
+          .Split("dx", 0, x_origin_axis)
+          .Split("dy", 0, y_origin_axis)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (cond_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Split("condition", 0, cond_origin_axis)
+          .Broadcast("x", 0)
+          .Broadcast("y", 0)
+          .Broadcast("dx", 0)
+          .Broadcast("dy", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (x_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Broadcast("condition", 0)
+          .Split("x", 0, x_origin_axis)
+          .Broadcast("y", 0)
+          .Split("dx", 0, x_origin_axis)
+          .Broadcast("dy", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    } else if (y_extend_shape.At(i) != 1) {
+      SbpSignatureBuilder()
+          .Split("dz", 0, i)
+          .Broadcast("condition", 0)
+          .Broadcast("x", 0)
+          .Split("y", 0, y_origin_axis)
+          .Broadcast("dx", 0)
+          .Split("dy", 0, y_origin_axis)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    }
+  }
+  SbpSignatureBuilder()
+      .PartialSum("dz", 0)
+      .Broadcast("condition", 0)
+      .PartialSum("x", 0)
+      .PartialSum("y", 0)
+      .PartialSum("dx", 0)
+      .PartialSum("dy", 0)
+      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
