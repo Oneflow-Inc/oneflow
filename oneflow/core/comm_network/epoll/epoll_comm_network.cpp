@@ -6,6 +6,8 @@
 
 #ifdef PLATFORM_POSIX
 
+#include <netinet/tcp.h>
+
 namespace oneflow {
 
 namespace {
@@ -136,6 +138,8 @@ void EpollCommNet::InitSockets() {
     auto peer_machine = Global<ResourceDesc>::Get()->machine(peer_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    const int val = 1;
+    PCHECK(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&val, sizeof(int)) == 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
