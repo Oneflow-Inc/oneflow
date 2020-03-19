@@ -157,7 +157,7 @@ def _compare_scatter_nd_update_with_tf(
         z2 = tf.tensor_scatter_nd_update(x_const, i_const, y)
     dz_dy = t2.gradient(z2, y)
 
-    test_case.assertTrue(np.array_equal(z1.numpy(), z2.numpy()))
+    test_case.assertTrue(np.allclose(z1.numpy(), z2.numpy()))
 
     def compare_dz_dx(params_grad):
         test_case.assertTrue(np.allclose(dz_dx.numpy(), params_grad.ndarray()))
@@ -212,7 +212,7 @@ def _compare_scatter_nd_update_with_tf(
         print("tf_z:", z1.numpy())
         print("of_z:", of_z.ndarray())
 
-    test_case.assertTrue(np.array_equal(z1.numpy(), of_z.ndarray()))
+    test_case.assertTrue(np.allclose(z1.numpy(), of_z.ndarray()))
 
 
 def _of_tensor_scatter_nd_add(
@@ -296,7 +296,7 @@ def _compare_tensor_scatter_nd_add_with_tf(
         tf_out2 = tf.tensor_scatter_nd_add(params_const, indices_const, updates_var)
     tf_updates_grad = t2.gradient(tf_out2, updates_var)
 
-    test_case.assertTrue(np.array_equal(tf_out1.numpy(), tf_out2.numpy()))
+    test_case.assertTrue(np.allclose(tf_out1.numpy(), tf_out2.numpy()))
 
     def compare_params_grad(of_params_grad):
         tf_params_grad_np = tf_params_grad.numpy()
@@ -315,7 +315,7 @@ def _compare_tensor_scatter_nd_add_with_tf(
     of_out = _of_tensor_scatter_nd_add(
         params, indices, updates, device_type, mirrored, compare_params_grad, compare_updates_grad
     )
-    test_case.assertTrue(np.array_equal(tf_out1.numpy(), of_out))
+    test_case.assertTrue(np.allclose(tf_out1.numpy(), of_out))
 
 
 def test_scatter_nd(test_case):
@@ -417,6 +417,28 @@ def test_tensor_scatter_nd_add(test_case):
     arg_dict["params_shape"] = [(12,)]
     arg_dict["indices_shape"] = [(7, 1)]
     arg_dict["updates_shape"] = [(7,)]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["mirrored"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_add_case1(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(38, 66, 9)]
+    arg_dict["indices_shape"] = [(17, 2)]
+    arg_dict["updates_shape"] = [(17, 9)]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["mirrored"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_add_case2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(2, 7, 19, 41, 33)]
+    arg_dict["indices_shape"] = [(20, 9, 3)]
+    arg_dict["updates_shape"] = [(20, 9, 41, 33)]
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["mirrored"] = [True, False]
     for arg in GenArgList(arg_dict):
