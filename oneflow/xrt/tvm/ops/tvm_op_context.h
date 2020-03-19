@@ -20,6 +20,7 @@ class TVMOpContext final : public OpContext {
 
   const XrtNode* node() const { return node_; }
   tvm::relay::Expr op_expr() const { return op_expr_; }
+  int32_t num_inputs() const { return input_name2arg_.size(); }
 
   void set_op_expr(tvm::relay::Expr op_expr);
 
