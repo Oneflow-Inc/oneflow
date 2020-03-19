@@ -99,7 +99,8 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 void IBVerbsCommNet::InitContext() {
-  const std::string& device_name = ibverbs_conf_.device_name();
+  const std::string& device_name =
+      Global<const CommNetworkConf>::Get()->ibverbs_conf().device_name();
   int32_t device_num = 0;
   int32_t device_index = 0;
   ibv_device** device_list = ibv_get_device_list(&device_num);
@@ -132,7 +133,8 @@ void IBVerbsCommNet::InitContext() {
 }
 
 uint32_t IBVerbsCommNet::QueryPort(ibv_port_attr* port_attr) const {
-  uint32_t port_num = static_cast<uint32_t>(ibverbs_conf_.port_num());
+  uint32_t port_num =
+      static_cast<uint32_t>(Global<const CommNetworkConf>::Get()->ibverbs_conf().port_num());
   ibv_device_attr device_attr;
   PCHECK(ibv_query_device(context_, &device_attr) == 0);
   if (port_num == 0) {
@@ -154,7 +156,8 @@ uint32_t IBVerbsCommNet::QueryPort(ibv_port_attr* port_attr) const {
 }
 
 uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, ibv_gid* gid) const {
-  uint32_t sgid_index = static_cast<uint32_t>(ibverbs_conf_.sgid_index());
+  uint32_t sgid_index =
+      static_cast<uint32_t>(Global<const CommNetworkConf>::Get()->ibverbs_conf().sgid_index());
   uint32_t gids_num = 0;
   uint32_t v2_ip_num = 0;
   uint32_t gid_index = 0;
@@ -163,7 +166,8 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
         << "Failed to query gid to port " << port_num << " index " << i;
     if (gid->global.interface_id) {
       gids_num++;
-      if (gid->global.subnet_prefix == 0 && IsGidTypeRoceV2(context_->device->ibdev_path, port_num, i)) {
+      if (gid->global.subnet_prefix == 0
+          && IsGidTypeRoceV2(context_->device->ibdev_path, port_num, i)) {
         if (v2_ip_num == 0) { gid_index = i; }
         v2_ip_num++;
       }
@@ -191,14 +195,14 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
 void IBVerbsCommNet::ConnectTopo() {
   int64_t this_mchn_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), nullptr);
-  
-  IBVerbsConf ibv_conf(ibverbs_conf_);
+
+  IBVerbsConf ibv_conf(Global<const CommNetworkConf>::Get()->ibverbs_conf());
   ibv_port_attr port_attr;
   ibv_gid gid;
   uint32_t port_num = QueryPort(&port_attr);
   ibv_conf.set_port_num(port_num);
   ibv_conf.set_sgid_index(QueryGid(port_num, &port_attr, &gid));
-  
+
   for (int64_t peer_mchn_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(ibv_conf, context_, pd_, cq_);
     qp_vec_.at(peer_mchn_id) = cur_qp;
@@ -216,7 +220,7 @@ void IBVerbsCommNet::ConnectTopo() {
     qp_vec_.at(peer_mchn_id)->Connect(conn_info);
   }
   OF_BARRIER();
-  
+
   for (int64_t peer_mchn_id : peer_machine_id()) {
     qp_vec_.at(peer_mchn_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_mchn_id, peer_mchn_id));
@@ -226,7 +230,6 @@ void IBVerbsCommNet::ConnectTopo() {
 
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
-      ibverbs_conf_(Global<const CommNetworkConf>::Get()->ibverbs_conf()),
       token2mem_desc_(Global<ResourceDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
   InitContext();

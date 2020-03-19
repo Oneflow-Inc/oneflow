@@ -39,7 +39,6 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   static const int32_t max_poll_wc_num_;
 
   std::vector<HashMap<void*, IBVerbsMemDescProto>> token2mem_desc_;
-  const IBVerbsConf& ibverbs_conf_;
   ibv_context* context_;
   ibv_pd* pd_;
   ibv_cq* cq_;
