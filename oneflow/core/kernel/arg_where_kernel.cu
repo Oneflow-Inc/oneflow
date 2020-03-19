@@ -97,6 +97,8 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
       std::transform(in->shape().ptr(), in->shape().ptr() + in->shape().NumAxes(), dims.begin(),
                      [](int64_t dim) { return static_cast<I>(dim); });
       NdIndexOffsetHelper<I, NDims> index_converter(dims.data(), dims.size());
+      // TODO: test whether kFlatIndexToNdIndexProposedLaunchBlocks or
+      // BlocksNum4ThreadsNum(elem_cnt) is faster
       CudaOffsetToNdIndexInplace<I, NDims>
           <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
              ctx.device_ctx->cuda_stream()>>>(index_converter, out_size->dptr<I>(),
