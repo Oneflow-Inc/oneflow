@@ -1,13 +1,8 @@
 import oneflow as flow
 import numpy as np
 import tensorflow as tf
-import os
 from collections import OrderedDict
 from test_util import GenArgList
-
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-tf.compat.v1.enable_eager_execution()
 
 
 def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_index=True):
@@ -97,10 +92,12 @@ def _compare_scatter_nd_with_tf(
 ):
     _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
 
+    indices_const = tf.constant(indices)
     with tf.GradientTape() as t:
         x = tf.Variable(updates)
-        y = tf.scatter_nd(tf.Variable(indices), x, params_shape)
-        dy_dx = t.gradient(y, x)
+        y = tf.scatter_nd(indices_const, x, params_shape)
+
+    dy_dx = t.gradient(y, x)
 
     if mirrored:
 
@@ -147,19 +144,18 @@ def _compare_scatter_nd_update_with_tf(
         params_shape, indices_shape, updates_shape, allow_duplicate_index
     )
 
-    x = tf.Variable(params)
-    y = tf.Variable(updates)
-    i = tf.Variable(indices)
-    const_x = tf.constant(params)
-    const_y = tf.constant(updates)
-
+    x_const = tf.constant(params)
+    y_const = tf.constant(updates)
+    i_const = tf.constant(indices)
     with tf.GradientTape() as t1:
-        z1 = tf.tensor_scatter_nd_update(x, i, const_y)
-        dz_dx = t1.gradient(z1, x)
+        x = tf.Variable(params)
+        z1 = tf.tensor_scatter_nd_update(x, i_const, y_const)
+    dz_dx = t1.gradient(z1, x)
 
     with tf.GradientTape() as t2:
-        z2 = tf.tensor_scatter_nd_update(const_x, i, y)
-        dz_dy = t2.gradient(z2, y)
+        y = tf.Variable(updates)
+        z2 = tf.tensor_scatter_nd_update(x_const, i_const, y)
+    dz_dy = t2.gradient(z2, y)
 
     test_case.assertTrue(np.array_equal(z1.numpy(), z2.numpy()))
 
