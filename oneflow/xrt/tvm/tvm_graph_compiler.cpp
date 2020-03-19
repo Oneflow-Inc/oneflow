@@ -94,15 +94,15 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode* node) {
     if (node->IsArgumentNode()) { return; }
-    util::Map<std::string, tvm::relay::Expr> input_name2expr;
+    util::Map<Argument, tvm::relay::Expr> input_arg2expr;
     for (const auto* in_edge : node->in_edges()) {
       const Argument& in_arg = in_edge->argument();
       auto it = tensor_name2expr.find(in_arg.name());
       CHECK(it != tensor_name2expr.end());
-      input_name2expr.emplace(in_arg.meta_data().consume_key, it->second);
+      input_arg2expr.emplace(in_arg, it->second);
     }
 
-    TVMOpContext ctx(node, OpMessage(node), std::move(input_name2expr));
+    TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr));
     auto op_kernel = BuildTVMOpKernel(node->type());
     op_kernel->Compile(&ctx);
     tvm::relay::Expr op_expr = ctx.op_expr();

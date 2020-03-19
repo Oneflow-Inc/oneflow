@@ -15,8 +15,7 @@ class TVMOpContext final : public OpContext {
  public:
   TVMOpContext(const XrtNode* node, 
       const PbMessage* message,
-      util::Map<std::string, tvm::relay::Expr>&& input_name2expr) : 
-    OpContext(*message), node_(node), input_name2expr_(input_name2expr) {}
+      util::Map<Argument, tvm::relay::Expr>&& input_arg2expr);
   ~TVMOpContext() = default;
 
   const XrtNode* node() const { return node_; }
@@ -25,6 +24,7 @@ class TVMOpContext final : public OpContext {
   void set_op_expr(tvm::relay::Expr op_expr);
 
   tvm::relay::Expr GetExpr4InputName(const std::string& name);
+  const Shape& GetShape4InputName(const std::string& name);
 
  private:
   TVMOpContext(const TVMOpContext&) = delete;
@@ -32,6 +32,7 @@ class TVMOpContext final : public OpContext {
 
   const XrtNode* node_;
   util::Map<std::string, tvm::relay::Expr> input_name2expr_;
+  util::Map<std::string, Argument> input_name2arg_;
   tvm::relay::Expr op_expr_;
 };
 
