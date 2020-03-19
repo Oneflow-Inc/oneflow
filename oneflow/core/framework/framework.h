@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_FRAMEWORK_H_
 #define ONEFLOW_CORE_FRAMEWORK_FRAMEWORK_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/util.h"
 
 #include "oneflow/core/framework/op_registration.h"
