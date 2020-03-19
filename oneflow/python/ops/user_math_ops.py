@@ -359,3 +359,14 @@ def pow(x, y, name=None):
             .Output("z")\
             .SetAttr("binary_math_type", "Pow", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.floordiv")
+def floordiv(x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Floordiv_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
+            .Input("x",[x])\
+            .Input("y",[y])\
+            .Output("z")\
+            .SetAttr("binary_math_type", "Floordiv", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
