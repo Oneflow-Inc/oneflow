@@ -20,17 +20,11 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
-__device__ float FloordivFuc(float x, float y) { 
-  return floor(fdividef(x, y)); 
-}
+__device__ float FloordivFuc(float x, float y) { return floor(fdividef(x, y)); }
 
-__device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) {
-  return 0;
-}
+__device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) { return 0; }
 
-__device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) {
-  return 0;
-}
+__device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 0; }
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
@@ -86,7 +80,7 @@ MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDi
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathBinaryGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryGpuFloatKernel() = default;
   ~MathBinaryGpuFloatKernel() = default;
 
@@ -108,11 +102,11 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
 };
 
 REGISTER_USER_KERNEL("binary")
-    .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryGpuFloatKernel(ctx); })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
+      if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
           && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
@@ -121,7 +115,7 @@ REGISTER_USER_KERNEL("binary")
 
 class MathBinaryXGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryXGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathBinaryXGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryXGradGpuFloatKernel() = default;
   ~MathBinaryXGradGpuFloatKernel() = default;
 
@@ -145,7 +139,7 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
 
 class MathBinaryYGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryYGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathBinaryYGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryYGradGpuFloatKernel() = default;
   ~MathBinaryYGradGpuFloatKernel() = default;
 
@@ -168,24 +162,20 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
 };
 
 REGISTER_USER_KERNEL("binary_x_grad")
-    .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathBinaryXGradGpuFloatKernel(ctx);
-    })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryXGradGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
     });
 
 REGISTER_USER_KERNEL("binary_y_grad")
-    .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathBinaryYGradGpuFloatKernel(ctx);
-    })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryYGradGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      if (ctx.device() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
