@@ -41,15 +41,15 @@ __global__ void CudaOffsetToNdIndexInplace(NdIndexOffsetHelper<T, NDims> index_c
 }
 
 template<typename T>
-struct IsNonzero {
+struct IsTrue {
   OF_DEVICE_FUNC bool operator()(const T& val) const { return static_cast<bool>(val); }
 };
 
 template<typename T, typename I, typename Iter>
-cudaError_t SelectNonzero(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
-                          const T* flags, Iter out_iter, I* num_selected) {
-  IsNonzero<T> is_nonzero;
-  cub::TransformInputIterator<bool, IsNonzero<T>, const T*> flag_iter(flags, is_nonzero);
+cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
+                       const T* flags, Iter out_iter, I* num_selected) {
+  IsTrue<T> is_true;
+  cub::TransformInputIterator<bool, IsTrue<T>, const T*> flag_iter(flags, is_true);
   cub::CountingInputIterator<I> offset_counter(0);
   return cub::DeviceSelect::Flagged(tmp, tmp_bytes, offset_counter, flag_iter, out_iter,
                                     num_selected, num_items, stream, false);
@@ -58,8 +58,8 @@ cudaError_t SelectNonzero(cudaStream_t stream, int num_items, void* tmp, size_t&
 }  // namespace
 
 template<typename T, typename I>
-cudaError_t InferSelectNonzeroTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes) {
-  return SelectNonzero<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr);
+cudaError_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes) {
+  return SelectTrue<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr);
 }
 
 template<typename T, typename I, size_t NDims>
@@ -80,16 +80,16 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
     CHECK_LE(elem_cnt, std::numeric_limits<I>::max());
     size_t tmp_bytes = 0;
     CudaCheck(
-        InferSelectNonzeroTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp_bytes));
+        InferSelectTrueTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp_bytes));
     CHECK_LE(tmp_bytes, tmp->shape().elem_cnt());
 
     if (NDims == 1) {
-      CudaCheck(SelectNonzero<T, I, I*>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(),
-                                        tmp_bytes, in->dptr<T>(), out->mut_dptr<I>(),
-                                        out_size->mut_dptr<I>()));
+      CudaCheck(SelectTrue<T, I, I*>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(),
+                                     tmp_bytes, in->dptr<T>(), out->mut_dptr<I>(),
+                                     out_size->mut_dptr<I>()));
     } else {
       StrideIterator<I, NDims> out_iter(out->mut_dptr<I>(), elem_cnt);
-      CudaCheck(SelectNonzero<T, I, StrideIterator<I, NDims>>(
+      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(
           ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(), tmp_bytes, in->dptr<T>(),
           out_iter, out_size->mut_dptr<I>()));
 
@@ -107,7 +107,7 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INFER_SELECT_NONZERO_TMP_BUFFER_SIZE,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INFER_SELECT_TRUE_TMP_BUFFER_SIZE,
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #define REGISTER_ARG_WHERE_GPU_KERNELS(dtype_pair, itype_pair)             \

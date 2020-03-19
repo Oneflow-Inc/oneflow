@@ -7,18 +7,17 @@ namespace oneflow {
 namespace {
 
 Maybe<size_t> InferArgWhereTmpBufferSize(const BlobDesc* in_desc, DataType out_data_type) {
-  int64_t elem_cnt = in_desc->shape().elem_cnt();
-  size_t tmp_bytes = 0;
-
-#define MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY(dtype_pair, itype_pair)                           \
-  {GetHashKey(OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(itype_pair)),                     \
-   [](int elem_cnt, size_t& tmp_bytes) {                                                         \
-     CudaCheck(                                                                                  \
-         InferSelectNonzeroTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair),                           \
-                                         OF_PP_PAIR_FIRST(itype_pair)>(0, elem_cnt, tmp_bytes)); \
+#define MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY(dtype_pair, itype_pair)                             \
+  {GetHashKey(OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(itype_pair)),                       \
+   [](int elem_cnt) -> size_t {                                                                    \
+     size_t tmp_bytes = 0;                                                                         \
+     CudaCheck(                                                                                    \
+         InferSelectTrueTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>( \
+             0, elem_cnt, tmp_bytes));                                                             \
+     return tmp_bytes;                                                                             \
    }},
 
-  static const HashMap<std::string, std::function<void(int, size_t&)>> infer_fn_map = {
+  static const HashMap<std::string, std::function<size_t(int)>> infer_fn_map = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY,
                                        ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
 #undef MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY
@@ -27,9 +26,7 @@ Maybe<size_t> InferArgWhereTmpBufferSize(const BlobDesc* in_desc, DataType out_d
   OF_CHECK(infer_fn_it != infer_fn_map.end())
       << "argwhere op do not support data_type (" << in_desc->data_type() << "), index_type ("
       << out_data_type << ")";
-
-  infer_fn_it->second(elem_cnt, tmp_bytes);
-  return tmp_bytes;
+  return infer_fn_it->second(in_desc->shape().elem_cnt());
 }
 
 }  // namespace
@@ -94,10 +91,11 @@ class ArgWhereOp final : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     if (BatchAxis4BnInOp("in")->has_value()) {
-      for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
+      BatchAxis4BnInOp("out")->set_value(0);
     } else {
-      for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
+      BatchAxis4BnInOp("out")->clear_value();
     }
+    BatchAxis4BnInOp("out_size")->clear_value();
     return Maybe<void>::Ok();
   }
 };

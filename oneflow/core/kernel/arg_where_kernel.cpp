@@ -17,26 +17,20 @@ class ArgWhereCpuKernel : public KernelIf<DeviceType::kCPU> {
     const Blob* in = BnInOp2Blob("in");
     Blob* out = BnInOp2Blob("out");
     Blob* out_size = BnInOp2Blob("out_size");
+    CHECK_LE(in->shape().elem_cnt(), std::numeric_limits<I>::max());
 
-    I nonzero_cnt = 0;
-    FOR_RANGE(int64_t, i, 0, in->shape().elem_cnt()) {
-      if (static_cast<bool>(in->dptr<T>()[i])) {
-        out->mut_dptr<I>()[nonzero_cnt * NDims] = i;
-        nonzero_cnt += 1;
-      }
-    }
-    CHECK_LE(nonzero_cnt, std::numeric_limits<I>::max());
-
+    I true_cnt = 0;
     fixed_vector<I, NDims> dims(NDims);
     std::transform(in->shape().ptr(), in->shape().ptr() + in->shape().NumAxes(), dims.begin(),
                    [](int64_t dim) { return static_cast<I>(dim); });
     NdIndexOffsetHelper<I, NDims> index_converter(dims.data(), dims.size());
-    FOR_RANGE(I, i, 0, nonzero_cnt) {
-      I* nd_index_ptr = out->mut_dptr<I>() + i * NDims;
-      // convert offset to nd_index inplace
-      index_converter.OffsetToNdIndex(*nd_index_ptr, nd_index_ptr);
+    FOR_RANGE(int64_t, i, 0, in->shape().elem_cnt()) {
+      if (static_cast<bool>(in->dptr<T>()[i])) {
+        index_converter.OffsetToNdIndex(i, out->mut_dptr<I>() + true_cnt * NDims);
+        true_cnt += 1;
+      }
     }
-    *out_size->mut_dptr<I>() = nonzero_cnt;
+    *out_size->mut_dptr<I>() = true_cnt;
   }
 };
 

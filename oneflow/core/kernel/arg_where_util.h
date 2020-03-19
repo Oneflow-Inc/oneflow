@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<typename T, typename I>
-cudaError_t InferSelectNonzeroTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes);
+cudaError_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes);
 
-#define INSTANTIATE_INFER_SELECT_NONZERO_TMP_BUFFER_SIZE(dtype_pair, itype_pair)               \
-  template cudaError_t                                                                         \
-  InferSelectNonzeroTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>( \
+#define INSTANTIATE_INFER_SELECT_TRUE_TMP_BUFFER_SIZE(dtype_pair, itype_pair)               \
+  template cudaError_t                                                                      \
+  InferSelectTrueTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>( \
       cudaStream_t, int, size_t&);
 
 #define REGISTER_ARG_WHERE_KERNEL(kernel, device_type_v, dtype, itype, ndims)         \
