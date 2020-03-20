@@ -1,3 +1,4 @@
+set -e
 set -x
 pwd=$1
 pip3 install --user $pwd/*.whl
