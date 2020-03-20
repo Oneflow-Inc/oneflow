@@ -6,7 +6,7 @@ REGISTER_USER_OP("unary")
     .Input("x")
     .Output("y")
     .Attr("unary_math_type", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *y_shape = *x_shape;
@@ -27,7 +27,7 @@ REGISTER_USER_OP("unary_grad")
     .Input("dy")
     .Output("dx")
     .Attr("unary_math_type", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);

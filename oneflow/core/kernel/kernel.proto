@@ -181,6 +181,7 @@ message IndexedSlicesReduceSumKernelConf {
 
 message UnsortedSegmentSumKernelConf {
   required DataType indices_data_type = 1;
+  required int64 axis = 2;
 }
 
 message IndexedSlicesNaiveModelUpdateKernelConf {

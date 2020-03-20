@@ -1,14 +1,4 @@
-#include <unistd.h>
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/grad_registration.h"
-#include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/framework/user_op_attr.pb.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -17,7 +7,7 @@ REGISTER_USER_OP("binary")
     .Input("y")
     .Output("z")
     .Attr("binary_math_type", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* z_shape = ctx->Shape4ArgNameAndIndex("z", 0);
@@ -42,7 +32,7 @@ REGISTER_USER_OP("binary_x_grad")
     .Input("dz")
     .Output("dx")
     .Attr("binary_math_type", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
@@ -67,7 +57,7 @@ REGISTER_USER_OP("binary_y_grad")
     .Input("dz")
     .Output("dy")
     .Attr("binary_math_type", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
