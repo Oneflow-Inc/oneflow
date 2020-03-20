@@ -7,13 +7,13 @@
 
 namespace oneflow {
 
-class OBJECT_MSG_TYPE(ObjMsgChunk);
+class ObjMsgChunk;
 
 struct ObjMsgMemBlock final {
  public:
-  static ObjMsgMemBlock* PlacementNew(char* mem_ptr, OBJECT_MSG_TYPE(ObjMsgChunk) * obj_msg_chunk);
+  static ObjMsgMemBlock* PlacementNew(char* mem_ptr, ObjMsgChunk* obj_msg_chunk);
 
-  OBJECT_MSG_TYPE(ObjMsgChunk) * mut_chunk() { return chunk_; }
+  ObjMsgChunk* mut_chunk() { return chunk_; }
 
   char* mem_ptr() { return &mem_ptr_[0]; }
 
@@ -22,22 +22,22 @@ struct ObjMsgMemBlock final {
     return (int)(long long)&((ObjMsgMemBlock*)nullptr)->mem_ptr_[0];
   }
 
-  OBJECT_MSG_TYPE(ObjMsgChunk) * chunk_;
+  ObjMsgChunk* chunk_;
   char mem_ptr_[0];
 };
 
-class OBJECT_MSG_TYPE(ObjMsgSizedMemPool);
+class ObjMsgSizedMemPool;
 
 // clang-format off
 BEGIN_OBJECT_MSG(ObjMsgChunk);
  public:
-  void __Init__(OBJECT_MSG_TYPE(ObjMsgSizedMemPool)* mem_pool, int64_t mem_size);
+  void __Init__(ObjMsgSizedMemPool* mem_pool, int64_t mem_size);
   void __Delete__();
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, mem_size);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgMemBlock*, mem_block);
-  OBJECT_MSG_DEFINE_RAW_PTR(OBJECT_MSG_TYPE(ObjMsgSizedMemPool)*, mem_pool);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgMemBlock, mem_block);
+  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgSizedMemPool, mem_pool);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(list);
@@ -93,7 +93,7 @@ class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
   ObjectMsgAllocator* backend_allocator_;
   std::size_t mem_size_shift_max_;
   int64_t prefetch_cnt_;
-  std::vector<OBJECT_MSG_PTR(ObjMsgSizedMemPool)> allocators_;
+  std::vector<ObjectMsgPtr<ObjMsgSizedMemPool>> allocators_;
 };
 
 class CachedObjectMsgAllocator : public CachedObjectMsgAllocatorBase {

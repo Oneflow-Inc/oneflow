@@ -72,6 +72,8 @@ class CudnnActivationDesc final {
   cudnnActivationDescriptor_t val_;
 };
 
+size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type);
+
 // SP for scaling parameter
 template<typename T>
 const void* CudnnSPOnePtr();

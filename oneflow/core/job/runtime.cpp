@@ -64,9 +64,9 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
-  LOG(INFO) << "All actor on this machine are constructed";
+  LOG(INFO) << "Actors on this machine constructed";
   OF_BARRIER();
-  LOG(INFO) << "All actor on all machine are constructed";
+  LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
   runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
   SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);

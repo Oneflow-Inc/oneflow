@@ -12,8 +12,11 @@ RUN yum update -y && yum install -y rdma-core-devel \
     git \
     centos-release-scl \
     swig \
-    intel-mkl-2020.0-088
-    # openblas-devel
+    intel-mkl-2020.0-088 \
+    zlib-devel \
+    curl-devel \
+    which
+
 RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
 RUN mkdir -p /tmp/download/cmake-extracted && \
@@ -21,8 +24,9 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0.tar.gz --output cmake.tar.gz && \
     tar -xvzf cmake.tar.gz --directory cmake-extracted && \
     cd cmake-extracted/* && \
-    mkdir /cmake-install && \
-    cmake . -DCMAKE_INSTALL_PREFIX=/cmake-install && \
+    mkdir /cmake-install
+RUN cd /tmp/download/cmake-extracted/* && \
+    cmake . -DCMAKE_USE_SYSTEM_CURL=ON -DCMAKE_INSTALL_PREFIX=/cmake-install && \
     make -j $(nproc) && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"

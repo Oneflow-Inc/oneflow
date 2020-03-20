@@ -270,11 +270,6 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
-template<>
-void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  memset(dst, value, sz);
-}
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::

@@ -15,7 +15,7 @@ import oneflow.python.lib.core.pb_util as pb_util
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()
-        
+
     def __getattr__(self, attr_name):
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
@@ -162,6 +162,14 @@ def set_cudnn_conv_force_bwd_data_algo(func_desc, value):
 def set_cudnn_conv_force_bwd_filter_algo(func_desc, value):
     func_desc.job_config_proto.cudnn_conv_force_bwd_filter_algo = value
 
+@oneflow_function_config('cudnn_conv_heuristic_search_algo')
+def set_cudnn_conv_heuristic_search_algo(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_heuristic_search_algo = value
+
+@oneflow_function_config('cudnn_conv_use_deterministic_algo_only')
+def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_use_deterministic_algo_only = value
+
 @oneflow_function_config('enable_reused_mem')
 def set_enable_reused_mem(func_desc, value = True):
     func_desc.job_config_proto.enable_reused_mem = value
@@ -218,13 +226,21 @@ def set_enable_non_distributed_optimizer(func_desc, value = True):
 def set_disable_all_reduce_sequence(func_desc, value = True):
     func_desc.job_config_proto.disable_all_reduce_sequence = value
 
+@oneflow_function_config('prune_parallel_cast_ops')
+def set_prune_parallel_cast_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_parallel_cast_ops = value
+
 @oneflow_function_config('non_distributed_optimizer_group_size_mbyte')
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
 
 @oneflow_function_config('enable_true_half_config_when_conv', 'cudnn_conv_enable_true_half')
 def set_cudnn_conv_enable_true_half(func_desc, value = True):
-    func_desc.job_config_proto.cudnn_conv_enable_true_half = value
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = (not value)
+
+@oneflow_function_config('cudnn_conv_enable_pseudo_half', 'enable_cudnn_conv_pseudo_half')
+def set_cudnn_conv_enable_pseudo_half(func_desc, value):
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = value
 
 @oneflow_function_config('enable_float_compute_for_half_gemm')
 def set_enable_float_compute_for_half_gemm(func_desc, value = True):
@@ -234,6 +250,10 @@ def set_enable_float_compute_for_half_gemm(func_desc, value = True):
 def set_enable_auto_mixed_precision(func_desc, value = True):
     func_desc.job_config_proto.enable_auto_mixed_precision = value
 
+@oneflow_function_config('enable_keep_header_only')
+def set_enable_keep_header_only(func_desc, value = True):
+    func_desc.job_config_proto.enable_keep_header_only = value
+
 @oneflow_function_config('concurrency_width')
 def set_concurrency_width(func_desc, value):
     func_desc.job_config_proto.concurrency_width = value
@@ -242,6 +262,12 @@ def set_concurrency_width(func_desc, value):
 def set_model_update_conf(func_desc, value):
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+
+@oneflow_function_config('indexed_slices_optimizer_conf')
+def set_indexed_slices_optimizer_conf(func_desc, value):
+    assert type(value) is dict
+    pb_msg = func_desc.job_config_proto.indexed_slices_optimizer_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
 @oneflow_function_config('train.loss_scale_factor')
@@ -255,22 +281,6 @@ def set_primary_lr(func_desc, value):
 @oneflow_function_config('train.secondary_lr')
 def set_secondary_lr(func_desc, value):
     func_desc.job_config_proto.train_conf.secondary_lr = value
-
-@oneflow_function_config('train.weight_l1')
-def set_weight_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l1 = value
-
-@oneflow_function_config('train.bias_l1')
-def set_bias_l1(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l1 = value
-
-@oneflow_function_config('train.weight_l2')
-def set_weight_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.weight_l2 = value
-
-@oneflow_function_config('train.bias_l2')
-def set_bias_l2(func_desc, value):
-    func_desc.job_config_proto.train_conf.bias_l2 = value
 
 @oneflow_function_config('default_placement_scope')
 def set_default_placement(func_desc, value):

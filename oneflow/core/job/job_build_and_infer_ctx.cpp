@@ -17,6 +17,22 @@ void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::st
   ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
 }
 
+void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
+  op_conf->set_name(new_op_name);
+  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(op_type_conf);
+  if (user_conf) {
+    for (const auto& pair : user_conf->output()) {
+      for (const std::string& old_lbn : pair.second.s()) {
+        LogicalBlobId old_lbi = GenLogicalBlobId(old_lbn);
+        auto blob_name_id_pair = GenUnRepeatedBn(old_lbi.blob_name());
+        std::string new_lbn = GenLogicalBlobName(new_op_name, old_lbi.blob_name());
+        (*(user_conf->mutable_output()))[pair.first].set_s(blob_name_id_pair.second, new_lbn);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
@@ -55,10 +71,12 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     DoPass("AutoTrainStep");
     DoPass("AutoLearningRate");
     DoPass("GenerateBackwardAndOptimizerOpConfs");
+    DoPass("IndexedSlicesOptimizerRewritePass");
     DoPass("SequentializeNcclTupleBroadcastReducePass");
     DoPass("AddAllReduceGroupPass");
     DoPass("AddLbiDiffWatcherOpConfs");
     DoPass("SequentializeAllReduceGroupPass");
+    DoPass("PruneParallelCastOpsPass");
   }
   DoPass("DumpTimeShapeAndBlobParallelConfPass");
   return Maybe<void>::Ok();
@@ -396,7 +414,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
   OperatorConf sub_op_conf(op_conf);
   FOR_RANGE(int32_t, i, 0, parallel_num) {
-    sub_op_conf.set_name(GetSubOpName(i));
+    ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
       ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));

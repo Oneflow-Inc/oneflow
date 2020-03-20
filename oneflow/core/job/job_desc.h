@@ -39,7 +39,6 @@ class JobDesc final {
   bool enable_inplace_in_reduce_struct() const {
     return job_conf_.enable_inplace_in_reduce_struct();
   }
-  bool cudnn_conv_enable_true_half() const { return job_conf_.cudnn_conv_enable_true_half(); }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
@@ -57,12 +56,15 @@ class JobDesc final {
     return job_conf_.non_distributed_optimizer_group_size_mbyte();
   }
   bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
+  bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
+
+  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
@@ -81,10 +83,6 @@ class JobDesc final {
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
-  float weight_l1() const;
-  float bias_l1() const;
-  float weight_l2() const;
-  float bias_l2() const;
   int32_t loss_scale_factor() const;
 
  private:

@@ -39,6 +39,9 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      DimVector* out, std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after, std::vector<int32_t>* dilation_rate);
 
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
+                      std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_

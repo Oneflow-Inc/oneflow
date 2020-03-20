@@ -15,11 +15,14 @@ class SbpContext {
   virtual ~SbpContext() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) = 0;
+      const std::string& input_arg_name, int32_t index) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
   SbpSignatureList* sbp_sig_list() { return sbp_sig_list_; }
+
+  DeviceType device_type() const { return device_type_; }
+  int64_t parallel_num() const { return parallel_num_; }
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
@@ -27,13 +30,19 @@ class SbpContext {
   }
 
  protected:
-  SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list)
-      : user_op_conf_(conf), sbp_sig_list_(sbp_sig_list) {}
+  SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list, DeviceType device_type,
+             int64_t parallel_num)
+      : user_op_conf_(conf),
+        sbp_sig_list_(sbp_sig_list),
+        device_type_(device_type),
+        parallel_num_(parallel_num) {}
   SbpContext(const SbpContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
   SbpSignatureList* sbp_sig_list_;
+  DeviceType device_type_;
+  int64_t parallel_num_;
 };
 
 struct GetSbpFnUtil {

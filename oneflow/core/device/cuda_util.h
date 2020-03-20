@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/data_type.h"
 
 #ifdef WITH_CUDA
 
@@ -34,6 +33,7 @@ const int32_t kCudaMaxBlocksNum = 4096;
 const int32_t kCudaWarpSize = 32;
 
 // 48KB, max byte size of shared memroy per thread block
+// TODO: limit of shared memory should be different for different arch
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
 int32_t GetSMCudaMaxBlocksNum();

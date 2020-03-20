@@ -13,7 +13,7 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
-include(json)
+include(re2)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -89,6 +89,7 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
+    ${RE2_LIBRARIES}
 )
 
 if(WIN32)
@@ -119,10 +120,11 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
-  json_copy_headers_to_destination
+  re2
 )
 
-include_directories(
+
+list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
@@ -135,7 +137,7 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
+    ${RE2_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
@@ -155,11 +157,11 @@ if (BUILD_CUDA)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
 
-  include_directories(
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
     ${NCCL_INCLUDE_DIR}
-)
+  )
 endif()
 
 if(BUILD_RDMA)
@@ -182,6 +184,8 @@ if(BUILD_RDMA)
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
 endif()
+
+include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
   list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)

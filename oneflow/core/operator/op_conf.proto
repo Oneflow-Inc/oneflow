@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
@@ -100,6 +101,17 @@ message InitializerConf {
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
     VarianceScalingInitializerConf variance_scaling_conf = 11;
+  }
+}
+
+message L1L2RegularizerConf {
+  optional float l1 = 1 [default = 0.0];
+  optional float l2 = 2 [default = 0.0];
+}
+
+message RegularizerConf {
+  oneof type {
+    L1L2RegularizerConf l1_l2_conf = 1;
   }
 }
 
@@ -589,10 +601,23 @@ message ClipConf {
   }
 }
 
+message WeightDecayFilterPatternSet {
+  repeated string pattern = 1;
+}
+
+message WeightDecayConf {
+  required float weight_decay_rate = 1;
+  oneof weight_decay_filter_type {
+    WeightDecayFilterPatternSet includes = 2;
+    WeightDecayFilterPatternSet excludes = 3;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
   optional ClipConf clip_conf = 3;
+  optional WeightDecayConf weight_decay_conf = 4;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -606,58 +631,48 @@ message NormalModelUpdateOpUserConf {
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message NaiveModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message MomentumModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  optional float weight_decay = 7 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
-  required string total_instance_num_diff = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
-  required float l1 = 8;
-  required float l2 = 9;
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message AdamModelUpdateOpConf {
@@ -667,12 +682,10 @@ message AdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message LazyAdamModelUpdateOpConf {
@@ -682,12 +695,10 @@ message LazyAdamModelUpdateOpConf {
   optional string beta1_t = 4;
   optional string beta2_t = 5;
   required string model_diff = 6;
-  required string total_instance_num_diff = 7;
   required string model = 8;
   required string train_step = 9;
   required string learning_rate = 10;
-  required float l1 = 11;
-  required float l2 = 12;
+  optional float weight_decay = 11 [default = 0.0];
 }
 
 message AccumulateOpConf {
@@ -757,6 +768,18 @@ message ReshapeOpConf {
 }
 
 message ReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+}
+
+message DynamicReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
+message DynamicReshapeLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
@@ -838,6 +861,7 @@ message VariableOpConf {
   optional string model_name = 7 [default = "weight"];
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
+  optional RegularizerConf regularizer = 10;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -1141,6 +1165,14 @@ message UnsortedSegmentSumOpConf {
   required string out = 3;
   required int64 axis = 4;
   required int64 num_segments = 5;
+}
+
+message UnsortedSegmentSumLikeOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string like = 3;
+  required string out = 4;
+  required int64 axis = 5;
 }
 
 message GatherMs0GradOpConf {
@@ -1561,6 +1593,21 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message SliceBoxingConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorSliceViewProto in_slice = 2;
+  required TensorSliceViewProto out_slice = 3;
+  optional ShapeProto out_shape = 4;
+}
+
+message SliceBoxingCopyOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+message SliceBoxingAddOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
 message XrtLaunchOpConf {
   message Argument {
     required string name = 1;
@@ -1638,6 +1685,14 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
+message L1L2RegularizeGradientOpConf {
+  required string model = 1;
+  required string model_diff = 2;
+  required string out = 3;
+  required float l1 = 4;
+  required float l2 = 5;
+}
+
 message SquareSumOpConf {
   required string x = 1;
   required string y = 2;
@@ -1689,6 +1744,43 @@ message ScalarDivByTensorOpConf {
   required string in = 1;
   required string scalar = 2;
   required string out = 3;
+}
+
+message IndexedSlicesNaiveModelUpdateOpConf {
+  required string model_diff_indices = 1;
+  required string model_diff_values = 2;
+  required string model = 3;
+  required string learning_rate = 4;
+}
+
+message IndexedSlicesMomentumModelUpdateOpConf {
+  required string momentum = 1;
+  required string model_diff_indices = 2;
+  required string model_diff_values = 3;
+  required string model = 4;
+  required string train_step = 5;
+  required string learning_rate = 6;
+  optional float beta = 7 [default = 0.9];
+}
+
+message IndexedSlicesLazyAdamModelUpdateOpConf {
+  required string m = 1;
+  required string v = 2;
+  required string model_diff_indices = 3;
+  required string model_diff_values = 4;
+  required string model = 5;
+  required string train_step = 6;
+  required string learning_rate = 7;
+  optional float beta1 = 8 [default = 0.9];
+  optional float beta2 = 9 [default = 0.999];
+  optional float epsilon = 10 [default = 1e-8];
+}
+
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
 }
 
 message OperatorConf {
@@ -1757,12 +1849,19 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
+    L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
+    IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
+    IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
+    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     UserOpConf user_conf = 199;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
+    DynamicReshapeOpConf dynamic_reshape_conf = 203;
     Conv1DOpConf conv_1d_conf = 205;
     Conv2DOpConf conv_2d_conf = 206;
     Conv3DOpConf conv_3d_conf = 207;
@@ -1810,7 +1909,6 @@ message OperatorConf {
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
-    ReshapeLikeOpConf reshape_like_conf = 268;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     DropoutGradOpConf dropout_grad_conf = 271;
@@ -1827,6 +1925,8 @@ message OperatorConf {
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
+    ReshapeLikeOpConf reshape_like_conf = 286;
+    DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
@@ -1848,6 +1948,8 @@ message OperatorConf {
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
+    UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
