@@ -106,26 +106,50 @@ REGISTER_USER_OP("clip_by_scalar_max_grad")
     .SetBatchAxisInferFn(InferClipGradBatchAxis)
     .SetGetSbpFn(GetClipGradSbpSignature);
 
-#define REGISTER_CLIP_OP_GRAD(op_type_name, grad_op_type_name)                               \
-  REGISTER_USER_OP_GRAD(#op_type_name)                                                       \
-      .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) { \
-        if (op.NeedGenGradTensor4OpInput("x", 0)) {                                          \
-          user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");                 \
-          user_op::UserOpConfWrapper grad_op =                                               \
-              builder.Op(#grad_op_type_name)                                                 \
-                  .Attr("min", op.attr<float>("min"))                                        \
-                  .Attr("max", op.attr<float>("max"))                                        \
-                  .Input("dy", op.GetGradTensorWithOpOutput("y", 0))                         \
-                  .Input("x", op.input("x", 0))                                              \
-                  .Output("dx")                                                              \
-                  .Build();                                                                  \
-          op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);                     \
-          AddOp(grad_op);                                                                    \
-        }                                                                                    \
-      });
+REGISTER_USER_OP_GRAD("clip_by_scalar")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_grad")
+                                                 .Attr("min", op.attr<float>("min"))
+                                                 .Attr("max", op.attr<float>("max"))
+                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("x", op.input("x", 0))
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
 
-REGISTER_CLIP_OP_GRAD(clip_by_scalar, clip_by_scalar_grad)
-REGISTER_CLIP_OP_GRAD(clip_by_scalar_min, clip_by_scalar_min_grad)
-REGISTER_CLIP_OP_GRAD(clip_by_scalar_max, clip_by_scalar_max_grad)
+REGISTER_USER_OP_GRAD("clip_by_scalar_min")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_min_grad")
+                                                 .Attr("min", op.attr<float>("min"))
+                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("x", op.input("x", 0))
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
+
+REGISTER_USER_OP_GRAD("clip_by_scalar_max")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_max_grad")
+                                                 .Attr("max", op.attr<float>("max"))
+                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("x", op.input("x", 0))
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
 
 }  // namespace oneflow

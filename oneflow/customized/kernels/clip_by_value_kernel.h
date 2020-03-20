@@ -138,7 +138,7 @@ class ClipByScalarMaxGradKernel;
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dy", 0, "dx", 0, true));                        \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
         return Maybe<void>::Ok();                                                               \
       });
 
