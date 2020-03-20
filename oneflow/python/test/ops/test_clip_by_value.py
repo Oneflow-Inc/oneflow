@@ -4,8 +4,6 @@ import tensorflow as tf
 from collections import OrderedDict
 from test_util import GenArgList
 
-tf.compat.v1.enable_eager_execution()
-
 
 def _np_dtype_to_of_dtype(np_dtype):
     if np_dtype == np.float32:
@@ -71,10 +69,10 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
 
 
 def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
-    x = tf.Variable(values)
     with tf.GradientTape() as t:
+        x = tf.Variable(values)
         y = tf.clip_by_value(x, min, max)
-        dy = t.gradient(y, x)
+    dy = t.gradient(y, x)
 
     def compare_dy(dy_blob):
         test_case.assertTrue(
