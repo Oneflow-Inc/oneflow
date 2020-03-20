@@ -19,8 +19,8 @@ def conv2d(
     padding,
     data_format="NHWC",
     dilations=None,
-    groups=1,
     name=None,
+    groups=1,
 ):
     assert len(input.static_shape) == 4
     assert len(filters.static_shape) == 4
@@ -73,6 +73,7 @@ def conv2d(
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
+    assert isinstance(groups, int)
     op_conf.conv_2d_conf.groups = groups
 
     compile_context.CurJobAddOp(op_conf)
