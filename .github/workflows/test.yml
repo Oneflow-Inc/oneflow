@@ -3,10 +3,10 @@ name: Build and Test CI
 on:
     push:
       branches:
-        - dev_python
+        - develop
     pull_request:
       branches:
-        - dev_python
+        - develop
 
 jobs:
 
