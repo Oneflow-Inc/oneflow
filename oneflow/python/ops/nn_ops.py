@@ -19,6 +19,7 @@ def conv2d(
     padding,
     data_format="NHWC",
     dilations=None,
+    groups=1,
     name=None,
 ):
     assert len(input.static_shape) == 4
@@ -72,6 +73,7 @@ def conv2d(
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
+    op_conf.conv_2d_conf.groups = groups
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
