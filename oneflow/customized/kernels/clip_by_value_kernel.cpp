@@ -1,9 +1,24 @@
 #include "oneflow/customized/kernels/clip_by_value_kernel.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 template<typename T>
-class ClipByScalarKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+struct ClipKernelUtil<DeviceType::kCPU, T> {
+  template<typename F>
+  static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
+    FOR_RANGE(int64_t, i, 0, n) { y[i] = clip_func(x[i]); }
+  }
+
+  template<typename F>
+  static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
+                       T* dx) {
+    FOR_RANGE(int64_t, i, 0, n) { dx[i] = clip_func(x[i], dy[i]); }
+  }
+};
+
+template<DeviceType device_type, typename T>
+class ClipByScalarKernel final : public user_op::OpKernel {
  public:
   ClipByScalarKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarKernel() = default;
@@ -13,13 +28,14 @@ class ClipByScalarKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
   void Compute(user_op::KernelContext* ctx) override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    ClipByMinMaxFunctor<T> clip_fn(ctx->GetAttr<float>("min"), ctx->GetAttr<float>("max"));
-    ClipUtil<T>::Forward(clip_fn, y->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>());
+    ClipByMinMaxFunctor<T> clip_func(ctx->GetAttr<float>("min"), ctx->GetAttr<float>("max"));
+    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+                                            x->dptr<T>(), y->mut_dptr<T>());
   }
 };
 
-template<typename T>
-class ClipByScalarMinKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class ClipByScalarMinKernel final : public user_op::OpKernel {
  public:
   ClipByScalarMinKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMinKernel() = default;
@@ -29,13 +45,14 @@ class ClipByScalarMinKernel<DeviceType::kCPU, T> final : public user_op::OpKerne
   void Compute(user_op::KernelContext* ctx) override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    ClipByMinFunctor<T> clip_fn(ctx->GetAttr<float>("min"));
-    ClipUtil<T>::Forward(clip_fn, y->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>());
+    ClipByMinFunctor<T> clip_func(ctx->GetAttr<float>("min"));
+    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+                                            x->dptr<T>(), y->mut_dptr<T>());
   }
 };
 
-template<typename T>
-class ClipByScalarMaxKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class ClipByScalarMaxKernel final : public user_op::OpKernel {
  public:
   ClipByScalarMaxKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMaxKernel() = default;
@@ -45,13 +62,14 @@ class ClipByScalarMaxKernel<DeviceType::kCPU, T> final : public user_op::OpKerne
   void Compute(user_op::KernelContext* ctx) override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    ClipByMaxFunctor<T> clip_fn(ctx->GetAttr<float>("max"));
-    ClipUtil<T>::Forward(clip_fn, y->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>());
+    ClipByMaxFunctor<T> clip_func(ctx->GetAttr<float>("max"));
+    ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
+                                            x->dptr<T>(), y->mut_dptr<T>());
   }
 };
 
-template<typename T>
-class ClipByScalarGradKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class ClipByScalarGradKernel final : public user_op::OpKernel {
  public:
   ClipByScalarGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarGradKernel() = default;
@@ -62,14 +80,14 @@ class ClipByScalarGradKernel<DeviceType::kCPU, T> final : public user_op::OpKern
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    ClipByMinMaxGradFunctor<T> clip_fn(ctx->GetAttr<float>("min"), ctx->GetAttr<float>("max"));
-    ClipUtil<T>::Backward(clip_fn, dx->shape().elem_cnt(), x->dptr<T>(), dy->dptr<T>(),
-                          dx->mut_dptr<T>());
+    ClipByMinMaxGradFunctor<T> clip_func(ctx->GetAttr<float>("min"), ctx->GetAttr<float>("max"));
+    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+                                             x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
 };
 
-template<typename T>
-class ClipByScalarMinGradKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class ClipByScalarMinGradKernel final : public user_op::OpKernel {
  public:
   ClipByScalarMinGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMinGradKernel() = default;
@@ -80,14 +98,14 @@ class ClipByScalarMinGradKernel<DeviceType::kCPU, T> final : public user_op::OpK
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    ClipByMinGradFunctor<T> clip_fn(ctx->GetAttr<float>("min"));
-    ClipUtil<T>::Backward(clip_fn, dx->shape().elem_cnt(), x->dptr<T>(), dy->dptr<T>(),
-                          dx->mut_dptr<T>());
+    ClipByMinGradFunctor<T> clip_func(ctx->GetAttr<float>("min"));
+    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+                                             x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
 };
 
-template<typename T>
-class ClipByScalarMaxGradKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
  public:
   ClipByScalarMaxGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMaxGradKernel() = default;
@@ -98,13 +116,57 @@ class ClipByScalarMaxGradKernel<DeviceType::kCPU, T> final : public user_op::OpK
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    ClipByMaxGradFunctor<T> clip_fn(ctx->GetAttr<float>("max"));
-    ClipUtil<T>::Backward(clip_fn, dx->shape().elem_cnt(), x->dptr<T>(), dy->dptr<T>(),
-                          dx->mut_dptr<T>());
+    ClipByMaxGradFunctor<T> clip_func(ctx->GetAttr<float>("max"));
+    ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
+                                             x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+#define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \
+  REGISTER_USER_KERNEL(#op_type_name)                                                           \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
+        return new kernel_name##Kernel<device_type_v, dtype>(ctx);                              \
+      })                                                                                        \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) -> bool {                      \
+        return (ctx.device_type() == device_type_v                                              \
+                && ctx.TensorDesc4ArgNameAndIndex("y", 0)->data_type()                          \
+                       == GetDataType<dtype>::value);                                           \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+#define REGISTER_CLIP_GRAD_KERNEL(op_type_name, kernel_name, device_type_v, dtype)              \
+  REGISTER_USER_KERNEL(#op_type_name)                                                           \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
+        return new kernel_name##GradKernel<device_type_v, dtype>(ctx);                          \
+      })                                                                                        \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) -> bool {                      \
+        return (ctx.device_type() == device_type_v                                              \
+                && ctx.TensorDesc4ArgNameAndIndex("dx", 0)->data_type()                         \
+                       == GetDataType<dtype>::value);                                           \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+#define REGISTER_CLIP_KERNELS(device_type_v, dtype_pair)                                          \
+  REGISTER_CLIP_KERNEL(clip_by_scalar, ClipByScalar, device_type_v, OF_PP_PAIR_FIRST(dtype_pair)) \
+  REGISTER_CLIP_KERNEL(clip_by_scalar_min, ClipByScalarMin, device_type_v,                        \
+                       OF_PP_PAIR_FIRST(dtype_pair))                                              \
+  REGISTER_CLIP_KERNEL(clip_by_scalar_max, ClipByScalarMax, device_type_v,                        \
+                       OF_PP_PAIR_FIRST(dtype_pair))                                              \
+  REGISTER_CLIP_GRAD_KERNEL(clip_by_scalar_grad, ClipByScalar, device_type_v,                     \
+                            OF_PP_PAIR_FIRST(dtype_pair))                                         \
+  REGISTER_CLIP_GRAD_KERNEL(clip_by_scalar_min_grad, ClipByScalarMin, device_type_v,              \
+                            OF_PP_PAIR_FIRST(dtype_pair))                                         \
+  REGISTER_CLIP_GRAD_KERNEL(clip_by_scalar_max_grad, ClipByScalarMax, device_type_v,              \
+                            OF_PP_PAIR_FIRST(dtype_pair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

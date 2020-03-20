@@ -22,8 +22,6 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
       .MakeSplitSignatureListBuilder(
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes())
       .Build(ctx->sbp_sig_list());
-  SbpSignatureBuilder().PartialSum("x", 0).PartialSum("y", 0).Build(
-      ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
@@ -46,7 +44,7 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
       .MakeSplitSignatureListBuilder(
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes())
       .Build(ctx->sbp_sig_list());
-  SbpSignatureBuilder().PartialSum("x", 0).PartialSum("y", 0).Build(
+  SbpSignatureBuilder().Broadcast("x", 0).PartialSum("dy", 0).PartialSum("dx", 0).Build(
       ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
