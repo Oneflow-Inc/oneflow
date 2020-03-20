@@ -96,7 +96,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   DimVector weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
-  int32_t groups = GetValFromCustomizedConf<int32_t>("groups");
+  const int32_t groups = GetValFromCustomizedConf<int32_t>("groups");
   CHECK_GT(groups, 0);
   CHECK_LE(groups, filters);
   CHECK_EQ_OR_RETURN(filters % groups, 0);
