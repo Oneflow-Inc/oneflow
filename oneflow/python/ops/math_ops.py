@@ -692,26 +692,31 @@ def top_k(input, k=1, sorted=True, name=None):
     )
 
 
-@oneflow_export("math.clip_by_value", "clip_by_value", "clamp")
+@oneflow_export("math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp")
 def clip_by_value(values, min_value=None, max_value=None, name=None):
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
-    if min_value is None and max_value is None:
+    if min_value is not None and max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar")
+            .SetAttr("min", float(min_value), "AttrTypeFloat")
+            .SetAttr("max", float(max_value), "AttrTypeFloat")
+        )
+    elif min_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_min")
+            .SetAttr("min", float(min_value), "AttrTypeFloat")
+        )
+    elif max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_max")
+            .SetAttr("max", float(max_value), "AttrTypeFloat")
+        )
+    else:
         raise ValueError("min_value and max_value cannot be None at the same time")
 
-    op_builder = flow.user_op_builder(name).Op("clip_by_value").Input("x", [values])
-
-    if min_value is not None:
-        min_tensor = flow.constant(
-            min_value, dtype=values.dtype, shape=(1,), name=name + "_ConstantMin"
-        )
-        op_builder.Input("min", [min_tensor])
-
-    if max_value is not None:
-        max_tensor = flow.constant(
-            max_value, dtype=values.dtype, shape=(1,), name=name + "_ConstantMax"
-        )
-        op_builder.Input("max", [max_tensor])
-
-    return op_builder.Output("y").Build().RemoteBlobList()[0]
+    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
