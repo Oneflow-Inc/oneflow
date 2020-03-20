@@ -15,7 +15,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   if (GetValFromCustomizedConf<int32_t>("groups") != 1
       && (!DevIsGpuAndEnableCudnn()
           || GetValFromCustomizedConf<std::string>("data_format") == "channels_last")) {
-    UNIMPLEMENTED();
+    LOG(FATAL) << "only enable_cudnn and channel_first support groups > 1";
   }
   EnrollInputBn("in");
   EnrollOutputBn("out");
