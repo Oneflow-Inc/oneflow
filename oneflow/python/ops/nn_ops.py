@@ -73,7 +73,10 @@ def conv2d(
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
+
     assert isinstance(groups, int)
+    if groups > 1 and channel_pos == "channels_last":
+        raise ValueError("channels_last not support groups > 1")
     op_conf.conv_2d_conf.groups = groups
 
     compile_context.CurJobAddOp(op_conf)
