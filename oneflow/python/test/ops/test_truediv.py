@@ -26,7 +26,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
                 shape=x_shape,
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5),
+                    minval=-2**100, maxval=2**100),
                 trainable=True,
             )
             y = flow.get_variable(
@@ -34,7 +34,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
                 shape=y_shape,
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=4),
+                    minval=-2**100, maxval=2**100),
                 trainable=True,
             )
             loss = flow.math.truediv(x, y)
@@ -72,8 +72,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape):
 def test_truediv(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(2, 2)]
-    arg_dict["y_shape"] = [(2, 2)]
+    arg_dict["x_shape"] = [(9, 9)]
+    arg_dict["y_shape"] = [(9, 9)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-

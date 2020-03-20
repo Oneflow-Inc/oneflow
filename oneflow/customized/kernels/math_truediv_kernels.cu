@@ -8,19 +8,13 @@ namespace user_op {
 
 #ifdef WITH_CUDA
 
-__device__ float PowCalXDiff4GpuFloat(float x, float y, float dz) {
-  return dz * y * (powf(x, y - 1));
+__device__ float TruedivCalXDiff4GpuFloat(float x, float y, float dz) { return dz * fdivide(1, y); }
+
+__device__ float TruedivCalYDiff4GpuFloat(float x, float y, float dz) {
+  return dz * (-1) * fdivide(x, powf(y, 2));
 }
 
-__device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
-  if (x > 0) {
-    return dz * logf(x) * (powf(x, y));
-  } else {
-    return 0;
-  }
-}
-
-#define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
+#define MATH_TRUEDIV_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)      \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
     CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                                    \
   }                                                                                              \
@@ -65,35 +59,32 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
                               ctx->cuda_stream()>>>(n, x, y, dz, dy);                            \
   }
 
-#define MATH_BINARY_GPU_FLOAT_SEQ OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)
+#define MATH_TRUEDIV_GPU_FLOAT_SEQ OF_PP_MAKE_TUPLE_SEQ(Truediv)
 
-MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
+MATH_TRUEDIV_GPU(Truediv, fdivide, TruedivCalXDiff4GpuFloat, TruedivCalYDiff4GpuFloat, float);
 
-class MathBinaryGpuFloatKernel final : public OpKernel {
+class MathTruedivGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
-  MathBinaryGpuFloatKernel() = default;
-  ~MathBinaryGpuFloatKernel() = default;
+  MathTruedivGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivGpuFloatKernel() = default;
+  ~MathTruedivGpuFloatKernel() = default;
 
  private:
   void Compute(KernelContext* ctx) override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
 
-#define MATH_BINARY_FORWARD(binary_math_type_str, func_name_prefix)             \
-  if (binary_math_type == binary_math_type_str) {                               \
-    func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z); \
-  }
+#define MATH_TRUEDIV_FORWARD(func_name_prefix) \
+  func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z);
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-#undef MATH_BINARY_FORWARD
+    OF_PP_FOR_EACH_TUPLE(MATH_TRUEDIV_FORWARD, MATH_TRUEDIV_GPU_FLOAT_SEQ);
+#undef MATH_TRUEDIV_FORWARD
   }
 };
 
-REGISTER_USER_KERNEL("binary")
-    .SetCreateFn([](const KernelInitContext& ctx) { return new MathBinaryGpuFloatKernel(ctx); })
+REGISTER_USER_KERNEL("truediv")
+    .SetCreateFn([](const KernelInitContext& ctx) { return new MathTruedivGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
@@ -104,11 +95,11 @@ REGISTER_USER_KERNEL("binary")
       return false;
     });
 
-class MathBinaryXGradGpuFloatKernel final : public OpKernel {
+class MathTruedivXGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryXGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
-  MathBinaryXGradGpuFloatKernel() = default;
-  ~MathBinaryXGradGpuFloatKernel() = default;
+  MathTruedivXGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivXGradGpuFloatKernel() = default;
+  ~MathTruedivXGradGpuFloatKernel() = default;
 
  private:
   void Compute(KernelContext* ctx) override {
@@ -116,23 +107,20 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
 
-#define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                          \
-  if (binary_math_type == binary_math_type_str) {                                             \
-    func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx); \
-  }
+#define MATH_TRUEDIV_BACKWARD(func_name_prefix) \
+  func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx);
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-#undef MATH_BINARY_FORWARD
+    OF_PP_FOR_EACH_TUPLE(MATH_TRUEDIV_BACKWARD, MATH_TRUEDIV_GPU_FLOAT_SEQ);
+#undef MATH_TRUEDIV_FORWARD
   }
 };
 
-class MathBinaryYGradGpuFloatKernel final : public OpKernel {
+class MathTruedivYGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryYGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
-  MathBinaryYGradGpuFloatKernel() = default;
-  ~MathBinaryYGradGpuFloatKernel() = default;
+  MathTruedivYGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivYGradGpuFloatKernel() = default;
+  ~MathTruedivYGradGpuFloatKernel() = default;
 
  private:
   void Compute(KernelContext* ctx) override {
@@ -140,21 +128,18 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
 
-#define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                          \
-  if (binary_math_type == binary_math_type_str) {                                             \
-    func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy); \
-  }
+#define MATH_TRUEDIV_BACKWARD(func_name_prefix) \
+  func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy);
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-#undef MATH_BINARY_FORWARD
+    OF_PP_FOR_EACH_TUPLE(MATH_TRUEDIV_BACKWARD, MATH_TRUEDIV_GPU_FLOAT_SEQ);
+#undef MATH_TRUEDIV_FORWARD
   }
 };
 
-REGISTER_USER_KERNEL("binary_x_grad")
+REGISTER_USER_KERNEL("truediv_x_grad")
     .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathBinaryXGradGpuFloatKernel(ctx);
+      return new MathTruedivXGradGpuFloatKernel(ctx);
     })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
@@ -164,9 +149,9 @@ REGISTER_USER_KERNEL("binary_x_grad")
       return false;
     });
 
-REGISTER_USER_KERNEL("binary_y_grad")
+REGISTER_USER_KERNEL("truediv_y_grad")
     .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathBinaryYGradGpuFloatKernel(ctx);
+      return new MathTruedivYGradGpuFloatKernel(ctx);
     })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);

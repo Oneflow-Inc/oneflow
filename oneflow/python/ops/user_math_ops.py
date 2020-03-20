@@ -364,9 +364,8 @@ def pow(x, y, name=None):
 def truediv(x, y, name=None):
     if name is None:
         name = id_util.UniqueStr("Truediv_")
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("truediv")\
             .Input("x",[x])\
             .Input("y",[y])\
             .Output("z")\
-            .SetAttr("binary_math_type", "Truediv", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
