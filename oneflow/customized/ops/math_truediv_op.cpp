@@ -1,22 +1,11 @@
-#include <unistd.h>
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/grad_registration.h"
-#include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/framework/user_op_attr.pb.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
-
 namespace oneflow {
 
 REGISTER_USER_OP("truediv")
     .Input("x")
     .Input("y")
     .Output("z")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* z_shape = ctx->Shape4ArgNameAndIndex("z", 0);
@@ -24,20 +13,20 @@ REGISTER_USER_OP("truediv")
       *z_shape = *x_shape;
       return Maybe<void>::Ok();
     })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
-      DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
-      DataType* z_dtype = ctx->Dtype4ArgNameAndIndex("z", 0);
-      CHECK(*y_dtype == *x_dtype);
-      if (*x_dtype == DataType::kInt8) {
-        *z_dtype = DataType::kFloat;
-      } else if (*x_dtype == DataType::kInt32 || *x_dtype == DataType::kInt64) {
-        *z_dtype = DataType::kDouble;
-      } else {
-        *z_dtype = *x_dtype;
-      }
-      return Maybe<void>::Ok();
-    })
+    // .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    //   DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
+    //   DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+    //   DataType* z_dtype = ctx->Dtype4ArgNameAndIndex("z", 0);
+    //   CHECK(*y_dtype == *x_dtype);
+    //   if (*x_dtype == DataType::kInt8) {
+    //     *z_dtype = DataType::kFloat;
+    //   } else if (*x_dtype == DataType::kInt32 || *x_dtype == DataType::kInt64) {
+    //     *z_dtype = DataType::kDouble;
+    //   } else {
+    //     *z_dtype = *x_dtype;
+    //   }
+    //   return Maybe<void>::Ok();
+    // })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor_x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       // const user_op::TensorDesc& tensor_y = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
@@ -54,7 +43,7 @@ REGISTER_USER_OP("truediv_x_grad")
     .Input("y")
     .Input("dz")
     .Output("dx")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
@@ -63,14 +52,14 @@ REGISTER_USER_OP("truediv_x_grad")
       *dx_shape = *x_shape;
       return Maybe<void>::Ok();
     })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
-      DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
-      DataType* dx_dtype = ctx->Dtype4ArgNameAndIndex("dx", 0);
-      CHECK(*y_dtype == *x_dtype);
-      *dx_dtype = *x_dtype;
-      return Maybe<void>::Ok();
-    })
+    // .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    //   DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
+    //   DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+    //   DataType* dx_dtype = ctx->Dtype4ArgNameAndIndex("dx", 0);
+    //   CHECK(*y_dtype == *x_dtype);
+    //   *dx_dtype = *x_dtype;
+    //   return Maybe<void>::Ok();
+    // })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0);
       SbpSignatureBuilder()
@@ -86,7 +75,7 @@ REGISTER_USER_OP("truediv_y_grad")
     .Input("y")
     .Input("dz")
     .Output("dy")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
@@ -95,14 +84,14 @@ REGISTER_USER_OP("truediv_y_grad")
       *dy_shape = *y_shape;
       return Maybe<void>::Ok();
     })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
-      DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
-      DataType* dy_dtype = ctx->Dtype4ArgNameAndIndex("dy", 0);
-      CHECK(*y_dtype == *x_dtype);
-      *dy_dtype = *x_dtype;
-      return Maybe<void>::Ok();
-    })
+    // .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    //   DataType* x_dtype = ctx->Dtype4ArgNameAndIndex("x", 0);
+    //   DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+    //   DataType* dy_dtype = ctx->Dtype4ArgNameAndIndex("dy", 0);
+    //   CHECK(*y_dtype == *x_dtype);
+    //   *dy_dtype = *x_dtype;
+    //   return Maybe<void>::Ok();
+    // })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0);
       SbpSignatureBuilder()

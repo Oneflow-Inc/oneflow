@@ -65,7 +65,7 @@ MATH_TRUEDIV_GPU(Truediv, fdivide, TruedivCalXDiff4GpuFloat, TruedivCalYDiff4Gpu
 
 class MathTruedivGpuFloatKernel final : public OpKernel {
  public:
-  MathTruedivGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathTruedivGpuFloatKernel() = default;
   ~MathTruedivGpuFloatKernel() = default;
 
@@ -84,11 +84,11 @@ class MathTruedivGpuFloatKernel final : public OpKernel {
 };
 
 REGISTER_USER_KERNEL("truediv")
-    .SetCreateFn([](const KernelInitContext& ctx) { return new MathTruedivGpuFloatKernel(ctx); })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathTruedivGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
+      if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
           && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
@@ -97,7 +97,7 @@ REGISTER_USER_KERNEL("truediv")
 
 class MathTruedivXGradGpuFloatKernel final : public OpKernel {
  public:
-  MathTruedivXGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivXGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathTruedivXGradGpuFloatKernel() = default;
   ~MathTruedivXGradGpuFloatKernel() = default;
 
@@ -118,7 +118,7 @@ class MathTruedivXGradGpuFloatKernel final : public OpKernel {
 
 class MathTruedivYGradGpuFloatKernel final : public OpKernel {
  public:
-  MathTruedivYGradGpuFloatKernel(const KernelInitContext& ctx) : OpKernel(ctx) {}
+  MathTruedivYGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathTruedivYGradGpuFloatKernel() = default;
   ~MathTruedivYGradGpuFloatKernel() = default;
 
@@ -138,24 +138,20 @@ class MathTruedivYGradGpuFloatKernel final : public OpKernel {
 };
 
 REGISTER_USER_KERNEL("truediv_x_grad")
-    .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathTruedivXGradGpuFloatKernel(ctx);
-    })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathTruedivXGradGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      if (ctx.device() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
     });
 
 REGISTER_USER_KERNEL("truediv_y_grad")
-    .SetCreateFn([](const KernelInitContext& ctx) {
-      return new MathTruedivYGradGpuFloatKernel(ctx);
-    })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathTruedivYGradGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      if (ctx.device() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {
+      if (ctx.device_type() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
       }
       return false;
