@@ -53,8 +53,10 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
 
 REGISTER_USER_OP("clip_by_scalar")
     .Input("x")
-    .Attr("min", UserOpAttrType::kAtFloat)
-    .Attr("max", UserOpAttrType::kAtFloat)
+    .Attr("floating_min", UserOpAttrType::kAtDouble)
+    .Attr("integral_min", UserOpAttrType::kAtInt64)
+    .Attr("floating_max", UserOpAttrType::kAtDouble)
+    .Attr("integral_max", UserOpAttrType::kAtInt64)
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetBatchAxisInferFn(InferClipBatchAxis)
@@ -62,7 +64,8 @@ REGISTER_USER_OP("clip_by_scalar")
 
 REGISTER_USER_OP("clip_by_scalar_min")
     .Input("x")
-    .Attr("min", UserOpAttrType::kAtFloat)
+    .Attr("floating_min", UserOpAttrType::kAtDouble)
+    .Attr("integral_min", UserOpAttrType::kAtInt64)
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetBatchAxisInferFn(InferClipBatchAxis)
@@ -70,7 +73,8 @@ REGISTER_USER_OP("clip_by_scalar_min")
 
 REGISTER_USER_OP("clip_by_scalar_max")
     .Input("x")
-    .Attr("max", UserOpAttrType::kAtFloat)
+    .Attr("floating_max", UserOpAttrType::kAtDouble)
+    .Attr("integral_max", UserOpAttrType::kAtInt64)
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetBatchAxisInferFn(InferClipBatchAxis)
@@ -79,8 +83,10 @@ REGISTER_USER_OP("clip_by_scalar_max")
 REGISTER_USER_OP("clip_by_scalar_grad")
     .Input("dy")
     .Input("x")
-    .Attr("min", UserOpAttrType::kAtFloat)
-    .Attr("max", UserOpAttrType::kAtFloat)
+    .Attr("floating_min", UserOpAttrType::kAtDouble)
+    .Attr("integral_min", UserOpAttrType::kAtInt64)
+    .Attr("floating_max", UserOpAttrType::kAtDouble)
+    .Attr("integral_max", UserOpAttrType::kAtInt64)
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetBatchAxisInferFn(InferClipGradBatchAxis)
@@ -89,7 +95,8 @@ REGISTER_USER_OP("clip_by_scalar_grad")
 REGISTER_USER_OP("clip_by_scalar_min_grad")
     .Input("dy")
     .Input("x")
-    .Attr("min", UserOpAttrType::kAtFloat)
+    .Attr("floating_min", UserOpAttrType::kAtDouble)
+    .Attr("integral_min", UserOpAttrType::kAtInt64)
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetBatchAxisInferFn(InferClipGradBatchAxis)
@@ -98,7 +105,8 @@ REGISTER_USER_OP("clip_by_scalar_min_grad")
 REGISTER_USER_OP("clip_by_scalar_max_grad")
     .Input("dy")
     .Input("x")
-    .Attr("max", UserOpAttrType::kAtFloat)
+    .Attr("floating_max", UserOpAttrType::kAtDouble)
+    .Attr("integral_max", UserOpAttrType::kAtInt64)
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetBatchAxisInferFn(InferClipGradBatchAxis)
@@ -108,13 +116,16 @@ REGISTER_USER_OP_GRAD("clip_by_scalar")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_grad")
-                                                 .Attr("min", op.attr<float>("min"))
-                                                 .Attr("max", op.attr<float>("max"))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("x", op.input("x", 0))
-                                                 .Output("dx")
-                                                 .Build();
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("clip_by_scalar_grad")
+                .Attr("floating_min", op.attr<double>("floating_min"))
+                .Attr("integral_min", op.attr<int64_t>("integral_min"))
+                .Attr("floating_max", op.attr<double>("floating_max"))
+                .Attr("integral_max", op.attr<int64_t>("integral_max"))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("x", op.input("x", 0))
+                .Output("dx")
+                .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
@@ -124,12 +135,14 @@ REGISTER_USER_OP_GRAD("clip_by_scalar_min")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_min_grad")
-                                                 .Attr("min", op.attr<float>("min"))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("x", op.input("x", 0))
-                                                 .Output("dx")
-                                                 .Build();
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("clip_by_scalar_min_grad")
+                .Attr("floating_min", op.attr<double>("floating_min"))
+                .Attr("integral_min", op.attr<int64_t>("integral_min"))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("x", op.input("x", 0))
+                .Output("dx")
+                .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
@@ -139,12 +152,14 @@ REGISTER_USER_OP_GRAD("clip_by_scalar_max")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("clip_by_scalar_max_grad")
-                                                 .Attr("max", op.attr<float>("max"))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("x", op.input("x", 0))
-                                                 .Output("dx")
-                                                 .Build();
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("clip_by_scalar_max_grad")
+                .Attr("floating_max", op.attr<double>("floating_max"))
+                .Attr("integral_max", op.attr<int64_t>("integral_max"))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("x", op.input("x", 0))
+                .Output("dx")
+                .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }

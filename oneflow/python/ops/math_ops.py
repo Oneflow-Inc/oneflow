@@ -701,20 +701,24 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .SetAttr("min", float(min_value), "AttrTypeFloat")
-            .SetAttr("max", float(max_value), "AttrTypeFloat")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .SetAttr("min", float(min_value), "AttrTypeFloat")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .SetAttr("max", float(max_value), "AttrTypeFloat")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
