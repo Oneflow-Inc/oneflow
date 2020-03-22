@@ -157,3 +157,4 @@ def test_conv6(test_case):
     arg_dict["groups"] = [32]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
