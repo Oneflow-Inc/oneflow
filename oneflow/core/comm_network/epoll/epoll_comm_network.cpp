@@ -94,6 +94,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
+  LOG(INFO) << "Communication in SOCKET mode.";
 }
 
 void EpollCommNet::InitSockets() {

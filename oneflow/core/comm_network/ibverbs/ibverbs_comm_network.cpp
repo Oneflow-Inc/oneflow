@@ -181,12 +181,12 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, ibv_port_attr* port_attr, i
         gid_index = sgid_index;
       }
       if (!IsGidTypeRoceV2(context_->device->ibdev_path, port_num, gid_index)) {
-        LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << gid_index;
+        LOG(FATAL) << "RoCE v2 is not configured for GID_INDEX " << gid_index;
       }
       break;
     case (IBV_LINK_LAYER_INFINIBAND): break;
     default:
-      LOG(INFO) << "Unknown port link layer. Currently supporting Ethernet and InfiniBand only.";
+      LOG(FATAL) << "Unknown port link layer. Currently supporting Ethernet and InfiniBand only.";
   }
   PCHECK(ibv_query_gid(context_, port_num, gid_index, gid) == 0);
   return gid_index;
@@ -236,6 +236,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   ConnectTopo();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
   OF_BARRIER();
+  LOG(INFO) << "Communication in RDMA mode.";
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
