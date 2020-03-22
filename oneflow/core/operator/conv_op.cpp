@@ -12,10 +12,10 @@ template<int32_t NDims>
 void ConvOp<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
-  if (GetValFromCustomizedConf<int32_t>("groups") != 1
-      && (!DevIsGpuAndEnableCudnn()
-          || GetValFromCustomizedConf<std::string>("data_format") == "channels_last")) {
-    LOG(FATAL) << "only enable_cudnn and channel_first support groups > 1";
+  if (GetValFromCustomizedConf<int32_t>("groups") != 1) {
+    CHECK(DevIsGpuAndEnableCudnn()) << "only enable_cudnn support groups > 1";
+    CHECK_EQ(GetValFromCustomizedConf<std::string>("data_format"), "channels_first")
+        << "only channel_first support groups > 1";
   }
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -97,15 +97,15 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   DimVector weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
   const int32_t groups = GetValFromCustomizedConf<int32_t>("groups");
-  CHECK_GT(groups, 0);
-  CHECK_LE(groups, filters);
+  CHECK_GT_OR_RETURN(groups, 0);
+  CHECK_LE_OR_RETURN(groups, filters);
   CHECK_EQ_OR_RETURN(filters % groups, 0);
   if (data_format == "channels_first") {
-    CHECK_LE(groups, weight_shape[1]);
+    CHECK_LE_OR_RETURN(groups, weight_shape[1]);
     CHECK_EQ_OR_RETURN(weight_shape[1] % groups, 0);
     weight_shape[1] = weight_shape[1] / groups;
   } else if (data_format == "channels_last") {
-    CHECK_LE(groups, weight_shape[NDims + 1]);
+    CHECK_LE_OR_RETURN(groups, weight_shape[NDims + 1]);
     CHECK_EQ_OR_RETURN(weight_shape[NDims + 1] % groups, 0);
     weight_shape[NDims + 1] = weight_shape[NDims + 1] / groups;
   } else {
