@@ -124,26 +124,22 @@ def conv2d(
     else:
         assert isinstance(kernel_size, (list, tuple))
         kernel_size = tuple(kernel_size)
-    if data_format.upper() == "NCHW":
-        weight_shape = (filters, inputs.static_shape[1]) + kernel_size
-    elif data_format.upper() == "NHWC":
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.static_shape[3])
-    else:
-        raise ValueError("data_format must be in NCHW or NHWC")
 
     assert isinstance(groups, int)
-    assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCHW":
-            assert groups <= filters
-            assert filters % groups == 0
-            assert groups <= inputs.static_shape[1]
-            assert inputs.static_shape[1] % groups == 0
-            weight_shape[1] = weight_shape[1] / groups
-        elif data_format.upper() == "NHWC":
-            raise ValueError("data_format NHWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
+    assert groups > 0    
+    assert groups <= filters
+    assert filters % groups == 0
+    if data_format.upper() == "NCHW":
+        assert groups <= inputs.static_shape[1]
+        assert inputs.static_shape[1] % groups == 0
+        weight_shape = (filters, int(inputs.static_shape[1] / groups)) + kernel_size
+    elif data_format.upper() == "NHWC":
+        assert groups == 1
+        assert groups <= inputs.static_shape[3]
+        assert inputs.static_shape[3] % groups == 0
+        weight_shape = (filters, kernel_size[0], kernel_size[1], int(inputs.static_shape[3] / groups))
+    else:
+        raise ValueError("data_format must be in NCHW or NHWC")
 
     weight = flow.get_variable(
         weight_name if weight_name else name_prefix + "-weight",

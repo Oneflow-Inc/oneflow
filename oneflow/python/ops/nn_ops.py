@@ -82,7 +82,7 @@ def conv2d(
             assert filters.static_shape[0] % groups == 0
             assert groups <= input.static_shape[1]
             assert input.static_shape[1] % groups == 0
-            assert filters.static_shape[1] == input.static_shape[1] / groups
+            assert filters.static_shape[1] == int(input.static_shape[1] / groups)
         elif data_format.upper() == "NHWC":
             raise ValueError("data_format NHWC not support groups > 1")
         else:
