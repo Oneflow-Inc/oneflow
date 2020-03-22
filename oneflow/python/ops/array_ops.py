@@ -223,34 +223,71 @@ def slice(input_, begin, size, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 @oneflow_export("slice_v2")
-# slice_confs: list of tuple/list (begin, end, stride)
-def slice_v2(input, slice_confs, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("SliceV2_"))
-    setattr(op_conf.slice_v2_conf, "in", input.logical_blob_name)
-    setattr(op_conf.slice_v2_conf, "out", "out")
-    slice_conf_list = []
-    for dim_slice_conf in slice_confs:
-        assert isinstance(dim_slice_conf, dict)
-        slice_conf = op_conf_util.DimSliceConf()
-        if "begin" in dim_slice_conf:
-            slice_conf.start = dim_slice_conf["begin"]
-        if "end" in dim_slice_conf:
-            slice_conf.end = dim_slice_conf["end"]
-        if "stride" in dim_slice_conf:
-            slice_conf.stride = dim_slice_conf["stride"]
-        else:
-            slice_conf.stride = 1
-        slice_conf_list.append(slice_conf)
-    op_conf.slice_v2_conf.dim_slice_conf.extend(slice_conf_list)
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def slice_v2(input, slice_tup_list, name=None):
+    r"""Extracts a slice from a tensor.
+    Args:
+        input: A `Blob`.
+        slice_tup_list: A list of tuple, indicate each dimension slice (begin, end, stride). 
+            Note: The function don't support slice at dim0 for now , first element of slice_tup_list must be 
+            (None, None, None).
+        name: A name for the operation (optional).
+    """
+    name = name or id_util.UniqueStr("SliceV2_")
+    if not isinstance(name, str):
+        raise ValueError('param "name" must be a string')
 
+    ndims = len(input.shape)
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
+        raise ValueError(
+            'param "slice_tup_list" must be a list or tuple whose length should be '
+            'less than or equal to number of dimensions of input'
+        )
+
+    # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
+    if len(slice_tup_list) < ndims:
+        slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list))
+
+    begin_list = []
+    end_list = []
+    stride_list = []
+    has_begin_list = []
+    has_end_list = []
+    for slice_tup, dim in zip(slice_tup_list, input.shape):
+        if not isinstance(slice_tup, (tuple, list)):
+            raise ValueError(
+                "element of slice_tup_list must be a list or tuple with form (begin, end, stride)"
+            )
+        (begin, end, stride) = slice_tup
+        has_begin = 1
+        has_end = 1
+        if begin is None:
+            begin = 0
+            has_begin = 0
+        if end is None:
+            end = 0
+            has_end = 0
+        if stride is None:
+            stride = 1
+        begin_list.append(begin)
+        end_list.append(end)
+        stride_list.append(stride)
+        has_begin_list.append(has_begin)
+        has_end_list.append(has_end)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice_v2")
+        .Input("x", [input])
+        .Output("y")
+        .SetAttr("begin", begin_list, "AttrTypeListInt64")
+        .SetAttr("end", end_list, "AttrTypeListInt64")
+        .SetAttr("stride", stride_list, "AttrTypeListInt64")
+        .SetAttr("has_begin", has_begin_list, "AttrTypeListInt64")
+        .SetAttr("has_end", has_end_list, "AttrTypeListInt64")
+        .Build()
+    )
+    return op.RemoteBlobList()[0]
 
 @oneflow_export("concat")
 def concat(values, axis, name=None):
