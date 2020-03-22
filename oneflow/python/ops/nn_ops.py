@@ -75,8 +75,18 @@ def conv2d(
     op_conf.conv_2d_conf.use_bias = False
 
     assert isinstance(groups, int)
-    if groups > 1 and channel_pos == "channels_last":
-        raise ValueError("channels_last not support groups > 1")
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCHW":
+            assert groups <= filters.static_shape[0]
+            assert filters.static_shape[0] % groups == 0
+            assert groups <= input.static_shape[1]
+            assert input.static_shape[1] % groups == 0
+            assert filters.static_shape[1] == input.static_shape[1] / groups
+        elif data_format.upper() == "NHWC":
+            raise ValueError("data_format NHWC not support groups > 1")
+        else:
+            raise ValueError("invalid data_format")
     op_conf.conv_2d_conf.groups = groups
 
     compile_context.CurJobAddOp(op_conf)
