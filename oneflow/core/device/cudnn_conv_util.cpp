@@ -172,6 +172,7 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
   CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  CudaCheck(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
 
