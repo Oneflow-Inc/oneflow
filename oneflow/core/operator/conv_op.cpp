@@ -109,7 +109,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
     CHECK_EQ_OR_RETURN(weight_shape[NDims + 1] % groups, 0);
     weight_shape[NDims + 1] = weight_shape[NDims + 1] / groups;
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
