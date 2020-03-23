@@ -25,6 +25,7 @@ class SyncDynamicResizeOp : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* size = GetBlobDesc4BnInOp("size");
     CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
+    CHECK_EQ_OR_RETURN(size->data_type(), conf.size_data_type());
     CHECK_OR_RETURN(IsIntegralDataType(size->data_type()));
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
