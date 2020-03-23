@@ -24,7 +24,7 @@ def CurJobAddMirroredOp(op_conf, parallel_conf=None):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 
 def GetOpConfAndParallelConf(op_conf, parallel_conf=None):
-    name_scope.PrependNameScopePrefix4OpConf(op_conf)
+    name_scope.PrependOpNamePrefixIfNeed(op_conf)
     if not op_conf.HasField('device_type'):
         op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)

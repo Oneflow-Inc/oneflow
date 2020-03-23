@@ -6,9 +6,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
 
 
-NAME_SCOPE_OP_CONF_BLACKLIST = ["variable_conf", "decode_ofrecord_conf"]
-
-
 @oneflow_export("experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
 def name_scope(name):
@@ -40,9 +37,9 @@ def name_scope_stack_top():
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
     if job_name not in sess.job_name2name_scope_stack:
-        return ""
+        return None
     if len(sess.job_name2name_scope_stack[job_name]) == 0:
-        return ""
+        return None
     return sess.job_name2name_scope_stack[job_name][-1]
 
 
@@ -55,10 +52,12 @@ def GetJobNameScopePrefix(job_name):
     return "-".join(sess.job_name2name_scope_stack[job_name]) + "-"
 
 
-def PrependNameScopePrefix4OpConf(op_conf):
-    for no_prefix_conf in NAME_SCOPE_OP_CONF_BLACKLIST:
-        if op_conf.HasField(no_prefix_conf):
-            return
+def PrependOpNamePrefixIfNeed(op_conf):
+    if op_conf.HasField("variable_conf"):
+        return
+
+    if op_conf.HasField("decode_ofrecord_conf"):
+        return
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     op_conf.name = GetJobNameScopePrefix(job_name) + op_conf.name
