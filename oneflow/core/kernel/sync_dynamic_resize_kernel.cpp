@@ -83,4 +83,43 @@ REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int8_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int32_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
 
+template<typename SizeType>
+class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeCPUKernel);
+  SyncDynamicResizeCPUKernel() = default;
+  ~SyncDynamicResizeCPUKernel() override = default;
+
+ private:
+  bool IsKernelLaunchSynchronized() const override { return false; }
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
+    CHECK_EQ(conf.axis(), 0);
+    const Blob* in = BnInOp2Blob("in");
+    const Blob* size = BnInOp2Blob("size");
+    Blob* out = BnInOp2Blob("out");
+    AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+               out->mem_case(), in->mem_case());
+    const SizeType new_size = *size->dptr<SizeType>();
+    CHECK_GE(new_size, 0);
+    CHECK_LE(new_size, out->shape_view().At(conf.axis()));
+    out->mut_shape_view()->Set(conf.axis(), new_size);
+  }
+};
+
+#define REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(stype)                                         \
+  NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeCPUKernel<stype>) \
+      .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
+        return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kCPU         \
+                && GetDataType<stype>::value                                                   \
+                       == kernel_conf.op_attribute()                                           \
+                              .op_conf()                                                       \
+                              .sync_dynamic_resize_conf()                                      \
+                              .size_data_type());                                              \
+      })
+REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(int8_t);
+REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(int32_t);
+REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(int64_t);
+
 }  // namespace oneflow

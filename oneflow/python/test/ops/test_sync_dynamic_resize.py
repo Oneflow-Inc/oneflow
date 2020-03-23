@@ -9,7 +9,7 @@ from test_util import type_name_to_np_type
 
 def test_sync_dynamic_resize(_):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [
         (100,),
         (100, 100),
