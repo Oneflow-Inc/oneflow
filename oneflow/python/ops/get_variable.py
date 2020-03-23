@@ -46,7 +46,9 @@ def get_variable(
         distribute=distribute,
     )
     op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-    return _CreateVariableBlob(op_conf, parallel_conf)
+    var_blob = _CreateVariableBlob(op_conf, parallel_conf)
+    sess.var_name2var_blob[op_conf.name] = var_blob
+    return var_blob
 
 
 def _GenerateVariableOpConf(
