@@ -28,6 +28,7 @@ class Session(object):
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
+        self.var_name2var_blob_ = {}
         self.UpdateFunctionFlagName2DefaultVal()
 
     @property
@@ -53,6 +54,9 @@ class Session(object):
 
     @property
     def inter_user_job_info(self): return self.inter_user_job_info_
+
+    @property
+    def var_name2var_blob(self): return self.var_name2var_blob_
 
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto
