@@ -1,11 +1,12 @@
 from __future__ import absolute_import
 
+import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.python.framework.session_context import GetDefaultSession
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
@@ -24,13 +25,14 @@ def get_variable(
     distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
-    name = compile_context.GetVariablePrefix() + name
+    name = name_scope.GetNameScopePrefix() + name
+    sess = session_context.GetDefaultSession()
+    if name in sess.var_name2var_blob:
+        assert sess.var_name2var_blob[name].static_shape == shape
+        assert sess.var_name2var_blob[name].dtype == dtype
+        return sess.var_name2var_blob[name]
 
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
-
-    sess = GetDefaultSession()
-    if name in sess.var_name2var_blob:
-        return sess.var_name2var_blob[name]
 
     op_conf = _GenerateVariableOpConf(
         name=name,
