@@ -12,10 +12,9 @@ def test_sync_dynamic_resize(_):
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [
         (100,),
-        (100, 100),
-        (1000, 1000),
-        (10, 10, 2000),
-        (10, 10000),
+        (100, 1),
+        (1000, 10),
+        (10, 10, 200),
     ]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     arg_dict["size_type"] = ["int32", "int64"]
