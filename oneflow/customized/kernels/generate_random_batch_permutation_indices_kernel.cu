@@ -63,7 +63,7 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr) {
 
 class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpKernel {
  public:
-  GenerateRandomBatchPermutationIndicesGPUKernel(const user_op::KernelInitContext& ctx)
+  GenerateRandomBatchPermutationIndicesGPUKernel(user_op::KernelInitContext* ctx)
       : user_op::OpKernel(ctx) {}
   GenerateRandomBatchPermutationIndicesGPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;
@@ -96,7 +96,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
-    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
+    .SetCreateFn([](oneflow::user_op::KernelInitContext* ctx) {
       return new GenerateRandomBatchPermutationIndicesGPUKernel(ctx);
     })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {

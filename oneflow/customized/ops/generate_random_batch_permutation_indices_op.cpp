@@ -6,11 +6,8 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr("seed", UserOpAttrType::kAtInt64)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
