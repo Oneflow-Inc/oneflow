@@ -140,13 +140,13 @@ class Session(object):
     def HasAnyCallbackAfterFunctionReturn(self):
         return len(self.uuid2watch_handler) > 0
 
-    def RecordVariableBlob4Job(self, job_name, var_name, var_blob):
+    def StashVariableBlob4Job(self, job_name, var_name, var_blob):
         if job_name not in self.job_name2var_name2var_blob:
             self.job_name2var_name2var_blob[job_name] = dict()
         assert var_name not in self.job_name2var_name2var_blob[job_name]
         self.job_name2var_name2var_blob[job_name][var_name] = var_blob
 
-    def GetRecordedVariableBlobOfJob(self, job_name, var_name):
+    def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
         if job_name not in self.job_name2var_name2var_blob:
             return None
 

@@ -31,7 +31,7 @@ def get_variable(
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_context.GetDefaultSession()
-    var_blob = sess.GetRecordedVariableBlobOfJob(job_name, name)
+    var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
         assert var_blob.static_shape == shape
@@ -50,7 +50,7 @@ def get_variable(
         )
         op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
         var_blob = _CreateVariableBlob(op_conf, parallel_conf)
-        sess.RecordVariableBlob4Job(job_name, op_conf.name, var_blob)
+        sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
 
     return var_blob
 
