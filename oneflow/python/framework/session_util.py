@@ -28,8 +28,8 @@ class Session(object):
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
-        self.var_name2var_blob_ = {}
-        self.op_name_scope_stack_ = []
+        self.job_name2var_name2var_blob_ = {}
+        self.job_name2name_scope_stack_ = {}
         self.UpdateFunctionFlagName2DefaultVal()
 
     @property
@@ -57,10 +57,10 @@ class Session(object):
     def inter_user_job_info(self): return self.inter_user_job_info_
 
     @property
-    def var_name2var_blob(self): return self.var_name2var_blob_
+    def job_name2var_name2var_blob(self): return self.job_name2var_name2var_blob_
 
     @property
-    def op_name_scope_stack(self): return self.op_name_scope_stack_
+    def job_name2name_scope_stack(self): return self.job_name2name_scope_stack_
 
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto
@@ -139,6 +139,22 @@ class Session(object):
 
     def HasAnyCallbackAfterFunctionReturn(self):
         return len(self.uuid2watch_handler) > 0
+
+    def RecordVariableBlob4Job(self, job_name, var_name, var_blob):
+        if job_name not in self.job_name2var_name2var_blob:
+            self.job_name2var_name2var_blob[job_name] = dict()
+        assert var_name not in self.job_name2var_name2var_blob[job_name]
+        self.job_name2var_name2var_blob[job_name][var_name] = var_blob
+
+    def GetRecordedVariableBlobOfJob(self, job_name, var_name):
+        if job_name not in self.job_name2var_name2var_blob:
+            return None
+
+        var_name2var_blob = self.job_name2var_name2var_blob[job_name]
+        if var_name not in var_name2var_blob:
+            return None
+
+        return var_name2var_blob[var_name]
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

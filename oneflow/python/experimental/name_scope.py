@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.session_context as session_context
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
 
@@ -20,25 +21,38 @@ def name_scope(name):
 
 
 def name_scope_stack_push(name):
-    session_context.GetDefaultSession().op_name_scope_stack.append(name)
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    sess = session_context.GetDefaultSession()
+    if job_name not in sess.job_name2name_scope_stack:
+        sess.job_name2name_scope_stack[job_name] = []
+    sess.job_name2name_scope_stack[job_name].append(name)
 
 
 def name_scope_stack_pop():
-    return session_context.GetDefaultSession().op_name_scope_stack.pop()
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    sess = session_context.GetDefaultSession()
+    assert job_name in sess.job_name2name_scope_stack
+    assert len(sess.job_name2name_scope_stack[job_name]) > 0
+    return sess.job_name2name_scope_stack[job_name].pop()
 
 
 def name_scope_stack_top():
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
-    if len(sess.op_name_scope_stack) == 0:
+    if job_name not in sess.job_name2name_scope_stack:
         return ""
-    return sess.op_name_scope_stack[-1]
+    if len(sess.job_name2name_scope_stack[job_name]) == 0:
+        return ""
+    return sess.job_name2name_scope_stack[job_name][-1]
 
 
-def GetNameScopePrefix():
+def GetJobNameScopePrefix(job_name):
     sess = session_context.GetDefaultSession()
-    if len(sess.op_name_scope_stack) == 0:
+    if job_name not in sess.job_name2name_scope_stack:
         return ""
-    return "-".join(sess.op_name_scope_stack) + "-"
+    if len(sess.job_name2name_scope_stack[job_name]) == 0:
+        return ""
+    return "-".join(sess.job_name2name_scope_stack[job_name]) + "-"
 
 
 def PrependNameScopePrefix4OpConf(op_conf):
@@ -46,4 +60,5 @@ def PrependNameScopePrefix4OpConf(op_conf):
         if op_conf.HasField(no_prefix_conf):
             return
 
-    op_conf.name = GetNameScopePrefix() + op_conf.name
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    op_conf.name = GetJobNameScopePrefix(job_name) + op_conf.name

@@ -7,6 +7,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
@@ -25,29 +26,32 @@ def get_variable(
     distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
-    name = name_scope.GetNameScopePrefix() + name
-    sess = session_context.GetDefaultSession()
-    if name in sess.var_name2var_blob:
-        assert sess.var_name2var_blob[name].static_shape == shape
-        assert sess.var_name2var_blob[name].dtype == dtype
-        return sess.var_name2var_blob[name]
-
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
 
-    op_conf = _GenerateVariableOpConf(
-        name=name,
-        shape=shape,
-        dtype=dtype,
-        initializer=initializer,
-        regularizer=regularizer,
-        trainable=trainable,
-        model_name=model_name,
-        random_seed=random_seed,
-        distribute=distribute,
-    )
-    op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-    var_blob = _CreateVariableBlob(op_conf, parallel_conf)
-    sess.var_name2var_blob[op_conf.name] = var_blob
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    name = name_scope.GetJobNameScopePrefix(job_name) + name
+    sess = session_context.GetDefaultSession()
+    var_blob = sess.GetRecordedVariableBlobOfJob(job_name, name)
+
+    if var_blob is not None:
+        assert var_blob.static_shape == shape
+        assert var_blob.dtype == dtype
+    else:
+        op_conf = _GenerateVariableOpConf(
+            name=name,
+            shape=shape,
+            dtype=dtype,
+            initializer=initializer,
+            regularizer=regularizer,
+            trainable=trainable,
+            model_name=model_name,
+            random_seed=random_seed,
+            distribute=distribute,
+        )
+        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
+        var_blob = _CreateVariableBlob(op_conf, parallel_conf)
+        sess.RecordVariableBlob4Job(job_name, op_conf.name, var_blob)
+
     return var_blob
 
 
