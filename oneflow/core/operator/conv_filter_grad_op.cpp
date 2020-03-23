@@ -51,10 +51,6 @@ Maybe<void> ConvFilterGradOp::InferOutBlobDescs(
                                conv_conf.kernel_size().cend());
   } else if (conv_conf.data_format() == "channels_last") {
     CHECK_EQ_OR_RETURN(conv_conf.groups(), 1);
-    CHECK_LE_OR_RETURN(conv_conf.groups(), x->shape().dim_vec().back());
-    CHECK_LE_OR_RETURN(conv_conf.groups(), dy->shape().dim_vec().back());
-    CHECK_EQ_OR_RETURN(x->shape().dim_vec().back() % conv_conf.groups(), 0);
-    CHECK_EQ_OR_RETURN(dy->shape().dim_vec().back() % conv_conf.groups(), 0);
     filter_diff_dim_vec.push_back(dy->shape().dim_vec().back());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
