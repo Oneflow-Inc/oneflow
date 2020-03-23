@@ -23,9 +23,6 @@ def CurJobAddMirroredOp(op_conf, parallel_conf=None):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 
 def ResetCurJobContext():
-    global cur_job_var_op_name2var_blob
-    cur_job_var_op_name2var_blob = {}
-
     global cur_job_variable_scope_stack
     assert len(cur_job_variable_scope_stack) == 0
     cur_job_variable_scope_stack = []
@@ -56,5 +53,4 @@ def GetVariablePrefix():
 
     return "-".join(cur_job_variable_scope_stack) + "-"
 
-cur_job_var_op_name2var_blob = {}
 cur_job_variable_scope_stack = []
