@@ -17,6 +17,10 @@ namespace vm {
 class MirroredObject;
 
 // clang-format off
+OBJECT_MSG_BEGIN(InstructionOperandList);
+  OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
+OBJECT_MSG_END(InstructionOperandList);
+
 OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
   PUBLIC void __Init__() {}
@@ -30,10 +34,19 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
+    return operand_list().operand();
+  }
+  PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
+    return mut_operand_list()->mut_operand();
+  }
+  PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
+    return mutable_operand_list()->mut_operand();
+  }
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstrTypeId, instr_type_id);
-  OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
+  OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);

@@ -8,8 +8,9 @@ namespace oneflow {
 namespace vm {
 
 InstructionOperand* InstructionMsg::add_instr_operand() {
-  mut_operand()->emplace_back();
-  return mut_operand()->back().Mutable();
+  auto* operand_vec = mutable_operand();
+  operand_vec->emplace_back();
+  return operand_vec->back().Mutable();
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) {
