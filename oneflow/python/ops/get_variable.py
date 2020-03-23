@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 import os
 
+
 @oneflow_export("get_variable")
 def get_variable(
     name,
@@ -21,32 +22,46 @@ def get_variable(
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
-    op_conf = _GenerateVariableOpConf(
-        name=name, shape=shape, dtype=dtype, initializer=initializer, regularizer=regularizer, trainable=trainable,
-        model_name=model_name, random_seed=random_seed,distribute=distribute)
-    op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-    return _CreateVariableBlob(op_conf, parallel_conf)
-
-def _GenerateVariableOpConf(name,
-                           shape=None,
-                           dtype=None,
-                           initializer=None,
-                           regularizer=None,
-                           trainable=None,
-                           model_name=None,
-                           random_seed=None,
-                           distribute=distribute_util.broadcast(),):
     assert isinstance(name, str)
     name = compile_context.GetVariablePrefix() + name
 
-    assert shape is not None, "Argument shape should not be None when the variable exists!"
+    if name in compile_context.cur_job_var_op_name2var_blob:
+        return compile_context.cur_job_var_op_name2var_blob[name]
 
+    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    op_conf = _GenerateVariableOpConf(
+        name=name,
+        shape=shape,
+        dtype=dtype,
+        initializer=initializer,
+        regularizer=regularizer,
+        trainable=trainable,
+        model_name=model_name,
+        random_seed=random_seed,
+        distribute=distribute,
+    )
+    op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
+    return _CreateVariableBlob(op_conf, parallel_conf)
+
+
+def _GenerateVariableOpConf(
+    name,
+    shape,
+    dtype=None,
+    initializer=None,
+    regularizer=None,
+    trainable=None,
+    model_name=None,
+    random_seed=None,
+    distribute=distribute_util.broadcast(),
+):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     op_conf.variable_conf.shape.dim.extend(shape)
 
     if dtype is not None:
         op_conf.variable_conf.data_type = dtype
+
     root_path = compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
     dir_path = os.path.join(root_path, name)
     file_path = os.path.join(dir_path, "out")
@@ -78,6 +93,7 @@ def _GenerateVariableOpConf(name,
 
     op_conf.variable_conf.out = "out"
     return op_conf
+
 
 def _CreateVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddConsistentOp(op_conf)
