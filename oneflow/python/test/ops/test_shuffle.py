@@ -11,9 +11,8 @@ def test_shuffle(_):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["x_shape"] = [
         (100,),
-        (100, 100),
+        (10, 1000),
         (10, 10, 2000),
-        (10, 10000),
     ]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
 
