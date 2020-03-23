@@ -74,10 +74,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
         return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kGPU         \
                 && GetDataType<stype>::value                                                   \
-                       == kernel_conf.op_attribute()                                           \
-                              .op_conf()                                                       \
-                              .sync_dynamic_resize_conf()                                      \
-                              .size_data_type());                                              \
+                       == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int8_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int32_t);
@@ -113,10 +110,7 @@ class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
         return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kCPU         \
                 && GetDataType<stype>::value                                                   \
-                       == kernel_conf.op_attribute()                                           \
-                              .op_conf()                                                       \
-                              .sync_dynamic_resize_conf()                                      \
-                              .size_data_type());                                              \
+                       == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })
 REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(int8_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(int32_t);

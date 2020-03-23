@@ -25,7 +25,6 @@ class SyncDynamicResizeOp : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* size = GetBlobDesc4BnInOp("size");
     CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
-    CHECK_EQ_OR_RETURN(size->data_type(), conf.size_data_type());
     CHECK_OR_RETURN(IsIntegralDataType(size->data_type()));
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
@@ -43,6 +42,13 @@ class SyncDynamicResizeOp : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
+  }
+
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override {
+    kernel_conf->mutable_sync_dynamic_resize_conf()->set_size_data_type(
+        GetBlobDesc4BnInOp("size")->data_type());
   }
 };
 
