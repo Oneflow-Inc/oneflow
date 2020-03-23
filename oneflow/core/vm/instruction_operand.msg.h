@@ -8,20 +8,25 @@
 namespace oneflow {
 namespace vm {
 
-// clang-format off
-FLAT_MSG_BEGIN(ConstMirroredObjectOperand);
-  FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(ConstMirroredObjectOperand);
-// clang-format on
+enum OperandModifier {
+  kConstModifier = 0,
+  kDataMutableModifier,
+  kTypeAndDataMutableModifier,
+};
 
 // clang-format off
-FLAT_MSG_BEGIN(MutableMirroredObjectOperand);
+template<OperandModifier modifier>
+FLAT_MSG_BEGIN(LeveledMutableMirroredObjectOperand);
+  static const OperandModifier operand_modifier = modifier;
   FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(MutableMirroredObjectOperand);
-// clang-format on
+FLAT_MSG_END(LeveledMutableMirroredObjectOperand);
+
+using ConstMirroredObjectOperand = LeveledMutableMirroredObjectOperand<kConstModifier>;
+using MutableMirroredObjectOperand = LeveledMutableMirroredObjectOperand<kDataMutableModifier>;
+using Mut2MirroredObjectOperand = LeveledMutableMirroredObjectOperand<kTypeAndDataMutableModifier>;
 
 class InstructionOperandProto;
-// clang-format off
+
 FLAT_MSG_BEGIN(InstructionOperand);
   // methods
   PUBLIC void __Init__(const InstructionOperandProto& proto);
@@ -29,6 +34,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableMirroredObjectOperand, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(Mut2MirroredObjectOperand, mut2_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
     FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)

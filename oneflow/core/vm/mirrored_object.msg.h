@@ -71,6 +71,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OBJECT_MSG_DEFINE_ONEOF(object_type,
       OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)
       OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
+  OBJECT_MSG_DEFINE_STRUCT(ObjectMsgPtr<MirroredObject>, object_desc);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
