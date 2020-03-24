@@ -41,16 +41,25 @@ FLAT_MSG_BEGIN(StreamMask);
 FLAT_MSG_END(StreamMask);
 // clang-format on
 
-// clang-format off
-FLAT_MSG_BEGIN(StreamId);
-  // fields
-  FLAT_MSG_DEFINE_OPTIONAL(StreamTypeId, stream_type_id);
-  FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
-
-  // methods
+class StreamId final {
+ public:
+  using self_type = StreamId;
   FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
-FLAT_MSG_END(StreamId);
-// clang-format on
+
+  void __Init__(const StreamTypeId& stream_type_id, int64_t parallel_id) {
+    stream_type_id_.CopyFrom(stream_type_id);
+    parallel_id_ = parallel_id;
+  }
+
+  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_id_, rhs.parallel_id_); }
+
+  const StreamTypeId& stream_type_id() const { return stream_type_id_; }
+  int64_t parallel_id() const { return parallel_id_; }
+
+ private:
+  StreamTypeId stream_type_id_;
+  int64_t parallel_id_;
+};
 
 // clang-format off
 OBJECT_MSG_BEGIN(StreamDesc);
