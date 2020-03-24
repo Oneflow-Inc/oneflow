@@ -48,8 +48,6 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-const int NopStreamType::kStreamTypeMagicCode;
-
 void NopStreamType::Compute(InstrChain* instr_chain) const {
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();

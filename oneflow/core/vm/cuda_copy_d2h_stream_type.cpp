@@ -67,8 +67,6 @@ void CudaCopyD2H(Instruction* instr) {
 
 }  // namespace
 
-const int CudaCopyD2HStreamType::kStreamTypeMagicCode;
-
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
   device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->mut_callback_list()));

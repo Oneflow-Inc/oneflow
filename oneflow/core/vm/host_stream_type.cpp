@@ -176,8 +176,6 @@ COMMAND(RegisterInstrTypeId<HostStreamType>("LocalFree", kFreeOpcode, kLocal));
 
 }  // namespace
 
-const int HostStreamType::kStreamTypeMagicCode;
-
 void HostStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");

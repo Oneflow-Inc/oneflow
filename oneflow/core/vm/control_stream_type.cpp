@@ -64,8 +64,6 @@ FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 // clang-format on
 
-const int ControlStreamType::kStreamTypeMagicCode;
-
 ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();

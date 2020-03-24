@@ -77,8 +77,6 @@ void MakeSendRequests(Instruction* instr, TransportKey2SendRequest* transport_ke
 
 }  // namespace
 
-const int L2RSenderStreamType::kStreamTypeMagicCode;
-
 void L2RSenderStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
   if (stream->machine_id() != 0) { TODO(); }
