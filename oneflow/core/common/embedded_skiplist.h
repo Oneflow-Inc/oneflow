@@ -81,14 +81,20 @@ struct EmbeddedSkipListKey {
 
   bool empty() const { return link_.empty(); }
 
-  void __Init__() { link_.NullptrClear(); }
+  void __Init__() {
+    link_.NullptrClear();
+    KeyInitializer<std::is_scalar<T>::value>::Call(mut_key());
+  }
 
-  const T& key() const { return key_; }
-  T* mut_key() { return &key_; }
+  const T& key() const { return *reinterpret_cast<const T*>(&key_buffer_[0]); }
+  T* mut_key() { return reinterpret_cast<T*>(&key_buffer_[0]); }
 
   void CheckEmpty() const { return link_.CheckNullptrEmpty(); }
 
-  void Clear() { link_.NullptrClear(); }
+  void Clear() {
+    link_.NullptrClear();
+    mut_key()->__Delete__();
+  }
 
   static self_type* Find(const key_type& key, link_type* head, int size_shift) {
     EmbeddedListLink* last_link_less_than_key = SearchLastBottomLinkLessThan(key, head, size_shift);
@@ -131,6 +137,15 @@ struct EmbeddedSkipListKey {
   }
 
  private:
+  template<bool is_scalar, typename Enabled = void>
+  struct KeyInitializer {
+    static void Call(T* key) {}
+  };
+  template<typename Enabled>
+  struct KeyInitializer<false, Enabled> {
+    static void Call(T* key) { key->__Init__(); }
+  };
+
   template<typename Enabled = void>
   static constexpr int SkipListIteratorOffset() {
     return offsetof(self_type, link_);
@@ -163,7 +178,7 @@ struct EmbeddedSkipListKey {
   }
 
   link_type link_;
-  T key_;
+  char key_buffer_[sizeof(T)];
 };
 
 template<typename ValueLinkField>

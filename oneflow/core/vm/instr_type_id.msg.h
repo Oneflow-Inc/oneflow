@@ -13,7 +13,7 @@ class InstrTypeId final {
   void clear() {
     stream_type_id_.clear();
     opcode_ = 0;
-    type_ = VmType::kRemote;
+    type_ = VmType::kInvalidVmType;
   }
   void CopyFrom(const InstrTypeId& rhs) {
     stream_type_id_.CopyFrom(rhs.stream_type_id_);

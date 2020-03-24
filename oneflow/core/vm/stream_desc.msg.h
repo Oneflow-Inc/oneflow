@@ -17,8 +17,9 @@ class StreamTypeId final {
  public:
   void clear() {
     magic_code_ = 0;
-    interpret_type_ = InterpretType::kCompute;
+    interpret_type_ = InterpretType::kInvalidInterpretType;
   }
+  void __Init__() {}
   void __Init__(int magic_code, InterpretType interpret_type) {
     magic_code_ = magic_code;
     interpret_type_ = interpret_type;
@@ -59,7 +60,7 @@ FLAT_MSG_END(StreamMask);
 class StreamId final {
  public:
   using self_type = StreamId;
-
+  void __Init__() {}
   void __Init__(const StreamTypeId& stream_type_id, int64_t parallel_id) {
     stream_type_id_.CopyFrom(stream_type_id);
     parallel_id_ = parallel_id;

@@ -4,9 +4,9 @@
 namespace oneflow {
 namespace vm {
 
-enum VmType { kRemote = 0, kLocal };
+enum VmType { kInvalidVmType = 0, kRemote, kLocal };
 
-enum InterpretType { kCompute = 0, kInfer };
+enum InterpretType { kInvalidInterpretType = 0, kCompute, kInfer };
 
 }  // namespace vm
 }  // namespace oneflow
