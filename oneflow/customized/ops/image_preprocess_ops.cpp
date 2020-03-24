@@ -15,7 +15,6 @@ REGISTER_USER_OP("Resize")
     .Attr<float>("resize_shorter", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("resize_x", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("resize_y", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -36,6 +35,73 @@ REGISTER_USER_OP("Resize")
         *out_tensor->mut_data_type() = DataType::kTensorBuffer;
         *out_tensor->mut_shape() = Shape({batch_size});
       }
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split("in", 0, 0)
+          .Split("out", 0, 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("CropMirrorNormalize")
+    .Input("in")
+    .OptionalInput("mirror")
+    .Output("out")
+    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
+    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "CHW")
+    .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
+    .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
+    .Attr<std::vector<float>>("crop", UserOpAttrType::kAtListFloat, {0.0, 0.0})
+    .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
+    .Attr<int32_t>("output_dtype", UserOpAttrType::kAtInt32, static_cast<int32_t>(DataType::kFloat))
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
+      if (mirror_tensor) {
+        CHECK_OR_RETURN(mirror_tensor->shape().NumAxes() == 1
+                        && in_tensor->shape().At(0) == mirror_tensor->shape().At(0));
+        CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8);
+      }
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      int64_t N = in_tensor->shape().At(0);
+      std::vector<float> crop = ctx->GetAttr<std::vector<float>>("crop");
+      CHECK_EQ_OR_RETURN(crop.size(), 2);
+      int64_t H = static_cast<int64_t>(crop.at(0));
+      int64_t W = static_cast<int64_t>(crop.at(1));
+      std::string color_space = ctx->GetAttr<std::string>("color_space");
+      int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
+      if (in_tensor->data_type() == DataType::kUInt8) {
+        CHECK_EQ_OR_RETURN(in_tensor->shape().NumAxes(), 4);  // {N, H, W, C}
+        CHECK_EQ_OR_RETURN(in_tensor->shape().At(3), C);
+        if (H == 0 || W == 0) {
+          H = in_tensor->shape().At(1);
+          W = in_tensor->shape().At(2);
+        }
+        std::string output_layout = ctx->GetAttr<std::string>("output_layout");
+        if (output_layout == "CHW") {
+          *out_tensor->mut_shape() = Shape({N, C, H, W});
+        } else if (output_layout == "HWC") {
+          *out_tensor->mut_shape() = Shape({N, H, W, C});
+        } else {
+          return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
+        }
+      } else if (in_tensor->data_type() == DataType::kTensorBuffer) {
+        CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1);
+        *out_tensor->mut_shape() = Shape({N});
+      } else {
+        return Error::CheckFailed()
+               << "input Dtype: " << in_tensor->data_type() << " is not supported";
+      }
+      DataType output_dtype = static_cast<DataType>(ctx->GetAttr<int32_t>("output_dtype"));
+      CHECK_EQ(output_dtype, DataType::kFloat);  // only support float now; for float16 in future
+      *out_tensor->mut_data_type() = output_dtype;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
