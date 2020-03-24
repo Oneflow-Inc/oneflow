@@ -64,17 +64,16 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr) {
 class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpKernel {
  public:
   GenerateRandomBatchPermutationIndicesGPUKernel(user_op::KernelInitContext* ctx)
-      : user_op::OpKernel(ctx) {}
+      : user_op::OpKernel(ctx) {
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, ctx->device_ctx()));
+  }
+
   GenerateRandomBatchPermutationIndicesGPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
-    // TODO: tsai, chengcheng do the initialization in kernel init when interface ready
-    if (random_generator_.get() == nullptr) {
-      int64_t seed = ctx->GetAttr<int64_t>("seed");
-      random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, ctx->device_ctx()));
-    }
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
