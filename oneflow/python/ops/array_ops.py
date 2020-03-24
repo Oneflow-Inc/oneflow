@@ -473,7 +473,7 @@ def assign(ref, value, dtype=None, name=None):
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
 def generate_random_batch_permutation_indices(value, seed=None, name=None):
-    import time
+    import random
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
         .Op("generate_random_batch_permutation_indices")
@@ -483,7 +483,7 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
     if seed is not None:
         op.SetAttr("seed", seed, "AttrTypeInt64")
     else:
-        op.SetAttr("seed", int(time.time() * 1e6), "AttrTypeInt64")
+        op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
     return (
         op
         .Build()
