@@ -197,11 +197,11 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
       auto thread_ctx = ObjectMsgPtr<ThreadCtx>::NewFrom(allocator, stream_rt_desc.Get(), i);
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_parallel_id) {
-        FlatMsg<StreamId> stream_id;
-        stream_id->mutable_stream_type_id()->CopyFrom(stream_desc->stream_type_id());
-        stream_id->set_parallel_id(stream_desc->start_parallel_id() + rel_parallel_id);
+        StreamId stream_id;
+        stream_id.__Init__(stream_desc->stream_type_id(),
+                           stream_desc->start_parallel_id() + rel_parallel_id);
         auto stream =
-            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id.Get());
+            ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id);
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);
         thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
       }
