@@ -21,12 +21,12 @@ FLAT_MSG_BEGIN(TransportDataToken);
 FLAT_MSG_END(TransportDataToken);
 
 FLAT_MSG_BEGIN(TransportKey);
+  // methods
+  PUBLIC void __Init__() {}
+  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(TransportDataToken, data_token);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, data_offset);
-
-  // methods
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 FLAT_MSG_END(TransportKey);
 
 FLAT_MSG_BEGIN(TransportSize);

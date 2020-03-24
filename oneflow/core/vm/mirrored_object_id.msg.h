@@ -35,6 +35,7 @@ FLAT_MSG_END(MirroredObjectOperand);
 // clang-format off
 FLAT_MSG_BEGIN(MirroredObjectId);
   // methods
+  PUBLIC void __Init__() {}
   PUBLIC void __Init__(uint64_t logical_object_id_value, int64_t parallel_id);
   PUBLIC void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id);
   PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
