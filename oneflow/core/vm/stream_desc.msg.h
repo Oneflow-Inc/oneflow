@@ -13,20 +13,35 @@ namespace vm {
 
 using InstructionOpcode = int32_t;
 
-// clang-format off
-FLAT_MSG_BEGIN(StreamTypeId);
-  // methods
-  PUBLIC void __Init__(int magic_code, InterpretType interpret_type) {
-    set_magic_code(magic_code);
-    set_interpret_type(interpret_type);
+class StreamTypeId final {
+ public:
+  void clear() {
+    magic_code_ = 0;
+    interpret_type_ = InterpretType::kCompute;
   }
-  PUBLIC void __Init__(int magic_code) { __Init__(magic_code, InterpretType::kCompute); }
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
-  // fields
-  FLAT_MSG_DEFINE_OPTIONAL(int, magic_code);
-  FLAT_MSG_DEFINE_OPTIONAL(InterpretType, interpret_type);
-FLAT_MSG_END(StreamTypeId);
-// clang-format on
+  void __Init__(int magic_code, InterpretType interpret_type) {
+    magic_code_ = magic_code;
+    interpret_type_ = interpret_type;
+  }
+  void __Init__(int magic_code) { __Init__(magic_code, InterpretType::kCompute); }
+  void CopyFrom(const StreamTypeId& rhs) { __Init__(rhs.magic_code_, rhs.interpret_type_); }
+
+  int magic_code() const { return magic_code_; }
+  InterpretType interpret_type() const { return interpret_type_; }
+
+  bool operator==(const StreamTypeId& rhs) const {
+    return magic_code_ == rhs.magic_code_ && interpret_type_ == rhs.interpret_type_;
+  }
+  bool operator<(const StreamTypeId& rhs) const {
+    if (!(magic_code_ == rhs.magic_code_)) { return magic_code_ < rhs.magic_code_; }
+    return interpret_type_ < rhs.interpret_type_;
+  }
+  bool operator<=(const StreamTypeId& rhs) const { return *this < rhs || *this == rhs; }
+
+ private:
+  int magic_code_;
+  InterpretType interpret_type_;
+};
 
 // clang-format off
 FLAT_MSG_BEGIN(AllStreamEnabledMask);
@@ -44,7 +59,6 @@ FLAT_MSG_END(StreamMask);
 class StreamId final {
  public:
   using self_type = StreamId;
-  FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 
   void __Init__(const StreamTypeId& stream_type_id, int64_t parallel_id) {
     stream_type_id_.CopyFrom(stream_type_id);
@@ -55,6 +69,16 @@ class StreamId final {
 
   const StreamTypeId& stream_type_id() const { return stream_type_id_; }
   int64_t parallel_id() const { return parallel_id_; }
+
+  bool operator==(const StreamId& rhs) const {
+    return stream_type_id_ == rhs.stream_type_id_ && parallel_id_ == rhs.parallel_id_;
+  }
+
+  bool operator<(const StreamId& rhs) const {
+    if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
+    return parallel_id_ < rhs.parallel_id_;
+  }
+  bool operator<=(const StreamId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
   StreamTypeId stream_type_id_;
