@@ -132,12 +132,12 @@ def conv2d(
     if data_format.upper() == "NCHW":
         assert groups <= inputs.static_shape[1]
         assert inputs.static_shape[1] % groups == 0
-        weight_shape = (filters, int(inputs.static_shape[1] / groups)) + kernel_size
+        weight_shape = (filters, inputs.static_shape[1] // groups) + kernel_size
     elif data_format.upper() == "NHWC":
         assert groups == 1
         assert groups <= inputs.static_shape[3]
         assert inputs.static_shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], int(inputs.static_shape[3] / groups))
+        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.static_shape[3] // groups)
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
