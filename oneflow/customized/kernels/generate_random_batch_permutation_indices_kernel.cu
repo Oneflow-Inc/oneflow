@@ -51,7 +51,6 @@ class TmpBufferManager final {
   int32_t in_elem_cnt_;
   int32_t sorted_in_elem_cnt_;
   int32_t indices_elem_cnt_;
-
   int32_t temp_storage_bytes_;
 };
 
