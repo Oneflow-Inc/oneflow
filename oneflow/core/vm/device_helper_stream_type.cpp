@@ -26,7 +26,7 @@ class DeviceHelperStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* instr_chain) const override;
+  void Compute(InstrChain* instr_chain) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
 };
@@ -131,7 +131,7 @@ bool DeviceHelperStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void DeviceHelperStreamType::Run(InstrChain* instr_chain) const {
+void DeviceHelperStreamType::Compute(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
     auto opcode = instruction->mut_instr_msg()->instr_type_id().opcode();
     device_helper_instr_table.at(opcode)(instruction);

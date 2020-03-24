@@ -26,7 +26,7 @@ class NopStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* instr_chain) const override;
+  void Compute(InstrChain* instr_chain) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
@@ -50,7 +50,7 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
 
 const int NopStreamType::kStreamTypeMagicCode;
 
-void NopStreamType::Run(InstrChain* instr_chain) const {
+void NopStreamType::Compute(InstrChain* instr_chain) const {
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }

@@ -24,7 +24,7 @@ class L2RSenderStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* instr_chain) const override;
+  void Compute(InstrChain* instr_chain) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
@@ -103,7 +103,7 @@ bool L2RSenderStreamType::QueryInstructionStatusDone(
   return *reinterpret_cast<const std::atomic<int64_t>*>(status_buffer.buffer().data()) == 0;
 }
 
-void L2RSenderStreamType::Run(InstrChain* instr_chain) const {
+void L2RSenderStreamType::Compute(InstrChain* instr_chain) const {
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
   TransportKey2SendRequest transport_key2send_request;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {

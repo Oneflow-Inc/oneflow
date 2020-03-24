@@ -1,4 +1,5 @@
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/object_msg.h"
@@ -35,6 +36,17 @@ HashMap<std::string, FlatMsg<InstrTypeId>>* InstrTypeId4InstructionName() {
 }
 
 }  // namespace
+
+void StreamType::Run(InstrChain* instr_chain) const {
+  auto interpret_type = instr_chain->stream().stream_id().stream_type_id().interpret_type();
+  if (interpret_type == InterpretType::kCompute) {
+    Compute(instr_chain);
+  } else if (interpret_type == InterpretType::kInfer) {
+    Infer(instr_chain);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 const StreamType* LookupStreamType(const StreamTypeId& stream_type_id) {
   auto* map = StreamType4StreamTypeId();

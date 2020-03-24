@@ -26,7 +26,7 @@ class HostStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* instr_chain) const override;
+  void Compute(InstrChain* instr_chain) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
@@ -194,7 +194,7 @@ bool HostStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void HostStreamType::Run(InstrChain* instr_chain) const {
+void HostStreamType::Compute(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
     auto opcode = instruction->mut_instr_msg()->instr_type_id().opcode();
     host_instr_table.at(opcode)(instruction);
