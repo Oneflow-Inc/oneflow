@@ -67,7 +67,7 @@ OBJECT_MSG_BEGIN(TransportRequest);
   OBJECT_MSG_DEFINE_FLAT_MSG(TransportSize, size);
 
   // links
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(TransportKey, transport_key);
+  OBJECT_MSG_DEFINE_MAP_KEY(TransportKey, transport_key);
 OBJECT_MSG_END(TransportRequest);
 
 using SendTransportRequest = TransportRequest<kSendTransportRequestType>;

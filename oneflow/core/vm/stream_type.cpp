@@ -19,7 +19,7 @@ OBJECT_MSG_BEGIN(StreamTypeRegistry);
   // fields
   OBJECT_MSG_DEFINE_PTR(const StreamType, stream_type);
   // links
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(StreamTypeId, stream_type_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(StreamTypeId, stream_type_id);
 OBJECT_MSG_END(StreamTypeRegistry);
 // clang-format on
 

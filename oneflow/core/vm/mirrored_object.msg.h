@@ -27,7 +27,7 @@ OBJECT_MSG_BEGIN(MirroredObjectAccess);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
-  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(10, MirroredObjectId, mirrored_object_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(MirroredObjectAccess);
 // clang-format on

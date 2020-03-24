@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VM_PROCEDURE_H_
-#define ONEFLOW_CORE_VM_VM_PROCEDURE_H_
+#ifndef ONEFLOW_CORE_VM_PROCEDURE_H_
+#define ONEFLOW_CORE_VM_PROCEDURE_H_
 
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/job/placement.pb.h"
@@ -20,4 +20,4 @@ OBJECT_MSG_END(Procedure);
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_PROCEDURE_H_
+#endif  // ONEFLOW_CORE_VM_PROCEDURE_H_

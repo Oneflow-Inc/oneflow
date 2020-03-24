@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VM_TYPE_H_
-#define ONEFLOW_CORE_VM_VM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_TYPE_H_
+#define ONEFLOW_CORE_VM_TYPE_H_
 
 namespace oneflow {
 namespace vm {
@@ -11,4 +11,4 @@ enum InterpretType { kCompute = 0, kInfer };
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_TYPE_H_
