@@ -9,6 +9,7 @@ namespace {
 
 class TmpBufferManager final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
         in_elem_cnt_{in_shape.At(0)},
@@ -27,7 +28,6 @@ class TmpBufferManager final {
         capacity_ - in_aligned_bytes - sorted_in_aligned_bytes - indices_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
-  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
 
   float* InPtr() const { return in_ptr_; }
