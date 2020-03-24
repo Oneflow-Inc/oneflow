@@ -43,11 +43,10 @@ void Scheduler::TryReleaseFinishedInstrChains(Stream* stream,
 
 void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* instr_msg_list) {
   ControlStreamType control_stream_type;
+  const auto& control_type_index = std::type_index(typeid(ControlStreamType));
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& proto = instr_msg->instr_type_id();
-    if (proto.stream_type_id().magic_code() != ControlStreamType::kStreamTypeMagicCode) {
-      continue;
-    }
+    if (!(proto.stream_type_id().stream_type_index() == control_type_index)) { continue; }
     if (!control_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
     control_stream_type.Run(this, instr_msg);
     instr_msg_list->Erase(instr_msg);
@@ -182,8 +181,9 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
 void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
   bool has_control_stream_type = false;
+  const auto& control_type_index = std::type_index(typeid(ControlStreamType));
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    if (stream_desc->stream_type_id().magic_code() == ControlStreamType::kStreamTypeMagicCode) {
+    if (stream_desc->stream_type_id().stream_type_index() == control_type_index) {
       CHECK_EQ(stream_desc->num_machines(), 1);
       CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
       CHECK_EQ(stream_desc->num_streams_per_thread(), 1);

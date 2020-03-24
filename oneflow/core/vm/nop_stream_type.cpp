@@ -16,8 +16,6 @@ class NopStreamType final : public StreamType {
   NopStreamType() = default;
   ~NopStreamType() = default;
 
-  static const int kStreamTypeMagicCode = 1;
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
   void InitInstructionStatus(const Stream& stream,
@@ -56,7 +54,7 @@ void NopStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(NopStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -66,7 +64,7 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& res
 
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(NopStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

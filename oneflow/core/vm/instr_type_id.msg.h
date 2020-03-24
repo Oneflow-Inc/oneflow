@@ -10,6 +10,13 @@ namespace vm {
 
 class InstrTypeId final {
  public:
+  void __Init__() { mutable_stream_type_id()->__Init__(); }
+  void __Init__(const std::type_index& stream_type_index, InterpretType interpret_type,
+                InstructionOpcode opcode, VmType type) {
+    mutable_stream_type_id()->__Init__(stream_type_index, interpret_type);
+    set_opcode(opcode);
+    set_type(type);
+  }
   void clear() {
     stream_type_id_.clear();
     opcode_ = 0;

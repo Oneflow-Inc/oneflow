@@ -16,8 +16,6 @@ class HostStreamType final : public StreamType {
   HostStreamType() = default;
   ~HostStreamType() = default;
 
-  static const int kStreamTypeMagicCode = 2;
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
   void InitInstructionStatus(const Stream& stream,
@@ -204,7 +202,7 @@ void HostStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                               int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(HostStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -214,7 +212,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& re
 
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(HostStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

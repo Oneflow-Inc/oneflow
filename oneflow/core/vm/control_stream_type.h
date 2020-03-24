@@ -15,8 +15,6 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  static const int kStreamTypeMagicCode = 0;
-
   ObjectMsgPtr<InstructionMsg> NewSymbol(const LogicalObjectId& logical_object_id,
                                          int64_t parallel_num) const;
   ObjectMsgPtr<InstructionMsg> DeleteSymbol(const LogicalObjectId& logical_object_id) const;

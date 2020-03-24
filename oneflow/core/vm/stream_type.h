@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_VM_STREAM_TYPE_H_
 
 #include <string>
+#include <typeindex>
 #include <glog/logging.h>
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/instr_type_id.msg.h"
@@ -77,22 +78,23 @@ class StreamType {
 };
 
 const StreamType* LookupStreamType(const StreamTypeId&);
-void RegisterStreamType(int, const StreamType*);
+void RegisterStreamType(const std::type_index&, const StreamType*);
 template<typename T>
 void RegisterStreamType() {
-  RegisterStreamType(T::kStreamTypeMagicCode, new T());
+  RegisterStreamType(typeid(T), new T());
 }
 
 class InstrTypeId;
 
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
-void RegisterInstrTypeId(const std::string& instr_type_name, int stream_type_magic_code,
-                         InstructionOpcode opcode, VmType type);
+void RegisterInstrTypeId(const std::string& instr_type_name,
+                         const std::type_index& stream_type_index, InstructionOpcode opcode,
+                         VmType type);
 template<typename T>
 void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode opcode,
                          VmType type) {
-  RegisterInstrTypeId(instr_type_name, T::kStreamTypeMagicCode, opcode, type);
+  RegisterInstrTypeId(instr_type_name, typeid(T), opcode, type);
 }
 
 }  // namespace vm

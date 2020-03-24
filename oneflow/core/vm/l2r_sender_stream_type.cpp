@@ -14,8 +14,6 @@ class L2RSenderStreamType final : public StreamType {
   L2RSenderStreamType() = default;
   ~L2RSenderStreamType() = default;
 
-  static const int kStreamTypeMagicCode = 6;
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,
@@ -116,7 +114,7 @@ void L2RSenderStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(L2RSenderStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -126,7 +124,7 @@ ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeRemoteStreamDesc(const Resourc
 
 ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(L2RSenderStreamType));
   ret->set_num_machines(resource.machine_num());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

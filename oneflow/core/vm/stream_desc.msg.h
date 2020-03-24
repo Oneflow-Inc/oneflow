@@ -2,8 +2,10 @@
 #define ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
 
 #include <cstring>
+#include <typeindex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/common/layout_standardize.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/vm_type.h"
@@ -15,32 +17,37 @@ using InstructionOpcode = int32_t;
 
 class StreamTypeId final {
  public:
-  void clear() {
-    magic_code_ = 0;
-    interpret_type_ = InterpretType::kInvalidInterpretType;
-  }
-  void __Init__() {}
-  void __Init__(int magic_code, InterpretType interpret_type) {
-    magic_code_ = magic_code;
+  void clear() { interpret_type_ = InterpretType::kInvalidInterpretType; }
+  void __Init__() { stream_type_index_.__Init__(std::type_index(typeid(void))); }
+  void __Init__(const std::type_index& stream_type_index, InterpretType interpret_type) {
+    stream_type_index_.__Init__(stream_type_index);
     interpret_type_ = interpret_type;
   }
-  void __Init__(int magic_code) { __Init__(magic_code, InterpretType::kCompute); }
-  void CopyFrom(const StreamTypeId& rhs) { __Init__(rhs.magic_code_, rhs.interpret_type_); }
+  void __Init__(const std::type_index& stream_type_index) {
+    __Init__(stream_type_index, InterpretType::kCompute);
+  }
+  void __Delete__() { stream_type_index_.__Delete__(); }
+  void CopyFrom(const StreamTypeId& rhs) {
+    __Init__(rhs.stream_type_index_.Get(), rhs.interpret_type_);
+  }
 
-  int magic_code() const { return magic_code_; }
+  const std::type_index& stream_type_index() const { return stream_type_index_.Get(); }
   InterpretType interpret_type() const { return interpret_type_; }
 
   bool operator==(const StreamTypeId& rhs) const {
-    return magic_code_ == rhs.magic_code_ && interpret_type_ == rhs.interpret_type_;
+    return stream_type_index_.Get() == rhs.stream_type_index_.Get()
+           && interpret_type_ == rhs.interpret_type_;
   }
   bool operator<(const StreamTypeId& rhs) const {
-    if (!(magic_code_ == rhs.magic_code_)) { return magic_code_ < rhs.magic_code_; }
+    if (!(stream_type_index_.Get() == rhs.stream_type_index_.Get())) {
+      return stream_type_index_.Get() < rhs.stream_type_index_.Get();
+    }
     return interpret_type_ < rhs.interpret_type_;
   }
   bool operator<=(const StreamTypeId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
-  int magic_code_;
+  LayoutStandardize<std::type_index> stream_type_index_;
   InterpretType interpret_type_;
 };
 

@@ -55,10 +55,10 @@ const StreamType* LookupStreamType(const StreamTypeId& stream_type_id) {
   return &registry->stream_type();
 }
 
-void RegisterStreamType(int stream_type_magic_code, const StreamType* stream_type) {
+void RegisterStreamType(const std::type_index& stream_type_index, const StreamType* stream_type) {
   auto Register = [&](InterpretType interpret_type) {
     FlatMsg<StreamTypeId> stream_type_id;
-    stream_type_id->__Init__(stream_type_magic_code, interpret_type);
+    stream_type_id->__Init__(stream_type_index, interpret_type);
     auto registry = ObjectMsgPtr<StreamTypeRegistry>::New(stream_type, stream_type_id.Get());
     CHECK(StreamType4StreamTypeId()->Insert(registry.Mutable()).second);
   };
@@ -77,13 +77,12 @@ void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
   for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second.Get()); }
 }
 
-void RegisterInstrTypeId(const std::string& instruction_name, int stream_type_magic_code,
-                         InstructionOpcode opcode, VmType type) {
+void RegisterInstrTypeId(const std::string& instruction_name,
+                         const std::type_index& stream_type_index, InstructionOpcode opcode,
+                         VmType type) {
   auto Register = [&](const std::string& instruction_name, InterpretType interpret_type) {
     FlatMsg<InstrTypeId> instr_type_id;
-    instr_type_id->mutable_stream_type_id()->__Init__(stream_type_magic_code, interpret_type);
-    instr_type_id->set_opcode(opcode);
-    instr_type_id->set_type(type);
+    instr_type_id->__Init__(stream_type_index, interpret_type, opcode, type);
     CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
   };
   Register(instruction_name, InterpretType::kCompute);
