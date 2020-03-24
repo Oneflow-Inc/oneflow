@@ -113,8 +113,6 @@ COMMAND(RegisterInstrTypeId<DeviceHelperStreamType>("CudaFree", kCudaFreeOpcode,
 
 }  // namespace
 
-const int DeviceHelperStreamType::kStreamTypeMagicCode;
-
 void DeviceHelperStreamType::InitInstructionStatus(const Stream& stream,
                                                    InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
