@@ -16,7 +16,7 @@ class NopStreamType final : public StreamType {
   NopStreamType() = default;
   ~NopStreamType() = default;
 
-  static const StreamTypeId kStreamTypeId = 1;
+  static const int kStreamTypeMagicCode = 1;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
@@ -48,7 +48,7 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-const StreamTypeId NopStreamType::kStreamTypeId;
+const int NopStreamType::kStreamTypeMagicCode;
 
 void NopStreamType::Run(InstrChain* instr_chain) const {
   auto* status_buffer = instr_chain->mut_status_buffer();
@@ -58,7 +58,7 @@ void NopStreamType::Run(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -68,7 +68,7 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& res
 
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

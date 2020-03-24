@@ -73,23 +73,23 @@ class StreamType {
   StreamType() = default;
 };
 
-const StreamType* LookupStreamType(StreamTypeId);
-void RegisterStreamType(StreamTypeId, const StreamType*);
+const StreamType* LookupStreamType(const StreamTypeId&);
+void RegisterStreamType(int, const StreamType*);
 template<typename T>
 void RegisterStreamType() {
-  RegisterStreamType(T::kStreamTypeId, new T());
+  RegisterStreamType(T::kStreamTypeMagicCode, new T());
 }
 
 class InstrTypeId;
 
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
-void RegisterInstrTypeId(const std::string& instr_type_name, StreamTypeId stream_type_id,
+void RegisterInstrTypeId(const std::string& instr_type_name, int stream_type_magic_code,
                          InstructionOpcode opcode, VmType type);
 template<typename T>
 void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode opcode,
                          VmType type) {
-  RegisterInstrTypeId(instr_type_name, T::kStreamTypeId, opcode, type);
+  RegisterInstrTypeId(instr_type_name, T::kStreamTypeMagicCode, opcode, type);
 }
 
 }  // namespace vm

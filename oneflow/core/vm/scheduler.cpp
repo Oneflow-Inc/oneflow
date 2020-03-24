@@ -45,7 +45,9 @@ void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* in
   ControlStreamType control_stream_type;
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& proto = instr_msg->instr_type_id();
-    if (proto.stream_type_id() != ControlStreamType::kStreamTypeId) { continue; }
+    if (proto.stream_type_id().magic_code() != ControlStreamType::kStreamTypeMagicCode) {
+      continue;
+    }
     if (!control_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
     control_stream_type.Run(this, instr_msg);
     instr_msg_list->Erase(instr_msg);
@@ -55,7 +57,7 @@ void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* in
 void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
                                 /*out*/ NewInstrChainList* new_instr_chain_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    StreamTypeId stream_type_id = instr_msg->instr_type_id().stream_type_id();
+    const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       new_instr_chain_list->EmplaceBack(stream->NewInstrChain(instr_msg));
@@ -181,7 +183,7 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
   bool has_control_stream_type = false;
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    if (stream_desc->stream_type_id() == ControlStreamType::kStreamTypeId) {
+    if (stream_desc->stream_type_id().magic_code() == ControlStreamType::kStreamTypeMagicCode) {
       CHECK_EQ(stream_desc->num_machines(), 1);
       CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
       CHECK_EQ(stream_desc->num_streams_per_thread(), 1);
@@ -196,7 +198,7 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
       mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_parallel_id) {
         FlatMsg<StreamId> stream_id;
-        stream_id->set_stream_type_id(stream_desc->stream_type_id());
+        stream_id->mutable_stream_type_id()->CopyFrom(stream_desc->stream_type_id());
         stream_id->set_parallel_id(stream_desc->start_parallel_id() + rel_parallel_id);
         auto stream =
             ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id.Get());

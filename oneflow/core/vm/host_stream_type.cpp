@@ -16,7 +16,7 @@ class HostStreamType final : public StreamType {
   HostStreamType() = default;
   ~HostStreamType() = default;
 
-  static const StreamTypeId kStreamTypeId = 2;
+  static const int kStreamTypeMagicCode = 2;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
@@ -176,7 +176,7 @@ COMMAND(RegisterInstrTypeId<HostStreamType>("LocalFree", kFreeOpcode, kLocal));
 
 }  // namespace
 
-const StreamTypeId HostStreamType::kStreamTypeId;
+const int HostStreamType::kStreamTypeMagicCode;
 
 void HostStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
@@ -206,7 +206,7 @@ void HostStreamType::Run(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                               int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -216,7 +216,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& re
 
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

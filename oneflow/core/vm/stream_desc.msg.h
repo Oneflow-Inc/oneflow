@@ -6,12 +6,27 @@
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/vm_type.h"
 
 namespace oneflow {
 namespace vm {
 
-using StreamTypeId = int;
 using InstructionOpcode = int32_t;
+
+// clang-format off
+FLAT_MSG_BEGIN(StreamTypeId);
+  // methods
+  PUBLIC void __Init__(int magic_code, InterpretType interpret_type) {
+    set_magic_code(magic_code);
+    set_interpret_type(interpret_type);
+  }
+  PUBLIC void __Init__(int magic_code) { __Init__(magic_code, InterpretType::kCompute); }
+  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  // fields
+  FLAT_MSG_DEFINE_OPTIONAL(int, magic_code);
+  FLAT_MSG_DEFINE_OPTIONAL(InterpretType, interpret_type);
+FLAT_MSG_END(StreamTypeId);
+// clang-format on
 
 // clang-format off
 FLAT_MSG_BEGIN(AllStreamEnabledMask);
@@ -41,7 +56,7 @@ FLAT_MSG_END(StreamId);
 OBJECT_MSG_BEGIN(StreamDesc);
   // methods
   PUBLIC void __Init__() {}
-  PUBLIC void __Init__(StreamTypeId stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+  PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
                        int32_t num_streams_per_thread);
   PUBLIC int32_t num_threads() const;
   PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
@@ -53,7 +68,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_parallel_id);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(7, StreamTypeId, stream_type_id);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on
 

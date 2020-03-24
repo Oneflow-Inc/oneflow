@@ -14,7 +14,7 @@ class L2RReceiverStreamType final : public StreamType {
   L2RReceiverStreamType() = default;
   ~L2RReceiverStreamType() = default;
 
-  static const StreamTypeId kStreamTypeId = 7;
+  static const int kStreamTypeMagicCode = 7;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -78,7 +78,7 @@ void MakeReceiveRequests(Instruction* instr,
 
 }  // namespace
 
-const StreamTypeId L2RReceiverStreamType::kStreamTypeId;
+const int L2RReceiverStreamType::kStreamTypeMagicCode;
 
 void L2RReceiverStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
@@ -119,7 +119,7 @@ void L2RReceiverStreamType::Run(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -130,7 +130,7 @@ ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
 ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeLocalStreamDesc(
     const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(resource.machine_num());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

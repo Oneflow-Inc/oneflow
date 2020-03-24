@@ -83,15 +83,13 @@ class Scheduler;
 // clang-format off
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
-                       Scheduler* scheduler) {
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id) {
     set_logical_object_id(logical_object_id);
-    set_scheduler(scheduler);
   }
-  // fields
-  OBJECT_MSG_DEFINE_PTR(Scheduler, scheduler);
+
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object_type);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on

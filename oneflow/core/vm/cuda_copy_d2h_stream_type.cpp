@@ -18,7 +18,7 @@ class CudaCopyD2HStreamType final : public StreamType {
   CudaCopyD2HStreamType() = default;
   ~CudaCopyD2HStreamType() = default;
 
-  static const StreamTypeId kStreamTypeId = 5;
+  static const int kStreamTypeMagicCode = 5;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -67,7 +67,7 @@ void CudaCopyD2H(Instruction* instr) {
 
 }  // namespace
 
-const StreamTypeId CudaCopyD2HStreamType::kStreamTypeId;
+const int CudaCopyD2HStreamType::kStreamTypeMagicCode;
 
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
@@ -106,7 +106,7 @@ ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeRemoteStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

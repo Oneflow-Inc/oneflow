@@ -98,6 +98,8 @@ struct FlatMsg final {
   using value_type = typename FLAT_MSG_TYPE_CHECK(T);
   using self_value_type = value_type;
   FlatMsg() { msg_.clear(); }
+  FlatMsg(const FlatMsg& rhs) { msg_.CopyFrom(rhs.msg_); }
+  FlatMsg(const T& msg) { msg_.CopyFrom(msg); }
 
   const value_type& operator*() const { return msg_; }
   value_type& operator*() { return msg_; }
@@ -106,6 +108,42 @@ struct FlatMsg final {
 
   const value_type& Get() const { return msg_; }
   value_type* Mutable() { return &msg_; }
+
+  template<typename RhsT>
+  bool operator==(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ == rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator!=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ != rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator>=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ >= rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator<=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ <= rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator>(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ > rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator<(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ < rhs.msg_;
+  }
 
  private:
   union {
