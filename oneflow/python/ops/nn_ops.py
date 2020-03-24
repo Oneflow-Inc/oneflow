@@ -19,8 +19,8 @@ def conv2d(
     padding,
     data_format="NHWC",
     dilations=None,
-    name=None,
     groups=1,
+    name=None,
 ):
     assert len(input.static_shape) == 4
     assert len(filters.static_shape) == 4

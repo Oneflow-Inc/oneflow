@@ -106,6 +106,7 @@ def conv2d(
     padding="VALID",
     data_format="NCHW",
     dilation_rate=1,
+    groups=1,
     activation=None,
     use_bias=True,
     kernel_initializer=None,
@@ -116,7 +117,6 @@ def conv2d(
     name=None,
     weight_name=None,
     bias_name=None,
-    groups=1,
 ):
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
@@ -154,7 +154,7 @@ def conv2d(
     )
 
     output = flow.nn.conv2d(
-        inputs, weight, strides, padding, data_format, dilation_rate, name, groups
+        inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name
     )
     if use_bias:
         bias = flow.get_variable(
