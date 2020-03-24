@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -21,7 +22,14 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // Broadcast only
+      SbpSignatureBuilder().PartialSum("x").Broadcast("y").Build(
+          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+      FOR_RANGE(int64_t, i, 1, num_axes - 1) {
+        SbpSignatureBuilder().Split("x", i).Broadcast("y").Build(
+            ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
