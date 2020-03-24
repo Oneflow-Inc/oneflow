@@ -8,7 +8,7 @@ from test_util import type_name_to_np_type
 
 def test_shuffle(_):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [
         (100,),
         (10, 1000),
