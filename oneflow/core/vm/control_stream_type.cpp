@@ -127,7 +127,7 @@ void ControlStreamType::Compute(InstrChain* instr_chain) const { UNIMPLEMENTED()
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                                  int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(ControlStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -137,7 +137,7 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource&
 
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
+  ret->mutable_stream_type_id()->__Init__(typeid(ControlStreamType));
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

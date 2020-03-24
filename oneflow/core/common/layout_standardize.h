@@ -6,8 +6,8 @@ namespace oneflow {
 template<typename T>
 class LayoutStandardize final {
  public:
-  void __Init__() { new (&data_[0]) T(); }
-  void __Delete__() { mut_data()->~T(); }
+  void __Init__(const T& val) { new (&data_[0]) T(val); }
+  void __Delete__() { Mutable()->~T(); }
 
   const T& Get() const { return *reinterpret_cast<const T*>(&data_[0]); }
   T* Mutable() { return reinterpret_cast<T*>(&data_[0]); }
