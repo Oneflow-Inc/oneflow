@@ -35,17 +35,26 @@ Maybe<void> ConvFilterGradOp::InferOutBlobDescs(
   CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
+  CHECK_GT_OR_RETURN(conv_conf.groups(), 0);
+  if (conv_conf.groups() > 1) {
+    CHECK(DevIsGpuAndEnableCudnn()) << "only enable_cudnn support groups > 1";
+  }
   DimVector filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
+    CHECK_LE_OR_RETURN(conv_conf.groups(), x->shape().At(1));
+    CHECK_LE_OR_RETURN(conv_conf.groups(), dy->shape().At(1));
+    CHECK_EQ_OR_RETURN(x->shape().At(1) % conv_conf.groups(), 0);
+    CHECK_EQ_OR_RETURN(dy->shape().At(1) % conv_conf.groups(), 0);
     filter_diff_dim_vec.push_back(dy->shape().At(1));
-    filter_diff_dim_vec.push_back(x->shape().At(1));
+    filter_diff_dim_vec.push_back(x->shape().At(1) / conv_conf.groups());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
   } else if (conv_conf.data_format() == "channels_last") {
+    CHECK_EQ_OR_RETURN(conv_conf.groups(), 1);
     filter_diff_dim_vec.push_back(dy->shape().dim_vec().back());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
-    filter_diff_dim_vec.push_back(x->shape().dim_vec().back());
+    filter_diff_dim_vec.push_back(x->shape().dim_vec().back() / conv_conf.groups());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
@@ -69,17 +78,26 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
+  CHECK_GT_OR_RETURN(conv_conf.groups(), 0);
+  if (conv_conf.groups() > 1) {
+    CHECK(DevIsGpuAndEnableCudnn()) << "only enable_cudnn support groups > 1";
+  }
   DimVector filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
+    CHECK_LE_OR_RETURN(conv_conf.groups(), x->shape().At(1));
+    CHECK_LE_OR_RETURN(conv_conf.groups(), dy->shape().At(1));
+    CHECK_EQ_OR_RETURN(x->shape().At(1) % conv_conf.groups(), 0);
+    CHECK_EQ_OR_RETURN(dy->shape().At(1) % conv_conf.groups(), 0);
     filter_diff_dim_vec.push_back(dy->shape().At(1));
-    filter_diff_dim_vec.push_back(x->shape().At(1));
+    filter_diff_dim_vec.push_back(x->shape().At(1) / conv_conf.groups());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
   } else if (conv_conf.data_format() == "channels_last") {
+    CHECK_EQ_OR_RETURN(conv_conf.groups(), 1);
     filter_diff_dim_vec.push_back(dy->shape().dim_vec().back());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
-    filter_diff_dim_vec.push_back(x->shape().dim_vec().back());
+    filter_diff_dim_vec.push_back(x->shape().dim_vec().back() / conv_conf.groups());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
