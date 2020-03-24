@@ -128,7 +128,7 @@ bool ControlStreamType::IsSourceOpcode(InstructionOpcode opcode) const {
   return opcode == kNewSymbol;
 }
 
-void ControlStreamType::Run(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
+void ControlStreamType::Compute(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
 
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                                  int64_t this_machine_id) const {

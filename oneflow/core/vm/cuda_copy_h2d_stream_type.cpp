@@ -27,7 +27,7 @@ class CudaCopyH2DStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Run(InstrChain* instr_chain) const override;
+  void Compute(InstrChain* instr_chain) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
 };
@@ -90,7 +90,7 @@ bool CudaCopyH2DStreamType::QueryInstructionStatusDone(
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaCopyH2DStreamType::Run(InstrChain* instr_chain) const {
+void CudaCopyH2DStreamType::Compute(InstrChain* instr_chain) const {
   auto* stream = instr_chain->mut_stream();
   cudaSetDevice(stream->thread_ctx().device_id());
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {

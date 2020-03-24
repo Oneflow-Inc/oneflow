@@ -25,6 +25,8 @@ class StreamType {
  public:
   virtual ~StreamType() = default;
 
+  void Run(InstrChain* instr_chain) const;
+
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,
@@ -33,7 +35,8 @@ class StreamType {
                                        InstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Run(InstrChain* instr_chain) const = 0;
+  virtual void Compute(InstrChain* instr_chain) const = 0;
+  virtual void Infer(InstrChain* instr_chain) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   virtual ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                         int64_t this_machine_id) const = 0;

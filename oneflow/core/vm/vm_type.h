@@ -6,7 +6,7 @@ namespace vm {
 
 enum VmType { kRemote = 0, kLocal };
 
-enum InterpretType { kCompute = 0, kInference };
+enum InterpretType { kCompute = 0, kInfer };
 
 }  // namespace vm
 }  // namespace oneflow
