@@ -19,6 +19,7 @@ def conv2d(
     padding,
     data_format="NHWC",
     dilations=None,
+    groups=1,
     name=None,
 ):
     assert len(input.static_shape) == 4
@@ -72,6 +73,21 @@ def conv2d(
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
+
+    assert isinstance(groups, int)
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCHW":
+            assert groups <= filters.static_shape[0]
+            assert filters.static_shape[0] % groups == 0
+            assert groups <= input.static_shape[1]
+            assert input.static_shape[1] % groups == 0
+            assert filters.static_shape[1] == input.static_shape[1] // groups
+        elif data_format.upper() == "NHWC":
+            raise ValueError("data_format NHWC not support groups > 1")
+        else:
+            raise ValueError("invalid data_format")
+    op_conf.conv_2d_conf.groups = groups
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
