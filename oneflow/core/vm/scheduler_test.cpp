@@ -20,7 +20,8 @@ TEST(Scheduler, __Init__) {
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   ASSERT_EQ(scheduler->thread_ctx_list().size(), 2);

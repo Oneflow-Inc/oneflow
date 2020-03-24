@@ -19,7 +19,8 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 TEST(ControlStreamType, new_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
@@ -47,7 +48,8 @@ TEST(ControlStreamType, delete_symbol) {
       ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Nop").stream_type_id(), 1, 1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;

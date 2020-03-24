@@ -31,7 +31,7 @@ ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId&
                                                           int64_t parallel_num) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   instr_type_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(instr_msg->mutable_operand());
@@ -45,7 +45,7 @@ void NewSymbol(Scheduler* scheduler, InstructionMsg* instr_msg) {
   FlatMsgView<NewSymbolCtrlInstruction> view;
   CHECK(view->Match(instr_msg->mut_operand()));
   auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-      scheduler->mut_scheduler_thread_only_allocator(), view->logical_object_id(), scheduler);
+      scheduler->mut_scheduler_thread_only_allocator(), view->logical_object_id());
   CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
   auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
   for (int64_t i = 0; i < view->parallel_num(); ++i) {
@@ -64,13 +64,13 @@ FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 // clang-format on
 
-const StreamTypeId ControlStreamType::kStreamTypeId;
+const int ControlStreamType::kStreamTypeMagicCode;
 
 ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
   auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->set_stream_type_id(kStreamTypeId);
+  instr_type_id->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   instr_type_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
   {
     FlatMsgView<DeleteSymbolCtrlInstruction> view(instr_msg->mutable_operand());
@@ -133,7 +133,7 @@ void ControlStreamType::Run(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                                  int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -143,7 +143,7 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource&
 
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->set_stream_type_id(kStreamTypeId);
+  ret->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

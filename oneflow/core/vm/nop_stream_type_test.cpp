@@ -27,7 +27,7 @@ std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> CachedAllocatorNewSchedule
 }
 
 ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
-  StreamTypeId nop_stream_type_id = LookupInstrTypeId("Nop").stream_type_id();
+  const StreamTypeId& nop_stream_type_id = LookupInstrTypeId("Nop").stream_type_id();
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), thread_ctx) {
     if (nop_stream_type_id == thread_ctx->stream_rt_desc().stream_desc().stream_type_id()) {
       return thread_ctx;
@@ -43,7 +43,8 @@ void TestNopStreamTypeNoArgument(
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   auto nop_instr_msg = NewInstruction("Nop");
@@ -79,7 +80,8 @@ void TestNopStreamTypeOneArgument(
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -127,7 +129,8 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
@@ -163,7 +166,8 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
   vm_desc->mut_stream_type_id2desc()->Insert(nop_stream_desc.Mutable());
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;

@@ -32,7 +32,8 @@ ObjectMsgPtr<VmDesc> NewVmDesc() {
 ObjectMsgPtr<Scheduler> NewTestScheduler(uint64_t symbol_value, size_t size) {
   auto vm_desc = NewVmDesc();
   vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(ControlStreamType::kStreamTypeId, 1, 1, 1).Mutable());
+      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
+          .Mutable());
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, 1));
