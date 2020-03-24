@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VM_INSTRUCTION_OPERAND_H_
-#define ONEFLOW_CORE_VM_VM_INSTRUCTION_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
+#define ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
@@ -45,4 +45,4 @@ FLAT_MSG_END(InstructionOperand);
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_INSTRUCTION_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_

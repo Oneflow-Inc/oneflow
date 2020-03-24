@@ -15,7 +15,7 @@ OBJECT_MSG_BEGIN(UniqueStreamTypeId);
     mutable_stream_type_id()->CopyFrom(stream_type_id);
   }
   // links
-  OBJECT_MSG_DEFINE_MAP_FLAT_MSG_KEY(StreamTypeId, stream_type_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(StreamTypeId, stream_type_id);
 OBJECT_MSG_END(UniqueStreamTypeId);
 // clang-format on
 

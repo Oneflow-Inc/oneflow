@@ -68,7 +68,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_parallel_id);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(7, StreamTypeId, stream_type_id);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on
 

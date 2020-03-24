@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_STREAM_TYPE_H_
 
 #include <string>
 #include <glog/logging.h>
@@ -98,4 +98,4 @@ void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode o
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_TYPE_H_

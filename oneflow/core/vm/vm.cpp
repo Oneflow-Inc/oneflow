@@ -13,7 +13,7 @@ namespace vm {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
-  return ObjectMsgPtr<InstructionMsg>::New(LookupInstrTypeId(instr_type_name));
+  return ObjectMsgPtr<InstructionMsg>::New(instr_type_name);
 }
 
 Maybe<void> Run(const std::string& instruction_list_str) {

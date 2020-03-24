@@ -30,9 +30,7 @@ FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId& logical_object_id,
                                                           int64_t parallel_num) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
-  instr_type_id->set_opcode(CtrlInstrOpCode::kNewSymbol);
+  instr_msg->set_instr_type_id(&LookupInstrTypeId("NewSymbol"));
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     view->set_logical_object_id(logical_object_id);
@@ -67,9 +65,7 @@ FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  auto* instr_type_id = instr_msg->mutable_instr_type_id();
-  instr_type_id->mutable_stream_type_id()->__Init__(kStreamTypeMagicCode);
-  instr_type_id->set_opcode(CtrlInstrOpCode::kDeleteSymbol);
+  instr_msg->set_instr_type_id(&LookupInstrTypeId("DeleteSymbol"));
   {
     FlatMsgView<DeleteSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();

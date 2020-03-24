@@ -13,8 +13,12 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
   return operand_vec->back().Mutable();
 }
 
+void InstructionMsg::__Init__(const std::string& instr_type_name) {
+  set_instr_type_id(&LookupInstrTypeId(instr_type_name));
+}
+
 void InstructionMsg::__Init__(const InstructionProto& proto) {
-  mutable_instr_type_id()->__Init__(proto.instr_type_name());
+  __Init__(proto.instr_type_name());
   mutable_operand()->resize(proto.operand_size());
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));

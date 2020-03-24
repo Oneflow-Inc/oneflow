@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_VM_THREAD_MSG_H_
-#define ONEFLOW_CORE_VM_VM_THREAD_MSG_H_
+#ifndef ONEFLOW_CORE_VM_THREAD_MSG_H_
+#define ONEFLOW_CORE_VM_THREAD_MSG_H_
 
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
@@ -32,4 +32,4 @@ OBJECT_MSG_END(ThreadCtx);
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_THREAD_MSG_H_
+#endif  // ONEFLOW_CORE_VM_THREAD_MSG_H_
