@@ -28,18 +28,6 @@ FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 // clang-format on
 
-ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId& logical_object_id,
-                                                          int64_t parallel_num) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  instr_msg->mutable_instr_type_id()->CopyFrom(LookupInstrTypeId("NewSymbol"));
-  {
-    FlatMsgView<NewSymbolCtrlInstruction> view(instr_msg->mutable_operand());
-    view->set_logical_object_id(logical_object_id);
-    view->set_parallel_num(parallel_num);
-  }
-  return instr_msg;
-}
-
 void NewSymbol(Scheduler* scheduler, InstructionMsg* instr_msg) {
   FlatMsgView<NewSymbolCtrlInstruction> view;
   CHECK(view->Match(instr_msg->mut_operand()));
@@ -63,18 +51,6 @@ FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
 FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 // clang-format on
 
-ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
-    const LogicalObjectId& logical_object_id) const {
-  auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  instr_msg->mutable_instr_type_id()->CopyFrom(LookupInstrTypeId("DeleteSymbol"));
-  {
-    FlatMsgView<DeleteSymbolCtrlInstruction> view(instr_msg->mutable_operand());
-    auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();
-    mirrored_object_operand->set_logical_object_id(logical_object_id);
-    mirrored_object_operand->mutable_all_parallel_id();
-  }
-  return instr_msg;
-}
 void DeleteSymbol(Scheduler* scheduler, InstructionMsg* instr_msg) {
   FlatMsgView<DeleteSymbolCtrlInstruction> view;
   CHECK(view->Match(instr_msg->mut_operand()));

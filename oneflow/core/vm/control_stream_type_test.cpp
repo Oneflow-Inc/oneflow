@@ -27,7 +27,9 @@ TEST(ControlStreamType, new_symbol) {
   InstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(NewInstruction("NewSymbol")
+                       ->add_uint64_operand(symbol_value)
+                       ->add_int64_operand(parallel_num));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 1);
@@ -56,11 +58,13 @@ TEST(ControlStreamType, delete_symbol) {
   InstructionMsgList list;
   int64_t parallel_num = 8;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, parallel_num));
+  list.EmplaceBack(NewInstruction("NewSymbol")
+                       ->add_uint64_operand(symbol_value)
+                       ->add_int64_operand(parallel_num));
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
+  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3);

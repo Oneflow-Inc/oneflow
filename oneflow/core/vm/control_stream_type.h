@@ -15,10 +15,6 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  ObjectMsgPtr<InstructionMsg> NewSymbol(const LogicalObjectId& logical_object_id,
-                                         int64_t parallel_num) const;
-  ObjectMsgPtr<InstructionMsg> DeleteSymbol(const LogicalObjectId& logical_object_id) const;
-
   bool IsSourceOpcode(InstructionOpcode opcode) const;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}

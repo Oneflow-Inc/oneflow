@@ -28,11 +28,12 @@ TEST(DeviceHelperStreamType, basic) {
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  list.EmplaceBack(ControlStreamType().NewSymbol(symbol_value, 1));
+  list.EmplaceBack(
+      NewInstruction("NewSymbol")->add_uint64_operand(symbol_value)->add_int64_operand(1));
   list.EmplaceBack(
       NewInstruction("CudaMalloc")->add_mut_operand(symbol_value)->add_uint64_operand(1024));
   list.EmplaceBack(NewInstruction("CudaFree")->add_mut_operand(symbol_value));
-  list.EmplaceBack(ControlStreamType().DeleteSymbol(symbol_value));
+  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value));
   scheduler->Receive(&list);
   scheduler->Schedule();
   OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }

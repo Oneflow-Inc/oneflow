@@ -86,7 +86,8 @@ void TestNopStreamTypeOneArgument(
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_instr_msg =
+      NewInstruction("NewSymbol")->add_uint64_operand(symbol_value)->add_int64_operand(1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
@@ -135,7 +136,8 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_instr_msg =
+      NewInstruction("NewSymbol")->add_uint64_operand(symbol_value)->add_int64_operand(1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
@@ -172,7 +174,8 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
   uint64_t symbol_value = 9527;
-  auto ctrl_instr_msg = ControlStreamType().NewSymbol(symbol_value, 1);
+  auto ctrl_instr_msg =
+      NewInstruction("NewSymbol")->add_uint64_operand(symbol_value)->add_int64_operand(1);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
