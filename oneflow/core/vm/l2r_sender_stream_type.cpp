@@ -31,6 +31,19 @@ class L2RSenderStreamType final : public StreamType {
 
 namespace {
 
+class L2RSenderInstructionType final : public InstructionType {
+ public:
+  L2RSenderInstructionType() = default;
+  ~L2RSenderInstructionType() override = default;
+
+  using stream_type = L2RSenderStreamType;
+  static const InstructionOpcode opcode = 0;
+
+  void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
+};
+COMMAND(RegisterInstrTypeId<L2RSenderInstructionType>("L2RSend", kRemote));
+COMMAND(RegisterInstrTypeId<L2RSenderInstructionType>("L2RLocalSend", kLocal));
+
 Transporter* GetTransporter(InstrChain* instr_chain) {
   auto* device_ctx =
       dynamic_cast<TransporterDeviceCtx*>(instr_chain->mut_stream()->device_ctx().get());
@@ -134,8 +147,6 @@ ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeLocalStreamDesc(const Resource
 }
 
 COMMAND(RegisterStreamType<L2RSenderStreamType>());
-COMMAND(RegisterInstrTypeId<L2RSenderStreamType>("L2RSend", 0, kRemote));
-COMMAND(RegisterInstrTypeId<L2RSenderStreamType>("L2RLocalSend", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow

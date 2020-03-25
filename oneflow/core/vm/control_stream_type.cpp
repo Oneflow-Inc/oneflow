@@ -23,7 +23,7 @@ std::vector<CtrlInstrFunc> ctrl_instr_table;
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(LogicalObjectId, logical_object_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, logical_object_id);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_num);
 FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 // clang-format on

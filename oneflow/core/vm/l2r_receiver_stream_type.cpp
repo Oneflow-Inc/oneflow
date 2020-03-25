@@ -31,6 +31,19 @@ class L2RReceiverStreamType final : public StreamType {
 
 namespace {
 
+class L2RReceiverInstructionType final : public InstructionType {
+ public:
+  L2RReceiverInstructionType() = default;
+  ~L2RReceiverInstructionType() override = default;
+
+  using stream_type = L2RReceiverStreamType;
+  static const InstructionOpcode opcode = 0;
+
+  void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
+};
+COMMAND(RegisterInstrTypeId<L2RReceiverInstructionType>("L2RReceive", kRemote));
+COMMAND(RegisterInstrTypeId<L2RReceiverInstructionType>("L2RLocalReceive", kLocal));
+
 Transporter* GetTransporter(InstrChain* instr_chain) {
   auto* device_ctx =
       dynamic_cast<TransporterDeviceCtx*>(instr_chain->mut_stream()->device_ctx().get());
@@ -136,8 +149,6 @@ ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeLocalStreamDesc(
 }
 
 COMMAND(RegisterStreamType<L2RReceiverStreamType>());
-COMMAND(RegisterInstrTypeId<L2RReceiverStreamType>("L2RReceive", 0, kRemote));
-COMMAND(RegisterInstrTypeId<L2RReceiverStreamType>("L2RLocalReceive", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow
