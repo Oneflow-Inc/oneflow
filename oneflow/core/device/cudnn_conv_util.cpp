@@ -98,8 +98,10 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
         std::any_of(std::begin(args.params.stride), std::begin(args.params.stride) + stride_dim,
                     [](int n) { return n != 1; });
     if (blacklist
-        && (perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
-            || perf_vec[found_algo_idx].algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
+        && (static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
+                == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
+            || static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[found_algo_idx].algo)
+                   == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
       perf_t algo_perf;
       SetAlgo4Perf(args, res, &algo_perf, GetDefaultAlgo<algo_t>());
       return algo_perf;
@@ -136,6 +138,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
         val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   }
+  const int32_t groups = GetValFromPbMessage<int32_t>(conv_conf, "groups");
+  if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
 }
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
@@ -168,6 +172,7 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
   CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  CudaCheck(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
 
@@ -268,22 +273,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -301,22 +308,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
@@ -335,22 +344,24 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
   static void HeuristicSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                               std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 
   static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
                                std::vector<perf_t>* perf_vec) {
     int found_algo_cnt = 0;
-    perf_vec->reserve(GetAlgoMaxCount(res));
+    perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
         perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
+    // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
 };
