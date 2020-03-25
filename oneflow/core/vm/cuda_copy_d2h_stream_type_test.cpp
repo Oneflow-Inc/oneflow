@@ -39,8 +39,10 @@ void TestSimple(int64_t parallel_num) {
   uint64_t src_symbol = 9527;
   uint64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
-  list.EmplaceBack(ControlStreamType().NewSymbol(src_symbol, parallel_num));
-  list.EmplaceBack(ControlStreamType().NewSymbol(dst_symbol, parallel_num));
+  list.EmplaceBack(
+      NewInstruction("NewSymbol")->add_uint64_operand(src_symbol)->add_int64_operand(parallel_num));
+  list.EmplaceBack(
+      NewInstruction("NewSymbol")->add_uint64_operand(dst_symbol)->add_int64_operand(parallel_num));
   list.EmplaceBack(
       NewInstruction("CudaMalloc")->add_mut_operand(src_symbol)->add_uint64_operand(size));
   list.EmplaceBack(
