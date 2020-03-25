@@ -55,10 +55,12 @@ REGISTER_USER_OP("CropMirrorNormalize")
     .OptionalInput("mirror")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "CHW")
+    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
     .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
     .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
     .Attr<std::vector<float>>("crop", UserOpAttrType::kAtListFloat, {0.0, 0.0})
+    .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
+    .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
     .Attr<int32_t>("output_dtype", UserOpAttrType::kAtInt32, static_cast<int32_t>(DataType::kFloat))
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -85,9 +87,9 @@ REGISTER_USER_OP("CropMirrorNormalize")
           W = in_tensor->shape().At(2);
         }
         std::string output_layout = ctx->GetAttr<std::string>("output_layout");
-        if (output_layout == "CHW") {
+        if (output_layout == "NCHW") {
           *out_tensor->mut_shape() = Shape({N, C, H, W});
-        } else if (output_layout == "HWC") {
+        } else if (output_layout == "NHWC") {
           *out_tensor->mut_shape() = Shape({N, H, W, C});
         } else {
           return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
@@ -100,8 +102,13 @@ REGISTER_USER_OP("CropMirrorNormalize")
                << "input Dtype: " << in_tensor->data_type() << " is not supported";
       }
       DataType output_dtype = static_cast<DataType>(ctx->GetAttr<int32_t>("output_dtype"));
-      CHECK_EQ(output_dtype, DataType::kFloat);  // only support float now; for float16 in future
+      CHECK_EQ_OR_RETURN(output_dtype,
+                         DataType::kFloat);  // only support float now; for float16 in future
       *out_tensor->mut_data_type() = output_dtype;
+
+      bool pad_output = ctx->GetAttr<bool>("pad_output");
+      CHECK_OR_RETURN(pad_output == false);  // TODO(chengcheng)
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
