@@ -40,8 +40,8 @@ class NewSymbolInstructionType final : public InstructionType {
     }
   }
 };
-COMMAND(RegisterInstrTypeId<NewSymbolInstructionType>("NewSymbol", kRemote));
-COMMAND(RegisterInstrTypeId<NewSymbolInstructionType>("LocalNewSymbol", kLocal));
+COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
+COMMAND(RegisterLocalInstructionType<NewSymbolInstructionType>("LocalNewSymbol"));
 
 class DeleteSymbolInstructionType final : public InstructionType {
  public:
@@ -72,8 +72,8 @@ class DeleteSymbolInstructionType final : public InstructionType {
     scheduler->mut_id2logical_object()->Erase(logical_object);
   }
 };
-COMMAND(RegisterInstrTypeId<DeleteSymbolInstructionType>("DeleteSymbol", kRemote));
-COMMAND(RegisterInstrTypeId<DeleteSymbolInstructionType>("LocalDeleteSymbol", kLocal));
+COMMAND(RegisterInstructionType<DeleteSymbolInstructionType>("DeleteSymbol"));
+COMMAND(RegisterLocalInstructionType<DeleteSymbolInstructionType>("LocalDeleteSymbol"));
 
 void ControlStreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
@@ -131,8 +131,6 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& 
   ret->set_start_parallel_id(0);
   return ret;
 }
-
-COMMAND(RegisterStreamType<ControlStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

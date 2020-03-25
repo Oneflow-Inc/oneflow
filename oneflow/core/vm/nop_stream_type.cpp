@@ -40,8 +40,8 @@ class NopInstructionType final : public InstructionType {
 
   void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
 };
-COMMAND(RegisterInstrTypeId<NopInstructionType>("Nop", kRemote));
-COMMAND(RegisterInstrTypeId<NopInstructionType>("LocalNop", kLocal));
+COMMAND(RegisterInstructionType<NopInstructionType>("Nop"));
+COMMAND(RegisterLocalInstructionType<NopInstructionType>("LocalNop"));
 
 void NopStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
@@ -84,8 +84,6 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& reso
   ret->set_start_parallel_id(0);
   return ret;
 }
-
-COMMAND(RegisterStreamType<NopStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

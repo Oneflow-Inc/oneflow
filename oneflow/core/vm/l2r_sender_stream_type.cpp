@@ -40,8 +40,8 @@ class L2RSenderInstructionType final : public InstructionType {
 
   void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
 };
-COMMAND(RegisterInstrTypeId<L2RSenderInstructionType>("L2RSend", kRemote));
-COMMAND(RegisterInstrTypeId<L2RSenderInstructionType>("L2RLocalSend", kLocal));
+COMMAND(RegisterInstructionType<L2RSenderInstructionType>("L2RSend"));
+COMMAND(RegisterLocalInstructionType<L2RSenderInstructionType>("L2RLocalSend"));
 
 Transporter* GetTransporter(InstrChain* instr_chain) {
   auto* device_ctx =
@@ -144,8 +144,6 @@ ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeLocalStreamDesc(const Resource
   ret->set_start_parallel_id(0);
   return ret;
 }
-
-COMMAND(RegisterStreamType<L2RSenderStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

@@ -74,7 +74,7 @@ class CudaMallocInstructionType final : public InstructionType {
     mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
   }
 };
-COMMAND(RegisterInstrTypeId<CudaMallocInstructionType>("CudaMalloc", kRemote));
+COMMAND(RegisterInstructionType<CudaMallocInstructionType>("CudaMalloc"));
 
 class CudaFreeInstructionType final : public InstructionType {
  public:
@@ -113,7 +113,7 @@ class CudaFreeInstructionType final : public InstructionType {
     mirrored_object->clear_cuda_mem_buffer();
   }
 };
-COMMAND(RegisterInstrTypeId<CudaFreeInstructionType>("CudaFree", kRemote));
+COMMAND(RegisterInstructionType<CudaFreeInstructionType>("CudaFree"));
 
 }  // namespace
 
@@ -161,8 +161,6 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeRemoteStreamDesc(
   ret->set_start_parallel_id(this_machine_id * device_num);
   return ret;
 }
-
-COMMAND(RegisterStreamType<DeviceHelperStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

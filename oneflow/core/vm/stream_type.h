@@ -79,11 +79,7 @@ class StreamType {
 };
 
 const StreamType* LookupStreamType(const StreamTypeId&);
-void RegisterStreamType(const std::type_index&, const StreamType*);
-template<typename T>
-void RegisterStreamType() {
-  RegisterStreamType(typeid(T), new T());
-}
+bool TryRegisterStreamType(const std::type_index&, InterpretType interpret_type, const StreamType*);
 
 }  // namespace vm
 }  // namespace oneflow

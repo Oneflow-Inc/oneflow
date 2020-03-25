@@ -2,6 +2,8 @@
 #define ONEFLOW_CORE_VM_INSTRUCTION_TYPE_H_
 
 #include <glog/logging.h>
+#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/infer_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -31,14 +33,38 @@ class InstructionType {
 class InstrTypeId;
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
-void RegisterInstrTypeId(const std::string& instr_type_name,
-                         const std::type_index& stream_type_index,
-                         const std::type_index& instr_type_index, VmType type,
-                         const InstructionType* instruction_type);
+void RegisterInstructionType(const std::string& instr_type_name,
+                             const std::type_index& stream_type_index,
+                             const std::type_index& instr_type_index, InterpretType interpret_type,
+                             VmType vm_type, const InstructionType* instruction_type);
 
 template<typename T>
-void RegisterInstrTypeId(const std::string& instr_type_name, VmType type) {
-  RegisterInstrTypeId(instr_type_name, typeid(typename T::stream_type), typeid(T), type, new T());
+void RegisterInstructionType(const std::string& instr_type_name) {
+  TryRegisterStreamType(typeid(typename T::stream_type), InterpretType::kCompute,
+                        new typename T::stream_type());
+  RegisterInstructionType(instr_type_name, typeid(typename T::stream_type), typeid(T),
+                          InterpretType::kCompute, VmType::kRemote, new T());
+  TryRegisterStreamType(typeid(InferStreamType<typename T::stream_type>), InterpretType::kInfer,
+                        new InferStreamType<typename T::stream_type>());
+  RegisterInstructionType(std::string("Infer-") + instr_type_name,
+                          typeid(InferStreamType<typename T::stream_type>), typeid(T),
+                          InterpretType::kInfer, VmType::kRemote, new T());
+  RegisterInstructionType(std::string("LocalInfer-") + instr_type_name,
+                          typeid(InferStreamType<typename T::stream_type>), typeid(T),
+                          InterpretType::kInfer, VmType::kLocal, new T());
+}
+
+template<typename T>
+void RegisterLocalInstructionType(const std::string& instr_type_name) {
+  TryRegisterStreamType(typeid(typename T::stream_type), InterpretType::kCompute,
+                        new typename T::stream_type());
+  RegisterInstructionType(instr_type_name, typeid(typename T::stream_type), typeid(T),
+                          InterpretType::kCompute, VmType::kLocal, new T());
+  TryRegisterStreamType(typeid(InferStreamType<typename T::stream_type>), InterpretType::kInfer,
+                        new InferStreamType<typename T::stream_type>());
+  RegisterInstructionType(std::string("Infer-") + instr_type_name,
+                          typeid(InferStreamType<typename T::stream_type>), typeid(T),
+                          InterpretType::kInfer, VmType::kLocal, new T());
 }
 
 const InstructionType* LookupInstructionType(const InstrTypeId&);
