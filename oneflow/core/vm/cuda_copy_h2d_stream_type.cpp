@@ -70,8 +70,8 @@ class CudaCopyH2DInstructionType final : public InstructionType {
                              cudaMemcpyKind::cudaMemcpyHostToDevice);
   }
 };
-COMMAND(RegisterInstrTypeId<CudaCopyH2DInstructionType>("CopyH2D", kRemote));
-COMMAND(RegisterInstrTypeId<CudaCopyH2DInstructionType>("CudaCopyH2D", kRemote));
+COMMAND(RegisterInstructionType<CudaCopyH2DInstructionType>("CopyH2D"));
+COMMAND(RegisterInstructionType<CudaCopyH2DInstructionType>("CudaCopyH2D"));
 
 }  // namespace
 
@@ -121,8 +121,6 @@ ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeRemoteStreamDesc(
   ret->set_start_parallel_id(this_machine_id * device_num);
   return ret;
 }
-
-COMMAND(RegisterStreamType<CudaCopyH2DStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

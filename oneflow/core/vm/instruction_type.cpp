@@ -30,20 +30,16 @@ void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
   for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second); }
 }
 
-void RegisterInstrTypeId(const std::string& instruction_name,
-                         const std::type_index& stream_type_index,
-                         const std::type_index& instr_type_index, VmType type,
-                         const InstructionType* instruction_type) {
-  auto Register = [&](const std::string& instruction_name, InterpretType interpret_type) {
-    InstrTypeId instr_type_id;
-    instr_type_id.__Init__(stream_type_index, instr_type_index, interpret_type, type);
-    CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
-    auto ret = InstructionType4InstrTypeId()->emplace(instr_type_id, instruction_type);
-    if (instruction_type == nullptr) { return; }
-    if (!ret.second) { CHECK(typeid(ret.first->second) == typeid(instruction_type)); }
-  };
-  Register(instruction_name, InterpretType::kCompute);
-  Register(std::string("Infer-") + instruction_name, InterpretType::kInfer);
+void RegisterInstructionType(const std::string& instruction_name,
+                             const std::type_index& stream_type_index,
+                             const std::type_index& instr_type_index, InterpretType interpret_type,
+                             VmType vm_type, const InstructionType* instruction_type) {
+  InstrTypeId instr_type_id;
+  instr_type_id.__Init__(stream_type_index, instr_type_index, interpret_type, vm_type);
+  CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
+  auto ret = InstructionType4InstrTypeId()->emplace(instr_type_id, instruction_type);
+  if (instruction_type == nullptr) { return; }
+  if (!ret.second) { CHECK(typeid(ret.first->second) == typeid(instruction_type)); }
 }
 
 const InstructionType* LookupInstructionType(const InstrTypeId& instr_type_id) {

@@ -72,7 +72,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
     mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
   }
 };
-COMMAND(RegisterInstrTypeId<CudaMallocHostInstructionType>("CudaMallocHost", kRemote));
+COMMAND(RegisterInstructionType<CudaMallocHostInstructionType>("CudaMallocHost"));
 
 class MallocInstructionType final : public InstructionType {
  public:
@@ -113,8 +113,8 @@ class MallocInstructionType final : public InstructionType {
     mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
   }
 };
-COMMAND(RegisterInstrTypeId<MallocInstructionType>("Malloc", kRemote));
-COMMAND(RegisterInstrTypeId<MallocInstructionType>("LocalMalloc", kLocal));
+COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
+COMMAND(RegisterLocalInstructionType<MallocInstructionType>("LocalMalloc"));
 
 class CudaFreeHostInstructionType final : public InstructionType {
  public:
@@ -150,7 +150,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
     mirrored_object->clear_host_mem_buffer();
   }
 };
-COMMAND(RegisterInstrTypeId<CudaFreeHostInstructionType>("CudaFreeHost", kRemote));
+COMMAND(RegisterInstructionType<CudaFreeHostInstructionType>("CudaFreeHost"));
 
 class FreeInstructionType final : public InstructionType {
  public:
@@ -186,8 +186,8 @@ class FreeInstructionType final : public InstructionType {
     mirrored_object->clear_host_mem_buffer();
   }
 };
-COMMAND(RegisterInstrTypeId<FreeInstructionType>("Free", kRemote));
-COMMAND(RegisterInstrTypeId<FreeInstructionType>("LocalFree", kLocal));
+COMMAND(RegisterInstructionType<FreeInstructionType>("Free"));
+COMMAND(RegisterLocalInstructionType<FreeInstructionType>("LocalFree"));
 
 }  // namespace
 
@@ -237,8 +237,6 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& res
   ret->set_start_parallel_id(0);
   return ret;
 }
-
-COMMAND(RegisterStreamType<HostStreamType>());
 
 }  // namespace vm
 }  // namespace oneflow

@@ -51,15 +51,12 @@ const StreamType* LookupStreamType(const StreamTypeId& stream_type_id) {
   return &registry->stream_type();
 }
 
-void RegisterStreamType(const std::type_index& stream_type_index, const StreamType* stream_type) {
-  auto Register = [&](InterpretType interpret_type) {
-    FlatMsg<StreamTypeId> stream_type_id;
-    stream_type_id->__Init__(stream_type_index, interpret_type);
-    auto registry = ObjectMsgPtr<StreamTypeRegistry>::New(stream_type, stream_type_id.Get());
-    CHECK(StreamType4StreamTypeId()->Insert(registry.Mutable()).second);
-  };
-  Register(InterpretType::kCompute);
-  Register(InterpretType::kInfer);
+bool TryRegisterStreamType(const std::type_index& stream_type_index, InterpretType interpret_type,
+                           const StreamType* stream_type) {
+  FlatMsg<StreamTypeId> stream_type_id;
+  stream_type_id->__Init__(stream_type_index, interpret_type);
+  auto registry = ObjectMsgPtr<StreamTypeRegistry>::New(stream_type, stream_type_id.Get());
+  return StreamType4StreamTypeId()->Insert(registry.Mutable()).second;
 }
 
 }  // namespace vm
