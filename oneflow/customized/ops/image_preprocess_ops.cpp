@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/customized/image/image_util.h"
 
 namespace oneflow {
@@ -120,6 +121,35 @@ REGISTER_USER_OP("CropMirrorNormalize")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("CoinFlip")
+    .Output("out")
+    .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
+    .Attr("batch_size", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");
+      const ParallelContext& parallel_ctx = ctx->parallel_ctx();
+      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      if (parallel_ctx.parallel_num() > 1 && out_sbp.has_split_parallel()) {
+        BalancedSplitter bs(batch_size, parallel_ctx.parallel_num());
+        batch_size = bs.At(parallel_ctx.parallel_id()).size();
+      }
+      *out_tensor->mut_shape() = Shape({batch_size});
+      *out_tensor->mut_data_type() = DataType::kInt8;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split("out", 0, 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     });

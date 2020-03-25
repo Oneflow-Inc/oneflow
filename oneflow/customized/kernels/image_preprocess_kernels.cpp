@@ -225,4 +225,42 @@ REGISTER_USER_KERNEL("CropMirrorNormalize")
       return false;
     });
 
+class CoinFlipKernel final : public user_op::OpKernel {
+ public:
+  CoinFlipKernel(user_op::KernelInitContext* ctx)
+      : user_op::OpKernel(ctx),
+        dis_(ctx->GetAttr<float>("probability")),
+        rng_(ctx->GetAttr<int64_t>("seed") == -1 ? NewRandomSeed()
+                                                 : ctx->GetAttr<int64_t>("seed")) {
+    /*
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    if (seed == -1) { seed = NewRandomSeed(); }
+    rng_ = std::mt19937(seed);
+    */
+  }
+  CoinFlipKernel() = default;
+  ~CoinFlipKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+      *(out_blob->mut_dptr<int8_t>() + i) = dis_(rng_) ? 1 : 0;
+    }
+  }
+
+  std::bernoulli_distribution dis_;
+  std::mt19937 rng_;
+};
+
+REGISTER_USER_KERNEL("CoinFlip")
+    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new CoinFlipKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kInt8) {
+        return true;
+      }
+      return false;
+    });
+
 }  // namespace oneflow
