@@ -5,7 +5,7 @@
 #include <typeindex>
 #include <glog/logging.h>
 #include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/instr_type_id.msg.h"
+#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/device/device_context.h"
@@ -21,6 +21,7 @@ class Stream;
 class InstructionStatusBuffer;
 class InstrChain;
 class Scheduler;
+class InstructionType;
 
 class StreamType {
  public:
@@ -82,19 +83,6 @@ void RegisterStreamType(const std::type_index&, const StreamType*);
 template<typename T>
 void RegisterStreamType() {
   RegisterStreamType(typeid(T), new T());
-}
-
-class InstrTypeId;
-
-const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
-void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
-void RegisterInstrTypeId(const std::string& instr_type_name,
-                         const std::type_index& stream_type_index, InstructionOpcode opcode,
-                         VmType type);
-template<typename T>
-void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode opcode,
-                         VmType type) {
-  RegisterInstrTypeId(instr_type_name, typeid(T), opcode, type);
 }
 
 }  // namespace vm

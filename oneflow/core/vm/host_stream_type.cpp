@@ -1,5 +1,6 @@
 #include "oneflow/core/common/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
@@ -48,36 +49,48 @@ std::vector<HostInstrFunc> host_instr_table;
     host_instr_table.at(op_code) = &function_name;                                   \
   })
 
-// clang-format off
-FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
-// clang-format on
+class CudaMallocHostInstructionType final : public InstructionType {
+ public:
+  CudaMallocHostInstructionType() = default;
+  ~CudaMallocHostInstructionType() override = default;
 
-void CudaMallocHost(Instruction* instr) {
-  MirroredObject* mirrored_object = nullptr;
-  char* dptr = nullptr;
-  size_t size = 0;
-  {
-    const auto& stream = instr->mut_instr_chain()->stream();
-    auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
-    FlatMsgView<CudaMallocHostInstruction> view;
-    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
-    size = view->size();
-    FlatMsg<MirroredObjectId> mirrored_object_id;
-    mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
-    auto* mirrored_object_access =
-        instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
-    CHECK_NOTNULL(mirrored_object_access);
-    mirrored_object = mirrored_object_access->mut_mirrored_object();
-    CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
-    CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(), parallel_num);
-    CHECK(!mirrored_object->has_object_type());
+  using stream_type = HostStreamType;
+  static const int opcode = kCudaFreeHostOpcode;
+
+  // clang-format off
+  FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
+  FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
+  // clang-format on
+
+  void Compute(Instruction* instr) const override {
+    MirroredObject* mirrored_object = nullptr;
+    char* dptr = nullptr;
+    size_t size = 0;
+    {
+      const auto& stream = instr->mut_instr_chain()->stream();
+      auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
+      FlatMsgView<CudaMallocHostInstruction> view;
+      CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
+      size = view->size();
+      FlatMsg<MirroredObjectId> mirrored_object_id;
+      mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
+      auto* mirrored_object_access =
+          instr->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
+      CHECK_NOTNULL(mirrored_object_access);
+      mirrored_object = mirrored_object_access->mut_mirrored_object();
+      CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
+      CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
+               parallel_num);
+      CHECK(!mirrored_object->has_object_type());
+    }
+    CudaCheck(cudaMallocHost(&dptr, size));
+    mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
   }
-  CudaCheck(cudaMallocHost(&dptr, size));
-  mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
-}
+};
+
+void CudaMallocHost(Instruction* instr) { return CudaMallocHostInstructionType().Compute(instr); }
 REGISTER_HOST_INSTRUCTION(kCudaMallocHostOpcode, CudaMallocHost);
 COMMAND(RegisterInstrTypeId<HostStreamType>("CudaMallocHost", kCudaMallocHostOpcode, kRemote));
 

@@ -1,5 +1,6 @@
 #include "oneflow/core/common/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"

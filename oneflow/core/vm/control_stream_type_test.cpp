@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
