@@ -39,7 +39,7 @@ void RegisterInstrTypeId(const std::string& instruction_name,
     CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
     auto ret = InstructionType4InstrTypeId()->emplace(instr_type_id, instruction_type);
     if (instruction_type == nullptr) { return; }
-    if (!ret.second) { CHECK(typeid(ret.first->second) == typeid(*instruction_type)); }
+    if (!ret.second) { CHECK(typeid(ret.first->second) == typeid(instruction_type)); }
   };
   Register(instruction_name, InterpretType::kCompute);
   Register(std::string("Infer-") + instruction_name, InterpretType::kInfer);

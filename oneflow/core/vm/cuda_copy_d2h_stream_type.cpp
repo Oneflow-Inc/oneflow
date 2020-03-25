@@ -34,35 +34,46 @@ class CudaCopyD2HStreamType final : public StreamType {
 
 namespace {
 
-// clang-format off
-FLAT_MSG_VIEW_BEGIN(CudaCopyD2HInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, src);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-FLAT_MSG_VIEW_END(CudaCopyD2HInstruction);
-// clang-format on
+class CudaCopyD2HInstructionType final : public InstructionType {
+ public:
+  CudaCopyD2HInstructionType() = default;
+  ~CudaCopyD2HInstructionType() override = default;
 
-void CudaCopyD2H(Instruction* instr) {
-  void* dst = nullptr;
-  const void* src = nullptr;
-  size_t size = 0;
-  const auto& stream = instr->mut_instr_chain()->stream();
-  {
-    FlatMsgView<CudaCopyD2HInstruction> view;
-    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
-    size = view->size();
-    auto* dst_mirrored_obj =
-        instr->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
-    CHECK_NOTNULL(dst_mirrored_obj);
-    dst = dst_mirrored_obj->mut_host_mem_buffer()->mut_data();
-    auto* src_mirrored_obj =
-        instr->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
-    CHECK_NOTNULL(src_mirrored_obj);
-    src = src_mirrored_obj->mut_cuda_mem_buffer()->mut_data();
+  using stream_type = CudaCopyD2HStreamType;
+  static const InstructionOpcode opcode = 0;
+
+  // clang-format off
+  FLAT_MSG_VIEW_BEGIN(CudaCopyD2HInstruction);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, src);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
+  FLAT_MSG_VIEW_END(CudaCopyD2HInstruction);
+  // clang-format on
+
+  void Compute(Instruction* instr) const override {
+    void* dst = nullptr;
+    const void* src = nullptr;
+    size_t size = 0;
+    const auto& stream = instr->mut_instr_chain()->stream();
+    {
+      FlatMsgView<CudaCopyD2HInstruction> view;
+      CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
+      size = view->size();
+      auto* dst_mirrored_obj =
+          instr->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
+      CHECK_NOTNULL(dst_mirrored_obj);
+      dst = dst_mirrored_obj->mut_host_mem_buffer()->mut_data();
+      auto* src_mirrored_obj =
+          instr->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
+      CHECK_NOTNULL(src_mirrored_obj);
+      src = src_mirrored_obj->mut_cuda_mem_buffer()->mut_data();
+    }
+    Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,
+                             cudaMemcpyKind::cudaMemcpyDeviceToHost);
   }
-  Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,
-                           cudaMemcpyKind::cudaMemcpyDeviceToHost);
-}
+};
+COMMAND(RegisterInstrTypeId<CudaCopyD2HInstructionType>("CopyD2H", kRemote));
+COMMAND(RegisterInstrTypeId<CudaCopyD2HInstructionType>("CudaCopyD2H", kRemote));
 
 }  // namespace
 
@@ -92,7 +103,9 @@ void CudaCopyD2HStreamType::Compute(InstrChain* instr_chain) const {
   auto* stream = instr_chain->mut_stream();
   cudaSetDevice(stream->thread_ctx().device_id());
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
-    CudaCopyD2H(instruction);
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
+    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+    LookupInstructionType(instr_type_id)->Compute(instruction);
   }
   stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
@@ -112,8 +125,5 @@ ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeRemoteStreamDesc(
 }
 
 COMMAND(RegisterStreamType<CudaCopyD2HStreamType>());
-COMMAND(RegisterInstrTypeId<CudaCopyD2HStreamType>("CopyD2H", 0, kRemote));
-COMMAND(RegisterInstrTypeId<CudaCopyD2HStreamType>("CudaCopyD2H", 0, kRemote));
-
 }  // namespace vm
 }  // namespace oneflow

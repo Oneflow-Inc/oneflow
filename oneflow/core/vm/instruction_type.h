@@ -6,8 +6,7 @@
 namespace oneflow {
 namespace vm {
 
-class InstrChain;
-class InstrChain;
+class InstructionMsg;
 class Instruction;
 class Scheduler;
 
@@ -18,10 +17,10 @@ class InstructionType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  virtual void Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
+  virtual void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
+  virtual void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 
