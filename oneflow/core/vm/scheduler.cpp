@@ -45,9 +45,9 @@ void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* in
   ControlStreamType control_stream_type;
   const auto& control_type_index = std::type_index(typeid(ControlStreamType));
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
-    const auto& proto = instr_msg->instr_type_id();
-    if (!(proto.stream_type_id().stream_type_index() == control_type_index)) { continue; }
-    if (!control_stream_type.IsSourceOpcode(proto.opcode())) { continue; }
+    const auto& instr_type_id = instr_msg->instr_type_id();
+    if (!(instr_type_id.stream_type_id().stream_type_index() == control_type_index)) { continue; }
+    if (!control_stream_type.IsSourceInstruction(instr_type_id)) { continue; }
     control_stream_type.Run(this, instr_msg);
     instr_msg_list->Erase(instr_msg);
   }

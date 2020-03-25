@@ -15,7 +15,7 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  bool IsSourceOpcode(InstructionOpcode opcode) const;
+  bool IsSourceInstruction(const InstrTypeId& instr_type_id) const;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 

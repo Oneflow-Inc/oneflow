@@ -31,6 +31,19 @@ class NopStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
 };
 
+class NopInstructionType final : public InstructionType {
+ public:
+  NopInstructionType() = default;
+  ~NopInstructionType() override = default;
+
+  using stream_type = NopStreamType;
+  static const InstructionOpcode opcode = 0;
+
+  void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
+};
+COMMAND(RegisterInstrTypeId<NopInstructionType>("Nop", kRemote));
+COMMAND(RegisterInstrTypeId<NopInstructionType>("LocalNop", kLocal));
+
 void NopStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
@@ -74,8 +87,6 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& reso
 }
 
 COMMAND(RegisterStreamType<NopStreamType>());
-COMMAND(RegisterInstrTypeId<NopStreamType>("Nop", 0, kRemote));
-COMMAND(RegisterInstrTypeId<NopStreamType>("LocalNop", 0, kLocal));
 
 }  // namespace vm
 }  // namespace oneflow

@@ -32,17 +32,12 @@ class InstrTypeId;
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
 void RegisterInstrTypeId(const std::string& instr_type_name,
-                         const std::type_index& stream_type_index, InstructionOpcode opcode,
+                         const std::type_index& stream_type_index, const std::type_index& opcode,
                          VmType type, const InstructionType* instruction_type);
-template<typename T>
-void RegisterInstrTypeId(const std::string& instr_type_name, InstructionOpcode opcode,
-                         VmType type) {
-  RegisterInstrTypeId(instr_type_name, typeid(T), opcode, type, nullptr);
-}
 
 template<typename T>
 void RegisterInstrTypeId(const std::string& instr_type_name, VmType type) {
-  RegisterInstrTypeId(instr_type_name, typeid(typename T::stream_type), T::opcode, type, new T());
+  RegisterInstrTypeId(instr_type_name, typeid(typename T::stream_type), typeid(T), type, new T());
 }
 
 const InstructionType* LookupInstructionType(const InstrTypeId&);
