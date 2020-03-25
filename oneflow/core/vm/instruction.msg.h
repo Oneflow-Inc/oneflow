@@ -8,7 +8,7 @@
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instr_type_id.msg.h"
+#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
@@ -45,7 +45,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   }
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(const InstrTypeId, instr_type_id);
+  OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
 
   // links

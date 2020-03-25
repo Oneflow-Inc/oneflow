@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {

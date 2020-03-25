@@ -1,5 +1,6 @@
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/common/util.h"
@@ -30,7 +31,7 @@ FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
 ObjectMsgPtr<InstructionMsg> ControlStreamType::NewSymbol(const LogicalObjectId& logical_object_id,
                                                           int64_t parallel_num) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  instr_msg->set_instr_type_id(&LookupInstrTypeId("NewSymbol"));
+  instr_msg->mutable_instr_type_id()->CopyFrom(LookupInstrTypeId("NewSymbol"));
   {
     FlatMsgView<NewSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     view->set_logical_object_id(logical_object_id);
@@ -65,7 +66,7 @@ FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
 ObjectMsgPtr<InstructionMsg> ControlStreamType::DeleteSymbol(
     const LogicalObjectId& logical_object_id) const {
   auto instr_msg = ObjectMsgPtr<InstructionMsg>::New();
-  instr_msg->set_instr_type_id(&LookupInstrTypeId("DeleteSymbol"));
+  instr_msg->mutable_instr_type_id()->CopyFrom(LookupInstrTypeId("DeleteSymbol"));
   {
     FlatMsgView<DeleteSymbolCtrlInstruction> view(instr_msg->mutable_operand());
     auto* mirrored_object_operand = view->mutable_mirrored_object_operand()->mutable_operand();

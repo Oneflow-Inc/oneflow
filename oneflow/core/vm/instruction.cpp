@@ -1,5 +1,6 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/common/util.h"
@@ -14,7 +15,7 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
 }
 
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
-  set_instr_type_id(&LookupInstrTypeId(instr_type_name));
+  mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) {
