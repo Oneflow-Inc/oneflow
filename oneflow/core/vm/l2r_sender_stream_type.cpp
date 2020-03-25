@@ -37,7 +37,6 @@ class L2RSenderInstructionType final : public InstructionType {
   ~L2RSenderInstructionType() override = default;
 
   using stream_type = L2RSenderStreamType;
-  static const InstructionOpcode opcode = 0;
 
   void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
 };

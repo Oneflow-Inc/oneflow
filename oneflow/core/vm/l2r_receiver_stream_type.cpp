@@ -37,7 +37,6 @@ class L2RReceiverInstructionType final : public InstructionType {
   ~L2RReceiverInstructionType() override = default;
 
   using stream_type = L2RReceiverStreamType;
-  static const InstructionOpcode opcode = 0;
 
   void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
 };

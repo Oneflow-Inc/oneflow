@@ -40,7 +40,6 @@ class CudaCopyD2HInstructionType final : public InstructionType {
   ~CudaCopyD2HInstructionType() override = default;
 
   using stream_type = CudaCopyD2HStreamType;
-  static const InstructionOpcode opcode = 0;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaCopyD2HInstruction);

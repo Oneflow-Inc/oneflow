@@ -33,20 +33,12 @@ class HostStreamType final : public StreamType {
 
 namespace {
 
-enum HostInstrOpCode {
-  kCudaMallocHostOpcode = 0,
-  kCudaFreeHostOpcode,
-  kMallocOpcode,
-  kFreeOpcode,
-};
-
 class CudaMallocHostInstructionType final : public InstructionType {
  public:
   CudaMallocHostInstructionType() = default;
   ~CudaMallocHostInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  static const InstructionOpcode opcode = kCudaMallocHostOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
@@ -88,7 +80,6 @@ class MallocInstructionType final : public InstructionType {
   ~MallocInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  static const InstructionOpcode opcode = kMallocOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(MallocInstruction);
@@ -131,7 +122,6 @@ class CudaFreeHostInstructionType final : public InstructionType {
   ~CudaFreeHostInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  static const InstructionOpcode opcode = kCudaFreeHostOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
@@ -168,7 +158,6 @@ class FreeInstructionType final : public InstructionType {
   ~FreeInstructionType() override = default;
 
   using stream_type = HostStreamType;
-  static const InstructionOpcode opcode = kFreeOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(FreeInstruction);

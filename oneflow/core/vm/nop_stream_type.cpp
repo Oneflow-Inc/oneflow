@@ -37,7 +37,6 @@ class NopInstructionType final : public InstructionType {
   ~NopInstructionType() override = default;
 
   using stream_type = NopStreamType;
-  static const InstructionOpcode opcode = 0;
 
   void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
 };

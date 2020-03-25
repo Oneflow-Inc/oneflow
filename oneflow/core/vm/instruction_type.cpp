@@ -31,11 +31,12 @@ void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
 }
 
 void RegisterInstrTypeId(const std::string& instruction_name,
-                         const std::type_index& stream_type_index, const std::type_index& opcode,
-                         VmType type, const InstructionType* instruction_type) {
+                         const std::type_index& stream_type_index,
+                         const std::type_index& instr_type_index, VmType type,
+                         const InstructionType* instruction_type) {
   auto Register = [&](const std::string& instruction_name, InterpretType interpret_type) {
     InstrTypeId instr_type_id;
-    instr_type_id.__Init__(stream_type_index, interpret_type, opcode, type);
+    instr_type_id.__Init__(stream_type_index, instr_type_index, interpret_type, type);
     CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
     auto ret = InstructionType4InstrTypeId()->emplace(instr_type_id, instruction_type);
     if (instruction_type == nullptr) { return; }
