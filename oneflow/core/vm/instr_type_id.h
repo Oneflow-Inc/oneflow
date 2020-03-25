@@ -23,25 +23,25 @@ class InstrTypeId final {
     mutable_stream_type_id()->__Init__();
     clear();
   }
-  void __Init__(const std::type_index& stream_type_index, InterpretType interpret_type,
-                const std::type_index& opcode, VmType type) {
+  void __Init__(const std::type_index& stream_type_index, const std::type_index& instr_type_index,
+                InterpretType interpret_type, VmType type) {
     mutable_stream_type_id()->__Init__(stream_type_index, interpret_type);
-    opcode_.__Init__(opcode);
+    instr_type_index_.__Init__(instr_type_index);
     set_type(type);
   }
   void clear() {
     stream_type_id_.clear();
-    opcode_.__Init__(typeid(void));
+    instr_type_index_.__Init__(typeid(void));
     type_ = VmType::kInvalidVmType;
   }
   void CopyFrom(const InstrTypeId& rhs) {
     stream_type_id_.CopyFrom(rhs.stream_type_id_);
-    *opcode_.Mutable() = rhs.opcode();
+    *instr_type_index_.Mutable() = rhs.instr_type_index();
     type_ = rhs.type_;
   }
   // Getters
   const StreamTypeId& stream_type_id() const { return stream_type_id_; }
-  const std::type_index& opcode() const { return opcode_.Get(); }
+  const std::type_index& instr_type_index() const { return instr_type_index_.Get(); }
   VmType type() const { return type_; }
 
   // Setters
@@ -50,19 +50,21 @@ class InstrTypeId final {
   void set_type(VmType val) { type_ = val; }
 
   bool operator==(const InstrTypeId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_ && opcode_.Get() == rhs.opcode_.Get()
-           && type_ == rhs.type_;
+    return stream_type_id_ == rhs.stream_type_id_
+           && instr_type_index_.Get() == rhs.instr_type_index_.Get() && type_ == rhs.type_;
   }
   bool operator<(const InstrTypeId& rhs) const {
     if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
-    if (!(opcode_.Get() == rhs.opcode_.Get())) { return opcode_.Get() < rhs.opcode_.Get(); }
+    if (!(instr_type_index_.Get() == rhs.instr_type_index_.Get())) {
+      return instr_type_index_.Get() < rhs.instr_type_index_.Get();
+    }
     return type_ < rhs.type_;
   }
   bool operator<=(const InstrTypeId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
   StreamTypeId stream_type_id_;
-  LayoutStandardize<std::type_index> opcode_;
+  LayoutStandardize<std::type_index> instr_type_index_;
   VmType type_;
 };
 

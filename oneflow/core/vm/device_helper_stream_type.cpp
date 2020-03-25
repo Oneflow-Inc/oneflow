@@ -32,15 +32,12 @@ class DeviceHelperStreamType final : public StreamType {
 
 namespace {
 
-enum DeviceHelperInstrOpCode { kCudaMallocOpcode = 0, kCudaFreeOpcode };
-
 class CudaMallocInstructionType final : public InstructionType {
  public:
   CudaMallocInstructionType() = default;
   ~CudaMallocInstructionType() override = default;
 
   using stream_type = DeviceHelperStreamType;
-  static const InstructionOpcode opcode = kCudaMallocOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaMallocInstruction);
@@ -85,7 +82,6 @@ class CudaFreeInstructionType final : public InstructionType {
   ~CudaFreeInstructionType() override = default;
 
   using stream_type = DeviceHelperStreamType;
-  static const InstructionOpcode opcode = kCudaFreeOpcode;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);

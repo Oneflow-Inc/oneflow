@@ -39,7 +39,6 @@ class CudaCopyH2DInstructionType final : public InstructionType {
   ~CudaCopyH2DInstructionType() override = default;
 
   using stream_type = CudaCopyH2DStreamType;
-  static const InstructionOpcode opcode = 0;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(CudaCopyH2DInstruction);

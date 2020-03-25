@@ -11,15 +11,12 @@
 namespace oneflow {
 namespace vm {
 
-enum CtrlInstrOpCode { kNewSymbol = 0, kDeleteSymbol };
-
 class NewSymbolInstructionType final : public InstructionType {
  public:
   NewSymbolInstructionType() = default;
   ~NewSymbolInstructionType() override = default;
 
   using stream_type = ControlStreamType;
-  static const InstructionOpcode opcode = kNewSymbol;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
@@ -52,7 +49,6 @@ class DeleteSymbolInstructionType final : public InstructionType {
   ~DeleteSymbolInstructionType() override = default;
 
   using stream_type = ControlStreamType;
-  static const InstructionOpcode opcode = kDeleteSymbol;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
@@ -110,7 +106,7 @@ bool ControlStreamType::QueryInstructionStatusDone(
 }
 
 bool ControlStreamType::IsSourceInstruction(const InstrTypeId& instr_type_id) const {
-  return instr_type_id.opcode() == typeid(NewSymbolInstructionType);
+  return instr_type_id.instr_type_index() == typeid(NewSymbolInstructionType);
 }
 
 void ControlStreamType::Compute(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
