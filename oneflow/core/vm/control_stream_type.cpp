@@ -109,8 +109,8 @@ bool ControlStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-bool ControlStreamType::IsSourceOpcode(InstructionOpcode opcode) const {
-  return opcode == kNewSymbol;
+bool ControlStreamType::IsSourceInstruction(const InstrTypeId& instr_type_id) const {
+  return instr_type_id.opcode() == typeid(NewSymbolInstructionType);
 }
 
 void ControlStreamType::Compute(InstrChain* instr_chain) const { UNIMPLEMENTED(); }

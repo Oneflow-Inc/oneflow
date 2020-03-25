@@ -17,8 +17,7 @@ using InstructionOpcode = int32_t;
 
 class StreamTypeId final {
  public:
-  void clear() { interpret_type_ = InterpretType::kInvalidInterpretType; }
-  void __Init__() { stream_type_index_.__Init__(std::type_index(typeid(void))); }
+  void __Init__() { clear(); }
   void __Init__(const std::type_index& stream_type_index, InterpretType interpret_type) {
     stream_type_index_.__Init__(stream_type_index);
     interpret_type_ = interpret_type;
@@ -27,6 +26,10 @@ class StreamTypeId final {
     __Init__(stream_type_index, InterpretType::kCompute);
   }
   void __Delete__() { stream_type_index_.__Delete__(); }
+  void clear() {
+    stream_type_index_.__Init__(std::type_index(typeid(void)));
+    interpret_type_ = InterpretType::kInvalidInterpretType;
+  }
   void CopyFrom(const StreamTypeId& rhs) {
     __Init__(rhs.stream_type_index_.Get(), rhs.interpret_type_);
   }
