@@ -105,7 +105,7 @@ __global__ void WriteKeysToOutput(const int32_t instance_num,
 template<typename T>
 class GpuArgMaxKernel final : public user_op::OpKernel {
  public:
-  GpuArgMaxKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
+  GpuArgMaxKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GpuArgMaxKernel() = default;
   ~GpuArgMaxKernel() = default;
 
@@ -133,10 +133,10 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \
   REGISTER_USER_KERNEL("argmax")                                                                   \
       .SetCreateFn(                                                                                \
-          [](const user_op::KernelInitContext& ctx) { return new GpuArgMaxKernel<dtype>(ctx); })   \
+          [](user_op::KernelInitContext* ctx) { return new GpuArgMaxKernel<dtype>(ctx); })         \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device() == DeviceType::kGPU                                                    \
+        return ctx.device_type() == DeviceType::kGPU                                               \
                && in_desc->data_type() == GetDataType<dtype>::value;                               \
       })                                                                                           \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \

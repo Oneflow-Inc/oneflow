@@ -5,14 +5,11 @@ namespace oneflow {
 REGISTER_USER_OP("argmax")
     .Input("in")
     .Output("out")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto dim_vec = ctx->Shape4ArgNameAndIndex("in", 0)->dim_vec();
       dim_vec.pop_back();
       *ctx->Shape4ArgNameAndIndex("out", 0) =
           dim_vec.empty() ? Shape({1}) : Shape(std::move(dim_vec));
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
