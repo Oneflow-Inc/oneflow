@@ -1,3 +1,4 @@
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -30,6 +31,8 @@ REGISTER_USER_OP("unary_bool")
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *y_shape = *x_shape;
+      DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+      *y_dtype = kInt8;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

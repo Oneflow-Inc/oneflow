@@ -260,6 +260,27 @@ class MathUnaryGpuFloatKernel final : public OpKernel {
   }
 
     OF_PP_FOR_EACH_TUPLE(MATH_UNARY_FORWARD, MATH_UNARY_GPU_FLOAT_SEQ);
+#undef MATH_UNARY_FORWARD
+  }
+};
+
+class MathUnaryBoolGpuFloatKernel final : public OpKernel {
+ public:
+  MathUnaryBoolGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
+  MathUnaryBoolGpuFloatKernel() = default;
+  ~MathUnaryBoolGpuFloatKernel() = default;
+
+ private:
+  void Compute(KernelContext* ctx) override {
+    const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
+
+#define MATH_UNARY_FORWARD(unary_math_type_str, func_name_prefix)     \
+  if (unary_math_type == unary_math_type_str) {                       \
+    func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y); \
+  }
+
     OF_PP_FOR_EACH_TUPLE(MATH_UNARY_FORWARD, MATH_UNARY_GPU_BOOL_SEQ);
 #undef MATH_UNARY_FORWARD
   }
@@ -285,7 +306,7 @@ REGISTER_USER_KERNEL("unary")
 */
 
 REGISTER_USER_KERNEL("unary_bool")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathUnaryGpuFloatKernel(ctx); })
+    .SetCreateFn([](KernelInitContext* ctx) { return new MathUnaryBoolGpuFloatKernel(ctx); })
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
