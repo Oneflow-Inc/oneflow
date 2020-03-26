@@ -16,6 +16,10 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
   return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
 }
 
+void IBVForkInit() {
+  if (ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
+}
+
 }  // namespace
 
 IBVerbsCommNet::~IBVerbsCommNet() {
@@ -139,6 +143,8 @@ void IBVerbsCommNet::PollCQ() {
 }
 
 const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
+
+COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 
