@@ -419,11 +419,13 @@ message DistributeSplitOpConf {
   required string in = 1;
   repeated string out = 2;
   required int32 axis = 3;
+  optional bool is_variable_ref = 4 [default = false];
 }
 
 message DistributeCloneOpConf {
   required string in = 1;
   repeated string out = 2;
+  optional bool is_variable_ref = 3 [default = false];
 }
 
 message DistributeAddOpConf {
