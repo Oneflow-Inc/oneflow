@@ -70,6 +70,10 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
+MirroredObject* InstrCtx::mut_mirrored_object_operand(const MirroredObjectOperand& operand) {
+  return FindMirroredObjectByOperand(operand, instr_chain().stream().parallel_id());
+}
+
 MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                       int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;

@@ -15,6 +15,8 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
+
   bool IsSourceInstruction(const InstrTypeId& instr_type_id) const;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
@@ -31,9 +33,10 @@ class ControlStreamType final : public StreamType {
   void Compute(InstrChain* instr_chain) const override;
 
   bool SharingSchedulerThread() const override { return true; }
-  void Run(Scheduler* scheduler, InstrChain* instr_chain) const override;
-
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
+  void Infer(Scheduler* scheduler, InstrChain* instr_chain) const override;
+  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const;
+  void Compute(Scheduler* scheduler, InstrChain* instr_chain) const override;
+  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const;
 };
 
 }  // namespace vm

@@ -63,6 +63,7 @@ OBJECT_MSG_BEGIN(InstrCtx);
     set_instr_chain(instr_chain);
     reset_instr_msg(instr_msg);
   }
+  PUBLIC MirroredObject* mut_mirrored_object_operand(const MirroredObjectOperand& operand);
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                      int64_t default_parallel_id);
   // fields
@@ -70,7 +71,7 @@ OBJECT_MSG_BEGIN(InstrCtx);
   OBJECT_MSG_DEFINE_PTR(InstrChain, instr_chain);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(instr_ctx_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
 OBJECT_MSG_END(InstrCtx);
 // clang-format on
@@ -112,7 +113,7 @@ OBJECT_MSG_BEGIN(InstrChain);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_chain_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstrCtx, instruction_link, instr_ctx_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstrCtx, instr_ctx_link, instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, src_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, dst_instr_chain, out_edges);

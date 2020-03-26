@@ -25,12 +25,24 @@ class NewSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
   // clang-format on
 
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
+  }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run(scheduler, instr_msg, &GetSelfLogicalObjectId);
+  }
+  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+
+ private:
+  template<typename GetLogicalObjectIdT>
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
+           const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<NewSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
+    uint64_t logical_object_id = GetLogicalObjectId(view->logical_object_id());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-        scheduler->mut_scheduler_thread_only_allocator(), view->logical_object_id());
+        scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
     CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
     auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
     for (int64_t i = 0; i < view->parallel_num(); ++i) {
@@ -56,12 +68,24 @@ class DeleteSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
   // clang-format on
 
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
+  }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run(scheduler, instr_msg, &GetSelfLogicalObjectId);
+  }
+  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+
+ private:
+  template<typename GetLogicalObjectIdT>
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
+           const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
-    const auto& logical_objectId = view->mirrored_object_operand().operand().logical_object_id();
-    auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_objectId);
+    uint64_t logical_object_id = view->mirrored_object_operand().operand().logical_object_id();
+    logical_object_id = GetLogicalObjectId(logical_object_id);
+    auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
     CHECK_NOTNULL(logical_object);
     auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
     for (int i = 0; i < parallel_id2mirrored_object->size(); ++i) {
@@ -76,14 +100,39 @@ COMMAND(RegisterInstructionType<DeleteSymbolInstructionType>("DeleteSymbol"));
 COMMAND(RegisterLocalInstructionType<DeleteSymbolInstructionType>("LocalDeleteSymbol"));
 
 void ControlStreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
+  if (interpret_type == InterpretType::kCompute) {
+    Compute(scheduler, instr_msg);
+  } else if (interpret_type == InterpretType::kInfer) {
+    Infer(scheduler, instr_msg);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void ControlStreamType::Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  const auto& instr_type_id = instr_msg->instr_type_id();
+  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+  LookupInstructionType(instr_type_id)->Infer(scheduler, instr_msg);
+}
+
+void ControlStreamType::Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+    Infer(scheduler, instr_ctx->mut_instr_msg());
+  }
+  auto* status_buffer = instr_chain->mut_status_buffer();
+  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+}
+
+void ControlStreamType::Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   LookupInstructionType(instr_type_id)->Compute(scheduler, instr_msg);
 }
 
-void ControlStreamType::Run(Scheduler* scheduler, InstrChain* instr_chain) const {
+void ControlStreamType::Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    Run(scheduler, instr_ctx->mut_instr_msg());
+    Compute(scheduler, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
