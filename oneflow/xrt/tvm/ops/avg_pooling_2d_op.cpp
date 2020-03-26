@@ -42,11 +42,11 @@ class AveragePooling2DOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("nn.avg_pool2d");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(attrs), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(AveragePooling2D, AveragePooling2DOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(AveragePooling2D, AveragePooling2DOp).Finalize();
 
 }
 }

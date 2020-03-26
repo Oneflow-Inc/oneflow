@@ -17,11 +17,11 @@ class ReshapeLikeOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("reshape_like");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("y", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(ReshapeLike, ReshapeLikeOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(ReshapeLike, ReshapeLikeOp).Finalize();
 
 }
 }

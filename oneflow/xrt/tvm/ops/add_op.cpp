@@ -16,11 +16,11 @@ class AddOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("add");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(Add, AddOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(Add, AddOp).Finalize();
 
 }
 }

@@ -44,8 +44,6 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Pool(const std::string& data_for
   }
   auto padding4 = Calc2DPadding(padding_format, input_size, pool_size, stride,
       std::vector<int32_t>{1, 1});
-  LOG(INFO) << "padding4: " << padding4[0] << "," <<
-    padding4[1] << "," << padding4[2] << "," << padding4[3];
   // order is {top, left, bottom, right}
   return {padding4[1], padding4[3], padding4[0], padding4[2]};
 }

@@ -17,11 +17,11 @@ class BiasAddOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("nn.bias_add");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(bias_add_attrs), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(BiasAdd, BiasAddOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(BiasAdd, BiasAddOp).Finalize();
 
 }
 }

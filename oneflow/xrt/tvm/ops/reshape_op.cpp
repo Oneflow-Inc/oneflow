@@ -24,11 +24,11 @@ class ReshapeOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("reshape");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(reshape_attrs), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(Reshape, ReshapeOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(Reshape, ReshapeOp).Finalize();
 
 }
 }

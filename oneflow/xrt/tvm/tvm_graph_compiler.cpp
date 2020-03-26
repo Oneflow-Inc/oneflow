@@ -52,8 +52,6 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& retu
     const util::Map<std::string, tvm::relay::Expr>& tensor_name2expr) {
   tvm::Array<tvm::relay::Expr> fields;
   for (const auto& para : return_params) {
-    LOG(WARNING) << "TVMLOG: "
-      << "return_params name: " << para.name();
     auto it = tensor_name2expr.find(para.name());
     CHECK(it != tensor_name2expr.end());
     fields.push_back(it->second);
@@ -72,7 +70,7 @@ std::tuple<tvm::runtime::Module, std::string>
   auto get_mod_fn = builder.GetFunction("get_module", false);
 
   tvm::Map<tvm::Integer, tvm::Target> target_map = {
-    {DLDeviceType::kDLGPU, tvm::Target::Create("cuda")}}; //TODO(niuchong): support more devs and targets
+    {DLDeviceType::kDLGPU, tvm::Target::Create("cuda -model=1080ti")}}; //TODO(niuchong): support more devs and targets
   build_fn(graph_func, target_map, tvm::Target::Create("llvm"));
   tvm::runtime::Module built_mod = get_mod_fn();
   std::string graph_json = json_fn();
@@ -89,6 +87,10 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
                                     const std::vector<InputOutputAlias> &aliases) {
   util::Map<std::string, tvm::relay::Expr> tensor_name2expr;
   tvm::Array<tvm::relay::Var> graph_input_vars;
+  LOG(WARNING) << "Compile TVM ";
+  for (auto* node : graph->Nodes()) {
+    LOG(WARNING) << "node name: " << node->name();
+  }
 
   ConvertEntryParamsToTVMExpr(entry_params, &tensor_name2expr, &graph_input_vars);
 
@@ -105,15 +107,15 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
     TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr));
     auto op_kernel = BuildTVMOpKernel(node->type());
     op_kernel->Compile(&ctx);
-    tvm::relay::Expr op_expr = ctx.op_expr();
-    CHECK(op_expr.defined()) << "Get an empty tvm expresion for node: " << node->name();
 
     for (const auto* out_edge : node->out_edges()) {
-      auto out_arg_name = out_edge->argument().name();
-      LOG(WARNING) << "TVMLOG: "
-        << "out_arg_name: " << out_arg_name << " for node: " << node->name();
-      if (tensor_name2expr.find(out_arg_name) == tensor_name2expr.end()) {
-        CHECK(tensor_name2expr.emplace(out_arg_name, op_expr).second);
+      const auto& out_arg = out_edge->argument();
+      if (tensor_name2expr.find(out_arg.name()) == tensor_name2expr.end()) {
+        const std::string& produce_key = out_arg.meta_data().produce_key;
+        tvm::relay::Expr op_expr = ctx.GetExpr4OutputName(produce_key);
+        CHECK(op_expr.defined()) << "Get an empty tvm expresion for output: " << produce_key
+          << " of node: " << node->name();
+        CHECK(tensor_name2expr.emplace(out_arg.name(), op_expr).second);
       }
     }
   });

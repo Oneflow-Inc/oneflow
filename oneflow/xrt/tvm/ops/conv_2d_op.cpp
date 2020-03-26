@@ -77,7 +77,6 @@ class Conv2DOp final : public TVMOpKernel {
 
       conv_attrs->padding = Calc2DPadding4Conv(data_format, ctx->GetAttr<std::string>("padding"),
           ctx->GetShape4InputName("in"), ctx->GetShape4InputName("weight"), stride, dilation);
-      LOG(INFO) << "TVMLOG padding: " << conv_attrs->padding[0] << ',' << conv_attrs->padding[1];
 
       std::vector<int32_t> kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
       CHECK_EQ(2, kernel_size.size());
@@ -101,14 +100,14 @@ class Conv2DOp final : public TVMOpKernel {
       auto bias_add_op = tvm::relay::Op::Get("nn.bias_add");
       auto bias_add = tvm::relay::CallNode::make(
           bias_add_op, {conv, bias_add_in}, tvm::Attrs(bias_add_attrs), {});
-      ctx->set_op_expr(bias_add);
+      ctx->SetExpr4OutputName("out", std::move(bias_add));
     } else {
-      ctx->set_op_expr(conv);
+      ctx->SetExpr4OutputName("out", std::move(conv));
     }
   }
 };
 
-REGISTER_TVM_OP_KERNEL(Conv2D, Conv2DOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(Conv2D, Conv2DOp).Finalize();
 
 }
 }

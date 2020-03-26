@@ -39,14 +39,14 @@ class MatmulOp final : public TVMOpKernel {
       auto dense_op = tvm::relay::Op::Get("nn.dense");
       auto dense_expr = tvm::relay::CallNode::make(
           dense_op, {data_input, weight_input}, tvm::Attrs(dense_attrs), {});
-      ctx->set_op_expr(dense_expr);
+      ctx->SetExpr4OutputName("out", std::move(dense_expr));
     } else {
       //TODO(niuchong): support batch_matmul
     }
   }
 };
 
-REGISTER_TVM_OP_KERNEL(MatMul, MatmulOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(MatMul, MatmulOp).Finalize();
 
 }
 }

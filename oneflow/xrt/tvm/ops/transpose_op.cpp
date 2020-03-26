@@ -22,11 +22,11 @@ class TransposeOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("transpose");
     auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(transpose_attrs), {});
-    ctx->set_op_expr(expr);
+    ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };
 
-REGISTER_TVM_OP_KERNEL(Transpose, TransposeOp).EnableTrainPhase().Finalize();
+REGISTER_TVM_OP_KERNEL(Transpose, TransposeOp).Finalize();
 
 }
 }
