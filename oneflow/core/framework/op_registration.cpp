@@ -132,14 +132,9 @@ OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn shape_infer_fn) {
-  wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);
-  return *this;
-}
-
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
-    DtypeInferFn dtype_infer_fn) {
-  wrapper_.reg_val.dtype_infer_fn = std::move(dtype_infer_fn);
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetTensorDescInferFn(
+    TensorDescInferFn tensor_desc_infer_fn) {
+  wrapper_.reg_val.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -159,20 +154,26 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp
   return *this;
 }
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
+    InputArgModifyFn input_arg_modify_fn) {
+  wrapper_.reg_val.input_arg_modify_fn = std::move(input_arg_modify_fn);
+  return *this;
+}
+
 OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
-  CHECK(wrapper_.reg_val.shape_infer_fn != nullptr)
-      << "No ShapeInfer function for " << wrapper_.op_type_name;
+  CHECK(wrapper_.reg_val.tensor_desc_infer_fn != nullptr)
+      << "No TensorDescInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
     wrapper_.reg_val.check_fn = CheckAttrFnUtil::NoCheck;
-  }
-  if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
-    wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
   }
   if (wrapper_.reg_val.batch_axis_infer_fn == nullptr) {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
     wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
+  }
+  if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
+    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};
   }
   return wrapper_;
 }
