@@ -28,6 +28,7 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(InstrChain* instr_chain) const;
+  void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
@@ -47,7 +48,10 @@ class StreamType {
   }
 
   virtual bool SharingSchedulerThread() const { return false; }
-  virtual void Run(Scheduler* scheduler, InstrChain* instr_chain) const {
+  virtual void Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
+  virtual void Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 

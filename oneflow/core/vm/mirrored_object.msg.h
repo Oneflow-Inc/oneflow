@@ -89,7 +89,7 @@ OBJECT_MSG_BEGIN(LogicalObject);
 
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object_type);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2type_mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on

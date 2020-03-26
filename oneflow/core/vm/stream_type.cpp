@@ -44,6 +44,17 @@ void StreamType::Run(InstrChain* instr_chain) const {
   }
 }
 
+void StreamType::Run(Scheduler* scheduler, InstrChain* instr_chain) const {
+  auto interpret_type = instr_chain->stream().stream_id().stream_type_id().interpret_type();
+  if (interpret_type == InterpretType::kCompute) {
+    Compute(scheduler, instr_chain);
+  } else if (interpret_type == InterpretType::kInfer) {
+    Infer(scheduler, instr_chain);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 const StreamType* LookupStreamType(const StreamTypeId& stream_type_id) {
   auto* map = StreamType4StreamTypeId();
   auto* registry = map->FindPtr(stream_type_id);
