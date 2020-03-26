@@ -39,7 +39,6 @@ class JobDesc final {
   bool enable_inplace_in_reduce_struct() const {
     return job_conf_.enable_inplace_in_reduce_struct();
   }
-  bool cudnn_conv_enable_true_half() const { return job_conf_.cudnn_conv_enable_true_half(); }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
@@ -64,6 +63,8 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
+
+  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }

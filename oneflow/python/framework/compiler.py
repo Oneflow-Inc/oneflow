@@ -28,7 +28,6 @@ def Compile(function_desc, config_proto):
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
 
-    compile_context.ResetCurJobContext()
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         _CompileJob(function_desc)

@@ -2,9 +2,8 @@
 #define ONEFLOW_CORE_KERNEL_CONV_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 

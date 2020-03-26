@@ -128,6 +128,16 @@ Maybe<void> MatmulOp::GetSbpSignatures(
         .Split("b", k_b_axis)
         .PartialSum(output_bns())
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .PartialSum("a")
+        .Broadcast("b")
+        .PartialSum(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .Broadcast("a")
+        .PartialSum("b")
+        .PartialSum(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   } else {
     std::shared_ptr<ErrorProto> err;
     err->set_msg("MatMulOp: number of axis is " + std::to_string(num_axes) + " (not supported).");

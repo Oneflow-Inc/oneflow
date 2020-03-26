@@ -123,7 +123,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     regst->packed_blob_.reset(
         new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
-    if (main_mem_ptr == nullptr) {
+    if (main_mem_ptr == nullptr || packed_blob_desc->is_body_disabled()) {
       cur_body_pointer = nullptr;
     } else {
       cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
