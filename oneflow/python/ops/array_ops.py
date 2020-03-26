@@ -471,20 +471,30 @@ def assign(ref, value, dtype=None, name=None):
     setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
 
-
-@oneflow_export("random_like")
-def random_like(like, seed=None, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.random_like_conf.like = like.logical_blob_name
+@oneflow_export("random.generate_random_batch_permutation_indices")
+def generate_random_batch_permutation_indices(value, seed=None, name=None):
+    import random
+    op = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
+        .Op("generate_random_batch_permutation_indices")
+        .Input("x", [value])
+        .Output("y")
+    )
     if seed is not None:
-        op_conf.random_like_conf.random_seed = seed
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("RandomLike_"))
-    op_conf.random_like_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+        op.SetAttr("seed", seed, "AttrTypeInt64")
+    else:
+        op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+    return (
+        op
+        .Build()
+        .RemoteBlobList()[0]
+    )
+
+@oneflow_export("random.shuffle")
+def shuffle(value, seed=None, name=None):
+    return flow.gather(
+        value, generate_random_batch_permutation_indices(value, seed)
+    )
 
 @oneflow_export("identity")
 def identity(x, name=None):
