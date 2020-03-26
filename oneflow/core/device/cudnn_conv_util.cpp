@@ -138,6 +138,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
         val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   }
+  const int32_t groups = GetValFromPbMessage<int32_t>(conv_conf, "groups");
+  if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
 }
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
@@ -170,6 +172,7 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
   CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  CudaCheck(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
 
