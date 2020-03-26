@@ -70,8 +70,8 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
-MirroredObject* Instruction::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
-                                                         int64_t default_parallel_id) {
+MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                      int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__(operand, default_parallel_id);
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
@@ -84,14 +84,14 @@ void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   set_stream(stream);
   set_stream_type(&stream->thread_ctx().stream_rt_desc().stream_type());
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
-  auto instruction = ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), this, instr_msg);
-  mut_instruction_list()->EmplaceBack(std::move(instruction));
-  CHECK_EQ(instruction_list().size(), 1);
+  auto instr_ctx = ObjectMsgPtr<InstrCtx>::NewFrom(mut_allocator(), this, instr_msg);
+  mut_instr_ctx_list()->EmplaceBack(std::move(instr_ctx));
+  CHECK_EQ(instr_ctx_list().size(), 1);
 }
 
 void InstrChain::__Delete__() {
   stream_type().DeleteInstructionStatus(stream(), mut_status_buffer());
-  mut_instruction_list()->Clear();
+  mut_instr_ctx_list()->Clear();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }

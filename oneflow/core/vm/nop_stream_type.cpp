@@ -38,7 +38,7 @@ class NopInstructionType final : public InstructionType {
 
   using stream_type = NopStreamType;
 
-  void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx* instr_ctx) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<NopInstructionType>("Nop"));
 COMMAND(RegisterLocalInstructionType<NopInstructionType>("LocalNop"));

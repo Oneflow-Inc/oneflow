@@ -25,7 +25,7 @@ class NewSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
   // clang-format on
 
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
     FlatMsgView<NewSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
@@ -56,7 +56,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
   // clang-format on
 
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
@@ -82,8 +82,8 @@ void ControlStreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) con
 }
 
 void ControlStreamType::Run(Scheduler* scheduler, InstrChain* instr_chain) const {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instr) {
-    Run(scheduler, instr->mut_instr_msg());
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+    Run(scheduler, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();

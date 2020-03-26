@@ -57,7 +57,7 @@ OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
 // clang-format off
-OBJECT_MSG_BEGIN(Instruction);
+OBJECT_MSG_BEGIN(InstrCtx);
   // methods
   PUBLIC void __Init__(InstrChain* instr_chain, InstructionMsg* instr_msg) {
     set_instr_chain(instr_chain);
@@ -72,7 +72,7 @@ OBJECT_MSG_BEGIN(Instruction);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
-OBJECT_MSG_END(Instruction);
+OBJECT_MSG_END(InstrCtx);
 // clang-format on
 
 static const int kInstructionStatusBufferBytes = 32;
@@ -112,7 +112,7 @@ OBJECT_MSG_BEGIN(InstrChain);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_chain_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(InstrCtx, instruction_link, instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, src_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, dst_instr_chain, out_edges);

@@ -9,8 +9,8 @@ namespace vm {
 
 void Scheduler::ReleaseInstruction(InstrChain* instr_chain,
                                    /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
-    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+    auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
       mirrored_object_accesses->Erase(access);
       if (access->is_mirrored_object_access_link_empty()) { continue; }
@@ -82,12 +82,12 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
 }
 
 void Scheduler::ConsumeMirroredObject(OperandAccessType access_type,
-                                      MirroredObject* mirrored_object, Instruction* instruction) {
+                                      MirroredObject* mirrored_object, InstrCtx* instr_ctx) {
   bool is_const_operand = (access_type == kConstOperandAccess);
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
+      instr_ctx->mut_allocator(), instr_ctx, mirrored_object, is_const_operand);
   bool success =
-      instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
+      instr_ctx->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
   if (success) {
     mirrored_object->mut_access_list()->EmplaceBack(std::move(mirrored_object_access));
   }
@@ -104,19 +104,19 @@ void Scheduler::ConnectInstruction(InstrChain* src_instr_chain, InstrChain* dst_
 void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                        NewInstrChainList* new_instr_chain_list) {
   auto* begin = new_instr_chain_list->Begin();
-  if (begin != nullptr) { CHECK_EQ(begin->instruction_list().size(), 1); }
+  if (begin != nullptr) { CHECK_EQ(begin->instr_ctx_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
     int64_t parallel_id = instr_chain->stream().stream_id().parallel_id();
-    CHECK_EQ(instr_chain->instruction_list().size(), 1);
-    auto* instruction = instr_chain->mut_instruction_list()->Begin();
-    const auto& operands = instruction->instr_msg().operand();
+    CHECK_EQ(instr_chain->instr_ctx_list().size(), 1);
+    auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+    const auto& operands = instr_ctx->instr_msg().operand();
     for (const auto& operand : operands) {
       if (!operand->has_mutable_operand()) { continue; }
       const auto& mirrored_object_operand = operand->mutable_operand().operand();
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
-                                                    instruction);
+                                                    instr_ctx);
                             });
     }
     for (const auto& operand : operands) {
@@ -125,23 +125,23 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
                             [&](MirroredObject* mirrored_object) {
                               ConsumeMirroredObject(kConstOperandAccess, mirrored_object,
-                                                    instruction);
+                                                    instr_ctx);
                             });
     }
-    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
+    auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
       auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
       if (mirrored_object->access_list().size() == 1) { continue; }
       if (mirrored_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
-          ConnectInstruction(first->mut_instruction()->mut_instr_chain(), instr_chain);
+          ConnectInstruction(first->mut_instr_ctx()->mut_instr_chain(), instr_chain);
         }
       } else {
         auto* access_list = mirrored_object->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == mirrored_object_access) { break; }
-          ConnectInstruction(access->mut_instruction()->mut_instr_chain(), instr_chain);
+          ConnectInstruction(access->mut_instr_ctx()->mut_instr_chain(), instr_chain);
           access_list->Erase(access);
         }
       }
