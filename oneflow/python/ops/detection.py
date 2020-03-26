@@ -495,9 +495,3 @@ def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
-@oneflow_export("detection.random_perm_like")
-def random_perm_like(like, seed=None):
-    assert len(like.shape) == 1
-    mask = flow.random_like(like, seed=seed, name=like.op_name + "_random_perm_mask")
-    return flow.argsort(mask, name=like.op_name + "_random_perm_argsort")
