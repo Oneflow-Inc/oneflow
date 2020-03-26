@@ -26,7 +26,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       const int32_t num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
-      FOR_RANGE(int64_t, i, 1, num_axes - 1) {
+      FOR_RANGE(int64_t, i, 1, num_axes) {
         SbpSignatureBuilder().Split("x", i).Broadcast("y").Build(
             ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }

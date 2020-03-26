@@ -12,47 +12,47 @@ class TmpBufferManager final {
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(const int32_t& batch_size, const int32_t& capacity, void* ptr)
       : capacity_{capacity},
-        random_mask_elem_cnt_{batch_size},
-        sorted_mask_elem_cnt_{batch_size},
+        random_value_elem_cnt_{batch_size},
+        sorted_value_elem_cnt_{batch_size},
         indices_elem_cnt_{batch_size} {
-    const int32_t random_mask_aligned_bytes =
-        GetCudaAlignedSize(random_mask_elem_cnt_ * sizeof(float));
-    const int32_t sorted_mask_aligned_bytes =
-        GetCudaAlignedSize(sorted_mask_elem_cnt_ * sizeof(float));
+    const int32_t random_value_aligned_bytes =
+        GetCudaAlignedSize(random_value_elem_cnt_ * sizeof(float));
+    const int32_t sorted_value_aligned_bytes =
+        GetCudaAlignedSize(sorted_value_elem_cnt_ * sizeof(float));
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
-    random_mask_ptr_ = reinterpret_cast<float*>(ptr);
-    sorted_mask_ptr_ = reinterpret_cast<float*>(reinterpret_cast<char*>(random_mask_ptr_)
-                                                + random_mask_aligned_bytes);
-    indices_ptr_ = reinterpret_cast<int32_t*>(reinterpret_cast<char*>(sorted_mask_ptr_)
-                                              + sorted_mask_aligned_bytes);
+    random_value_ptr_ = reinterpret_cast<float*>(ptr);
+    sorted_value_ptr_ = reinterpret_cast<float*>(reinterpret_cast<char*>(random_value_ptr_)
+                                                 + random_value_aligned_bytes);
+    indices_ptr_ = reinterpret_cast<int32_t*>(reinterpret_cast<char*>(sorted_value_ptr_)
+                                              + sorted_value_aligned_bytes);
     temp_storage_ptr_ =
         reinterpret_cast<void*>(reinterpret_cast<char*>(indices_ptr_) + indices_aligned_bytes);
     temp_storage_bytes_ =
-        capacity_ - random_mask_aligned_bytes - sorted_mask_aligned_bytes - indices_aligned_bytes;
+        capacity_ - random_value_aligned_bytes - sorted_value_aligned_bytes - indices_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
   ~TmpBufferManager() = default;
 
-  float* RandomMaskPtr() const { return random_mask_ptr_; }
-  float* SortedMaskPtr() const { return sorted_mask_ptr_; }
+  float* RandomMaskPtr() const { return random_value_ptr_; }
+  float* SortedMaskPtr() const { return sorted_value_ptr_; }
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t RandomMaskElemCnt() const { return random_mask_elem_cnt_; }
-  int32_t SortedMaskElemCnt() const { return sorted_mask_elem_cnt_; }
+  int32_t RandomMaskElemCnt() const { return random_value_elem_cnt_; }
+  int32_t SortedMaskElemCnt() const { return sorted_value_elem_cnt_; }
   int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
   int32_t capacity_;
 
-  float* random_mask_ptr_;
-  float* sorted_mask_ptr_;
+  float* random_value_ptr_;
+  float* sorted_value_ptr_;
   int32_t* indices_ptr_;
   void* temp_storage_ptr_;
 
-  int32_t random_mask_elem_cnt_;
-  int32_t sorted_mask_elem_cnt_;
+  int32_t random_value_elem_cnt_;
+  int32_t sorted_value_elem_cnt_;
   int32_t indices_elem_cnt_;
   int32_t temp_storage_bytes_;
 };
@@ -106,15 +106,15 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const int32_t batch_size = y_shape->At(0);
 
-      const int32_t random_mask_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));
-      const int32_t sorted_mask_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));
+      const int32_t random_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));
+      const int32_t sorted_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));
       const int32_t indices_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(int32_t));
       const int32_t argsort_instance_num = 1;
       const int32_t argsort_instance_size = batch_size;
       const int32_t temp_storage_bytes = InferTempStorageForSortPairsAscending<float, int32_t>(
           argsort_instance_num, argsort_instance_size);
 
-      return random_mask_aligned_bytes + sorted_mask_aligned_bytes + indices_aligned_bytes
+      return random_value_aligned_bytes + sorted_value_aligned_bytes + indices_aligned_bytes
              + temp_storage_bytes;
     });
 
