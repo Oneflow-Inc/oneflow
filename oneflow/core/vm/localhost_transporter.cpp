@@ -1,5 +1,6 @@
 #include "oneflow/core/vm/localhost_transporter.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 namespace vm {
