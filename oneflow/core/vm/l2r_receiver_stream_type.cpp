@@ -38,7 +38,7 @@ class L2RReceiverInstructionType final : public InstructionType {
 
   using stream_type = L2RReceiverStreamType;
 
-  void Compute(Instruction* instr) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx* instr_ctx) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<L2RReceiverInstructionType>("L2RReceive"));
 COMMAND(RegisterLocalInstructionType<L2RReceiverInstructionType>("L2RLocalReceive"));
@@ -58,21 +58,21 @@ FLAT_MSG_VIEW_BEGIN(L2RReceiverInstruction);
 FLAT_MSG_VIEW_END(L2RReceiverInstruction);
 // clang-format on
 
-void MakeReceiveRequests(Instruction* instr,
+void MakeReceiveRequests(InstrCtx* instr_ctx,
                          TransportKey2ReceiveRequest* transport_key2receive_request) {
-  auto* instr_chain = instr->mut_instr_chain();
+  auto* instr_chain = instr_ctx->mut_instr_chain();
   FlatMsg<TransportDataToken> data_token;
   char* data_ptr = nullptr;
   size_t data_size = 0;
   {
     const auto& stream = instr_chain->stream();
     FlatMsgView<L2RReceiverInstruction> view;
-    CHECK(view->Match(instr->mut_instr_msg()->mut_operand()));
+    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_parallel_id(stream.parallel_id());
     data_size = view->size();
     auto* dst_mirrored_obj =
-        instr->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
+        instr_ctx->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
     CHECK_NOTNULL(dst_mirrored_obj);
     CHECK(dst_mirrored_obj->has_host_mem_buffer());
     data_ptr = dst_mirrored_obj->mut_host_mem_buffer()->mut_data();
@@ -82,7 +82,7 @@ void MakeReceiveRequests(Instruction* instr,
     char* buffer_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
     incomplete_cnt = reinterpret_cast<std::atomic<int64_t>*>(buffer_ptr);
   }
-  GetTransporter(instr->mut_instr_chain())
+  GetTransporter(instr_ctx->mut_instr_chain())
       ->MakeReceiveTransportRequest(data_token.Get(), data_ptr, data_size, incomplete_cnt,
                                     transport_key2receive_request);
 }
@@ -116,8 +116,8 @@ bool L2RReceiverStreamType::QueryInstructionStatusDone(
 void L2RReceiverStreamType::Compute(InstrChain* instr_chain) const {
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
   TransportKey2ReceiveRequest transport_key2receive_request;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instruction_list(), instruction) {
-    MakeReceiveRequests(instruction, &transport_key2receive_request);
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+    MakeReceiveRequests(instr_ctx, &transport_key2receive_request);
   }
   // inital val is one
   *reinterpret_cast<std::atomic<int64_t>*>(data_ptr) +=

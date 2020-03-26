@@ -64,7 +64,7 @@ OBJECT_MSG_BEGIN(Scheduler);
 
   void ConnectInstruction(InstrChain* src_instr_chain, InstrChain* dst_instr_chain);
   void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
-                             Instruction* instrution);
+                             InstrCtx* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstrChainList* new_instr_chain_list);
   void MergeChains(NewInstrChainList* new_instr_chain_list);

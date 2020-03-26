@@ -63,9 +63,9 @@ void TestNopStreamTypeNoArgument(
   ASSERT_TRUE(stream != nullptr);
   auto* instr_chain = stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(instr_chain != nullptr);
-  auto* instruction = instr_chain->mut_instruction_list()->Begin();
-  ASSERT_TRUE(instruction != nullptr);
-  ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
+  auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+  ASSERT_TRUE(instr_ctx != nullptr);
+  ASSERT_EQ(instr_ctx->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
 TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewScheduler); }
@@ -109,14 +109,14 @@ void TestNopStreamTypeOneArgument(
   auto* instr_chain = stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(instr_chain != nullptr);
   ASSERT_EQ(instr_chain->out_edges().size(), 1);
-  auto* instruction = instr_chain->mut_instruction_list()->Begin();
-  ASSERT_TRUE(instruction != nullptr);
-  ASSERT_EQ(instruction->mut_instr_msg(), nop0_instr_msg.Mutable());
+  auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+  ASSERT_TRUE(instr_ctx != nullptr);
+  ASSERT_EQ(instr_ctx->mut_instr_msg(), nop0_instr_msg.Mutable());
   instr_chain = instr_chain->mut_out_edges()->Begin()->dst_instr_chain();
   ASSERT_TRUE(instr_chain != nullptr);
-  instruction = instr_chain->mut_instruction_list()->Begin();
-  ASSERT_TRUE(instruction != nullptr);
-  ASSERT_EQ(instruction->mut_instr_msg(), nop1_instr_msg.Mutable());
+  instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+  ASSERT_TRUE(instr_ctx != nullptr);
+  ASSERT_EQ(instr_ctx->mut_instr_msg(), nop1_instr_msg.Mutable());
 }
 
 TEST(NopStreamType, one_argument_dispatch) { TestNopStreamTypeOneArgument(&NaiveNewScheduler); }
@@ -158,9 +158,9 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   auto* instr_chain = stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(instr_chain != nullptr);
   ASSERT_EQ(instr_chain->out_edges().size(), 0);
-  auto* instruction = instr_chain->mut_instruction_list()->Begin();
-  ASSERT_TRUE(instruction != nullptr);
-  ASSERT_EQ(instruction->mut_instr_msg(), nop1_instr_msg.Mutable());
+  auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+  ASSERT_TRUE(instr_ctx != nullptr);
+  ASSERT_EQ(instr_ctx->mut_instr_msg(), nop1_instr_msg.Mutable());
 }
 
 TEST(NopStreamType, one_argument_triger_all_chains) {
