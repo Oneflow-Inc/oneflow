@@ -41,9 +41,9 @@ class GpuLeakyReluKernel final : public user_op::OpKernel {
       .SetCreateFn(                                                                           \
           [](user_op::KernelInitContext* ctx) { return new GpuLeakyReluKernel<dtype>(ctx); }) \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);         \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);           \
         return ctx.device_type() == DeviceType::kGPU                                          \
-               && out_desc->data_type() == GetDataType<dtype>::value;                         \
+               && y_desc->data_type() == GetDataType<dtype>::value;                           \
       });
 
 REGISTER_GPU_LEAKY_RELU_KERNEL(float)
@@ -74,9 +74,9 @@ class GpuLeakyReluGradKernel final : public user_op::OpKernel {
       .SetCreateFn(                                                                               \
           [](user_op::KernelInitContext* ctx) { return new GpuLeakyReluGradKernel<dtype>(ctx); }) \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);             \
         return ctx.device_type() == DeviceType::kGPU                                              \
-               && out_desc->data_type() == GetDataType<dtype>::value;                             \
+               && dx_desc->data_type() == GetDataType<dtype>::value;                              \
       });
 
 REGISTER_GPU_LEAKY_RELU_GRAD_KERNEL(float)
