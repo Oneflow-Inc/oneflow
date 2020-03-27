@@ -7,7 +7,7 @@ REGISTER_USER_OP("leaky_relu")
     .Output("y")
     .Attr("alpha", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *y_shape = *x_shape;
       return Maybe<void>::Ok();
@@ -51,6 +51,8 @@ REGISTER_USER_OP("leaky_relu_grad")
           .Split("dx", 0, 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
+      SbpSignatureBuilder().Broadcast("x", 0).PartialSum("dy", 0).PartialSum("dx", 0).Build(
+          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
