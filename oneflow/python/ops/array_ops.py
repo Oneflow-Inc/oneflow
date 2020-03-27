@@ -469,10 +469,7 @@ def identity(x, name=None):
 @oneflow_export("squeeze")
 def squeeze(input, axis=None, name=None):
     if axis is None:
-        axis = []
-        for idx, dim in enumerate(input.shape):
-            if dim is 1:
-                axis.append(idx)
+        axis = [idx for idx, dim in enumerate(input.shape) if dim is 1]
     else:
         assert isinstance(axis, list) or isinstance(axis, tuple)
         in_num_axes = len(input.shape)

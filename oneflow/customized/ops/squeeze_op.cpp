@@ -4,6 +4,15 @@ namespace oneflow {
 
 namespace {
 
+Maybe<void> TransformNegativeAxesToPositive(std::vector<int32_t>* axes, const int32_t num_axes) {
+  for (auto& axis : *axes) {
+    CHECK_GE(axis, -num_axes);
+    CHECK_LT(axis, num_axes);
+    axis = axis < 0 ? axis + num_axes : axis;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const std::vector<int32_t>& axes,
                                                DimVector* dim_vec) {
   for (auto axis : axes) {
@@ -23,12 +32,7 @@ REGISTER_USER_OP("squeeze")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       auto axes = ctx->GetAttr<std::vector<int32_t>>("axes");
-      const int32_t in_num_axes = in_shape->NumAxes();
-      for (auto& axis : axes) {
-        CHECK_GE(axis, -in_num_axes);
-        CHECK_LT(axis, in_num_axes);
-        axis = axis < 0 ? axis + in_num_axes : axis;
-      }
+      TransformNegativeAxesToPositive(&axes, in_shape->NumAxes());
 
       auto dim_vec = in_shape->dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(axes, &dim_vec);
@@ -46,12 +50,7 @@ REGISTER_USER_OP("squeeze")
       const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       auto axes = ctx->GetAttr<std::vector<int32_t>>("axes");
-      const int32_t in_num_axes = in_desc.shape().NumAxes();
-      for (auto& axis : axes) {
-        CHECK_GE(axis, -in_num_axes);
-        CHECK_LT(axis, in_num_axes);
-        axis = axis < 0 ? axis + in_num_axes : axis;
-      }
+      TransformNegativeAxesToPositive(&axes, in_desc.shape().NumAxes());
 
       const int32_t in_batch_axis_value = static_cast<int32_t>(in_batch_axis->value());
       if (in_batch_axis->has_value()
@@ -71,12 +70,7 @@ REGISTER_USER_OP("squeeze")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       auto axes = ctx->GetAttr<std::vector<int32_t>>("axes");
-      const int32_t in_num_axes = in_desc.shape().NumAxes();
-      for (auto& axis : axes) {
-        CHECK_GE(axis, -in_num_axes);
-        CHECK_LT(axis, in_num_axes);
-        axis = axis < 0 ? axis + in_num_axes : axis;
-      }
+      TransformNegativeAxesToPositive(&axes, in_desc.shape().NumAxes());
 
       auto dim_vec = in_desc.shape().dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(axes, &dim_vec);
@@ -85,8 +79,9 @@ REGISTER_USER_OP("squeeze")
         if (in_axis != -1) {
           SbpSignatureBuilder()
               .Split("in", in_axis)
-              .Split("out", out_axis++)
+              .Split("out", out_axis)
               .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ++out_axis;
         }
       }
       return Maybe<void>::Ok();
