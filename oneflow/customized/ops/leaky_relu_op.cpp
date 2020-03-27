@@ -32,8 +32,8 @@ REGISTER_USER_OP("leaky_relu_grad")
     .Output("dx")
     .Attr("alpha", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       CHECK(*dy_shape == *x_shape);
       *dx_shape = *dy_shape;
