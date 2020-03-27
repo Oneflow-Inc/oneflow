@@ -1691,6 +1691,28 @@ message ScalarDivByTensorOpConf {
   required string out = 3;
 }
 
+
+message ReduceMinOpConf{
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
+}
+
+message ReduceProdOpConf{
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
+}
+
+message ReduceAnyOpConf{
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1876,6 +1898,10 @@ message OperatorConf {
     SquareSumOpConf square_sum_conf = 522;
     BroadcastMaximumOpConf broadcast_maximum_conf = 523;
     BroadcastMinimumOpConf broadcast_minimum_conf = 524;
+
+    ReduceMinOpConf reduce_min_conf = 525;
+    ReduceProdOpConf reduce_prod_conf = 526;
+    ReduceAnyOpConf reduce_any_conf = 527;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
