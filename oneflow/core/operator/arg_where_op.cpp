@@ -7,14 +7,11 @@ namespace oneflow {
 namespace {
 
 Maybe<size_t> InferArgWhereTmpBufferSize(const BlobDesc* in_desc, DataType out_data_type) {
-#define MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY(dtype_pair, itype_pair)                             \
-  {GetHashKey(OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(itype_pair)),                       \
-   [](int elem_cnt) -> size_t {                                                                    \
-     size_t tmp_bytes = 0;                                                                         \
-     CudaCheck(                                                                                    \
-         InferSelectTrueTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>( \
-             0, elem_cnt, tmp_bytes));                                                             \
-     return tmp_bytes;                                                                             \
+#define MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY(dtype_pair, itype_pair)               \
+  {GetHashKey(OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(itype_pair)),         \
+   [](int elem_cnt) -> size_t {                                                      \
+     return InferSelectTrueTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair),               \
+                                         OF_PP_PAIR_FIRST(itype_pair)>(0, elem_cnt); \
    }},
 
   static const HashMap<std::string, std::function<size_t(int)>> infer_fn_map = {

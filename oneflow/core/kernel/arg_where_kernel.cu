@@ -57,8 +57,10 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* tmp, size_t& tm
 }  // namespace
 
 template<typename T, typename I>
-cudaError_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items, size_t& tmp_bytes) {
-  return SelectTrue<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr);
+size_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items) {
+  size_t tmp_bytes;
+  CudaCheck(SelectTrue<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
+  return tmp_bytes;
 }
 
 template<typename T, typename I, size_t NDims>
@@ -77,9 +79,7 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
     Blob* tmp = BnInOp2Blob("tmp");
     const int64_t elem_cnt = in->shape().elem_cnt();
     CHECK_LE(elem_cnt, std::numeric_limits<I>::max());
-    size_t tmp_bytes = 0;
-    CudaCheck(
-        InferSelectTrueTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp_bytes));
+    size_t tmp_bytes = InferSelectTrueTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt);
     CHECK_LE(tmp_bytes, tmp->shape().elem_cnt());
 
     if (NDims == 1) {
