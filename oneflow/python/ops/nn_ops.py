@@ -528,7 +528,7 @@ def deconv2d(
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(x, alpha=0.2, name=None):
     return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Leaky_relu"))
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("LeakyRelu_"))
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")
