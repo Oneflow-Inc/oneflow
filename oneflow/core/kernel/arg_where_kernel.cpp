@@ -36,14 +36,14 @@ class ArgWhereKernel : public KernelIf<DeviceType::kCPU> {
       });
 
 #define REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(device_type_v, dtype, itype) \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 1);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 2);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 3);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 4);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 5);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 6);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 7);             \
-  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 8);
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 1)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 2)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 3)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 4)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 5)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 6)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 7)              \
+  REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, 8)
 
 #define REGISTER_ARG_WHERE_KERNELS(device_type_v, dtype_pair, itype_pair)          \
   REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
