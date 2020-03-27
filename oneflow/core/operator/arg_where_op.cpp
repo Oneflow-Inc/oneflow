@@ -1,32 +1,8 @@
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/kernel/arg_where_kernel_util.h"
+#include "oneflow/core/operator/arg_where_op_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
-
-namespace {
-
-Maybe<size_t> InferArgWhereTmpBufferSize(const BlobDesc* in_desc, DataType out_data_type) {
-#define MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY(dtype_pair, itype_pair)               \
-  {GetHashKey(OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(itype_pair)),         \
-   [](int elem_cnt) -> size_t {                                                      \
-     return InferSelectTrueTmpBufferSize<OF_PP_PAIR_FIRST(dtype_pair),               \
-                                         OF_PP_PAIR_FIRST(itype_pair)>(0, elem_cnt); \
-   }},
-
-  static const HashMap<std::string, std::function<size_t(int)>> infer_fn_map = {
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY,
-                                       ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
-#undef MAKE_INFER_ARG_WHERE_TMP_FN_PAIR_ENTRY
-
-  auto infer_fn_it = infer_fn_map.find(GetHashKey(in_desc->data_type(), out_data_type));
-  OF_CHECK(infer_fn_it != infer_fn_map.end())
-      << "argwhere op do not support data_type (" << in_desc->data_type() << "), index_type ("
-      << out_data_type << ")";
-  return infer_fn_it->second(in_desc->shape().elem_cnt());
-}
-
-}  // namespace
 
 class ArgWhereOp final : public Operator {
  public:
@@ -66,11 +42,13 @@ class ArgWhereOp final : public Operator {
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
+    const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
+    const BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     BlobDesc* tmp_desc = GetBlobDesc4BnInOp("tmp");
-    size_t tmp_bytes = JUST(InferArgWhereTmpBufferSize(GetBlobDesc4BnInOp("in"),
-                                                       op_conf().arg_where_conf().data_type()));
-    OF_CHECK_GT(tmp_bytes, 0) << "tmp buffer bytes should be greater than zero";
-    tmp_desc->mut_shape() = Shape({static_cast<int64_t>(tmp_bytes)});
+    int64_t tmp_bytes = 0;
+    InferArgWhereWorkspaceSizeInBytes(device_type(), in_desc->data_type(), out_desc->data_type(),
+                                      in_desc->shape().elem_cnt(), &tmp_bytes);
+    tmp_desc->mut_shape() = Shape({tmp_bytes});
     tmp_desc->set_data_type(DataType::kChar);
     return Maybe<void>::Ok();
   }

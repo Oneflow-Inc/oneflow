@@ -1,6 +1,6 @@
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/common/fixed_vector.h"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -54,64 +54,50 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* tmp, size_t& tm
                                     num_selected, num_items, stream, false);
 }
 
-}  // namespace
-
 template<typename T, typename I>
-size_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items) {
+size_t GetSelectTrueTempStorageSize(cudaStream_t stream, int num_items) {
   size_t tmp_bytes;
   CudaCheck(SelectTrue<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
   return tmp_bytes;
 }
 
-template<typename T, typename I, size_t NDims>
-class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ArgWhereGpuKernel);
-  ArgWhereGpuKernel() = default;
-  ~ArgWhereGpuKernel() = default;
+}  // namespace
 
- private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    const Blob* in = BnInOp2Blob("in");
-    Blob* out = BnInOp2Blob("out");
-    Blob* out_size = BnInOp2Blob("out_size");
-    Blob* tmp = BnInOp2Blob("tmp");
-    const int64_t elem_cnt = in->shape().elem_cnt();
-    CHECK_LE(elem_cnt, std::numeric_limits<I>::max());
-    size_t tmp_bytes = InferSelectTrueTmpBufferSize<T, I>(ctx.device_ctx->cuda_stream(), elem_cnt);
-    CHECK_LE(tmp_bytes, tmp->shape().elem_cnt());
+template<typename T, typename I, size_t NDims>
+struct ArgWhereForward<DeviceType::kGPU, T, I, NDims> {
+  void operator()(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
+                  size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
+    CHECK_LE(in_shape.elem_cnt(), std::numeric_limits<I>::max());
+    size_t tmp_bytes = ArgWhereWorkspace<DeviceType::kGPU, T, I>()(ctx, in_shape.elem_cnt());
+    CHECK_LE(tmp_bytes, tmp_max_bytes);
 
     if (NDims == 1) {
-      CudaCheck(SelectTrue<T, I, I*>(ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(),
-                                     tmp_bytes, in->dptr<T>(), out->mut_dptr<I>(),
-                                     out_size->mut_dptr<I>()));
+      CudaCheck(SelectTrue<T, I, I*>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes,
+                                     in_ptr, out_ptr, out_size_ptr));
     } else {
-      StrideIterator<I, NDims> out_iter(out->mut_dptr<I>(), elem_cnt);
+      StrideIterator<I, NDims> out_iter(out_ptr, in_shape.elem_cnt());
       CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(
-          ctx.device_ctx->cuda_stream(), elem_cnt, tmp->mut_dptr(), tmp_bytes, in->dptr<T>(),
-          out_iter, out_size->mut_dptr<I>()));
+          ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes, in_ptr, out_iter, out_size_ptr));
 
       fixed_vector<I, NDims> dims(NDims);
-      std::transform(in->shape().ptr(), in->shape().ptr() + in->shape().NumAxes(), dims.begin(),
+      std::transform(in_shape.ptr(), in_shape.ptr() + in_shape.NumAxes(), dims.begin(),
                      [](int64_t dim) { return static_cast<I>(dim); });
       NdIndexOffsetHelper<I, NDims> index_converter(dims.data(), dims.size());
       CudaOffsetToNdIndexInplace<I, NDims>
           <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
-             ctx.device_ctx->cuda_stream()>>>(index_converter, out_size->dptr<I>(),
-                                              out->mut_dptr<I>());
+             ctx->cuda_stream()>>>(index_converter, out_size_ptr, out_ptr);
     }
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INFER_SELECT_TRUE_TMP_BUFFER_SIZE,
+template<typename T, typename I>
+struct ArgWhereWorkspace<DeviceType::kGPU, T, I> {
+  size_t operator()(DeviceCtx* ctx, int64_t n) {
+    return GetSelectTrueTempStorageSize<T, I>(ctx ? ctx->cuda_stream() : 0, n);
+  }
+};
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARG_WHERE_KERNEL_UTIL, (DeviceType::kGPU),
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
-#define REGISTER_ARG_WHERE_GPU_KERNELS(dtype_pair, itype_pair)             \
-  REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(ArgWhereGpuKernel, DeviceType::kGPU, \
-                                      OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair))
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_GPU_KERNELS, ARITHMETIC_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
