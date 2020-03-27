@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/arg_where_util.h"
+#include "oneflow/core/kernel/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include <cub/cub.cuh>
 

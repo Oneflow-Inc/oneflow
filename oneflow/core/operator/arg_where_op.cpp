@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/kernel/arg_where_util.h"
+#include "oneflow/core/kernel/arg_where_kernel_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {

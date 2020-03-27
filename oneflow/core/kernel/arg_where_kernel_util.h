@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_ARG_WHERE_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_ARG_WHERE_UTIL_H_
+#ifndef ONEFLOW_CORE_KERNEL_ARG_WHERE_KERNEL_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_ARG_WHERE_KERNEL_UTIL_H_
 
 #include "oneflow/core/device/cuda_util.h"
 
@@ -34,4 +34,4 @@ cudaError_t InferSelectTrueTmpBufferSize(cudaStream_t stream, int num_items, siz
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_ARG_WHERE_UTIL_H_
+#endif  // ONEFLOW_CORE_KERNEL_ARG_WHERE_KERNEL_UTIL_H_
