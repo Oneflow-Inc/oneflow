@@ -1,4 +1,5 @@
 #include "oneflow/customized/kernels/clip_by_value_kernel.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -20,15 +21,13 @@ template<typename T>
 struct ClipKernelUtil<DeviceType::kGPU, T> {
   template<typename F>
   static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
-    CudaClipForward<<<SMBlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        clip_func, n, x, y);
+    RUN_CUDA_KERNEL((CudaClipForward<T, F>), ctx, n, clip_func, n, x, y);
   }
 
   template<typename F>
   static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx) {
-    CudaClipBackward<<<SMBlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        clip_func, n, x, dy, dx);
+    RUN_CUDA_KERNEL((CudaClipBackward<T, F>), ctx, n, clip_func, n, x, dy, dx);
   }
 };
 
