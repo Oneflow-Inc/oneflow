@@ -33,7 +33,9 @@ struct ArgWhereWorkspace {
   INSTANTIATE_ARG_WHERE_FORWARD(device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
                                 OF_PP_PAIR_FIRST(itype_pair), 4)                 \
   INSTANTIATE_ARG_WHERE_FORWARD(device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
-                                OF_PP_PAIR_FIRST(itype_pair), 5)
+                                OF_PP_PAIR_FIRST(itype_pair), 5)                 \
+  INSTANTIATE_ARG_WHERE_WORKSPACE(device_type_v, OF_PP_PAIR_FIRST(dtype_pair),   \
+                                  OF_PP_PAIR_FIRST(itype_pair))
 
 }  // namespace oneflow
 
