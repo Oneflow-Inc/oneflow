@@ -2,6 +2,17 @@
 
 namespace oneflow {
 
+namespace {
+
+int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
+  axis = axis < 0 ? axis + num_axes + 1 : axis;
+  CHECK_GE(axis, 0);
+  CHECK_LE(axis, num_axes);
+  return axis;
+}
+
+}  // namespace
+
 REGISTER_USER_OP("expand_dims")
     .Input("in")
     .Output("out")
@@ -9,11 +20,8 @@ REGISTER_USER_OP("expand_dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      int32_t axis = ctx->GetAttr<int32_t>("axis");
-      const int32_t in_num_axes = in_shape->NumAxes();
-      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
-      CHECK_GE(axis, 0);
-      CHECK_LE(axis, in_num_axes);
+      const int32_t axis =
+          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_shape->NumAxes());
 
       auto dim_vec = in_shape->dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
@@ -25,11 +33,8 @@ REGISTER_USER_OP("expand_dims")
       const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      int32_t axis = ctx->GetAttr<int32_t>("axis");
-      const int32_t in_num_axes = in_desc.shape().NumAxes();
-      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
-      CHECK_GE(axis, 0);
-      CHECK_LE(axis, in_num_axes);
+      const int32_t axis =
+          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_desc.shape().NumAxes());
 
       if (in_batch_axis->has_value()) {
         out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
@@ -42,11 +47,8 @@ REGISTER_USER_OP("expand_dims")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      int32_t axis = ctx->GetAttr<int32_t>("axis");
-      const int32_t in_num_axes = in_desc.shape().NumAxes();
-      axis = axis < 0 ? axis + in_num_axes + 1 : axis;
-      CHECK_GE(axis, 0);
-      CHECK_LE(axis, in_num_axes);
+      const int32_t axis =
+          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_desc.shape().NumAxes());
 
       auto dim_vec = in_desc.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {

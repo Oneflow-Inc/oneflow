@@ -57,10 +57,7 @@ REGISTER_USER_OP("squeeze")
           && std::find(axes.begin(), axes.end(), in_batch_axis_value) == axes.end()) {
         auto dim_vec = in_desc.shape().dim_vec();
         CheckAndLabelAxesToSqueezeMinusOne(axes, &dim_vec);
-        int32_t cnt = 0;
-        FOR_RANGE(int32_t, i, 0, in_batch_axis_value) {
-          cnt += static_cast<int32_t>(dim_vec.at(i) == -1);
-        }
+        const int32_t cnt = std::count(dim_vec.begin(), dim_vec.end(), -1);
         out_batch_axis->set_value(in_batch_axis_value - cnt);
       } else {
         out_batch_axis->clear_value();

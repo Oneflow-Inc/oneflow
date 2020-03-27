@@ -3,15 +3,13 @@
 
 namespace oneflow {
 
-#define REGISTER_RESHAPE_LIKE_KERNEL(T, D)                                                      \
+#define REGISTER_RESHAPE_LIKE_KERNEL(D)                                                         \
   REGISTER_USER_KERNEL("reshape_like")                                                          \
       .SetCreateFn([](oneflow::user_op::KernelInitContext* ctx) {                               \
-        return new CopyDataContentKernel<T, DeviceType::D>(ctx);                                \
+        return new CopyDataContentKernel<DeviceType::D>(ctx);                                   \
       })                                                                                        \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
-        return ctx.device_type() == DeviceType::D                                               \
-               && out_desc->data_type() == GetDataType<T>::value;                               \
+        return ctx.device_type() == DeviceType::D;                                              \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -19,15 +17,7 @@ namespace oneflow {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_RESHAPE_LIKE_KERNEL(float, kCPU)
-REGISTER_RESHAPE_LIKE_KERNEL(double, kCPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int8_t, kCPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int32_t, kCPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int64_t, kCPU)
-REGISTER_RESHAPE_LIKE_KERNEL(float, kGPU)
-REGISTER_RESHAPE_LIKE_KERNEL(double, kGPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int8_t, kGPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int32_t, kGPU)
-REGISTER_RESHAPE_LIKE_KERNEL(int64_t, kGPU)
+REGISTER_RESHAPE_LIKE_KERNEL(kCPU)
+REGISTER_RESHAPE_LIKE_KERNEL(kGPU)
 
 }  // namespace oneflow
