@@ -345,10 +345,6 @@ def argwhere(condition, dtype=None, name=None):
 
     arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
     arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
-    # sync_dynamic_resize only support int32 for now
-    if arg_where_out_size.dtype != flow.int32:
-        arg_where_out_size = flow.cast(arg_where_out_size, flow.int32)
-
     return sync_dynamic_resize(arg_where_out, arg_where_out_size)
 
 
