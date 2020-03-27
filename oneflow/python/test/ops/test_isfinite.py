@@ -12,9 +12,9 @@ def test_isfinite(test_case):
 
     x = np.array([-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf"), float("nan")], dtype=np.float32)
     y = IsfiniteJob(x).get().ndarray()
-    # output: [False True True True True True False False] 
-    print("isfinite y = ", y)
-    print("np.isfinite y =", np.isfinite(x))
+ 
+    print("isfinite y = ", y) # output:  [0 1 1 1 1 1 1 0 0]
+    print("np.isfinite y =", np.isfinite(x))  # output: [False True True True True True False False]
     test_case.assertTrue(np.allclose(y, np.isfinite(x)))
 
     x = np.random.uniform(size=(9,)).astype(np.float32)
