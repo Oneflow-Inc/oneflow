@@ -360,6 +360,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
                               "Optimizer",
                               &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",

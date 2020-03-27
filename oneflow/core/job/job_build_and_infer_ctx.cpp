@@ -317,6 +317,10 @@ Maybe<bool> JobBuildAndInferCtx::AllInputsBroadcastParallel(const Operator& op) 
   return true;
 }
 
+bool JobBuildAndInferCtx::IsVariableLbi(const LogicalBlobId& lbi) const {
+  return op_name2op_.at(lbi.op_name())->op_conf().has_variable_conf();
+}
+
 Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const Operator& op) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
@@ -376,6 +380,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
     FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
       const std::string& blob_name = "out_" + std::to_string(i);
       distribute_clone->add_out(blob_name);
+      distribute_clone->set_is_variable_ref(IsVariableLbi(lbi));
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else if (sbp.has_split_parallel()) {
@@ -385,6 +390,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
     distribute_split->set_in(lbn);
     distribute_split->set_axis(0);
+    distribute_split->set_is_variable_ref(IsVariableLbi(lbi));
     FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
       const std::string& blob_name = "out_" + std::to_string(i);
       distribute_split->add_out(blob_name);
