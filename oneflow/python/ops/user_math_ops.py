@@ -359,6 +359,26 @@ def isfinite(x, name=None):
             .SetAttr("unary_math_type", "IsFinite", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.isinf")
+def isfinite(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("IsInf_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary_bool")\
+            .Input("x", [x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "IsInf", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.isnan")
+def isfinite(x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("IsNaN_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary_bool")\
+            .Input("x", [x])\
+            .Output("y")\
+            .SetAttr("unary_math_type", "IsNan", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 @oneflow_export("math.pow")
 def pow(x, y, name=None):
     if name is None:
