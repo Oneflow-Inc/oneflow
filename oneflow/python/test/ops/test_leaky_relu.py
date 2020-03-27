@@ -3,13 +3,14 @@ import numpy as np
 import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict 
+from test_util import type_name_to_flow_type
 
 from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, x_shape, alpha):
+def compare_with_tensorflow(device_type, x_shape, data_type, alpha):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -23,7 +24,7 @@ def compare_with_tensorflow(device_type, x_shape, alpha):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
@@ -52,66 +53,11 @@ def compare_with_tensorflow(device_type, x_shape, alpha):
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
-def test_leaky_relu1(test_case):
+def test_leaky_relu(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30)]
-    arg_dict["alpha"] = [0.1]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30)]
-    arg_dict["alpha"] = [0.2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 10, 20)]
-    arg_dict["alpha"] = [-0.2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu4(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 10, 20)]
-    arg_dict["alpha"] = [2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu5(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30)]
-    arg_dict["alpha"] = [0.1]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu6(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30)]
-    arg_dict["alpha"] = [0.2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu7(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20)]
-    arg_dict["alpha"] = [-0.2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-def test_leaky_relu8(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20)]
-    arg_dict["alpha"] = [2]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20), (20,)]
+    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["alpha"] = [0.1, 0.2, -0.2, 2]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
