@@ -87,10 +87,7 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
                                     const std::vector<InputOutputAlias> &aliases) {
   util::Map<std::string, tvm::relay::Expr> tensor_name2expr;
   tvm::Array<tvm::relay::Var> graph_input_vars;
-  LOG(WARNING) << "Compile TVM ";
-  for (auto* node : graph->Nodes()) {
-    LOG(WARNING) << "node name: " << node->name();
-  }
+  LOG(WARNING) << "Compile Xrt graph with TVM";
 
   ConvertEntryParamsToTVMExpr(entry_params, &tensor_name2expr, &graph_input_vars);
 
