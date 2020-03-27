@@ -33,7 +33,6 @@ struct StrideIterator {
 template<typename T, size_t NDims>
 __global__ void CudaOffsetToNdIndexInplace(NdIndexOffsetHelper<T, NDims> index_converter,
                                            const T* num_indices_ptr, T* indices_ptr) {
-  // TODO: test if ldg can improve effect
   CUDA_1D_KERNEL_LOOP_T(T, i, *num_indices_ptr) {
     T* cur_indices_ptr = indices_ptr + i * NDims;
     index_converter.OffsetToNdIndex(*cur_indices_ptr, cur_indices_ptr);
@@ -97,8 +96,6 @@ class ArgWhereGpuKernel : public KernelIf<DeviceType::kGPU> {
       std::transform(in->shape().ptr(), in->shape().ptr() + in->shape().NumAxes(), dims.begin(),
                      [](int64_t dim) { return static_cast<I>(dim); });
       NdIndexOffsetHelper<I, NDims> index_converter(dims.data(), dims.size());
-      // TODO: test whether kFlatIndexToNdIndexProposedLaunchBlocks or
-      // BlocksNum4ThreadsNum(elem_cnt) is faster
       CudaOffsetToNdIndexInplace<I, NDims>
           <<<kFlatIndexToNdIndexProposedLaunchBlocks, kCudaThreadsNumPerBlock, 0,
              ctx.device_ctx->cuda_stream()>>>(index_converter, out_size->dptr<I>(),
