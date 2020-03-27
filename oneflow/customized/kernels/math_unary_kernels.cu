@@ -49,6 +49,10 @@ __device__ float FloorCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
 __device__ int8_t IsFinite(float x) { return isfinite(x) ? 1 : 0; }
 
+__device__ int8_t IsInf(float x) { return IsInf(x) ? 1 : 0; }
+
+__device__ int8_t IsNaN(float x) { return IsNaN(x) ? 1 : 0; }
+
 __device__ float LgammaCalInDiff4GpuFloat(float x, float dy) {
   // TODO(chengcheng): return: dy * digamma(x)
   assert(false);
@@ -154,18 +158,18 @@ __device__ float TanhCalInDiff4GpuFloat(float x, float dy) { return dy * sinhf(x
                              ctx->cuda_stream()>>>(n, x, dy, dx);                           \
   }
 
-  #define MATH_UNARY_BOOL_GPU(func_name, fw_func, x_dtype, y_dtype)                         \
-  __global__ void func_name##ForwardGpu(const int n, const x_dtype* x, y_dtype* y) {        \
-    CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                                     \
-  }                                                                                         \
-  void func_name##Forward(DeviceCtx* ctx, const Tensor* tensor_x, Tensor* tensor_y) {       \
-    const x_dtype* x = tensor_x->dptr<x_dtype>();                                             \
-    y_dtype* y = tensor_y->mut_dptr<y_dtype>();                                             \
-    int64_t n = tensor_x->shape().elem_cnt();                                               \
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                                  \
-    func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,            \
-                            ctx->cuda_stream()>>>(n, x, y);                                 \
-  }                                                                                         \
+#define MATH_UNARY_BOOL_GPU(func_name, fw_func, x_dtype, y_dtype)                     \
+  __global__ void func_name##ForwardGpu(const int n, const x_dtype* x, y_dtype* y) {  \
+    CUDA_1D_KERNEL_LOOP(i, n) { y[i] = fw_func(x[i]); }                               \
+  }                                                                                   \
+  void func_name##Forward(DeviceCtx* ctx, const Tensor* tensor_x, Tensor* tensor_y) { \
+    const x_dtype* x = tensor_x->dptr<x_dtype>();                                     \
+    y_dtype* y = tensor_y->mut_dptr<y_dtype>();                                       \
+    int64_t n = tensor_x->shape().elem_cnt();                                         \
+    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                            \
+    func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,      \
+                            ctx->cuda_stream()>>>(n, x, y);                           \
+  }
 
 #define MATH_UNARY_GPU_FLOAT_SEQ                           \
   OF_PP_MAKE_TUPLE_SEQ("Abs", Abs)                         \
@@ -201,10 +205,12 @@ __device__ float TanhCalInDiff4GpuFloat(float x, float dy) { return dy * sinhf(x
   OF_PP_MAKE_TUPLE_SEQ("Sqrt", Sqrt)                       \
   OF_PP_MAKE_TUPLE_SEQ("Square", Square)                   \
   OF_PP_MAKE_TUPLE_SEQ("Tan", Tan)                         \
-  OF_PP_MAKE_TUPLE_SEQ("Tanh", Tanh)   
-  
-  #define MATH_UNARY_GPU_BOOL_SEQ                          \
-  OF_PP_MAKE_TUPLE_SEQ("IsFinite", IsFinite)
+  OF_PP_MAKE_TUPLE_SEQ("Tanh", Tanh)
+
+#define MATH_UNARY_GPU_BOOL_SEQ                            \
+OF_PP_MAKE_TUPLE_SEQ("IsFinite", IsFinite)                 \
+OF_PP_MAKE_TUPLE_SEQ("IsInf", IsInf)                 \
+OF_PP_MAKE_TUPLE_SEQ("IsNaN", IsNaN)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -240,7 +246,9 @@ MATH_UNARY_GPU(Sqrt, sqrtf, SqrtCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Square, Square4GpuFloat, SquareCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Tan, tanf, TanCalInDiff4GpuFloat, float);
 MATH_UNARY_GPU(Tanh, tanhf, TanhCalInDiff4GpuFloat, float);
-MATH_UNARY_BOOL_GPU(IsFinite, isfinite, float, int8_t)
+MATH_UNARY_BOOL_GPU(IsFinite, isfinite, float, int8_t);
+MATH_UNARY_BOOL_GPU(IsInf, isinf, float, int8_t);
+MATH_UNARY_BOOL_GPU(IsNaN, isnan, float, int8_t)
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
