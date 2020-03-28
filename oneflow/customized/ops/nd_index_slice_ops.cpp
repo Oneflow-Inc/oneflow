@@ -331,14 +331,7 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
         AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("identity")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "params", 0);
-        AddOp(grad_op);
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "params", 0);
       }
     });
 }  // namespace oneflow
