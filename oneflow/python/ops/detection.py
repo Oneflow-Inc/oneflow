@@ -322,25 +322,22 @@ def non_maximum_suppression(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("detection.smooth_l1")
+@oneflow_export("smooth_l1")
 def smooth_l1(prediction, label, beta=1.0, scale=1.0, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("SmoothL1_"),
+    op = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("SmoothL1"))
+        .Op("smooth_l1")
+        .Input("x", [prediction])
+        .Input("label", [label])
+        .Output("y")
     )
-    op_conf.smooth_l1_conf.prediction = prediction.logical_blob_name
-    op_conf.smooth_l1_conf.label = label.logical_blob_name
-    op_conf.smooth_l1_conf.beta = float(beta)
-    op_conf.smooth_l1_conf.scale = float(scale)
-    op_conf.smooth_l1_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
+    op.SetAttr("beta", float(beta), "AttrTypeFloat")
+    op.SetAttr("scale", float(scale), "AttrTypeFloat")
+    return (
+        op
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("detection.upsample_nearest")
 def upsample_nearest(inputs, scale, data_format, name=None):
