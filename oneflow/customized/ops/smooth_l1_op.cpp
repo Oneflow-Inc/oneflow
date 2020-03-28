@@ -66,4 +66,19 @@ REGISTER_USER_OP("smooth_l1_grad")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("smooth_l1")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("smooth_l1_grad")
+                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("x", op.input("x", 0))
+                                                 .Input("label", op.input("label", 0))
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
+
 }  // namespace oneflow
