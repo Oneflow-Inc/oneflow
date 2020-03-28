@@ -22,11 +22,11 @@ class SmoothL1CPUKernel final : public user_op::OpKernel {
     const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
     T* y = ctx->Tensor4ArgNameAndIndex("y", 0)->mut_dptr<T>();
     for (int64_t i = 0; i < elem_cnt; i++) {
-      const T abs_x = std::abs(x[i] - label[i]);
-      if (abs_x < beta) {
-        y[i] = 0.5 * abs_x * abs_x / beta;
+      const T abs_diff = std::abs(x[i] - label[i]);
+      if (abs_diff < beta) {
+        y[i] = 0.5 * abs_diff * abs_diff / beta;
       } else {
-        y[i] = abs_x - 0.5 * beta;
+        y[i] = abs_diff - 0.5 * beta;
       }
       y[i] *= scale;
     }
