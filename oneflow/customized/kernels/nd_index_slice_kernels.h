@@ -54,6 +54,7 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
   GatherNdFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                        params->dptr<T>(), out->mut_dptr<T>());
@@ -66,6 +67,7 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
+  if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
@@ -79,6 +81,7 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelCont
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
+  if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ZeroByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                             out->mut_dptr<T>());
@@ -94,6 +97,7 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
+  if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());

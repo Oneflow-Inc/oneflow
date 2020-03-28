@@ -152,6 +152,36 @@ def _compare_dynamic_gather_nd_with_tf(test_case, params_shape, static_params_sh
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
+def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_type):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+    @flow.function(func_config)
+    def gather_nd_fn(
+        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
+        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
+    ):
+        with flow.device_prior_placement(device_type, "0:0"):
+            return flow.gather_nd(params_def, indices_def)
+
+    return gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+
+
+def _compare_gather_nd_dynamic_indices_with_tf(
+    test_case, params_shape, indices_shape, indices_static_shape, device_type
+):
+    params, indices = _random_inputs(params_shape, indices_shape)
+
+    i = tf.constant(indices)
+    x = tf.Variable(params)
+    y = tf.gather_nd(x, i)
+
+    of_y = _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_type)
+    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+
+
 def test_gather_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -206,3 +236,23 @@ def test_dynamic_gather_nd(test_case):
     arg_dict["indices_shape"] = [(12, 1)]
     for arg in GenArgList(arg_dict):
         _compare_dynamic_gather_nd_with_tf(test_case, *arg)
+
+
+def test_gather_nd_dynamic_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(25, 10)]
+    arg_dict["indices_shape"] = [(11, 1)]
+    arg_dict["indices_static_shape"] = [(15, 1)]
+    arg_dict["device_type"] = ["gpu"]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_gather_nd_empty_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(12, 13, 7)]
+    arg_dict["indices_shape"] = [(5, 0, 2)]
+    arg_dict["indices_static_shape"] = [(5, 10, 2)]
+    arg_dict["device_type"] = ["gpu"]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)

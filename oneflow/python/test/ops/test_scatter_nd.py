@@ -12,7 +12,7 @@ def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_i
     indices_rows = np.prod(indices_shape[:-1])
     indices_cols = indices_shape[-1]
     for col in range(indices_cols):
-        if indices_rows <= params_shape[col] and allow_duplicate_index is False:
+        if allow_duplicate_index is False and indices_rows <= params_shape[col]:
             rand_indices = np.arange(params_shape[col], dtype=np.int32)
             np.random.shuffle(rand_indices)
             indices_col = rand_indices[:indices_rows].reshape(indices_shape[:-1])
@@ -318,6 +318,127 @@ def _compare_tensor_scatter_nd_add_with_tf(
     test_case.assertTrue(np.allclose(tf_out1.numpy(), of_out))
 
 
+def _of_scatter_nd_dynamic_indices(
+    indices, updates, indices_static_shape, updates_static_shape, params_shape
+):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+    @flow.function(func_config)
+    def scatter_nd_fn(
+        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
+        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+    ):
+        with flow.device_prior_placement("gpu", "0:0"):
+            return flow.scatter_nd(indices_def, updates_def, params_shape)
+
+    return scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
+
+
+def _compare_scatter_nd_dynamic_indices_with_tf(
+    test_case,
+    indices_shape,
+    updates_shape,
+    indices_static_shape,
+    updates_static_shape,
+    params_shape,
+):
+    _, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+
+    indices_const = tf.constant(indices)
+    x = tf.Variable(updates)
+    y = tf.scatter_nd(indices_const, x, params_shape)
+
+    of_y = _of_scatter_nd_dynamic_indices(
+        indices, updates, indices_static_shape, updates_static_shape, params_shape
+    )
+    test_case.assertTrue(np.allclose(y.numpy(), of_y))
+
+
+def _of_tensor_scatter_nd_update_dynamic_indices(
+    params, indices, updates, indices_static_shape, updates_static_shape
+):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+    @flow.function(func_config)
+    def tensor_scatter_nd_update_fn(
+        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
+        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
+        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+    ):
+        with flow.device_prior_placement("gpu", "0:0"):
+            return flow.tensor_scatter_nd_update(params_def, indices_def, updates_def)
+
+    return tensor_scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
+
+
+def _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(
+    test_case,
+    params_shape,
+    indices_shape,
+    updates_shape,
+    indices_static_shape,
+    updates_static_shape,
+):
+    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, False)
+
+    i = tf.constant(indices)
+    x = tf.Variable(params)
+    y = tf.Variable(updates)
+    z = tf.tensor_scatter_nd_update(x, i, y)
+
+    of_z = _of_tensor_scatter_nd_update_dynamic_indices(
+        params, indices, updates, indices_static_shape, updates_static_shape
+    )
+    test_case.assertTrue(np.allclose(z.numpy(), of_z))
+
+
+def _of_tensor_scatter_nd_add_dynamic_indices(
+    params, indices, updates, indices_static_shape, updates_static_shape
+):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+    @flow.function(func_config)
+    def tensor_scatter_nd_add_fn(
+        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
+        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
+        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+    ):
+        with flow.device_prior_placement("gpu", "0:0"):
+            return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)
+
+    return tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+
+
+def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
+    test_case,
+    params_shape,
+    indices_shape,
+    updates_shape,
+    indices_static_shape,
+    updates_static_shape,
+):
+    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+
+    i = tf.constant(indices)
+    x = tf.Variable(params)
+    y = tf.Variable(updates)
+    z = tf.tensor_scatter_nd_add(x, i, y)
+
+    of_z = _of_tensor_scatter_nd_add_dynamic_indices(
+        params, indices, updates, indices_static_shape, updates_static_shape
+    )
+    test_case.assertTrue(np.allclose(z.numpy(), of_z))
+
+
 def test_scatter_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -443,3 +564,69 @@ def test_tensor_scatter_nd_add_case2(test_case):
     arg_dict["mirrored"] = [True, False]
     for arg in GenArgList(arg_dict):
         _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_dynamic_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["indices_shape"] = [(12, 10, 2)]
+    arg_dict["updates_shape"] = [(12, 10, 41, 33)]
+    arg_dict["indices_static_shape"] = [(15, 10, 2)]
+    arg_dict["updates_static_shape"] = [(15, 10, 41, 33)]
+    arg_dict["params_shape"] = [(64, 22, 41, 33)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_scatter_nd_empty_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["indices_shape"] = [(0, 1)]
+    arg_dict["updates_shape"] = [(0, 14)]
+    arg_dict["indices_static_shape"] = [(8, 1)]
+    arg_dict["updates_static_shape"] = [(8, 14)]
+    arg_dict["params_shape"] = [(10, 14)]
+    for arg in GenArgList(arg_dict):
+        _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_update_dynamic_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(32, 33, 4, 5)]
+    arg_dict["indices_shape"] = [(12, 2)]
+    arg_dict["updates_shape"] = [(12, 4, 5)]
+    arg_dict["indices_static_shape"] = [(14, 2)]
+    arg_dict["updates_static_shape"] = [(14, 4, 5)]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_update_empty_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(37, 14)]
+    arg_dict["indices_shape"] = [(7, 0, 1)]
+    arg_dict["updates_shape"] = [(7, 0, 14)]
+    arg_dict["indices_static_shape"] = [(7, 5, 1)]
+    arg_dict["updates_static_shape"] = [(7, 5, 14)]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_add_dynamic_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(2, 9, 7, 5, 4)]
+    arg_dict["indices_shape"] = [(12, 5, 3)]
+    arg_dict["updates_shape"] = [(12, 5, 5, 4)]
+    arg_dict["indices_static_shape"] = [(15, 6, 3)]
+    arg_dict["updates_static_shape"] = [(15, 6, 5, 4)]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
+
+
+def test_tensor_scatter_nd_add_empty_indices(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["params_shape"] = [(24, 30, 14)]
+    arg_dict["indices_shape"] = [(0, 2)]
+    arg_dict["updates_shape"] = [(0, 14)]
+    arg_dict["indices_static_shape"] = [(11, 2)]
+    arg_dict["updates_static_shape"] = [(11, 14)]
+    for arg in GenArgList(arg_dict):
+        _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
