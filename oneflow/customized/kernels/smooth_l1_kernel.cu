@@ -97,7 +97,7 @@ class SmoothL1GradGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SMOOTH_L1_GRAD_GPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("smooth_l1")                                                              \
+  REGISTER_USER_KERNEL("smooth_l1_grad")                                                         \
       .SetCreateFn(                                                                              \
           [](user_op::KernelInitContext* ctx) { return new SmoothL1GradGpuKernel<dtype>(ctx); }) \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
