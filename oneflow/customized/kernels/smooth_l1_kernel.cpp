@@ -13,9 +13,24 @@ class SmoothL1CPUKernel final : public user_op::OpKernel {
   ~SmoothL1CPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override { return; };
-
-  std::unique_ptr<std::mt19937> random_generator_;
+  void Compute(user_op::KernelContext* ctx) override {
+    const float beta = ctx->GetAttr<float>("beta");
+    const float scale = ctx->GetAttr<float>("scale");
+    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const T* x = x_blob->dptr<T>();
+    const int64_t elem_cnt = x_blob->shape().elem_cnt();
+    const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
+    T* y = ctx->Tensor4ArgNameAndIndex("y", 0)->mut_dptr<T>();
+    for (int64_t i = 0; i < elem_cnt; i++) {
+      const T abs_x = std::abs(x[i] - label[i]);
+      if (abs_x < beta) {
+        y[i] = 0.5 * abs_x * abs_x / beta;
+      } else {
+        y[i] = abs_x - 0.5 * beta;
+      }
+      y[i] *= scale;
+    }
+  };
 };
 
 #define REGISTER_SMOOTH_L1_CPU_KERNEL(dtype)                                                 \
