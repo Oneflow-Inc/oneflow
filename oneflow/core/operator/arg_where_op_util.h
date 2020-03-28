@@ -6,7 +6,8 @@
 namespace oneflow {
 
 void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                       DataType index_type, int64_t n, int64_t* workspace_bytes);
+                                       DataType index_type, int32_t num_axes, int64_t n,
+                                       int64_t* workspace_bytes);
 
 }  // namespace oneflow
 

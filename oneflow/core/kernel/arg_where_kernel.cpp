@@ -19,7 +19,7 @@ class ArgWhereKernel : public KernelIf<DeviceType::kCPU> {
     Blob* out = BnInOp2Blob("out");
     Blob* out_size = BnInOp2Blob("out_size");
     Blob* tmp = BnInOp2Blob("tmp");
-    ArgWhereForward<device_type, T, I, NDims>()(
+    ArgWhereKernelUtil<device_type, T, I, NDims>::ArgWhere(
         ctx.device_ctx, in->shape(), in->dptr<T>(), tmp ? tmp->mut_dptr() : nullptr,
         tmp ? tmp->ByteSizeOfBlobBody() : 0, out->mut_dptr<I>(), out_size->mut_dptr<I>());
   }

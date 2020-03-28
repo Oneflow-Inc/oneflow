@@ -47,7 +47,8 @@ class ArgWhereOp final : public Operator {
     BlobDesc* tmp_desc = GetBlobDesc4BnInOp("tmp");
     int64_t tmp_bytes = 0;
     InferArgWhereWorkspaceSizeInBytes(device_type(), in_desc->data_type(), out_desc->data_type(),
-                                      in_desc->shape().elem_cnt(), &tmp_bytes);
+                                      in_desc->shape().NumAxes(), in_desc->shape().elem_cnt(),
+                                      &tmp_bytes);
     tmp_desc->mut_shape() = Shape({tmp_bytes});
     tmp_desc->set_data_type(DataType::kChar);
     return Maybe<void>::Ok();

@@ -4,9 +4,9 @@
 namespace oneflow {
 
 template<typename T, typename I, size_t NDims>
-struct ArgWhereForward<DeviceType::kCPU, T, I, NDims> {
-  void operator()(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
-                  size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
+struct ArgWhereKernelUtil<DeviceType::kCPU, T, I, NDims> {
+  static void ArgWhere(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
+                       size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
     CHECK_LE(in_shape.elem_cnt(), std::numeric_limits<I>::max());
     I true_cnt = 0;
     fixed_vector<I, NDims> dims(NDims);
@@ -21,11 +21,8 @@ struct ArgWhereForward<DeviceType::kCPU, T, I, NDims> {
     }
     *out_size_ptr = true_cnt;
   }
-};
 
-template<typename T, typename I>
-struct ArgWhereWorkspace<DeviceType::kCPU, T, I> {
-  size_t operator()(DeviceCtx* ctx, int64_t n) { return 0; }
+  static size_t GetArgWhereWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n) { return 0; }
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARG_WHERE_KERNEL_UTIL, (DeviceType::kCPU),

@@ -54,21 +54,15 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* tmp, size_t& tm
                                     num_selected, num_items, stream, false);
 }
 
-template<typename T, typename I>
-size_t GetSelectTrueTempStorageSize(cudaStream_t stream, int num_items) {
-  size_t tmp_bytes;
-  CudaCheck(SelectTrue<T, I, I*>(stream, num_items, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
-  return tmp_bytes;
-}
-
 }  // namespace
 
 template<typename T, typename I, size_t NDims>
-struct ArgWhereForward<DeviceType::kGPU, T, I, NDims> {
-  void operator()(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
-                  size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
+struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
+  static void ArgWhere(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
+                       size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
+    CHECK_NOTNULL(ctx);
     CHECK_LE(in_shape.elem_cnt(), std::numeric_limits<I>::max());
-    size_t tmp_bytes = ArgWhereWorkspace<DeviceType::kGPU, T, I>()(ctx, in_shape.elem_cnt());
+    size_t tmp_bytes = GetArgWhereWorkspaceSizeInBytes(ctx, in_shape.elem_cnt());
     CHECK_LE(tmp_bytes, tmp_max_bytes);
 
     if (NDims == 1) {
@@ -88,12 +82,18 @@ struct ArgWhereForward<DeviceType::kGPU, T, I, NDims> {
              ctx->cuda_stream()>>>(index_converter, out_size_ptr, out_ptr);
     }
   }
-};
 
-template<typename T, typename I>
-struct ArgWhereWorkspace<DeviceType::kGPU, T, I> {
-  size_t operator()(DeviceCtx* ctx, int64_t n) {
-    return GetSelectTrueTempStorageSize<T, I>(ctx ? ctx->cuda_stream() : 0, n);
+  static size_t GetArgWhereWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n) {
+    cudaStream_t stream = ctx ? ctx->cuda_stream() : 0;
+    size_t tmp_bytes = 0;
+    if (NDims == 1) {
+      CudaCheck(SelectTrue<T, I, I*>(stream, n, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
+    } else {
+      StrideIterator<I, NDims> out_iter(nullptr, n);
+      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(stream, n, nullptr, tmp_bytes, nullptr,
+                                                           out_iter, nullptr));
+    }
+    return tmp_bytes;
   }
 };
 
