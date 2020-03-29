@@ -23,6 +23,7 @@ def gen_numpy_data(x, label, beta=1.0, scale=1.0):
         else:
             y[i] = abs_diff - 0.5 * beta
     y *= scale
+
     # Backward
     for i in np.arange(elem_cnt):
         diff = x[i] - label[i]
