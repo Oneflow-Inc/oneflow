@@ -12,8 +12,8 @@ def gen_numpy_data(x, label, beta=1.0, scale=1.0):
     elem_cnt = x.size
     x = x.reshape(-1)
     label = label.reshape(-1)
-    y = np.zeros((elem_cnt)).astype(np.float)
-    dx = np.zeros((elem_cnt)).astype(np.float)
+    y = np.zeros((elem_cnt)).astype(x.dtype)
+    dx = np.zeros((elem_cnt)).astype(x.dtype)
 
     # Forward
     for i in np.arange(elem_cnt):
@@ -66,7 +66,8 @@ def test_smooth_l1(_):
         np_result = gen_numpy_data(x, label, beta, scale)
 
         def assert_dx(b):
-            dx_np = np_result["dx"].astype(type_name_to_np_type[data_type])
+            dx_np = np_result["dx"]
+            assert dx_np.dtype == type_name_to_np_type[data_type]
             assert np.allclose(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
 
         @flow.function(func_config)
@@ -88,6 +89,7 @@ def test_smooth_l1(_):
                 flow.losses.add_loss(y)
                 return y
         
-        y_np = np_result["y"].astype(type_name_to_np_type[data_type])
+        y_np = np_result["y"]
+        assert y_np.dtype == type_name_to_np_type[data_type]
         y = TestJob(x, label).get().ndarray()
         assert np.allclose(y_np, y), (case, y_np, y)
