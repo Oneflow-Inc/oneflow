@@ -68,7 +68,10 @@ def test_smooth_l1(_):
         def assert_dx(b):
             dx_np = np_result["dx"]
             assert dx_np.dtype == type_name_to_np_type[data_type]
-            assert np.allclose(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
+            if data_type == "float":
+                assert np.array_equal(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
+            else:
+                assert np.allclose(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
 
         @flow.function(func_config)
         def TestJob(
@@ -92,4 +95,7 @@ def test_smooth_l1(_):
         y_np = np_result["y"]
         assert y_np.dtype == type_name_to_np_type[data_type]
         y = TestJob(x, label).get().ndarray()
-        assert np.allclose(y_np, y), (case, y_np, y)
+        if data_type == "float":
+            assert np.array_equal(y_np, y), (case, y_np, y)
+        else:
+            assert np.allclose(y_np, y), (case, y_np, y)
