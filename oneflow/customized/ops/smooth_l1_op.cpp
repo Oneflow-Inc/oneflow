@@ -9,7 +9,6 @@ REGISTER_USER_OP("smooth_l1")
     .Attr("beta", UserOpAttrType::kAtFloat)
     .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("x", 0),
                          *ctx->Shape4ArgNameAndIndex("label", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0),
@@ -40,7 +39,6 @@ REGISTER_USER_OP("smooth_l1_grad")
     .Attr("beta", UserOpAttrType::kAtFloat)
     .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("dy", 0), *ctx->Shape4ArgNameAndIndex("x", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *ctx->Dtype4ArgNameAndIndex("x", 0));
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("x", 0),
