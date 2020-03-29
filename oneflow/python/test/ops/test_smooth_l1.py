@@ -5,6 +5,7 @@ import uuid
 from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
+import random
 
 def gen_numpy_data(x, label, beta=1.0, scale=1.0):
     original_shape = x.shape
@@ -46,9 +47,11 @@ def test_smooth_l1(_):
         (10, 10, 2000),
     ]
     arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["beta"] = [0, 0.5, 4]
+    arg_dict["scale"] = [-1, 0, 100]
 
     for case in GenArgList(arg_dict):
-        device_type, x_shape, data_type = case
+        device_type, x_shape, data_type, beta, scale = case
         assert device_type in ["gpu", "cpu"]
         assert data_type in ["float32", "double", "int8", "int32", "int64"]
         flow.clear_default_session()
@@ -60,7 +63,7 @@ def test_smooth_l1(_):
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         label = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
-        np_result = gen_numpy_data(x, label)
+        np_result = gen_numpy_data(x, label, beta, scale)
 
         def assert_dx(b):
             assert np.allclose(np_result["dx"], b.ndarray()), (case, y, np_result["y"])
@@ -80,7 +83,7 @@ def test_smooth_l1(_):
             flow.watch_diff(v, assert_dx)
             x += v
             with flow.fixed_placement(device_type, "0:0"):
-                y = flow.smooth_l1(x, label)
+                y = flow.smooth_l1(x, label, beta, scale)
                 flow.losses.add_loss(y)
                 return y
         
