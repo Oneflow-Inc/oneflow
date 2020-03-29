@@ -43,11 +43,11 @@ def test_smooth_l1(_):
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [
         (100,),
-        (10, 100),
+        (10, 10),
     ]
     arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["beta"] = [0, 0.5]
-    arg_dict["scale"] = [-1, 0, 100]
+    arg_dict["beta"] = [0, 0.5, 1]
+    arg_dict["scale"] = [-1.1, 0, 1]
 
     for case in GenArgList(arg_dict):
         device_type, x_shape, data_type, beta, scale = case
