@@ -66,7 +66,7 @@ def test_smooth_l1(_):
         np_result = gen_numpy_data(x, label, beta, scale)
 
         def assert_dx(b):
-            assert np.allclose(np_result["dx"], b.ndarray()), (case, y, np_result["y"])
+            assert np.allclose(np_result["dx"], b.ndarray()), (case, b.ndarray(), np_result["dx"])
 
         @flow.function(func_config)
         def TestJob(
