@@ -68,7 +68,7 @@ class SmoothL1GradCpuKernel final : public user_op::OpKernel {
       const T diff = x[i] - label[i];
       const T abs_diff = std::abs(diff);
       if (abs_diff < beta) {
-        dx[i] = abs_diff / beta;
+        dx[i] = diff / beta;
       } else {
         dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
       }
