@@ -75,6 +75,8 @@ REGISTER_USER_OP_GRAD("smooth_l1")
                                                  .Input("x", op.input("x", 0))
                                                  .Input("label", op.input("label", 0))
                                                  .Output("dx")
+                                                 .Attr("beta", op.attr<float>("beta"))
+                                                 .Attr("scale", op.attr<float>("scale"))
                                                  .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
