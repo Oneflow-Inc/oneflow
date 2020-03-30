@@ -5,7 +5,6 @@ import uuid
 from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
-import random
 
 def gen_numpy_data(prediction, label, beta=1.0):
     original_shape = prediction.shape
