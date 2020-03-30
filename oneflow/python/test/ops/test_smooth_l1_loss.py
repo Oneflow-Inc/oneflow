@@ -40,7 +40,7 @@ def gen_numpy_data(prediction, label, beta=1.0):
 def test_smooth_l1(_):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [
+    arg_dict["prediction_shape"] = [
         (100,),
         (10, 10),
     ]
@@ -48,7 +48,7 @@ def test_smooth_l1(_):
     arg_dict["beta"] = [0, 0.5, 1]
 
     for case in GenArgList(arg_dict):
-        device_type, x_shape, data_type, beta = case
+        device_type, prediction_shape, data_type, beta = case
         assert device_type in ["gpu", "cpu"]
         assert data_type in ["float32", "double", "int8", "int32", "int64"]
         flow.clear_default_session()
@@ -57,8 +57,8 @@ def test_smooth_l1(_):
         func_config.train.primary_lr(1e-4)
         func_config.train.model_update_conf(dict(naive_conf={}))
 
-        prediction = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
-        label = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
+        prediction = np.random.randn(*prediction_shape).astype(type_name_to_np_type[data_type])
+        label = np.random.randn(*prediction_shape).astype(type_name_to_np_type[data_type])
 
         np_result = gen_numpy_data(prediction, label, beta)
 
@@ -72,12 +72,12 @@ def test_smooth_l1(_):
 
         @flow.function(func_config)
         def TestJob(
-            prediction=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
-            label=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
+            prediction=flow.FixedTensorDef(prediction_shape, dtype=type_name_to_flow_type[data_type]),
+            label=flow.FixedTensorDef(prediction_shape, dtype=type_name_to_flow_type[data_type])
         ):
             v = flow.get_variable(
                 "prediction",
-                shape=x_shape,
+                shape=prediction_shape,
                 dtype=type_name_to_flow_type[data_type],
                 initializer=flow.constant_initializer(0),
                 trainable=True,
