@@ -43,12 +43,12 @@ REGISTER_SMOOTH_L1_CPU_KERNEL(float)
 REGISTER_SMOOTH_L1_CPU_KERNEL(double)
 
 template<typename T>
-class SmoothL1GradCpuKernel final : public user_op::OpKernel {
+class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
  public:
-  SmoothL1GradCpuKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  SmoothL1LossGradCpuKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
 
-  SmoothL1GradCpuKernel() = default;
-  ~SmoothL1GradCpuKernel() = default;
+  SmoothL1LossGradCpuKernel() = default;
+  ~SmoothL1LossGradCpuKernel() = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
@@ -72,15 +72,16 @@ class SmoothL1GradCpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                                    \
-      .SetCreateFn(                                                                              \
-          [](user_op::KernelInitContext* ctx) { return new SmoothL1GradCpuKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
-        const user_op::TensorDesc* prediction_grad_desc =                                        \
-            ctx.TensorDesc4ArgNameAndIndex("prediction_grad", 0);                                \
-        return ctx.device_type() == DeviceType::kCPU                                             \
-               && prediction_grad_desc->data_type() == GetDataType<dtype>::value;                \
+#define REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                     \
+      .SetCreateFn([](user_op::KernelInitContext* ctx) {                          \
+        return new SmoothL1LossGradCpuKernel<dtype>(ctx);                         \
+      })                                                                          \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                \
+        const user_op::TensorDesc* prediction_grad_desc =                         \
+            ctx.TensorDesc4ArgNameAndIndex("prediction_grad", 0);                 \
+        return ctx.device_type() == DeviceType::kCPU                              \
+               && prediction_grad_desc->data_type() == GetDataType<dtype>::value; \
       });
 
 REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(float)
