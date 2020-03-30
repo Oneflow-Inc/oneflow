@@ -11,17 +11,9 @@ RandomCropGenerator::RandomCropGenerator(AspectRatioRange aspect_ratio_range, Ar
       area_dis_(area_range.first, area_range.second),
       rand_gen_(seed),
       seed_(seed),
-      num_attempts_(num_attempts) {
-  std::cout << " cclog: aspect_ratio: " << aspect_ratio_range.first << ", "
-            << aspect_ratio_range.second << " area_range: " << area_range.first << ", "
-            << area_range.second << ", seed: " << seed
-            << ", log_dis_attr: " << std::log(aspect_ratio_range.first) << " "
-            << std::log(aspect_ratio_range.second) << std::endl;
-}
+      num_attempts_(num_attempts) {}
 
 CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
-  std::cout << "cclog: RandomCropGen: original shape: H = " << shape.At(0) << " W = " << shape.At(1)
-            << std::endl;
   CHECK(shape.NumAxes() == 2);
   CropWindow crop;
   int H = shape.At(0);
@@ -34,9 +26,6 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
   float min_area = W * H * area_dis_.a();
   int maxW = std::max<int>(1, static_cast<int>(H * max_wh_ratio));
   int maxH = std::max<int>(1, static_cast<int>(W * max_hw_ratio));
-  std::cout << " cclog: min_hw_ratio = " << min_wh_ratio << " max_hw_ratio = " << max_wh_ratio
-            << " max_hw_ratio = " << max_hw_ratio << " min_area = " << min_area
-            << " maxW = " << maxW << " maxH = " << maxH << std::endl;
 
   if (H * maxW < min_area) {
     crop.shape = Shape({H, maxW});
@@ -61,9 +50,6 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
 
       ratio = static_cast<float>(w) / h;
 
-      std::cout << " cclog: attempts_left: " << attempts_left << " scale = " << scale
-                << ", ratio = " << ratio << std::endl;
-
       if (w <= W && h <= H && ratio >= min_wh_ratio && ratio <= max_wh_ratio) { break; }
     }
 
@@ -85,9 +71,6 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
 
   crop.anchor.Set(0, std::uniform_int_distribution<int>(0, H - crop.shape.At(0))(rand_gen_));
   crop.anchor.Set(1, std::uniform_int_distribution<int>(0, W - crop.shape.At(1))(rand_gen_));
-  std::cout << "cclog: random crop gen: crop: shape: H = " << crop.shape.At(0)
-            << ", W = " << crop.shape.At(1) << " ancher: y = " << crop.anchor.At(0)
-            << ", x = " << crop.anchor.At(1) << std::endl;
   return crop;
 }
 
