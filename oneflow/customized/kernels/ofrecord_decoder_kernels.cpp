@@ -61,13 +61,6 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       CHECK(feature.bytes_list().value_size() == 1);
       const std::string& src_data = feature.bytes_list().value(0);
 
-      std::cout << "cclog: image BINARY val: ";
-      for (int i = 0; i < 20; ++i) {
-        uint8_t val = *(((uint8_t*)src_data.data()) + i);
-        std::cout << " " << static_cast<int>(val);
-      }
-      std::cout << std::endl;
-
       // cv::_InputArray image_data(src_data.data(), src_data.size());
       // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
       cv::Mat image =
@@ -75,13 +68,6 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
                        ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
       int W = image.cols;
       int H = image.rows;
-
-      std::cout << "cclog: decode ORIGINAL image val: ";
-      for (int i = 0; i < 20; ++i) {
-        uint8_t val = *(image.ptr() + i);
-        std::cout << " " << static_cast<int>(val);
-      }
-      std::cout << std::endl;
 
       // random crop
       CHECK(image.data != nullptr);
@@ -114,17 +100,6 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
       CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
       memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
-      std::cout << "cclog: decode image shape: H = " << H << ", W = " << W << ", c = " << c
-                << std::endl;
-      // std::cout << "cclog: decode image val: 0 = " << *(buffer->mut_data<uint8_t>())
-      //           << ", 1 = " << *(buffer->mut_data<uint8_t>() + 1)
-      //           << ", 2 = " << *(buffer->mut_data<uint8_t>() + 2);
-      std::cout << "cclog: decode image val: ";
-      for (int i = 0; i < 20; ++i) {
-        uint8_t val = *(buffer->mut_data<uint8_t>() + i);
-        std::cout << " " << static_cast<int>(val);
-      }
-      std::cout << std::endl;
     }
   }
 
