@@ -7,34 +7,34 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 import random
 
-def gen_numpy_data(x, label, beta=1.0):
-    original_shape = x.shape
-    elem_cnt = x.size
-    x = x.reshape(-1)
+def gen_numpy_data(prediction, label, beta=1.0):
+    original_shape = prediction.shape
+    elem_cnt = prediction.size
+    prediction = prediction.reshape(-1)
     label = label.reshape(-1)
-    y = np.zeros((elem_cnt)).astype(x.dtype)
-    dx = np.zeros((elem_cnt)).astype(x.dtype)
+    loss = np.zeros((elem_cnt)).astype(prediction.dtype)
+    prediction_grad = np.zeros((elem_cnt)).astype(prediction.dtype)
 
     # Forward
     for i in np.arange(elem_cnt):
-        abs_diff = abs(x[i] - label[i])
+        abs_diff = abs(prediction[i] - label[i])
         if abs_diff < beta:
-            y[i] = 0.5 * abs_diff * abs_diff / beta
+            loss[i] = 0.5 * abs_diff * abs_diff / beta
         else:
-            y[i] = abs_diff - 0.5 * beta
+            loss[i] = abs_diff - 0.5 * beta
 
     # Backward
     for i in np.arange(elem_cnt):
-        diff = x[i] - label[i]
+        diff = prediction[i] - label[i]
         abs_diff = abs(diff)
         if abs_diff < beta:
-            dx[i] = diff / beta
+            prediction_grad[i] = diff / beta
         else:
-            dx[i] = np.sign(diff)
+            prediction_grad[i] = np.sign(diff)
     
     return {
-        "y": y.reshape(original_shape),
-        "dx": dx.reshape(original_shape)
+        "loss": loss.reshape(original_shape),
+        "prediction_grad": prediction_grad.reshape(original_shape)
     }
 
 def test_smooth_l1(_):
@@ -57,42 +57,42 @@ def test_smooth_l1(_):
         func_config.train.primary_lr(1e-4)
         func_config.train.model_update_conf(dict(naive_conf={}))
 
-        x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
+        prediction = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         label = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
-        np_result = gen_numpy_data(x, label, beta)
+        np_result = gen_numpy_data(prediction, label, beta)
 
         def assert_dx(b):
-            dx_np = np_result["dx"]
-            assert dx_np.dtype == type_name_to_np_type[data_type]
+            prediction_grad = np_result["prediction_grad"]
+            assert prediction_grad.dtype == type_name_to_np_type[data_type]
             if data_type == "float":
-                assert np.array_equal(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
+                assert np.array_equal(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
             else:
-                assert np.allclose(dx_np, b.ndarray()), (case, dx_np, b.ndarray())
+                assert np.allclose(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
 
         @flow.function(func_config)
         def TestJob(
-            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
+            prediction=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
             label=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             v = flow.get_variable(
-                "x",
+                "prediction",
                 shape=x_shape,
                 dtype=type_name_to_flow_type[data_type],
                 initializer=flow.constant_initializer(0),
                 trainable=True,
             )
             flow.watch_diff(v, assert_dx)
-            x += v
+            prediction += v
             with flow.fixed_placement(device_type, "0:0"):
-                y = flow.smooth_l1_loss(x, label, beta)
-                flow.losses.add_loss(y)
-                return y
+                loss = flow.smooth_l1_loss(prediction, label, beta)
+                flow.losses.add_loss(loss)
+                return loss
         
-        y_np = np_result["y"]
-        assert y_np.dtype == type_name_to_np_type[data_type]
-        y = TestJob(x, label).get().ndarray()
+        loss_np = np_result["loss"]
+        assert loss_np.dtype == type_name_to_np_type[data_type]
+        loss = TestJob(prediction, label).get().ndarray()
         if data_type == "float":
-            assert np.array_equal(y_np, y), (case, y_np, y)
+            assert np.array_equal(loss_np, loss), (case, loss_np, loss)
         else:
-            assert np.allclose(y_np, y), (case, y_np, y)
+            assert np.allclose(loss_np, loss), (case, loss_np, loss)

@@ -321,23 +321,6 @@ def non_maximum_suppression(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
-@oneflow_export("smooth_l1_loss")
-def smooth_l1_loss(prediction, label, beta=1.0, name=None):
-    op = (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("SmoothL1"))
-        .Op("smooth_l1_loss")
-        .Input("prediction", [prediction])
-        .Input("label", [label])
-        .Output("loss")
-    )
-    op.SetAttr("beta", float(beta), "AttrTypeFloat")
-    return (
-        op
-        .Build()
-        .RemoteBlobList()[0]
-    )
-
 @oneflow_export("detection.upsample_nearest")
 def upsample_nearest(inputs, scale, data_format, name=None):
     op_conf = op_conf_util.OperatorConf()
