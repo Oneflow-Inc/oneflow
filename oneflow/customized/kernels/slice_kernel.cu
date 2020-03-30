@@ -97,9 +97,9 @@ __global__ void SliceForwardGpu(const int n, SliceGpuParams params, const T* ent
   CUDA_1D_KERNEL_LOOP(i, n) {
     OffsetToNdIndex(i, params.ndims, params.sliced_dims, nd_index);
 #pragma unroll
-    for (int64_t i = 0; i < params.ndims; ++i) {
-      nd_index[i] = params.begin[i] + params.stride[i] * nd_index[i];
-      assert(nd_index[i] < params.dims[i]);
+    for (int64_t j = 0; j < params.ndims; ++j) {
+      nd_index[j] = params.begin[j] + params.stride[j] * nd_index[j];
+      assert(nd_index[j] < params.dims[j]);
     }
     int64_t offset = NdIndexToOffset(params.ndims, params.dims, nd_index);
     part[i] = entire[offset];
@@ -112,9 +112,9 @@ __global__ void SliceBackwardGpu(const int n, SliceGpuParams params, const T* pa
   CUDA_1D_KERNEL_LOOP(i, n) {
     OffsetToNdIndex(i, params.ndims, params.sliced_dims, nd_index);
 #pragma unroll
-    for (int64_t i = 0; i < params.ndims; ++i) {
-      nd_index[i] = params.begin[i] + params.stride[i] * nd_index[i];
-      assert(nd_index[i] < params.dims[i]);
+    for (int64_t j = 0; j < params.ndims; ++j) {
+      nd_index[j] = params.begin[j] + params.stride[j] * nd_index[j];
+      assert(nd_index[j] < params.dims[j]);
     }
     int64_t offset = NdIndexToOffset(params.ndims, params.dims, nd_index);
     entire[offset] = part[i];

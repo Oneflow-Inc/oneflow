@@ -524,3 +524,15 @@ def deconv2d(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("nn.leaky_relu")
+def leaky_relu(x, alpha=0.2, name=None):
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("LeakyRelu_"))
+        .Op("leaky_relu")
+        .Input("x", [x])
+        .Output("y")
+        .SetAttr("alpha", float(alpha), "AttrTypeFloat")
+        .Build()
+        .RemoteBlobList()[0]
+    )
