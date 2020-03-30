@@ -22,11 +22,9 @@ REGISTER_USER_OP("smooth_l1_loss")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("prediction", 0, 0)
-          .Split("label", 0, 0)
-          .Split("loss", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
+      SbpSignatureBuilder().MakeSplitSignatureListBuilder(num_axes - 1).Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
 
@@ -58,12 +56,9 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("loss_grad", 0, 0)
-          .Split("prediction", 0, 0)
-          .Split("label", 0, 0)
-          .Split("prediction_grad", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
+      SbpSignatureBuilder().MakeSplitSignatureListBuilder(num_axes - 1).Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
 
