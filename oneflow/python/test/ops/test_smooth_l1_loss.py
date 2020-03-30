@@ -37,7 +37,7 @@ def gen_numpy_data(prediction, label, beta=1.0):
         "prediction_grad": prediction_grad.reshape(original_shape)
     }
 
-def test_smooth_l1(_):
+def test_smooth_l1_loss(_):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["prediction_shape"] = [
