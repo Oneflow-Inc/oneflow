@@ -10,6 +10,28 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 
+@oneflow_export("data.OFRecordRawDecoder")
+def OFRecordRawDecoder(
+        input_blob,
+        blob_name,
+        shape,
+        dtype,
+        dim1_varying_length=False,
+        auto_zero_padding=False,
+        name=None):
+    if name is None:
+        name = id_util.UniqueStr("OFRecordRawDecoder_")
+    return user_op_builder.UserOpConfWrapperBuilder(name)\
+            .Op("OFRecordRawDecoder")\
+            .Input("in",[input_blob])\
+            .Output("out")\
+            .SetAttr("name", blob_name, "AttrTypeString")\
+            .SetAttr("shape", shape, "AttrTypeShape")\
+            .SetAttr("data_type", dtype, "AttrTypeInt64")\
+            .SetAttr("dim1_varying_length", dim1_varying_length, "AttrTypeBool")\
+            .SetAttr("auto_zero_padding", auto_zero_padding, "AttrTypeBool")\
+            .Build().RemoteBlobList()[0]
+
 @oneflow_export("data.OFRecordImageDecoderRandomCrop")
 def OFRecordImageDecoderRandomCrop(
         input_blob,

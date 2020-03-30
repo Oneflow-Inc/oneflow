@@ -9,6 +9,8 @@ REGISTER_USER_OP("OFRecordRawDecoder")
     .Attr("name", UserOpAttrType::kAtString)
     .Attr("shape", UserOpAttrType::kAtShape)
     .Attr("data_type", UserOpAttrType::kAtInt64)
+    .Attr<bool>("dim1_varying_length", UserOpAttrType::kAtBool, false)
+    .Attr<bool>("auto_zero_padding", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -19,8 +21,8 @@ REGISTER_USER_OP("OFRecordRawDecoder")
       dim_vec[0] = in_tensor->shape().At(0);
       for (int i = 1; i < dim_vec.size(); ++i) { dim_vec[i] = conf_shape.At(i - 1); }
       *out_tensor->mut_shape() = Shape(dim_vec);
-      // TODO(chengcheng)
-      *out_tensor->mut_data_type() = DataType::kInt32;
+      int64_t data_type = ctx->GetAttr<int64_t>("data_type");
+      *out_tensor->mut_data_type() = static_cast<DataType>(data_type);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
