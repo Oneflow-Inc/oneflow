@@ -47,11 +47,11 @@ __device__ float Expm1CalInDiff4GpuFloat(float x, float dy) { return dy * expf(x
 
 __device__ float FloorCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ int8_t IsFinite(float x) { return isfinite(x) ? 1 : 0; }
+__device__ int8_t IsFinite(float x) { return isfinite(x) ? 1 : 0; } //use int8 1 as true; int8 0 as false
 
-__device__ int8_t IsInf(float x) { return IsInf(x) ? 1 : 0; }
+__device__ int8_t IsInf(float x) { return isinf(x) ? 1 : 0; }
 
-__device__ int8_t IsNaN(float x) { return IsNaN(x) ? 1 : 0; }
+__device__ int8_t IsNaN(float x) { return isnan(x) ? 1 : 0; }
 
 __device__ float LgammaCalInDiff4GpuFloat(float x, float dy) {
   // TODO(chengcheng): return: dy * digamma(x)

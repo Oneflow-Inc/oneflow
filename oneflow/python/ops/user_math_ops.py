@@ -360,7 +360,7 @@ def isfinite(x, name=None):
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.isinf")
-def isfinite(x, name=None):
+def isinf(x, name=None):
     if name is None:
         name = id_util.UniqueStr("IsInf_")
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary_bool")\
@@ -370,13 +370,13 @@ def isfinite(x, name=None):
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.isnan")
-def isfinite(x, name=None):
+def isnan(x, name=None):
     if name is None:
         name = id_util.UniqueStr("IsNaN_")
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("unary_bool")\
             .Input("x", [x])\
             .Output("y")\
-            .SetAttr("unary_math_type", "IsNan", "AttrTypeString")\
+            .SetAttr("unary_math_type", "IsNaN", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.pow")
