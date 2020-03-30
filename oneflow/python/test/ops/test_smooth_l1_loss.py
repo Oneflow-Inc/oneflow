@@ -62,7 +62,7 @@ def test_smooth_l1(_):
 
         np_result = gen_numpy_data(prediction, label, beta)
 
-        def assert_dx(b):
+        def assert_prediction_grad(b):
             prediction_grad = np_result["prediction_grad"]
             assert prediction_grad.dtype == type_name_to_np_type[data_type]
             if data_type == "float":
@@ -82,7 +82,7 @@ def test_smooth_l1(_):
                 initializer=flow.constant_initializer(0),
                 trainable=True,
             )
-            flow.watch_diff(v, assert_dx)
+            flow.watch_diff(v, assert_prediction_grad)
             prediction += v
             with flow.fixed_placement(device_type, "0:0"):
                 loss = flow.smooth_l1_loss(prediction, label, beta)
