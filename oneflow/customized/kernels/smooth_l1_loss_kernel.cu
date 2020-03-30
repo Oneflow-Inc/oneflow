@@ -62,9 +62,9 @@ class SmoothL1GPUKernel final : public user_op::OpKernel {
       .SetCreateFn(                                                                          \
           [](user_op::KernelInitContext* ctx) { return new SmoothL1GPUKernel<dtype>(ctx); }) \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                           \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0);       \
+        const user_op::TensorDesc* loss_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0);    \
         return ctx.device_type() == DeviceType::kGPU                                         \
-               && y_desc->data_type() == GetDataType<dtype>::value;                          \
+               && loss_desc->data_type() == GetDataType<dtype>::value;                       \
       });
 
 REGISTER_SMOOTH_L1_GPU_KERNEL(float)
