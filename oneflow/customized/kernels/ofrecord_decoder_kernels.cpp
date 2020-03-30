@@ -8,6 +8,7 @@
 #include "oneflow/customized/image/image_util.h"
 
 #include <opencv2/opencv.hpp>
+#include <iostream>
 
 namespace oneflow {
 
@@ -28,11 +29,14 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     int64_t batch_size = out_tensor_desc->shape().At(0);
     CHECK(batch_size > 0);
     int64_t seed = ctx->GetAttr<int64_t>("seed");
+    std::cout << " cclog: Decoder: attr seed = " << seed;
     if (seed == -1) { seed = NewRandomSeed(); }
     CHECK(seed >= 0);
     std::seed_seq seq{seed};
-    std::vector<int64_t> seeds(batch_size);
+    std::vector<int> seeds(batch_size);
     seq.generate(seeds.begin(), seeds.end());
+    std::cout << " cclog: Decoder: original seed = " << seed;
+    std::cout << "cclog: Deocder: seeds: " << seeds.at(0);
 
     crop_window_generators_.resize(batch_size);
     for (int32_t i = 0; i < batch_size; ++i) {
@@ -67,6 +71,8 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       int W = image.cols;
       int H = image.rows;
 
+      LOG(INFO) << "cclog: original image shape: H = " << H << ", W = " << W;
+
       // random crop
       CHECK(image.data != nullptr);
       cv::Mat image_roi;
@@ -98,6 +104,10 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
       CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
       memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
+      LOG(INFO) << "cclog: decode image shape: H = " << H << ", W = " << W << ", c = " << c;
+      LOG(INFO) << "cclog: decode image val: 0 = " << *(buffer->mut_data<uint8_t>())
+                << ", 1 = " << *(buffer->mut_data<uint8_t>() + 1)
+                << ", 2 = " << *(buffer->mut_data<uint8_t>() + 2);
     }
   }
 
