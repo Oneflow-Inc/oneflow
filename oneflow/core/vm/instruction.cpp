@@ -15,6 +15,7 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
 }
 
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
+  __Init__();
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
 }
 
@@ -24,6 +25,12 @@ void InstructionMsg::__Init__(const InstructionProto& proto) {
   for (int i = 0; i < proto.operand_size(); ++i) {
     mutable_operand()->at(i)->__Init__(proto.operand(i));
   }
+}
+
+void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
+  __Init__();
+  mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
+  reset_operand_list(instr_msg.operand_list());
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_i_operand) {
@@ -70,6 +77,21 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
+                                                             const AllParallelId& all_parallel_id) {
+  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                              all_parallel_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
+  auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
+  auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
+  CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
+  stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));
+  return infer_instr_msg;
+}
+
 MirroredObject* InstrCtx::mut_mirrored_object_operand(const MirroredObjectOperand& operand) {
   return FindMirroredObjectByOperand(operand, instr_chain().stream().parallel_id());
 }
@@ -86,7 +108,6 @@ MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperan
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
   set_stream(stream);
-  set_stream_type(&stream->thread_ctx().stream_rt_desc().stream_type());
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
   auto instr_ctx = ObjectMsgPtr<InstrCtx>::NewFrom(mut_allocator(), this, instr_msg);
   mut_instr_ctx_list()->EmplaceBack(std::move(instr_ctx));
@@ -103,6 +124,8 @@ void InstrChain::__Delete__() {
 bool InstrChain::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
+
+const StreamType& InstrChain::stream_type() const { return stream().stream_type(); }
 
 }  // namespace vm
 }  // namespace oneflow

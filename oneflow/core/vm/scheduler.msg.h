@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 
 #include <mutex>
+#include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
@@ -50,13 +51,33 @@ OBJECT_MSG_BEGIN(Scheduler);
                             /*out*/ ReadyInstrChainList* ready_instr_chain_list);
   void TryReleaseFinishedInstrChains(
           Stream* stream, /*out*/ ReadyInstrChainList* ready_instr_chain_list);
-  void FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* instr_msg_list);
+  void FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
                          /*out*/ NewInstrChainList* ret_instr_chain_list);
-  template<typename DoEachT>
+  template<uint64_t (*TransformLogicalObjectId)(uint64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const MirroredObjectOperand& mirrored_object_operand,
                              int64_t parallel_id, const DoEachT& DoEach);
+  template<typename DoEachT>
+  void ForEachConstMirroredObject(const InterpretType interpret_type,
+                                  Id2LogicalObject* id2logical_object,
+                                  const ConstMirroredObjectOperand& const_mirrored_object_operand,
+                                  int64_t parallel_id, const DoEachT& DoEach);
+  template<typename DoEachT>
+  void ForEachConstMirroredObject(const InterpretType interpret_type,
+                                  Id2LogicalObject* id2logical_object,
+                                  const MutableMirroredObjectOperand& mutable_mirrored_object_operand,
+                                  int64_t parallel_id, const DoEachT& DoEach);
+  template<typename DoEachT>
+  void ForEachMutMirroredObject(const InterpretType interpret_type,
+                                Id2LogicalObject* id2logical_object,
+                                const MutableMirroredObjectOperand& mutable_mirrored_object_operand,
+                                int64_t parallel_id, const DoEachT& DoEach);
+  template<typename DoEachT>
+  void ForEachMutMirroredObject(const InterpretType interpret_type,
+                                Id2LogicalObject* id2logical_object,
+                                const Mut2MirroredObjectOperand& mut2_mirrored_object_operand,
+                                int64_t parallel_id, const DoEachT& DoEach);
   enum OperandAccessType {
     kMutableOperandAccess = 0,
     kConstOperandAccess

@@ -15,9 +15,9 @@ class StreamDesc;
 OBJECT_MSG_BEGIN(StreamRtDesc);
   // methods
   PUBLIC void __Init__(StreamDesc* stream_desc);
+  PUBLIC const StreamType& stream_type() const;
 
   // fields
-  OBJECT_MSG_DEFINE_PTR(const StreamType, stream_type); 
   OBJECT_MSG_DEFINE_OPTIONAL(StreamDesc, stream_desc); 
 
   // links

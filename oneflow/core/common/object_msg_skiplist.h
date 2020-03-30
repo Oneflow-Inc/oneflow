@@ -98,7 +98,7 @@ namespace oneflow {
   bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
     return OF_PP_CAT(field_name, _).empty();                                                 \
   }                                                                                          \
-  key_type field_name() const { return OF_PP_CAT(field_name, _).key(); }                     \
+  ConstType<key_type>& field_name() const { return OF_PP_CAT(field_name, _).key(); }         \
   key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }     \
   key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); } \
   template<typename T>                                                                       \

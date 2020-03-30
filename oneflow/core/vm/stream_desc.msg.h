@@ -5,54 +5,12 @@
 #include <typeindex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/common/layout_standardize.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/stream_type_id.h"
 
 namespace oneflow {
 namespace vm {
-
-using InstructionOpcode = int32_t;
-
-class StreamTypeId final {
- public:
-  void __Init__() { clear(); }
-  void __Init__(const std::type_index& stream_type_index, InterpretType interpret_type) {
-    stream_type_index_.__Init__(stream_type_index);
-    interpret_type_ = interpret_type;
-  }
-  void __Init__(const std::type_index& stream_type_index) {
-    __Init__(stream_type_index, InterpretType::kCompute);
-  }
-  void __Delete__() { stream_type_index_.__Delete__(); }
-  void clear() {
-    stream_type_index_.__Init__(std::type_index(typeid(void)));
-    interpret_type_ = InterpretType::kInvalidInterpretType;
-  }
-  void CopyFrom(const StreamTypeId& rhs) {
-    __Init__(rhs.stream_type_index_.Get(), rhs.interpret_type_);
-  }
-
-  const std::type_index& stream_type_index() const { return stream_type_index_.Get(); }
-  InterpretType interpret_type() const { return interpret_type_; }
-
-  bool operator==(const StreamTypeId& rhs) const {
-    return stream_type_index_.Get() == rhs.stream_type_index_.Get()
-           && interpret_type_ == rhs.interpret_type_;
-  }
-  bool operator<(const StreamTypeId& rhs) const {
-    if (!(stream_type_index_.Get() == rhs.stream_type_index_.Get())) {
-      return stream_type_index_.Get() < rhs.stream_type_index_.Get();
-    }
-    return interpret_type_ < rhs.interpret_type_;
-  }
-  bool operator<=(const StreamTypeId& rhs) const { return *this < rhs || *this == rhs; }
-
- private:
-  LayoutStandardize<std::type_index> stream_type_index_;
-  InterpretType interpret_type_;
-};
 
 // clang-format off
 FLAT_MSG_BEGIN(AllStreamEnabledMask);

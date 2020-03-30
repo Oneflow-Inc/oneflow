@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
@@ -18,23 +19,13 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 ObjectMsgPtr<VmDesc> NewVmDesc() {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New();
-  auto host_stream_desc =
-      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("Malloc").stream_type_id(), 1, 1, 1);
-  vm_desc->mut_stream_type_id2desc()->Insert(host_stream_desc.Mutable());
-  auto l2r_sender_stream_desc =
-      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("L2RSend").stream_type_id(), 1, 1, 1);
-  vm_desc->mut_stream_type_id2desc()->Insert(l2r_sender_stream_desc.Mutable());
-  auto l2r_receiver_stream_desc =
-      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("L2RReceive").stream_type_id(), 1, 1, 1);
-  vm_desc->mut_stream_type_id2desc()->Insert(l2r_receiver_stream_desc.Mutable());
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Malloc", "L2RSend", "L2RReceive"});
   return vm_desc;
 }
 
 ObjectMsgPtr<Scheduler> NewTestScheduler(uint64_t symbol_value, size_t size) {
   auto vm_desc = NewVmDesc();
-  vm_desc->mut_stream_type_id2desc()->Insert(
-      ObjectMsgPtr<StreamDesc>::New(LookupInstrTypeId("NewSymbol").stream_type_id(), 1, 1, 1)
-          .Mutable());
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   list.EmplaceBack(

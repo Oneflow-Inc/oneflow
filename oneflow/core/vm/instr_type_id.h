@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 #define ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 
+#include <typeindex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/layout_standardize.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
@@ -9,10 +10,12 @@
 namespace oneflow {
 namespace vm {
 
+class InstructionType;
+
 class InstrTypeId final {
  public:
-  InstrTypeId() { __Init__(); }
-  InstrTypeId(const InstrTypeId& rhs) {
+  InstrTypeId() : instruction_type_(nullptr) { __Init__(); }
+  InstrTypeId(const InstrTypeId& rhs) : instruction_type_(nullptr) {
     __Init__();
     CopyFrom(rhs);
   }
@@ -20,28 +23,29 @@ class InstrTypeId final {
   ~InstrTypeId() = default;
 
   void __Init__() {
+    std::memset(this, 0, sizeof(InstrTypeId));
     mutable_stream_type_id()->__Init__();
-    clear();
   }
-  void __Init__(const std::type_index& stream_type_index, const std::type_index& instr_type_index,
+  void __Init__(const StreamType* stream_type, const InstructionType* instruction_type,
                 InterpretType interpret_type, VmType type) {
-    mutable_stream_type_id()->__Init__(stream_type_index, interpret_type);
-    instr_type_index_.__Init__(instr_type_index);
+    __Init__();
+    mutable_stream_type_id()->__Init__(stream_type, interpret_type);
+    instruction_type_ = instruction_type;
     set_type(type);
   }
   void clear() {
     stream_type_id_.clear();
-    instr_type_index_.__Init__(typeid(void));
+    instruction_type_ = nullptr;
     type_ = VmType::kInvalidVmType;
   }
   void CopyFrom(const InstrTypeId& rhs) {
     stream_type_id_.CopyFrom(rhs.stream_type_id_);
-    *instr_type_index_.Mutable() = rhs.instr_type_index();
+    instruction_type_ = &rhs.instruction_type();
     type_ = rhs.type_;
   }
   // Getters
   const StreamTypeId& stream_type_id() const { return stream_type_id_; }
-  const std::type_index& instr_type_index() const { return instr_type_index_.Get(); }
+  const InstructionType& instruction_type() const { return *instruction_type_; }
   VmType type() const { return type_; }
 
   // Setters
@@ -50,21 +54,21 @@ class InstrTypeId final {
   void set_type(VmType val) { type_ = val; }
 
   bool operator==(const InstrTypeId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_
-           && instr_type_index_.Get() == rhs.instr_type_index_.Get() && type_ == rhs.type_;
+    return stream_type_id_ == rhs.stream_type_id_ && instruction_type_ == rhs.instruction_type_
+           && type_ == rhs.type_;
   }
   bool operator<(const InstrTypeId& rhs) const {
     if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
-    if (!(instr_type_index_.Get() == rhs.instr_type_index_.Get())) {
-      return instr_type_index_.Get() < rhs.instr_type_index_.Get();
+    if (!(instruction_type_ == rhs.instruction_type_)) {
+      return instruction_type_ < rhs.instruction_type_;
     }
     return type_ < rhs.type_;
   }
   bool operator<=(const InstrTypeId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
+  const InstructionType* instruction_type_;
   StreamTypeId stream_type_id_;
-  LayoutStandardize<std::type_index> instr_type_index_;
   VmType type_;
 };
 

@@ -12,11 +12,6 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
   return &map;
 }
 
-std::map<InstrTypeId, const InstructionType*>* InstructionType4InstrTypeId() {
-  static std::map<InstrTypeId, const InstructionType*> map;
-  return &map;
-}
-
 }  // namespace
 
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
@@ -30,20 +25,17 @@ void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
   for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second); }
 }
 
-void RegisterInstructionType(const std::string& instruction_name,
-                             const std::type_index& stream_type_index,
-                             const std::type_index& instr_type_index, InterpretType interpret_type,
-                             VmType vm_type, const InstructionType* instruction_type) {
-  InstrTypeId instr_type_id;
-  instr_type_id.__Init__(stream_type_index, instr_type_index, interpret_type, vm_type);
-  CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
-  auto ret = InstructionType4InstrTypeId()->emplace(instr_type_id, instruction_type);
-  if (instruction_type == nullptr) { return; }
-  if (!ret.second) { CHECK(typeid(ret.first->second) == typeid(instruction_type)); }
+HashMap<std::type_index, const InstructionType*>* InstructionType4TypeIndex() {
+  static HashMap<std::type_index, const InstructionType*> map;
+  return &map;
 }
 
-const InstructionType* LookupInstructionType(const InstrTypeId& instr_type_id) {
-  return InstructionType4InstrTypeId()->at(instr_type_id);
+void RegisterInstrTypeId(const std::string& instruction_name, const StreamType* stream_type,
+                         const InstructionType* instruction_type, InterpretType interpret_type,
+                         VmType vm_type) {
+  InstrTypeId instr_type_id;
+  instr_type_id.__Init__(stream_type, instruction_type, interpret_type, vm_type);
+  CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
 }
 
 }  // namespace vm

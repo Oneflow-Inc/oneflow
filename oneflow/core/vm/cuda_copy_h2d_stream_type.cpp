@@ -48,6 +48,8 @@ class CudaCopyH2DInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(CudaCopyH2DInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     void* dst = nullptr;
     const void* src = nullptr;
@@ -103,7 +105,7 @@ void CudaCopyH2DStreamType::Compute(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
     const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    LookupInstructionType(instr_type_id)->Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instr_ctx);
   }
   stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
@@ -114,7 +116,7 @@ ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeRemoteStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(CudaCopyH2DStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyH2DStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

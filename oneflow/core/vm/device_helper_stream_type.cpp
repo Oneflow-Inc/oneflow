@@ -46,6 +46,8 @@ class CudaMallocInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(CudaMallocInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     char* dptr = nullptr;
@@ -65,7 +67,7 @@ class CudaMallocInstructionType final : public InstructionType {
       CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
       CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
                parallel_num);
-      CHECK(!mirrored_object->has_object_type());
+      CHECK(!mirrored_object->has_mirrored_object_type());
     }
     {
       cudaSetDevice(stream.thread_ctx().device_id());
@@ -89,6 +91,8 @@ class CudaFreeInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(CudaFreeInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
@@ -137,7 +141,7 @@ void DeviceHelperStreamType::Compute(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
     const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    LookupInstructionType(instr_type_id)->Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instr_ctx);
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
@@ -154,7 +158,7 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeRemoteStreamDesc(
     UNIMPLEMENTED();
   }
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(DeviceHelperStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

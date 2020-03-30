@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
@@ -14,10 +15,6 @@ class ControlStreamType final : public StreamType {
  public:
   ControlStreamType() = default;
   ~ControlStreamType() = default;
-
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
-
-  bool IsSourceInstruction(const InstrTypeId& instr_type_id) const;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
@@ -34,9 +31,9 @@ class ControlStreamType final : public StreamType {
 
   bool SharingSchedulerThread() const override { return true; }
   void Infer(Scheduler* scheduler, InstrChain* instr_chain) const override;
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const;
   void Compute(Scheduler* scheduler, InstrChain* instr_chain) const override;
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const;
+  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override;
+  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override;
 };
 
 }  // namespace vm

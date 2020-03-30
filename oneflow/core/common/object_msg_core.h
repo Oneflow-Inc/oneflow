@@ -124,6 +124,12 @@ namespace oneflow {
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair)                     \
  public:                                                                           \
   template<typename T>                                                             \
+  void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(const T& rhs) {                  \
+    static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
+    static_assert(T::__is_object_message_type__, "object message supported only"); \
+    OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(const_cast<T*>(&rhs));              \
+  }                                                                                \
+  template<typename T>                                                             \
   void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(T * rhs) {                       \
     static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
     static_assert(T::__is_object_message_type__, "object message supported only"); \

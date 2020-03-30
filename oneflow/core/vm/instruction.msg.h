@@ -9,6 +9,7 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
+#include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
@@ -23,9 +24,10 @@ OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
-  PUBLIC void __Init__() {}
+  PUBLIC void __Init__() { mutable_operand_list(); }
   PUBLIC void __Init__(const std::string& instr_type_name);
   PUBLIC void __Init__(const InstructionProto& proto);
+  PUBLIC void __Init__(const InstructionMsg& instr_msg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_i_operand);
@@ -34,6 +36,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllParallelId&);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -43,6 +46,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
+  PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
@@ -104,11 +108,11 @@ OBJECT_MSG_BEGIN(InstrChain);
   PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream);
   PUBLIC void __Delete__();
   PUBLIC bool Done() const;
+  PUBLIC const StreamType& stream_type() const;
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
-  OBJECT_MSG_DEFINE_PTR(const StreamType, stream_type);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_chain_link);

@@ -1,11 +1,27 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 namespace vm {
+
+namespace {
+
+bool IsSourceInstruction(const InstructionMsg& instr_msg) {
+  for (const auto& instr_operand : instr_msg.operand()) {
+    if (instr_operand->has_const_operand()) { return false; }
+    if (instr_operand->has_mutable_operand()) { return false; }
+    if (instr_operand->has_mut2_operand()) { return false; }
+    CHECK(instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
+          || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
+  }
+  return true;
+}
+
+}  // namespace
 
 void Scheduler::ReleaseInstruction(InstrChain* instr_chain,
                                    /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
@@ -41,15 +57,14 @@ void Scheduler::TryReleaseFinishedInstrChains(Stream* stream,
   }
 }
 
-void Scheduler::FilterAndRunSourceControlInstructions(TmpPendingInstrMsgList* instr_msg_list) {
-  ControlStreamType control_stream_type;
-  const auto& control_type_index = std::type_index(typeid(ControlStreamType));
+void Scheduler::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
-    if (!(instr_type_id.stream_type_id().stream_type_index() == control_type_index)) { continue; }
-    if (!control_stream_type.IsSourceInstruction(instr_type_id)) { continue; }
-    control_stream_type.Run(this, instr_msg);
-    instr_msg_list->Erase(instr_msg);
+    const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+    if (stream_type.SharingSchedulerThread() && IsSourceInstruction(*instr_msg)) {
+      stream_type.Run(this, instr_msg);
+      instr_msg_list->Erase(instr_msg);
+    }
   }
 }
 
@@ -65,11 +80,13 @@ void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
   }
 }
 
-template<typename DoEachT>
+template<uint64_t (*TransformLogicalObjectId)(uint64_t), typename DoEachT>
 void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                                       const MirroredObjectOperand& mirrored_object_operand,
                                       int64_t parallel_id, const DoEachT& DoEach) {
-  auto* logical_object = id2logical_object->FindPtr(mirrored_object_operand.logical_object_id());
+  uint64_t logical_object_id = mirrored_object_operand.logical_object_id();
+  logical_object_id = TransformLogicalObjectId(logical_object_id);
+  auto* logical_object = id2logical_object->FindPtr(logical_object_id);
   auto* map = logical_object->mut_parallel_id2mirrored_object();
   if (mirrored_object_operand.has_all_parallel_id()) {
     OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
@@ -79,6 +96,77 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
   auto* ret = map->FindPtr(mirrored_object_operand.GetParallelId(parallel_id));
   CHECK_NOTNULL(ret);
   DoEach(ret);
+}
+
+template<typename DoEachT>
+void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
+                                           Id2LogicalObject* id2logical_object,
+                                           const ConstMirroredObjectOperand& operand,
+                                           int64_t parallel_id, const DoEachT& DoEach) {
+  const auto& mirrored_object_operand = operand.operand();
+  if (interpret_type == InterpretType::kCompute) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else if (interpret_type == InterpretType::kInfer) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename DoEachT>
+void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
+                                           Id2LogicalObject* id2logical_object,
+                                           const MutableMirroredObjectOperand& operand,
+                                           int64_t parallel_id, const DoEachT& DoEach) {
+  const auto& mirrored_object_operand = operand.operand();
+  if (interpret_type == InterpretType::kCompute) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else if (interpret_type == InterpretType::kInfer) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename DoEachT>
+void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
+                                         Id2LogicalObject* id2logical_object,
+                                         const MutableMirroredObjectOperand& operand,
+                                         int64_t parallel_id, const DoEachT& DoEach) {
+  const auto& mirrored_object_operand = operand.operand();
+  if (interpret_type == InterpretType::kCompute) {
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else if (interpret_type == InterpretType::kInfer) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename DoEachT>
+void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
+                                         Id2LogicalObject* id2logical_object,
+                                         const Mut2MirroredObjectOperand& operand,
+                                         int64_t parallel_id, const DoEachT& DoEach) {
+  const auto& mirrored_object_operand = operand.operand();
+  if (interpret_type == InterpretType::kCompute) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else if (interpret_type == InterpretType::kInfer) {
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
+                                                   parallel_id, DoEach);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void Scheduler::ConsumeMirroredObject(OperandAccessType access_type,
@@ -107,26 +195,37 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   if (begin != nullptr) { CHECK_EQ(begin->instr_ctx_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
     int64_t parallel_id = instr_chain->stream().stream_id().parallel_id();
+    InterpretType interpret_type = instr_chain->stream().stream_type_id().interpret_type();
     CHECK_EQ(instr_chain->instr_ctx_list().size(), 1);
     auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+    auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instr_ctx);
+    };
+    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instr_ctx);
+    };
     const auto& operands = instr_ctx->instr_msg().operand();
     for (const auto& operand : operands) {
-      if (!operand->has_mutable_operand()) { continue; }
-      const auto& mirrored_object_operand = operand->mutable_operand().operand();
-      ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
-                            [&](MirroredObject* mirrored_object) {
-                              ConsumeMirroredObject(kMutableOperandAccess, mirrored_object,
-                                                    instr_ctx);
-                            });
+      if (operand->has_mutable_operand()) {
+        ForEachMutMirroredObject(interpret_type, id2logical_object, operand->mutable_operand(),
+                                 parallel_id, ConsumeMutMirroredObject);
+      } else if (operand->has_mut2_operand()) {
+        ForEachMutMirroredObject(interpret_type, id2logical_object, operand->mut2_operand(),
+                                 parallel_id, ConsumeMutMirroredObject);
+      } else {
+        // do nothing
+      }
     }
     for (const auto& operand : operands) {
-      if (!operand->has_const_operand()) { continue; }
-      const auto& mirrored_object_operand = operand->const_operand().operand();
-      ForEachMirroredObject(id2logical_object, mirrored_object_operand, parallel_id,
-                            [&](MirroredObject* mirrored_object) {
-                              ConsumeMirroredObject(kConstOperandAccess, mirrored_object,
-                                                    instr_ctx);
-                            });
+      if (operand->has_const_operand()) {
+        ForEachConstMirroredObject(interpret_type, id2logical_object, operand->const_operand(),
+                                   parallel_id, ConsumeConstMirroredObject);
+      } else if (operand->has_mutable_operand()) {
+        ForEachConstMirroredObject(interpret_type, id2logical_object, operand->mutable_operand(),
+                                   parallel_id, ConsumeConstMirroredObject);
+      } else {
+        // do nothing
+      }
     }
     auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
@@ -166,12 +265,12 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
   auto* active_stream_list = mut_active_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instr_chain) {
     auto* stream = instr_chain->mut_stream();
+    ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
+    if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
     if (stream_type.SharingSchedulerThread()) {
       stream_type.Run(this, instr_chain);
     } else {
-      ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
-      if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
       stream->mut_thread_ctx()->mut_pending_chain_list()->PushBack(instr_chain);
     }
   }
@@ -181,14 +280,23 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
 void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
   bool has_control_stream_type = false;
-  const auto& control_type_index = std::type_index(typeid(ControlStreamType));
+  bool has_infer_control_stream_type = false;
+  auto CheckControlStreamDesc = [&](const StreamDesc* stream_desc) {
+    CHECK_EQ(stream_desc->num_machines(), 1);
+    CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
+    CHECK_EQ(stream_desc->num_streams_per_thread(), 1);
+    CHECK_EQ(stream_desc->start_parallel_id(), 0);
+  };
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    if (stream_desc->stream_type_id().stream_type_index() == control_type_index) {
-      CHECK_EQ(stream_desc->num_machines(), 1);
-      CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
-      CHECK_EQ(stream_desc->num_streams_per_thread(), 1);
-      CHECK_EQ(stream_desc->start_parallel_id(), 0);
+    const StreamType* stream_type = &stream_desc->stream_type_id().stream_type();
+    if (dynamic_cast<const ControlStreamType*>(stream_type) != nullptr) {
+      CheckControlStreamDesc(stream_desc);
       has_control_stream_type = true;
+    } else if (dynamic_cast<const InferStreamType<ControlStreamType>*>(stream_type) != nullptr) {
+      CheckControlStreamDesc(stream_desc);
+      has_infer_control_stream_type = true;
+    } else {
+      // do nothing
     }
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
@@ -208,14 +316,22 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
     }
   }
   CHECK(has_control_stream_type);
+  CHECK_EQ(has_control_stream_type, has_infer_control_stream_type);
 }
 
-void Scheduler::Receive(InstructionMsgList* instr_list) {
-  mut_pending_msg_list()->MoveFrom(instr_list);
+void Scheduler::Receive(InstructionMsgList* compute_instr_msg_list) {
+  InstructionMsgList new_instr_msg_list;
+  OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
+    new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
+    compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
+  }
+  mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
 }
 
-void Scheduler::Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg) {
-  mut_pending_msg_list()->EmplaceBack(std::move(instruction_msg));
+void Scheduler::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
+  InstructionMsgList instr_msg_list;
+  instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
+  Receive(&instr_msg_list);
 }
 
 void Scheduler::Schedule() {
@@ -229,7 +345,7 @@ void Scheduler::Schedule() {
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunSourceControlInstructions(&tmp_pending_msg_list);
+    FilterAndRunSourceInstructions(&tmp_pending_msg_list);
     NewInstrChainList new_instr_chain_list;
     MakeInstrChains(&tmp_pending_msg_list, /*out*/ &new_instr_chain_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instr_chain_list);

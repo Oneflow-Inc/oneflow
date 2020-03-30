@@ -8,8 +8,7 @@ namespace vm {
 void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id) {
   set_thread_ctx(thread_ctx);
   mut_stream_id()->CopyFrom(stream_id);
-  const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
-  stream_type.InitDeviceCtx(mut_device_ctx(), this);
+  stream_type().InitDeviceCtx(mut_device_ctx(), this);
 }
 
 int64_t Stream::machine_id() const {
@@ -18,6 +17,10 @@ int64_t Stream::machine_id() const {
 
 const StreamType& Stream::stream_type() const {
   return thread_ctx().stream_rt_desc().stream_type();
+}
+
+const StreamTypeId& Stream::stream_type_id() const {
+  return thread_ctx().stream_rt_desc().stream_type_id();
 }
 
 ObjectMsgPtr<InstrChain> Stream::NewInstrChain(InstructionMsg* instr_msg) {

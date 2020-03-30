@@ -38,6 +38,8 @@ class L2RReceiverInstructionType final : public InstructionType {
 
   using stream_type = L2RReceiverStreamType;
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<L2RReceiverInstructionType>("L2RReceive"));
@@ -128,7 +130,7 @@ void L2RReceiverStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(L2RReceiverStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RReceiverStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -139,7 +141,7 @@ ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
 ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeLocalStreamDesc(
     const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(L2RReceiverStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RReceiverStreamType>());
   ret->set_num_machines(resource.machine_num());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

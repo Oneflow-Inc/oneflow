@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/logical_object_id.msg.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/object.h"
 
 namespace oneflow {
 
@@ -65,13 +66,23 @@ class LogicalObject;
 OBJECT_MSG_BEGIN(MirroredObject);
   // methods
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
+
+  PUBLIC const Object& object() const { return *object_ptr().get(); }
+  PUBLIC bool has_object() const { return object_ptr().get() != nullptr; }
+  PUBLIC void reset_object(Object* object) { mut_object_ptr()->reset(object); }
+  PUBLIC const Object& object_type() const { return *object_type_ptr().get(); }
+  PUBLIC bool has_object_type() const { return object_type_ptr().get() != nullptr; }
+  PUBLIC void reset_object_type(Object* object) { mut_object_type_ptr()->reset(object); }
+
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_PTR(LogicalObject, logical_object);
-  OBJECT_MSG_DEFINE_ONEOF(object_type,
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<Object>, object_ptr);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<Object>, object_type_ptr);
+
+  OBJECT_MSG_DEFINE_ONEOF(mirrored_object_type,
       OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)
       OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
-  OBJECT_MSG_DEFINE_STRUCT(ObjectMsgPtr<MirroredObject>, object_desc);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
