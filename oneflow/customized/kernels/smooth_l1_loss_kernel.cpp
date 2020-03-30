@@ -29,7 +29,7 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SMOOTH_L1_CPU_KERNEL(dtype)                                                     \
+#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("smooth_l1_loss")                                                         \
       .SetCreateFn(                                                                              \
           [](user_op::KernelInitContext* ctx) { return new SmoothL1LossCPUKernel<dtype>(ctx); }) \
@@ -39,8 +39,8 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
                && loss_desc->data_type() == GetDataType<dtype>::value;                           \
       });
 
-REGISTER_SMOOTH_L1_CPU_KERNEL(float)
-REGISTER_SMOOTH_L1_CPU_KERNEL(double)
+REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(float)
+REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(double)
 
 template<typename T>
 class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
@@ -72,7 +72,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(dtype)                                 \
+#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)                            \
   REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                     \
       .SetCreateFn([](user_op::KernelInitContext* ctx) {                          \
         return new SmoothL1LossGradCpuKernel<dtype>(ctx);                         \
@@ -84,7 +84,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
                && prediction_grad_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(float)
-REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(double)
+REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(float)
+REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(double)
 
 }  // namespace oneflow
