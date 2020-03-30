@@ -322,11 +322,11 @@ def non_maximum_suppression(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("smooth_l1")
-def smooth_l1(prediction, label, beta=1.0, name=None):
+@oneflow_export("smooth_l1_loss")
+def smooth_l1_loss(prediction, label, beta=1.0, name=None):
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("SmoothL1"))
-        .Op("smooth_l1")
+        .Op("smooth_l1_loss")
         .Input("prediction", [prediction])
         .Input("label", [label])
         .Output("loss")

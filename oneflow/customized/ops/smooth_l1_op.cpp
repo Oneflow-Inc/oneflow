@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("smooth_l1")
+REGISTER_USER_OP("smooth_l1_loss")
     .Input("prediction")
     .Input("label")
     .Output("loss")
@@ -30,7 +30,7 @@ REGISTER_USER_OP("smooth_l1")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("smooth_l1_grad")
+REGISTER_USER_OP("smooth_l1_loss_grad")
     .Input("loss_grad")
     .Input("prediction")
     .Input("label")
@@ -67,12 +67,12 @@ REGISTER_USER_OP("smooth_l1_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("smooth_l1")
+REGISTER_USER_OP_GRAD("smooth_l1_loss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("smooth_l1_grad")
+            builder.Op("smooth_l1_loss_grad")
                 .Input("loss_grad", op.GetGradTensorWithOpOutput("loss", 0))
                 .Input("prediction", op.input("prediction", 0))
                 .Input("label", op.input("label", 0))

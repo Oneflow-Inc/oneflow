@@ -31,7 +31,7 @@ class SmoothL1CPUKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SMOOTH_L1_CPU_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("smooth_l1")                                                          \
+  REGISTER_USER_KERNEL("smooth_l1_loss")                                                     \
       .SetCreateFn(                                                                          \
           [](user_op::KernelInitContext* ctx) { return new SmoothL1CPUKernel<dtype>(ctx); }) \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                           \
@@ -74,7 +74,7 @@ class SmoothL1GradCpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SMOOTH_L1_GRAD_CPU_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("smooth_l1_grad")                                                           \
+  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                                      \
       .SetCreateFn(                                                                                \
           [](user_op::KernelInitContext* ctx) { return new SmoothL1GradCpuKernel<dtype>(ctx); })   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \

@@ -85,7 +85,7 @@ def test_smooth_l1(_):
             flow.watch_diff(v, assert_dx)
             x += v
             with flow.fixed_placement(device_type, "0:0"):
-                y = flow.smooth_l1(x, label, beta)
+                y = flow.smooth_l1_loss(x, label, beta)
                 flow.losses.add_loss(y)
                 return y
         
