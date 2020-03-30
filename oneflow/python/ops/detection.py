@@ -323,7 +323,7 @@ def non_maximum_suppression(
 
 
 @oneflow_export("smooth_l1")
-def smooth_l1(prediction, label, beta=1.0, scale=1.0, name=None):
+def smooth_l1(prediction, label, beta=1.0, name=None):
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("SmoothL1"))
         .Op("smooth_l1")
@@ -332,7 +332,6 @@ def smooth_l1(prediction, label, beta=1.0, scale=1.0, name=None):
         .Output("y")
     )
     op.SetAttr("beta", float(beta), "AttrTypeFloat")
-    op.SetAttr("scale", float(scale), "AttrTypeFloat")
     return (
         op
         .Build()

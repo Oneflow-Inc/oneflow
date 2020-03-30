@@ -7,7 +7,6 @@ REGISTER_USER_OP("smooth_l1")
     .Input("label")
     .Output("y")
     .Attr("beta", UserOpAttrType::kAtFloat)
-    .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("x", 0),
                          *ctx->Shape4ArgNameAndIndex("label", 0));
@@ -37,7 +36,6 @@ REGISTER_USER_OP("smooth_l1_grad")
     .Input("label")
     .Output("dx")
     .Attr("beta", UserOpAttrType::kAtFloat)
-    .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("dy", 0), *ctx->Shape4ArgNameAndIndex("x", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *ctx->Dtype4ArgNameAndIndex("x", 0));
@@ -74,7 +72,6 @@ REGISTER_USER_OP_GRAD("smooth_l1")
                                                  .Input("label", op.input("label", 0))
                                                  .Output("dx")
                                                  .Attr("beta", op.attr<float>("beta"))
-                                                 .Attr("scale", op.attr<float>("scale"))
                                                  .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);

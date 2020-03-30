@@ -14,7 +14,6 @@ class SmoothL1CPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const float scale = ctx->GetAttr<float>("scale");
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* x = x_blob->dptr<T>();
     const int64_t elem_cnt = x_blob->shape().elem_cnt();
@@ -27,7 +26,6 @@ class SmoothL1CPUKernel final : public user_op::OpKernel {
       } else {
         y[i] = abs_diff - 0.5 * beta;
       }
-      y[i] *= scale;
     }
   };
 };
@@ -56,7 +54,6 @@ class SmoothL1GradCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const float scale = ctx->GetAttr<float>("scale");
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* x = x_blob->dptr<T>();
     const int64_t elem_cnt = x_blob->shape().elem_cnt();
@@ -71,7 +68,7 @@ class SmoothL1GradCpuKernel final : public user_op::OpKernel {
       } else {
         dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
       }
-      dx[i] *= scale * dy[i];
+      dx[i] = dx[i] * dy[i];
     }
   };
 };

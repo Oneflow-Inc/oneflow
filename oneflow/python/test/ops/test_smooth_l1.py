@@ -7,7 +7,7 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 import random
 
-def gen_numpy_data(x, label, beta=1.0, scale=1.0):
+def gen_numpy_data(x, label, beta=1.0):
     original_shape = x.shape
     elem_cnt = x.size
     x = x.reshape(-1)
@@ -22,7 +22,6 @@ def gen_numpy_data(x, label, beta=1.0, scale=1.0):
             y[i] = 0.5 * abs_diff * abs_diff / beta
         else:
             y[i] = abs_diff - 0.5 * beta
-    y *= scale
 
     # Backward
     for i in np.arange(elem_cnt):
@@ -33,7 +32,6 @@ def gen_numpy_data(x, label, beta=1.0, scale=1.0):
         else:
             dx[i] = np.sign(diff)
     
-    dx *= scale
     return {
         "y": y.reshape(original_shape),
         "dx": dx.reshape(original_shape)
@@ -48,10 +46,9 @@ def test_smooth_l1(_):
     ]
     arg_dict["data_type"] = ["float32", "double"]
     arg_dict["beta"] = [0, 0.5, 1]
-    arg_dict["scale"] = [-1.1, 0, 1]
 
     for case in GenArgList(arg_dict):
-        device_type, x_shape, data_type, beta, scale = case
+        device_type, x_shape, data_type, beta = case
         assert device_type in ["gpu", "cpu"]
         assert data_type in ["float32", "double", "int8", "int32", "int64"]
         flow.clear_default_session()
@@ -63,7 +60,7 @@ def test_smooth_l1(_):
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         label = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
-        np_result = gen_numpy_data(x, label, beta, scale)
+        np_result = gen_numpy_data(x, label, beta)
 
         def assert_dx(b):
             dx_np = np_result["dx"]
@@ -88,7 +85,7 @@ def test_smooth_l1(_):
             flow.watch_diff(v, assert_dx)
             x += v
             with flow.fixed_placement(device_type, "0:0"):
-                y = flow.smooth_l1(x, label, beta, scale)
+                y = flow.smooth_l1(x, label, beta)
                 flow.losses.add_loss(y)
                 return y
         

@@ -8,7 +8,7 @@ namespace {
 
 template<typename T>
 __global__ void SmoothL1Forward(const int64_t elem_cnt, const T* x, const T* label, const T beta,
-                                const T scale, T* out) {
+                                T* out) {
   const T half_beta = static_cast<T>(0.5) * beta;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T abs_diff = std::abs(x[i] - label[i]);
@@ -17,13 +17,12 @@ __global__ void SmoothL1Forward(const int64_t elem_cnt, const T* x, const T* lab
     } else {
       out[i] = abs_diff - half_beta;
     }
-    out[i] = out[i] * scale;
   }
 }
 
 template<typename T>
 __global__ void SmoothL1Backward(const int64_t elem_cnt, const T* dy, const T* x, const T* label,
-                                 const T beta, const T scale, T* dx) {
+                                 const T beta, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T diff = x[i] - label[i];
     const T abs_diff = std::abs(diff);
@@ -32,7 +31,7 @@ __global__ void SmoothL1Backward(const int64_t elem_cnt, const T* dy, const T* x
     } else {
       dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
     }
-    dx[i] = dx[i] * dy[i] * scale;
+    dx[i] = dx[i] * dy[i];
   }
 }
 
@@ -49,14 +48,13 @@ class SmoothL1GPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const float scale = ctx->GetAttr<float>("scale");
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* x = x_blob->dptr<T>();
     const int64_t elem_cnt = x_blob->shape().elem_cnt();
     const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
     T* y = ctx->Tensor4ArgNameAndIndex("y", 0)->mut_dptr<T>();
     SmoothL1Forward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x, label, beta, scale, y);
+                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x, label, beta, y);
   };
 };
 
@@ -84,16 +82,14 @@ class SmoothL1GradGpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const float scale = ctx->GetAttr<float>("scale");
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* x = x_blob->dptr<T>();
     const int64_t elem_cnt = x_blob->shape().elem_cnt();
     const T* dy = ctx->Tensor4ArgNameAndIndex("dy", 0)->dptr<T>();
     const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
     T* dx = ctx->Tensor4ArgNameAndIndex("dx", 0)->mut_dptr<T>();
-    SmoothL1Backward<T>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, dy, x, label, beta, scale, dx);
+    SmoothL1Backward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                          ctx->device_ctx()->cuda_stream()>>>(elem_cnt, dy, x, label, beta, dx);
   };
 };
 
