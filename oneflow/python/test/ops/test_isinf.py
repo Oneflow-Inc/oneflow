@@ -13,8 +13,8 @@ def test_isinf(test_case):
     x = np.array([-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf"), float("nan")], dtype=np.float32)
     y = IsinfJob(x).get().ndarray()
     
-    print("isinf y = ", y)
-    print("np.isinf y =", np.isinf(x))
+    print("isinf y = ", y) # [1 0 0 0 0 0 0 1 0] int8
+    print("np.isinf y =", np.isinf(x)) # [ True False False False False False False  True False]
     test_case.assertTrue(np.allclose(y, np.isinf(x)))
 
     x = np.random.uniform(size=(9,)).astype(np.float32)

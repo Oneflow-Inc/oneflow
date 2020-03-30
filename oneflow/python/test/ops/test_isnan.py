@@ -13,8 +13,8 @@ def test_isnan(test_case):
     x = np.array([-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf"), np.nan, float("nan")], dtype=np.float32)
     y = IsnanJob(x).get().ndarray()
  
-    print("isnan y  =  ", y, y.dtype) 
-    print("np.isnan y =", np.isnan(x)) 
+    print("isnan y  =  ", y, y.dtype) # [0 0 0 0 0 0 0 0 1 1] int8
+    print("np.isnan y =", np.isnan(x)) # [False False False False False False False False  True  True]
     test_case.assertTrue(np.allclose(y, np.isnan(x)))
 
     x = np.random.uniform(size=(10,)).astype(np.float32)
