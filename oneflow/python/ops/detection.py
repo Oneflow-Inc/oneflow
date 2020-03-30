@@ -327,9 +327,9 @@ def smooth_l1(prediction, label, beta=1.0, name=None):
     op = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("SmoothL1"))
         .Op("smooth_l1")
-        .Input("x", [prediction])
+        .Input("prediction", [prediction])
         .Input("label", [label])
-        .Output("y")
+        .Output("loss")
     )
     op.SetAttr("beta", float(beta), "AttrTypeFloat")
     return (
