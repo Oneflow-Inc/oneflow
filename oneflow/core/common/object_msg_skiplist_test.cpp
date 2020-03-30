@@ -45,6 +45,16 @@ TEST(ObjectMsgSkipList, insert_naive) {
   }
 }
 
+TEST(ObjectMsgSkipList, insert_twice) {
+  OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
+  auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
+  elem0->set_foo_map_key(0);
+  auto elem1 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();
+  elem1->set_foo_map_key(0);
+  ASSERT_TRUE(foo_map.Insert(elem0.Mutable()).second);
+  ASSERT_TRUE(!foo_map.Insert(elem1.Mutable()).second);
+}
+
 TEST(ObjectMsgSkipList, erase_by_key) {
   OBJECT_MSG_MAP(ObjectMsgSkipListFoo, foo_map_key) foo_map;
   auto elem0 = ObjectMsgPtr<ObjectMsgSkipListFoo>::New();

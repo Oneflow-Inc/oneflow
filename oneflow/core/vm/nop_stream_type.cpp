@@ -38,6 +38,8 @@ class NopInstructionType final : public InstructionType {
 
   using stream_type = NopStreamType;
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<NopInstructionType>("Nop"));
@@ -67,7 +69,7 @@ void NopStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(NopStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -77,7 +79,7 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& res
 
 ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(NopStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

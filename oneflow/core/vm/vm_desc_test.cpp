@@ -52,7 +52,7 @@ ObjectMsgPtr<Scheduler> NewTestScheduler(uint64_t symbol_value, size_t size) {
   return scheduler;
 }
 
-TEST(L2RSenderReceiverStreamType, basic) {
+TEST(VmDesc, basic) {
   uint64_t logical_token = 88888888;
   uint64_t src_symbol = 9527;
   uint64_t dst_symbol = 9528;

@@ -10,35 +10,40 @@ namespace vm {
 
 namespace {
 
-// clang-format off
-OBJECT_MSG_BEGIN(StreamTypeRegistry);
-  // methods
-  PUBLIC void __Init__(const StreamType* stream_type, const StreamTypeId& stream_type_id) {
-    set_stream_type(stream_type);
-    mutable_stream_type_id()->CopyFrom(stream_type_id);
-  }
-  // fields
-  OBJECT_MSG_DEFINE_PTR(const StreamType, stream_type);
-  // links
-  OBJECT_MSG_DEFINE_MAP_KEY(StreamTypeId, stream_type_id);
-OBJECT_MSG_END(StreamTypeRegistry);
-// clang-format on
-
-using StreamTypeRegistryMap = OBJECT_MSG_MAP(StreamTypeRegistry, stream_type_id);
-
-StreamTypeRegistryMap* StreamType4StreamTypeId() {
-  static StreamTypeRegistryMap map;
+HashMap<StreamTypeId, StreamTypeId>* InferStreamTypeId4ComputeStreamTypeId() {
+  static HashMap<StreamTypeId, StreamTypeId> map;
   return &map;
 }
 
 }  // namespace
 
+HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex() {
+  static HashMap<std::type_index, const StreamType*> map;
+  return &map;
+}
+
+const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_type_id) {
+  return InferStreamTypeId4ComputeStreamTypeId()->at(compute_stream_type_id);
+}
+
 void StreamType::Run(InstrChain* instr_chain) const {
-  auto interpret_type = instr_chain->stream().stream_id().stream_type_id().interpret_type();
+  const auto& stream_type_id = instr_chain->stream().stream_id().stream_type_id();
+  auto interpret_type = stream_type_id.interpret_type();
   if (interpret_type == InterpretType::kCompute) {
     Compute(instr_chain);
   } else if (interpret_type == InterpretType::kInfer) {
     Infer(instr_chain);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void StreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
+  if (interpret_type == InterpretType::kCompute) {
+    Compute(scheduler, instr_msg);
+  } else if (interpret_type == InterpretType::kInfer) {
+    Infer(scheduler, instr_msg);
   } else {
     UNIMPLEMENTED();
   }
@@ -55,19 +60,13 @@ void StreamType::Run(Scheduler* scheduler, InstrChain* instr_chain) const {
   }
 }
 
-const StreamType* LookupStreamType(const StreamTypeId& stream_type_id) {
-  auto* map = StreamType4StreamTypeId();
-  auto* registry = map->FindPtr(stream_type_id);
-  CHECK_NOTNULL(registry);
-  return &registry->stream_type();
-}
-
-bool TryRegisterStreamType(const std::type_index& stream_type_index, InterpretType interpret_type,
-                           const StreamType* stream_type) {
-  FlatMsg<StreamTypeId> stream_type_id;
-  stream_type_id->__Init__(stream_type_index, interpret_type);
-  auto registry = ObjectMsgPtr<StreamTypeRegistry>::New(stream_type, stream_type_id.Get());
-  return StreamType4StreamTypeId()->Insert(registry.Mutable()).second;
+void TryRegisterInferStreamTypeId(const StreamType* infer_stream_type,
+                                  const StreamType* compute_stream_type) {
+  StreamTypeId compute_stream_type_id;
+  compute_stream_type_id.__Init__(compute_stream_type, InterpretType::kCompute);
+  StreamTypeId infer_stream_type_id;
+  infer_stream_type_id.__Init__(infer_stream_type, InterpretType::kInfer);
+  InferStreamTypeId4ComputeStreamTypeId()->emplace(compute_stream_type_id, infer_stream_type_id);
 }
 
 }  // namespace vm

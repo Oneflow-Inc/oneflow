@@ -112,20 +112,23 @@ struct EmbeddedSkipListKey {
   static void Erase(self_type* elem) { elem->link_.Erase(); }
   // return true if success
   static std::pair<self_type*, bool> Insert(self_type* elem, link_type* head, int size_shift) {
-    self_type* searched = SearchLastElemLessThan(elem->key(), head, size_shift);
+    EmbeddedListLink* prev_list_link = SearchLastBottomLinkLessThan(elem->key(), head, size_shift);
+    self_type* maybe_searched = nullptr;
+    if (prev_list_link->next() == head->mutable_link(0)) {
+      maybe_searched = nullptr;
+    } else {
+      maybe_searched = ThisPtr4LinkPtr(prev_list_link->next(), 0);
+    }
     self_type* ret_elem = nullptr;
     bool success = false;
-    if (searched == nullptr) {
-      ret_elem = elem;
-      elem->link_.InsertAfter(head, RandomNumLevels(size_shift));
-      success = true;
-    } else if (!(searched->key() == elem->key())) {
-      ret_elem = elem;
-      elem->link_.InsertAfter(&searched->link_, RandomNumLevels(size_shift));
-      success = true;
-    } else {
-      ret_elem = searched;
+    if (maybe_searched != nullptr && (maybe_searched->key() == elem->key())) {
+      ret_elem = maybe_searched;
       success = false;
+    } else {
+      self_type* prev = ThisPtr4LinkPtr(prev_list_link, 0);
+      ret_elem = elem;
+      elem->link_.InsertAfter(&prev->link_, RandomNumLevels(size_shift));
+      success = true;
     }
     // CHECK_EQ(Find(ret_elem->key(), head), ret_elem, GetMaxVal<int32_t>() / 2);
     return std::make_pair(ret_elem, success);
@@ -156,11 +159,6 @@ struct EmbeddedSkipListKey {
     int32_t num_levels = 1;
     for (int i = 1; (rand() % 2 == 0) && i < max_num_levels; ++i) { ++num_levels; }
     return num_levels;
-  }
-  static self_type* SearchLastElemLessThan(const key_type& key, link_type* head, int size_shift) {
-    EmbeddedListLink* list_link = SearchLastBottomLinkLessThan(key, head, size_shift);
-    if (list_link == head->mutable_link(0)) { return nullptr; }
-    return ThisPtr4LinkPtr(list_link, 0);
   }
 
   static EmbeddedListLink* SearchLastBottomLinkLessThan(const key_type& key, link_type* head,

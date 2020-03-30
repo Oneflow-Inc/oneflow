@@ -21,6 +21,7 @@ class Stream;
 class InstructionStatusBuffer;
 class InstrChain;
 class Scheduler;
+class InstructionMsg;
 class InstructionType;
 
 class StreamType {
@@ -28,6 +29,7 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(InstrChain* instr_chain) const;
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
   void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
@@ -52,6 +54,12 @@ class StreamType {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
   virtual void Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
+  virtual void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
+  virtual void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 
@@ -82,8 +90,28 @@ class StreamType {
   StreamType() = default;
 };
 
-const StreamType* LookupStreamType(const StreamTypeId&);
-bool TryRegisterStreamType(const std::type_index&, InterpretType interpret_type, const StreamType*);
+HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();
+
+template<typename T>
+const StreamType* LookupStreamType4TypeIndex() {
+  return StreamType4TypeIndex()->at(typeid(T));
+}
+
+template<typename T>
+void TryRegisterStreamType4TypeIndex() {
+  auto* map = StreamType4TypeIndex();
+  std::type_index type_index(typeid(T));
+  if (map->find(type_index) == map->end()) { map->emplace(type_index, new T()); }
+}
+
+const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_type_id);
+void TryRegisterInferStreamTypeId(const StreamType* infer_stream_type,
+                                  const StreamType* compute_stream_type);
+template<typename InferStreamType, typename ComputeStreamType>
+void TryRegisterInferStreamTypeId() {
+  TryRegisterInferStreamTypeId(LookupStreamType4TypeIndex<InferStreamType>(),
+                               LookupStreamType4TypeIndex<ComputeStreamType>());
+}
 
 }  // namespace vm
 }  // namespace oneflow

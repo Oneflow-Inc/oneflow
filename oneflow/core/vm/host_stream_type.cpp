@@ -47,6 +47,8 @@ class CudaMallocHostInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     char* dptr = nullptr;
@@ -66,7 +68,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
       CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
       CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
                parallel_num);
-      CHECK(!mirrored_object->has_object_type());
+      CHECK(!mirrored_object->has_mirrored_object_type());
     }
     CudaCheck(cudaMallocHost(&dptr, size));
     mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
@@ -88,6 +90,8 @@ class MallocInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(MallocInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     char* dptr = nullptr;
@@ -107,7 +111,7 @@ class MallocInstructionType final : public InstructionType {
       CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
       CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
                parallel_num);
-      CHECK(!mirrored_object->has_object_type());
+      CHECK(!mirrored_object->has_mirrored_object_type());
     }
     dptr = reinterpret_cast<char*>(std::malloc(size));
     mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
@@ -129,6 +133,8 @@ class CudaFreeHostInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(CudaFreeHostInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     {
@@ -165,6 +171,8 @@ class FreeInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(FreeInstruction);
   // clang-format on
 
+  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  }
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* mirrored_object = nullptr;
     {
@@ -211,7 +219,7 @@ void HostStreamType::Compute(InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
     const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    LookupInstructionType(instr_type_id)->Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instr_ctx);
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
@@ -220,7 +228,7 @@ void HostStreamType::Compute(InstrChain* instr_chain) const {
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                               int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(HostStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
@@ -230,7 +238,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& re
 
 ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(typeid(HostStreamType));
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);

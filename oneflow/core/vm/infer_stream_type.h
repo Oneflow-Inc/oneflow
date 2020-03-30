@@ -4,6 +4,8 @@
 #include <glog/logging.h>
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
@@ -49,10 +51,20 @@ class InferStreamType final : public StreamType {
 
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override {
-    return T().MakeRemoteStreamDesc(resource, this_machine_id);
+    auto stream_desc = T().MakeRemoteStreamDesc(resource, this_machine_id);
+    if (stream_desc) {
+      stream_desc->mut_stream_type_id()->CopyFrom(
+          LookupInferStreamTypeId(stream_desc->stream_type_id()));
+    }
+    return stream_desc;
   }
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override {
-    return T().MakeLocalStreamDesc(resource);
+    auto stream_desc = T().MakeLocalStreamDesc(resource);
+    if (stream_desc) {
+      stream_desc->mut_stream_type_id()->CopyFrom(
+          LookupInferStreamTypeId(stream_desc->stream_type_id()));
+    }
+    return stream_desc;
   }
 };
 
