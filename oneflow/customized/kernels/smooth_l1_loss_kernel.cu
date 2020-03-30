@@ -46,9 +46,9 @@ class SmoothL1GPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
-    const T* prediction = x_blob->dptr<T>();
-    const int64_t elem_cnt = x_blob->shape().elem_cnt();
+    const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
+    const T* prediction = prediction_blob->dptr<T>();
+    const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
     const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
     T* loss = ctx->Tensor4ArgNameAndIndex("loss", 0)->mut_dptr<T>();
     SmoothL1Forward<T>
@@ -81,9 +81,9 @@ class SmoothL1GradGpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
-    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
-    const T* prediction = x_blob->dptr<T>();
-    const int64_t elem_cnt = x_blob->shape().elem_cnt();
+    const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
+    const T* prediction = prediction_blob->dptr<T>();
+    const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
     const T* loss_grad = ctx->Tensor4ArgNameAndIndex("loss_grad", 0)->dptr<T>();
     const T* label = ctx->Tensor4ArgNameAndIndex("label", 0)->dptr<T>();
     T* prediction_grad = ctx->Tensor4ArgNameAndIndex("prediction_grad", 0)->mut_dptr<T>();
