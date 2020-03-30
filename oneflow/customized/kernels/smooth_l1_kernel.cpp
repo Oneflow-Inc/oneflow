@@ -1,4 +1,3 @@
-#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
