@@ -7,22 +7,23 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SmoothL1Forward(const int64_t elem_cnt, const T* x, const T* label,
-                                const float beta, const float scale, T* out) {
+__global__ void SmoothL1Forward(const int64_t elem_cnt, const T* x, const T* label, const T beta,
+                                const T scale, T* out) {
+  const T half_beta = static_cast<T>(0.5) * beta;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T abs_diff = std::abs(x[i] - label[i]);
     if (abs_diff < beta) {
-      out[i] = 0.5 * abs_diff * abs_diff / beta;
+      out[i] = static_cast<T>(0.5) * abs_diff * abs_diff / beta;
     } else {
-      out[i] = abs_diff - 0.5 * beta;
+      out[i] = abs_diff - half_beta;
     }
-    out[i] *= scale;
+    out[i] = out[i] * scale;
   }
 }
 
 template<typename T>
 __global__ void SmoothL1Backward(const int64_t elem_cnt, const T* dy, const T* x, const T* label,
-                                 const float beta, const float scale, T* dx) {
+                                 const T beta, const T scale, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T diff = x[i] - label[i];
     const T abs_diff = std::abs(diff);
@@ -31,7 +32,7 @@ __global__ void SmoothL1Backward(const int64_t elem_cnt, const T* dy, const T* x
     } else {
       dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
     }
-    dx[i] *= scale * dy[i];
+    dx[i] = dx[i] * dy[i] * scale;
   }
 }
 
