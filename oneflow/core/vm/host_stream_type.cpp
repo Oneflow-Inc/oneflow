@@ -2,6 +2,7 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/mem_instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
@@ -41,19 +42,12 @@ class CudaMallocHostInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(CudaMallocHostInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-  FLAT_MSG_VIEW_END(CudaMallocHostInstruction);
-  // clang-format on
-
   void Infer(InstrCtx* instr_ctx) const override {
     MemBufferObjectType* mem_buffer_object_type = nullptr;
     size_t size = 0;
     int64_t device_id = 0;
     {
-      FlatMsgView<CudaMallocHostInstruction> view;
+      FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
@@ -70,7 +64,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
     MemBufferObjectValue* buffer_value = nullptr;
     char* dptr = nullptr;
     {
-      FlatMsgView<CudaMallocHostInstruction> view;
+      FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
@@ -89,38 +83,33 @@ class MallocInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(MallocInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-  FLAT_MSG_VIEW_END(MallocInstruction);
-  // clang-format on
-
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
-  }
-  void Compute(InstrCtx* instr_ctx) const override {
-    MirroredObject* mirrored_object = nullptr;
-    char* dptr = nullptr;
+  void Infer(InstrCtx* instr_ctx) const override {
+    MemBufferObjectType* mem_buffer_object_type = nullptr;
     size_t size = 0;
     {
-      const auto& stream = instr_ctx->mut_instr_chain()->stream();
-      auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
       FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
-      FlatMsg<MirroredObjectId> mirrored_object_id;
-      mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
-      auto* mirrored_object_access =
-          instr_ctx->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
-      CHECK_NOTNULL(mirrored_object_access);
-      mirrored_object = mirrored_object_access->mut_mirrored_object();
-      CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
-      CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
-               parallel_num);
-      CHECK(!mirrored_object->has_mirrored_object_type());
+      const auto& operand = view->mirrored_object_operand().operand();
+      MirroredObject* mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
     }
-    dptr = reinterpret_cast<char*>(std::malloc(size));
-    mirrored_object->mutable_host_mem_buffer()->__Init__(size, dptr);
+    mem_buffer_object_type->set_size(size);
+    mem_buffer_object_type->mut_mem_case()->mutable_host_mem();
+  }
+  void Compute(InstrCtx* instr_ctx) const override {
+    const MemBufferObjectType* buffer_type = nullptr;
+    MemBufferObjectValue* buffer_value = nullptr;
+    char* dptr = nullptr;
+    {
+      FlatMsgView<MallocInstruction> view;
+      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      const auto& operand = view->mirrored_object_operand().operand();
+      buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instr_ctx->mut_mirrored_object_value(operand)->Mutable<MemBufferObjectValue>();
+    }
+    dptr = reinterpret_cast<char*>(std::malloc(buffer_type->size()));
+    buffer_value->reset_data(dptr);
   }
 };
 COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
@@ -133,16 +122,10 @@ class CudaFreeHostInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(CudaFreeHostInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-  FLAT_MSG_VIEW_END(CudaFreeHostInstruction);
-  // clang-format on
-
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  void Infer(InstrCtx* instr_ctx) const override {
     MirroredObject* type_mirrored_object = nullptr;
     {
-      FlatMsgView<CudaFreeHostInstruction> view;
+      FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
@@ -155,7 +138,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
   void Compute(InstrCtx* instr_ctx) const override {
     MirroredObject* value_mirrored_object = nullptr;
     {
-      FlatMsgView<CudaFreeHostInstruction> view;
+      FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
@@ -173,33 +156,29 @@ class FreeInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(FreeInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-  FLAT_MSG_VIEW_END(FreeInstruction);
-  // clang-format on
-
   void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
-  }
-  void Compute(InstrCtx* instr_ctx) const override {
-    MirroredObject* mirrored_object = nullptr;
+    MirroredObject* type_mirrored_object = nullptr;
     {
-      const auto& stream = instr_ctx->mut_instr_chain()->stream();
-      auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
-      FlatMsg<MirroredObjectId> mirrored_object_id;
-      mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
-      auto* mirrored_object_access =
-          instr_ctx->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
-      CHECK_NOTNULL(mirrored_object_access);
-      mirrored_object = mirrored_object_access->mut_mirrored_object();
-      CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
-      CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
-               parallel_num);
+      const auto& operand = view->mirrored_object_operand().operand();
+      type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
+      CHECK(buffer_type.mem_case().has_host_mem());
+      CHECK(!buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
     }
-    std::free(mirrored_object->mut_host_mem_buffer()->mut_data());
-    mirrored_object->clear_host_mem_buffer();
+    type_mirrored_object->reset_object();
+  }
+  void Compute(InstrCtx* instr_ctx) const override {
+    MirroredObject* value_mirrored_object = nullptr;
+    {
+      FlatMsgView<FreeInstruction> view;
+      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      const auto& operand = view->mirrored_object_operand().operand();
+      value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
+    }
+    std::free(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data());
+    value_mirrored_object->reset_object();
   }
 };
 COMMAND(RegisterInstructionType<FreeInstructionType>("Free"));

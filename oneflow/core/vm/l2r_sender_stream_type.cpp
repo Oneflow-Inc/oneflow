@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/localhost_transporter.h"
 #include "oneflow/core/vm/transporter_device_context.h"
+#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
@@ -72,11 +73,13 @@ void MakeSendRequests(InstrCtx* instr_ctx, TransportKey2SendRequest* transport_k
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_parallel_id(stream.parallel_id());
     data_size = view->size();
-    auto* src_mirrored_obj =
-        instr_ctx->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
-    CHECK_NOTNULL(src_mirrored_obj);
-    CHECK(src_mirrored_obj->has_host_mem_buffer());
-    data_ptr = &src_mirrored_obj->host_mem_buffer().data();
+    const auto& src_buffer_type =
+        instr_ctx->mirrored_object_type(view->src().operand()).Get<MemBufferObjectType>();
+    CHECK_LE(data_size, src_buffer_type.size());
+    CHECK(src_buffer_type.mem_case().has_host_mem());
+    const auto& src_buffer_value =
+        instr_ctx->mirrored_object_value(view->src().operand()).Get<MemBufferObjectValue>();
+    data_ptr = src_buffer_value.data();
   }
   std::atomic<int64_t>* incomplete_cnt = nullptr;
   {

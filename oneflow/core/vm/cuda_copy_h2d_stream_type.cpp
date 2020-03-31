@@ -2,6 +2,7 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/copy_instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
@@ -41,14 +42,6 @@ class CudaCopyH2DInstructionType final : public InstructionType {
 
   using stream_type = CudaCopyH2DStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(CudaCopyH2DInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, src);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-  FLAT_MSG_VIEW_END(CudaCopyH2DInstruction);
-  // clang-format on
-
   void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
   }
   void Compute(InstrCtx* instr_ctx) const override {
@@ -57,13 +50,19 @@ class CudaCopyH2DInstructionType final : public InstructionType {
     size_t size = 0;
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
     {
-      FlatMsgView<CudaCopyH2DInstruction> view;
+      FlatMsgView<CopyInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
-      auto* dst_mirrored_obj =
-          instr_ctx->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
-      CHECK_NOTNULL(dst_mirrored_obj);
-      dst = dst_mirrored_obj->mut_cuda_mem_buffer()->mut_data();
+      const auto& dst_buffer_type =
+          instr_ctx->mirrored_object_type(view->dst().operand()).Get<MemBufferObjectType>();
+      CHECK_LE(size, dst_buffer_type.size());
+      CHECK(dst_buffer_type.mem_case().has_device_cuda_mem());
+      CHECK_EQ(dst_buffer_type.mem_case().device_cuda_mem().device_id(),
+               stream.thread_ctx().device_id());
+      auto* dst_buffer_value =
+          instr_ctx->mut_mirrored_object_value(view->dst().operand())->Mut<MemBufferObjectValue>();
+      dst = dst_buffer_value->mut_data();
+
       const auto& src_buffer_type =
           instr_ctx->mirrored_object_type(view->src().operand()).Get<MemBufferObjectType>();
       CHECK_LE(size, src_buffer_type.size());

@@ -139,7 +139,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
     auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
     for (int i = 0; i < parallel_id2mirrored_object->size(); ++i) {
       auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
-      CHECK(!mirrored_object->has_mirrored_object_type());
+      CHECK(!mirrored_object->has_object());
       parallel_id2mirrored_object->Erase(mirrored_object);
     }
     scheduler->mut_id2logical_object()->Erase(logical_object);
