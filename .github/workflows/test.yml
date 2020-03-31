@@ -5,6 +5,7 @@ on:
       branches:
         - develop
     pull_request:
+      types: [synchronize, opened, reopened, ready_for_review]
       branches:
         - develop
 
@@ -13,7 +14,7 @@ jobs:
   build_and_test:
 
     runs-on: [self-hosted, linux]
-
+    if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v2
     - name: Checkout submodules
