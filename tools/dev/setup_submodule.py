@@ -4,7 +4,11 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "oneflow_src_path", type=str, default=os.getenv("ONEFLOW_SRC_DIR"), required=False
+    "-s",
+    "--oneflow_src_path",
+    type=str,
+    default=os.getenv("ONEFLOW_SRC_DIR"),
+    required=False,
 )
 args = parser.parse_args()
 
