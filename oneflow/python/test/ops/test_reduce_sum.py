@@ -48,7 +48,7 @@ def test_col_reduce(test_case):
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+        compare_with_tensorflow(*arg, atol=1e-1)
 
 def test_row_reduce(test_case):
     arg_dict = OrderedDict()
