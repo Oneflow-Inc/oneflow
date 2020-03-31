@@ -185,6 +185,7 @@ class TrivialObjectMsgSkipList {
     return ret;
   }
   value_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
+  const value_type* FindPtr(const key_type& key) const { return skiplist_head_.Find(key); }
   bool EqualsEnd(const ObjectMsgPtr<value_type>& ptr) { return !ptr; }
   void Erase(const key_type& key) { ObjectMsgPtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
   void Erase(value_type* elem_ptr) {

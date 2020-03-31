@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
+#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -63,10 +64,14 @@ class CudaCopyH2DInstructionType final : public InstructionType {
           instr_ctx->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
       CHECK_NOTNULL(dst_mirrored_obj);
       dst = dst_mirrored_obj->mut_cuda_mem_buffer()->mut_data();
-      auto* src_mirrored_obj =
-          instr_ctx->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
-      CHECK_NOTNULL(src_mirrored_obj);
-      src = src_mirrored_obj->mut_host_mem_buffer()->mut_data();
+      const auto& src_buffer_type =
+          instr_ctx->mirrored_object_type(view->src().operand()).Get<MemBufferObjectType>();
+      CHECK_LE(size, src_buffer_type.size());
+      CHECK(src_buffer_type.mem_case().has_host_mem());
+      CHECK(src_buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
+      const auto& src_buffer_value =
+          instr_ctx->mirrored_object_value(view->src().operand()).Get<MemBufferObjectValue>();
+      src = src_buffer_value.data();
     }
     Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,
                              cudaMemcpyKind::cudaMemcpyHostToDevice);

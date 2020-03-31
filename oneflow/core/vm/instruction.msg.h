@@ -9,6 +9,7 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
+#include "oneflow/core/vm/logical_object_id.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
@@ -67,9 +68,14 @@ OBJECT_MSG_BEGIN(InstrCtx);
     set_instr_chain(instr_chain);
     reset_instr_msg(instr_msg);
   }
-  PUBLIC MirroredObject* mut_mirrored_object_operand(const MirroredObjectOperand& operand);
+  PUBLIC const MirroredObject& mirrored_object_type(const MirroredObjectOperand& operand) const;
+  PUBLIC const MirroredObject& mirrored_object_value(const MirroredObjectOperand& operand) const;
+  PUBLIC MirroredObject* mut_mirrored_object_type(const MirroredObjectOperand& operand);
+  PUBLIC MirroredObject* mut_mirrored_object_value(const MirroredObjectOperand& operand);
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
-                                                     int64_t default_parallel_id);
+                                                     int64_t default_parallel_id) {
+    return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
+  }
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
   OBJECT_MSG_DEFINE_PTR(InstrChain, instr_chain);
@@ -77,6 +83,13 @@ OBJECT_MSG_BEGIN(InstrCtx);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_ctx_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
+  // private methods
+  PRIVATE template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+          MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                      int64_t default_parallel_id);
+  PRIVATE template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+          const MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                            int64_t default_parallel_id) const;
 OBJECT_MSG_END(InstrCtx);
 // clang-format on
 

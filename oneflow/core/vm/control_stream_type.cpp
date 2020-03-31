@@ -118,9 +118,9 @@ class DeleteSymbolInstructionType final : public InstructionType {
 
   void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
     // do nothing, delete symbol in Compute method
+    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
   }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
     Run(scheduler, instr_msg, &GetSelfLogicalObjectId);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }

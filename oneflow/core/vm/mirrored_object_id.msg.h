@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 
 #include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/logical_object_id.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
@@ -37,7 +37,14 @@ FLAT_MSG_BEGIN(MirroredObjectId);
   // methods
   PUBLIC void __Init__() {}
   PUBLIC void __Init__(uint64_t logical_object_id_value, int64_t parallel_id);
-  PUBLIC void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id);
+  PUBLIC template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+         void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
+    __Init__(TransformLogicalObjectId(operand.logical_object_id()),
+             operand.GetParallelId(parallel_id));
+  }
+  PUBLIC void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
+    __Init__(operand.logical_object_id(), operand.GetParallelId(parallel_id));
+  }
   PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 
   // fields

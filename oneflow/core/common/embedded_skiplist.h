@@ -217,6 +217,12 @@ class EmbeddedSkipListHead {
     if (key_link_ptr == nullptr) { return nullptr; }
     return ValueLinkField::StructPtr4FieldPtr(key_link_ptr);
   }
+  const value_type* Find(const key_type& key) const {
+    auto* key_link_ptr = key_link_type::Find(
+        key, const_cast<EmbeddedSkipListLink<max_level>*>(&skiplist_head_), size_shift());
+    if (key_link_ptr == nullptr) { return nullptr; }
+    return ValueLinkField::StructPtr4FieldPtr(key_link_ptr);
+  }
   value_type* Erase(const key_type& key) {
     key_link_type* erased = key_link_type::Erase(key, &skiplist_head_, size_shift());
     --size_;
