@@ -1,6 +1,10 @@
 set -e
 set -x
 pwd=$1
+
+chmod +x $pwd/oneflow_testexe
+$pwd/oneflow_testexe
+
 pip3 install --user $pwd/*.whl
 installed_path=$(python3 -c "import oneflow; print(oneflow.__path__[0])")
 test_dir="/test_dir"
