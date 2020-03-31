@@ -23,13 +23,14 @@ jobs:
         rm -rf *.whl
         rm -rf oneflow_testexe
         rm -rf build/third_party
+        bash tools/dev/setup_submodule.sh
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
       run: |
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        docker build --build-arg http_proxy=192.168.1.11:8118 --build-arg https_proxy=192.168.1.11:8118 --rm -t oneflow-build:${git_branch} -t oneflow-build:${git_hash} -f docker/build/Dockerfile .
+        docker build --build-arg http_proxy=${ONEFLOW_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_HTTPS_PROXY} --rm -t oneflow-build:${git_branch} -t oneflow-build:${git_hash} -f docker/build/Dockerfile .
         docker run -u $(id -u ${USER}):$(id -g ${USER}) --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD && cp /workspace/build/bin/oneflow_testexe $PWD"
     - name: Run Test
       run: |
