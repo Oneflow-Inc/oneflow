@@ -201,6 +201,10 @@ message IndexedSlicesLazyAdamModelUpdateKernelConf {
   required int64 upper_bound = 3;
 }
 
+message BroadcastToCompatibleWithKernelConf {
+  repeated int64 broadcast_axes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -247,5 +251,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 426;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 427;
+    BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
   }
 }
