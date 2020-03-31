@@ -92,17 +92,50 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   return infer_instr_msg;
 }
 
-MirroredObject* InstrCtx::mut_mirrored_object_operand(const MirroredObjectOperand& operand) {
-  return FindMirroredObjectByOperand(operand, instr_chain().stream().parallel_id());
+const MirroredObject& InstrCtx::mirrored_object_type(const MirroredObjectOperand& operand) const {
+  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
+  return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(
+      operand, instr_chain().stream().parallel_id());
 }
 
+const MirroredObject& InstrCtx::mirrored_object_value(const MirroredObjectOperand& operand) const {
+  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
+  CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
+  return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(
+      operand, instr_chain().stream().parallel_id());
+}
+
+MirroredObject* InstrCtx::mut_mirrored_object_type(const MirroredObjectOperand& operand) {
+  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
+  return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand,
+                                                              instr_chain().stream().parallel_id());
+}
+
+MirroredObject* InstrCtx::mut_mirrored_object_value(const MirroredObjectOperand& operand) {
+  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
+  CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
+  return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand,
+                                                              instr_chain().stream().parallel_id());
+}
+
+template<uint64_t (*TransformLogicalObjectId)(uint64_t)>
 MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                       int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
-  mirrored_object_id->__Init__(operand, default_parallel_id);
+  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
   if (access == nullptr) { return nullptr; }
   return access->mut_mirrored_object();
+}
+
+template<uint64_t (*TransformLogicalObjectId)(uint64_t)>
+const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+                                                            int64_t default_parallel_id) const {
+  FlatMsg<MirroredObjectId> mirrored_object_id;
+  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);
+  const auto* access = mirrored_object_id2access().FindPtr(mirrored_object_id.Get());
+  if (access == nullptr) { return nullptr; }
+  return &access->mirrored_object();
 }
 
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {

@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/logical_object_id.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/object.h"
@@ -67,18 +67,33 @@ OBJECT_MSG_BEGIN(MirroredObject);
   // methods
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
 
+  PUBLIC template<typename T> bool Has() const {
+    return dynamic_cast<const T*>(&object()) != nullptr;
+  }
+  PUBLIC template<typename T> const T& Get() const {
+    const T* obj = dynamic_cast<const T*>(&object());
+    CHECK(obj != nullptr);
+    return *obj;
+  }
+  PUBLIC template<typename T> T* Mut() {
+    T* object = dynamic_cast<T*>(object_ptr().get());
+    CHECK(object != nullptr);
+    return object;
+  }
+  PUBLIC template<typename T> T* Mutable() {
+    auto* object = new T();
+    reset_object(object);
+    return object;
+  }
   PUBLIC const Object& object() const { return *object_ptr().get(); }
   PUBLIC bool has_object() const { return object_ptr().get() != nullptr; }
   PUBLIC void reset_object(Object* object) { mut_object_ptr()->reset(object); }
-  PUBLIC const Object& object_type() const { return *object_type_ptr().get(); }
-  PUBLIC bool has_object_type() const { return object_type_ptr().get() != nullptr; }
-  PUBLIC void reset_object_type(Object* object) { mut_object_type_ptr()->reset(object); }
+  PUBLIC void reset_object() { reset_object(nullptr); }
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_PTR(LogicalObject, logical_object);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<Object>, object_ptr);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<Object>, object_type_ptr);
 
   OBJECT_MSG_DEFINE_ONEOF(mirrored_object_type,
       OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)

@@ -6,6 +6,7 @@
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
+#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -60,10 +61,14 @@ class CudaCopyD2HInstructionType final : public InstructionType {
       FlatMsgView<CudaCopyD2HInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
-      auto* dst_mirrored_obj =
-          instr_ctx->FindMirroredObjectByOperand(view->dst().operand(), stream.parallel_id());
-      CHECK_NOTNULL(dst_mirrored_obj);
-      dst = dst_mirrored_obj->mut_host_mem_buffer()->mut_data();
+      const auto& dst_buffer_type =
+          instr_ctx->mirrored_object_type(view->dst().operand()).Get<MemBufferObjectType>();
+      CHECK_LE(size, dst_buffer_type.size());
+      CHECK(dst_buffer_type.mem_case().has_host_mem());
+      CHECK(dst_buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
+      auto* dst_buffer_value =
+          instr_ctx->mut_mirrored_object_value(view->dst().operand())->Mut<MemBufferObjectValue>();
+      dst = dst_buffer_value->mut_data();
       auto* src_mirrored_obj =
           instr_ctx->FindMirroredObjectByOperand(view->src().operand(), stream.parallel_id());
       CHECK_NOTNULL(src_mirrored_obj);

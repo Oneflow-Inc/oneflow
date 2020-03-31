@@ -45,9 +45,5 @@ void MirroredObjectId::__Init__(uint64_t logical_object_id_value, int64_t parall
   set_parallel_id(parallel_id);
 }
 
-void MirroredObjectId::__Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
-  __Init__(operand.logical_object_id(), operand.GetParallelId(parallel_id));
-}
-
 }  // namespace vm
 }  // namespace oneflow

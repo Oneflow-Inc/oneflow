@@ -5,7 +5,7 @@
 #include <typeindex>
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/vm/logical_object_id.msg.h"
+#include "oneflow/core/vm/logical_object_id.h"
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/stream_type_id.h"
 
