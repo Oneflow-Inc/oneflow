@@ -24,7 +24,7 @@ namespace oneflow {
 #define BINARY_FUNC_NAME_SEQ ARITHMETIC_BINARY_FUNC_NAME_SEQ LOGICAL_BINARY_FUNC_NAME_SEQ
 #define BINARY_FUNC_SEQ ARITHMETIC_BINARY_FUNC_SEQ LOGICAL_BINARY_FUNC_SEQ
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 
@@ -64,6 +64,12 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncSub);
 template<typename T>
 struct BinaryFuncMul final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
+};
+template<typename T>
+struct BinaryFuncProd final {
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+    return BinaryFuncMul<T>::Invoke(x, y);
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMul);
 
@@ -132,6 +138,12 @@ struct BinaryFuncAND final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
+
+template<typename T>
+struct BinaryFuncAny final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAny);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -267,8 +279,10 @@ struct UnitOfBinaryFunc;
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncProd, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAny, GetZeroVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
 }  // namespace oneflow

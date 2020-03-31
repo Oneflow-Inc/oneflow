@@ -8,3 +8,4 @@ log/
 core.*
 *.pyc
 *.ipynb
+.clangd
