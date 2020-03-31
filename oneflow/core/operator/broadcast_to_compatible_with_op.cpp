@@ -112,7 +112,57 @@ class BroadcastToCompatibleWithOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    // TODO
+    const Shape& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
+    const Shape& y_shape = JUST(LogicalBlobDesc4Ibn("y"))->shape();
+    int64_t broadcast_num_axes = y_shape.NumAxes();
+    int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
+    std::vector<Shape> compatible_extend_shape_vec(num_compatibles);
+    FOR_RANGE(int64_t, i, 0, num_compatibles) {
+      compatible_extend_shape_vec.at(i) =
+          JUST(LogicalBlobDesc4Ibn(GenRepeatedBn("compatible", i)))->shape();
+    }
+    std::transform(compatible_extend_shape_vec.begin(), compatible_extend_shape_vec.end(),
+                   compatible_extend_shape_vec.begin(), [=](Shape shape) {
+                     return CreateLeftExtendedShape(ShapeView(shape), broadcast_num_axes);
+                   });
+    Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), broadcast_num_axes);
+
+    FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
+      SbpSignature sbp_sig;
+      int64_t split_axis = -1;
+      if (x_extend_shape.At(i) == 1) {
+        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_broadcast_parallel();
+      } else {
+        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_split_parallel()->set_axis(
+            i - (broadcast_num_axes - x_shape.NumAxes()));
+        split_axis = i;
+      }
+      FOR_RANGE(int64_t, j, 0, num_compatibles) {
+        std::string compatible_bn = GenRepeatedBn("compatible", j);
+        if (compatible_extend_shape_vec.at(j).At(i) == 1) {
+          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[compatible_bn].mutable_broadcast_parallel();
+        } else {
+          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[compatible_bn]
+              .mutable_split_parallel()
+              ->set_axis(i - (broadcast_num_axes - compatible_extend_shape_vec.at(j).NumAxes()));
+          split_axis = i;
+        }
+      }
+      if (split_axis >= 0) {
+        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["y"].mutable_split_parallel()->set_axis(i);
+        *sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sig;
+      }
+    }
+
+    PbRpf<std::string> compatible_bns;
+    FOR_RANGE(int64_t, i, 0, num_compatibles) {
+      *compatible_bns.Add() = GenRepeatedBn("compatible", i);
+    }
+    SbpSignatureBuilder()
+        .PartialSum("x")
+        .Broadcast(compatible_bns)
+        .PartialSum("y")
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
