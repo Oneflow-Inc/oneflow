@@ -81,8 +81,11 @@ OBJECT_MSG_BEGIN(MirroredObject);
     return object;
   }
   PUBLIC template<typename T> T* Mutable() {
-    auto* object = new T();
-    reset_object(object);
+    T* object = dynamic_cast<T*>(object_ptr().get());
+    if (object == nullptr) {
+      object = new T();
+      reset_object(object);
+    }
     return object;
   }
   PUBLIC const Object& object() const { return *object_ptr().get(); }
@@ -93,11 +96,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_PTR(LogicalObject, logical_object);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<Object>, object_ptr);
-
-  OBJECT_MSG_DEFINE_ONEOF(mirrored_object_type,
-      OBJECT_MSG_ONEOF_FIELD(HostMemBuffer, host_mem_buffer)
-      OBJECT_MSG_ONEOF_FIELD(CudaMemBuffer, cuda_mem_buffer));
+  OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);

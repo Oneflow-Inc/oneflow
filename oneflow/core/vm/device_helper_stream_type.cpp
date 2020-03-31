@@ -2,9 +2,11 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/mem_instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
+#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -39,41 +41,37 @@ class CudaMallocInstructionType final : public InstructionType {
 
   using stream_type = DeviceHelperStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(CudaMallocInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
-  FLAT_MSG_VIEW_END(CudaMallocInstruction);
-  // clang-format on
-
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
-  }
-  void Compute(InstrCtx* instr_ctx) const override {
-    MirroredObject* mirrored_object = nullptr;
-    char* dptr = nullptr;
+  void Infer(InstrCtx* instr_ctx) const override {
+    MemBufferObjectType* mem_buffer_object_type = nullptr;
     size_t size = 0;
-    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    int64_t device_id = 0;
     {
-      auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
-      FlatMsgView<CudaMallocInstruction> view;
+      FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
-      FlatMsg<MirroredObjectId> mirrored_object_id;
-      mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
-      auto* mirrored_object_access =
-          instr_ctx->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
-      CHECK_NOTNULL(mirrored_object_access);
-      mirrored_object = mirrored_object_access->mut_mirrored_object();
-      CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
-      CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
-               parallel_num);
-      CHECK(!mirrored_object->has_mirrored_object_type());
+      const auto& operand = view->mirrored_object_operand().operand();
+      MirroredObject* mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
+      device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
     }
+    mem_buffer_object_type->set_size(size);
+    mem_buffer_object_type->mut_mem_case()->mutable_device_cuda_mem()->set_device_id(device_id);
+  }
+  void Compute(InstrCtx* instr_ctx) const override {
+    const MemBufferObjectType* buffer_type = nullptr;
+    MemBufferObjectValue* buffer_value = nullptr;
+    char* dptr = nullptr;
     {
-      cudaSetDevice(stream.thread_ctx().device_id());
-      CudaCheck(cudaMalloc(&dptr, size));
+      FlatMsgView<MallocInstruction> view;
+      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      const auto& operand = view->mirrored_object_operand().operand();
+      buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instr_ctx->mut_mirrored_object_value(operand)->Mutable<MemBufferObjectValue>();
     }
-    mirrored_object->mutable_cuda_mem_buffer()->__Init__(size, dptr);
+    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    cudaSetDevice(stream.thread_ctx().device_id());
+    CudaCheck(cudaMalloc(&dptr, buffer_type->size()));
+    buffer_value->reset_data(dptr);
   }
 };
 COMMAND(RegisterInstructionType<CudaMallocInstructionType>("CudaMalloc"));
@@ -85,36 +83,30 @@ class CudaFreeInstructionType final : public InstructionType {
 
   using stream_type = DeviceHelperStreamType;
 
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(CudaFreeInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-  FLAT_MSG_VIEW_END(CudaFreeInstruction);
-  // clang-format on
-
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  void Infer(InstrCtx* instr_ctx) const override {
+    MirroredObject* type_mirrored_object = nullptr;
+    {
+      FlatMsgView<FreeInstruction> view;
+      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      const auto& operand = view->mirrored_object_operand().operand();
+      type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
+      CHECK(buffer_type.mem_case().has_device_cuda_mem());
+    }
+    type_mirrored_object->reset_object();
   }
   void Compute(InstrCtx* instr_ctx) const override {
-    MirroredObject* mirrored_object = nullptr;
-    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    MirroredObject* value_mirrored_object = nullptr;
     {
-      auto parallel_num = stream.thread_ctx().stream_rt_desc().stream_desc().parallel_num();
-      FlatMsgView<CudaFreeInstruction> view;
+      FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
-      FlatMsg<MirroredObjectId> mirrored_object_id;
-      mirrored_object_id->__Init__(view->mirrored_object_operand().operand(), stream.parallel_id());
-      auto* mirrored_object_access =
-          instr_ctx->mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
-      CHECK_NOTNULL(mirrored_object_access);
-      mirrored_object = mirrored_object_access->mut_mirrored_object();
-      CHECK_EQ(mirrored_object->parallel_id(), stream.parallel_id());
-      CHECK_EQ(mirrored_object->logical_object().parallel_id2mirrored_object().size(),
-               parallel_num);
+      const auto& operand = view->mirrored_object_operand().operand();
+      value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
     }
-    {
-      cudaSetDevice(stream.thread_ctx().device_id());
-      CudaCheck(cudaFree(mirrored_object->mut_cuda_mem_buffer()->mut_data()));
-    }
-    mirrored_object->clear_cuda_mem_buffer();
+    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    cudaSetDevice(stream.thread_ctx().device_id());
+    CudaCheck(cudaFree(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data()));
+    value_mirrored_object->reset_object();
   }
 };
 COMMAND(RegisterInstructionType<CudaFreeInstructionType>("CudaFree"));
