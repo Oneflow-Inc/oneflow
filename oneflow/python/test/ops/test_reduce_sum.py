@@ -30,7 +30,7 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims, rtol=1e-5,
 #    print(of_out.ndarray())
 #    print("diff: ")
 #    print(of_out.ndarray() - tf_out.numpy())
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol), (of_out.ndarray(), tf_out.numpy())
 
 def test_reduce_sum(test_case):
     arg_dict = OrderedDict()
