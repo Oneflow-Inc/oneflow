@@ -61,19 +61,10 @@ class TensorBuffer {
     num_bytes_ = new_num_bytes;
   }
 
-  /**
-   * @brief Returns the size in elements of the underlying data
-   */
   int64_t elem_cnt() const { return shape_.elem_cnt(); }
 
-  /**
-   * @brief Returns the size in bytes of the underlying data
-   */
   size_t nbytes() const { return elem_cnt() * GetSizeOfDataType(data_type_); }
 
-  /**
-   * @brief Returns the real size of the allocation
-   */
   size_t capacity() const { return num_bytes_; }
 
   const MemoryCase& mem_case() const { return mem_case_; }
