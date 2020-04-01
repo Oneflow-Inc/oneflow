@@ -23,7 +23,7 @@ jobs:
         rm -rf *.whl
         rm -rf oneflow_testexe
         rm -rf build/third_party
-        bash tools/dev/setup_submodule.sh
+        bash tools/dev/ci_setup_submodule.sh
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
