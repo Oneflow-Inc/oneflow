@@ -16,7 +16,7 @@ class JobStorage final {
   ~JobStorage() = default;
 
   bool HasJob(int64_t logical_object_id) const;
-  const Job& LookupJob(int64_t logical_object_id) const;
+  std::shared_ptr<Job> LookupJob(int64_t logical_object_id) const;
 
   void AddJob(const std::shared_ptr<Job>& job);
   void ClearJob(int64_t logical_object_id);

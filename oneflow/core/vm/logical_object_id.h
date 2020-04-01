@@ -13,13 +13,9 @@ inline int64_t GetTypeLogicalObjectId(int64_t value_logical_object_id) {
   return -value_logical_object_id;
 }
 
-inline bool IsTypeLogicalObjectId(int64_t logical_object_id) {
-  return logical_object_id < 0;
-}
+inline bool IsTypeLogicalObjectId(int64_t logical_object_id) { return logical_object_id < 0; }
 
-inline bool IsValueLogicalObjectId(int64_t logical_object_id) {
-  return logical_object_id > 0;
-}
+inline bool IsValueLogicalObjectId(int64_t logical_object_id) { return logical_object_id > 0; }
 
 inline int64_t GetSelfLogicalObjectId(int64_t logical_object_id) { return logical_object_id; }
 

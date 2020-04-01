@@ -54,23 +54,21 @@ class CudaCopyD2HInstructionType final : public InstructionType {
       FlatMsgView<CopyInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
-      const auto& dst_buffer_type =
-          instr_ctx->mirrored_object_type(view->dst().operand()).Get<MemBufferObjectType>();
+      const auto& dst_buffer_type = instr_ctx->operand_type(view->dst()).Get<MemBufferObjectType>();
       CHECK_LE(size, dst_buffer_type.size());
       CHECK(dst_buffer_type.mem_case().has_host_mem());
       CHECK(dst_buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
       auto* dst_buffer_value =
-          instr_ctx->mut_mirrored_object_value(view->dst().operand())->Mut<MemBufferObjectValue>();
+          instr_ctx->mut_operand_value(view->dst())->Mut<MemBufferObjectValue>();
       dst = dst_buffer_value->mut_data();
 
-      const auto& src_buffer_type =
-          instr_ctx->mirrored_object_type(view->src().operand()).Get<MemBufferObjectType>();
+      const auto& src_buffer_type = instr_ctx->operand_type(view->src()).Get<MemBufferObjectType>();
       CHECK_LE(size, src_buffer_type.size());
       CHECK(src_buffer_type.mem_case().has_device_cuda_mem());
       CHECK_EQ(src_buffer_type.mem_case().device_cuda_mem().device_id(),
                stream.thread_ctx().device_id());
       const auto& src_buffer_value =
-          instr_ctx->mirrored_object_value(view->src().operand()).Get<MemBufferObjectValue>();
+          instr_ctx->operand_value(view->src()).Get<MemBufferObjectValue>();
       src = src_buffer_value.data();
     }
     Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,

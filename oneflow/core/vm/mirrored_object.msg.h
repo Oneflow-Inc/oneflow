@@ -80,10 +80,10 @@ OBJECT_MSG_BEGIN(MirroredObject);
     CHECK(object != nullptr);
     return object;
   }
-  PUBLIC template<typename T> T* Mutable() {
+  PUBLIC template<typename T, typename... Args> T* Mutable(Args&&... args) {
     T* object = dynamic_cast<T*>(object_ptr().get());
     if (object == nullptr) {
-      object = new T();
+      object = new T(std::forward<Args>(args)...);
       reset_object(object);
     }
     return object;

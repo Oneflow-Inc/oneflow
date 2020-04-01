@@ -16,14 +16,17 @@ enum OperandModifier {
 
 // clang-format off
 template<OperandModifier modifier>
-FLAT_MSG_BEGIN(LeveledMutableMirroredObjectOperand);
-  static const OperandModifier operand_modifier = modifier;
+FLAT_MSG_BEGIN(ModifiedMirroredObjectOperand);
+  PUBLIC static const OperandModifier operand_modifier = modifier;
+  // methods
+  PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
+  // fields
   FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(LeveledMutableMirroredObjectOperand);
+FLAT_MSG_END(ModifiedMirroredObjectOperand);
 
-using ConstMirroredObjectOperand = LeveledMutableMirroredObjectOperand<kConstModifier>;
-using MutableMirroredObjectOperand = LeveledMutableMirroredObjectOperand<kDataMutableModifier>;
-using Mut2MirroredObjectOperand = LeveledMutableMirroredObjectOperand<kTypeAndDataMutableModifier>;
+using ConstMirroredObjectOperand = ModifiedMirroredObjectOperand<kConstModifier>;
+using MutableMirroredObjectOperand = ModifiedMirroredObjectOperand<kDataMutableModifier>;
+using Mut2MirroredObjectOperand = ModifiedMirroredObjectOperand<kTypeAndDataMutableModifier>;
 
 class InstructionOperandProto;
 

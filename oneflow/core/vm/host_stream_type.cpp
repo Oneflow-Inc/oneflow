@@ -31,7 +31,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
-      MirroredObject* mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
       mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
       device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
     }
@@ -47,8 +47,8 @@ class CudaMallocHostInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_mirrored_object_value(operand)->Mutable<MemBufferObjectValue>();
+      buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
     }
     CudaCheck(cudaMallocHost(&dptr, buffer_type->size()));
     buffer_value->reset_data(dptr);
@@ -71,7 +71,7 @@ class MallocInstructionType final : public InstructionType {
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
-      MirroredObject* mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
       mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
     }
     mem_buffer_object_type->set_size(size);
@@ -85,8 +85,8 @@ class MallocInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_mirrored_object_value(operand)->Mutable<MemBufferObjectValue>();
+      buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
     }
     dptr = reinterpret_cast<char*>(std::malloc(buffer_type->size()));
     buffer_value->reset_data(dptr);
@@ -108,7 +108,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      type_mirrored_object = instr_ctx->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
@@ -121,7 +121,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
+      value_mirrored_object = instr_ctx->mut_operand_value(operand);
     }
     CudaCheck(cudaFreeHost(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data()));
     value_mirrored_object->reset_object();
@@ -142,7 +142,7 @@ class FreeInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      type_mirrored_object = instr_ctx->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(!buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
@@ -155,7 +155,7 @@ class FreeInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
+      value_mirrored_object = instr_ctx->mut_operand_value(operand);
     }
     std::free(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data());
     value_mirrored_object->reset_object();
