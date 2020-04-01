@@ -33,8 +33,7 @@ REGISTER_USER_OP("reshape_like")
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return ReshapeOpUtil::GetReshapeSbpSignatures(
           in_shape, like_shape, StdVec2PbRpf<std::string>({"in"}),
-          StdVec2PbRpf<std::string>({"like", "out"}), ctx->parallel_num(),
-          ctx->sbp_sig_list());
+          StdVec2PbRpf<std::string>({"like", "out"}), ctx->parallel_num(), ctx->sbp_sig_list());
     });
 
 }  // namespace oneflow
