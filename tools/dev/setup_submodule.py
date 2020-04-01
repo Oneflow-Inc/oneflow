@@ -16,8 +16,8 @@ for s in config.sections():
     path = config[s]["path"]
     if args.oneflow_src_local_path:
         src_path = os.path.join(args.oneflow_src_local_path, path)
-        assert os.path.exists(f"{src_path}/.git"), src_path
-        config[s]["url"] = f"file://{src_path}"
+        assert os.path.exists("{}/.git".format(src_path)), src_path
+        config[s]["url"] = "file://{}".format(src_path)
     else:
         src_path = os.path.join(args.oneflow_src_remote_url, path)
         config[s]["url"] = src_path
