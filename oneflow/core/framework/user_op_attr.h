@@ -4,6 +4,7 @@
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -17,7 +18,10 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_float, float, UserOpAttrType::kAtFloat)    \
   OF_PP_MAKE_TUPLE_SEQ(at_double, double, UserOpAttrType::kAtDouble) \
   OF_PP_MAKE_TUPLE_SEQ(at_string, std::string, UserOpAttrType::kAtString)
-#define MESSAGE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape)
+
+#define MESSAGE_ATTR_SEQ                                          \
+  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape) \
+  OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, UserOpAttrType::kAtDataType)
 
 #define LIST_ATTR_SEQ                                                                     \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, UserOpAttrType::kAtListInt32) \

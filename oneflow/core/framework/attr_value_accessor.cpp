@@ -30,6 +30,17 @@ void AttrValAccessor<Shape>::SetAttr(const Shape& cpp_val, UserOpAttrVal* attr_v
   cpp_val.ToProto(attr_val->mutable_at_shape());
 }
 
+template<>
+DataType AttrValAccessor<DataType>::GetAttr(const UserOpAttrVal& val) {
+  return DataType(val.at_data_type());
+}
+template<>
+void AttrValAccessor<DataType>::SetAttr(const DataType& cpp_val, UserOpAttrVal* attr_val) {
+  attr_val->set_at_data_type(cpp_val);
+}
+
+#undef MESSAGE_ATTR_SEQ_ENTRY
+
 #define LIST_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                         \
   template<>                                                                                    \
   cpp_type AttrValAccessor<cpp_type>::GetAttr(const UserOpAttrVal& val) {                       \

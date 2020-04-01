@@ -8,7 +8,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow
+import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 
 class UserOpConfWrapper(object):
@@ -91,6 +91,9 @@ class UserOpConfWrapperBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
+        elif attr_type == "AttrDataType":
+            assert isinstance(attr_value, int) and attr_value in flow.dtypes
+            attribute.at_data_type = attr_value
         elif attr_type == "AttrTypeListInt32":
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
