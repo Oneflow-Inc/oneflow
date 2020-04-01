@@ -26,6 +26,7 @@ jobs:
     - name: Checkout submodules
       shell: bash
       run: |
+        echo $HOSTNAME
         rm -rf ci_tmp
         mkdir ci_tmp
         rm -rf build/third_party
