@@ -10,15 +10,15 @@ namespace vm {
 using LogicalObjectId = int64_t;
 
 inline int64_t GetTypeLogicalObjectId(int64_t value_logical_object_id) {
-  return static_cast<int64_t>(-static_cast<int64_t>(value_logical_object_id));
+  return -value_logical_object_id;
 }
 
 inline bool IsTypeLogicalObjectId(int64_t logical_object_id) {
-  return static_cast<int64_t>(logical_object_id) < 0;
+  return logical_object_id < 0;
 }
 
 inline bool IsValueLogicalObjectId(int64_t logical_object_id) {
-  return static_cast<int64_t>(logical_object_id) > 0;
+  return logical_object_id > 0;
 }
 
 inline int64_t GetSelfLogicalObjectId(int64_t logical_object_id) { return logical_object_id; }
