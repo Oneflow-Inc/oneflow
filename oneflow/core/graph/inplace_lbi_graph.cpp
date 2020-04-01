@@ -1,11 +1,17 @@
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
 namespace {
 
 bool IsSourceNode(const Operator& op) {
-  return op.op_conf().has_variable_conf() || op.op_conf().has_constant_conf();
+  const auto& op_conf = op.op_conf();
+  return op_conf.has_variable_conf() || op_conf.has_constant_conf()
+         || (op_conf.has_distribute_clone_conf()
+             && op_conf.distribute_clone_conf().is_variable_ref())
+         || (op_conf.has_distribute_split_conf()
+             && op_conf.distribute_split_conf().is_variable_ref());
 }
 
 void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) {
@@ -20,7 +26,11 @@ void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) {
     }
     if (dynamic_cast<const UpdateInplaceLbiNode*>(node) != nullptr) {
       CHECK_EQ(++updt_node_cnt, 1);
-      CHECK_NOTNULL(dynamic_cast<const SourceOpInplaceLbiNode*>(node->SoleInEdge()->src_node()));
+      CHECK(dynamic_cast<const SourceOpInplaceLbiNode*>(node->SoleInEdge()->src_node()) != nullptr)
+          << "UpdateInplaceLbiNode-lbi: " << PbMessage2TxtString(node->lbi())
+          << ", src_node.in_edges_size: " << node->SoleInEdge()->src_node()->in_edges().size()
+          << ", SoleInNode: " << typeid(node->SoleInEdge()->src_node()).name() << ", "
+          << PbMessage2TxtString(node->SoleInEdge()->src_node()->lbi());
     }
   }
 }

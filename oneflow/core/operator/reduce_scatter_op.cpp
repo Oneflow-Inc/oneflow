@@ -40,6 +40,12 @@ Maybe<void> ReduceScatterOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> ReduceScatterOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  return SymbolOf(op_conf);
+}
+
 REGISTER_OP(OperatorConf::kReduceScatterConf, ReduceScatterOp);
 
 }  // namespace oneflow
