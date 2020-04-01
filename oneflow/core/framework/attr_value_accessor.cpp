@@ -39,8 +39,6 @@ void AttrValAccessor<DataType>::SetAttr(const DataType& cpp_val, UserOpAttrVal* 
   attr_val->set_at_data_type(cpp_val);
 }
 
-#undef MESSAGE_ATTR_SEQ_ENTRY
-
 #define LIST_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                         \
   template<>                                                                                    \
   cpp_type AttrValAccessor<cpp_type>::GetAttr(const UserOpAttrVal& val) {                       \
