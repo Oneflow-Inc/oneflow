@@ -22,15 +22,17 @@ jobs:
     runs-on: [self-hosted, linux]
     if: github.event.pull_request.draft == false
     steps:
-    - uses: actions/checkout@v2
-    - name: Checkout submodules
-      shell: bash
+    - name: Setup environment
       run: |
         echo $HOSTNAME
         rm -rf ci_tmp
         mkdir ci_tmp
         rm -rf build/third_party
         bash ci/reset_submodule.sh
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
