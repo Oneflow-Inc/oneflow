@@ -1789,6 +1789,12 @@ message SyncDynamicResizeOpConf {
   required int64 axis = 4;
 }
 
+message BroadcastToCompatibleWithOpConf {
+  required string x = 1;
+  repeated string compatible = 2;
+  required string y = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1984,6 +1990,7 @@ message OperatorConf {
     SquareSumOpConf square_sum_conf = 522;
     BroadcastMaximumOpConf broadcast_maximum_conf = 523;
     BroadcastMinimumOpConf broadcast_minimum_conf = 524;
+    BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
