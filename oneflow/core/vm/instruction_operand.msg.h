@@ -37,7 +37,6 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(Mut2MirroredObjectOperand, mut2_operand)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
-    FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
     FLAT_MSG_ONEOF_FIELD(bool, bool_i_operand));
 FLAT_MSG_END(InstructionOperand);
 // clang-format on

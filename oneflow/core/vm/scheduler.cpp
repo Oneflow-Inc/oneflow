@@ -16,7 +16,7 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_mutable_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
     CHECK(instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
-          || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
+          || instr_operand->has_bool_i_operand());
   }
   return true;
 }
@@ -80,11 +80,11 @@ void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
   }
 }
 
-template<uint64_t (*TransformLogicalObjectId)(uint64_t), typename DoEachT>
+template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
 void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                                       const MirroredObjectOperand& mirrored_object_operand,
                                       int64_t parallel_id, const DoEachT& DoEach) {
-  uint64_t logical_object_id = mirrored_object_operand.logical_object_id();
+  int64_t logical_object_id = mirrored_object_operand.logical_object_id();
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
   auto* map = logical_object->mut_parallel_id2mirrored_object();

@@ -43,11 +43,6 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_i_o
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_i_operand) {
-  add_instr_operand()->set_uint64_i_operand(uint64_i_operand);
-  return this;
-}
-
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_i_operand) {
   add_instr_operand()->set_bool_i_operand(bool_i_operand);
   return this;
@@ -118,7 +113,7 @@ MirroredObject* InstrCtx::mut_mirrored_object_value(const MirroredObjectOperand&
                                                               instr_chain().stream().parallel_id());
 }
 
-template<uint64_t (*TransformLogicalObjectId)(uint64_t)>
+template<int64_t (*TransformLogicalObjectId)(int64_t)>
 MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                       int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
@@ -128,7 +123,7 @@ MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperan
   return access->mut_mirrored_object();
 }
 
-template<uint64_t (*TransformLogicalObjectId)(uint64_t)>
+template<int64_t (*TransformLogicalObjectId)(int64_t)>
 const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                             int64_t default_parallel_id) const {
   FlatMsg<MirroredObjectId> mirrored_object_id;

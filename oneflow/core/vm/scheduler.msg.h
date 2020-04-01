@@ -54,7 +54,7 @@ OBJECT_MSG_BEGIN(Scheduler);
   void FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
                          /*out*/ NewInstrChainList* ret_instr_chain_list);
-  template<uint64_t (*TransformLogicalObjectId)(uint64_t), typename DoEachT>
+  template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const MirroredObjectOperand& mirrored_object_operand,
                              int64_t parallel_id, const DoEachT& DoEach);

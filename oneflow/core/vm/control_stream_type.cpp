@@ -68,7 +68,7 @@ class NewSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, logical_object_id);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, logical_object_id);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_num);
   FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
   // clang-format on
@@ -88,7 +88,7 @@ class NewSymbolInstructionType final : public InstructionType {
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<NewSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
-    uint64_t logical_object_id = GetLogicalObjectId(view->logical_object_id());
+    int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
         scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
     CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
@@ -132,7 +132,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view->Match(instr_msg->mut_operand()));
-    uint64_t logical_object_id = view->mirrored_object_operand().operand().logical_object_id();
+    int64_t logical_object_id = view->mirrored_object_operand().operand().logical_object_id();
     logical_object_id = GetLogicalObjectId(logical_object_id);
     auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
     CHECK_NOTNULL(logical_object);

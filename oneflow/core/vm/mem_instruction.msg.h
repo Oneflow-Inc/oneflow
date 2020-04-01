@@ -10,7 +10,7 @@ namespace vm {
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(MallocInstruction);
   FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, size);
 FLAT_MSG_VIEW_END(MallocInstruction);
 // clang-format on
 

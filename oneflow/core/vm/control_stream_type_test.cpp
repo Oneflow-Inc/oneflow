@@ -26,9 +26,9 @@ TEST(ControlStreamType, new_symbol) {
   auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
   int64_t parallel_num = 8;
-  uint64_t symbol_value = 9527;
+  int64_t symbol_value = 9527;
   list.EmplaceBack(NewInstruction("NewSymbol")
-                       ->add_uint64_operand(symbol_value)
+                       ->add_int64_operand(symbol_value)
                        ->add_int64_operand(parallel_num));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
@@ -52,9 +52,9 @@ TEST(ControlStreamType, delete_symbol) {
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t parallel_num = 1;
-  uint64_t symbol_value = 9527;
+  int64_t symbol_value = 9527;
   list.EmplaceBack(NewInstruction("NewSymbol")
-                       ->add_uint64_operand(symbol_value)
+                       ->add_int64_operand(symbol_value)
                        ->add_int64_operand(parallel_num));
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
