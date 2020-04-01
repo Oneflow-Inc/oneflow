@@ -279,6 +279,7 @@ endif()
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
 add_custom_target(of_include_copy ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+add_dependencies(of_include_copy of_ccobj)
 file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
@@ -323,5 +324,3 @@ foreach(of_core_hdr_file ${OF_CORE_HDRS})
     "${of_core_hdr_file}"
     "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
 endforeach()
-
-add_dependencies(of_include_copy, of_ccobj)
