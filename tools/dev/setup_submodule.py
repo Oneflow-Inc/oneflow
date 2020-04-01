@@ -3,23 +3,24 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-s",
-    "--oneflow_src_path",
-    type=str,
-    default=os.getenv("ONEFLOW_SRC_DIR"),
-    required=False,
-)
+parser.add_argument("-s", "--oneflow_src_local_path", type=str, required=False)
+parser.add_argument("-r", "--oneflow_src_remote_url", type=str, required=False)
 args = parser.parse_args()
 
+assert (
+    args.oneflow_src_local_path or args.oneflow_src_remote_url
+), "require one of oneflow_src_local_path or oneflow_src_remote_url"
 config = configparser.ConfigParser()
 config.read(".gitmodules")
 for s in config.sections():
     path = config[s]["path"]
-    src_path = os.path.join(args.oneflow_src_path, path)
-    assert os.path.exists(f"{src_path}/.git"), src_path
-
-    config[s]["url"] = f"file://{src_path}"
+    if args.oneflow_src_local_path:
+        src_path = os.path.join(args.oneflow_src_local_path, path)
+        assert os.path.exists(f"{src_path}/.git"), src_path
+        config[s]["url"] = f"file://{src_path}"
+    else:
+        src_path = os.path.join(args.oneflow_src_remote_url, path)
+        config[s]["url"] = src_path
 
 with open(".gitmodules", "w") as configfile:
     config.write(configfile)
