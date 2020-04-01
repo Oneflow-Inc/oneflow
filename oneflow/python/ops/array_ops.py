@@ -347,27 +347,19 @@ def where(condition, x=None, y=None, name=None):
         if name is None:
             name = id_util.UniqueStr("Where_")
 
-        def check_broadcastable(shape_list):
-            max_num_dims = max(map(lambda x: len(x), shape_list))
-            extend_shape_list = [
-                [1] * (max_num_dims - len(shape)) + list(shape) for shape in shape_list
-            ]
-            for dims in zip(*extend_shape_list):
-                unique_dims = np.unique(np.array(dims))
-                if len(unique_dims) > 2 or (len(unique_dims) == 2 and 1 not in unique_dims):
-                    raise ValueError("condition, x and y must be broadcastable to the same shape.")
-
-        check_broadcastable([condition.shape, x.shape, y.shape])
-        op = (
+        broadcast_cond = flow.broadcast_to_compatible_with(condition, [x, y])
+        broadcast_x = flow.broadcast_to_compatible_with(x, [condition, y])
+        broadcast_y = flow.broadcast_to_compatible_with(y, [condition, x])
+        return (
             flow.user_op_builder(name)
             .Op("where")
-            .Input("condition", [condition])
-            .Input("x", [x])
-            .Input("y", [y])
+            .Input("condition", [broadcast_cond])
+            .Input("x", [broadcast_x])
+            .Input("y", [broadcast_y])
             .Output("out")
             .Build()
+            .RemoteBlobList()[0]
         )
-        return op.RemoteBlobList()[0]
     else:
         raise ValueError("it is not supported when exactly one of x or y is non-None")
 

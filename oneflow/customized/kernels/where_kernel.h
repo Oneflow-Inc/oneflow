@@ -58,9 +58,6 @@ class WhereGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelContext* ctx) override;
 };
 
-size_t InferWhereTmpBufferSize(user_op::InferContext* ctx);
-size_t InferWhereGradTmpBufferSize(user_op::InferContext* ctx);
-
 #define REGISTER_WHERE_KERNEL(device_type_v, dtype, ctype)                                     \
   REGISTER_USER_KERNEL("where")                                                                \
       .SetCreateFn([](user_op::KernelInitContext* ctx) {                                       \
@@ -72,8 +69,7 @@ size_t InferWhereGradTmpBufferSize(user_op::InferContext* ctx);
         return ctx.device_type() == device_type_v                                              \
                && cond_desc->data_type() == GetDataType<ctype>::value                          \
                && out_desc->data_type() == GetDataType<dtype>::value;                          \
-      })                                                                                       \
-      .SetInferTmpSizeFn(InferWhereTmpBufferSize);
+      });
 
 #define REGISTER_WHERE_GRAD_KERNEL(device_type_v, dtype, ctype)                                \
   REGISTER_USER_KERNEL("where_grad")                                                           \
@@ -86,8 +82,7 @@ size_t InferWhereGradTmpBufferSize(user_op::InferContext* ctx);
         return ctx.device_type() == device_type_v                                              \
                && cond_desc->data_type() == GetDataType<ctype>::value                          \
                && dz_desc->data_type() == GetDataType<dtype>::value;                           \
-      })                                                                                       \
-      .SetInferTmpSizeFn(InferWhereGradTmpBufferSize);
+      });
 
 #define REGISTER_WHERE_KERNELS(device_type_v, dtype_pair, ctype_pair)                              \
   REGISTER_WHERE_KERNEL(device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ctype_pair)) \
