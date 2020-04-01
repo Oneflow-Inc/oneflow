@@ -22,6 +22,7 @@ jobs:
     runs-on: [self-hosted, linux]
     if: github.event.pull_request.draft == false
     steps:
+    - uses: actions/checkout@v2
     - name: Setup environment
       run: |
         echo $HOSTNAME
@@ -29,7 +30,6 @@ jobs:
         mkdir ci_tmp
         rm -rf build/third_party
         bash ci/setup_submodule.sh
-    - uses: actions/checkout@v2
     - name: Checkout submodules
       shell: bash
       run: |
