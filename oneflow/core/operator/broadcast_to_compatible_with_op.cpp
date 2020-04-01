@@ -80,36 +80,25 @@ class BroadcastToCompatibleWithOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    const Shape& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
     const Shape& y_shape = JUST(LogicalBlobDesc4Ibn("y"))->shape();
     int64_t broadcast_num_axes = y_shape.NumAxes();
-    int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
-    std::vector<Shape> compatible_extend_shape_vec(num_compatibles);
-    FOR_RANGE(int64_t, i, 0, num_compatibles) {
-      const Shape& compatible_shape =
-          JUST(LogicalBlobDesc4Ibn(GenRepeatedBn("compatible", i)))->shape();
-      compatible_extend_shape_vec.at(i) =
-          CreateLeftExtendedShape(ShapeView(compatible_shape), broadcast_num_axes);
+    HashMap<std::string, Shape> ibn2extend_shape;
+    for (const std::string bn : input_bns()) {
+      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(bn))->shape();
+      OF_CHECK(ibn2extend_shape
+                   .emplace(bn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
+                   .second);
     }
-    Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), broadcast_num_axes);
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
       if (y_shape.At(i) == 1) { continue; }
       SbpSignature sbp_sig;
-      if (x_extend_shape.At(i) == 1) {
-        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_broadcast_parallel();
-      } else {
-        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_split_parallel()->set_axis(
-            i - (broadcast_num_axes - x_shape.NumAxes()));
-      }
-      FOR_RANGE(int64_t, j, 0, num_compatibles) {
-        std::string compatible_bn = GenRepeatedBn("compatible", j);
-        if (compatible_extend_shape_vec.at(j).At(i) == 1) {
-          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[compatible_bn].mutable_broadcast_parallel();
+      for (const auto& pair : ibn2extend_shape) {
+        if (pair.second.At(i) == 1) {
+          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[pair.first].mutable_broadcast_parallel();
         } else {
-          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[compatible_bn]
-              .mutable_split_parallel()
-              ->set_axis(i - (broadcast_num_axes - compatible_extend_shape_vec.at(j).NumAxes()));
+          (*sbp_sig.mutable_bn_in_op2sbp_parallel())[pair.first].mutable_split_parallel()->set_axis(
+              i - (broadcast_num_axes - pair.second.NumAxes()));
         }
       }
       (*sbp_sig.mutable_bn_in_op2sbp_parallel())["y"].mutable_split_parallel()->set_axis(i);
@@ -117,6 +106,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
     }
 
     PbRpf<std::string> compatible_bns;
+    int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
     FOR_RANGE(int64_t, i, 0, num_compatibles) {
       *compatible_bns.Add() = GenRepeatedBn("compatible", i);
     }

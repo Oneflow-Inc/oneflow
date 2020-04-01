@@ -11,16 +11,15 @@ void GenBroadcastToCompatibleWithGradOpConf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_broadcast_to_compatible_with_conf());
   if (DiffLbi4BnInOp("x") != nullptr) {
-    const BlobDesc& x_desc = LogicalBlobDesc4BnInOp("x");
-    const BlobDesc& y_desc = LogicalBlobDesc4BnInOp("y");
-    Shape x_extend_shape =
-        CreateLeftExtendedShape(ShapeView(x_desc.shape()), y_desc.shape().NumAxes());
+    const Shape& x_shape = LogicalBlobDesc4BnInOp("x").shape();
+    const Shape& y_shape = LogicalBlobDesc4BnInOp("y").shape();
+    Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), y_shape.NumAxes());
     std::vector<int32_t> reduced_axes;
-    FOR_RANGE(int64_t, i, 0, y_desc.shape().NumAxes()) {
-      if (x_extend_shape.At(i) == 1) {
+    FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
+      if (x_extend_shape.At(i) == 1 && y_shape.At(i) != 1) {
         reduced_axes.push_back(i);
       } else {
-        CHECK_EQ(x_extend_shape.At(i), y_desc.shape().At(i));
+        CHECK_EQ(x_extend_shape.At(i), y_shape.At(i));
       }
     }
 
