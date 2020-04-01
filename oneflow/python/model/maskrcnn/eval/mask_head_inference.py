@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 
-#import torch
 from .bounding_box import BoxList
 
 
@@ -131,19 +130,8 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     w = max(w, 1)
     h = max(h, 1)
 
-    # Set shape to [batchxCxHxW]
-    #mask = np.expand_dims(mask, 0)
-    #mask = np.expand_dims(mask, 0)
-
     # Resize mask
     mask = mask.astype(np.float32)
-    #mask = interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
-    #mask = torch.from_numpy(mask).float().to('cpu')
-    #mask = mask.expand((1, 1, -1, -1))
-    #mask = torch.nn.functional.interpolate(mask, (h, w), None, 'bilinear', False)
-    #mask = mask[0][0]
-    #mask = mask.cpu().numpy()
-
     mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_LINEAR)
 
 
@@ -194,21 +182,9 @@ class Masker(object):
         # Make some sanity check
         assert len(boxes) == len(masks), "Masks and boxes should have the same length."
 
-        # TODO:  Is this JIT compatible?
-        # If not we should make it compatible.
         results = []
         for mask, box in zip(masks, boxes):
             assert mask.shape[0] == len(box), "Number of objects should be the same."
             result = self.forward_single_image(mask, box)
             results.append(result)
         return results
-
-
-def make_roi_mask_post_processor(cfg):
-    if cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:
-        mask_threshold = cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD
-        masker = Masker(threshold=mask_threshold, padding=1)
-    else:
-        masker = None
-    mask_post_processor = MaskPostProcessor(masker)
-    return mask_post_processor

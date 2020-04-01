@@ -127,43 +127,6 @@ class BoxList(object):
 
         return bbox.convert(self.mode)
 
-    #def transpose(self, method):
-    #    """
-    #    Transpose bounding box (flip or rotate in 90 degree steps)
-    #    :param method: One of :py:attr:`PIL.Image.FLIP_LEFT_RIGHT`,
-    #      :py:attr:`PIL.Image.FLIP_TOP_BOTTOM`, :py:attr:`PIL.Image.ROTATE_90`,
-    #      :py:attr:`PIL.Image.ROTATE_180`, :py:attr:`PIL.Image.ROTATE_270`,
-    #      :py:attr:`PIL.Image.TRANSPOSE` or :py:attr:`PIL.Image.TRANSVERSE`.
-    #    """
-    #    if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-    #        raise NotImplementedError(
-    #            "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
-    #        )
-
-    #    image_width, image_height = self.size
-    #    xmin, ymin, xmax, ymax = self._split_into_xyxy()
-    #    if method == FLIP_LEFT_RIGHT:
-    #        TO_REMOVE = 1
-    #        transposed_xmin = image_width - xmax - TO_REMOVE
-    #        transposed_xmax = image_width - xmin - TO_REMOVE
-    #        transposed_ymin = ymin
-    #        transposed_ymax = ymax
-    #    elif method == FLIP_TOP_BOTTOM:
-    #        transposed_xmin = xmin
-    #        transposed_xmax = xmax
-    #        transposed_ymin = image_height - ymax
-    #        transposed_ymax = image_height - ymin
-
-    #    transposed_boxes = np.concatenate(
-    #        (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1
-    #    )
-    #    bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
-    #    # bbox._copy_extra_fields(self)
-    #    for k, v in self.extra_fields.items():
-    #        if not isinstance(v, np.ndarray):
-    #            v = v.transpose(method)
-    #        bbox.add_field(k, v)
-    #    return bbox.convert(self.mode)
 
     def crop(self, box):
         """
@@ -246,14 +209,3 @@ class BoxList(object):
         s += "image_height={}, ".format(self.size[1])
         s += "mode={})".format(self.mode)
         return s
-
-
-if __name__ == "__main__":
-    bbox = BoxList([[0, 0, 10, 10], [0, 0, 5, 5]], (10, 10))
-    s_bbox = bbox.resize((5, 5))
-    print(s_bbox)
-    print(s_bbox.bbox)
-
-    #t_bbox = bbox.transpose(0)
-    #print(t_bbox)
-    #print(t_bbox.bbox)

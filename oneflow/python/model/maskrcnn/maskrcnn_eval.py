@@ -1,6 +1,3 @@
-# must import get cfg before importing oneflow
-from config import get_default_cfgs
-
 import os
 import numpy as np
 import pickle
@@ -11,7 +8,7 @@ import statistics
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
 
-from datetime import datetime
+from config import get_default_cfgs
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
@@ -167,7 +164,7 @@ else:
         return maskrcnn_eval(images, image_sizes, image_ids)
 
 
-# return: (list of BoxList wrt. images, list of image_is wrt. image)
+# return: (list of BoxList wrt. images, list of image_id wrt. images)
 def GenPredictionsAndImageIds(results):
     assert isinstance(results, dict)
     box_head_results = results["box_head_results"]
@@ -254,31 +251,3 @@ if __name__ == "__main__":
         expected_results=(),
         expected_results_sigma_tol=4,
     )
-
-# Box Head
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.257
-#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.432
-#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.269
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.167
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.311
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.394
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.294
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.395
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.400
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.291
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.413
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.539
-
-# Mask Head
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.232
-#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.408
-#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.241
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.122
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.290
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.427
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.262
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.350
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.353
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.227
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.389
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.539
