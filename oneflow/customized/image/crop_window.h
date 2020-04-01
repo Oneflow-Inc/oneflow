@@ -12,8 +12,6 @@ struct CropWindow {
   CropWindow() : anchor{0, 0}, shape{0, 0} {}
 };
 
-using CropWindowGenerator = std::function<CropWindow(const Shape& shape)>;
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_IMAGE_CROP_WINDOW_H_

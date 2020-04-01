@@ -14,7 +14,7 @@ struct ImageUtil {
 };
 
 template<typename T>
-inline cv::Mat CreateMatFromPtr(int H, int W, int type, const T* ptr,
+inline cv::Mat CreateMatWithPtr(int H, int W, int type, const T* ptr,
                                 size_t step = cv::Mat::AUTO_STEP) {
   return cv::Mat(H, W, type, const_cast<T*>(ptr), step);
 }

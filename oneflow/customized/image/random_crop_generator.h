@@ -13,8 +13,8 @@ class RandomCropGenerator {
   RandomCropGenerator(AspectRatioRange aspect_ratio_range, AreaRange area_range, int64_t seed,
                       int32_t num_attempts);
 
-  CropWindow GenerateCropWindow(const Shape& shape);
-  std::vector<CropWindow> GenerateCropWindows(const Shape& shape, size_t n);
+  void GenerateCropWindow(const Shape& shape, CropWindow* crop_window);
+  void GenerateCropWindows(const Shape& shape, size_t n, std::vector<CropWindow>* crop_windows);
 
  private:
   AspectRatioRange aspect_ratio_range_;

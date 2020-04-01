@@ -13,12 +13,13 @@ RandomCropGenerator::RandomCropGenerator(AspectRatioRange aspect_ratio_range, Ar
       seed_(seed),
       num_attempts_(num_attempts) {}
 
-CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
-  CHECK(shape.NumAxes() == 2);
-  CropWindow crop;
+void RandomCropGenerator::GenerateCropWindow(const Shape& shape, CropWindow* crop_window) {
+  CHECK_EQ(shape.NumAxes(), 2);
+  CHECK(crop_window != nullptr);
+
   int H = shape.At(0);
   int W = shape.At(1);
-  if (H <= 0 || W <= 0) { return crop; }
+  if (H <= 0 || W <= 0) { return; }
 
   float min_wh_ratio = aspect_ratio_range_.first;
   float max_wh_ratio = aspect_ratio_range_.second;
@@ -28,9 +29,9 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
   int maxH = std::max<int>(1, static_cast<int>(W * max_hw_ratio));
 
   if (H * maxW < min_area) {
-    crop.shape = Shape({H, maxW});
+    crop_window->shape = Shape({H, maxW});
   } else if (W * maxH < min_area) {
-    crop.shape = Shape({maxH, W});
+    crop_window->shape = Shape({maxH, W});
   } else {
     int attempts_left = num_attempts_;
     for (; attempts_left > 0; attempts_left--) {
@@ -46,7 +47,7 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
       w = std::max(w, 1);
       h = std::max(h, 1);
 
-      crop.shape = Shape({h, w});
+      crop_window->shape = Shape({h, w});
 
       ratio = static_cast<float>(w) / h;
 
@@ -57,34 +58,36 @@ CropWindow RandomCropGenerator::GenerateCropWindow(const Shape& shape) {
       float max_area = area_dis_.b() * W * H;
       float ratio = static_cast<float>(W) / H;
       if (ratio > max_wh_ratio) {
-        crop.shape = Shape({H, maxW});
+        crop_window->shape = Shape({H, maxW});
       } else if (ratio < min_wh_ratio) {
-        crop.shape = Shape({maxH, W});
+        crop_window->shape = Shape({maxH, W});
       } else {
-        crop.shape = Shape({H, W});
+        crop_window->shape = Shape({H, W});
       }
-      float scale = std::min(1.0f, max_area / (crop.shape.At(0) * crop.shape.At(1)));
-      crop.shape.Set(0, std::max<int64_t>(1, crop.shape.At(0) * std::sqrt(scale)));
-      crop.shape.Set(1, std::max<int64_t>(1, crop.shape.At(1) * std::sqrt(scale)));
+      float scale =
+          std::min(1.0f, max_area / (crop_window->shape.At(0) * crop_window->shape.At(1)));
+      crop_window->shape.Set(0, std::max<int64_t>(1, crop_window->shape.At(0) * std::sqrt(scale)));
+      crop_window->shape.Set(1, std::max<int64_t>(1, crop_window->shape.At(1) * std::sqrt(scale)));
     }
   }
 
-  crop.anchor.Set(0, std::uniform_int_distribution<int>(0, H - crop.shape.At(0))(rand_gen_));
-  crop.anchor.Set(1, std::uniform_int_distribution<int>(0, W - crop.shape.At(1))(rand_gen_));
-  return crop;
+  crop_window->anchor.Set(
+      0, std::uniform_int_distribution<int>(0, H - crop_window->shape.At(0))(rand_gen_));
+  crop_window->anchor.Set(
+      1, std::uniform_int_distribution<int>(0, W - crop_window->shape.At(1))(rand_gen_));
 }
 
-std::vector<CropWindow> RandomCropGenerator::GenerateCropWindows(const Shape& shape, size_t n) {
+void RandomCropGenerator::GenerateCropWindows(const Shape& shape, size_t n,
+                                              std::vector<CropWindow>* crop_windows) {
   std::seed_seq seq{seed_};
   std::vector<int64_t> seeds(n);
   seq.generate(seeds.begin(), seeds.end());
+  crop_windows->resize(n);
 
-  std::vector<CropWindow> crop_windows;
   for (std::size_t i = 0; i < n; i++) {
     rand_gen_.seed(seeds.at(i));
-    crop_windows.push_back(GenerateCropWindow(shape));
+    GenerateCropWindow(shape, &(crop_windows->at(i)));
   }
-  return crop_windows;
 }
 
 }  // namespace oneflow

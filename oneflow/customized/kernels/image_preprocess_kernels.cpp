@@ -28,38 +28,15 @@ int GetOpencvInterp(const std::string& interp_type) {
 class ResizeToStaticShapeKernel final : public user_op::OpKernel {
  public:
   ResizeToStaticShapeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  ResizeToStaticShapeKernel() = default;
-  ~ResizeToStaticShapeKernel() = default;
+  ResizeToStaticShapeKernel() = delete;
+  ~ResizeToStaticShapeKernel() override = default;
 
  private:
-  void ResizePartSamples(int32_t part_id, int32_t part_num, int64_t record_num,
-                         TensorBuffer* buffers, int rsz_h, int rsz_w, int C, uint8_t* out_dptr,
-                         const std::string& interp_type) {
-    BalancedSplitter bs(record_num, part_num);
-    Range range = bs.At(part_id);
-    int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
-    CHECK(C == 3 || C == 1);
-    FOR_RANGE(int32_t, i, range.begin(), range.end()) {
-      TensorBuffer* buffer = buffers + i;
-      uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
-      const Shape& in_shape = buffer->shape();
-      CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
-      int H = in_shape.At(0);
-      int W = in_shape.At(1);
-      CHECK_EQ(C, in_shape.At(2));
-      int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-      const cv::Mat image = CreateMatFromPtr(H, W, channel_flag, buffer->data<uint8_t>());
-      cv::Mat rsz_image = CreateMatFromPtr(rsz_h, rsz_w, channel_flag, dptr);
-      int opencv_inter_type = GetOpencvInterp(interp_type);
-      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
-    }
-  }
-
   void Compute(user_op::KernelContext* ctx) override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = in_blob->shape().At(0);
-    CHECK(record_num > 0);
+    CHECK_GT(record_num, 0);
 
     TensorBuffer* buffers = in_blob->mut_dptr<TensorBuffer>();
     uint8_t* out_dptr = out_blob->mut_dptr<uint8_t>();
@@ -68,25 +45,28 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int rsz_h = out_shape.At(1);
     int rsz_w = out_shape.At(2);
     int C = out_shape.At(3);
+    CHECK(C == 3 || C == 1);
+    int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
     std::string interp_type = ctx->GetAttr<std::string>("interp_type");
+    int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
+    int opencv_inter_type = GetOpencvInterp(interp_type);
 
-    ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
-    int32_t thread_num = thread_pool->thread_num();
-    int32_t part_num = std::min(static_cast<int32_t>(record_num), thread_num);
-    BlockingCounter bc(part_num);
-    FOR_RANGE(int32_t, part_id, 0, part_num) {
-      thread_pool->AddWork([&bc, part_id, part_num, record_num, buffers, rsz_h, rsz_w, C, out_dptr,
-                            &interp_type, this]() {
-        ResizePartSamples(part_id, part_num, record_num, buffers, rsz_h, rsz_w, C, out_dptr,
-                          interp_type);
-        bc.Decrease();
-      });
-    }
-    bc.WaitUntilCntEqualZero();
+    MultiThreadLoop(record_num, [&](size_t i) {
+      TensorBuffer* buffer = buffers + i;
+      uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
+      const Shape& in_shape = buffer->shape();
+      CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
+      int H = in_shape.At(0);
+      int W = in_shape.At(1);
+      CHECK_EQ(C, in_shape.At(2));
+      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, buffer->data<uint8_t>());
+      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, dptr);
+      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
+    });
   }
 };
 
-REGISTER_USER_KERNEL("Resize")
+REGISTER_USER_KERNEL("ImageResize")
     .SetCreateFn([](user_op::KernelInitContext* ctx) { return new ResizeToStaticShapeKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
@@ -114,8 +94,8 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     if (mean_vec_.size() == 1) { mean_vec_.resize(C, mean_vec_.at(0)); }
     if (inv_std_vec_.size() == 1) { inv_std_vec_.resize(C, inv_std_vec_.at(0)); }
   }
-  CropMirrorNormalizeFromStaticShapeToFloatKernel() = default;
-  ~CropMirrorNormalizeFromStaticShapeToFloatKernel() = default;
+  CropMirrorNormalizeFromStaticShapeToFloatKernel() = delete;
+  ~CropMirrorNormalizeFromStaticShapeToFloatKernel() override = default;
 
  private:
   void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,
@@ -185,25 +165,11 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     CHECK(in_H == out_H && in_W == out_W);  // TODO(chengcheng): support crop
     int64_t H = in_H;
     int64_t W = in_W;
-
-    ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
-    int32_t thread_num = thread_pool->thread_num();
-    int32_t part_num = std::min(static_cast<int32_t>(record_num), thread_num);
-    BlockingCounter bc(part_num);
-    FOR_RANGE(int32_t, part_id, 0, part_num) {
-      thread_pool->AddWork(
-          [&bc, part_id, part_num, record_num, N, C, H, W, in_dptr, out_dptr, this]() {
-            int64_t one_sample_elem_cnt = C * H * W;
-            BalancedSplitter bs(record_num, part_num);
-            Range range = bs.At(part_id);
-            FOR_RANGE(int32_t, i, range.begin(), range.end()) {
-              CMN1Sample(C, H, W, in_dptr + one_sample_elem_cnt * i,
-                         out_dptr + one_sample_elem_cnt * i, mirror_.at(i));
-            }
-            bc.Decrease();
-          });
-    }
-    bc.WaitUntilCntEqualZero();
+    int64_t one_sample_elem_cnt = C * H * W;
+    MultiThreadLoop(record_num, [&](size_t i) {
+      CMN1Sample(C, H, W, in_dptr + one_sample_elem_cnt * i, out_dptr + one_sample_elem_cnt * i,
+                 mirror_.at(i));
+    });
   }
 
   std::vector<float> mean_vec_;
@@ -238,15 +204,14 @@ class CoinFlipKernel final : public user_op::OpKernel {
     rng_ = std::mt19937(seed);
     */
   }
-  CoinFlipKernel() = default;
-  ~CoinFlipKernel() = default;
+  CoinFlipKernel() = delete;
+  ~CoinFlipKernel() override = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
-      *(out_blob->mut_dptr<int8_t>() + i) = dis_(rng_) ? 1 : 0;
-    }
+    int8_t* dptr = out_blob->mut_dptr<int8_t>();
+    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) { *(dptr + i) = dis_(rng_) ? 1 : 0; }
   }
 
   std::bernoulli_distribution dis_;

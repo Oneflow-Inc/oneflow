@@ -61,19 +61,19 @@ def Resize(
         input_blob,
         color_space="BGR",
         interp_type="Linear",
-        resize_x=0.0,
-        resize_y=0.0,
+        resize_x=0,
+        resize_y=0,
         name=None):
     if name is None:
-        name = id_util.UniqueStr("Resize_")
+        name = id_util.UniqueStr("ImageResize_")
     return user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("Resize")\
+            .Op("ImageResize")\
             .Input("in",[input_blob])\
             .Output("out")\
             .SetAttr("color_space", color_space, "AttrTypeString")\
             .SetAttr("interp_type", interp_type, "AttrTypeString")\
-            .SetAttr("resize_x", resize_x, "AttrTypeFloat")\
-            .SetAttr("resize_y", resize_y, "AttrTypeFloat")\
+            .SetAttr("resize_x", resize_x, "AttrTypeInt64")\
+            .SetAttr("resize_y", resize_y, "AttrTypeInt64")\
             .Build().RemoteBlobList()[0]
 
 @oneflow_export("image.CropMirrorNormalize")
@@ -101,7 +101,7 @@ def CropMirrorNormalize(
             .SetAttr("output_dtype", output_dtype, "AttrTypeInt32")\
             .Build().RemoteBlobList()[0]
 
-@oneflow_export("image.CoinFlip")
+@oneflow_export("random.CoinFlip")
 def CoinFlip(
         batch_size=1,
         seed=-1,
