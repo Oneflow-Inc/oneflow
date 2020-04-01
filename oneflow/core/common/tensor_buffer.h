@@ -24,10 +24,12 @@ class TensorBuffer {
   void set_data_type(DataType val) {
     CHECK(val != DataType::kTensorBuffer) << "TensorBuffer cannot store datatype as itself";
     if (data_type_ == val) { return; }
-    data_type_ = val;
-    if (val == DataType::kInvalidDataType) { return; }
-    size_t new_num_bytes = elem_cnt() * GetSizeOfDataType(val);
-    if (new_num_bytes > num_bytes_) { reserve(new_num_bytes); }
+    if (val == DataType::kInvalidDataType) {
+      data_type_ = val;
+      return;
+    } else {
+      Resize(shape_, val);
+    }
   }
 
   template<typename T = void>
@@ -38,7 +40,7 @@ class TensorBuffer {
   }
 
   template<typename T = void>
-  inline const T* data() {
+  inline const T* data() const {
     if (data_ == nullptr) { return nullptr; }
     CheckDataType<T>(data_type_);
     return static_cast<const T*>(data_.get());
@@ -49,6 +51,7 @@ class TensorBuffer {
     data_.reset();
     data_type_ = DataType::kInvalidDataType;
     num_bytes_ = 0;
+    mem_case_.Clear();
     mem_case_.mutable_host_mem();
   }
 
@@ -88,16 +91,16 @@ class TensorBuffer {
     shape_ = new_shape;
 
     size_t new_num_bytes = elem_cnt * GetSizeOfDataType(new_type);
+    new_num_bytes = RoundUp(new_num_bytes, kTensorBufferAlignedSize);
     if (new_num_bytes > num_bytes_) {
       new_num_bytes =
           std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
       reserve(new_num_bytes);
     } else if (!MemoryCaseUtil::IsPinnedMemoryCase(mem_case_)
-               && RoundUp(new_num_bytes, kTensorBufferAlignedSize)
-                      < num_bytes_ * shrink_threshold_) {
+               && new_num_bytes < num_bytes_ * shrink_threshold_) {
       data_.reset();
       num_bytes_ = 0;
-      reserve(RoundUp(new_num_bytes, kTensorBufferAlignedSize));
+      reserve(new_num_bytes);
     }
   }
 
