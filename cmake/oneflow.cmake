@@ -323,3 +323,5 @@ foreach(of_core_hdr_file ${OF_CORE_HDRS})
     "${of_core_hdr_file}"
     "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
 endforeach()
+
+add_dependencies(of_include_copy, of_ccobj)
