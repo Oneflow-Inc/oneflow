@@ -38,7 +38,7 @@ jobs:
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
         docker build --build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY} --rm -t oneflow-build:${git_branch} -t oneflow-build:${git_hash} -f docker/build/Dockerfile .
-        docker run -u $(id -u ${USER}):$(id -g ${USER}) --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD/ci_tmp && cp /workspace/build/bin/oneflow_testexe $PWD/ci_tmp"
+        docker run -u $(id -u ${USER}):$(id -g ${USER}) --shm-size=8g --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD/ci_tmp && cp /workspace/build/bin/oneflow_testexe $PWD/ci_tmp"
     - name: Run Test
       run: |
-        docker run --shm-size=8g --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/ci/test.sh $PWD/ci_tmp
+        docker run -u $(id -u ${USER}):$(id -g ${USER}) --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test.sh
