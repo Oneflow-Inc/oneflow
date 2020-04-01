@@ -28,7 +28,7 @@ jobs:
         rm -rf ci_tmp
         mkdir ci_tmp
         rm -rf build/third_party
-        bash ci/reset_submodule.sh
+        bash ci/setup_submodule.sh
     - uses: actions/checkout@v2
     - name: Checkout submodules
       shell: bash
