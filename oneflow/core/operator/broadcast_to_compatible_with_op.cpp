@@ -1,6 +1,5 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/shape_view.h"
-#include "oneflow/core/job_completer/autograd.h"
 
 namespace oneflow {
 
@@ -21,37 +20,6 @@ Maybe<void> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape, Shape*
   return Maybe<void>::Ok();
 }
 
-void GenBroadcastToCompatibleWithGradOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
-  CHECK(op.op_conf().has_broadcast_to_compatible_with_conf());
-  if (DiffLbi4BnInOp("x") != nullptr) {
-    const BlobDesc& x_desc = LogicalBlobDesc4BnInOp("x");
-    const BlobDesc& y_desc = LogicalBlobDesc4BnInOp("y");
-    Shape x_extend_shape = CreateLeftExtendedShape(x_desc.shape(), y_desc.shape().NumAxes());
-    std::vector<int32_t> reduced_axes;
-    FOR_RANGE(int64_t, i, 0, y_desc.shape().NumAxes()) {
-      if (x_extend_shape.At(i) == 1) {
-        reduced_axes.push_back(i);
-      } else {
-        CHECK_EQ(x_extend_shape.At(i), y_desc.shape().At(i));
-      }
-    }
-
-    OperatorConf reduce_sum_like_op;
-    reduce_sum_like_op.set_name("System-AutoGrad-" + op.op_name());
-    ReduceSumLikeOpConf* conf = reduce_sum_like_op.mutable_reduce_sum_like_conf();
-    conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("y")));
-    conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("x")));
-    conf->set_y("y");
-    *conf->mutable_axis() = StdVec2PbRf(reduced_axes);
-    op_confs->push_back(reduce_sum_like_op);
-    DiffLbi4BnInOp("x")->set_op_name(reduce_sum_like_op.name());
-    DiffLbi4BnInOp("x")->set_blob_name(conf->y());
-  }
-}
-
 }  // namespace
 
 class BroadcastToCompatibleWithOp final : public Operator {
@@ -68,7 +36,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
       InputBlobModifier* modifer = MutInputBlobModifier4Ibn(GenRepeatedBn("compatible", i));
       modifer->set_use_header_only(true);
     }
-    EnrollOutputBn("y")->set_const_inplace_ibn("x");
+    EnrollOutputBn("y");
   }
 
   const PbMessage& GetCustomizedConf() const override {
@@ -118,24 +86,21 @@ class BroadcastToCompatibleWithOp final : public Operator {
     int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
     std::vector<Shape> compatible_extend_shape_vec(num_compatibles);
     FOR_RANGE(int64_t, i, 0, num_compatibles) {
-      compatible_extend_shape_vec.at(i) =
+      const Shape& compatible_shape =
           JUST(LogicalBlobDesc4Ibn(GenRepeatedBn("compatible", i)))->shape();
+      compatible_extend_shape_vec.at(i) =
+          CreateLeftExtendedShape(ShapeView(compatible_shape), broadcast_num_axes);
     }
-    std::transform(compatible_extend_shape_vec.begin(), compatible_extend_shape_vec.end(),
-                   compatible_extend_shape_vec.begin(), [=](Shape shape) {
-                     return CreateLeftExtendedShape(ShapeView(shape), broadcast_num_axes);
-                   });
     Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), broadcast_num_axes);
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
+      if (y_shape.At(i) == 1) { continue; }
       SbpSignature sbp_sig;
-      int64_t split_axis = -1;
       if (x_extend_shape.At(i) == 1) {
         (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_broadcast_parallel();
       } else {
         (*sbp_sig.mutable_bn_in_op2sbp_parallel())["x"].mutable_split_parallel()->set_axis(
             i - (broadcast_num_axes - x_shape.NumAxes()));
-        split_axis = i;
       }
       FOR_RANGE(int64_t, j, 0, num_compatibles) {
         std::string compatible_bn = GenRepeatedBn("compatible", j);
@@ -145,13 +110,10 @@ class BroadcastToCompatibleWithOp final : public Operator {
           (*sbp_sig.mutable_bn_in_op2sbp_parallel())[compatible_bn]
               .mutable_split_parallel()
               ->set_axis(i - (broadcast_num_axes - compatible_extend_shape_vec.at(j).NumAxes()));
-          split_axis = i;
         }
       }
-      if (split_axis >= 0) {
-        (*sbp_sig.mutable_bn_in_op2sbp_parallel())["y"].mutable_split_parallel()->set_axis(i);
-        *sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sig;
-      }
+      (*sbp_sig.mutable_bn_in_op2sbp_parallel())["y"].mutable_split_parallel()->set_axis(i);
+      *sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sig;
     }
 
     PbRpf<std::string> compatible_bns;
@@ -163,12 +125,15 @@ class BroadcastToCompatibleWithOp final : public Operator {
         .Broadcast(compatible_bns)
         .PartialSum("y")
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .Broadcast("x")
+        .PartialSum(compatible_bns)
+        .Broadcast("y")
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
 
 REGISTER_OP(OperatorConf::kBroadcastToCompatibleWithConf, BroadcastToCompatibleWithOp);
-REGISTER_OP_GRAD(OperatorConf::kBroadcastToCompatibleWithConf,
-                 &GenBroadcastToCompatibleWithGradOpConf);
 
 }  // namespace oneflow
