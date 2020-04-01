@@ -31,7 +31,6 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC void __Init__(const InstructionMsg& instr_msg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_i_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
@@ -84,10 +83,10 @@ OBJECT_MSG_BEGIN(InstrCtx);
   OBJECT_MSG_DEFINE_LIST_LINK(instr_ctx_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
   // private methods
-  PRIVATE template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+  PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                       int64_t default_parallel_id);
-  PRIVATE template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+  PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                             int64_t default_parallel_id) const;
 OBJECT_MSG_END(InstrCtx);

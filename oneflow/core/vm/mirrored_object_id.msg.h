@@ -36,8 +36,8 @@ FLAT_MSG_END(MirroredObjectOperand);
 FLAT_MSG_BEGIN(MirroredObjectId);
   // methods
   PUBLIC void __Init__() {}
-  PUBLIC void __Init__(uint64_t logical_object_id_value, int64_t parallel_id);
-  PUBLIC template<uint64_t(*TransformLogicalObjectId)(uint64_t)>
+  PUBLIC void __Init__(int64_t logical_object_id_value, int64_t parallel_id);
+  PUBLIC template<int64_t(*TransformLogicalObjectId)(int64_t)>
          void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
     __Init__(TransformLogicalObjectId(operand.logical_object_id()),
              operand.GetParallelId(parallel_id));
@@ -48,7 +48,7 @@ FLAT_MSG_BEGIN(MirroredObjectId);
   PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, logical_object_id_value);
+  FLAT_MSG_DEFINE_OPTIONAL(int64_t, logical_object_id_value);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
 
 FLAT_MSG_END(MirroredObjectId);

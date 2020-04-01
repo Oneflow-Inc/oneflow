@@ -23,34 +23,34 @@ ObjectMsgPtr<VmDesc> NewVmDesc() {
   return vm_desc;
 }
 
-ObjectMsgPtr<Scheduler> NewTestScheduler(uint64_t symbol_value, size_t size) {
+ObjectMsgPtr<Scheduler> NewTestScheduler(int64_t symbol_value, size_t size) {
   auto vm_desc = NewVmDesc();
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(symbol_value)->add_int64_operand(1));
+      NewInstruction("NewSymbol")->add_int64_operand(symbol_value)->add_int64_operand(1));
   list.EmplaceBack(
-      NewInstruction("Malloc")->add_mut_operand(symbol_value)->add_uint64_operand(size));
+      NewInstruction("Malloc")->add_mut_operand(symbol_value)->add_int64_operand(size));
   scheduler->Receive(&list);
   return scheduler;
 }
 
 TEST(L2RSenderReceiverStreamType, basic) {
-  uint64_t logical_token = 88888888;
-  uint64_t src_symbol = 9527;
-  uint64_t dst_symbol = 9528;
+  int64_t logical_token = 88888888;
+  int64_t src_symbol = 9527;
+  int64_t dst_symbol = 9528;
   size_t size = 1024;
   auto scheduler0 = NewTestScheduler(src_symbol, size);
   auto scheduler1 = NewTestScheduler(dst_symbol, size);
   scheduler0->Receive(NewInstruction("L2RSend")
                           ->add_operand(src_symbol)
-                          ->add_uint64_operand(logical_token)
-                          ->add_uint64_operand(size));
+                          ->add_int64_operand(logical_token)
+                          ->add_int64_operand(size));
   scheduler1->Receive(NewInstruction("L2RReceive")
                           ->add_mut_operand(dst_symbol)
-                          ->add_uint64_operand(logical_token)
-                          ->add_uint64_operand(size));
+                          ->add_int64_operand(logical_token)
+                          ->add_int64_operand(size));
   while (!(scheduler0->Empty() && scheduler1->Empty())) {
     scheduler0->Schedule();
     OBJECT_MSG_LIST_FOR_EACH(scheduler0->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }

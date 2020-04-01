@@ -11,11 +11,11 @@ namespace vm {
 FLAT_MSG_VIEW_BEGIN(CopyInstruction);
   FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
   FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, src);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, size);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, size);
 FLAT_MSG_VIEW_END(CopyInstruction);
 // clang-format on
 
-}
-}
+}  // namespace vm
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_COPY_INSTRUCTION_MSG_H_

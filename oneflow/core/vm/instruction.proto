@@ -5,7 +5,7 @@ message MirroredParallelIdProto {}
 message AllParallelIdProto {}
 
 message MirroredObjectOperandProto {
-  required uint64 logical_object_id = 1;
+  required int64 logical_object_id = 1;
   oneof operand_type {
     int64 fixed_parallel_id = 2;
     MirroredParallelIdProto mirrored_parallel_id = 3;
@@ -19,8 +19,7 @@ message InstructionOperandProto {
     MirroredObjectOperandProto mutable_operand = 2;
     double double_i_operand = 3;
     int64 int64_i_operand = 4;
-    uint64 uint64_i_operand = 5;
-    bool bool_i_operand = 6;
+    bool bool_i_operand = 5;
   }
 }
 

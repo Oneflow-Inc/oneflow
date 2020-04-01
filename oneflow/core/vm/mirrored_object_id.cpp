@@ -40,7 +40,7 @@ int64_t MirroredObjectOperand::GetParallelId(int64_t parallel_id) const {
   return parallel_id;
 }
 
-void MirroredObjectId::__Init__(uint64_t logical_object_id_value, int64_t parallel_id) {
+void MirroredObjectId::__Init__(int64_t logical_object_id_value, int64_t parallel_id) {
   set_logical_object_id_value(logical_object_id_value);
   set_parallel_id(parallel_id);
 }
