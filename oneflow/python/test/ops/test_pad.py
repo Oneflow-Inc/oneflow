@@ -55,10 +55,22 @@ def compare_with_tensorflow(device_type, input_shape, paddings):
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
-def test_pad(test_case):
+def test_pad_gpu(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2, 2, 1, 3)]
+    arg_dict["input_shape"] = [(2, 2, 1, 3), (1, 1, 2, 3)]
+    arg_dict["paddings"] = [
+                            ([0, 0], [0, 0], [1, 2], [1, 1]), 
+                            ([0, 0], [0, 0], [0, 1], [1, 0]),
+                            ([0, 0], [0, 0], [10, 20], [0, 0],)
+                           ]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
+
+def test_pad_cpu(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu"]
+    arg_dict["input_shape"] = [(2, 3, 4, 3), (5, 1, 1, 1)]
     arg_dict["paddings"] = [
                             ([0, 0], [0, 0], [1, 2], [1, 1]), 
                             ([0, 0], [0, 0], [0, 1], [1, 0]),

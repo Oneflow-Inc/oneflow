@@ -13,7 +13,7 @@ REGISTER_USER_OP("pad")
       auto paddings_vec = ctx->GetAttr<std::vector<int64_t>>("paddings");
       CHECK_EQ(paddings_vec.size(), 2 * x_shape->NumAxes());
       DimVector y_dim_vec(x_shape->NumAxes());
-      FOR_RANGE(int64_t, i, 0, x_shape->NumAxes()){
+      FOR_RANGE(int64_t, i, 0, x_shape->NumAxes()) {
         y_dim_vec[i] = x_shape->At(i) + paddings_vec[2 * i] + paddings_vec[2 * i + 1];
       }
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
@@ -22,12 +22,19 @@ REGISTER_USER_OP("pad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // TODO: check sbp
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      auto paddings_vec = ctx->GetAttr<std::vector<int64_t>>("paddings");
+      int32_t slice_dims = 0;
+      FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+        if (paddings_vec[2 * i] == 0 && paddings_vec[2 * i + 1] == 0) { slice_dims++; }
+      }
+      slice_dims = std::max(0, slice_dims - 1);
+      for (int64_t i = 0; i <= slice_dims; i++) {
+        SbpSignatureBuilder()
+            .Split("x", 0, i)
+            .Split("y", 0, i)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     });
 
@@ -41,7 +48,7 @@ REGISTER_USER_OP("pad_grad")
       auto paddings_vec = ctx->GetAttr<std::vector<int64_t>>("paddings");
       CHECK_EQ(paddings_vec.size(), 2 * dy_shape->NumAxes());
       DimVector dx_dim_vec(dy_shape->NumAxes());
-      FOR_RANGE(int64_t, i, 0, dy_shape->NumAxes()){
+      FOR_RANGE(int64_t, i, 0, dy_shape->NumAxes()) {
         dx_dim_vec[i] = dy_shape->At(i) - paddings_vec[2 * i] - paddings_vec[2 * i + 1];
       }
       *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);
@@ -49,30 +56,37 @@ REGISTER_USER_OP("pad_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO: check sbp
-      SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("dx", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      auto paddings_vec = ctx->GetAttr<std::vector<int64_t>>("paddings");
+      int32_t slice_dims = 0;
+      FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+        if (paddings_vec[2 * i] == 0 && paddings_vec[2 * i + 1] == 0) { slice_dims++; }
+      }
+      slice_dims = std::max(0, slice_dims - 1);
+      for (int64_t i = 0; i <= slice_dims; i++) {
+        SbpSignatureBuilder()
+            .Split("dx", 0, i)
+            .Split("dy", 0, i)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("pad")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("pad_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("dx")
-                .Attr("constant_value", op.attr<float>("constant_value"))
-                .Attr("paddings", op.attr<std::vector<int64_t>>("paddings"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-    });
+REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                       user_op::AddOpFn AddOp) {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("pad_grad")
+            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+            .Output("dx")
+            .Attr("constant_value", op.attr<float>("constant_value"))
+            .Attr("paddings", op.attr<std::vector<int64_t>>("paddings"))
+            .Build();
+    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+    AddOp(grad_op);
+  }
+});
 
 REGISTER_USER_OP_GRAD("pad_grad")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
@@ -89,6 +103,5 @@ REGISTER_USER_OP_GRAD("pad_grad")
         AddOp(grad_op);
       }
     });
-
 
 }  // namespace oneflow
