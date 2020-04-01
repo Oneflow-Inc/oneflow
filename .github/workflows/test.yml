@@ -30,7 +30,7 @@ jobs:
         rm -rf ci_tmp
         mkdir ci_tmp
         rm -rf build/third_party
-        bash tools/dev/ci_setup_submodule.sh
+        bash ci/reset_submodule.sh
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
@@ -41,4 +41,4 @@ jobs:
         docker run -u $(id -u ${USER}):$(id -g ${USER}) --rm -v $PWD:$PWD oneflow-build:${git_hash} bash -c "cp /workspace/dist/*.whl $PWD/ci_tmp && cp /workspace/build/bin/oneflow_testexe $PWD/ci_tmp"
     - name: Run Test
       run: |
-        docker run --shm-size=8g --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/tools/dev/ci_test.sh $PWD/ci_tmp
+        docker run --shm-size=8g --rm -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash $PWD/ci/test.sh $PWD/ci_tmp
