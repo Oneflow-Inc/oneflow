@@ -4,14 +4,16 @@ on:
     push:
       branches:
         - develop
+      paths-ignore:
+        - '**.md'
+        - '.gitignore'
     pull_request:
       types: [synchronize, opened, reopened, ready_for_review]
       branches:
         - develop
-      paths:
-        oneflow/**
-        cmake/**
-        CMakeLists.txt
+      paths-ignore:
+        - '**.md'
+        - '.gitignore'
 
 jobs:
 
