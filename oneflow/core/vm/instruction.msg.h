@@ -67,10 +67,31 @@ OBJECT_MSG_BEGIN(InstrCtx);
     set_instr_chain(instr_chain);
     reset_instr_msg(instr_msg);
   }
-  PUBLIC const MirroredObject& mirrored_object_type(const MirroredObjectOperand& operand) const;
-  PUBLIC const MirroredObject& mirrored_object_value(const MirroredObjectOperand& operand) const;
-  PUBLIC MirroredObject* mut_mirrored_object_type(const MirroredObjectOperand& operand);
-  PUBLIC MirroredObject* mut_mirrored_object_value(const MirroredObjectOperand& operand);
+  PUBLIC const MirroredObject& operand_type(const MirroredObjectOperand& operand) const;
+  PUBLIC const MirroredObject& operand_value(const MirroredObjectOperand& operand) const;
+  PUBLIC MirroredObject* mut_operand_type(const MirroredObjectOperand& operand);
+  PUBLIC MirroredObject* mut_operand_value(const MirroredObjectOperand& operand);
+  PUBLIC template<OperandModifier operand_modifier>
+  const MirroredObject& operand_type(
+      const ModifiedMirroredObjectOperand<operand_modifier>& operand) const {
+    return operand_type(operand.operand());
+  }
+  PUBLIC template<OperandModifier operand_modifier>
+  const MirroredObject& operand_value(
+      const ModifiedMirroredObjectOperand<operand_modifier>& operand) const {
+    return operand_value(operand.operand());
+  }
+  PUBLIC template<OperandModifier operand_modifier>
+  MirroredObject* mut_operand_type(
+      const ModifiedMirroredObjectOperand<operand_modifier>& operand) {
+    return mut_operand_type(operand.operand());
+  }
+  PUBLIC template<OperandModifier operand_modifier>
+  MirroredObject* mut_operand_value(
+      const ModifiedMirroredObjectOperand<operand_modifier>& operand) {
+    return mut_operand_value(operand.operand());
+  }
+
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
                                                      int64_t default_parallel_id) {
     return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);

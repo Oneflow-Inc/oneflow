@@ -73,12 +73,11 @@ void MakeSendRequests(InstrCtx* instr_ctx, TransportKey2SendRequest* transport_k
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_parallel_id(stream.parallel_id());
     data_size = view->size();
-    const auto& src_buffer_type =
-        instr_ctx->mirrored_object_type(view->src().operand()).Get<MemBufferObjectType>();
+    const auto& src_buffer_type = instr_ctx->operand_type(view->src()).Get<MemBufferObjectType>();
     CHECK_LE(data_size, src_buffer_type.size());
     CHECK(src_buffer_type.mem_case().has_host_mem());
     const auto& src_buffer_value =
-        instr_ctx->mirrored_object_value(view->src().operand()).Get<MemBufferObjectValue>();
+        instr_ctx->operand_value(view->src()).Get<MemBufferObjectValue>();
     data_ptr = src_buffer_value.data();
   }
   std::atomic<int64_t>* incomplete_cnt = nullptr;

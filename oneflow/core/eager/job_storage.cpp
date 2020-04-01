@@ -8,9 +8,9 @@ bool JobStorage::HasJob(int64_t logical_object_id) const {
   return logical_object_id2job_.find(logical_object_id) != logical_object_id2job_.end();
 }
 
-const Job& JobStorage::LookupJob(int64_t logical_object_id) const {
+std::shared_ptr<Job> JobStorage::LookupJob(int64_t logical_object_id) const {
   std::unique_lock<std::mutex> lock(mutex_);
-  return *logical_object_id2job_.at(logical_object_id);
+  return logical_object_id2job_.at(logical_object_id);
 }
 
 void JobStorage::AddJob(const std::shared_ptr<Job>& job) {

@@ -50,7 +50,7 @@ class CudaMallocInstructionType final : public InstructionType {
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
-      MirroredObject* mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
       mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
       device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
     }
@@ -65,8 +65,8 @@ class CudaMallocInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      buffer_type = &instr_ctx->mut_mirrored_object_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_mirrored_object_value(operand)->Mutable<MemBufferObjectValue>();
+      buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
     }
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
     cudaSetDevice(stream.thread_ctx().device_id());
@@ -89,7 +89,7 @@ class CudaFreeInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      type_mirrored_object = instr_ctx->mut_mirrored_object_type(operand);
+      type_mirrored_object = instr_ctx->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_device_cuda_mem());
     }
@@ -101,7 +101,7 @@ class CudaFreeInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
       const auto& operand = view->mirrored_object_operand().operand();
-      value_mirrored_object = instr_ctx->mut_mirrored_object_value(operand);
+      value_mirrored_object = instr_ctx->mut_operand_value(operand);
     }
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
     cudaSetDevice(stream.thread_ctx().device_id());

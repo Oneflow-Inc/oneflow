@@ -87,26 +87,26 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   return infer_instr_msg;
 }
 
-const MirroredObject& InstrCtx::mirrored_object_type(const MirroredObjectOperand& operand) const {
+const MirroredObject& InstrCtx::operand_type(const MirroredObjectOperand& operand) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(
       operand, instr_chain().stream().parallel_id());
 }
 
-const MirroredObject& InstrCtx::mirrored_object_value(const MirroredObjectOperand& operand) const {
+const MirroredObject& InstrCtx::operand_value(const MirroredObjectOperand& operand) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(
       operand, instr_chain().stream().parallel_id());
 }
 
-MirroredObject* InstrCtx::mut_mirrored_object_type(const MirroredObjectOperand& operand) {
+MirroredObject* InstrCtx::mut_operand_type(const MirroredObjectOperand& operand) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand,
                                                               instr_chain().stream().parallel_id());
 }
 
-MirroredObject* InstrCtx::mut_mirrored_object_value(const MirroredObjectOperand& operand) {
+MirroredObject* InstrCtx::mut_operand_value(const MirroredObjectOperand& operand) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand,
