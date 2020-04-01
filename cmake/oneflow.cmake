@@ -241,7 +241,7 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${oneflow_python_file}"
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
-
+add_dependencies(of_pyscript_copy of_protoobj)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
