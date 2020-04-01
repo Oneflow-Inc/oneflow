@@ -4,7 +4,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/memory/dynamic_memory_allocator.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -59,8 +59,8 @@ class TensorBuffer {
     if (new_num_bytes <= num_bytes_) { return; }
 
     data_.reset();
-    data_.reset(DynamicMemoryAllocator::New(mem_case_, new_num_bytes),
-                std::bind(DynamicMemoryAllocator::Delete, std::placeholders::_1, mem_case_));
+    data_.reset(MemoryAllocatorImpl::New(mem_case_, new_num_bytes),
+                std::bind(MemoryAllocatorImpl::Delete, std::placeholders::_1, mem_case_));
     num_bytes_ = new_num_bytes;
   }
 
