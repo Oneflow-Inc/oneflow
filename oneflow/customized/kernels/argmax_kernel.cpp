@@ -39,7 +39,7 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_ARG_MAX_KERNEL(dtype)                                                 \
+#define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                  \
   REGISTER_USER_KERNEL("argmax")                                                           \
       .SetCreateFn(                                                                        \
           [](user_op::KernelInitContext* ctx) { return new CpuArgMaxKernel<dtype>(ctx); }) \
@@ -49,9 +49,9 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
                && in_desc->data_type() == GetDataType<dtype>::value;                       \
       });
 
-REGISTER_CPU_ARG_MAX_KERNEL(float)
-REGISTER_CPU_ARG_MAX_KERNEL(double)
-REGISTER_CPU_ARG_MAX_KERNEL(int32_t)
-REGISTER_CPU_ARG_MAX_KERNEL(int64_t)
+REGISTER_CPU_ARGMAX_KERNEL(float)
+REGISTER_CPU_ARGMAX_KERNEL(double)
+REGISTER_CPU_ARGMAX_KERNEL(int32_t)
+REGISTER_CPU_ARGMAX_KERNEL(int64_t)
 
 }  // namespace oneflow
