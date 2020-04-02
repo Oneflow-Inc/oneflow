@@ -321,21 +321,43 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("local_nonzero")
-def local_nonzero(input, name=None):
+@oneflow_export("argwhere")
+def argwhere(condition, dtype=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ArgWhere_")
+
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("LocalNonzero_"))
-    setattr(op_conf.local_nonzero_conf, "in", input.logical_blob_name)
-    setattr(op_conf.local_nonzero_conf, "out", "out")
-    setattr(op_conf.local_nonzero_conf, "num_nonzero", "num_nonzero")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.arg_where_conf, "in", condition.logical_blob_name)
+    setattr(op_conf.arg_where_conf, "out", "out")
+    setattr(op_conf.arg_where_conf, "out_size", "out_size")
+    if dtype is not None:
+        setattr(op_conf.arg_where_conf, "data_type", dtype)
     compile_context.CurJobAddOp(op_conf)
-    ret = []
-    for obn in ["out", "num_nonzero"]:
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", obn)
-        ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return sync_dynamic_resize(ret[0], ret[1])
+
+    arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_lbi, "blob_name", "out")
+
+    arg_where_out_size_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_size_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_size_lbi, "blob_name", "out_size")
+
+    arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
+    arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
+    return sync_dynamic_resize(arg_where_out, arg_where_out_size)
+
+
+@oneflow_export("nonzero")
+def nonzero(a, name=None):
+    if name is None:
+        argwhere_name = id_util.UniqueStr("Nonzero_ArgWhere_")
+        tranpose_name = id_util.UniqueStr("Nonzero_Transpose_")
+    else:
+        argwhere_name = name + "_ArgWhere"
+        tranpose_name = name + "_Transpose"
+    indices = argwhere(a, name=argwhere_name)
+    return transpose(indices, perm=(1, 0), name=tranpose_name)
 
 
 @oneflow_export("where")
