@@ -537,7 +537,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lb
   JUST(CheckLbnValidAndExist(lbn));
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
-      << "job has not TrainConf when add loss logical blob name";
+      << "job has no TrainConf when adding loss logical blob name";
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>::Ok();
 }
@@ -593,7 +593,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
   const auto& mirrored_lbi = JUST(GetMirroredLbi(lbn));
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
-      << "job has not TrainConf when add loss logical blob name";
+      << "job has no TrainConf when adding loss logical blob name";
   for (const auto& lbi : mirrored_lbi2sub_lbis_.at(*mirrored_lbi)) {
     job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(GenLogicalBlobName(lbi));
   }
