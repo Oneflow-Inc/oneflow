@@ -30,7 +30,6 @@ def RunTest(shape, data_type):
 
     input = np.random.random_sample((shape)).astype(np.float32)
     output = TestDataTypeAttrJob(input).get().ndarray()
-    print(output.dtype)
     assert output.dtype == type_name_to_np_type[data_type]
 
 
