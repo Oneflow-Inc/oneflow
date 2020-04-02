@@ -1,14 +1,7 @@
-#include "oneflow/customized/kernels/where_kernel.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/customized/kernels/where_kernel_util.h"
 
 namespace oneflow {
-
-template<typename T, typename CondT>
-struct WhereFunctor<DeviceType::kCPU, T, CondT> {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                  const T* rhs, T* out) const {
-    DoWhere(elem_cnt, cond, lhs, rhs, out);
-  }
-};
 
 template<DeviceType device_type, typename T, typename CondT>
 class WhereKernel final : public user_op::OpKernel {
@@ -42,9 +35,6 @@ class WhereKernel final : public user_op::OpKernel {
                && cond_desc->data_type() == OF_PP_PAIR_SECOND(ctype_pair)                      \
                && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                      \
       });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ)

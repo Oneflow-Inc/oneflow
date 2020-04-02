@@ -1,4 +1,4 @@
-#include "oneflow/customized/kernels/where_kernel.h"
+#include "oneflow/customized/kernels/where_kernel_util.h"
 
 namespace oneflow {
 
@@ -16,9 +16,7 @@ template<typename T, typename CondT>
 struct WhereFunctor<DeviceType::kGPU, T, CondT> {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                   const T* rhs, T* out) const {
-    CudaWhere<T, CondT>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, cond, lhs, rhs, out);
+    RUN_CUDA_KERNEL((CudaWhere<T, CondT>), ctx, elem_cnt, elem_cnt, cond, lhs, rhs, out);
   }
 };
 
