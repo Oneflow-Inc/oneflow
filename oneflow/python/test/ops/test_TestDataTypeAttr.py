@@ -36,7 +36,7 @@ def RunTest(shape, data_type):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["shape"] = [(10, 10)]
-    # TODO: fix bugs in ForeignOutputKernel with "float" and "char"
+    # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
     arg_dict["data_type"] = ["float32", "double", "int8", "int32", "int64", "uint8"]
 
     return GenArgList(arg_dict)
