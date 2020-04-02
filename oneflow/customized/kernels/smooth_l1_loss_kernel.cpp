@@ -7,7 +7,6 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
  public:
   SmoothL1LossCPUKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
 
-  SmoothL1LossCPUKernel() = default;
   ~SmoothL1LossCPUKernel() = default;
 
  private:

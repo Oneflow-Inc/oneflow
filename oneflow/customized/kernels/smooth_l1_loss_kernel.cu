@@ -8,10 +8,11 @@ template<typename T>
 __global__ void SmoothL1LossForward(const int64_t elem_cnt, const T* prediction, const T* label,
                                     const T beta, T* loss) {
   const T half_beta = static_cast<T>(0.5) * beta;
+  const T point5_div_beta = static_cast<T>(0.5) / beta;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T abs_diff = std::abs(prediction[i] - label[i]);
     if (abs_diff < beta) {
-      loss[i] = static_cast<T>(0.5) * abs_diff * abs_diff / beta;
+      loss[i] = abs_diff * abs_diff * point5_div_beta;
     } else {
       loss[i] = abs_diff - half_beta;
     }
@@ -26,11 +27,10 @@ __global__ void SmoothL1LossBackward(const int64_t elem_cnt, const T* loss_grad,
     const T diff = prediction[i] - label[i];
     const T abs_diff = std::abs(diff);
     if (abs_diff < beta) {
-      prediction_grad[i] = diff / beta;
+      prediction_grad[i] = diff / beta * loss_grad[i];
     } else {
-      prediction_grad[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
+      prediction_grad[i] = ((diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>())) * loss_grad[i];
     }
-    prediction_grad[i] = prediction_grad[i] * loss_grad[i];
   }
 }
 
@@ -41,7 +41,6 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
  public:
   SmoothL1LossGPUKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
 
-  SmoothL1LossGPUKernel() = default;
   ~SmoothL1LossGPUKernel() = default;
 
  private:

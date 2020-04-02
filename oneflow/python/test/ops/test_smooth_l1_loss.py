@@ -64,10 +64,7 @@ def test_smooth_l1_loss(_):
         def assert_prediction_grad(b):
             prediction_grad = np_result["prediction_grad"]
             assert prediction_grad.dtype == type_name_to_np_type[data_type]
-            if data_type == "float":
-                assert np.array_equal(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
-            else:
-                assert np.allclose(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
+            assert np.allclose(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
 
         @flow.function(func_config)
         def TestJob(
@@ -91,7 +88,4 @@ def test_smooth_l1_loss(_):
         loss_np = np_result["loss"]
         assert loss_np.dtype == type_name_to_np_type[data_type]
         loss = TestJob(prediction, label).get().ndarray()
-        if data_type == "float":
-            assert np.array_equal(loss_np, loss), (case, loss_np, loss)
-        else:
-            assert np.allclose(loss_np, loss), (case, loss_np, loss)
+        assert np.allclose(loss_np, loss), (case, loss_np, loss)
