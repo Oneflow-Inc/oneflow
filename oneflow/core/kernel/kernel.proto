@@ -206,6 +206,11 @@ message SyncDynamicResizeKernelConf {
   required DataType size_data_type = 1;
 }
 
+message ArgWhereKernelConf {
+  required int32 num_axes = 1;
+  required DataType in_data_type = 2;
+}
+
 message BroadcastToCompatibleWithKernelConf {
   repeated int64 broadcast_axes = 1;
 }
@@ -241,6 +246,7 @@ message KernelConf {
     IndexedSlicesMomentumModelUpdateKernelConf indexed_slices_momentum_model_update_conf = 358;
     IndexedSlicesLazyAdamModelUpdateKernelConf indexed_slices_lazy_adam_model_update_conf = 359;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
+    ArgWhereKernelConf arg_where_conf = 361;
 
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
