@@ -27,7 +27,8 @@ def pad(x, paddings, constant_value=0, name=None):
         .Output("y")
         .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
         .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
-        .SetAttr("constant_value", float(constant_value), "AttrTypeFloat")
+        .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
+        .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .RemoteBlobList()[0]
     )
@@ -56,7 +57,8 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .Output("dx")
         .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
         .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
-        .SetAttr("constant_value", float(constant_value), "AttrTypeFloat")
+        .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
+        .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .RemoteBlobList()[0]
     )

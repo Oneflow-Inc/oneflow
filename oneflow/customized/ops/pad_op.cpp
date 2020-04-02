@@ -8,7 +8,8 @@ REGISTER_USER_OP("pad")
     .Output("y")
     .Attr("padding_before", UserOpAttrType::kAtListInt64)
     .Attr("padding_after", UserOpAttrType::kAtListInt64)
-    .Attr("constant_value", UserOpAttrType::kAtFloat)
+    .Attr("floating_constant_value", UserOpAttrType::kAtDouble)
+    .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
@@ -24,10 +25,10 @@ REGISTER_USER_OP("pad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
       auto padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
-      for (int64_t i = 0; i <= tensor.shape().NumAxes(); i++) {
+      for (int64_t i = 0; i < x_tensor.shape().NumAxes(); i++) {
         if (padding_before[i] == 0 && padding_after[i] == 0){
           SbpSignatureBuilder()
               .Split("dx", 0, i)
@@ -43,7 +44,8 @@ REGISTER_USER_OP("pad_grad")
     .Output("dx")
     .Attr("padding_before", UserOpAttrType::kAtListInt64)
     .Attr("padding_after", UserOpAttrType::kAtListInt64)
-    .Attr("constant_value", UserOpAttrType::kAtFloat)
+    .Attr("floating_constant_value", UserOpAttrType::kAtDouble)
+    .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
@@ -59,10 +61,10 @@ REGISTER_USER_OP("pad_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
       auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
       auto padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
-      for (int64_t i = 0; i <= tensor.shape().NumAxes(); i++) {
+      for (int64_t i = 0; i < dy_tensor.shape().NumAxes(); i++) {
         if (padding_before[i] == 0 && padding_after[i] == 0){
           SbpSignatureBuilder()
               .Split("dx", 0, i)
@@ -81,7 +83,8 @@ REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrap
         builder.Op("pad_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
             .Output("dx")
-            .Attr("constant_value", op.attr<float>("constant_value"))
+            .Attr("floating_constant_value", op.attr<double>("floating_constant_value"))
+            .Attr("integral_constant_value", op.attr<int64_t>("integral_constant_value"))
             .Attr("padding_before", op.attr<std::vector<int64_t>>("padding_before"))
             .Attr("padding_after", op.attr<std::vector<int64_t>>("padding_after"))
             .Build();
@@ -98,7 +101,8 @@ REGISTER_USER_OP_GRAD("pad_grad")
             builder.Op("pad")
                 .Input("x", op.GetGradTensorWithOpOutput("dy", 0))
                 .Output("y")
-                .Attr("constant_value", op.attr<float>("constant_value"))
+                .Attr("floating_constant_value", op.attr<double>("floating_constant_value"))
+                .Attr("integral_constant_value", op.attr<int64_t>("integral_constant_value"))
                 .Attr("padding_before", op.attr<std::vector<int64_t>>("padding_before"))
                 .Attr("padding_after", op.attr<std::vector<int64_t>>("padding_after"))
                 .Build();
