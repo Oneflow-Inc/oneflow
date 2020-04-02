@@ -188,12 +188,12 @@ def test_where_grad_case_1(test_case):
         _compare_with_tf(test_case, *arg)
 
 
-# def test_where_grad_case_2(test_case):
-#     arg_dict = OrderedDict()
-#     arg_dict["cond_shape"] = [[16, 1]]
-#     arg_dict["x_shape"] = [[4, 1, 20]]
-#     arg_dict["y_shape"] = [[8, 4, 16, 20]]
-#     arg_dict["device_type"] = ["cpu", "gpu"]
-#     arg_dict["dynamic"] = [True, False]
-#     for arg in GenArgList(arg_dict):
-#         _compare_with_tf(test_case, *arg)
+def test_where_grad_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["cond_shape"] = [[16, 1]]
+    arg_dict["x_shape"] = [[4, 1, 20]]
+    arg_dict["y_shape"] = [[8, 4, 16, 20]]
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["dynamic"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        _compare_with_tf(test_case, *arg)
