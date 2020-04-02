@@ -7,7 +7,7 @@ namespace oneflow {
 
 namespace user_op {
 
-#define BASIC_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                      \
+#define BASIC_AND_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                             \
   template<>                                                                                  \
   cpp_type AttrValAccessor<cpp_type>::GetAttr(const UserOpAttrVal& val) {                     \
     return val.field();                                                                       \
@@ -17,8 +17,13 @@ namespace user_op {
     attr_val->set_##field(cpp_val);                                                           \
   }
 
-OF_PP_FOR_EACH_TUPLE(BASIC_ATTR_SEQ_ENTRY, BASIC_ATTR_SEQ)
+#define BASIC_AND_ENUM_ATTR_SEQ \
+  BASIC_ATTR_SEQ                \
+  ENUM_ATTR_SEQ
 
+OF_PP_FOR_EACH_TUPLE(BASIC_AND_ENUM_ATTR_SEQ_ENTRY, BASIC_AND_ENUM_ATTR_SEQ)
+
+#undef BASIC_AND_ENUM_ATTR_SEQ
 #undef BASIC_ATTR_SEQ_ENTRY
 
 template<>
@@ -28,15 +33,6 @@ Shape AttrValAccessor<Shape>::GetAttr(const UserOpAttrVal& val) {
 template<>
 void AttrValAccessor<Shape>::SetAttr(const Shape& cpp_val, UserOpAttrVal* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_shape());
-}
-
-template<>
-DataType AttrValAccessor<DataType>::GetAttr(const UserOpAttrVal& val) {
-  return DataType(val.at_data_type());
-}
-template<>
-void AttrValAccessor<DataType>::SetAttr(const DataType& cpp_val, UserOpAttrVal* attr_val) {
-  attr_val->set_at_data_type(cpp_val);
 }
 
 #define LIST_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                         \
