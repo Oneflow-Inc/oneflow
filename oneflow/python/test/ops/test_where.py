@@ -122,6 +122,28 @@ def _compare_with_tf(test_case, cond_shape, x_shape, y_shape, device_type, dynam
     test_case.assertTrue(np.array_equal(z.numpy(), of_z))
 
 
+def _of_where_with_x_and_y_are_none(input, input_shape=None):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+
+    if input_shape is None:
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+
+        @flow.function(func_config)
+        def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
+            return flow.where(input_def)
+
+    else:
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+
+        @flow.function(func_config)
+        def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
+            return flow.where(input_def)
+
+    return where_fn([input]).get().ndarray_list()[0]
+
+
 def test_where(test_case):
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[5, 10]]
@@ -197,3 +219,11 @@ def test_where_grad_case_2(test_case):
     arg_dict["dynamic"] = [True, False]
     for arg in GenArgList(arg_dict):
         _compare_with_tf(test_case, *arg)
+
+
+def test_where_argwhere(test_case):
+    rand_input = np.random.random_sample((11, 3, 5)).astype(np.float32)
+    rand_input[np.nonzero(rand_input < 0.5)] = 0.0
+    ret = _of_where_with_x_and_y_are_none(rand_input, input_shape=(11, 3, 5))
+    exp_ret = np.argwhere(rand_input)
+    test_case.assertTrue(np.array_equal(exp_ret, ret))
