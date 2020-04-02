@@ -28,11 +28,12 @@ class NewBlobObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<NewBlobObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
+    DataType data_type = job_object.job_desc().DefaultDataType();
     for (int i = 0; i < view->blob_size(); ++i) {
       CHECK_GT(view->blob(i).logical_object_id(), 0);
-      instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObjectType>();
+      instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObjectType>(data_type);
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }
@@ -55,7 +56,7 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<DeleteBlobObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     for (int i = 0; i < view->blob_size(); ++i) {
       auto* type_mirrored_object = instr_ctx->mut_operand_type(view->blob(i));
       CHECK(type_mirrored_object->Has<BlobObjectType>());

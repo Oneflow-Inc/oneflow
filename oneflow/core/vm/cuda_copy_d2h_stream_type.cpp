@@ -52,7 +52,7 @@ class CudaCopyD2HInstructionType final : public InstructionType {
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
     {
       FlatMsgView<CopyInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       size = view->size();
       const auto& dst_buffer_type = instr_ctx->operand_type(view->dst()).Get<MemBufferObjectType>();
       CHECK_LE(size, dst_buffer_type.size());

@@ -12,7 +12,7 @@ class BlobObjectType : public vm::Object {
  public:
   BlobObjectType(const BlobObjectType&) = delete;
   BlobObjectType(BlobObjectType&&) = delete;
-  BlobObjectType() : blob_desc_(DataType::kInvalidDataType) {}
+  BlobObjectType(DataType data_type) : blob_desc_(data_type) {}
   ~BlobObjectType() = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }

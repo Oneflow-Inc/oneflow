@@ -87,7 +87,7 @@ class NewSymbolInstructionType final : public InstructionType {
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<NewSymbolCtrlInstruction> view;
-    CHECK(view->Match(instr_msg->mut_operand()));
+    CHECK(view.Match(instr_msg->operand()));
     int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
         scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
@@ -131,7 +131,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
-    CHECK(view->Match(instr_msg->mut_operand()));
+    CHECK(view.Match(instr_msg->operand()));
     int64_t logical_object_id = view->mirrored_object_operand().operand().logical_object_id();
     logical_object_id = GetLogicalObjectId(logical_object_id);
     auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
