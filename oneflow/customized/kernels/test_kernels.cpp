@@ -281,12 +281,11 @@ REGISTER_USER_KERNEL("TestRandomSource")
       return false;
     });
 
-// Remove after review
-class TestDTypeAttrKernel final : public user_op::OpKernel {
+class TestDataTypeAttrKernel final : public user_op::OpKernel {
  public:
-  TestDTypeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  TestDTypeAttrKernel() = default;
-  ~TestDTypeAttrKernel() = default;
+  TestDataTypeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  TestDataTypeAttrKernel() = delete;
+  ~TestDataTypeAttrKernel() override = default;
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
@@ -296,9 +295,8 @@ class TestDTypeAttrKernel final : public user_op::OpKernel {
   }
 };
 
-// Remove after review
-REGISTER_USER_KERNEL("dtype_attr")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDTypeAttrKernel(ctx); })
+REGISTER_USER_KERNEL("TestDataTypeAttr")
+    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDataTypeAttrKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
 }  // namespace oneflow

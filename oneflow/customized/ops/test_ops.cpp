@@ -295,8 +295,7 @@ REGISTER_USER_OP("TestRandomSource")
       return Maybe<void>::Ok();
     });
 
-// Remove after review
-REGISTER_USER_OP("dtype_attr")
+REGISTER_USER_OP("TestDataTypeAttr")
     .Input("in")
     .Output("out")
     .Attr("output_type", UserOpAttrType::kAtDataType)
