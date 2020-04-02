@@ -32,7 +32,8 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
     const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
-      const OperatorConf& op_conf = job_object.LookupOpConf(view->op(i).logical_object_id());
+      const OperatorConf& op_conf =
+          job_object.OpConf4LogicalObjectId(view->op(i).logical_object_id());
       instr_ctx->mut_operand_type(view->op(i))->Mutable<OpObject>(op_conf, &job_object.job_desc());
     }
   }
