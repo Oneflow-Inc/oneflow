@@ -107,6 +107,7 @@ def reshape(x, shape, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("reshape_like")
 def reshape_like(x, like, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -119,6 +120,7 @@ def reshape_like(x, like, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
@@ -208,7 +210,9 @@ def slice(input_, begin, size, name=None):
             elif s == -1:
                 slice_conf.end = d
             else:
-                raise ValueError("elements of size must be an int that greater then 0 or equal to -1")
+                raise ValueError(
+                    "elements of size must be an int that greater then 0 or equal to -1"
+                )
             slice_conf.stride = 1
         slice_conf_list.append(slice_conf)
 
@@ -223,6 +227,7 @@ def slice(input_, begin, size, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("slice_v2")
 def slice_v2(input, slice_tup_list, name=None):
@@ -242,7 +247,7 @@ def slice_v2(input, slice_tup_list, name=None):
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
         raise ValueError(
             'param "slice_tup_list" must be a list or tuple whose length should be '
-            'less than or equal to number of dimensions of input'
+            "less than or equal to number of dimensions of input"
         )
 
     # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
@@ -290,6 +295,7 @@ def slice_v2(input, slice_tup_list, name=None):
     )
     return op.RemoteBlobList()[0]
 
+
 @oneflow_export("concat")
 def concat(values, axis, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -305,21 +311,68 @@ def concat(values, axis, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("local_scatter_nd_update")
-def local_scatter_nd_update(inputs, indices, updates, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LocalScatterNdUpdate_")
+
+@oneflow_export("gather_nd")
+def gather_nd(params, indices, name=None):
+    if name is None:
+        name = id_util.UniqueStr("GatherNd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("gather_nd")
+        .Input("params", [params])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
     )
-    setattr(op_conf.local_scatter_nd_update_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "indices", indices.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "updates", updates.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    return op.RemoteBlobList()[0]
+
+
+@oneflow_export("scatter_nd")
+def scatter_nd(indices, updates, shape, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ScatterNd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("scatter_nd")
+        .Input("indices", [indices])
+        .Input("updates", [updates])
+        .SetAttr("shape", shape, "AttrTypeShape")
+        .Output("out")
+        .Build()
+    )
+    return op.RemoteBlobList()[0]
+
+
+@oneflow_export("tensor_scatter_nd_update")
+def tensor_scatter_nd_update(params, indices, updates, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorScatterNdUpdate_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("tensor_scatter_nd_update")
+        .Input("params", [params])
+        .Input("updates", [updates])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
+    )
+    return op.RemoteBlobList()[0]
+
+
+@oneflow_export("tensor_scatter_nd_add")
+def tensor_scatter_nd_add(params, indices, updates, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorScatterNdAdd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("tensor_scatter_nd_add")
+        .Input("params", [params])
+        .Input("updates", [updates])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
+    )
+    return op.RemoteBlobList()[0]
 
 
 @oneflow_export("argwhere")
@@ -494,9 +547,11 @@ def shuffle(value, seed=None, name=None):
         value, generate_random_batch_permutation_indices(value, seed)
     )
 
+
 @oneflow_export("identity")
 def identity(x, name=None):
-    if name is None: name = id_util.UniqueStr("Identity_")
+    if name is None:
+        name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.logical_blob_name)
