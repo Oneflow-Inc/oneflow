@@ -91,7 +91,7 @@ class UserOpConfWrapperBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == "AttrDataType":
+        elif attr_type == "AttrTypeDataType":
             assert isinstance(attr_value, int) and attr_value in flow.dtypes
             attribute.at_data_type = attr_value
         elif attr_type == "AttrTypeListInt32":

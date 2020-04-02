@@ -281,4 +281,22 @@ REGISTER_USER_KERNEL("TestRandomSource")
       return false;
     });
 
+class TestDTypeAttrKernel final : public user_op::OpKernel {
+ public:
+  TestDTypeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  TestDTypeAttrKernel() = default;
+  ~TestDTypeAttrKernel() = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    DataType output_type = ctx->GetAttr<DataType>("output_type");
+    CHECK_EQ(output_type, out_blob->data_type());
+  }
+};
+
+REGISTER_USER_KERNEL("dtype_attr")
+    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDTypeAttrKernel(ctx); })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+
 }  // namespace oneflow

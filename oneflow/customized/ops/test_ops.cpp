@@ -295,4 +295,16 @@ REGISTER_USER_OP("TestRandomSource")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("dtype_attr")
+    .Input("in")
+    .Output("out")
+    .Attr("output_type", UserOpAttrType::kAtDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = *in_shape;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->GetAttr<DataType>("output_type");
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
