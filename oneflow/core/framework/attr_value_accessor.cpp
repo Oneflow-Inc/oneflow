@@ -24,7 +24,7 @@ namespace user_op {
 OF_PP_FOR_EACH_TUPLE(BASIC_AND_ENUM_ATTR_SEQ_ENTRY, BASIC_AND_ENUM_ATTR_SEQ)
 
 #undef BASIC_AND_ENUM_ATTR_SEQ
-#undef BASIC_ATTR_SEQ_ENTRY
+#undef BASIC_AND_ENUM_ATTR_SEQ_ENTRY
 
 template<>
 Shape AttrValAccessor<Shape>::GetAttr(const UserOpAttrVal& val) {
