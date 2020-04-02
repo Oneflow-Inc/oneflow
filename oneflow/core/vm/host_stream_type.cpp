@@ -28,7 +28,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
     int64_t device_id = 0;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
       MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
@@ -45,7 +45,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
     char* dptr = nullptr;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
       buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
@@ -68,7 +68,7 @@ class MallocInstructionType final : public InstructionType {
     size_t size = 0;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       size = view->size();
       const auto& operand = view->mirrored_object_operand().operand();
       MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
@@ -83,7 +83,7 @@ class MallocInstructionType final : public InstructionType {
     char* dptr = nullptr;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
       buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
@@ -106,7 +106,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
     MirroredObject* type_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       type_mirrored_object = instr_ctx->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
@@ -119,7 +119,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
     MirroredObject* value_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       value_mirrored_object = instr_ctx->mut_operand_value(operand);
     }
@@ -140,7 +140,7 @@ class FreeInstructionType final : public InstructionType {
     MirroredObject* type_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       type_mirrored_object = instr_ctx->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
@@ -153,7 +153,7 @@ class FreeInstructionType final : public InstructionType {
     MirroredObject* value_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+      CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mirrored_object_operand().operand();
       value_mirrored_object = instr_ctx->mut_operand_value(operand);
     }

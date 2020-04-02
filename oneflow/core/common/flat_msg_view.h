@@ -51,7 +51,7 @@ namespace oneflow {
   const field_type& field_name() const { return *OF_PP_CAT(field_name, _); } \
                                                                              \
  private:                                                                    \
-  field_type* OF_PP_CAT(field_name, _);
+  const field_type* OF_PP_CAT(field_name, _);
 
 #define _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(field_type, field_name)                         \
  public:                                                                                       \
@@ -61,24 +61,18 @@ namespace oneflow {
  private:                                                                                      \
   FlatMsgViewPatternVec<field_type> OF_PP_CAT(field_name, _);
 
-#define FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(T)                                               \
- public:                                                                                    \
-  void Clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); }                \
-  template<int field_index, typename Enabled = void>                                        \
-  struct IsRepeatedPattern {                                                                \
-    static const bool value = false;                                                        \
-  };                                                                                        \
-  template<typename RepeatedFlatMsgT>                                                       \
-  bool Match(RepeatedFlatMsgT* repeated_flat_msg) {                                         \
-    return FlatMsgViewContainerUtil<self_type,                                              \
-                                    typename RepeatedFlatMsgT::value_type::self_value_type, \
-                                    RepeatedFlatMsgT>::Match(this, repeated_flat_msg);      \
-  }                                                                                         \
-                                                                                            \
- private:                                                                                   \
-  template<int field_index, typename Enabled = void>                                        \
-  struct __FlatMsgViewFieldType__ {                                                         \
-    struct type {};                                                                         \
+#define FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(T)                                \
+ public:                                                                     \
+  void Clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); } \
+  template<int field_index, typename Enabled = void>                         \
+  struct IsRepeatedPattern {                                                 \
+    static const bool value = false;                                         \
+  };                                                                         \
+                                                                             \
+ private:                                                                    \
+  template<int field_index, typename Enabled = void>                         \
+  struct __FlatMsgViewFieldType__ {                                          \
+    struct type {};                                                          \
   };
 
 #define FLAT_MSG_VIEW_SPECIALIZE_FIELD_TYPE(field_index, field_type) \
@@ -130,20 +124,20 @@ class FlatMsgViewFieldCtx {
                 "invalid view match");
   FlatMsgViewFieldCtx(const FlatMsgViewFieldCtx&) = delete;
   FlatMsgViewFieldCtx(FlatMsgViewFieldCtx&&) = delete;
-  FlatMsgViewFieldCtx(OneofValueType* repeated_flag_msg, std::size_t size)
+  FlatMsgViewFieldCtx(const OneofValueType* repeated_flag_msg, std::size_t size)
       : repeated_flag_msg_(repeated_flag_msg), token_index_(0), size_(size) {}
   ~FlatMsgViewFieldCtx() = default;
 
-  OneofValueType* MutableFlatMsg() { return repeated_flag_msg_ + token_index_; }
-  typename FlatMsgOneofField::field_type* MutableOneof() {
-    return FlatMsgOneofField::FieldPtr4StructPtr(MutableFlatMsg());
+  const OneofValueType* GetFlatMsg() const { return repeated_flag_msg_ + token_index_; }
+  typename FlatMsgOneofField::field_type* GetOneof() const {
+    return FlatMsgOneofField::FieldPtr4StructPtr(GetFlatMsg());
   }
   bool is_token_index_valid() const { return token_index_ < size_; }
   void increase_token_index() { ++token_index_; }
   int32_t token_count() const { return token_index_; }
 
  private:
-  OneofValueType* repeated_flag_msg_;
+  const OneofValueType* repeated_flag_msg_;
   int32_t token_index_;
   const std::size_t size_;
 };
@@ -166,10 +160,11 @@ struct _FlatMsgViewFieldMatcher<false, WalkCtxType, FieldPtrT> {
   // return true if error occured
   static bool Call(WalkCtxType* ctx, FieldPtrT* field) {
     if (!ctx->is_token_index_valid()) { return true; }
-    using FieldType = typename std::remove_pointer<FieldPtrT>::type;
-    auto* oneof = ctx->MutableOneof();
+    using ConstFieldType = typename std::remove_pointer<FieldPtrT>::type;
+    using FieldType = typename std::remove_const<ConstFieldType>::type;
+    const auto* oneof = ctx->GetOneof();
     if (!oneof->template HasField<FieldType>()) { return true; }
-    *field = oneof->template MutableField<FieldType>();
+    *field = &oneof->template GetField<FieldType>();
     ctx->increase_token_index();
     return false;
   }
@@ -181,9 +176,9 @@ struct _FlatMsgViewFieldMatcher<true, WalkCtxType, FieldPtrT> {
   static bool Call(WalkCtxType* ctx, FieldPtrT* field) {
     using FieldType = typename FieldPtrT::value_type;
     while (ctx->is_token_index_valid()) {
-      auto* oneof = ctx->MutableOneof();
+      const auto* oneof = ctx->GetOneof();
       if (!oneof->template HasField<FieldType>()) { break; }
-      field->push_back(oneof->template MutableField<FieldType>());
+      field->push_back(&oneof->template GetField<FieldType>());
       ctx->increase_token_index();
     }
     return false;
@@ -194,7 +189,7 @@ template<typename FlatMsgViewT, typename FlatMsgOneofField, typename ValueType>
 struct FlatMsgViewUtil {
   static_assert(std::is_same<ValueType, typename FlatMsgOneofField::struct_type>::value,
                 "invalid view match");
-  static bool Match(FlatMsgViewT* flat_msg_view, ValueType* data_ptr, std::size_t size) {
+  static bool Match(FlatMsgViewT* flat_msg_view, const ValueType* data_ptr, std::size_t size) {
     FlatMsgViewFieldCtx<FlatMsgViewT, FlatMsgOneofField, ValueType> ctx(data_ptr, size);
     bool ret = !flat_msg_view->template __WalkFieldUntil__<FlatMsgViewFieldMatcher>(&ctx);
     if (ret) {
@@ -213,9 +208,9 @@ template<typename FlatMsgViewT, typename ValueType, typename ContainerT, typenam
 struct FlatMsgViewContainerUtil {
   using FlatMsgOneofField =
       StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
-  static bool Match(FlatMsgViewT* self, ContainerT* container) {
+  static bool Match(FlatMsgViewT* self, const ContainerT& container) {
     return FlatMsgViewUtil<FlatMsgViewT, FlatMsgOneofField, typename ContainerT::value_type>::Match(
-        self, container->mut_data(), container->size());
+        self, container.data(), container.size());
   }
 };
 
@@ -225,9 +220,9 @@ struct FlatMsgViewContainerUtil<FlatMsgViewT, ValueType, std::vector<FlatMsg<Val
       StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
   static_assert(sizeof(ValueType) == sizeof(FlatMsg<ValueType>), "");
   static_assert(alignof(ValueType) == alignof(FlatMsg<ValueType>), "");
-  static bool Match(FlatMsgViewT* self, std::vector<FlatMsg<ValueType>>* container) {
+  static bool Match(FlatMsgViewT* self, const std::vector<FlatMsg<ValueType>>& container) {
     return FlatMsgViewUtil<FlatMsgViewT, FlatMsgOneofField, ValueType>::Match(
-        self, container->data()->Mutable(), container->size());
+        self, &container.data()->Get(), container.size());
   }
 };
 
@@ -291,6 +286,13 @@ struct FlatMsgView final {
 
   const T& Get() const { return view_; }
   T* Mutable() { return &view_; }
+
+  template<typename RepeatedFlatMsgT>
+  bool Match(const RepeatedFlatMsgT& repeated_flat_msg) {
+    using OneofType = typename RepeatedFlatMsgT::value_type::self_value_type;
+    return FlatMsgViewContainerUtil<T, OneofType, RepeatedFlatMsgT>::Match(&view_,
+                                                                           repeated_flat_msg);
+  }
 
  private:
   union {

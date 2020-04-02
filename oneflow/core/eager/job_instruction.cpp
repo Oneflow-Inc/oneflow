@@ -30,7 +30,7 @@ class NewJobObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<NewJobObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     const auto& job = Global<JobStorage>::Get()->LookupJob(view->job().logical_object_id());
     instr_ctx->mut_operand_type(view->job())->Mutable<JobObject>(job, view->job_id());
   }
@@ -56,7 +56,7 @@ class DeleteJobObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<DeleteJobObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     auto* type_mirrored_object = instr_ctx->mut_operand_type(view->job());
     CHECK(type_mirrored_object->Has<JobObject>());
     type_mirrored_object->reset_object();

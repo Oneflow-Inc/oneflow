@@ -28,7 +28,7 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<NewOpObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
@@ -59,7 +59,7 @@ class DeleteOpObjectInstructionType final : public vm::InstructionType {
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<DeleteOpObjectInstrOperand> view;
-    CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
+    CHECK(view.Match(instr_ctx->instr_msg().operand()));
     for (int i = 0; i < view->op_size(); ++i) {
       auto* type_mirrored_object = instr_ctx->mut_operand_type(view->op(i));
       CHECK(type_mirrored_object->Has<OpObject>());

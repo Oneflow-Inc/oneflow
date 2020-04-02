@@ -37,7 +37,7 @@ TEST(FlatMsgView, match_success) {
   variant_list.Mutable()->mutable_foo()->Add()->set_int16_value(40);
   variant_list.Mutable()->mutable_foo()->Add()->set_float_value(50.0);
   FlatMsgView<ViewFoo> view;
-  ASSERT_TRUE(view->template Match(variant_list.Mutable()->mutable_foo()));
+  ASSERT_TRUE(view.template Match(variant_list.Get().foo()));
   ASSERT_EQ(view->int32_value(), 30);
   ASSERT_EQ(view->int16_value(), 40);
   ASSERT_EQ(view->float_value(), 50.0);
@@ -49,7 +49,7 @@ TEST(FlatMsgView, match_failed) {
   variant_list.Mutable()->mutable_foo()->Add()->set_int32_value(30);
   variant_list.Mutable()->mutable_foo()->Add()->set_float_value(50.0);
   FlatMsgView<ViewFoo> view;
-  ASSERT_TRUE(!view->template Match(variant_list.Mutable()->mutable_foo()));
+  ASSERT_TRUE(!view.template Match(variant_list.Get().foo()));
 }
 
 TEST(FlatMsgView, match_success_vector) {
@@ -58,7 +58,7 @@ TEST(FlatMsgView, match_success_vector) {
   variant_list.at(1)->set_int16_value(40);
   variant_list.at(2)->set_float_value(50.0);
   FlatMsgView<ViewFoo> view;
-  ASSERT_TRUE(view->template Match(&variant_list));
+  ASSERT_TRUE(view.template Match(variant_list));
   ASSERT_EQ(view->int32_value(), 30);
   ASSERT_EQ(view->int16_value(), 40);
   ASSERT_EQ(view->float_value(), 50.0);
@@ -70,7 +70,7 @@ TEST(FlatMsgView, match_failed_vector) {
   variant_list.at(1)->set_int32_value(30);
   variant_list.at(2)->set_float_value(50.0);
   FlatMsgView<ViewFoo> view;
-  ASSERT_TRUE(!view->template Match(&variant_list));
+  ASSERT_TRUE(!view.template Match(variant_list));
 }
 
 // clang-format off
@@ -86,7 +86,7 @@ TEST(FlatMsgView, repeated_empty) {
   variant_list.at(0)->set_int32_value(40);
   variant_list.at(1)->set_float_value(50.0);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 0);
 }
 
@@ -95,7 +95,7 @@ TEST(FlatMsgView, repeated_empty_failed) {
   variant_list.at(0)->set_float_value(50.0);
   variant_list.at(1)->set_int32_value(40);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 TEST(FlatMsgView, repeated_one) {
@@ -104,7 +104,7 @@ TEST(FlatMsgView, repeated_one) {
   variant_list.at(1)->set_int16_value(45);
   variant_list.at(2)->set_float_value(50.0);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 1);
   ASSERT_EQ(view->int16_value(0), 45);
 }
@@ -115,7 +115,7 @@ TEST(FlatMsgView, repeated_one_failed) {
   variant_list.at(1)->set_float_value(50.0);
   variant_list.at(2)->set_int16_value(45);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 TEST(FlatMsgView, repeated_many) {
@@ -125,7 +125,7 @@ TEST(FlatMsgView, repeated_many) {
   variant_list.at(2)->set_int16_value(45);
   variant_list.at(3)->set_float_value(50.0);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 2);
   ASSERT_EQ(view->int16_value(0), 45);
   ASSERT_EQ(view->int16_value(1), 45);
@@ -138,7 +138,7 @@ TEST(FlatMsgView, repeated_many_failed) {
   variant_list.at(2)->set_float_value(45.0);
   variant_list.at(3)->set_float_value(50.0);
   FlatMsgView<RepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 // clang-format off
@@ -154,7 +154,7 @@ TEST(FlatMsgView, last_field_repeated_empty) {
   variant_list.at(0)->set_int32_value(40);
   variant_list.at(1)->set_float_value(50.0);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 0);
 }
 
@@ -163,7 +163,7 @@ TEST(FlatMsgView, last_field_repeated_empty_failed) {
   variant_list.at(0)->set_float_value(50.0);
   variant_list.at(1)->set_int32_value(40);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 TEST(FlatMsgView, last_field_repeated_one) {
@@ -172,7 +172,7 @@ TEST(FlatMsgView, last_field_repeated_one) {
   variant_list.at(1)->set_float_value(50.0);
   variant_list.at(2)->set_int16_value(45);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 1);
   ASSERT_EQ(view->int16_value(0), 45);
 }
@@ -183,7 +183,7 @@ TEST(FlatMsgView, last_field_repeated_one_failed) {
   variant_list.at(1)->set_int16_value(45);
   variant_list.at(2)->set_float_value(50.0);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 TEST(FlatMsgView, last_field_repeated_many) {
@@ -193,7 +193,7 @@ TEST(FlatMsgView, last_field_repeated_many) {
   variant_list.at(2)->set_int16_value(45);
   variant_list.at(3)->set_int16_value(45);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(view->Match(&variant_list));
+  ASSERT_TRUE(view.Match(variant_list));
   ASSERT_EQ(view->int16_value_size(), 2);
   ASSERT_EQ(view->int16_value(0), 45);
   ASSERT_EQ(view->int16_value(1), 45);
@@ -206,7 +206,7 @@ TEST(FlatMsgView, last_field_repeated_many_failed) {
   variant_list.at(2)->set_float_value(50.0);
   variant_list.at(3)->set_int16_value(45);
   FlatMsgView<LastFieldRepeatedFoo> view;
-  ASSERT_TRUE(!view->Match(&variant_list));
+  ASSERT_TRUE(!view.Match(variant_list));
 }
 
 }  // namespace
