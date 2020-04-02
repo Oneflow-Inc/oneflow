@@ -44,6 +44,7 @@ struct CudnnConvParams {
   int stride[kConvMaxDims];
   int dilation[kConvMaxDims];
   size_t max_ws_size;
+  int groups;
 };
 
 struct CudnnConvArgs final {
