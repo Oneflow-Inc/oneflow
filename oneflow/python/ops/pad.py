@@ -6,7 +6,8 @@ import oneflow.python.framework.id_util as id_util
 
 @oneflow_export("pad")
 def pad(x, paddings, constant_value=0, name=None):
-    paddings_list = []
+    padding_before = []
+    padding_after = []
     if isinstance(paddings, (list, tuple)):
         assert len(paddings) == len(x.static_shape), ValueError(
             "paddings must be the same size of input dims"
@@ -15,8 +16,8 @@ def pad(x, paddings, constant_value=0, name=None):
             assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError(
                 "the elem of paddings must be a tuple or a list with length of 2"
             )
-            paddings_list.append(p[0])
-            paddings_list.append(p[1])
+            padding_before.append(p[0])
+            padding_after.append(p[1])
     else:
         raise ValueError("paddings must be a tuple or a list.")
     return (
@@ -24,7 +25,8 @@ def pad(x, paddings, constant_value=0, name=None):
         .Op("pad")
         .Input("x", [x])
         .Output("y")
-        .SetAttr("paddings", paddings_list, "AttrTypeListInt64")
+        .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
+        .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
         .SetAttr("constant_value", float(constant_value), "AttrTypeFloat")
         .Build()
         .RemoteBlobList()[0]
@@ -33,7 +35,8 @@ def pad(x, paddings, constant_value=0, name=None):
 
 @oneflow_export("pad_grad")
 def pad_grad(x, paddings, constant_value=0, name=None):
-    paddings_list = []
+    padding_before = []
+    padding_after = []
     if isinstance(paddings, (list, tuple)):
         assert len(paddings) == len(x.static_shape), ValueError(
             "paddings must be the same size of input dims"
@@ -42,8 +45,8 @@ def pad_grad(x, paddings, constant_value=0, name=None):
             assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError(
                 "the elem of paddings must be a tuple or a list with length of 2"
             )
-            paddings_list.append(p[0])
-            paddings_list.append(p[1])
+            padding_before.append(p[0])
+            padding_after.append(p[1])
     else:
         raise ValueError("paddings must be a tuple or a list.")
     return (
@@ -51,7 +54,8 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .Op("pad_grad")
         .Input("dy", [x])
         .Output("dx")
-        .SetAttr("paddings", paddings_list, "AttrTypeListInt64")
+        .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
+        .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
         .SetAttr("constant_value", float(constant_value), "AttrTypeFloat")
         .Build()
         .RemoteBlobList()[0]
