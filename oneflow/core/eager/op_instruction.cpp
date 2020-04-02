@@ -22,7 +22,7 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewOpObjectInstrOperand);
     FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstMirroredObjectOperand, job);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableMirroredObjectOperand, op);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, op);
   FLAT_MSG_VIEW_END(NewOpObjectInstrOperand);
   // clang-format on
 
@@ -30,9 +30,11 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
     FlatMsgView<NewOpObjectInstrOperand> view;
     CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
     const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
-    CHECK_GT(view->op().logical_object_id(), 0);
-    const OperatorConf& op_conf = job_object.LookupOpConf(view->op().logical_object_id());
-    instr_ctx->mut_operand_type(view->op())->Mutable<OpObject>(op_conf, &job_object.job_desc());
+    for (int i = 0; i < view->op_size(); ++i) {
+      CHECK_GT(view->op(i).logical_object_id(), 0);
+      const OperatorConf& op_conf = job_object.LookupOpConf(view->op(i).logical_object_id());
+      instr_ctx->mut_operand_type(view->op(i))->Mutable<OpObject>(op_conf, &job_object.job_desc());
+    }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {
     // do nothing
@@ -50,16 +52,18 @@ class DeleteOpObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteOpObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableMirroredObjectOperand, op);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, op);
   FLAT_MSG_VIEW_END(DeleteOpObjectInstrOperand);
   // clang-format on
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<DeleteOpObjectInstrOperand> view;
     CHECK(view->Match(instr_ctx->mut_instr_msg()->mut_operand()));
-    auto* type_mirrored_object = instr_ctx->mut_operand_type(view->op());
-    CHECK(type_mirrored_object->Has<OpObject>());
-    type_mirrored_object->reset_object();
+    for (int i = 0; i < view->op_size(); ++i) {
+      auto* type_mirrored_object = instr_ctx->mut_operand_type(view->op(i));
+      CHECK(type_mirrored_object->Has<OpObject>());
+      type_mirrored_object->reset_object();
+    }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {
     // do nothing
