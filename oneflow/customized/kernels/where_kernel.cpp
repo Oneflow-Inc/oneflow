@@ -20,6 +20,11 @@ void WhereGradKernel<device_type, T, CondT>::Compute(user_op::KernelContext* ctx
   const user_op::Tensor* dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
   user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
   user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  size_t dx_bytes = GetCudaAlignedSize(dx->shape().elem_cnt() * sizeof(T));
+  size_t dy_bytes = GetCudaAlignedSize(dy->shape().elem_cnt() * sizeof(T));
+  CHECK_EQ(dx_bytes, dy_bytes);
+  Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_bytes);
+  Memset<device_type>(ctx->device_ctx(), dy->mut_dptr<T>(), 0, dy_bytes);
   WhereGradFunctor<device_type, T, CondT>()(ctx->device_ctx(), dz->shape().elem_cnt(),
                                             cond->dptr<CondT>(), dz->dptr<T>(), dx->mut_dptr<T>(),
                                             dy->mut_dptr<T>());
