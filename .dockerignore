@@ -11,6 +11,7 @@ dist
 
 **/__pycache__
 **/*.pyc
+**/*.npy
 **/log
 **/.ipynb_checkpoints
 **/core.0*
