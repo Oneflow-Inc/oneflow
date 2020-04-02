@@ -281,6 +281,7 @@ REGISTER_USER_KERNEL("TestRandomSource")
       return false;
     });
 
+// Remove after review
 class TestDTypeAttrKernel final : public user_op::OpKernel {
  public:
   TestDTypeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
@@ -295,6 +296,7 @@ class TestDTypeAttrKernel final : public user_op::OpKernel {
   }
 };
 
+// Remove after review
 REGISTER_USER_KERNEL("dtype_attr")
     .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDTypeAttrKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });

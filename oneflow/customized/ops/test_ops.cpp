@@ -295,6 +295,7 @@ REGISTER_USER_OP("TestRandomSource")
       return Maybe<void>::Ok();
     });
 
+// Remove after review
 REGISTER_USER_OP("dtype_attr")
     .Input("in")
     .Output("out")
