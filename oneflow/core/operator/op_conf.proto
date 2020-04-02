@@ -348,20 +348,6 @@ message TanHGradOpConf {
   required string dx = 3;
 }
 
-message PadOpConf{
-  required string in = 1;
-  required string out = 2;
-  repeated int32 paddings = 3;
-  optional int32 constant_value = 4 [default = 0];
-}
-
-message PadGradOpConf{
-  required string in = 1;
-  required string out = 2;
-  repeated int32 paddings = 3;
-  optional int32 constant_value = 4 [default = 0];
-}
-
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
@@ -2001,9 +1987,7 @@ message OperatorConf {
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
     ArgWhereOpConf arg_where_conf = 342;
-    PadOpConf pad_conf = 343;
-    PadGradOpConf pad_grad_conf = 344;
-    DeconvOpConf deconv_conf = 345;
+    DeconvOpConf deconv_conf = 343;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
