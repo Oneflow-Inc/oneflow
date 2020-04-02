@@ -19,22 +19,6 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferWhereGradTensorDesc(user_op::InferContext* ctx) {
-  // shape infer
-  const Shape* cond_shape = ctx->Shape4ArgNameAndIndex("condition", 0);
-  const Shape* dz_shape = ctx->Shape4ArgNameAndIndex("dz", 0);
-  OF_CHECK_EQ(*cond_shape, *dz_shape);
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = *dz_shape;
-  *ctx->Shape4ArgNameAndIndex("dy", 0) = *dz_shape;
-  // data_type infer
-  DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
-  OF_CHECK(IsIntegralDataType(cond_dtype));
-  DataType dz_dtype = *ctx->Dtype4ArgNameAndIndex("dz", 0);
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = dz_dtype;
-  *ctx->Dtype4ArgNameAndIndex("dy", 0) = dz_dtype;
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> InferWhereBatchAxis(user_op::BatchAxisContext* ctx) {
   OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
   OptInt64* y_batch_axis = ctx->BatchAxis4ArgNameAndIndex("y", 0);
@@ -67,30 +51,6 @@ Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferWhereGradBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dz", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *ctx->BatchAxis4ArgNameAndIndex("dz", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereGradSbpSignatures(user_op::SbpContext* ctx) {
-  int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape().NumAxes();
-  SbpSignatureBuilder()
-      .Split("condition", 0, 0)
-      .Split("dz", 0, 0)
-      .Split("dx", 0, 0)
-      .Split("dy", 0, 0)
-      .MakeSplitSignatureListBuilder(num_axes)
-      .Build(ctx->sbp_sig_list());
-  SbpSignatureBuilder()
-      .Broadcast("condition", 0)
-      .PartialSum("dz", 0)
-      .PartialSum("dx", 0)
-      .PartialSum("dy", 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 REGISTER_USER_OP("where")
@@ -102,30 +62,37 @@ REGISTER_USER_OP("where")
     .SetBatchAxisInferFn(InferWhereBatchAxis)
     .SetGetSbpFn(GetWhereSbpSignatures);
 
-REGISTER_USER_OP("where_grad")
-    .Input("condition")
-    .Input("dz")
-    .Output("dx")
-    .Output("dy")
-    .SetTensorDescInferFn(InferWhereGradTensorDesc)
-    .SetBatchAxisInferFn(InferWhereGradBatchAxis)
-    .SetGetSbpFn(GetWhereGradSbpSignatures);
-
 REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                          user_op::AddOpFn AddOp) {
-  bool x_need_grad = op.NeedGenGradTensor4OpInput("x", 0);
-  bool y_need_grad = op.NeedGenGradTensor4OpInput("y", 0);
-  if (x_need_grad || y_need_grad) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op("where_grad")
-                                             .Input("condition", op.input("condition", 0))
-                                             .Input("dz", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("dx")
-                                             .Output("dy")
-                                             .Build();
-    if (x_need_grad) { op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0); }
-    if (y_need_grad) { op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0); }
-    AddOp(grad_op);
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder zero_y_builder(op.op_name() + "_zero_y");
+    user_op::UserOpConfWrapper zero_y_op =
+        zero_y_builder.Op("zero_like").Input("like", op.input("y", 0)).Output("out").Build();
+    AddOp(zero_y_op);
+    user_op::UserOpConfWrapperBuilder x_grad_builder(op.op_name() + "_x_grad");
+    user_op::UserOpConfWrapper x_grad_op = x_grad_builder.Op("where")
+                                               .Input("condition", op.input("condition", 0))
+                                               .Input("x", op.GetGradTensorWithOpOutput("out", 0))
+                                               .Input("y", zero_y_op.output("out", 0))
+                                               .Output("out")
+                                               .Build();
+    op.BindGradTensorWithOpInput(x_grad_op.output("out", 0), "x", 0);
+    AddOp(x_grad_op);
+  }
+  if (op.NeedGenGradTensor4OpInput("y", 0)) {
+    user_op::UserOpConfWrapperBuilder zero_x_builder(op.op_name() + "_zero_x");
+    user_op::UserOpConfWrapper zero_x_op =
+        zero_x_builder.Op("zero_like").Input("like", op.input("x", 0)).Output("out").Build();
+    AddOp(zero_x_op);
+    user_op::UserOpConfWrapperBuilder y_grad_builder(op.op_name() + "_y_grad");
+    user_op::UserOpConfWrapper y_grad_op = y_grad_builder.Op("where")
+                                               .Input("condition", op.input("condition", 0))
+                                               .Input("x", zero_x_op.output("out", 0))
+                                               .Input("y", op.GetGradTensorWithOpOutput("out", 0))
+                                               .Output("out")
+                                               .Build();
+    op.BindGradTensorWithOpInput(y_grad_op.output("out", 0), "y", 0);
+    AddOp(y_grad_op);
   }
 });
 
