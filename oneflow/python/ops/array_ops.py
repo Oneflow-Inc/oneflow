@@ -362,9 +362,9 @@ def nonzero(a, name=None):
 
 
 @oneflow_export("where")
-def where(condition, x=None, y=None, name=None):
+def where(condition, x=None, y=None, name=None): 
     if x is None and y is None:
-        raise NotImplementedError("Will be implemented using argwhere or nonzero")
+        return argwhere(condition, name=name)
     elif x is not None and y is not None:
         if name is None:
             name = id_util.UniqueStr("Where_")
