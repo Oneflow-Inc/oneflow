@@ -709,3 +709,24 @@ def top_k(input, k=1, sorted=True, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
+def broadcast_to_compatible_with(x, compatible, name=None):
+    assert isinstance(compatible, (list, tuple))
+    if name is None:
+        name = id_util.UniqueStr("BroadcastToCompatibleWith_")
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "x", x.logical_blob_name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "y", "y")
+    op_conf.broadcast_to_compatible_with_conf.compatible.extend(
+        [cp.logical_blob_name for cp in compatible]
+    )
+    compile_context.CurJobAddOp(op_conf)
+
+    ret_lbi = logical_blob_id_util.LogicalBlobId()
+    ret_lbi.op_name = op_conf.name
+    ret_lbi.blob_name = "y"
+    return remote_blob_util.RemoteBlob(ret_lbi)
