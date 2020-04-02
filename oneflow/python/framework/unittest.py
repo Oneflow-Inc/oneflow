@@ -10,7 +10,7 @@ import imp
 def register_test_cases(scope, directory, filter_by_num_nodes, base_class=unittest.TestCase):
     def FilterTestPyFile(f):
         return os.path.isfile(os.path.join(directory, f)) \
-            and f.endswith('.py') and f.startswith('test_smooth_l1')
+            and f.endswith('.py') and f.startswith('test')
     def FilterMethodName(module, name):
         method = getattr(module, name)
         return name.startswith('test') and callable(method) \
