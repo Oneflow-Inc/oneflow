@@ -19,9 +19,9 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_double, double, UserOpAttrType::kAtDouble) \
   OF_PP_MAKE_TUPLE_SEQ(at_string, std::string, UserOpAttrType::kAtString)
 
-#define MESSAGE_ATTR_SEQ                                          \
-  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape) \
-  OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, UserOpAttrType::kAtDataType)
+#define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, UserOpAttrType::kAtDataType)
+
+#define MESSAGE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape)
 
 #define LIST_ATTR_SEQ                                                                     \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, UserOpAttrType::kAtListInt32) \
@@ -30,6 +30,7 @@ namespace user_op {
 
 #define ATTR_SEQ   \
   BASIC_ATTR_SEQ   \
+  ENUM_ATTR_SEQ    \
   MESSAGE_ATTR_SEQ \
   LIST_ATTR_SEQ
 
