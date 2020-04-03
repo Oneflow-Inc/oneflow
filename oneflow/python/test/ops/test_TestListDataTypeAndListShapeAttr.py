@@ -43,7 +43,7 @@ def RunTest(out_shapes, out_types):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["out_shapes"] = [[(4, 4), (6, 6), (8, 8)]]
-    # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
+    # TODO: fix bugs in ForeignOutputKernel with "float16" and "char" dtype, do not test these two dtypes here
     arg_dict["out_types"] = [["float32", "double", "int8"], ["int32", "int64", "uint8"]]
 
     return GenArgList(arg_dict)

@@ -35,6 +35,6 @@ def RunTest(data_type):
 
 
 def test_data_type_attr(test_case):
-    # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
+    # TODO: fix bugs in ForeignOutputKernel with "float16" and "char" dtype, do not test these two dtypes here
     for data_type in ["float32", "double", "int8", "int32", "int64", "uint8"]:
         RunTest(data_type)
