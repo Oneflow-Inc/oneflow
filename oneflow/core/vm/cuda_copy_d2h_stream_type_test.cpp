@@ -29,9 +29,9 @@ void TestSimple(int64_t parallel_num) {
   int64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_int64_operand(src_symbol)->add_int64_operand(parallel_num));
+      NewInstruction("NewSymbol")->add_uint64_operand(parallel_num)->add_int64_operand(src_symbol));
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_int64_operand(dst_symbol)->add_int64_operand(parallel_num));
+      NewInstruction("NewSymbol")->add_uint64_operand(parallel_num)->add_int64_operand(dst_symbol));
   list.EmplaceBack(
       NewInstruction("CudaMalloc")->add_mut_operand(src_symbol)->add_int64_operand(size));
   list.EmplaceBack(

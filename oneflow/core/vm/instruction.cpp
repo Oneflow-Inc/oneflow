@@ -43,6 +43,11 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_i_o
   return this;
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_i_operand) {
+  add_instr_operand()->set_uint64_i_operand(uint64_i_operand);
+  return this;
+}
+
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_i_operand) {
   add_instr_operand()->set_bool_i_operand(bool_i_operand);
   return this;

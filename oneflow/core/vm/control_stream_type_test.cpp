@@ -28,8 +28,8 @@ TEST(ControlStreamType, new_symbol) {
   int64_t parallel_num = 8;
   int64_t symbol_value = 9527;
   list.EmplaceBack(NewInstruction("NewSymbol")
-                       ->add_int64_operand(symbol_value)
-                       ->add_int64_operand(parallel_num));
+                       ->add_uint64_operand(parallel_num)
+                       ->add_int64_operand(symbol_value));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 1 * 2);
@@ -54,8 +54,8 @@ TEST(ControlStreamType, delete_symbol) {
   int64_t parallel_num = 1;
   int64_t symbol_value = 9527;
   list.EmplaceBack(NewInstruction("NewSymbol")
-                       ->add_int64_operand(symbol_value)
-                       ->add_int64_operand(parallel_num));
+                       ->add_uint64_operand(parallel_num)
+                       ->add_int64_operand(symbol_value));
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());

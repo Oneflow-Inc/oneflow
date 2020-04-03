@@ -68,8 +68,8 @@ class NewSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, logical_object_id);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_num);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, parallel_num);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
   FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
   // clang-format on
 
@@ -88,15 +88,17 @@ class NewSymbolInstructionType final : public InstructionType {
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<NewSymbolCtrlInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
-    int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id());
-    auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-        scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
-    CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-    auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-    for (int64_t i = 0; i < view->parallel_num(); ++i) {
-      auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
-                                                                   logical_object.Mutable(), i);
-      CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+    FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
+      int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
+      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
+          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
+      CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+      for (int64_t parallel_id = 0; parallel_id < view->parallel_num(); ++parallel_id) {
+        auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
+            scheduler->mut_allocator(), logical_object.Mutable(), parallel_id);
+        CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+      }
     }
   }
 };
@@ -112,7 +114,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutableMirroredObjectOperand, mirrored_object_operand);
   FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
   // clang-format on
 
@@ -132,17 +134,19 @@ class DeleteSymbolInstructionType final : public InstructionType {
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
-    int64_t logical_object_id = view->mirrored_object_operand().operand().logical_object_id();
-    logical_object_id = GetLogicalObjectId(logical_object_id);
-    auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
-    CHECK_NOTNULL(logical_object);
-    auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-    for (int i = 0; i < parallel_id2mirrored_object->size(); ++i) {
-      auto* mirrored_object = parallel_id2mirrored_object->FindPtr(i);
-      CHECK(!mirrored_object->has_object());
-      parallel_id2mirrored_object->Erase(mirrored_object);
+    FOR_RANGE(int, i, 0, view->mirrored_object_operand_size()) {
+      int64_t logical_object_id = view->mirrored_object_operand(i).operand().logical_object_id();
+      logical_object_id = GetLogicalObjectId(logical_object_id);
+      auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
+      CHECK_NOTNULL(logical_object);
+      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+      for (int parallel_id = 0; parallel_id < parallel_id2mirrored_object->size(); ++parallel_id) {
+        auto* mirrored_object = parallel_id2mirrored_object->FindPtr(parallel_id);
+        CHECK(!mirrored_object->has_object());
+        parallel_id2mirrored_object->Erase(mirrored_object);
+      }
+      scheduler->mut_id2logical_object()->Erase(logical_object);
     }
-    scheduler->mut_id2logical_object()->Erase(logical_object);
   }
 };
 COMMAND(RegisterInstructionType<DeleteSymbolInstructionType>("DeleteSymbol"));

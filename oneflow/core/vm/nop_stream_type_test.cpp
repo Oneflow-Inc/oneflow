@@ -78,7 +78,7 @@ void TestNopStreamTypeOneArgument(
   InstructionMsgList list;
   int64_t symbol_value = 9527;
   auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_int64_operand(symbol_value)->add_int64_operand(1);
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
@@ -108,7 +108,7 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   InstructionMsgList list;
   int64_t symbol_value = 9527;
   auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_int64_operand(symbol_value)->add_int64_operand(1);
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
@@ -130,7 +130,7 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   InstructionMsgList list;
   int64_t symbol_value = 9527;
   auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_int64_operand(symbol_value)->add_int64_operand(1);
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
   list.PushBack(ctrl_instr_msg.Mutable());
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
