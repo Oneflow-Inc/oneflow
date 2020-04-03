@@ -17,6 +17,11 @@ void JobObject::InitLbi2LogicalObjectId() {
   }
 }
 
+void JobObject::InitParallelDesc() {
+  CHECK_EQ(job_->placement().placement_group_size(), 1);
+  parallel_desc_.reset(new ParallelDesc(job_->placement().placement_group(0).parallel_conf()));
+}
+
 bool JobObject::HasOpConf(int64_t op_logical_object_id) const {
   return logical_object_id2op_conf_.find(op_logical_object_id) != logical_object_id2op_conf_.end();
 }

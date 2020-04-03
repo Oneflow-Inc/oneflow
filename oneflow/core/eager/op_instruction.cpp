@@ -3,7 +3,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/job_object.h"
 #include "oneflow/core/eager/op_object.h"
-#include "oneflow/core/vm/host_stream_type.h"
+#include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
@@ -17,7 +17,7 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
   NewOpObjectInstructionType() = default;
   ~NewOpObjectInstructionType() override = default;
 
-  using stream_type = vm::HostStreamType;
+  using stream_type = vm::DeviceHelperStreamType;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewOpObjectInstrOperand);
@@ -49,7 +49,7 @@ class DeleteOpObjectInstructionType final : public vm::InstructionType {
   DeleteOpObjectInstructionType() = default;
   ~DeleteOpObjectInstructionType() override = default;
 
-  using stream_type = vm::HostStreamType;
+  using stream_type = vm::DeviceHelperStreamType;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteOpObjectInstrOperand);
