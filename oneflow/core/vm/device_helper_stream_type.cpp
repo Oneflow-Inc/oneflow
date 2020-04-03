@@ -1,36 +1,16 @@
 #include "oneflow/core/common/flat_msg_view.h"
-#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/mem_instruction.msg.h"
-#include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
-
-class DeviceHelperStreamType final : public StreamType {
- public:
-  DeviceHelperStreamType() = default;
-  ~DeviceHelperStreamType() = default;
-
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
-
-  void InitInstructionStatus(const Stream& stream,
-                             InstructionStatusBuffer* status_buffer) const override;
-  void DeleteInstructionStatus(const Stream& stream,
-                               InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(InstrChain* instr_chain) const override;
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
-                                                int64_t this_machine_id) const override;
-};
 
 namespace {
 

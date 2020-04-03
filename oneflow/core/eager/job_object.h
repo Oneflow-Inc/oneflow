@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
@@ -25,19 +26,23 @@ class JobObject : public vm::Object {
   bool HasOpConf(int64_t op_logical_object_id) const;
   const OperatorConf& OpConf4LogicalObjectId(int64_t op_logical_object_id) const;
   int64_t LogicalObjectId4Lbi(const LogicalBlobId& lbi) const;
+  const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
 
  private:
   void Init() {
     InitLogicalObjectId2OpConf();
     InitLbi2LogicalObjectId();
+    InitParallelDesc();
   }
   void InitLogicalObjectId2OpConf();
   void InitLbi2LogicalObjectId();
+  void InitParallelDesc();
 
   std::shared_ptr<Job> job_;
   const JobDesc job_desc_;
   HashMap<int64_t, const OperatorConf*> logical_object_id2op_conf_;
   HashMap<LogicalBlobId, int64_t> lbi2logical_object_id_;
+  std::shared_ptr<ParallelDesc> parallel_desc_;
 };
 
 }  // namespace eager
