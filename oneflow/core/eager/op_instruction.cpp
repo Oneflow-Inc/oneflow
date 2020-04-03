@@ -21,8 +21,8 @@ class NewOpObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewOpObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstMirroredObjectOperand, job);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, op);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, job);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, op);
   FLAT_MSG_VIEW_END(NewOpObjectInstrOperand);
   // clang-format on
 
@@ -53,7 +53,7 @@ class DeleteOpObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteOpObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, op);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, op);
   FLAT_MSG_VIEW_END(DeleteOpObjectInstrOperand);
   // clang-format on
 

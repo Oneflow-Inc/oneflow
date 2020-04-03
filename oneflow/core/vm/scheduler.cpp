@@ -83,8 +83,8 @@ void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
 
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
 void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                                      const MirroredObjectOperand& mirrored_object_operand,
-                                      int64_t parallel_id, const DoEachT& DoEach) {
+                                      const Operand& mirrored_object_operand, int64_t parallel_id,
+                                      const DoEachT& DoEach) {
   int64_t logical_object_id = mirrored_object_operand.logical_object_id();
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
@@ -102,8 +102,8 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
 template<typename DoEachT>
 void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
                                            Id2LogicalObject* id2logical_object,
-                                           const ConstMirroredObjectOperand& operand,
-                                           int64_t parallel_id, const DoEachT& DoEach) {
+                                           const ConstOperand& operand, int64_t parallel_id,
+                                           const DoEachT& DoEach) {
   const auto& mirrored_object_operand = operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
@@ -121,8 +121,8 @@ void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
                                            Id2LogicalObject* id2logical_object,
-                                           const MutableMirroredObjectOperand& operand,
-                                           int64_t parallel_id, const DoEachT& DoEach) {
+                                           const MutableOperand& operand, int64_t parallel_id,
+                                           const DoEachT& DoEach) {
   const auto& mirrored_object_operand = operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
@@ -137,8 +137,8 @@ void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
                                          Id2LogicalObject* id2logical_object,
-                                         const MutableMirroredObjectOperand& operand,
-                                         int64_t parallel_id, const DoEachT& DoEach) {
+                                         const MutableOperand& operand, int64_t parallel_id,
+                                         const DoEachT& DoEach) {
   const auto& mirrored_object_operand = operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
@@ -154,8 +154,8 @@ void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
                                          Id2LogicalObject* id2logical_object,
-                                         const Mut2MirroredObjectOperand& operand,
-                                         int64_t parallel_id, const DoEachT& DoEach) {
+                                         const Mut2Operand& operand, int64_t parallel_id,
+                                         const DoEachT& DoEach) {
   const auto& mirrored_object_operand = operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
