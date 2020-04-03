@@ -8,8 +8,10 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+
 
 class UserOpConfWrapper(object):
     def __init__(self, op_name):
@@ -22,26 +24,33 @@ class UserOpConfWrapper(object):
         compile_context.CurJobAddOp(self.op_conf_)
         for k in self.op_conf_.user_conf.output:
             if k not in self.output_arg_key_list_:
-                raise ValueError("Error: In op_name: \"" + self.op_conf_.name
-                        + "\" output_arg_name: \"" + k + "\" is not set in python op builder")
+                raise ValueError(
+                    'Error: In op_name: "'
+                    + self.op_conf_.name
+                    + '" output_arg_name: "'
+                    + k
+                    + '" is not set in python op builder'
+                )
         for output_arg_name in self.output_arg_key_list_:
-            assert(output_arg_name in self.op_conf_.user_conf.output)
+            assert output_arg_name in self.op_conf_.user_conf.output
             for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
-                lbi.blob_name = output_arg_name + '_' + str(i)
+                lbi.blob_name = output_arg_name + "_" + str(i)
                 remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
         return tuple(remote_blob_list)
 
-@oneflow_export('user_op_builder')
+
+@oneflow_export("user_op_builder")
 class UserOpConfWrapperBuilder(object):
     def __init__(self, op_name):
         self.user_op_ = UserOpConfWrapper(op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
-        self.user_op_.op_conf_ = \
-            c_api_util.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        self.user_op_.op_conf_ = c_api_util.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(
+            self.user_op_.op_conf_
+        )
         return self.user_op_
 
     def Op(self, op_type_name):
@@ -52,14 +61,16 @@ class UserOpConfWrapperBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.logical_blob_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(
+                input_blob.logical_blob_name
+            )
         return self
 
-    def Output(self, output_name, num = 1):
+    def Output(self, output_name, num=1):
         assert type(num) is int and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = self.user_op_.op_conf_.name + '/' + output_name + '_' + str(i)
+            lbn = self.user_op_.op_conf_.name + "/" + output_name + "_" + str(i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -114,9 +125,10 @@ class UserOpConfWrapperBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
-                attribute.at_list_shape.val[i].dim[:] = list(attr_value[i])
+                shape = shape_util.ShapeProto()
+                shape.dim[:] = list(attr_value[i])
+                attribute.at_list_shape.val.append(shape)
         else:
             assert False, "Unknow op attribute type: {}".format(attr_type)
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
-

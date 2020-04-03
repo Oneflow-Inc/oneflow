@@ -299,4 +299,29 @@ REGISTER_USER_KERNEL("TestDataTypeAttr")
     .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDataTypeAttrKernel(ctx); })
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
+class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
+ public:
+  TestListDataTypeAndShapeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  TestListDataTypeAndShapeAttrKernel() = delete;
+  ~TestListDataTypeAndShapeAttrKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelContext* ctx) override {
+    auto out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
+    auto out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+    FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+      Shape out_shape_i;
+      ctx->Tensor4ArgNameAndIndex("out", i)->shape().ToShape(&out_shape_i);
+      CHECK_EQ(out_shapes.at(i), out_shape_i);
+      CHECK_EQ(out_types.at(i), ctx->Tensor4ArgNameAndIndex("out", i)->data_type());
+    }
+  }
+};
+
+REGISTER_USER_KERNEL("TestListDataTypeAndListShapeAttr")
+    .SetCreateFn([](user_op::KernelInitContext* ctx) {
+      return new TestListDataTypeAndShapeAttrKernel(ctx);
+    })
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+
 }  // namespace oneflow

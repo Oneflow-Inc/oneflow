@@ -307,4 +307,19 @@ REGISTER_USER_OP("TestDataTypeAttr")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
+    .Input("in")
+    .Output("out", 3)
+    .Attr("out_shapes", UserOpAttrType::kAtListShape)
+    .Attr("out_types", UserOpAttrType::kAtListDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      auto out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
+      auto out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+      FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+        *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
+        *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
+      }
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
