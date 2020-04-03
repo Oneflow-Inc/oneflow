@@ -29,7 +29,7 @@ ObjectMsgPtr<Scheduler> NewTestScheduler(int64_t symbol_value, size_t size) {
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_int64_operand(symbol_value)->add_int64_operand(1));
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value));
   list.EmplaceBack(
       NewInstruction("Malloc")->add_mut_operand(symbol_value)->add_int64_operand(size));
   scheduler->Receive(&list);

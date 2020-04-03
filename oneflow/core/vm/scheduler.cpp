@@ -16,7 +16,7 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_mutable_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
     CHECK(instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
-          || instr_operand->has_bool_i_operand());
+          || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
   }
   return true;
 }

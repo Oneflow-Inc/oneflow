@@ -28,9 +28,9 @@ TEST(CudaCopyH2DStreamType, basic) {
   int64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_int64_operand(src_symbol)->add_int64_operand(1));
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(src_symbol));
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_int64_operand(dst_symbol)->add_int64_operand(1));
+      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(dst_symbol));
   list.EmplaceBack(
       NewInstruction("CudaMallocHost")->add_mut_operand(src_symbol)->add_int64_operand(size));
   list.EmplaceBack(
