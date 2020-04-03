@@ -17,11 +17,6 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferWhereBatchAxis(user_op::BatchAxisContext* ctx) {
-  // TODO
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
   int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0).shape().NumAxes();
   SbpSignatureBuilder()
@@ -48,7 +43,7 @@ REGISTER_USER_OP("where")
     .Input("y")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
-    .SetBatchAxisInferFn(InferWhereBatchAxis)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetWhereSbpSignatures);
 
 REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
