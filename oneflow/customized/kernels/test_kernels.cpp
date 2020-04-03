@@ -289,9 +289,8 @@ class TestDataTypeAttrKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelContext* ctx) override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    DataType output_type = ctx->GetAttr<DataType>("output_type");
-    CHECK_EQ(output_type, out_blob->data_type());
+    CHECK_EQ(ctx->GetAttr<DataType>("output_type"),
+             ctx->Tensor4ArgNameAndIndex("out", 0)->data_type());
   }
 };
 
