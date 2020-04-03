@@ -8,6 +8,7 @@ from test_util import type_name_to_np_type
 
 
 def TestDataTypeAttr(input, output_type):
+    assert output_type in flow.dtypes
     return (
         flow.user_op_builder("TestDataTypeAttr")
         .Op("TestDataTypeAttr")
@@ -19,29 +20,21 @@ def TestDataTypeAttr(input, output_type):
     )
 
 
-def RunTest(shape, data_type):
+def RunTest(data_type):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def TestDataTypeAttrJob(input=flow.FixedTensorDef(shape, dtype=flow.float)):
+    def TestDataTypeAttrJob(input=flow.FixedTensorDef((10, 10), dtype=flow.float)):
         return TestDataTypeAttr(input, type_name_to_flow_type[data_type])
 
-    input = np.random.random_sample((shape)).astype(np.float32)
+    input = np.random.random_sample((10, 10)).astype(np.float32)
     output = TestDataTypeAttrJob(input).get().ndarray()
     assert output.dtype == type_name_to_np_type[data_type]
 
 
-def gen_arg_list():
-    arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10, 10)]
-    # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
-    arg_dict["data_type"] = ["float32", "double", "int8", "int32", "int64", "uint8"]
-
-    return GenArgList(arg_dict)
-
-
 def test_data_type_attr(test_case):
-    for arg in gen_arg_list():
-        RunTest(*arg)
+    # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
+    for data_type in ["float32", "double", "int8", "int32", "int64", "uint8"]:
+        RunTest(data_type)

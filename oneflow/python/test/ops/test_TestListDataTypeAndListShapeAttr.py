@@ -8,6 +8,8 @@ from test_util import type_name_to_np_type
 
 
 def TestListDataTypeAndListShapeAttr(input, out_shapes, out_types):
+    assert isinstance(out_shapes, list)
+    assert isinstance(out_types, list)
     return (
         flow.user_op_builder("TestListDataTypeAndListShapeAttr")
         .Op("TestListDataTypeAndListShapeAttr")
@@ -20,18 +22,18 @@ def TestListDataTypeAndListShapeAttr(input, out_shapes, out_types):
     )
 
 
-def RunTest(shape, out_shapes, out_types):
+def RunTest(out_shapes, out_types):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def TestListDataTypeAndListShapeAttrJob(input=flow.FixedTensorDef(shape, dtype=flow.float)):
+    def TestListDataTypeAndListShapeAttrJob(input=flow.FixedTensorDef((10, 10), dtype=flow.float)):
         return TestListDataTypeAndListShapeAttr(
             input, out_shapes, [type_name_to_flow_type[data_type] for data_type in out_types]
         )
 
-    input = np.random.random_sample((shape)).astype(np.float32)
+    input = np.random.random_sample((10, 10)).astype(np.float32)
     outputs = [x.ndarray() for x in TestListDataTypeAndListShapeAttrJob(input).get()]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]
@@ -40,7 +42,6 @@ def RunTest(shape, out_shapes, out_types):
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["in_shape"] = [(10, 10)]
     arg_dict["out_shapes"] = [[(4, 4), (6, 6), (8, 8)]]
     # TODO: fix bugs in ForeignOutputKernel with "float" and "char" dtype, do not test these two dtypes here
     arg_dict["out_types"] = [["float32", "double", "int8"], ["int32", "int64", "uint8"]]
