@@ -21,8 +21,8 @@ class NewBlobObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewBlobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstMirroredObjectOperand, job);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, blob);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, job);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, blob);
   FLAT_MSG_VIEW_END(NewBlobObjectInstrOperand);
   // clang-format on
 
@@ -33,7 +33,7 @@ class NewBlobObjectInstructionType final : public vm::InstructionType {
     DataType data_type = job_object.job_desc().DefaultDataType();
     for (int i = 0; i < view->blob_size(); ++i) {
       CHECK_GT(view->blob(i).logical_object_id(), 0);
-      instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObjectType>(data_type);
+      instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObject>(data_type);
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }
@@ -50,7 +50,7 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteBlobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableMirroredObjectOperand, blob);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, blob);
   FLAT_MSG_VIEW_END(DeleteBlobObjectInstrOperand);
   // clang-format on
 
@@ -59,7 +59,7 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
     for (int i = 0; i < view->blob_size(); ++i) {
       auto* type_mirrored_object = instr_ctx->mut_operand_type(view->blob(i));
-      CHECK(type_mirrored_object->Has<BlobObjectType>());
+      CHECK(type_mirrored_object->Has<BlobObject>());
       type_mirrored_object->reset_object();
     }
   }

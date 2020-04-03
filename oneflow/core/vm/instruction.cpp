@@ -92,26 +92,26 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   return infer_instr_msg;
 }
 
-const MirroredObject& InstrCtx::operand_type(const MirroredObjectOperand& operand) const {
+const MirroredObject& InstrCtx::operand_type(const Operand& operand) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(
       operand, instr_chain().stream().parallel_id());
 }
 
-const MirroredObject& InstrCtx::operand_value(const MirroredObjectOperand& operand) const {
+const MirroredObject& InstrCtx::operand_value(const Operand& operand) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(
       operand, instr_chain().stream().parallel_id());
 }
 
-MirroredObject* InstrCtx::mut_operand_type(const MirroredObjectOperand& operand) {
+MirroredObject* InstrCtx::mut_operand_type(const Operand& operand) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand,
                                                               instr_chain().stream().parallel_id());
 }
 
-MirroredObject* InstrCtx::mut_operand_value(const MirroredObjectOperand& operand) {
+MirroredObject* InstrCtx::mut_operand_value(const Operand& operand) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand,
@@ -119,7 +119,7 @@ MirroredObject* InstrCtx::mut_operand_value(const MirroredObjectOperand& operand
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
                                                       int64_t default_parallel_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);
@@ -129,7 +129,7 @@ MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperan
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const MirroredObjectOperand& operand,
+const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
                                                             int64_t default_parallel_id) const {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);

@@ -15,12 +15,12 @@ FLAT_MSG_END(MirroredParallelId);
 FLAT_MSG_BEGIN(AllParallelId);
 FLAT_MSG_END(AllParallelId);
 
-FLAT_MSG_BEGIN(MirroredObjectOperand);
+FLAT_MSG_BEGIN(Operand);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, int64_t parallel_id);
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const AllParallelId&);
-  PUBLIC void __Init__(const MirroredObjectOperandProto& proto);
+  PUBLIC void __Init__(const OperandProto& proto);
   PUBLIC int64_t GetParallelId(int64_t default_parallel_id) const;
 
   // fields
@@ -29,7 +29,7 @@ FLAT_MSG_BEGIN(MirroredObjectOperand);
     FLAT_MSG_ONEOF_FIELD(int64_t, fixed_parallel_id)
     FLAT_MSG_ONEOF_FIELD(MirroredParallelId, mirrored_parallel_id)
     FLAT_MSG_ONEOF_FIELD(AllParallelId, all_parallel_id));
-FLAT_MSG_END(MirroredObjectOperand);
+FLAT_MSG_END(Operand);
 // clang-format on
 
 // clang-format off
@@ -38,11 +38,11 @@ FLAT_MSG_BEGIN(MirroredObjectId);
   PUBLIC void __Init__() {}
   PUBLIC void __Init__(int64_t logical_object_id_value, int64_t parallel_id);
   PUBLIC template<int64_t(*TransformLogicalObjectId)(int64_t)>
-         void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
+         void __Init__(const Operand& operand, int64_t parallel_id) {
     __Init__(TransformLogicalObjectId(operand.logical_object_id()),
              operand.GetParallelId(parallel_id));
   }
-  PUBLIC void __Init__(const MirroredObjectOperand& operand, int64_t parallel_id) {
+  PUBLIC void __Init__(const Operand& operand, int64_t parallel_id) {
     __Init__(operand.logical_object_id(), operand.GetParallelId(parallel_id));
   }
   PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();

@@ -9,8 +9,8 @@ namespace vm {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(CopyInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableMirroredObjectOperand, dst);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(ConstMirroredObjectOperand, src);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(MutableOperand, dst);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(ConstOperand, src);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, size);
 FLAT_MSG_VIEW_END(CopyInstruction);
 // clang-format on

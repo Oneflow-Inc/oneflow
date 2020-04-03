@@ -8,12 +8,12 @@
 namespace oneflow {
 namespace eager {
 
-class BlobObjectType : public vm::Object {
+class BlobObject : public vm::Object {
  public:
-  BlobObjectType(const BlobObjectType&) = delete;
-  BlobObjectType(BlobObjectType&&) = delete;
-  BlobObjectType(DataType data_type) : blob_desc_(data_type) {}
-  ~BlobObjectType() = default;
+  BlobObject(const BlobObject&) = delete;
+  BlobObject(BlobObject&&) = delete;
+  BlobObject(DataType data_type) : blob_desc_(data_type) {}
+  ~BlobObject() = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }
   BlobDesc* mut_blob_desc() { return &blob_desc_; }

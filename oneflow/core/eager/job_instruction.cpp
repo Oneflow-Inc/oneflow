@@ -23,7 +23,7 @@ class NewJobObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewJobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableMirroredObjectOperand, job);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableOperand, job);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, job_id);
   FLAT_MSG_VIEW_END(NewJobObjectInstrOperand);
   // clang-format on
@@ -50,7 +50,7 @@ class DeleteJobObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteJobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableMirroredObjectOperand, job);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableOperand, job);
   FLAT_MSG_VIEW_END(DeleteJobObjectInstrOperand);
   // clang-format on
 

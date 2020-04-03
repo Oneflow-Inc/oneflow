@@ -16,17 +16,17 @@ enum OperandModifier {
 
 // clang-format off
 template<OperandModifier modifier>
-FLAT_MSG_BEGIN(ModifiedMirroredObjectOperand);
+FLAT_MSG_BEGIN(ModifiedOperand);
   PUBLIC static const OperandModifier operand_modifier = modifier;
   // methods
   PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(MirroredObjectOperand, operand);
-FLAT_MSG_END(ModifiedMirroredObjectOperand);
+  FLAT_MSG_DEFINE_OPTIONAL(Operand, operand);
+FLAT_MSG_END(ModifiedOperand);
 
-using ConstMirroredObjectOperand = ModifiedMirroredObjectOperand<kConstModifier>;
-using MutableMirroredObjectOperand = ModifiedMirroredObjectOperand<kDataMutableModifier>;
-using Mut2MirroredObjectOperand = ModifiedMirroredObjectOperand<kTypeAndDataMutableModifier>;
+using ConstOperand = ModifiedOperand<kConstModifier>;
+using MutableOperand = ModifiedOperand<kDataMutableModifier>;
+using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier>;
 
 FLAT_MSG_BEGIN(OperandSeparator);
 FLAT_MSG_END(OperandSeparator);
@@ -38,9 +38,9 @@ FLAT_MSG_BEGIN(InstructionOperand);
   PUBLIC void __Init__(const InstructionOperandProto& proto);
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
-    FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableMirroredObjectOperand, mutable_operand)
-    FLAT_MSG_ONEOF_FIELD(Mut2MirroredObjectOperand, mut2_operand)
+    FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
+    FLAT_MSG_ONEOF_FIELD(MutableOperand, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, sep)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
