@@ -49,7 +49,7 @@ class NewBlobObjectInstructionType final : public vm::InstructionType {
     const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
     auto mem_case = MakeMemCase(job_object.parallel_desc().device_type(),
                                 instr_ctx->instr_chain().stream().thread_ctx().device_id());
-    DataType data_type = job_object.job_desc().DefaultDataType();
+    DataType data_type = job_object.job_desc()->DefaultDataType();
     for (int i = 0; i < view->blob_size(); ++i) {
       CHECK_GT(view->blob(i).logical_object_id(), 0);
       instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObject>(mem_case, data_type);
