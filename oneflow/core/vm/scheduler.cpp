@@ -82,19 +82,18 @@ void Scheduler::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
-void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                                      const Operand& mirrored_object_operand, int64_t parallel_id,
-                                      const DoEachT& DoEach) {
-  int64_t logical_object_id = mirrored_object_operand.logical_object_id();
+void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
+                                      int64_t parallel_id, const DoEachT& DoEach) {
+  int64_t logical_object_id = operand.logical_object_id();
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
   auto* map = logical_object->mut_parallel_id2mirrored_object();
-  if (mirrored_object_operand.has_all_parallel_id()) {
+  if (operand.has_all_parallel_id()) {
     OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
     return;
   }
   CHECK_NOTNULL(logical_object);
-  auto* ret = map->FindPtr(mirrored_object_operand.GetParallelId(parallel_id));
+  auto* ret = map->FindPtr(operand.GetParallelId(parallel_id));
   CHECK_NOTNULL(ret);
   DoEach(ret);
 }
@@ -102,17 +101,14 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
 template<typename DoEachT>
 void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
                                            Id2LogicalObject* id2logical_object,
-                                           const ConstOperand& operand, int64_t parallel_id,
+                                           const ConstOperand& const_operand, int64_t parallel_id,
                                            const DoEachT& DoEach) {
-  const auto& mirrored_object_operand = operand.operand();
+  const auto& operand = const_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
-    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }
@@ -121,12 +117,11 @@ void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
                                            Id2LogicalObject* id2logical_object,
-                                           const MutableOperand& operand, int64_t parallel_id,
-                                           const DoEachT& DoEach) {
-  const auto& mirrored_object_operand = operand.operand();
+                                           const MutableOperand& mutable_operand,
+                                           int64_t parallel_id, const DoEachT& DoEach) {
+  const auto& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
     // do nothing
   } else {
@@ -137,15 +132,13 @@ void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
                                          Id2LogicalObject* id2logical_object,
-                                         const MutableOperand& operand, int64_t parallel_id,
+                                         const MutableOperand& mutable_operand, int64_t parallel_id,
                                          const DoEachT& DoEach) {
-  const auto& mirrored_object_operand = operand.operand();
+  const auto& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }
@@ -154,17 +147,14 @@ void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
 template<typename DoEachT>
 void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
                                          Id2LogicalObject* id2logical_object,
-                                         const Mut2Operand& operand, int64_t parallel_id,
+                                         const Mut2Operand& mut2_operand, int64_t parallel_id,
                                          const DoEachT& DoEach) {
-  const auto& mirrored_object_operand = operand.operand();
+  const auto& operand = mut2_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
-    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
+    ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, mirrored_object_operand,
-                                                   parallel_id, DoEach);
+    ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }

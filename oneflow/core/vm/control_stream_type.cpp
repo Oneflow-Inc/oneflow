@@ -114,7 +114,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutableOperand, mirrored_object_operand);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutableOperand, symbol);
   FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
   // clang-format on
 
@@ -134,8 +134,8 @@ class DeleteSymbolInstructionType final : public InstructionType {
            const GetLogicalObjectIdT& GetLogicalObjectId) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
-    FOR_RANGE(int, i, 0, view->mirrored_object_operand_size()) {
-      int64_t logical_object_id = view->mirrored_object_operand(i).operand().logical_object_id();
+    FOR_RANGE(int, i, 0, view->symbol_size()) {
+      int64_t logical_object_id = view->symbol(i).operand().logical_object_id();
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);

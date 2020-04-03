@@ -56,27 +56,27 @@ OBJECT_MSG_BEGIN(Scheduler);
                          /*out*/ NewInstrChainList* ret_instr_chain_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
-                             const Operand& mirrored_object_operand,
+                             const Operand& operand,
                              int64_t parallel_id, const DoEachT& DoEach);
   template<typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
-                                  const ConstOperand& const_mirrored_object_operand,
+                                  const ConstOperand& const_operand,
                                   int64_t parallel_id, const DoEachT& DoEach);
   template<typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
-                                  const MutableOperand& mutable_mirrored_object_operand,
+                                  const MutableOperand& mutable_operand,
                                   int64_t parallel_id, const DoEachT& DoEach);
   template<typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
-                                const MutableOperand& mutable_mirrored_object_operand,
+                                const MutableOperand& mutable_operand,
                                 int64_t parallel_id, const DoEachT& DoEach);
   template<typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
-                                const Mut2Operand& mut2_mirrored_object_operand,
+                                const Mut2Operand& mut2_operand,
                                 int64_t parallel_id, const DoEachT& DoEach);
   enum OperandAccessType {
     kMutableOperandAccess = 0,
