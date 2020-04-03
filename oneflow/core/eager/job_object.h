@@ -16,12 +16,12 @@ class JobObject : public vm::Object {
   JobObject(JobObject&&) = delete;
 
   JobObject(const std::shared_ptr<Job>& job, int64_t job_id)
-      : job_(job), job_desc_(job->job_conf(), job_id) {
+      : job_(job), job_desc_(new JobDesc(job->job_conf(), job_id)) {
     Init();
   }
   ~JobObject() override = default;
 
-  const JobDesc& job_desc() const { return job_desc_; }
+  const std::shared_ptr<const JobDesc>& job_desc() const { return job_desc_; }
   const Job& job() const { return *job_; }
   bool HasOpConf(int64_t op_logical_object_id) const;
   const OperatorConf& OpConf4LogicalObjectId(int64_t op_logical_object_id) const;
@@ -39,7 +39,7 @@ class JobObject : public vm::Object {
   void InitParallelDesc();
 
   std::shared_ptr<Job> job_;
-  const JobDesc job_desc_;
+  std::shared_ptr<const JobDesc> job_desc_;
   HashMap<int64_t, const OperatorConf*> logical_object_id2op_conf_;
   HashMap<LogicalBlobId, int64_t> lbi2logical_object_id_;
   std::shared_ptr<ParallelDesc> parallel_desc_;
