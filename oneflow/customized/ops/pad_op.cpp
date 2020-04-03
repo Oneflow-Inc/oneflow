@@ -95,18 +95,18 @@ REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrap
 
 REGISTER_USER_OP_GRAD("pad_grad")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+      if (op.NeedGenGradTensor4OpInput("dy", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("pad")
-                .Input("x", op.GetGradTensorWithOpOutput("dy", 0))
+                .Input("x", op.GetGradTensorWithOpOutput("dx", 0))
                 .Output("y")
                 .Attr("floating_constant_value", op.attr<double>("floating_constant_value"))
                 .Attr("integral_constant_value", op.attr<int64_t>("integral_constant_value"))
                 .Attr("padding_before", op.attr<std::vector<int64_t>>("padding_before"))
                 .Attr("padding_after", op.attr<std::vector<int64_t>>("padding_after"))
                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dx", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dy", 0);
         AddOp(grad_op);
       }
     });
