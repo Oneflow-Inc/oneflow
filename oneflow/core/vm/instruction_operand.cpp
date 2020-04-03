@@ -10,6 +10,10 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mutable_operand()) {
     mutable_mutable_operand()->mutable_operand()->__Init__(proto.mutable_operand());
+  } else if (proto.has_mut2_operand()) {
+    mutable_mut2_operand()->mutable_operand()->__Init__(proto.mut2_operand());
+  } else if (proto.has_sep()) {
+    mutable_sep();
   } else if (proto.has_double_i_operand()) {
     set_double_i_operand(proto.double_i_operand());
   } else if (proto.has_int64_i_operand()) {
