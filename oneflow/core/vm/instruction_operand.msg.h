@@ -28,6 +28,9 @@ using ConstMirroredObjectOperand = ModifiedMirroredObjectOperand<kConstModifier>
 using MutableMirroredObjectOperand = ModifiedMirroredObjectOperand<kDataMutableModifier>;
 using Mut2MirroredObjectOperand = ModifiedMirroredObjectOperand<kTypeAndDataMutableModifier>;
 
+FLAT_MSG_BEGIN(OperandSeparator);
+FLAT_MSG_END(OperandSeparator);
+
 class InstructionOperandProto;
 
 FLAT_MSG_BEGIN(InstructionOperand);
@@ -38,6 +41,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstMirroredObjectOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableMirroredObjectOperand, mutable_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2MirroredObjectOperand, mut2_operand)
+    FLAT_MSG_ONEOF_FIELD(OperandSeparator, sep)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)
     FLAT_MSG_ONEOF_FIELD(uint64_t, uint64_i_operand)
