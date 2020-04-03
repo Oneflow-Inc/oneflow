@@ -7,7 +7,6 @@ template<DeviceType device_type, typename T, typename CondT>
 class WhereKernel final : public user_op::OpKernel {
  public:
   WhereKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  WhereKernel() = default;
   ~WhereKernel() = default;
 
  private:
