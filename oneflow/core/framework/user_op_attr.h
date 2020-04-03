@@ -23,16 +23,24 @@ namespace user_op {
 
 #define MESSAGE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape)
 
-#define LIST_ATTR_SEQ                                                                     \
+#define LIST_BASIC_ATTR_SEQ                                                               \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, UserOpAttrType::kAtListInt32) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int64, std::vector<int64_t>, UserOpAttrType::kAtListInt64) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_float, std::vector<float>, UserOpAttrType::kAtListFloat)
 
-#define ATTR_SEQ   \
-  BASIC_ATTR_SEQ   \
-  ENUM_ATTR_SEQ    \
-  MESSAGE_ATTR_SEQ \
-  LIST_ATTR_SEQ
+#define LIST_ENUM_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_data_type, std::vector<DataType>, UserOpAttrType::kAtListDataType)
+
+#define LIST_MESSAGE_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, UserOpAttrType::kAtListShape)
+
+#define ATTR_SEQ      \
+  BASIC_ATTR_SEQ      \
+  ENUM_ATTR_SEQ       \
+  MESSAGE_ATTR_SEQ    \
+  LIST_BASIC_ATTR_SEQ \
+  LIST_ENUM_ATTR_SEQ  \
+  LIST_MESSAGE_ATTR_SEQ
 
 // Type Trait: GetAttrType
 

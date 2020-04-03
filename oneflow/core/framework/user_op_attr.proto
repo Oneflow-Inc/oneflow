@@ -16,6 +16,8 @@ enum UserOpAttrType {
   kAtListInt32 = 9;
   kAtListInt64 = 10;
   kAtListFloat = 11;
+  kAtListDataType = 12;
+  kAtListShape = 13;
 }
 
 message UserOpAttrVal {
@@ -27,6 +29,12 @@ message UserOpAttrVal {
   }
   message ListFloat {
     repeated float val = 1;
+  }
+  message ListDataType {
+    repeated DataType val = 1;
+  }
+  message ListShape {
+    repeated ShapeProto val = 1;
   }
   oneof value {
     int32 at_int32 = 1;
@@ -40,5 +48,7 @@ message UserOpAttrVal {
     ListInt32 at_list_int32 = 9;
     ListInt64 at_list_int64 = 10;
     ListFloat at_list_float = 11;
+    ListDataType at_list_data_type = 12;
+    ListShape at_list_shape = 13;
   }
 }

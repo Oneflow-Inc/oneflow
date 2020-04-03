@@ -106,6 +106,15 @@ class UserOpConfWrapperBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, float) for x in attr_value)
             attribute.at_list_float.val[:] = list(attr_value)
+        elif attr_type == "AttrTypeListDataType":
+            assert isinstance(attr_value, (tuple, list))
+            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
+            attribute.at_list_data_type.val[:] = list(attr_value)
+        elif attr_type == "AttrTypeListShape":
+            assert isinstance(attr_value, (tuple, list))
+            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
+            for i in range(len(attr_value)):
+                attribute.at_list_shape.val[i].dim[:] = list(attr_value[i])
         else:
             assert False, "Unknow op attribute type: {}".format(attr_type)
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
