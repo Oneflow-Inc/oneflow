@@ -7,15 +7,15 @@ namespace {
 template<typename T, typename CondT>
 __global__ void CudaWhere(const int64_t elem_cnt, const CondT* cond, const T* lhs, const T* rhs,
                           T* out) {
-  DoWhere(elem_cnt, cond, lhs, rhs, out);
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : rhs[i]; }
 }
 
 }  // namespace
 
 template<typename T, typename CondT>
-struct WhereFunctor<DeviceType::kGPU, T, CondT> {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                  const T* rhs, T* out) const {
+struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
+  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                    const T* rhs, T* out) {
     RUN_CUDA_KERNEL((CudaWhere<T, CondT>), ctx, elem_cnt, elem_cnt, cond, lhs, rhs, out);
   }
 };

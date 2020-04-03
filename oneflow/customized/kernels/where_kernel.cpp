@@ -16,9 +16,9 @@ class WhereKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    WhereFunctor<device_type, T, CondT>()(ctx->device_ctx(), out->shape().elem_cnt(),
-                                          cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
-                                          out->mut_dptr<T>());
+    WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
+                                                  cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
+                                                  out->mut_dptr<T>());
   }
 };
 

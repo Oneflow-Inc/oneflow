@@ -3,10 +3,10 @@
 namespace oneflow {
 
 template<typename T, typename CondT>
-struct WhereFunctor<DeviceType::kCPU, T, CondT> {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                  const T* rhs, T* out) const {
-    DoWhere(elem_cnt, cond, lhs, rhs, out);
+struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
+  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                    const T* rhs, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : rhs[i]; }
   }
 };
 
