@@ -88,7 +88,7 @@ template<>
 void AttrValAccessor<std::vector<Shape>>::SetAttr(const std::vector<Shape>& cpp_val,
                                                   UserOpAttrVal* attr_val) {
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
-    cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->mutable_val(i));
+    cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }
 }
 
