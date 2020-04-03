@@ -12,7 +12,6 @@ import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 
-
 class UserOpConfWrapper(object):
     def __init__(self, op_name):
         self.op_conf_ = op_conf_util.OperatorConf()
@@ -34,7 +33,6 @@ class UserOpConfWrapper(object):
                 lbi.blob_name = output_arg_name + '_' + str(i)
                 remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
         return tuple(remote_blob_list)
-
 
 @oneflow_export('user_op_builder')
 class UserOpConfWrapperBuilder(object):
