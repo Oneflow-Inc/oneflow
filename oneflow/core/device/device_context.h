@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/vm/allocator.h"
 
 namespace oneflow {
 
@@ -21,6 +22,11 @@ class DeviceCtx {
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
   virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
+
+  virtual vm::Allocator* mut_allocator() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 
  protected:
   DeviceCtx() = default;
