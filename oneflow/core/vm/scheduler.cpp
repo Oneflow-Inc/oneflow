@@ -1,6 +1,5 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -270,25 +269,7 @@ void Scheduler::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
 
 void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   set_scheduler_thread_only_allocator(allocator);
-  bool has_control_stream_type = false;
-  bool has_infer_control_stream_type = false;
-  auto CheckControlStreamDesc = [&](const StreamDesc* stream_desc) {
-    CHECK_EQ(stream_desc->num_machines(), 1);
-    CHECK_EQ(stream_desc->num_streams_per_machine(), 1);
-    CHECK_EQ(stream_desc->num_streams_per_thread(), 1);
-    CHECK_EQ(stream_desc->start_parallel_id(), 0);
-  };
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
-    const StreamType* stream_type = &stream_desc->stream_type_id().stream_type();
-    if (dynamic_cast<const ControlStreamType*>(stream_type) != nullptr) {
-      CheckControlStreamDesc(stream_desc);
-      has_control_stream_type = true;
-    } else if (dynamic_cast<const InferStreamType<ControlStreamType>*>(stream_type) != nullptr) {
-      CheckControlStreamDesc(stream_desc);
-      has_infer_control_stream_type = true;
-    } else {
-      // do nothing
-    }
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
@@ -306,8 +287,6 @@ void Scheduler::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
       }
     }
   }
-  CHECK(has_control_stream_type);
-  CHECK_EQ(has_control_stream_type, has_infer_control_stream_type);
 }
 
 void Scheduler::Receive(InstructionMsgList* compute_instr_msg_list) {
