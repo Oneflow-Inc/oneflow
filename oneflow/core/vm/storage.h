@@ -35,6 +35,10 @@ class Storage final {
     std::unique_lock<std::mutex> lock(mutex_);
     logical_object_id2data_.erase(logical_object_id);
   }
+  void ClearAll() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    logical_object_id2data_.clear();
+  }
 
  private:
   mutable std::mutex mutex_;

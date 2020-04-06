@@ -12,6 +12,8 @@
 namespace oneflow {
 namespace eager {
 
+COMMAND(Global<vm::Storage<Job>>::SetAllocated(new vm::Storage<Job>()));
+
 namespace {
 
 class NewJobObjectInstructionType final : public vm::InstructionType {
@@ -29,8 +31,7 @@ class NewJobObjectInstructionType final : public vm::InstructionType {
   // clang-format on
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
-    FlatMsgView<NewJobObjectInstrOperand> view;
-    CHECK(view.Match(instr_ctx->instr_msg().operand()));
+    FlatMsgView<NewJobObjectInstrOperand> view(instr_ctx->instr_msg().operand());
     const auto& job = Global<vm::Storage<Job>>::Get()->Get(view->job().logical_object_id());
     instr_ctx->mut_operand_type(view->job())->Mutable<JobObject>(job, view->job_id());
   }
@@ -55,8 +56,7 @@ class DeleteJobObjectInstructionType final : public vm::InstructionType {
   // clang-format on
 
   void Infer(vm::InstrCtx* instr_ctx) const override {
-    FlatMsgView<DeleteJobObjectInstrOperand> view;
-    CHECK(view.Match(instr_ctx->instr_msg().operand()));
+    FlatMsgView<DeleteJobObjectInstrOperand> view(instr_ctx->instr_msg().operand());
     auto* type_mirrored_object = instr_ctx->mut_operand_type(view->job());
     CHECK(type_mirrored_object->Has<JobObject>());
     type_mirrored_object->reset_object();
