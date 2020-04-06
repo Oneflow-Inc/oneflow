@@ -6,6 +6,10 @@
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+class KernelCtx;
+class Blob;
+
 namespace eager {
 
 class OpKernelObject : public vm::Object {
@@ -20,7 +24,8 @@ class OpKernelObject : public vm::Object {
   ~OpKernelObject() override = default;
 
   const Operator& op() const { return *op_; }
-  const Kernel& kernel(DeviceCtx* device_ctx);
+  const Kernel& kernel(const KernelCtx& ctx,
+                       const std::function<Blob*(const std::string&)>& BnInOp2Blob);
 
   void InferAndNewUninitiatedKernel(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);

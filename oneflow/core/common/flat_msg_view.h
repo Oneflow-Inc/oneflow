@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
 
 #include <vector>
+#include <glog/logging.h>
 #include "oneflow/core/common/dss.h"
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/struct_traits.h"
@@ -61,18 +62,17 @@ namespace oneflow {
  private:                                                                                      \
   FlatMsgViewPatternVec<field_type> OF_PP_CAT(field_name, _);
 
-#define FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(T)                                \
- public:                                                                     \
-  void Clear() { std::memset(reinterpret_cast<void*>(this), 0, sizeof(T)); } \
-  template<int field_index, typename Enabled = void>                         \
-  struct IsRepeatedPattern {                                                 \
-    static const bool value = false;                                         \
-  };                                                                         \
-                                                                             \
- private:                                                                    \
-  template<int field_index, typename Enabled = void>                         \
-  struct __FlatMsgViewFieldType__ {                                          \
-    struct type {};                                                          \
+#define FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(T)        \
+ public:                                             \
+  template<int field_index, typename Enabled = void> \
+  struct IsRepeatedPattern {                         \
+    static const bool value = false;                 \
+  };                                                 \
+                                                     \
+ private:                                            \
+  template<int field_index, typename Enabled = void> \
+  struct __FlatMsgViewFieldType__ {                  \
+    struct type {};                                  \
   };
 
 #define FLAT_MSG_VIEW_SPECIALIZE_FIELD_TYPE(field_index, field_type) \
@@ -106,6 +106,7 @@ struct FlatMsgViewPatternVec {
 
   const T* at(int index) const { return reinterpret_cast<const Vec*>(&vec_buffer_)->at(index); }
   size_t size() const { return reinterpret_cast<const Vec*>(&vec_buffer_)->size(); }
+  void clear() { reinterpret_cast<Vec*>(&vec_buffer_)->clear(); }
   void push_back(const T* ptr) { reinterpret_cast<Vec*>(&vec_buffer_)->push_back(ptr); }
 
  private:
@@ -174,6 +175,7 @@ template<typename WalkCtxType, typename FieldPtrT>
 struct _FlatMsgViewFieldMatcher<true, WalkCtxType, FieldPtrT> {
   // return true if error occured
   static bool Call(WalkCtxType* ctx, FieldPtrT* field) {
+    field->clear();
     using FieldType = typename FieldPtrT::value_type;
     while (ctx->is_token_index_valid()) {
       const auto* oneof = ctx->GetOneof();
@@ -272,10 +274,14 @@ struct _FlatMsgViewFieldDelete<true, FieldPtrT> {
 
 template<typename T>
 struct FlatMsgView final {
+  FlatMsgView(const FlatMsgView&) = delete;
+  FlatMsgView(FlatMsgView&&) = delete;
   static_assert(T::__is_flat_message_view_type__, "T is not a flat message view type");
-  FlatMsgView() {
-    view_.Clear();
+  FlatMsgView() { view_.template __WalkField__<FlatMsgViewFieldInit>(&view_); }
+  template<typename RepeatedFlatMsgT>
+  explicit FlatMsgView(const RepeatedFlatMsgT& repeated_flat_msg) {
     view_.template __WalkField__<FlatMsgViewFieldInit>(&view_);
+    CHECK(this->template Match(repeated_flat_msg));
   }
   ~FlatMsgView() { view_.template __ReverseWalkField__<FlatMsgViewFieldDelete>(&view_); }
 

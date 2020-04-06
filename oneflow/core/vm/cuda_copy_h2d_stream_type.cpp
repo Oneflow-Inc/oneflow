@@ -81,7 +81,8 @@ COMMAND(RegisterInstructionType<CudaCopyH2DInstructionType>("CudaCopyH2D"));
 
 void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
-  device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->mut_callback_list()));
+  device_ctx->reset(
+      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->thread_ctx().device_id()));
 }
 
 void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,

@@ -80,6 +80,8 @@ class Blob final {
   const ShapeView& shape() const { return *shape_view_; }
   MutShapeView* mut_shape_view() { return mut_shape_view_.get(); }
 
+  void reset_dptr(char* dptr) { dptr_ = dptr; }
+
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);

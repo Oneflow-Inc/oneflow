@@ -38,9 +38,12 @@ void OpKernelObject::NewUninitiatedKernel(
   kernel_.reset(ConstructUninitiatedKernel(kernel_conf_));
 }
 
-const Kernel& OpKernelObject::kernel(DeviceCtx* device_ctx) {
+const Kernel& OpKernelObject::kernel(const KernelCtx& ctx,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   if (!is_kernel_initiated_) {
-    kernel_->Init(job_desc_.get(), kernel_conf_, device_ctx);
+    // malloc for const_buf blob and tmp blob
+    kernel_->Init(job_desc_.get(), kernel_conf_, ctx.device_ctx);
+    kernel_->InitModelAndConstBuf(ctx, BnInOp2Blob);
     is_kernel_initiated_ = true;
   }
   return *kernel_;
