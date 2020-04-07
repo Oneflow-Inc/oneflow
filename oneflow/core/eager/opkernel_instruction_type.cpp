@@ -1,5 +1,6 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/job_object.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
@@ -68,25 +69,46 @@ COMMAND(vm::RegisterLocalInstructionType<DeleteOpKernelObjectInstructionType>(
     "DeleteLocalOpKernelObject"));
 
 namespace {
+
+template<typename CallbackT>
+void ForEachIbnAndBlobObject(vm::InstrCtx* instr_ctx,
+                             const FlatMsgView<CallOpKernelInstrOperand>& args,
+                             const CallbackT& Callback) {
+  CHECK_EQ(args->ibn_size(), args->input_index_size());
+  CHECK_EQ(args->ibn_size(), args->input_blob_size());
+  FOR_RANGE(int, i, 0, args->ibn_size()) {
+    const std::string& bn_in_op =
+        instr_ctx->operand_type(args->ibn(i)).Get<vm::StringObject>().str();
+    int64_t index = args->input_index(i);
+    const auto& blob_object = instr_ctx->operand_type(args->input_blob(i)).Get<BlobObject>();
+    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
+  }
+}
+
 template<typename CallbackT>
 void ForEachObnAndBlobObject(vm::InstrCtx* instr_ctx,
                              const FlatMsgView<CallOpKernelInstrOperand>& args,
                              const CallbackT& Callback) {
+  CHECK_EQ(args->obn_size(), args->output_index_size());
   CHECK_EQ(args->obn_size(), args->output_blob_size());
   FOR_RANGE(int, i, 0, args->obn_size()) {
     const std::string& bn_in_op =
         instr_ctx->operand_type(args->obn(i)).Get<vm::StringObject>().str();
+    int64_t index = args->output_index(i);
     auto* blob_object = instr_ctx->mut_operand_type(args->output_blob(i))->Mut<BlobObject>();
-    Callback(bn_in_op, blob_object);
+    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
   }
+  CHECK_EQ(args->mut2_obn_size(), args->mut2_output_index_size());
   CHECK_EQ(args->mut2_obn_size(), args->mut2_output_blob_size());
   FOR_RANGE(int, i, 0, args->mut2_obn_size()) {
     const std::string& bn_in_op =
         instr_ctx->operand_type(args->mut2_obn(i)).Get<vm::StringObject>().str();
+    int64_t index = args->mut2_output_index(i);
     auto* blob_object = instr_ctx->mut_operand_type(args->mut2_output_blob(i))->Mut<BlobObject>();
-    Callback(bn_in_op, blob_object);
+    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
   }
 }
+
 }  // namespace
 
 void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
@@ -102,16 +124,10 @@ void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
                             });
   }
   HashMap<std::string, const BlobDesc*> ibn2blob_desc;
-  {
-    CHECK_EQ(args->ibn_size(), args->input_blob_size());
-    FOR_RANGE(int, i, 0, args->ibn_size()) {
-      const std::string& bn_in_op =
-          instr_ctx->operand_type(args->ibn(i)).Get<vm::StringObject>().str();
-      const BlobDesc* blob_desc =
-          &instr_ctx->operand_type(args->input_blob(i)).Get<BlobObject>().blob_desc();
-      CHECK(ibn2blob_desc.emplace(bn_in_op, blob_desc).second);
-    }
-  }
+  ForEachIbnAndBlobObject(instr_ctx, args,
+                          [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+                            CHECK(ibn2blob_desc.emplace(bn_in_op, &blob_object.blob_desc()).second);
+                          });
   auto* opkernel_obj = instr_ctx->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
   auto BnInOp2BlobDesc = [&](const std::string& bn_in_op) -> BlobDesc* {
     auto output_iter = obn2blob_desc.find(bn_in_op);
@@ -134,15 +150,10 @@ void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
                             CHECK(obn2blob.emplace(bn_in_op, blob_object->mut_blob()).second);
                           });
   HashMap<std::string, const Blob*> ibn2blob;
-  {
-    CHECK_EQ(args->ibn_size(), args->input_blob_size());
-    FOR_RANGE(int, i, 0, args->ibn_size()) {
-      const std::string& bn_in_op =
-          instr_ctx->operand_type(args->ibn(i)).Get<vm::StringObject>().str();
-      const Blob* blob = &instr_ctx->operand_type(args->output_blob(i)).Get<BlobObject>().blob();
-      CHECK(ibn2blob.emplace(bn_in_op, blob).second);
-    }
-  }
+  ForEachIbnAndBlobObject(instr_ctx, args,
+                          [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+                            CHECK(ibn2blob.emplace(bn_in_op, &blob_object.blob()).second);
+                          });
   auto* opkernel_obj = instr_ctx->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
   DeviceCtx* device_ctx = instr_ctx->mut_instr_chain()->stream().device_ctx().get();
   KernelCtx kernel_ctx;
