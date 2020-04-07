@@ -3,39 +3,41 @@ import numpy as np
 import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict 
+import oneflow.core.common.data_type_pb2 as data_type_util
 
 from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5):
+def compare_with_tensorflow(device_type, input_shape, axis, keepdims, func_name, rtol=1e-5, atol=1e-5):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
+    func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceProdJob(x=flow.FixedTensorDef(input_shape)):
+    def eval(func_name)(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_prod(x, axis=axis, keepdims=keepdims)
-    x = np.random.rand(*input_shape).astype(np.float32)
+    x = np.random.rand(*input_shape).astype(np.int32)
     # OneFlow
-    of_out = ReduceProdJob(x).get()
+    of_out = ReduceAnyJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_prod(x, axis=axis, keepdims=keepdims)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
 
-def test_reduce_prod(test_case):
+def test_reduce_func(test_case, func_name):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(64, 64, 64)]
-    arg_dict["axis"] = [None, [1], [0, 2]]
+    arg_dict["input_shape"] = [(2,3,4)]
+    arg_dict["axis"] = [None, [], [1], [0, 2]]
     arg_dict["keepdims"] = [True, False]
+    add_dict["func_name"] = func_name 
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-test_reduce_prod(1)
+test_reduce_func(1, ReduceAnyJob)
 
 def test_col_reduce(test_case):
     arg_dict = OrderedDict()
@@ -70,7 +72,7 @@ def test_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
-        y = flow.math.reduce_prod(x)
+        y = flow.math.reduce_any(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
     Foo(np.ndarray((10,), dtype=np.float32))
