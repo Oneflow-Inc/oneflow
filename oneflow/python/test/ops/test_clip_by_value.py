@@ -114,7 +114,7 @@ def test_clip_by_min(test_case):
 
 
 def test_clip_by_max(test_case):
-    values = np.random.standard_normal((2, 64, 80, 188)).astype(np.float32)
+    values = np.random.standard_normal((2, 4, 64, 188)).astype(np.float32)
     np_out = np.clip(values, a_min=None, a_max=0.2)
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
