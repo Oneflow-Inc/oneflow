@@ -11,7 +11,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
   ~CategoricalOrdinalEncodeKernel() override = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     bool hash_precomputed = ctx->GetAttr<bool>("hash_precomputed");
     CHECK(hash_precomputed);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

@@ -16,7 +16,7 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
   ~GenerateRandomBatchPermutationIndicesCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     std::iota(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(), 0);
     std::shuffle(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(),

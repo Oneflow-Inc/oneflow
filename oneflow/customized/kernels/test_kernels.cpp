@@ -11,7 +11,7 @@ class ReluKernel final : public user_op::OpKernel {
   ~ReluKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -28,7 +28,7 @@ class ReluGradKernel final : public user_op::OpKernel {
   ~ReluGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -60,7 +60,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
   ~TestReshapeKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
@@ -79,7 +79,7 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
   ~CopyIn2OutKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
@@ -102,7 +102,7 @@ class TestSourceKernel final : public user_op::OpKernel {
   ~TestSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
@@ -126,7 +126,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
   ~TestMultiOutputOrderKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out1_blob = ctx->Tensor4ArgNameAndIndex("out1", 0);
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
@@ -156,7 +156,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
   ~TestSourceMultiGpuFixedOutNumKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
       *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
@@ -183,7 +183,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
   ~TestMultiInputFwKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* x1_blob = ctx->Tensor4ArgNameAndIndex("x1", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
@@ -208,7 +208,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
   ~TestMultiInputBwKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
     user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x1_diff_blob->shape().elem_cnt(), 1.0,
@@ -235,7 +235,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
   ~TestDynamicSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     out_blob->mut_shape()->Set(0, 3);
     for (int i = 0; i < 3; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
@@ -262,7 +262,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
   ~TestRandomSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     random_generator_->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
                                       out_blob->mut_dptr<float>());

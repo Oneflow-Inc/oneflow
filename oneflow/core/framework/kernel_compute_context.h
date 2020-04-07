@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_KERNEL_CONTEXT_H_
-#define ONEFLOW_CORE_FRAMEWORK_KERNEL_CONTEXT_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_KERNEL_COMPUTE_CONTEXT_H_
+#define ONEFLOW_CORE_FRAMEWORK_KERNEL_COMPUTE_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/device/device_context.h"
@@ -11,9 +11,9 @@ namespace user_op {
 
 class Tensor;
 
-class KernelContext {
+class KernelComputeContext {
  public:
-  virtual ~KernelContext() = default;
+  virtual ~KernelComputeContext() = default;
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
@@ -30,8 +30,8 @@ class KernelContext {
   }
 
  protected:
-  KernelContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
-  KernelContext(const KernelContext&) = delete;
+  KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelComputeContext(const KernelComputeContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
@@ -41,4 +41,4 @@ class KernelContext {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_KERNEL_CONTEXT_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_KERNEL_COMPUTE_CONTEXT_H_

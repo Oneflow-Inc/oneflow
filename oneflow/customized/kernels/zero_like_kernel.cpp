@@ -11,7 +11,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
   ~ZeroLikeKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));

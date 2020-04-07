@@ -4,7 +4,7 @@
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/kernel_context.h"
+#include "oneflow/core/framework/kernel_compute_context.h"
 
 namespace oneflow {
 
@@ -41,7 +41,7 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  virtual void Compute(KernelContext*) = 0;
+  virtual void Compute(KernelComputeContext*) = 0;
 
  protected:
   OpKernel(KernelInitContext*) {}

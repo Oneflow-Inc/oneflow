@@ -11,7 +11,7 @@ class CopyDataContentKernel final : public user_op::OpKernel {
   ~CopyDataContentKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());

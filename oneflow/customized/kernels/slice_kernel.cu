@@ -17,7 +17,8 @@ struct SliceGpuParams {
   int64_t stride[kSliceMaxDims];
 };
 
-SliceGpuParams ConstructSliceGpuParams(user_op::KernelContext* ctx, const user_op::Tensor* entire,
+SliceGpuParams ConstructSliceGpuParams(user_op::KernelComputeContext* ctx,
+                                       const user_op::Tensor* entire,
                                        const user_op::Tensor* sliced) {
   auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
   auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
@@ -131,7 +132,7 @@ class SliceGpuKernel final : public user_op::OpKernel {
   ~SliceGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto params = ConstructSliceGpuParams(ctx, input, output);
@@ -150,7 +151,7 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
   ~SliceGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx->shape().elem_cnt() * sizeof(T);

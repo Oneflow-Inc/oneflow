@@ -75,7 +75,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t batch_size = y->shape().At(0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);

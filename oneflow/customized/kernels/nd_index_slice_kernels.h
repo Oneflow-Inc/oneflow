@@ -13,7 +13,7 @@ class GatherNdKernel final : public user_op::OpKernel {
   ~GatherNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) override;
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -24,7 +24,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
   ~ScatterNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) override;
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -35,7 +35,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
   ~TensorScatterNdUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) override;
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -46,11 +46,11 @@ class TensorScatterNdAddKernel final : public user_op::OpKernel {
   ~TensorScatterNdAddKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) override;
 };
 
 template<DeviceType device_type, typename T, typename I>
-void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -61,7 +61,7 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
 }
 
 template<DeviceType device_type, typename T, typename I>
-void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -74,7 +74,7 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
@@ -90,7 +90,7 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelCont
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);

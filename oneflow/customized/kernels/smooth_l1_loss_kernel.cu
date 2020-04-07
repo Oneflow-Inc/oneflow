@@ -44,7 +44,7 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
   ~SmoothL1LossGPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
@@ -79,7 +79,7 @@ class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
   ~SmoothL1LossGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) override {
     const float beta = ctx->GetAttr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
