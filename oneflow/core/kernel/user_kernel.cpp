@@ -3,7 +3,6 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/kernel_compute_context.h"
 
 namespace oneflow {
 
