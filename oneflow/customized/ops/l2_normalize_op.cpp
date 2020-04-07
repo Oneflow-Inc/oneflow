@@ -24,15 +24,27 @@ REGISTER_USER_OP("l2_normalize")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() != ctx->GetAttr<int32_t>("axis")) {
+        *ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0) =
+            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      } else {
+        ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0)->clear_value();
+      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("y", 0, 0)
-          .Split("square_x_sum", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      for (int64_t i = 0; i < num_axes; ++i) {
+        if (i != axis) {
+          SbpSignatureBuilder()
+              .Split("x", 0, i)
+              .Split("y", 0, i)
+              .Split("square_x_sum", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       return Maybe<void>::Ok();
     });
 
@@ -44,7 +56,6 @@ REGISTER_USER_OP("l2_normalize_grad")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       const Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
@@ -68,12 +79,19 @@ REGISTER_USER_OP("l2_normalize_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("y", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("square_x_sum", 0, 0)
-          .Split("dx", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      for (int64_t i = 0; i < num_axes; ++i) {
+        if (i != axis) {
+          SbpSignatureBuilder()
+              .Split("y", 0, i)
+              .Split("dy", 0, i)
+              .Split("square_x_sum", 0, i)
+              .Split("dx", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       return Maybe<void>::Ok();
     });
 
