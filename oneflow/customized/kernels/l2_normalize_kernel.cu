@@ -71,7 +71,6 @@ template<typename T>
 class GpuL2NormalizeKernel final : public user_op::OpKernel {
  public:
   GpuL2NormalizeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  GpuL2NormalizeKernel() = default;
   ~GpuL2NormalizeKernel() = default;
 
  private:
@@ -105,7 +104,6 @@ template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
  public:
   GpuL2NormalizeGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  GpuL2NormalizeGradKernel() = default;
   ~GpuL2NormalizeGradKernel() = default;
 
  private:

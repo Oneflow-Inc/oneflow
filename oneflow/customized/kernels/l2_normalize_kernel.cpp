@@ -54,7 +54,6 @@ template<typename T>
 class CpuL2NormalizeKernel final : public user_op::OpKernel {
  public:
   CpuL2NormalizeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  CpuL2NormalizeKernel() = default;
   ~CpuL2NormalizeKernel() = default;
 
  private:
@@ -92,7 +91,6 @@ template<typename T>
 class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
  public:
   CpuL2NormalizeGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  CpuL2NormalizeGradKernel() = default;
   ~CpuL2NormalizeGradKernel() = default;
 
  private:
