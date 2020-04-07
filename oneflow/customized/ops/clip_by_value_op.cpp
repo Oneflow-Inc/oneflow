@@ -17,8 +17,8 @@ Maybe<void> InferClipBatchAxis(user_op::BatchAxisContext* ctx) {
 
 Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
   SbpSignatureBuilder()
-      .Split("x", 0)
-      .Split("y", 0)
+      .Split("x", 0, 0)
+      .Split("y", 0, 0)
       .MakeSplitSignatureListBuilder(
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes())
       .Build(ctx->sbp_sig_list());
@@ -38,9 +38,9 @@ Maybe<void> InferClipGradBatchAxis(user_op::BatchAxisContext* ctx) {
 
 Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
   SbpSignatureBuilder()
-      .Split("dy", 0)
-      .Split("x", 0)
-      .Split("dx", 0)
+      .Split("dy", 0, 0)
+      .Split("x", 0, 0)
+      .Split("dx", 0, 0)
       .MakeSplitSignatureListBuilder(
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes())
       .Build(ctx->sbp_sig_list());
