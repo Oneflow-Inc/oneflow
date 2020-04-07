@@ -53,8 +53,8 @@ REGISTER_USER_OP("expand_dims")
       auto dim_vec = in_desc.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
         SbpSignatureBuilder()
-            .Split("in", in_axis)
-            .Split("out", in_axis < axis ? in_axis : in_axis + 1)
+            .Split("in", 0, in_axis)
+            .Split("out", 0, in_axis < axis ? in_axis : in_axis + 1)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
 
