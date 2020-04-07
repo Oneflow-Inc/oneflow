@@ -87,6 +87,7 @@ std::vector<Shape> AttrValAccessor<std::vector<Shape>>::GetAttr(const UserOpAttr
 template<>
 void AttrValAccessor<std::vector<Shape>>::SetAttr(const std::vector<Shape>& cpp_val,
                                                   UserOpAttrVal* attr_val) {
+  if (attr_val->at_list_shape().val_size() > 0) { attr_val->mutable_at_list_shape()->clear_val(); }
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }
