@@ -106,6 +106,7 @@ def conv2d(
     padding="VALID",
     data_format="NCHW",
     dilation_rate=1,
+    groups=1,
     activation=None,
     use_bias=True,
     kernel_initializer=None,
@@ -123,7 +124,23 @@ def conv2d(
     else:
         assert isinstance(kernel_size, (list, tuple))
         kernel_size = tuple(kernel_size)
-    weight_shape = (filters, inputs.static_shape[1]) + kernel_size
+
+    assert isinstance(groups, int)
+    assert groups > 0    
+    assert groups <= filters
+    assert filters % groups == 0
+    if data_format.upper() == "NCHW":
+        assert groups <= inputs.static_shape[1]
+        assert inputs.static_shape[1] % groups == 0
+        weight_shape = (filters, inputs.static_shape[1] // groups) + kernel_size
+    elif data_format.upper() == "NHWC":
+        assert groups == 1
+        assert groups <= inputs.static_shape[3]
+        assert inputs.static_shape[3] % groups == 0
+        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.static_shape[3] // groups)
+    else:
+        raise ValueError("data_format must be in NCHW or NHWC")
+
     weight = flow.get_variable(
         weight_name if weight_name else name_prefix + "-weight",
         shape=weight_shape,
@@ -135,8 +152,9 @@ def conv2d(
         trainable=trainable,
         model_name="weight",
     )
+
     output = flow.nn.conv2d(
-        inputs, weight, strides, padding, data_format, dilation_rate, name
+        inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name
     )
     if use_bias:
         bias = flow.get_variable(

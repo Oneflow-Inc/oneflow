@@ -369,7 +369,7 @@ def sigmoid(x, name=None):
 
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
-def unsorted_segment_sum(data, segment_ids, num_segments, name=None):
+def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSum_")
     op_conf = op_conf_util.OperatorConf()
@@ -377,8 +377,27 @@ def unsorted_segment_sum(data, segment_ids, num_segments, name=None):
     op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
     op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
     op_conf.unsorted_segment_sum_conf.num_segments = num_segments
-    op_conf.unsorted_segment_sum_conf.axis = 0
+    op_conf.unsorted_segment_sum_conf.axis = axis
     op_conf.unsorted_segment_sum_conf.out = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
+def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
+    if name is None:
+        name = id_util.UniqueStr("UnsortedSegmentSumLike_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.unsorted_segment_sum_like_conf.data = data.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.like = like.logical_blob_name
+    op_conf.unsorted_segment_sum_like_conf.axis = axis
+    op_conf.unsorted_segment_sum_like_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -690,3 +709,58 @@ def top_k(input, k=1, sorted=True, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
+def broadcast_to_compatible_with(x, compatible, name=None):
+    assert isinstance(compatible, (list, tuple))
+    if name is None:
+        name = id_util.UniqueStr("BroadcastToCompatibleWith_")
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "x", x.logical_blob_name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "y", "y")
+    op_conf.broadcast_to_compatible_with_conf.compatible.extend(
+        [cp.logical_blob_name for cp in compatible]
+    )
+    compile_context.CurJobAddOp(op_conf)
+
+    ret_lbi = logical_blob_id_util.LogicalBlobId()
+    ret_lbi.op_name = op_conf.name
+    ret_lbi.blob_name = "y"
+    return remote_blob_util.RemoteBlob(ret_lbi)
+
+
+@oneflow_export("math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp")
+def clip_by_value(values, min_value=None, max_value=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ClipByValue_")
+
+    if min_value is not None and max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+        )
+    elif min_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_min")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+        )
+    elif max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_max")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+        )
+    else:
+        raise ValueError("min_value and max_value cannot be None at the same time")
+
+    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]

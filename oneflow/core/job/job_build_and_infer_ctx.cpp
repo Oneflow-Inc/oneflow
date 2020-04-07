@@ -317,6 +317,10 @@ Maybe<bool> JobBuildAndInferCtx::AllInputsBroadcastParallel(const Operator& op) 
   return true;
 }
 
+bool JobBuildAndInferCtx::IsVariableLbi(const LogicalBlobId& lbi) const {
+  return op_name2op_.at(lbi.op_name())->op_conf().has_variable_conf();
+}
+
 Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const Operator& op) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
@@ -376,6 +380,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
     FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
       const std::string& blob_name = "out_" + std::to_string(i);
       distribute_clone->add_out(blob_name);
+      distribute_clone->set_is_variable_ref(IsVariableLbi(lbi));
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else if (sbp.has_split_parallel()) {
@@ -385,6 +390,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
     distribute_split->set_in(lbn);
     distribute_split->set_axis(0);
+    distribute_split->set_is_variable_ref(IsVariableLbi(lbi));
     FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
       const std::string& blob_name = "out_" + std::to_string(i);
       distribute_split->add_out(blob_name);
@@ -531,7 +537,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lb
   JUST(CheckLbnValidAndExist(lbn));
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
-      << "job has not TrainConf when add loss logical blob name";
+      << "job has no TrainConf when adding loss logical blob name";
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>::Ok();
 }
@@ -587,7 +593,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
   const auto& mirrored_lbi = JUST(GetMirroredLbi(lbn));
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
-      << "job has not TrainConf when add loss logical blob name";
+      << "job has no TrainConf when adding loss logical blob name";
   for (const auto& lbi : mirrored_lbi2sub_lbis_.at(*mirrored_lbi)) {
     job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(GenLogicalBlobName(lbi));
   }

@@ -7,6 +7,10 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     assert device_type in ["gpu", "cpu"]
