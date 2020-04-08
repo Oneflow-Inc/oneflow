@@ -6,12 +6,11 @@ namespace oneflow {
 
 class ReluKernel final : public user_op::OpKernel {
  public:
-  ReluKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ReluKernel() = default;
   ~ReluKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -23,12 +22,11 @@ class ReluKernel final : public user_op::OpKernel {
 
 class ReluGradKernel final : public user_op::OpKernel {
  public:
-  ReluGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ReluGradKernel() = default;
   ~ReluGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -39,7 +37,7 @@ class ReluGradKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("ccrelu")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new ReluKernel(ctx); })
+    .SetCreateFn<ReluKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; })
     .SetInplaceProposalFn([](const user_op::InferContext&,
@@ -49,18 +47,17 @@ REGISTER_USER_KERNEL("ccrelu")
     });
 
 REGISTER_USER_KERNEL("ccrelu_grad")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new ReluGradKernel(ctx); })
+    .SetCreateFn<ReluGradKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; });
 
 class TestReshapeKernel final : public user_op::OpKernel {
  public:
-  TestReshapeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestReshapeKernel() = default;
   ~TestReshapeKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
@@ -69,17 +66,16 @@ class TestReshapeKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestReshape")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestReshapeKernel(ctx); })
+    .SetCreateFn<TestReshapeKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
 class CopyIn2OutKernel final : public user_op::OpKernel {
  public:
-  CopyIn2OutKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CopyIn2OutKernel() = default;
   ~CopyIn2OutKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
@@ -88,28 +84,27 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetCreateFn<CopyIn2OutKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
 REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new CopyIn2OutKernel(ctx); })
+    .SetCreateFn<CopyIn2OutKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
 
 class TestSourceKernel final : public user_op::OpKernel {
  public:
-  TestSourceKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestSourceKernel() = default;
   ~TestSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
 };
 
 REGISTER_USER_KERNEL("TestSource")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestSourceKernel(ctx); })
+    .SetCreateFn<TestSourceKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
@@ -121,12 +116,11 @@ REGISTER_USER_KERNEL("TestSource")
 
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
  public:
-  TestMultiOutputOrderKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestMultiOutputOrderKernel() = default;
   ~TestMultiOutputOrderKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out1_blob = ctx->Tensor4ArgNameAndIndex("out1", 0);
     user_op::Tensor* out2_blob = ctx->Tensor4ArgNameAndIndex("out2", 0);
@@ -138,9 +132,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) {
-      return new TestMultiOutputOrderKernel(ctx);
-    })
+    .SetCreateFn<TestMultiOutputOrderKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       if (ctx.device_type() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
@@ -151,12 +143,11 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
 
 class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
  public:
-  TestSourceMultiGpuFixedOutNumKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestSourceMultiGpuFixedOutNumKernel() = default;
   ~TestSourceMultiGpuFixedOutNumKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
       *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
@@ -165,9 +156,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) {
-      return new TestSourceMultiGpuFixedOutNumKernel(ctx);
-    })
+    .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
@@ -178,12 +167,11 @@ REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
  public:
-  TestMultiInputFwKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestMultiInputFwKernel() = default;
   ~TestMultiInputFwKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x1_blob = ctx->Tensor4ArgNameAndIndex("x1", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
@@ -192,7 +180,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestMultiInput")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestMultiInputFwKernel(ctx); })
+    .SetCreateFn<TestMultiInputFwKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
       if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
@@ -203,12 +191,11 @@ REGISTER_USER_KERNEL("TestMultiInput")
 
 class TestMultiInputBwKernel final : public user_op::OpKernel {
  public:
-  TestMultiInputBwKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestMultiInputBwKernel() = default;
   ~TestMultiInputBwKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* x1_diff_blob = ctx->Tensor4ArgNameAndIndex("x1_diff", 0);
     user_op::Tensor* x2_diff_blob = ctx->Tensor4ArgNameAndIndex("x2_diff", 0);
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x1_diff_blob->shape().elem_cnt(), 1.0,
@@ -219,7 +206,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestMultiInputGrad")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestMultiInputBwKernel(ctx); })
+    .SetCreateFn<TestMultiInputBwKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
       if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
@@ -230,12 +217,11 @@ REGISTER_USER_KERNEL("TestMultiInputGrad")
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:
-  TestDynamicSourceKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TestDynamicSourceKernel() = default;
   ~TestDynamicSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     out_blob->mut_shape()->Set(0, 3);
     for (int i = 0; i < 3; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
@@ -243,7 +229,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestDynamicSource")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDynamicSourceKernel(ctx); })
+    .SetCreateFn<TestDynamicSourceKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
@@ -254,25 +240,28 @@ REGISTER_USER_KERNEL("TestDynamicSource")
 
 class TestRandomSourceKernel final : public user_op::OpKernel {
  public:
-  TestRandomSourceKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    random_generator_.reset(new RandomGenerator<DeviceType::kCPU>(seed, ctx->device_ctx()));
-  }
   TestRandomSourceKernel() = default;
   ~TestRandomSourceKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    random_generator_->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
-                                      out_blob->mut_dptr<float>());
+  void InitOpKernelContext(user_op::KernelInitContext* ctx,
+                           user_op::OpKernelContext** opkernel_ctx) const override {
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    *opkernel_ctx =
+        new user_op::OpKernelContextIf<RandomGenerator<DeviceType::kCPU>>(seed, ctx->device_ctx());
   }
-
-  std::unique_ptr<RandomGenerator<DeviceType::kCPU>> random_generator_;
+  void Compute(user_op::KernelComputeContext* ctx,
+               user_op::OpKernelContext* opkernel_ctx) const override {
+    auto* random_generator =
+        dynamic_cast<user_op::OpKernelContextIf<RandomGenerator<DeviceType::kCPU>>*>(opkernel_ctx);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    random_generator->Mutable()->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
+                                                out_blob->mut_dptr<float>());
+  }
 };
 
 REGISTER_USER_KERNEL("TestRandomSource")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestRandomSourceKernel(ctx); })
+    .SetCreateFn<TestRandomSourceKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {

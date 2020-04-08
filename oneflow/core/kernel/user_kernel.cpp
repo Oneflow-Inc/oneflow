@@ -157,30 +157,46 @@ class UserKernel final : public Kernel {
   UserKernel() = default;
   ~UserKernel() = default;
 
- private:
-  std::unique_ptr<user_op::OpKernel> kernel_;
-  std::unique_ptr<UserKernelComputeContext> ctx_;
-
-  void VirtualKernelInit(DeviceCtx* device_ctx) override {
+  void InitUserKernel(DeviceCtx* device_ctx) {
     ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
-
-    const std::string& op_type_name =
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
     {
+      const std::string& op_type_name =
+          kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
       auto kernel_reg_val =
           user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
       CHECK_NOTNULL(kernel_reg_val);
+      kernel_.reset(kernel_reg_val->create_fn());
+    }
+  }
+  void InitOpKernelContext(DeviceCtx* device_ctx, user_op::OpKernelContext** opkernel_ctx) {
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+    kernel_->InitOpKernelContext(&init_ctx, opkernel_ctx);
+  }
+  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         user_op::OpKernelContext* opkernel_ctx) const {
+    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+    kernel_->Compute(ctx_.get(), opkernel_ctx);
+  }
 
-      UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-      kernel_.reset(kernel_reg_val->create_fn(&init_ctx));
+ private:
+  void VirtualKernelInit(DeviceCtx* device_ctx) override {
+    InitUserKernel(device_ctx);
+    {
+      user_op::OpKernelContext* opkernel_ctx = nullptr;
+      InitOpKernelContext(device_ctx, &opkernel_ctx);
+      CHECK(opkernel_ctx_.get() == nullptr);
+      opkernel_ctx_.reset(opkernel_ctx);
     }
   }
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->Compute(ctx_.get());
+    ForwardUserKernel(BnInOp2Blob, opkernel_ctx_.get());
   }
+
+  std::shared_ptr<user_op::OpKernelContext> opkernel_ctx_;
+  std::unique_ptr<const user_op::OpKernel> kernel_;
+  std::unique_ptr<UserKernelComputeContext> ctx_;
 };
 
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
