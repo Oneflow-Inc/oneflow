@@ -55,12 +55,11 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr, int32_
 template<typename T>
 class GpuArgSortKernel final : public user_op::OpKernel {
  public:
-  GpuArgSortKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GpuArgSortKernel() = default;
   ~GpuArgSortKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -92,8 +91,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
-      .SetCreateFn(                                                                                \
-          [](user_op::KernelInitContext* ctx) { return new GpuArgSortKernel<dtype>(ctx); })        \
+      .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
         return ctx.device_type() == DeviceType::kGPU                                               \
