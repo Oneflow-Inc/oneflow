@@ -8,49 +8,45 @@ namespace oneflow {
 template<DeviceType device_type, typename T, typename I>
 class GatherNdKernel final : public user_op::OpKernel {
  public:
-  GatherNdKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   GatherNdKernel() = default;
   ~GatherNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T, typename I>
 class ScatterNdKernel final : public user_op::OpKernel {
  public:
-  ScatterNdKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ScatterNdKernel() = default;
   ~ScatterNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T, typename I>
 class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
  public:
-  TensorScatterNdUpdateKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TensorScatterNdUpdateKernel() = default;
   ~TensorScatterNdUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T, typename I>
 class TensorScatterNdAddKernel final : public user_op::OpKernel {
  public:
-  TensorScatterNdAddKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   TensorScatterNdAddKernel() = default;
   ~TensorScatterNdAddKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override;
+  void Compute(user_op::KernelComputeContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T, typename I>
-void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -61,7 +57,7 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
 }
 
 template<DeviceType device_type, typename T, typename I>
-void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -74,7 +70,8 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
+    user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
@@ -90,7 +87,8 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(user_op::KernelCont
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdAddKernel<device_type, T, I>::Compute(user_op::KernelContext* ctx) {
+void TensorScatterNdAddKernel<device_type, T, I>::Compute(
+    user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
@@ -121,24 +119,20 @@ MakeNdIndexSliceKernelMatchedPredictor() {
 
 }  // namespace
 
-#define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,       \
-                                           itype_pair)                                        \
-  REGISTER_USER_KERNEL(#op_type_name)                                                         \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                      \
-        return new op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                    \
-                              OF_PP_PAIR_FIRST(itype_pair)>(ctx);                             \
-      })                                                                                      \
-      .SetIsMatchedPred(                                                                      \
-          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+#define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,            \
+                                           itype_pair)                                             \
+  REGISTER_USER_KERNEL(#op_type_name)                                                              \
+      .SetCreateFn<                                                                                \
+          op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
+      .SetIsMatchedPred(                                                                           \
+          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
                                                  OF_PP_PAIR_FIRST(itype_pair)>());
 
 #define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,    \
                                                itype_pair)                                      \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
-        return new TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
-                                                OF_PP_PAIR_FIRST(itype_pair)>(ctx);             \
-      })                                                                                        \
+      .SetCreateFn<TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
+                                                OF_PP_PAIR_FIRST(itype_pair)>>()                \
       .SetIsMatchedPred(                                                                        \
           MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),   \
                                                  OF_PP_PAIR_FIRST(itype_pair)>())               \

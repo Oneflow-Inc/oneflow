@@ -39,12 +39,11 @@ __global__ void SmoothL1LossBackward(const int64_t elem_cnt, const T* loss_grad,
 template<typename T>
 class SmoothL1LossGPUKernel final : public user_op::OpKernel {
  public:
-  SmoothL1LossGPUKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-
+  SmoothL1LossGPUKernel() = default;
   ~SmoothL1LossGPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const float beta = ctx->GetAttr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
@@ -57,14 +56,13 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("smooth_l1_loss")                                                         \
-      .SetCreateFn(                                                                              \
-          [](user_op::KernelInitContext* ctx) { return new SmoothL1LossGPUKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
-        const user_op::TensorDesc* loss_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0);        \
-        return ctx.device_type() == DeviceType::kGPU                                             \
-               && loss_desc->data_type() == GetDataType<dtype>::value;                           \
+#define REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("smooth_l1_loss")                                                  \
+      .SetCreateFn<SmoothL1LossGPUKernel<dtype>>()                                        \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                        \
+        const user_op::TensorDesc* loss_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                      \
+               && loss_desc->data_type() == GetDataType<dtype>::value;                    \
       });
 
 REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(float)
@@ -73,13 +71,11 @@ REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(double)
 template<typename T>
 class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
  public:
-  SmoothL1LossGradGpuKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-
   SmoothL1LossGradGpuKernel() = default;
   ~SmoothL1LossGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const float beta = ctx->GetAttr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
@@ -95,9 +91,7 @@ class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(dtype)                            \
   REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                     \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                          \
-        return new SmoothL1LossGradGpuKernel<dtype>(ctx);                         \
-      })                                                                          \
+      .SetCreateFn<SmoothL1LossGradGpuKernel<dtype>>()                            \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                \
         const user_op::TensorDesc* prediction_grad_desc =                         \
             ctx.TensorDesc4ArgNameAndIndex("prediction_grad", 0);                 \
