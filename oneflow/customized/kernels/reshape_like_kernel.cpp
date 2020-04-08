@@ -5,9 +5,7 @@ namespace oneflow {
 
 #define REGISTER_RESHAPE_LIKE_KERNEL(D)                                                         \
   REGISTER_USER_KERNEL("reshape_like")                                                          \
-      .SetCreateFn([](oneflow::user_op::KernelInitContext* ctx) {                               \
-        return new CopyDataContentKernel<DeviceType::D>(ctx);                                   \
-      })                                                                                        \
+      .SetCreateFn<CopyDataContentKernel<DeviceType::D>>()                                      \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
         return ctx.device_type() == DeviceType::D;                                              \
       })                                                                                        \

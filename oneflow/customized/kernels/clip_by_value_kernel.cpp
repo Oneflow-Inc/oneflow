@@ -52,12 +52,11 @@ struct ClipKernelUtil<DeviceType::kCPU, T> {
 template<DeviceType device_type, typename T>
 class ClipByScalarKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarKernel() = default;
   ~ClipByScalarKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto floating_min = ctx->GetAttr<double>("floating_min");
@@ -74,12 +73,11 @@ class ClipByScalarKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByScalarMinKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarMinKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMinKernel() = default;
   ~ClipByScalarMinKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto floating_min = ctx->GetAttr<double>("floating_min");
@@ -93,12 +91,11 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByScalarMaxKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarMaxKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMaxKernel() = default;
   ~ClipByScalarMaxKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto floating_max = ctx->GetAttr<double>("floating_max");
@@ -112,12 +109,11 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByScalarGradKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarGradKernel() = default;
   ~ClipByScalarGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -135,12 +131,11 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByScalarMinGradKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarMinGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMinGradKernel() = default;
   ~ClipByScalarMinGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -155,12 +150,11 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
  public:
-  ClipByScalarMaxGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   ClipByScalarMaxGradKernel() = default;
   ~ClipByScalarMaxGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -174,9 +168,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
-        return new kernel_name##Kernel<device_type_v, dtype>(ctx);                              \
-      })                                                                                        \
+      .SetCreateFn<kernel_name##Kernel<device_type_v, dtype>>()                                 \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) -> bool {                      \
         return (ctx.device_type() == device_type_v                                              \
                 && ctx.TensorDesc4ArgNameAndIndex("y", 0)->data_type()                          \
@@ -190,9 +182,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_CLIP_GRAD_KERNEL(op_type_name, kernel_name, device_type_v, dtype)              \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                        \
-        return new kernel_name##GradKernel<device_type_v, dtype>(ctx);                          \
-      })                                                                                        \
+      .SetCreateFn<kernel_name##GradKernel<device_type_v, dtype>>()                             \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) -> bool {                      \
         return (ctx.device_type() == device_type_v                                              \
                 && ctx.TensorDesc4ArgNameAndIndex("dx", 0)->data_type()                         \
