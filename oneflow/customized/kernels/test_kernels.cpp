@@ -244,8 +244,8 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
   ~TestRandomSourceKernel() = default;
 
  private:
-  void InitOpKernelContext(user_op::KernelInitContext* ctx,
-                           user_op::OpKernelContext** opkernel_ctx) const override {
+  void NewOpKernelContext(user_op::KernelInitContext* ctx,
+                          user_op::OpKernelContext** opkernel_ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     *opkernel_ctx =
         new user_op::OpKernelContextIf<RandomGenerator<DeviceType::kCPU>>(seed, ctx->device_ctx());

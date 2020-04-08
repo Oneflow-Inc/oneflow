@@ -168,9 +168,9 @@ class UserKernel final : public Kernel {
       kernel_.reset(kernel_reg_val->create_fn());
     }
   }
-  void InitOpKernelContext(DeviceCtx* device_ctx, user_op::OpKernelContext** opkernel_ctx) {
+  void NewOpKernelContext(DeviceCtx* device_ctx, user_op::OpKernelContext** opkernel_ctx) {
     UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-    kernel_->InitOpKernelContext(&init_ctx, opkernel_ctx);
+    kernel_->NewOpKernelContext(&init_ctx, opkernel_ctx);
   }
   void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
                          user_op::OpKernelContext* opkernel_ctx) const {
@@ -183,7 +183,7 @@ class UserKernel final : public Kernel {
     InitUserKernel(device_ctx);
     {
       user_op::OpKernelContext* opkernel_ctx = nullptr;
-      InitOpKernelContext(device_ctx, &opkernel_ctx);
+      NewOpKernelContext(device_ctx, &opkernel_ctx);
       CHECK(opkernel_ctx_.get() == nullptr);
       opkernel_ctx_.reset(opkernel_ctx);
     }

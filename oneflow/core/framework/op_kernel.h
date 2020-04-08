@@ -94,7 +94,7 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  virtual void InitOpKernelContext(KernelInitContext* ctx, OpKernelContext**) const {}
+  virtual void NewOpKernelContext(KernelInitContext* ctx, OpKernelContext**) const {}
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelContext*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
