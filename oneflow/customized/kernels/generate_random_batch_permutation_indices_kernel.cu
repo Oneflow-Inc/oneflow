@@ -76,10 +76,9 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
         seed, ctx->device_ctx());
   }
-  void Compute(user_op::KernelComputeContext* ctx,
-               user_op::OpKernelState* opkernel_ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(opkernel_ctx);
+        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t batch_size = y->shape().At(0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);

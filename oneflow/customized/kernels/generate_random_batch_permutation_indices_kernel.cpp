@@ -16,9 +16,8 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<std::mt19937>>(seed);
   }
-  void Compute(user_op::KernelComputeContext* ctx,
-               user_op::OpKernelState* opkernel_ctx) const override {
-    auto* random_generator = dynamic_cast<OpKernelStateWrapper<std::mt19937>*>(opkernel_ctx);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* random_generator = dynamic_cast<OpKernelStateWrapper<std::mt19937>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     std::iota(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(), 0);
     std::shuffle(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(),

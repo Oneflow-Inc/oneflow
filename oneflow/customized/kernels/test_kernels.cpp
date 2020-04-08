@@ -251,10 +251,9 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>>(
         seed, ctx->device_ctx());
   }
-  void Compute(user_op::KernelComputeContext* ctx,
-               user_op::OpKernelState* opkernel_ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(opkernel_ctx);
+        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     random_generator->Mutable()->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
                                                 out_blob->mut_dptr<float>());
