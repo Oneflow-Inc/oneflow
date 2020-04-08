@@ -6,11 +6,11 @@ namespace oneflow {
 template<DeviceType device_type, typename T, typename CondT>
 class WhereKernel final : public user_op::OpKernel {
  public:
-  WhereKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  WhereKernel() = default;
   ~WhereKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* cond = ctx->Tensor4ArgNameAndIndex("condition", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -23,10 +23,8 @@ class WhereKernel final : public user_op::OpKernel {
 
 #define REGISTER_WHERE_KERNEL(device_type_v, dtype_pair, ctype_pair)                           \
   REGISTER_USER_KERNEL("where")                                                                \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                       \
-        return new WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                    \
-                               OF_PP_PAIR_FIRST(ctype_pair)>(ctx);                             \
-      })                                                                                       \
+      .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                    \
+                               OF_PP_PAIR_FIRST(ctype_pair)>>()                                \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                             \
         const user_op::TensorDesc* cond_desc = ctx.TensorDesc4ArgNameAndIndex("condition", 0); \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);        \
