@@ -1,5 +1,4 @@
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -151,49 +150,67 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   UserKernelBaseContext base_ctx_;
 };
 
-class UserKernel final : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UserKernel);
-  UserKernel() = default;
-  ~UserKernel() = default;
+UserKernel::UserKernel(const JobDesc* job_desc, const KernelConf& kernel_conf) : ctx_(nullptr) {
+  InitBase(job_desc, kernel_conf);
+  InitOpKernel();
+}
 
-  void InitUserKernel(DeviceCtx* device_ctx) {
-    ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
-    {
-      const std::string& op_type_name =
-          kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      auto kernel_reg_val =
-          user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
-      CHECK_NOTNULL(kernel_reg_val);
-      kernel_.reset(kernel_reg_val->create_fn());
-    }
-  }
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-    return kernel_->CreateOpKernelState(&init_ctx);
-  }
-  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         user_op::OpKernelState* opkernel_state) const {
-    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->Compute(ctx_.get(), opkernel_state);
-  }
+UserKernel::~UserKernel() = default;
 
- private:
-  void VirtualKernelInit(DeviceCtx* device_ctx) override {
-    InitUserKernel(device_ctx);
-    CHECK(opkernel_state_.get() == nullptr);
-    opkernel_state_ = CreateOpKernelState(device_ctx);
-  }
+void UserKernel::InitOpKernel() {
+  const std::string& op_type_name =
+      kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
+  auto kernel_reg_val =
+      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
+  CHECK_NOTNULL(kernel_reg_val);
+  kernel_.reset(kernel_reg_val->create_fn());
+}
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
-  }
+void UserKernel::InitComputeContext(DeviceCtx* device_ctx) {
+  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
+}
 
-  std::shared_ptr<user_op::OpKernelState> opkernel_state_;
-  std::unique_ptr<const user_op::OpKernel> kernel_;
-  std::unique_ptr<UserKernelComputeContext> ctx_;
-};
+void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
+  InitComputeContext(device_ctx);
+  InitOpKernel();
+}
+
+std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
+  UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+  return kernel_->CreateOpKernelState(&init_ctx);
+}
+
+std::shared_ptr<user_op::OpKernelState> UserKernel::EagerModelForward(
+    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
+  if (old_opkernel_state) {
+    new_opkernel_state = old_opkernel_state;
+  } else {
+    CHECK_NOTNULL(&job_desc());
+    new_opkernel_state = CreateOpKernelState(device_ctx);
+    InitComputeContext(device_ctx);
+  }
+  ForwardUserKernel(BnInOp2Blob, new_opkernel_state.get());
+  return new_opkernel_state;
+}
+
+void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                   user_op::OpKernelState* opkernel_state) const {
+  ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+  kernel_->Compute(ctx_.get(), opkernel_state);
+}
+
+void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
+  InitUserKernel(device_ctx);
+  CHECK(opkernel_state_.get() == nullptr);
+  opkernel_state_ = CreateOpKernelState(device_ctx);
+}
+
+void UserKernel::ForwardDataContent(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
+}
 
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
   return true;
