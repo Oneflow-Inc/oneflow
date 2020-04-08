@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
 
 #include <glog/logging.h>
+#include <memory>
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -66,27 +67,12 @@ class KernelComputeContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-class OpKernelContext {
+class OpKernelState {
  public:
-  virtual ~OpKernelContext() = default;
+  virtual ~OpKernelState() = default;
 
  protected:
-  OpKernelContext() = default;
-};
-
-template<typename T>
-class OpKernelContextIf final : public OpKernelContext {
- public:
-  template<typename... Args>
-  explicit OpKernelContextIf(Args&&... args) : data_(std::forward<Args>(args)...) {}
-
-  ~OpKernelContextIf() = default;
-
-  const T& Get() const { return data_; }
-  T* Mutable() { return &data_; }
-
- private:
-  T data_;
+  OpKernelState() = default;
 };
 
 class OpKernel {
@@ -94,9 +80,11 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  virtual void NewOpKernelContext(KernelInitContext* ctx, OpKernelContext**) const {}
+  virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
+    return std::shared_ptr<OpKernelState>();
+  }
 
-  virtual void Compute(KernelComputeContext* ctx, OpKernelContext*) const { Compute(ctx); }
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
 
  protected:

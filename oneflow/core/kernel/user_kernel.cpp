@@ -168,12 +168,12 @@ class UserKernel final : public Kernel {
       kernel_.reset(kernel_reg_val->create_fn());
     }
   }
-  void NewOpKernelContext(DeviceCtx* device_ctx, user_op::OpKernelContext** opkernel_ctx) {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
     UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-    kernel_->NewOpKernelContext(&init_ctx, opkernel_ctx);
+    return kernel_->CreateOpKernelState(&init_ctx);
   }
   void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         user_op::OpKernelContext* opkernel_ctx) const {
+                         user_op::OpKernelState* opkernel_ctx) const {
     ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
     kernel_->Compute(ctx_.get(), opkernel_ctx);
   }
@@ -181,12 +181,8 @@ class UserKernel final : public Kernel {
  private:
   void VirtualKernelInit(DeviceCtx* device_ctx) override {
     InitUserKernel(device_ctx);
-    {
-      user_op::OpKernelContext* opkernel_ctx = nullptr;
-      NewOpKernelContext(device_ctx, &opkernel_ctx);
-      CHECK(opkernel_ctx_.get() == nullptr);
-      opkernel_ctx_.reset(opkernel_ctx);
-    }
+    CHECK(opkernel_ctx_.get() == nullptr);
+    opkernel_ctx_ = CreateOpKernelState(device_ctx);
   }
 
   void ForwardDataContent(const KernelCtx& ctx,
@@ -194,7 +190,7 @@ class UserKernel final : public Kernel {
     ForwardUserKernel(BnInOp2Blob, opkernel_ctx_.get());
   }
 
-  std::shared_ptr<user_op::OpKernelContext> opkernel_ctx_;
+  std::shared_ptr<user_op::OpKernelState> opkernel_ctx_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
 };
