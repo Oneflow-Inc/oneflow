@@ -2,6 +2,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/customized/kernels/radix_sort.cuh"
+#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 
@@ -65,23 +66,25 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr) {
 
 class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpKernel {
  public:
-  GenerateRandomBatchPermutationIndicesGPUKernel(user_op::KernelInitContext* ctx)
-      : user_op::OpKernel(ctx) {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, ctx->device_ctx()));
-  }
-
   GenerateRandomBatchPermutationIndicesGPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
+        seed, ctx->device_ctx());
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* random_generator =
+        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t batch_size = y->shape().At(0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager buf_manager(batch_size, static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
                                  tmp_buffer->mut_dptr<void>());
-    random_generator_->Uniform(batch_size, buf_manager.RandomValuePtr());
+    random_generator->Mutable()->Uniform(batch_size, buf_manager.RandomValuePtr());
     InitializeIndices<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(batch_size, buf_manager.IndicesPtr());
     const int32_t argsort_instance_num = 1;
@@ -91,14 +94,10 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
                        buf_manager.TempStorageBytes(), buf_manager.SortedValuePtr(),
                        y->mut_dptr<int32_t>(), ctx->device_ctx()->cuda_stream());
   };
-
-  std::unique_ptr<RandomGenerator<DeviceType::kGPU>> random_generator_;
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
-    .SetCreateFn([](oneflow::user_op::KernelInitContext* ctx) {
-      return new GenerateRandomBatchPermutationIndicesGPUKernel(ctx);
-    })
+    .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
       return ctx.device_type() == DeviceType::kGPU;
     })
