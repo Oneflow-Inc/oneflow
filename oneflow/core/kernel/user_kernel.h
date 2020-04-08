@@ -32,7 +32,7 @@ class UserKernel final : public Kernel {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  std::unique_ptr<UserKernelComputeContext> ctx_;
+  UserKernelComputeContext* ctx_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
 };

@@ -32,8 +32,9 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
       CHECK_GT(view->op(i).logical_object_id(), 0);
       const OperatorConf& op_conf =
           job_object.OpConf4LogicalObjectId(view->op(i).logical_object_id());
+      CHECK(op_conf.has_user_conf());
       instr_ctx->mut_operand_type(view->op(i))
-          ->Mutable<OpKernelObject>(job_object.job_desc(), op_conf);
+          ->Mutable<OpKernelObject>(op_conf.user_conf(), job_object.job_desc());
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {
@@ -113,6 +114,7 @@ void ForEachObnAndBlobObject(vm::InstrCtx* instr_ctx,
 
 void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
+  TODO();  // update Opkernel.user_op_conf_;
   HashMap<std::string, BlobDesc*> obn2blob_desc;
   {
     HashSet<const BlobDesc*> out_blob_descs;
@@ -156,8 +158,6 @@ void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
                           });
   auto* opkernel_obj = instr_ctx->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
   DeviceCtx* device_ctx = instr_ctx->mut_instr_chain()->stream().device_ctx().get();
-  KernelCtx kernel_ctx;
-  kernel_ctx.device_ctx = device_ctx;
   auto BnInOp2Blob = [&](const std::string& bn_in_op) -> Blob* {
     auto output_iter = obn2blob.find(bn_in_op);
     if (output_iter != obn2blob.end()) { return output_iter->second; }
@@ -169,7 +169,13 @@ void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
                           [&](const std::string& bn_in_op, BlobObject* blob_object) {
                             blob_object->TryAllocateBlobBodyMemory(device_ctx);
                           });
-  opkernel_obj->kernel(kernel_ctx, BnInOp2Blob).Launch(kernel_ctx, BnInOp2Blob);
+  std::shared_ptr<user_op::OpKernelState> new_state;
+  {
+    UserKernel* user_kernel = opkernel_obj->mut_kernel();
+    const auto& old_state = opkernel_obj->opkernel_state();
+    new_state = user_kernel->EagerModelForward(old_state, device_ctx, BnInOp2Blob);
+  }
+  opkernel_obj->reset_opkernel_state(new_state);
 }
 
 }  // namespace eager

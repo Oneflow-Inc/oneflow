@@ -3,7 +3,7 @@
 
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/operator/user_op.h"
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/user_kernel.h"
 
 namespace oneflow {
 
@@ -16,32 +16,37 @@ class OpKernelObject : public vm::Object {
  public:
   OpKernelObject(const OpKernelObject&) = delete;
   OpKernelObject(OpKernelObject&&) = delete;
-  OpKernelObject(const std::shared_ptr<const JobDesc>& job_desc, const OperatorConf& op_conf)
-      : job_desc_(job_desc),
-        op_(std::dynamic_pointer_cast<UserOp>(ConstructOp(op_conf, job_desc.get()))),
+  OpKernelObject(const UserOpConf& user_op_conf, const std::shared_ptr<const JobDesc>& job_desc)
+      : user_op_conf_(user_op_conf),
+        job_desc_(job_desc),
+        op_(nullptr),
         kernel_(nullptr),
-        is_kernel_initiated_(false) {}
+        opkernel_state_(nullptr) {}
   ~OpKernelObject() override = default;
 
   const UserOp& op() const { return *op_; }
-  const Kernel& kernel(const KernelCtx& ctx,
-                       const std::function<Blob*(const std::string&)>& BnInOp2Blob);
+  const std::shared_ptr<user_op::OpKernelState>& opkernel_state() const { return opkernel_state_; }
+
+  UserKernel* mut_kernel() { return kernel_.get(); }
+  void reset_opkernel_state(const std::shared_ptr<user_op::OpKernelState>& opkernel_state) {
+    opkernel_state_ = opkernel_state;
+  }
 
   void InferAndNewUninitiatedKernel(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
   void InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx);
-  void NewUninitiatedKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx);
+                      const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx);
+  void NewPartialInitializedKernel(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, OpContext* op_ctx);
 
+  UserOpConf user_op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
   std::shared_ptr<UserOp> op_;
-  std::unique_ptr<OpContext> op_ctx_;
-  KernelConf kernel_conf_;
-  std::unique_ptr<Kernel> kernel_;
-  bool is_kernel_initiated_;
+  std::unique_ptr<UserKernel> kernel_;
+  std::shared_ptr<user_op::OpKernelState> opkernel_state_;
 };
 
 }  // namespace eager

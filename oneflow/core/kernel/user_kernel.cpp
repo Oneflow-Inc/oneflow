@@ -155,7 +155,11 @@ UserKernel::UserKernel(const JobDesc* job_desc, const KernelConf& kernel_conf) :
   InitOpKernel();
 }
 
-UserKernel::~UserKernel() = default;
+UserKernel::~UserKernel() {
+  kernel_.reset();
+  opkernel_state_.reset();
+  if (ctx_ != nullptr) { delete ctx_; }
+}
 
 void UserKernel::InitOpKernel() {
   const std::string& op_type_name =
@@ -167,7 +171,7 @@ void UserKernel::InitOpKernel() {
 }
 
 void UserKernel::InitComputeContext(DeviceCtx* device_ctx) {
-  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
+  ctx_ = new UserKernelComputeContext(device_ctx, kernel_conf());
 }
 
 void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
@@ -189,8 +193,10 @@ std::shared_ptr<user_op::OpKernelState> UserKernel::EagerModelForward(
   } else {
     CHECK_NOTNULL(&job_desc());
     new_opkernel_state = CreateOpKernelState(device_ctx);
-    InitComputeContext(device_ctx);
   }
+  // TODO(lixinqi): refactor to a lightweight KernelComputeContext
+  CHECK(ctx_ == nullptr);
+  InitComputeContext(device_ctx);
   ForwardUserKernel(BnInOp2Blob, new_opkernel_state.get());
   return new_opkernel_state;
 }
@@ -198,7 +204,7 @@ std::shared_ptr<user_op::OpKernelState> UserKernel::EagerModelForward(
 void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
   ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(ctx_.get(), opkernel_state);
+  kernel_->Compute(ctx_, opkernel_state);
 }
 
 void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {

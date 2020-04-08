@@ -10,13 +10,14 @@ void OpKernelObject::InferAndNewUninitiatedKernel(
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
   }
-  InferBlobDescs(BlobDesc4BnInOp, &parallel_ctx);
-  NewUninitiatedKernel(BlobDesc4BnInOp, &parallel_ctx);
+  std::unique_ptr<OpContext> op_ctx;
+  InferBlobDescs(BlobDesc4BnInOp, &parallel_ctx, &op_ctx);
+  NewPartialInitializedKernel(BlobDesc4BnInOp, &parallel_ctx, op_ctx.get());
 }
 
 void OpKernelObject::InferBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) {
+    const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx) {
   SbpSignature sbp_signature;
   {
     auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
@@ -24,29 +25,19 @@ void OpKernelObject::InferBlobDescs(
     for (const auto& obn : op_->output_bns()) { (*map)[obn].mutable_broadcast_parallel(); }
   }
   CHECK_JUST(op_->InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, &sbp_signature,
-                                   [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); }));
+                                   [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
 }
 
-void OpKernelObject::NewUninitiatedKernel(
+void OpKernelObject::NewPartialInitializedKernel(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) {
+    const ParallelContext* parallel_ctx, OpContext* op_ctx) {
+  KernelConf kernel_conf;
   auto LogicalBlobDesc4BnInOpFunc = [&](const std::string& bn_in_op) -> const BlobDesc& {
     return *BlobDesc4BnInOp(bn_in_op);
   };
-  op_->GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf_, op_ctx_.get(),
+  op_->GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx,
                      LogicalBlobDesc4BnInOpFunc);
-  kernel_.reset(ConstructUninitiatedKernel(kernel_conf_));
-}
-
-const Kernel& OpKernelObject::kernel(const KernelCtx& ctx,
-                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  if (!is_kernel_initiated_) {
-    // malloc for const_buf blob and tmp blob
-    kernel_->Init(job_desc_.get(), kernel_conf_, ctx.device_ctx);
-    kernel_->InitModelAndConstBuf(ctx, BnInOp2Blob);
-    is_kernel_initiated_ = true;
-  }
-  return *kernel_;
+  kernel_.reset(new UserKernel(job_desc_.get(), kernel_conf));
 }
 
 }  // namespace eager
