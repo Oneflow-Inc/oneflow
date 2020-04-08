@@ -64,7 +64,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     check_point.init()
     of_out = DeconvJob().get()
     # Tensorflow
-    tf.enable_eager_execution()
+    # tf.enable_eager_execution()
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
         w = np.load(os.path.join(GetSavePath(), "weight.npy"))
