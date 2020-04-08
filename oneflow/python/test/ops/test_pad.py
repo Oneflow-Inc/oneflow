@@ -43,7 +43,7 @@ def compare_with_tensorflow(device_type, input_shape, paddings):
     check_point.init()
     of_out = PadJob().get()
     # TensorFlow
-    tf.enable_eager_execution()
+    # tf.enable_eager_execution()
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
         tf_out = tf.pad(x, tf.constant(paddings))
