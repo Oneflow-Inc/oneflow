@@ -57,7 +57,7 @@ class ReduceGpuKernel final : public OpKernel {
       })                                                                                     \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                             \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0);                  \
-        return in_shape->elem_cnt() * sizeof(int32_t);                                       \
+        return in_shape->elem_cnt() * sizeof(dtype);                                         \
       });
 
 REGISTER_REDUCE_GPU_KERNEL(float)

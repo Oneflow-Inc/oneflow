@@ -6,6 +6,7 @@ import oneflow.python.ops.reduce_sum as reduce_sum
 import oneflow.python.ops.math_ops as math_ops
 import oneflow.python.ops.user_op_builder as user_op_builder
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.ops.constant_op as constant_op
 
 @oneflow_export("math.reduce_any")
 def reduce_any(x, axis=None, keepdims=None, name=None):
@@ -14,7 +15,7 @@ def reduce_any(x, axis=None, keepdims=None, name=None):
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
-        return x
+        return math_ops.not_equal(x, constant_op.constant_scalar(value=0.0, dtype=x.dtype))
     return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce")\
         .Input("tensor_in", [x])\
         .Output("tensor_out")\
