@@ -723,3 +723,37 @@ def broadcast_to_compatible_with(x, compatible, name=None):
     ret_lbi.op_name = op_conf.name
     ret_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(ret_lbi)
+
+
+@oneflow_export("math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp")
+def clip_by_value(values, min_value=None, max_value=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ClipByValue_")
+
+    if min_value is not None and max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+        )
+    elif min_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_min")
+            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
+            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+        )
+    elif max_value is not None:
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("clip_by_scalar_max")
+            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
+            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+        )
+    else:
+        raise ValueError("min_value and max_value cannot be None at the same time")
+
+    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]

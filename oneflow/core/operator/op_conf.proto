@@ -1789,6 +1789,13 @@ message SyncDynamicResizeOpConf {
   required int64 axis = 4;
 }
 
+message ArgWhereOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string out_size = 3;
+  optional DataType data_type = 4 [default = kInt32];
+}
+
 message BroadcastToCompatibleWithOpConf {
   required string x = 1;
   repeated string compatible = 2;
@@ -1962,6 +1969,7 @@ message OperatorConf {
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
+    ArgWhereOpConf arg_where_conf = 342;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
