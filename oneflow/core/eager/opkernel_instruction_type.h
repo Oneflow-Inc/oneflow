@@ -15,6 +15,15 @@ class CallOpKernelInstructionType : public vm::InstructionType {
  protected:
   CallOpKernelInstructionType() = default;
   virtual ~CallOpKernelInstructionType() = default;
+
+ private:
+  template<typename T>
+  void UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx, UserOpConf* user_op_conf,
+                                      const T& args) const;
+  template<typename T>
+  void Infer(vm::InstrCtx* instr_ctx, const T& args) const;
+  template<typename T>
+  void Compute(vm::InstrCtx* instr_ctx, const T& args) const;
 };
 
 }  // namespace eager
