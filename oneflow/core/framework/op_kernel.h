@@ -75,21 +75,65 @@ class OpKernelState {
   OpKernelState() = default;
 };
 
+class OpKernel;
+
+template<typename T>
+OpKernel* NewOpKernel();
+
+enum OpKernelStateness {
+  kInvalidOpKernelStateness = 0,
+  kStatefulOpKernel,
+  kStatelessOpKernel,
+};
+
 class OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
+  bool is_stateless() const {
+    CHECK_NE(stateness_, kInvalidOpKernelStateness);
+    return stateness_ == kStatelessOpKernel;
+  }
+
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
   }
 
-  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
-  virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
+  void Run(KernelComputeContext* ctx, OpKernelState* state) const {
+    if (is_stateless()) {
+      CHECK(state == nullptr);
+      Compute(ctx);
+    } else {
+      Compute(ctx, state);
+    }
+  }
 
  protected:
-  OpKernel() = default;
+  OpKernel() : stateness_(kInvalidOpKernelStateness) {}
+
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
+    LOG(INFO) << "UNIMPLEMENTED";
+  }
+  virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
+
+ private:
+  template<typename T>
+  friend OpKernel* NewOpKernel();
+
+  OpKernelStateness stateness_;
 };
+
+template<typename T>
+OpKernel* NewOpKernel() {
+  OpKernel* opkernel = new T();
+  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
+    opkernel->stateness_ = kStatelessOpKernel;
+  } else {
+    opkernel->stateness_ = kStatefulOpKernel;
+  }
+  return opkernel;
+}
 
 }  // namespace user_op
 

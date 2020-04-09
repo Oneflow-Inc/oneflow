@@ -10,12 +10,13 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
   GenerateRandomBatchPermutationIndicesCPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesCPUKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<std::mt19937>>(seed);
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator = dynamic_cast<OpKernelStateWrapper<std::mt19937>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
