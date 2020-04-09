@@ -7,12 +7,11 @@ namespace oneflow {
 template<typename T>
 class CpuArgMaxKernel final : public user_op::OpKernel {
  public:
-  CpuArgMaxKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CpuArgMaxKernel() = default;
   ~CpuArgMaxKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in->dptr<T>();
@@ -39,14 +38,12 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("argmax")                                                           \
-      .SetCreateFn(                                                                        \
-          [](user_op::KernelInitContext* ctx) { return new CpuArgMaxKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);      \
-        return ctx.device_type() == DeviceType::kCPU                                       \
-               && in_desc->data_type() == GetDataType<dtype>::value;                       \
+#define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                \
+  REGISTER_USER_KERNEL("argmax").SetCreateFn<CpuArgMaxKernel<dtype>>().SetIsMatchedPred( \
+      [](const user_op::KernelRegContext& ctx) {                                         \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);    \
+        return ctx.device_type() == DeviceType::kCPU                                     \
+               && in_desc->data_type() == GetDataType<dtype>::value;                     \
       });
 
 REGISTER_CPU_ARGMAX_KERNEL(float)
