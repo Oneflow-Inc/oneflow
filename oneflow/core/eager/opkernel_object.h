@@ -3,7 +3,7 @@
 
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/operator/user_op.h"
-#include "oneflow/core/kernel/user_kernel.h"
+#include "oneflow/core/kernel/eager_kernel.h"
 
 namespace oneflow {
 
@@ -16,36 +16,40 @@ class OpKernelObject : public vm::Object {
  public:
   OpKernelObject(const OpKernelObject&) = delete;
   OpKernelObject(OpKernelObject&&) = delete;
-  OpKernelObject(const UserOpConf& user_op_conf, const std::shared_ptr<const JobDesc>& job_desc)
-      : user_op_conf_(user_op_conf),
+  OpKernelObject(const OperatorConf& op_conf, const std::shared_ptr<const JobDesc>& job_desc,
+                 DeviceType device_type)
+      : op_conf_(op_conf),
         job_desc_(job_desc),
-        op_(nullptr),
+        device_type_(device_type),
         kernel_(nullptr),
-        opkernel_state_(nullptr) {}
+        opkernel_state_(nullptr) {
+    CHECK(op_conf.has_user_conf());
+  }
   ~OpKernelObject() override = default;
 
-  const UserOp& op() const { return *op_; }
+  UserOpConf* mut_user_op_conf() { return op_conf_.mutable_user_conf(); }
+
   const std::shared_ptr<user_op::OpKernelState>& opkernel_state() const { return opkernel_state_; }
 
-  UserKernel* mut_kernel() { return kernel_.get(); }
+  EagerKernel* mut_kernel() { return kernel_.get(); }
   void reset_opkernel_state(const std::shared_ptr<user_op::OpKernelState>& opkernel_state) {
     opkernel_state_ = opkernel_state;
   }
 
-  void InferAndNewUninitiatedKernel(
-      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  void ResetOpAndKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
-  void InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+  void InferBlobDescs(const Operator& op,
+                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx);
   void NewPartialInitializedKernel(
-      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, OpContext* op_ctx);
 
-  UserOpConf user_op_conf_;
+  OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
-  std::shared_ptr<UserOp> op_;
-  std::unique_ptr<UserKernel> kernel_;
+  DeviceType device_type_;
+  std::unique_ptr<EagerKernel> kernel_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
 };
 
