@@ -8,6 +8,10 @@
 
 namespace oneflow {
 
+namespace extension {
+class RuntimeExtensionContext;
+}
+
 class Plan;
 
 class ThreadMgr final {
@@ -19,6 +23,7 @@ class ThreadMgr final {
   Thread* GetThrd(int64_t thrd_id);
 
   ThreadPool* compute_thread_pool() { return compute_thread_pool_.get(); }
+  void SetRuntimeExtensionContext(std::shared_ptr<extension::RuntimeExtensionContext>);
 
  private:
   friend class Global<ThreadMgr>;

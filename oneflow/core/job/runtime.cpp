@@ -66,6 +66,7 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(mdupdt_tasks);
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
+  Global<ThreadMgr>::Get()->SetRuntimeExtensionContext(this->get_runtime_ext_ctx());
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   LOG(INFO) << "Actors on this machine constructed";
   OF_BARRIER();

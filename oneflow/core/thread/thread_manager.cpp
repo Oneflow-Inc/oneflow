@@ -5,6 +5,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/extension/extension_base.h"
 
 namespace oneflow {
 
@@ -48,6 +49,13 @@ void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
   }
 
   for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
+}
+
+void ThreadMgr::SetRuntimeExtensionContext(
+    std::shared_ptr<extension::RuntimeExtensionContext> runtime_ext_ctx) {
+  for (oneflow::Thread* t : threads_) {
+    t->get_thread_ext_ctx()->set_runtime_ext_ctx(runtime_ext_ctx);
+  }
 }
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
