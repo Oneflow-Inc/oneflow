@@ -5,9 +5,7 @@ namespace oneflow {
 
 #define REGISTER_EXPAND_DIMS_KERNEL(D)                                                          \
   REGISTER_USER_KERNEL("expand_dims")                                                           \
-      .SetCreateFn([](oneflow::user_op::KernelInitContext* ctx) {                               \
-        return new CopyDataContentKernel<DeviceType::D>(ctx);                                   \
-      })                                                                                        \
+      .SetCreateFn<CopyDataContentKernel<DeviceType::D>>()                                      \
       .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
         return ctx.device_type() == DeviceType::D;                                              \
       })                                                                                        \

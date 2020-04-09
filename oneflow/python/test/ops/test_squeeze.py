@@ -4,6 +4,10 @@ import oneflow as flow
 from collections import OrderedDict
 from test_util import GenArgList
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, x_shape, axis):
     assert device_type in ["gpu", "cpu"]
