@@ -272,29 +272,27 @@ REGISTER_USER_KERNEL("TestRandomSource")
 
 class TestDataTypeAttrKernel final : public user_op::OpKernel {
  public:
-  TestDataTypeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  TestDataTypeAttrKernel() = delete;
+  TestDataTypeAttrKernel() = default;
   ~TestDataTypeAttrKernel() override = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     CHECK_EQ(ctx->GetAttr<DataType>("output_type"),
              ctx->Tensor4ArgNameAndIndex("out", 0)->data_type());
   }
 };
 
 REGISTER_USER_KERNEL("TestDataTypeAttr")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new TestDataTypeAttrKernel(ctx); })
+    .SetCreateFn<TestDataTypeAttrKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
 class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
  public:
-  TestListDataTypeAndShapeAttrKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  TestListDataTypeAndShapeAttrKernel() = delete;
+  TestListDataTypeAndShapeAttrKernel() = default;
   ~TestListDataTypeAndShapeAttrKernel() override = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     auto out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
     auto out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
@@ -307,9 +305,7 @@ class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TestListDataTypeAndListShapeAttr")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) {
-      return new TestListDataTypeAndShapeAttrKernel(ctx);
-    })
+    .SetCreateFn<TestListDataTypeAndShapeAttrKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
 }  // namespace oneflow
