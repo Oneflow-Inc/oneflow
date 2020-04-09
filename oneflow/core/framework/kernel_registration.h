@@ -66,11 +66,16 @@ struct KernelRegistryWrapper final {
   KernelRegistrationVal reg_val;
 };
 
+bool IsStatefull4OpTypeName(const std::string& op_type_name);
+void CheckStatefulnessConsistency(const std::string& op_type_name, bool is_stateless);
+
 class KernelRegistryWrapperBuilder final {
  public:
   KernelRegistryWrapperBuilder(const std::string& op_type_name);
   template<typename T>
   KernelRegistryWrapperBuilder& SetCreateFn() {
+    CheckStatefulnessConsistency(wrapper_.op_type_name, typeid(&OpKernel::CreateOpKernelState)
+                                                            == typeid(&T::CreateOpKernelState));
     return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);

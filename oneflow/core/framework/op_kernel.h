@@ -80,8 +80,8 @@ class OpKernel;
 template<typename T>
 OpKernel* NewOpKernel();
 
-enum OpKernelStateness {
-  kInvalidOpKernelStateness = 0,
+enum OpKernelStatefulness {
+  kInvalidOpKernelStatefulness = 0,
   kStatefulOpKernel,
   kStatelessOpKernel,
 };
@@ -92,8 +92,8 @@ class OpKernel {
   virtual ~OpKernel() = default;
 
   bool is_stateless() const {
-    CHECK_NE(stateness_, kInvalidOpKernelStateness);
-    return stateness_ == kStatelessOpKernel;
+    CHECK_NE(statefullness_, kInvalidOpKernelStatefulness);
+    return statefullness_ == kStatelessOpKernel;
   }
 
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
@@ -110,7 +110,7 @@ class OpKernel {
   }
 
  protected:
-  OpKernel() : stateness_(kInvalidOpKernelStateness) {}
+  OpKernel() : statefullness_(kInvalidOpKernelStatefulness) {}
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
     LOG(INFO) << "UNIMPLEMENTED";
@@ -121,16 +121,16 @@ class OpKernel {
   template<typename T>
   friend OpKernel* NewOpKernel();
 
-  OpKernelStateness stateness_;
+  OpKernelStatefulness statefullness_;
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
   OpKernel* opkernel = new T();
   if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
-    opkernel->stateness_ = kStatelessOpKernel;
+    opkernel->statefullness_ = kStatelessOpKernel;
   } else {
-    opkernel->stateness_ = kStatefulOpKernel;
+    opkernel->statefullness_ = kStatefulOpKernel;
   }
   return opkernel;
 }
