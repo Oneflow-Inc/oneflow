@@ -37,9 +37,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
-  set_actor_ext_ctx(
-      std::shared_ptr<extension::ActorExtensionContext>(new extension::ActorExtensionContext()));
-  get_actor_ext_ctx()->set_actor(this);
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
@@ -696,6 +693,9 @@ std::unique_ptr<Actor> NewActor(
     const TaskProto& task_proto, const ThreadCtx& thread_ctx,
     const std::shared_ptr<extension::ThreadExtensionContext> thread_ext_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
+  rptr->set_actor_ext_ctx(
+      std::shared_ptr<extension::ActorExtensionContext>(new extension::ActorExtensionContext()));
+  rptr->get_actor_ext_ctx()->set_actor(rptr);
   rptr->get_actor_ext_ctx()->set_thread_ext_ctx(thread_ext_ctx);
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
