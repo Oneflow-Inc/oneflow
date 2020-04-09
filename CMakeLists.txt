@@ -31,6 +31,10 @@ if (WITH_TENSORRT)
   add_definitions(-DWITH_TENSORRT)
 endif()
 
+if (WITH_ONEFLOW_EXTENSION)
+  add_definitions(-DWITH_ONEFLOW_EXTENSION)
+endif()
+
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
