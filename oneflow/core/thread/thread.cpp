@@ -1,6 +1,7 @@
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/extension/extension_base.h"
 
 namespace oneflow {
 
@@ -60,7 +61,9 @@ void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
-  CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx)).second);
+  CHECK(id2actor_ptr_
+            .emplace(actor_id, NewActor(task_it->second, thread_ctx, this->get_thread_ext_ctx()))
+            .second);
   id2task_.erase(task_it);
   Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
 }

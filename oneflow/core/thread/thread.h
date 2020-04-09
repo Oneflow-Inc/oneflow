@@ -10,6 +10,10 @@
 
 namespace oneflow {
 
+namespace extension {
+class ThreadExtensionContext;
+}
+
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
@@ -21,6 +25,13 @@ class Thread {
   void EnqueueActorMsg(const ActorMsg& msg);
 
   void JoinAllActor() { actor_thread_.join(); }
+
+  void set_thread_ext_ctx(std::shared_ptr<extension::ThreadExtensionContext> new_ctx) {
+    thread_ext_ctx_ = new_ctx;
+  }
+  const std::shared_ptr<extension::ThreadExtensionContext> get_thread_ext_ctx() const {
+    return thread_ext_ctx_;
+  }
 
  protected:
   Thread() = default;
@@ -40,6 +51,7 @@ class Thread {
   std::queue<ActorMsg> local_msg_queue_;
 
   int64_t thrd_id_;
+  std::shared_ptr<extension::ThreadExtensionContext> thread_ext_ctx_;
 };
 
 }  // namespace oneflow

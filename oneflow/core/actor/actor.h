@@ -17,7 +17,8 @@ namespace oneflow {
 
 namespace extension {
 class ActorExtensionContext;
-}
+class ThreadExtensionContext;
+}  // namespace extension
 
 enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
@@ -247,7 +248,8 @@ class Actor {
   std::shared_ptr<extension::ActorExtensionContext> actor_ext_ctx_;
 };
 
-std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
+std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&,
+                                const std::shared_ptr<extension::ThreadExtensionContext>);
 
 #define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, Actor, ActorType)
 

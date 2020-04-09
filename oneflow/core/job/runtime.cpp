@@ -12,6 +12,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/extension/extension_base.h"
 
 namespace oneflow {
 
@@ -43,6 +44,8 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   NewAllGlobal(plan, total_piece_num, is_experiment_phase);
+  set_runtime_ext_ctx(std::shared_ptr<extension::RuntimeExtensionContext>(
+      new extension::RuntimeExtensionContext()));
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;

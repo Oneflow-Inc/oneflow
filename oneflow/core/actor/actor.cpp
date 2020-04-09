@@ -692,8 +692,11 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
   return naive_produced_rs_.Front(regst_desc_id);
 }
 
-std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+std::unique_ptr<Actor> NewActor(
+    const TaskProto& task_proto, const ThreadCtx& thread_ctx,
+    const std::shared_ptr<extension::ThreadExtensionContext> thread_ext_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
+  rptr->get_actor_ext_ctx()->set_thread_ext_ctx(thread_ext_ctx);
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
