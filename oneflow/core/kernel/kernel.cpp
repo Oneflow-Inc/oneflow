@@ -42,11 +42,11 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-#ifdef WITH_ONEFLOW_EXTENSION
+#if defined(WITH_ONEFLOW_EXTENSION)
   extension::kernel_event("Kernel/WillForward", this, BnInOp2Blob);
 #endif
   Forward(ctx, BnInOp2Blob);
-#ifdef WITH_ONEFLOW_EXTENSION
+#if defined(WITH_ONEFLOW_EXTENSION)
   extension::kernel_event("Kernel/DidForward", this, BnInOp2Blob);
 #endif
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);

@@ -51,9 +51,12 @@ void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
   for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
 }
 
-void ThreadMgr::SetRuntimeExtensionContext(
+void ThreadMgr::SetupExtensionContext(
     std::shared_ptr<extension::RuntimeExtensionContext> runtime_ext_ctx) {
   for (oneflow::Thread* t : threads_) {
+    t->set_thread_ext_ctx(std::shared_ptr<extension::ThreadExtensionContext>(
+        new extension::ThreadExtensionContext()));
+    t->get_thread_ext_ctx()->set_thread(t);
     t->get_thread_ext_ctx()->set_runtime_ext_ctx(runtime_ext_ctx);
   }
 }

@@ -4,6 +4,8 @@
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/thread/thread.h"
+#include "oneflow/core/job/runtime.h"
 
 namespace oneflow {
 
@@ -29,7 +31,14 @@ class ExtensionContext {
   HashMap<std::string, std::shared_ptr<void>> ext_name2state_;
 };
 
-class RuntimeExtensionContext : public ExtensionContext {};
+class RuntimeExtensionContext : public ExtensionContext {
+ public:
+  void set_runtime(Runtime* runtime) { runtime_ = runtime; }
+  Runtime* get_runtime() { return runtime_; }
+
+ private:
+  Runtime* runtime_;
+};
 
 class ThreadExtensionContext : public ExtensionContext {
  public:
@@ -37,9 +46,12 @@ class ThreadExtensionContext : public ExtensionContext {
     runtime_ext_ctx_ = runtime_ext_ctx;
   }
   const std::shared_ptr<RuntimeExtensionContext> get_runtime_ext_ctx() { return runtime_ext_ctx_; }
+  void set_thread(Thread* thread) { thread_ = thread; }
+  Thread* get_thread() { return thread_; }
 
  private:
   std::shared_ptr<RuntimeExtensionContext> runtime_ext_ctx_;
+  Thread* thread_;
 };
 
 class ActorExtensionContext : public ExtensionContext {
