@@ -204,7 +204,7 @@ std::shared_ptr<user_op::OpKernelState> UserKernel::EagerModelForward(
 void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
   ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(ctx_, opkernel_state);
+  kernel_->Run(ctx_, opkernel_state);
 }
 
 void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {

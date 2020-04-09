@@ -69,13 +69,14 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
   GenerateRandomBatchPermutationIndicesGPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
         seed, ctx->device_ctx());
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);

@@ -116,17 +116,12 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
-Kernel* ConstructUninitiatedKernel(const KernelConf& conf) {
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
+                                              DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
-  return rptr;
-}
-
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
-                                              DeviceCtx* device_ctx) {
-  Kernel* rptr = ConstructUninitiatedKernel(conf);
   rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }

@@ -244,13 +244,14 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
   TestRandomSourceKernel() = default;
   ~TestRandomSourceKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>>(
         seed, ctx->device_ctx());
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(state);
