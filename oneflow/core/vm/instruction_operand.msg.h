@@ -17,7 +17,7 @@ enum OperandAccessModifier {
 
 enum OperandMemZoneModifier {
   kInvalidOperandMemZoneModifier = 0,
-  kHostMemZoneModifier,
+  kHostConstMemZoneModifier,
   kDeviceMemZoneModifier,
 };
 
@@ -36,9 +36,8 @@ using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
 using MutOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
 using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
 
-using ConstHostOperand = ModifiedOperand<kConstModifier, kHostMemZoneModifier>;
-using MutableHostOperand = ModifiedOperand<kDataMutableModifier, kHostMemZoneModifier>;
-using Mut2HostOperand = ModifiedOperand<kTypeAndDataMutableModifier, kHostMemZoneModifier>;
+using ConstHostOperand = ModifiedOperand<kConstModifier, kHostConstMemZoneModifier>;
+using InitConstHostOperand = ModifiedOperand<kDataMutableModifier, kHostConstMemZoneModifier>;
 
 FLAT_MSG_BEGIN(OperandSeparator);
 FLAT_MSG_END(OperandSeparator);
@@ -54,8 +53,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(MutOperand, mut_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
     FLAT_MSG_ONEOF_FIELD(ConstHostOperand, const_host_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableHostOperand, mut_host_operand)
-    FLAT_MSG_ONEOF_FIELD(Mut2HostOperand, mut2_host_operand)
+    FLAT_MSG_ONEOF_FIELD(InitConstHostOperand, init_const_host_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, sep)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)

@@ -89,9 +89,10 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_host_operand(
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_const_host_operand(
     LogicalObjectId logical_object_id) {
-  add_instr_operand()->mutable_mut_host_operand()->mutable_operand()->__Init__(logical_object_id);
+  add_instr_operand()->mutable_init_const_host_operand()->mutable_operand()->__Init__(
+      logical_object_id);
   return this;
 }
 
@@ -114,12 +115,6 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_host_operand(
-    LogicalObjectId logical_object_id) {
-  add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
-  return this;
-}
-
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
@@ -129,7 +124,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
 }
 
 template<>
-int64_t GetOperandDefaultParallelId<kHostMemZoneModifier>(const InstrChain& instr_chain) {
+int64_t GetOperandDefaultParallelId<kHostConstMemZoneModifier>(const InstrChain& instr_chain) {
   return instr_chain.stream().machine_id();
 }
 
