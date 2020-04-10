@@ -17,12 +17,11 @@ namespace user_op {
 template<typename T>
 class ReduceCpuKernel final : public OpKernel {
  public:
-  ReduceCpuKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   ReduceCpuKernel() = default;
   ~ReduceCpuKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("tensor_in", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("tensor_out", 0);
     Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -46,7 +45,7 @@ class ReduceCpuKernel final : public OpKernel {
 
 #define REGISTER_REDUCE_CPU_KERNEL(dtype)                                                    \
   REGISTER_USER_KERNEL("reduce")                                                             \
-      .SetCreateFn([](KernelInitContext* ctx) { return new ReduceCpuKernel<dtype>(ctx); })   \
+      .SetCreateFn<ReduceCpuKernel<dtype>>()                                                 \
       .SetIsMatchedPred([](const KernelRegContext& ctx) {                                    \
         const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("tensor_out", 0); \
         if (ctx.device_type() == DeviceType::kCPU                                            \
@@ -57,7 +56,7 @@ class ReduceCpuKernel final : public OpKernel {
       })                                                                                     \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                             \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0);                  \
-        return in_shape->elem_cnt() * sizeof(int32_t);                                       \
+        return in_shape->elem_cnt() * sizeof(dtype);                                         \
       });
 
 REGISTER_REDUCE_CPU_KERNEL(float)

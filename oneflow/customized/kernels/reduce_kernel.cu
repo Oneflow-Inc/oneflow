@@ -17,12 +17,11 @@ namespace user_op {
 template<typename T>
 class ReduceGpuKernel final : public OpKernel {
  public:
-  ReduceGpuKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   ReduceGpuKernel() = default;
   ~ReduceGpuKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("tensor_in", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("tensor_out", 0);
     Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -46,7 +45,7 @@ class ReduceGpuKernel final : public OpKernel {
 
 #define REGISTER_REDUCE_GPU_KERNEL(dtype)                                                    \
   REGISTER_USER_KERNEL("reduce")                                                             \
-      .SetCreateFn([](KernelInitContext* ctx) { return new ReduceGpuKernel<dtype>(ctx); })   \
+      .SetCreateFn<ReduceGpuKernel<dtype>>()                                                 \
       .SetIsMatchedPred([](const KernelRegContext& ctx) {                                    \
         const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("tensor_out", 0); \
         if (ctx.device_type() == DeviceType::kGPU                                            \
