@@ -65,6 +65,11 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_operand(LogicalObjectId logical
   return this;
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_host_operand(LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(logical_object_id);
+  return this;
+}
+
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id) {
   add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
@@ -84,6 +89,38 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_host_operand(
+    LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_mutable_host_operand()->mutable_operand()->__Init__(
+      logical_object_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
+                                                              int64_t parallel_id) {
+  add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                           parallel_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+    LogicalObjectId logical_object_id, const AllParallelId& all_parallel_id) {
+  add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                           all_parallel_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_host_operand(
+    LogicalObjectId logical_object_id) {
+  add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
+  return this;
+}
+
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
@@ -92,30 +129,38 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   return infer_instr_msg;
 }
 
-const MirroredObject& InstrCtx::operand_type(const Operand& operand) const {
-  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
-  return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(
-      operand, instr_chain().stream().parallel_id());
+template<>
+int64_t GetOperandDefaultParallelId<kHostMemZoneModifier>(const InstrChain& instr_chain) {
+  return instr_chain.stream().machine_id();
 }
 
-const MirroredObject& InstrCtx::operand_value(const Operand& operand) const {
+template<>
+int64_t GetOperandDefaultParallelId<kDeviceMemZoneModifier>(const InstrChain& instr_chain) {
+  return instr_chain.stream().parallel_id();
+}
+
+const MirroredObject& InstrCtx::operand_type(const Operand& operand,
+                                             int64_t default_parallel_id) const {
+  CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
+  return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_parallel_id);
+}
+
+const MirroredObject& InstrCtx::operand_value(const Operand& operand,
+                                              int64_t default_parallel_id) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(
-      operand, instr_chain().stream().parallel_id());
+  return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_type(const Operand& operand) {
+MirroredObject* InstrCtx::mut_operand_type(const Operand& operand, int64_t default_parallel_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand,
-                                                              instr_chain().stream().parallel_id());
+  return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_parallel_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_value(const Operand& operand) {
+MirroredObject* InstrCtx::mut_operand_value(const Operand& operand, int64_t default_parallel_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand,
-                                                              instr_chain().stream().parallel_id());
+  return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>

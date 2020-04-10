@@ -8,25 +8,37 @@
 namespace oneflow {
 namespace vm {
 
-enum OperandModifier {
-  kConstModifier = 0,
+enum OperandAccessModifier {
+  kInvalidOperandAccessModifier = 0,
+  kConstModifier,
   kDataMutableModifier,
   kTypeAndDataMutableModifier,
 };
 
+enum OperandMemZoneModifier {
+  kInvalidOperandMemZoneModifier = 0,
+  kHostMemZoneModifier,
+  kDeviceMemZoneModifier,
+};
+
 // clang-format off
-template<OperandModifier modifier>
+template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
 FLAT_MSG_BEGIN(ModifiedOperand);
-  PUBLIC static const OperandModifier operand_modifier = modifier;
+  PUBLIC static const OperandAccessModifier operand_access_modifier = access_modifier;
+  PUBLIC static const OperandMemZoneModifier operand_mem_zone_modifier = mem_zone_modifier;
   // methods
   PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(Operand, operand);
 FLAT_MSG_END(ModifiedOperand);
 
-using ConstOperand = ModifiedOperand<kConstModifier>;
-using MutableOperand = ModifiedOperand<kDataMutableModifier>;
-using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier>;
+using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
+using MutableOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
+using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
+
+using ConstHostOperand = ModifiedOperand<kConstModifier, kHostMemZoneModifier>;
+using MutableHostOperand = ModifiedOperand<kDataMutableModifier, kHostMemZoneModifier>;
+using Mut2HostOperand = ModifiedOperand<kTypeAndDataMutableModifier, kHostMemZoneModifier>;
 
 FLAT_MSG_BEGIN(OperandSeparator);
 FLAT_MSG_END(OperandSeparator);
@@ -41,6 +53,9 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutableOperand, mutable_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
+    FLAT_MSG_ONEOF_FIELD(ConstHostOperand, const_host_operand)
+    FLAT_MSG_ONEOF_FIELD(MutableHostOperand, mutable_host_operand)
+    FLAT_MSG_ONEOF_FIELD(Mut2HostOperand, mut2_host_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, sep)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_i_operand)

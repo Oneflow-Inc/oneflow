@@ -14,6 +14,9 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_const_operand()) { return false; }
     if (instr_operand->has_mutable_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
+    if (instr_operand->has_const_host_operand()) { return false; }
+    if (instr_operand->has_mutable_host_operand()) { return false; }
+    if (instr_operand->has_mut2_host_operand()) { return false; }
     CHECK(instr_operand->has_sep() || instr_operand->has_double_i_operand()
           || instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
           || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
@@ -97,12 +100,12 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object, const
   DoEach(ret);
 }
 
-template<typename DoEachT>
-void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
-                                           Id2LogicalObject* id2logical_object,
-                                           const ConstOperand& const_operand, int64_t parallel_id,
-                                           const DoEachT& DoEach) {
-  const auto& operand = const_operand.operand();
+template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+void Scheduler::ForEachConstMirroredObject(
+    InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+    const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand, int64_t parallel_id,
+    const DoEachT& DoEach) {
+  const Operand& operand = const_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
     ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
@@ -113,12 +116,12 @@ void Scheduler::ForEachConstMirroredObject(InterpretType interpret_type,
   }
 }
 
-template<typename DoEachT>
-void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
-                                           Id2LogicalObject* id2logical_object,
-                                           const MutableOperand& mutable_operand,
-                                           int64_t parallel_id, const DoEachT& DoEach) {
-  const auto& operand = mutable_operand.operand();
+template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+void Scheduler::ForEachConstMirroredObject(
+    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+    int64_t parallel_id, const DoEachT& DoEach) {
+  const Operand& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
@@ -128,12 +131,12 @@ void Scheduler::ForEachConstMirroredObject(const InterpretType interpret_type,
   }
 }
 
-template<typename DoEachT>
-void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
-                                         Id2LogicalObject* id2logical_object,
-                                         const MutableOperand& mutable_operand, int64_t parallel_id,
-                                         const DoEachT& DoEach) {
-  const auto& operand = mutable_operand.operand();
+template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+void Scheduler::ForEachMutMirroredObject(
+    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+    const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
+    int64_t parallel_id, const DoEachT& DoEach) {
+  const Operand& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
@@ -143,12 +146,12 @@ void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
   }
 }
 
-template<typename DoEachT>
-void Scheduler::ForEachMutMirroredObject(const InterpretType interpret_type,
-                                         Id2LogicalObject* id2logical_object,
-                                         const Mut2Operand& mut2_operand, int64_t parallel_id,
-                                         const DoEachT& DoEach) {
-  const auto& operand = mut2_operand.operand();
+template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+void Scheduler::ForEachMutMirroredObject(
+    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+    const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
+    int64_t parallel_id, const DoEachT& DoEach) {
+  const Operand& operand = mut2_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&GetTypeLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
     ForEachMirroredObject<&GetSelfLogicalObjectId>(id2logical_object, operand, parallel_id, DoEach);
@@ -184,7 +187,8 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   auto* begin = new_instr_chain_list->Begin();
   if (begin != nullptr) { CHECK_EQ(begin->instr_ctx_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
-    int64_t parallel_id = instr_chain->stream().stream_id().parallel_id();
+    int64_t parallel_id = instr_chain->stream().parallel_id();
+    int64_t machine_id = instr_chain->stream().machine_id();
     InterpretType interpret_type = instr_chain->stream().stream_type_id().interpret_type();
     CHECK_EQ(instr_chain->instr_ctx_list().size(), 1);
     auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
@@ -197,22 +201,46 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     const auto& operands = instr_ctx->instr_msg().operand();
     for (const auto& operand : operands) {
       if (operand->has_mutable_operand()) {
-        ForEachMutMirroredObject(interpret_type, id2logical_object, operand->mutable_operand(),
-                                 parallel_id, ConsumeMutMirroredObject);
+        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                         operand->mutable_operand(), parallel_id,
+                                                         ConsumeMutMirroredObject);
       } else if (operand->has_mut2_operand()) {
-        ForEachMutMirroredObject(interpret_type, id2logical_object, operand->mut2_operand(),
-                                 parallel_id, ConsumeMutMirroredObject);
+        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                         operand->mut2_operand(), parallel_id,
+                                                         ConsumeMutMirroredObject);
+      } else if (operand->has_mutable_host_operand()) {
+        CHECK(operand->mutable_host_operand().operand().has_mirrored_parallel_id());
+        ForEachMutMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
+                                                       operand->mutable_host_operand(), machine_id,
+                                                       ConsumeMutMirroredObject);
+      } else if (operand->has_mut2_host_operand()) {
+        CHECK(operand->mut2_host_operand().operand().has_mirrored_parallel_id());
+        ForEachMutMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
+                                                       operand->mut2_host_operand(), machine_id,
+                                                       ConsumeMutMirroredObject);
       } else {
         // do nothing
       }
     }
     for (const auto& operand : operands) {
       if (operand->has_const_operand()) {
-        ForEachConstMirroredObject(interpret_type, id2logical_object, operand->const_operand(),
-                                   parallel_id, ConsumeConstMirroredObject);
+        ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                           operand->const_operand(), parallel_id,
+                                                           ConsumeConstMirroredObject);
       } else if (operand->has_mutable_operand()) {
-        ForEachConstMirroredObject(interpret_type, id2logical_object, operand->mutable_operand(),
-                                   parallel_id, ConsumeConstMirroredObject);
+        ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                           operand->mutable_operand(), parallel_id,
+                                                           ConsumeConstMirroredObject);
+      } else if (operand->has_const_host_operand()) {
+        CHECK(operand->const_host_operand().operand().has_mirrored_parallel_id());
+        ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
+                                                         operand->const_host_operand(), machine_id,
+                                                         ConsumeConstMirroredObject);
+      } else if (operand->has_mutable_host_operand()) {
+        CHECK(operand->mutable_host_operand().operand().has_mirrored_parallel_id());
+        ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
+                                                         operand->mutable_host_operand(),
+                                                         machine_id, ConsumeConstMirroredObject);
       } else {
         // do nothing
       }
