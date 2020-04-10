@@ -60,7 +60,7 @@ TEST(VmDesc, basic) {
   auto scheduler0 = NewTestScheduler<VmType::kLocal>(src_symbol, size);
   auto scheduler1 = NewTestScheduler<VmType::kRemote>(dst_symbol, size);
   scheduler0->Receive(NewInstruction("L2RLocalSend")
-                          ->add_operand(src_symbol)
+                          ->add_const_operand(src_symbol)
                           ->add_int64_operand(logical_token)
                           ->add_int64_operand(size));
   scheduler1->Receive(NewInstruction("L2RReceive")

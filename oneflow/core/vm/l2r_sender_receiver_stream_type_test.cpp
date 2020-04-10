@@ -44,7 +44,7 @@ TEST(L2RSenderReceiverStreamType, basic) {
   auto scheduler0 = NewTestScheduler(src_symbol, size);
   auto scheduler1 = NewTestScheduler(dst_symbol, size);
   scheduler0->Receive(NewInstruction("L2RSend")
-                          ->add_operand(src_symbol)
+                          ->add_const_operand(src_symbol)
                           ->add_int64_operand(logical_token)
                           ->add_int64_operand(size));
   scheduler1->Receive(NewInstruction("L2RReceive")

@@ -9,15 +9,15 @@ namespace vm {
 
 using LogicalObjectId = int64_t;
 
-inline int64_t GetTypeLogicalObjectId(int64_t value_logical_object_id) {
-  return -value_logical_object_id;
-}
+int64_t NewNaiveLogicalObjectId();
+int64_t NewConstHostLogicalObjectId();
+bool IsNaiveLogicalObjectId(int64_t logical_object_id);
+bool IsConstHostLogicalObjectId(int64_t logical_object_id);
 
-inline bool IsTypeLogicalObjectId(int64_t logical_object_id) { return logical_object_id < 0; }
-
-inline bool IsValueLogicalObjectId(int64_t logical_object_id) { return logical_object_id > 0; }
-
-inline int64_t GetSelfLogicalObjectId(int64_t logical_object_id) { return logical_object_id; }
+int64_t GetTypeLogicalObjectId(int64_t value_logical_object_id);
+bool IsTypeLogicalObjectId(int64_t logical_object_id);
+bool IsValueLogicalObjectId(int64_t logical_object_id);
+int64_t GetSelfLogicalObjectId(int64_t logical_object_id);
 
 }  // namespace vm
 }  // namespace oneflow

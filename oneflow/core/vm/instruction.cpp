@@ -33,50 +33,70 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   reset_operand_list(instr_msg.operand_list());
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_i_operand) {
-  add_instr_operand()->set_double_i_operand(double_i_operand);
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_operand) {
+  add_instr_operand()->set_double_operand(double_operand);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_i_operand) {
-  add_instr_operand()->set_int64_i_operand(int64_i_operand);
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_int64_operand(int64_t int64_operand) {
+  add_instr_operand()->set_int64_operand(int64_operand);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_i_operand) {
-  add_instr_operand()->set_uint64_i_operand(uint64_i_operand);
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_uint64_operand(uint64_t uint64_operand) {
+  add_instr_operand()->set_uint64_operand(uint64_operand);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_i_operand) {
-  add_instr_operand()->set_bool_i_operand(bool_i_operand);
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_bool_operand(bool bool_operand) {
+  add_instr_operand()->set_bool_operand(bool_operand);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_operand(LogicalObjectId logical_object_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_separator() {
+  add_instr_operand()->mutable_separator();
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_operand(LogicalObjectId logical_object_id,
-                                                         int64_t parallel_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id,
+                                                               int64_t parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             parallel_id);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_host_operand(LogicalObjectId logical_object_id) {
-  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(logical_object_id);
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
+    LogicalObjectId logical_object_id, const AllParallelId& all_parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
+  add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                            all_parallel_id);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_host_operand(
+    LogicalObjectId logical_object_id) {
+  CHECK(IsConstHostLogicalObjectId(logical_object_id));
+  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                                 0);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
                                                              int64_t parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           parallel_id);
   return this;
@@ -84,6 +104,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
                                                              const AllParallelId& all_parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           all_parallel_id);
   return this;
@@ -91,18 +112,21 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_const_host_operand(
     LogicalObjectId logical_object_id) {
+  CHECK(IsConstHostLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_init_const_host_operand()->mutable_operand()->__Init__(
-      logical_object_id);
+      logical_object_id, 0);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
                                                               int64_t parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            parallel_id);
   return this;
@@ -110,6 +134,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId lo
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
     LogicalObjectId logical_object_id, const AllParallelId& all_parallel_id) {
+  CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            all_parallel_id);
   return this;
@@ -124,13 +149,15 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
 }
 
 template<>
-int64_t GetOperandDefaultParallelId<kHostConstMemZoneModifier>(const InstrChain& instr_chain) {
-  return instr_chain.stream().machine_id();
+void CheckOperand<kHostConstMemZoneModifier>(const Operand& operand) {
+  CHECK(operand.has_fixed_parallel_id());
+  CHECK_EQ(operand.fixed_parallel_id(), 0);
+  CHECK(IsConstHostLogicalObjectId(operand.logical_object_id()));
 }
 
 template<>
-int64_t GetOperandDefaultParallelId<kDeviceMemZoneModifier>(const InstrChain& instr_chain) {
-  return instr_chain.stream().parallel_id();
+void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
+  CHECK(IsNaiveLogicalObjectId(operand.logical_object_id()));
 }
 
 const MirroredObject& InstrCtx::operand_type(const Operand& operand,
@@ -175,6 +202,10 @@ const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& opera
   const auto* access = mirrored_object_id2access().FindPtr(mirrored_object_id.Get());
   if (access == nullptr) { return nullptr; }
   return &access->mirrored_object();
+}
+
+int64_t InstrCtx::GetOperandDefaultParallelId() const {
+  return instr_chain().stream().parallel_id();
 }
 
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
