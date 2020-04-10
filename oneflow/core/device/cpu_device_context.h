@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_CPU_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/vm/cpu_allocator.h"
 
 namespace oneflow {
 
@@ -15,6 +16,8 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   void SyncDevice() override {}
   void AddCallBack(std::function<void()> callback) const override { callback(); }
+
+  vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
  private:
 };  // namespace oneflow
