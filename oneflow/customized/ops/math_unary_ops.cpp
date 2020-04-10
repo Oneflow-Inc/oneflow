@@ -1,3 +1,4 @@
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -10,6 +11,28 @@ REGISTER_USER_OP("unary")
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *y_shape = *x_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      SbpSignatureBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("unary_bool")
+    .Input("x")
+    .Output("y")
+    .Attr("unary_math_type", UserOpAttrType::kAtString)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      *y_shape = *x_shape;
+      DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+      *y_dtype = kInt8;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
