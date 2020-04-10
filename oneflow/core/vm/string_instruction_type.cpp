@@ -22,10 +22,10 @@ FLAT_MSG_VIEW_END(StringObjectInstrOperand);
 
 }  // namespace
 
-class NewStringObjectInstructionType final : public InstructionType {
+class InitStringObjectInstructionType final : public InstructionType {
  public:
-  NewStringObjectInstructionType() = default;
-  ~NewStringObjectInstructionType() override = default;
+  InitStringObjectInstructionType() = default;
+  ~InitStringObjectInstructionType() override = default;
 
   using stream_type = HostStreamType;
 
@@ -33,17 +33,17 @@ class NewStringObjectInstructionType final : public InstructionType {
     FlatMsgView<StringObjectInstrOperand> args(instr_ctx->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
-      const auto& str_ptr = Global<Storage<std::string>>::Get()->Get(logical_object_id);
+      const auto& str = Global<Storage<std::string>>::Get()->Get(logical_object_id);
       auto* mirrored_object = instr_ctx->mut_operand_type(args->string(i));
-      mirrored_object->Mutable<StringObject>(*str_ptr);
+      mirrored_object->Mutable<StringObject>(str);
     }
   }
   void Compute(InstrCtx* instr_ctx) const override {
     // do nothing
   }
 };
-COMMAND(RegisterInstructionType<NewStringObjectInstructionType>("InitStringObject"));
-COMMAND(RegisterLocalInstructionType<NewStringObjectInstructionType>("LocalInitStringObject"));
+COMMAND(RegisterInstructionType<InitStringObjectInstructionType>("InitStringObject"));
+COMMAND(RegisterLocalInstructionType<InitStringObjectInstructionType>("LocalInitStringObject"));
 
 }  // namespace vm
 }  // namespace oneflow

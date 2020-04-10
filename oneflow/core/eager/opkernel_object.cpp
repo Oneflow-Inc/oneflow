@@ -1,5 +1,4 @@
 #include "oneflow/core/eager/opkernel_object.h"
-#include "oneflow/core/eager/job_object.h"
 
 namespace oneflow {
 namespace eager {

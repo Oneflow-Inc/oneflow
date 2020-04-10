@@ -1,6 +1,5 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/eager/job_object.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/opkernel_instruction.msg.h"
