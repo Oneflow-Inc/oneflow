@@ -29,13 +29,15 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC void __Init__(const std::string& instr_type_name);
   PUBLIC void __Init__(const InstructionProto& proto);
   PUBLIC void __Init__(const InstructionMsg& instr_msg);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_i_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_i_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_i_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_i_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_host_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllParallelId&);
@@ -67,7 +69,7 @@ OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
 template<OperandMemZoneModifier mem_zone_modifier>
-int64_t GetOperandDefaultParallelId(const InstrChain&);
+void CheckOperand(const Operand& operand);
 
 // clang-format off
 OBJECT_MSG_BEGIN(InstrCtx);
@@ -78,19 +80,23 @@ OBJECT_MSG_BEGIN(InstrCtx);
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const MirroredObject& operand_type(const Operand& operand) const {
-    return operand_type(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+    CheckOperand<mem_zone_modifier>(operand);
+    return operand_type(operand, GetOperandDefaultParallelId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const MirroredObject& operand_value(const Operand& operand) const {
-    return operand_value(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+    CheckOperand<mem_zone_modifier>(operand);
+    return operand_value(operand, GetOperandDefaultParallelId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       MirroredObject* mut_operand_type(const Operand& operand) {
-    return mut_operand_type(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+    CheckOperand<mem_zone_modifier>(operand);
+    return mut_operand_type(operand, GetOperandDefaultParallelId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       MirroredObject* mut_operand_value(const Operand& operand) {
-    return mut_operand_value(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+    CheckOperand<mem_zone_modifier>(operand);
+    return mut_operand_value(operand, GetOperandDefaultParallelId());
   }
 
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
@@ -136,6 +142,7 @@ OBJECT_MSG_BEGIN(InstrCtx);
   PRIVATE const MirroredObject& operand_value(const Operand& operand, int64_t default_parallel_id) const;
   PRIVATE MirroredObject* mut_operand_type(const Operand& operand, int64_t default_parallel_id);
   PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_parallel_id);
+  PRIVATE int64_t GetOperandDefaultParallelId() const;
 
 OBJECT_MSG_END(InstrCtx);
 // clang-format on

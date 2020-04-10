@@ -16,9 +16,9 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_mut2_operand()) { return false; }
     if (instr_operand->has_const_host_operand()) { return false; }
     if (instr_operand->has_init_const_host_operand()) { return false; }
-    CHECK(instr_operand->has_sep() || instr_operand->has_double_i_operand()
-          || instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
-          || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
+    CHECK(instr_operand->has_separator() || instr_operand->has_double_operand()
+          || instr_operand->has_double_operand() || instr_operand->has_int64_operand()
+          || instr_operand->has_uint64_operand() || instr_operand->has_bool_operand());
   }
   return true;
 }
@@ -208,7 +208,9 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                          operand->mut2_operand(), parallel_id,
                                                          ConsumeMutMirroredObject);
       } else if (operand->has_init_const_host_operand()) {
-        CHECK(operand->init_const_host_operand().operand().has_mirrored_parallel_id());
+        const auto& const_host_operand = operand->init_const_host_operand().operand();
+        CHECK(const_host_operand.has_fixed_parallel_id());
+        CHECK_EQ(const_host_operand.fixed_parallel_id(), 0);
         ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
                                                             operand->init_const_host_operand(),
                                                             machine_id, ConsumeMutMirroredObject);
@@ -226,7 +228,9 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                            operand->mut_operand(), parallel_id,
                                                            ConsumeConstMirroredObject);
       } else if (operand->has_const_host_operand()) {
-        CHECK(operand->const_host_operand().operand().has_mirrored_parallel_id());
+        const auto& const_host_operand = operand->const_host_operand().operand();
+        CHECK(const_host_operand.has_fixed_parallel_id());
+        CHECK_EQ(const_host_operand.fixed_parallel_id(), 0);
         ForEachConstMirroredObject<kHostConstMemZoneModifier>(
             interpret_type, id2logical_object, operand->const_host_operand(), machine_id,
             ConsumeConstMirroredObject);

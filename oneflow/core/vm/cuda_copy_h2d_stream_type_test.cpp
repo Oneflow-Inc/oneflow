@@ -37,7 +37,7 @@ TEST(CudaCopyH2DStreamType, basic) {
       NewInstruction("CudaMalloc")->add_mut_operand(dst_symbol)->add_int64_operand(size));
   list.EmplaceBack(NewInstruction("CudaCopyH2D")
                        ->add_mut_operand(dst_symbol)
-                       ->add_operand(src_symbol)
+                       ->add_const_operand(src_symbol)
                        ->add_int64_operand(size));
   scheduler->Receive(&list);
   size_t count = 0;

@@ -38,7 +38,7 @@ void TestSimple(int64_t parallel_num) {
       NewInstruction("CudaMallocHost")->add_mut_operand(dst_symbol)->add_int64_operand(size));
   list.EmplaceBack(NewInstruction("CudaCopyD2H")
                        ->add_mut_operand(dst_symbol)
-                       ->add_operand(src_symbol)
+                       ->add_const_operand(src_symbol)
                        ->add_int64_operand(size));
   scheduler->Receive(&list);
   size_t count = 0;

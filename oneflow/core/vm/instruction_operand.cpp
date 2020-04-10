@@ -16,16 +16,16 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
     mutable_const_host_operand()->mutable_operand()->__Init__(proto.const_host_operand());
   } else if (proto.has_init_const_host_operand()) {
     mutable_init_const_host_operand()->mutable_operand()->__Init__(proto.init_const_host_operand());
-  } else if (proto.has_sep()) {
-    mutable_sep();
-  } else if (proto.has_double_i_operand()) {
-    set_double_i_operand(proto.double_i_operand());
-  } else if (proto.has_int64_i_operand()) {
-    set_int64_i_operand(proto.int64_i_operand());
-  } else if (proto.has_uint64_i_operand()) {
-    set_uint64_i_operand(proto.uint64_i_operand());
-  } else if (proto.has_bool_i_operand()) {
-    set_bool_i_operand(proto.bool_i_operand());
+  } else if (proto.has_separator()) {
+    mutable_separator();
+  } else if (proto.has_double_operand()) {
+    set_double_operand(proto.double_operand());
+  } else if (proto.has_int64_operand()) {
+    set_int64_operand(proto.int64_operand());
+  } else if (proto.has_uint64_operand()) {
+    set_uint64_operand(proto.uint64_operand());
+  } else if (proto.has_bool_operand()) {
+    set_bool_operand(proto.bool_operand());
   } else {
     UNIMPLEMENTED();
   }
