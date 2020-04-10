@@ -5,12 +5,11 @@ namespace oneflow {
 template<typename T>
 class CpuLeakyReluKernel final : public user_op::OpKernel {
  public:
-  CpuLeakyReluKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CpuLeakyReluKernel() = default;
   ~CpuLeakyReluKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
@@ -21,14 +20,13 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("leaky_relu")                                                          \
-      .SetCreateFn(                                                                           \
-          [](user_op::KernelInitContext* ctx) { return new CpuLeakyReluKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);           \
-        return ctx.device_type() == DeviceType::kCPU                                          \
-               && y_desc->data_type() == GetDataType<dtype>::value;                           \
+#define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("leaky_relu")                                                \
+      .SetCreateFn<CpuLeakyReluKernel<dtype>>()                                     \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
+        return ctx.device_type() == DeviceType::kCPU                                \
+               && y_desc->data_type() == GetDataType<dtype>::value;                 \
       });
 
 REGISTER_CPU_LEAKY_RELU_KERNEL(float)
@@ -37,12 +35,11 @@ REGISTER_CPU_LEAKY_RELU_KERNEL(double)
 template<typename T>
 class CpuLeakyReluGradKernel final : public user_op::OpKernel {
  public:
-  CpuLeakyReluGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
   CpuLeakyReluGradKernel() = default;
   ~CpuLeakyReluGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -57,14 +54,13 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("leaky_relu_grad")                                                         \
-      .SetCreateFn(                                                                               \
-          [](user_op::KernelInitContext* ctx) { return new CpuLeakyReluGradKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);             \
-        return ctx.device_type() == DeviceType::kCPU                                              \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                              \
+#define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("leaky_relu_grad")                                             \
+      .SetCreateFn<CpuLeakyReluGradKernel<dtype>>()                                   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
+        return ctx.device_type() == DeviceType::kCPU                                  \
+               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
 REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(float)

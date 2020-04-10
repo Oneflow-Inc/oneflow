@@ -21,7 +21,7 @@ def GenArgList(arg_dict):
 
 
 def GetSavePath():
-    return "/tmp/op_unit_test/"
+    return "./log/op_unit_test/"
 
 
 # Save func for flow.watch
@@ -37,17 +37,23 @@ def Save(name):
 
 
 type_name_to_flow_type = {
+    "float16": flow.float16,
     "float32": flow.float32,
     "double": flow.double,
     "int8": flow.int8,
     "int32": flow.int32,
     "int64": flow.int64,
+    "char": flow.char,
+    "uint8": flow.uint8,
 }
 
 type_name_to_np_type = {
+    "float16": np.float16,
     "float32": np.float32,
     "double": np.float64,
     "int8": np.int8,
     "int32": np.int32,
     "int64": np.int64,
+    "char": np.byte,
+    "uint8": np.uint8,
 }
