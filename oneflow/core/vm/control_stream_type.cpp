@@ -74,18 +74,17 @@ class NewSymbolInstructionType final : public InstructionType {
   // clang-format on
 
   void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
+    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
   }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run(scheduler, instr_msg, &GetSelfLogicalObjectId);
+    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
 
  private:
-  template<typename GetLogicalObjectIdT>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
-           const GetLogicalObjectIdT& GetLogicalObjectId) const {
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     FlatMsgView<NewSymbolCtrlInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
@@ -120,18 +119,17 @@ class DeleteSymbolInstructionType final : public InstructionType {
 
   void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
     // do nothing, delete symbol in Compute method
-    Run(scheduler, instr_msg, &GetTypeLogicalObjectId);
+    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
   }
   void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run(scheduler, instr_msg, &GetSelfLogicalObjectId);
+    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
 
  private:
-  template<typename GetLogicalObjectIdT>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg,
-           const GetLogicalObjectIdT& GetLogicalObjectId) const {
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     FlatMsgView<DeleteSymbolCtrlInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->symbol_size()) {
@@ -151,6 +149,48 @@ class DeleteSymbolInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<DeleteSymbolInstructionType>("DeleteSymbol"));
 COMMAND(RegisterLocalInstructionType<DeleteSymbolInstructionType>("LocalDeleteSymbol"));
+
+class NewConstHostSymbolInstructionType final : public InstructionType {
+ public:
+  NewConstHostSymbolInstructionType() = default;
+  ~NewConstHostSymbolInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  // clang-format off
+  FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
+  FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
+  // clang-format on
+
+  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
+  }
+  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
+  }
+  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+
+ private:
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+    FlatMsgView<NewSymbolCtrlInstruction> view;
+    CHECK(view.Match(instr_msg->operand()));
+    FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
+      int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
+      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
+          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
+      CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+      auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
+                                                                   logical_object.Mutable(), 0);
+      CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+    }
+  }
+};
+COMMAND(RegisterInstructionType<NewConstHostSymbolInstructionType>("NewConstHostSymbol"));
+COMMAND(RegisterLocalInstructionType<NewConstHostSymbolInstructionType>("LocalNewConstHostSymbol"));
 
 void ControlStreamType::Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();

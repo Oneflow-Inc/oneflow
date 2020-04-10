@@ -16,7 +16,7 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(StringObjectInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, string);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::InitConstHostOperand, string);
 FLAT_MSG_VIEW_END(StringObjectInstrOperand);
 // clang-format on
 
@@ -42,30 +42,8 @@ class NewStringObjectInstructionType final : public InstructionType {
     // do nothing
   }
 };
-COMMAND(RegisterInstructionType<NewStringObjectInstructionType>("NewStringObject"));
-COMMAND(RegisterLocalInstructionType<NewStringObjectInstructionType>("LocalNewStringObject"));
-
-class DeleteStringObjectInstructionType final : public InstructionType {
- public:
-  DeleteStringObjectInstructionType() = default;
-  ~DeleteStringObjectInstructionType() override = default;
-
-  using stream_type = HostStreamType;
-
-  void Infer(InstrCtx* instr_ctx) const override {
-    FlatMsgView<StringObjectInstrOperand> args(instr_ctx->instr_msg().operand());
-    FOR_RANGE(int, i, 0, args->string_size()) {
-      auto* mirrored_object = instr_ctx->mut_operand_type(args->string(i));
-      CHECK(mirrored_object->Has<StringObject>());
-      mirrored_object->reset_object();
-    }
-  }
-  void Compute(InstrCtx* instr_ctx) const override {
-    // do nothing
-  }
-};
-COMMAND(RegisterInstructionType<DeleteStringObjectInstructionType>("DeleteStringObject"));
-COMMAND(RegisterLocalInstructionType<DeleteStringObjectInstructionType>("LocalDeleteStringObject"));
+COMMAND(RegisterInstructionType<NewStringObjectInstructionType>("InitStringObject"));
+COMMAND(RegisterLocalInstructionType<NewStringObjectInstructionType>("LocalInitStringObject"));
 
 }  // namespace vm
 }  // namespace oneflow
