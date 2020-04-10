@@ -15,8 +15,9 @@ REGISTER_USER_OP("argmax")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-      if (in_shape.NumAxes() > 1) {
-        *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      if (in_batch_axis->has_value() && in_batch_axis->value() != in_shape.NumAxes() - 1) {
+        *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *in_batch_axis;
       } else {
         ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       }
@@ -28,7 +29,7 @@ REGISTER_USER_OP("argmax")
         SbpSignatureBuilder()
             .Split(ctx->inputs(), 0)
             .Split(ctx->outputs(), 0)
-            .MakeSplitSignatureListBuilder(in_shape.NumAxes())
+            .MakeSplitSignatureListBuilder(in_shape.NumAxes() - 1)
             .Build(ctx->sbp_sig_list());
       }
       return Maybe<void>::Ok();
