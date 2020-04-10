@@ -8,6 +8,10 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
     assert device_type in ["gpu", "cpu"]
@@ -59,7 +63,7 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy())
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.ndarray() - tf_out.numpy()))
     assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy())
     assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy())
 

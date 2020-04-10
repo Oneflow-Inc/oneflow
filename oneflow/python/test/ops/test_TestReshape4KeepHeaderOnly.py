@@ -8,6 +8,11 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+
 def TestReshape(x, shape, name):
     return flow.user_op_builder(name).Op("TestReshape4KeepHeaderOnly") \
             .Input("in",[x]).Output("out") \
@@ -66,5 +71,3 @@ def test_TestReshape_train_keep_header_only_grad(test_case):
     arg_dict["output_shape"] = [(100, 10), (10, 100), (5, 20, 10)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-
-
