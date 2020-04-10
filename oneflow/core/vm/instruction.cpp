@@ -71,28 +71,27 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_host_operand(LogicalObjectId lo
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id) {
-  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id);
+  add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
                                                              int64_t parallel_id) {
-  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                              parallel_id);
+  add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                          parallel_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
                                                              const AllParallelId& all_parallel_id) {
-  add_instr_operand()->mutable_mutable_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                              all_parallel_id);
+  add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                          all_parallel_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_host_operand(
     LogicalObjectId logical_object_id) {
-  add_instr_operand()->mutable_mutable_host_operand()->mutable_operand()->__Init__(
-      logical_object_id);
+  add_instr_operand()->mutable_mut_host_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 

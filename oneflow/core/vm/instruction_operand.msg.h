@@ -33,7 +33,7 @@ FLAT_MSG_BEGIN(ModifiedOperand);
 FLAT_MSG_END(ModifiedOperand);
 
 using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
-using MutableOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
+using MutOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
 using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
 
 using ConstHostOperand = ModifiedOperand<kConstModifier, kHostMemZoneModifier>;
@@ -51,10 +51,10 @@ FLAT_MSG_BEGIN(InstructionOperand);
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableOperand, mutable_operand)
+    FLAT_MSG_ONEOF_FIELD(MutOperand, mut_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
     FLAT_MSG_ONEOF_FIELD(ConstHostOperand, const_host_operand)
-    FLAT_MSG_ONEOF_FIELD(MutableHostOperand, mutable_host_operand)
+    FLAT_MSG_ONEOF_FIELD(MutableHostOperand, mut_host_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2HostOperand, mut2_host_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, sep)
     FLAT_MSG_ONEOF_FIELD(double, double_i_operand) // i is short for immediate

@@ -114,7 +114,7 @@ class DeleteSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutableOperand, symbol);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, symbol);
   FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
   // clang-format on
 

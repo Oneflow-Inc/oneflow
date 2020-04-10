@@ -39,7 +39,7 @@ class NewBlobObjectInstructionType final : public vm::InstructionType {
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewBlobObjectInstrOperand);
     FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, job);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, blob);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, blob);
   FLAT_MSG_VIEW_END(NewBlobObjectInstrOperand);
   // clang-format on
 
@@ -69,7 +69,7 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteBlobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, blob);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, blob);
   FLAT_MSG_VIEW_END(DeleteBlobObjectInstrOperand);
   // clang-format on
 
