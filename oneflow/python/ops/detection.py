@@ -321,27 +321,6 @@ def non_maximum_suppression(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
-@oneflow_export("detection.smooth_l1")
-def smooth_l1(prediction, label, beta=1.0, scale=1.0, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("SmoothL1_"),
-    )
-    op_conf.smooth_l1_conf.prediction = prediction.logical_blob_name
-    op_conf.smooth_l1_conf.label = label.logical_blob_name
-    op_conf.smooth_l1_conf.beta = float(beta)
-    op_conf.smooth_l1_conf.scale = float(scale)
-    op_conf.smooth_l1_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
 @oneflow_export("detection.upsample_nearest")
 def upsample_nearest(inputs, scale, data_format, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -495,9 +474,3 @@ def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
-@oneflow_export("detection.random_perm_like")
-def random_perm_like(like, seed=None):
-    assert len(like.shape) == 1
-    mask = flow.random_like(like, seed=seed, name=like.op_name + "_random_perm_mask")
-    return flow.argsort(mask, name=like.op_name + "_random_perm_argsort")
