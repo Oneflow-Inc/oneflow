@@ -7,57 +7,60 @@
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/random_crop_generator.h"
 #include "oneflow/customized/image/image_util.h"
+#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt,
+                          bool dim1_varying_length, bool auto_zero_padding) {
+  if (feature.has_bytes_list()) {
+    CHECK_EQ(feature.bytes_list().value_size(), 1);
+    const auto& value0 = feature.bytes_list().value(0);
+    auto in_dptr = reinterpret_cast<const int8_t*>(value0.c_str());
+    sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, value0.size());
+    CopyElem<int8_t, T>(in_dptr, dptr, sample_elem_cnt);
+  }
+#define DEFINE_ONE_ELIF(PbT, CppT)                                                                \
+  else if (feature.has_##PbT##_list()) {                                                          \
+    const auto& list = feature.PbT##_list();                                                      \
+    const CppT* in_dptr = list.value().data();                                                    \
+    const int64_t padding_elem_num = auto_zero_padding ? sample_elem_cnt - list.value_size() : 0; \
+    if (dim1_varying_length || auto_zero_padding) {                                               \
+      CHECK_LE(list.value_size(), sample_elem_cnt);                                               \
+      sample_elem_cnt = list.value_size();                                                        \
+    } else {                                                                                      \
+      CHECK_EQ(sample_elem_cnt, list.value_size());                                               \
+    }                                                                                             \
+    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                            \
+    if (padding_elem_num > 0) {                                                                   \
+      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                       \
+    }                                                                                             \
+  }
+  DEFINE_ONE_ELIF(float, float)
+  DEFINE_ONE_ELIF(double, double)
+  DEFINE_ONE_ELIF(int32, int32_t)
+  DEFINE_ONE_ELIF(int64, int64_t)
+#undef DEFINE_ONE_ELIF
+  else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<typename T>
 class OFRecordRawDecoderKernel final : public user_op::OpKernel {
  public:
-  OFRecordRawDecoderKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {
-    auto_zero_padding_ = ctx->GetAttr<bool>("auto_zero_padding");
-    dim1_varying_length_ = ctx->GetAttr<bool>("dim1_varying_length");
-  }
-  OFRecordRawDecoderKernel() = delete;
+  OFRecordRawDecoderKernel() = default;
   ~OFRecordRawDecoderKernel() override = default;
 
  private:
-  void DecodeOneRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt) {
-    if (feature.has_bytes_list()) {
-      CHECK_EQ(feature.bytes_list().value_size(), 1);
-      const auto& value0 = feature.bytes_list().value(0);
-      auto in_dptr = reinterpret_cast<const int8_t*>(value0.c_str());
-      sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, value0.size());
-      CopyElem<int8_t, T>(in_dptr, dptr, sample_elem_cnt);
-    }
-#define DEFINE_ONE_ELIF(PbT, CppT)                                                                 \
-  else if (feature.has_##PbT##_list()) {                                                           \
-    const auto& list = feature.PbT##_list();                                                       \
-    const CppT* in_dptr = list.value().data();                                                     \
-    const int64_t padding_elem_num = auto_zero_padding_ ? sample_elem_cnt - list.value_size() : 0; \
-    if (dim1_varying_length_ || auto_zero_padding_) {                                              \
-      CHECK_LE(list.value_size(), sample_elem_cnt);                                                \
-      sample_elem_cnt = list.value_size();                                                         \
-    } else {                                                                                       \
-      CHECK_EQ(sample_elem_cnt, list.value_size());                                                \
-    }                                                                                              \
-    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                             \
-    if (padding_elem_num > 0) {                                                                    \
-      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                        \
-    }                                                                                              \
-  }
-    DEFINE_ONE_ELIF(float, float)
-    DEFINE_ONE_ELIF(double, double)
-    DEFINE_ONE_ELIF(int32, int32_t)
-    DEFINE_ONE_ELIF(int64, int64_t)
-#undef DEFINE_ONE_ELIF
-    else {
-      UNIMPLEMENTED();
-    }
-  }
-
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
@@ -68,25 +71,23 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     T* out_dptr = out_blob->mut_dptr<T>();
     std::string name = ctx->GetAttr<std::string>("name");
 
+    bool auto_zero_padding = ctx->GetAttr<bool>("auto_zero_padding");
+    bool dim1_varying_length = ctx->GetAttr<bool>("dim1_varying_length");
+
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       T* dptr = out_dptr + i * sample_elem_cnt;
       CHECK(record.feature().find(name) != record.feature().end())
           << "Field " << name << " not found";
       const Feature& feature = record.feature().at(name);
-      DecodeOneRecord(feature, dptr, sample_elem_cnt);
+      DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
     });
   }
-
-  bool auto_zero_padding_;
-  bool dim1_varying_length_;
 };
 
 #define REGISTER_RAW_DECODER_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("OFRecordRawDecoder")                                                       \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                                           \
-        return new OFRecordRawDecoderKernel<dtype>(ctx);                                           \
-      })                                                                                           \
+      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
         const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
         const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
@@ -158,11 +159,34 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
 }
 
+class RandCropGens final : public user_op::OpKernelState {
+ public:
+  explicit RandCropGens(int32_t size) : gens_(size) {}
+  ~RandCropGens() = default;
+
+  RandomCropGenerator* Get(int32_t idx) { return gens_.at(idx).get(); }
+
+  void New(int32_t idx, AspectRatioRange aspect_ratio_range, AreaRange area_range, int64_t seed,
+           int32_t num_attempts) {
+    CHECK_LT(idx, gens_.size());
+    gens_.at(idx).reset(
+        new RandomCropGenerator(aspect_ratio_range, area_range, seed, num_attempts));
+  }
+
+ private:
+  std::vector<std::shared_ptr<RandomCropGenerator>> gens_;
+};
+
 }  // namespace
 
 class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  public:
-  OFRecordImageDecoderRandomCropKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {
+  OFRecordImageDecoderRandomCropKernel() = default;
+  ~OFRecordImageDecoderRandomCropKernel() override = default;
+
+ private:
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
     int32_t num_attempts = ctx->GetAttr<int32_t>("num_attempts");
     CHECK(num_attempts >= 1);
     std::vector<float> random_aspect_ratio =
@@ -183,18 +207,17 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     std::vector<int> seeds(batch_size);
     seq.generate(seeds.begin(), seeds.end());
 
-    crop_window_generators_.resize(batch_size);
+    std::shared_ptr<RandCropGens> crop_window_generators(new RandCropGens(batch_size));
     for (int32_t i = 0; i < batch_size; ++i) {
-      crop_window_generators_.at(i).reset(new RandomCropGenerator(
-          {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
-          {random_area.at(0), random_area.at(1)}, seeds.at(i), num_attempts));
+      crop_window_generators->New(i, {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
+                                  {random_area.at(0), random_area.at(1)}, seeds.at(i),
+                                  num_attempts);
     }
+    return crop_window_generators;
   }
-  OFRecordImageDecoderRandomCropKernel() = delete;
-  ~OFRecordImageDecoderRandomCropKernel() override = default;
 
- private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* crop_window_generators = dynamic_cast<RandCropGens*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
     int64_t record_num = out_blob->shape().At(0);
@@ -209,18 +232,14 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
-      RandomCropGenerator* gen = crop_window_generators_.at(i).get();
+      RandomCropGenerator* gen = crop_window_generators->Get(i);
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
     });
   }
-
-  std::vector<std::shared_ptr<RandomCropGenerator>> crop_window_generators_;
 };
 
 REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) {
-      return new OFRecordImageDecoderRandomCropKernel(ctx);
-    })
+    .SetCreateFn<OFRecordImageDecoderRandomCropKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);

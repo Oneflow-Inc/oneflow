@@ -27,12 +27,11 @@ int GetOpencvInterp(const std::string& interp_type) {
 
 class ResizeToStaticShapeKernel final : public user_op::OpKernel {
  public:
-  ResizeToStaticShapeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
-  ResizeToStaticShapeKernel() = delete;
+  ResizeToStaticShapeKernel() = default;
   ~ResizeToStaticShapeKernel() override = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = in_blob->shape().At(0);
@@ -67,7 +66,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("ImageResize")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new ResizeToStaticShapeKernel(ctx); })
+    .SetCreateFn<ResizeToStaticShapeKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
@@ -78,70 +77,74 @@ REGISTER_USER_KERNEL("ImageResize")
       return false;
     });
 
-class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::OpKernel {
- public:
-  CropMirrorNormalizeFromStaticShapeToFloatKernel(user_op::KernelInitContext* ctx)
-      : user_op::OpKernel(ctx) {
-    mean_vec_ = ctx->GetAttr<std::vector<float>>("mean");
-    inv_std_vec_ = ctx->GetAttr<std::vector<float>>("std");
-    std::string color_space = ctx->GetAttr<std::string>("color_space");
-    int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
-    CHECK(mean_vec_.size() == 1 || mean_vec_.size() == C);
-    CHECK(inv_std_vec_.size() == 1 || inv_std_vec_.size() == C);
+namespace {
 
-    for (auto& elem : inv_std_vec_) { elem = 1.0f / elem; }
-
-    if (mean_vec_.size() == 1) { mean_vec_.resize(C, mean_vec_.at(0)); }
-    if (inv_std_vec_.size() == 1) { inv_std_vec_.resize(C, inv_std_vec_.at(0)); }
-  }
-  CropMirrorNormalizeFromStaticShapeToFloatKernel() = delete;
-  ~CropMirrorNormalizeFromStaticShapeToFloatKernel() override = default;
-
- private:
-  void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,
-                  int8_t mirror) {
-    if (mirror) {
-      for (int64_t c = 0; c < C; ++c) {
-        float mean = mean_vec_.at(c);
-        float inv_std = inv_std_vec_.at(c);
-        for (int64_t h = 0; h < H; ++h) {
-          for (int64_t w = 0; w < W; ++w) {
-            int64_t mirror_w = W - 1 - w;
-            int64_t in_offset = h * W * C + mirror_w * C + c;  // N, H, W, C
-            int64_t out_offset = c * H * W + h * W + w;        // N, C, H, W
-            out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
-          }
+void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,
+                int8_t mirror, const std::vector<float>& mean_vec,
+                const std::vector<float>& inv_std_vec) {
+  if (mirror) {
+    for (int64_t c = 0; c < C; ++c) {
+      float mean = mean_vec.at(c);
+      float inv_std = inv_std_vec.at(c);
+      for (int64_t h = 0; h < H; ++h) {
+        for (int64_t w = 0; w < W; ++w) {
+          int64_t mirrorw = W - 1 - w;
+          int64_t in_offset = h * W * C + mirrorw * C + c;  // N, H, W, C
+          int64_t out_offset = c * H * W + h * W + w;       // N, C, H, W
+          out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
         }
       }
-    } else {
-      for (int64_t c = 0; c < C; ++c) {
-        float mean = mean_vec_.at(c);
-        float inv_std = inv_std_vec_.at(c);
-        for (int64_t h = 0; h < H; ++h) {
-          for (int64_t w = 0; w < W; ++w) {
-            int64_t in_offset = h * W * C + w * C + c;   // N, H, W, C
-            int64_t out_offset = c * H * W + h * W + w;  // N, C, H, W
-            out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
-          }
+    }
+  } else {
+    for (int64_t c = 0; c < C; ++c) {
+      float mean = mean_vec.at(c);
+      float inv_std = inv_std_vec.at(c);
+      for (int64_t h = 0; h < H; ++h) {
+        for (int64_t w = 0; w < W; ++w) {
+          int64_t in_offset = h * W * C + w * C + c;   // N, H, W, C
+          int64_t out_offset = c * H * W + h * W + w;  // N, C, H, W
+          out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
         }
       }
     }
   }
+}
 
-  void Compute(user_op::KernelContext* ctx) override {
+}  // namespace
+
+class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::OpKernel {
+ public:
+  CropMirrorNormalizeFromStaticShapeToFloatKernel() = default;
+  ~CropMirrorNormalizeFromStaticShapeToFloatKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    std::vector<float> mean_vec = ctx->GetAttr<std::vector<float>>("mean");
+    std::vector<float> inv_std_vec = ctx->GetAttr<std::vector<float>>("std");
+    std::vector<int8_t> mirror;
+    std::string color_space = ctx->GetAttr<std::string>("color_space");
+    int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
+    CHECK(mean_vec.size() == 1 || mean_vec.size() == C);
+    CHECK(inv_std_vec.size() == 1 || inv_std_vec.size() == C);
+
+    for (auto& elem : inv_std_vec) { elem = 1.0f / elem; }
+
+    if (mean_vec.size() == 1) { mean_vec.resize(C, mean_vec.at(0)); }
+    if (inv_std_vec.size() == 1) { inv_std_vec.resize(C, inv_std_vec.at(0)); }
+
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* mirror_blob = ctx->Tensor4ArgNameAndIndex("mirror", 0);
+    user_op::Tensor* mirrorblob = ctx->Tensor4ArgNameAndIndex("mirror", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = in_blob->shape().At(0);
     CHECK(record_num > 0);
-    if (mirror_blob) {
-      CHECK_EQ(record_num, mirror_blob->shape().elem_cnt());
-      mirror_.resize(record_num);
+    if (mirrorblob) {
+      CHECK_EQ(record_num, mirrorblob->shape().elem_cnt());
+      mirror.resize(record_num);
       for (int32_t i = 0; i < record_num; ++i) {
-        mirror_.at(i) = *(mirror_blob->mut_dptr<int8_t>() + i);
+        mirror.at(i) = *(mirrorblob->mut_dptr<int8_t>() + i);
       }
     } else {
-      mirror_.resize(record_num, 0);
+      mirror.resize(record_num, 0);
     }
 
     const uint8_t* in_dptr = in_blob->dptr<uint8_t>();
@@ -151,7 +154,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     int64_t N = in_shape.At(0);
     int64_t in_H = in_shape.At(1);
     int64_t in_W = in_shape.At(2);
-    int64_t C = in_shape.At(3);
+    CHECK_EQ(C, in_shape.At(3));
     // int64_t in_image_elem_cnt = in_H * in_W * C;
 
     std::string output_layout = ctx->GetAttr<std::string>("output_layout");
@@ -166,21 +169,16 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     int64_t H = in_H;
     int64_t W = in_W;
     int64_t one_sample_elem_cnt = C * H * W;
+
     MultiThreadLoop(record_num, [&](size_t i) {
       CMN1Sample(C, H, W, in_dptr + one_sample_elem_cnt * i, out_dptr + one_sample_elem_cnt * i,
-                 mirror_.at(i));
+                 mirror.at(i), mean_vec, inv_std_vec);
     });
   }
-
-  std::vector<float> mean_vec_;
-  std::vector<float> inv_std_vec_;
-  std::vector<int8_t> mirror_;
 };
 
 REGISTER_USER_KERNEL("CropMirrorNormalize")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) {
-      return new CropMirrorNormalizeFromStaticShapeToFloatKernel(ctx);
-    })
+    .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
@@ -191,35 +189,49 @@ REGISTER_USER_KERNEL("CropMirrorNormalize")
       return false;
     });
 
-class CoinFlipKernel final : public user_op::OpKernel {
+namespace {
+
+class RandBoolGen final : public user_op::OpKernelState {
  public:
-  CoinFlipKernel(user_op::KernelInitContext* ctx)
-      : user_op::OpKernel(ctx),
-        dis_(ctx->GetAttr<float>("probability")),
-        rng_(ctx->GetAttr<int64_t>("seed") == -1 ? NewRandomSeed()
-                                                 : ctx->GetAttr<int64_t>("seed")) {
-    /*
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    if (seed == -1) { seed = NewRandomSeed(); }
-    rng_ = std::mt19937(seed);
-    */
-  }
-  CoinFlipKernel() = delete;
-  ~CoinFlipKernel() override = default;
+  explicit RandBoolGen(float prob, int64_t seed) : dis_(prob), rng_(seed) {}
+  ~RandBoolGen() = default;
+
+  bool GetNextBool() { return dis_(rng_); }
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int8_t* dptr = out_blob->mut_dptr<int8_t>();
-    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) { *(dptr + i) = dis_(rng_) ? 1 : 0; }
-  }
-
   std::bernoulli_distribution dis_;
   std::mt19937 rng_;
 };
 
+}  // namespace
+
+class CoinFlipKernel final : public user_op::OpKernel {
+ public:
+  CoinFlipKernel() = default;
+  ~CoinFlipKernel() override = default;
+
+ private:
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    float prob = ctx->GetAttr<float>("probability");
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    if (seed == -1) { seed = NewRandomSeed(); }
+    std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
+    return rand_bool_gen;
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* rand_bool_gen = dynamic_cast<RandBoolGen*>(state);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int8_t* dptr = out_blob->mut_dptr<int8_t>();
+    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+      *(dptr + i) = rand_bool_gen->GetNextBool() ? 1 : 0;
+    }
+  }
+};
+
 REGISTER_USER_KERNEL("CoinFlip")
-    .SetCreateFn([](user_op::KernelInitContext* ctx) { return new CoinFlipKernel(ctx); })
+    .SetCreateFn<CoinFlipKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kInt8) {
