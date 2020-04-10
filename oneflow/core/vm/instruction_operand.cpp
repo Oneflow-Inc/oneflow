@@ -8,14 +8,14 @@ namespace vm {
 void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
-  } else if (proto.has_mutable_operand()) {
-    mutable_mutable_operand()->mutable_operand()->__Init__(proto.mutable_operand());
+  } else if (proto.has_mut_operand()) {
+    mutable_mut_operand()->mutable_operand()->__Init__(proto.mut_operand());
   } else if (proto.has_mut2_operand()) {
     mutable_mut2_operand()->mutable_operand()->__Init__(proto.mut2_operand());
   } else if (proto.has_const_host_operand()) {
     mutable_const_host_operand()->mutable_operand()->__Init__(proto.const_host_operand());
-  } else if (proto.has_mutable_host_operand()) {
-    mutable_mutable_host_operand()->mutable_operand()->__Init__(proto.mutable_host_operand());
+  } else if (proto.has_mut_host_operand()) {
+    mutable_mut_host_operand()->mutable_operand()->__Init__(proto.mut_host_operand());
   } else if (proto.has_mut2_host_operand()) {
     mutable_mut2_host_operand()->mutable_operand()->__Init__(proto.mut2_host_operand());
   } else if (proto.has_sep()) {

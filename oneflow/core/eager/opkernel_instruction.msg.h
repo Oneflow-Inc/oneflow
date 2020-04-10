@@ -11,15 +11,15 @@ namespace eager {
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(NewOpKernelObjectInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, job);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, op);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, op);
 FLAT_MSG_VIEW_END(NewOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(DeleteOpKernelObjectInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, op);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, op);
 FLAT_MSG_VIEW_END(DeleteOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutableOperand, opkernel);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, ibn);
@@ -29,7 +29,7 @@ FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, output_index);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, output_blob);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, output_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_mut2_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, mut2_obn);

@@ -12,10 +12,10 @@ namespace {
 bool IsSourceInstruction(const InstructionMsg& instr_msg) {
   for (const auto& instr_operand : instr_msg.operand()) {
     if (instr_operand->has_const_operand()) { return false; }
-    if (instr_operand->has_mutable_operand()) { return false; }
+    if (instr_operand->has_mut_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
     if (instr_operand->has_const_host_operand()) { return false; }
-    if (instr_operand->has_mutable_host_operand()) { return false; }
+    if (instr_operand->has_mut_host_operand()) { return false; }
     if (instr_operand->has_mut2_host_operand()) { return false; }
     CHECK(instr_operand->has_sep() || instr_operand->has_double_i_operand()
           || instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
@@ -200,18 +200,18 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     };
     const auto& operands = instr_ctx->instr_msg().operand();
     for (const auto& operand : operands) {
-      if (operand->has_mutable_operand()) {
+      if (operand->has_mut_operand()) {
         ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mutable_operand(), parallel_id,
+                                                         operand->mut_operand(), parallel_id,
                                                          ConsumeMutMirroredObject);
       } else if (operand->has_mut2_operand()) {
         ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
                                                          operand->mut2_operand(), parallel_id,
                                                          ConsumeMutMirroredObject);
-      } else if (operand->has_mutable_host_operand()) {
-        CHECK(operand->mutable_host_operand().operand().has_mirrored_parallel_id());
+      } else if (operand->has_mut_host_operand()) {
+        CHECK(operand->mut_host_operand().operand().has_mirrored_parallel_id());
         ForEachMutMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                       operand->mutable_host_operand(), machine_id,
+                                                       operand->mut_host_operand(), machine_id,
                                                        ConsumeMutMirroredObject);
       } else if (operand->has_mut2_host_operand()) {
         CHECK(operand->mut2_host_operand().operand().has_mirrored_parallel_id());
@@ -227,20 +227,20 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
                                                            operand->const_operand(), parallel_id,
                                                            ConsumeConstMirroredObject);
-      } else if (operand->has_mutable_operand()) {
+      } else if (operand->has_mut_operand()) {
         ForEachConstMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
-                                                           operand->mutable_operand(), parallel_id,
+                                                           operand->mut_operand(), parallel_id,
                                                            ConsumeConstMirroredObject);
       } else if (operand->has_const_host_operand()) {
         CHECK(operand->const_host_operand().operand().has_mirrored_parallel_id());
         ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
                                                          operand->const_host_operand(), machine_id,
                                                          ConsumeConstMirroredObject);
-      } else if (operand->has_mutable_host_operand()) {
-        CHECK(operand->mutable_host_operand().operand().has_mirrored_parallel_id());
+      } else if (operand->has_mut_host_operand()) {
+        CHECK(operand->mut_host_operand().operand().has_mirrored_parallel_id());
         ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mutable_host_operand(),
-                                                         machine_id, ConsumeConstMirroredObject);
+                                                         operand->mut_host_operand(), machine_id,
+                                                         ConsumeConstMirroredObject);
       } else {
         // do nothing
       }

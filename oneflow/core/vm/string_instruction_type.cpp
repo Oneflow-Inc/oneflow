@@ -16,7 +16,7 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(StringObjectInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutableOperand, string);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, string);
 FLAT_MSG_VIEW_END(StringObjectInstrOperand);
 // clang-format on
 
