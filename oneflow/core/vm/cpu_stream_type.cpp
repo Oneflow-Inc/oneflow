@@ -6,14 +6,14 @@
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/mem_buffer_object.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
 void CpuStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
-  TODO();
+  device_ctx->reset(new CpuDeviceCtx());
 }
 
 void CpuStreamType::InitInstructionStatus(const Stream& stream,
