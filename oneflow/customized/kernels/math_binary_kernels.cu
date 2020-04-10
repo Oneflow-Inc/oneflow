@@ -24,7 +24,7 @@ __device__ float Xdivy4GpuFloat(float x, float y) {
   if (0 == x) {
     return 0;
   } else {
-    return  x / y;
+    return x / y;
   }
 }
 
@@ -32,31 +32,31 @@ __device__ float XdivyCalXDiff4GpuFloat(float x, float y, float dz) {
   if (0 == x) {
     return 0;
   } else {
-    return  Xdivy4GpuFloat(dz, y);
+    return Xdivy4GpuFloat(dz, y);
   }
 }
 
 __device__ float XdivyCalYDiff4GpuFloat(float x, float y, float dz) {
-    return dz * Xdivy4GpuFloat((-x), powf(y, 2));
+  return dz * Xdivy4GpuFloat((-x), powf(y, 2));
 }
 
 __device__ float Xlogy4GpuFloat(float x, float y) {
   if (0 == x) {
     return 0;
   } else {
-    return  x * logf(y);
+    return x * logf(y);
   }
 }
 __device__ float XlogyCalXDiff4GpuFloat(float x, float y, float dz) {
   if (0 == x) {
     return 0;
   } else {
-    return  Xlogy4GpuFloat(dz, y);
+    return Xlogy4GpuFloat(dz, y);
   }
 }
 
 __device__ float XlogyCalYDiff4GpuFloat(float x, float y, float dz) {
-    return dz * Xdivy4GpuFloat(x, y);
+  return dz * Xdivy4GpuFloat(x, y);
 }
 __device__ float FloordivFuc(float x, float y) { return floor(fdividef(x, y)); }
 
@@ -122,12 +122,11 @@ MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4Gpu
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryGpuFloatKernel() = default;
   ~MathBinaryGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
@@ -140,16 +139,15 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
     func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z); \
   }
 
-  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-  CHECK(is_find);
+    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+    CHECK(is_find);
 
 #undef MATH_BINARY_FORWARD
   }
 };
 
-REGISTER_USER_KERNEL("binary")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryGpuFloatKernel(ctx); })
-    .SetIsMatchedPred([](const KernelRegContext& ctx) {
+REGISTER_USER_KERNEL("binary").SetCreateFn<MathBinaryGpuFloatKernel>().SetIsMatchedPred(
+    [](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       const user_op::TensorDesc* z_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);
@@ -163,12 +161,11 @@ REGISTER_USER_KERNEL("binary")
 
 class MathBinaryXGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryXGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryXGradGpuFloatKernel() = default;
   ~MathBinaryXGradGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
@@ -182,8 +179,8 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
     func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx); \
   }
 
-  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-  CHECK(is_find);
+    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+    CHECK(is_find);
 
 #undef MATH_BINARY_FORWARD
   }
@@ -191,12 +188,11 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
 
 class MathBinaryYGradGpuFloatKernel final : public OpKernel {
  public:
-  MathBinaryYGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathBinaryYGradGpuFloatKernel() = default;
   ~MathBinaryYGradGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
@@ -210,15 +206,15 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
     func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy); \
   }
 
-  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
-  CHECK(is_find);
+    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+    CHECK(is_find);
 
 #undef MATH_BINARY_FORWARD
   }
 };
 
 REGISTER_USER_KERNEL("binary_x_grad")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryXGradGpuFloatKernel(ctx); })
+    .SetCreateFn<MathBinaryXGradGpuFloatKernel>()
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
@@ -228,7 +224,7 @@ REGISTER_USER_KERNEL("binary_x_grad")
     });
 
 REGISTER_USER_KERNEL("binary_y_grad")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathBinaryYGradGpuFloatKernel(ctx); })
+    .SetCreateFn<MathBinaryYGradGpuFloatKernel>()
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       if (ctx.device_type() == DeviceType::kGPU && y_tensor_desc->data_type() == DataType::kFloat) {

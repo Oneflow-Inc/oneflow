@@ -47,7 +47,9 @@ __device__ float Expm1CalInDiff4GpuFloat(float x, float dy) { return dy * expf(x
 
 __device__ float FloorCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ int8_t IsFinite(float x) { return isfinite(x) ? 1 : 0; } //use int8 1 as true; int8 0 as false
+__device__ int8_t IsFinite(float x) {
+  return isfinite(x) ? 1 : 0;
+}  // use int8 1 as true; int8 0 as false
 
 __device__ int8_t IsInf(float x) { return isinf(x) ? 1 : 0; }
 
@@ -207,10 +209,10 @@ __device__ float TanhCalInDiff4GpuFloat(float x, float dy) { return dy * sinhf(x
   OF_PP_MAKE_TUPLE_SEQ("Tan", Tan)                         \
   OF_PP_MAKE_TUPLE_SEQ("Tanh", Tanh)
 
-#define MATH_UNARY_GPU_BOOL_SEQ                            \
-OF_PP_MAKE_TUPLE_SEQ("IsFinite", IsFinite)                 \
-OF_PP_MAKE_TUPLE_SEQ("IsInf", IsInf)                 \
-OF_PP_MAKE_TUPLE_SEQ("IsNaN", IsNaN)
+#define MATH_UNARY_GPU_BOOL_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ("IsFinite", IsFinite) \
+  OF_PP_MAKE_TUPLE_SEQ("IsInf", IsInf)       \
+  OF_PP_MAKE_TUPLE_SEQ("IsNaN", IsNaN)
 
 MATH_UNARY_GPU(Abs, fabsf, AbsCalInDiff4Gpu<float>, float);
 MATH_UNARY_GPU(Acos, acosf, AcosCalInDiff4GpuFloat, float);
@@ -252,12 +254,11 @@ MATH_UNARY_BOOL_GPU(IsNaN, isnan, float, int8_t)
 
 class MathUnaryGpuFloatKernel final : public OpKernel {
  public:
-  MathUnaryGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathUnaryGpuFloatKernel() = default;
   ~MathUnaryGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
@@ -274,12 +275,11 @@ class MathUnaryGpuFloatKernel final : public OpKernel {
 
 class MathUnaryBoolGpuFloatKernel final : public OpKernel {
  public:
-  MathUnaryBoolGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathUnaryBoolGpuFloatKernel() = default;
   ~MathUnaryBoolGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     std::string unary_math_type = ctx->GetAttr<std::string>("unary_math_type");
@@ -294,9 +294,8 @@ class MathUnaryBoolGpuFloatKernel final : public OpKernel {
   }
 };
 
-REGISTER_USER_KERNEL("unary")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathUnaryGpuFloatKernel(ctx); })
-    .SetIsMatchedPred([](const KernelRegContext& ctx) {
+REGISTER_USER_KERNEL("unary").SetCreateFn<MathUnaryGpuFloatKernel>().SetIsMatchedPred(
+    [](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
@@ -314,7 +313,7 @@ REGISTER_USER_KERNEL("unary")
 */
 
 REGISTER_USER_KERNEL("unary_bool")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathUnaryBoolGpuFloatKernel(ctx); })
+    .SetCreateFn<MathUnaryBoolGpuFloatKernel>()
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
@@ -327,12 +326,11 @@ REGISTER_USER_KERNEL("unary_bool")
 
 class MathUnaryGradGpuFloatKernel final : public OpKernel {
  public:
-  MathUnaryGradGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
   MathUnaryGradGpuFloatKernel() = default;
   ~MathUnaryGradGpuFloatKernel() = default;
 
  private:
-  void Compute(KernelContext* ctx) override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -349,7 +347,7 @@ class MathUnaryGradGpuFloatKernel final : public OpKernel {
 };
 
 REGISTER_USER_KERNEL("unary_grad")
-    .SetCreateFn([](KernelInitContext* ctx) { return new MathUnaryGradGpuFloatKernel(ctx); })
+    .SetCreateFn<MathUnaryGradGpuFloatKernel>()
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat) {
