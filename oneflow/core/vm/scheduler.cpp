@@ -235,7 +235,9 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
             interpret_type, id2logical_object, operand->const_host_operand(), machine_id,
             ConsumeConstMirroredObject);
       } else if (operand->has_init_const_host_operand()) {
-        CHECK(operand->init_const_host_operand().operand().has_mirrored_parallel_id());
+        const auto& const_host_operand = operand->init_const_host_operand().operand();
+        CHECK(const_host_operand.has_fixed_parallel_id());
+        CHECK_EQ(const_host_operand.fixed_parallel_id(), 0);
         ForEachConstMirroredObject<kHostConstMemZoneModifier>(
             interpret_type, id2logical_object, operand->init_const_host_operand(), machine_id,
             ConsumeConstMirroredObject);
