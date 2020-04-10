@@ -7,6 +7,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     if x_shape is None:
         x_shape = x.shape
 
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
@@ -40,6 +41,7 @@ def _of_broadcast_to_compatible_with_dynamic(x, a, b, x_shape=None, a_shape=None
     if b_shape is None:
         b_shape = b.shape
 
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
@@ -61,6 +63,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     assert isinstance(compatible_shape, (list, tuple))
     assert callable(dx_watcher)
 
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
