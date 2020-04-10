@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
 
 #include "oneflow/core/common/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -10,10 +10,10 @@
 namespace oneflow {
 namespace vm {
 
-class CudaStreamType final : public StreamType {
+class CpuStreamType final : public StreamType {
  public:
-  CudaStreamType() = default;
-  ~CudaStreamType() override = default;
+  CpuStreamType() = default;
+  ~CpuStreamType() override = default;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -31,4 +31,4 @@ class CudaStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
