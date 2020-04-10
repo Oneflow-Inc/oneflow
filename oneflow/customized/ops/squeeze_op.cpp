@@ -73,7 +73,7 @@ REGISTER_USER_OP("squeeze")
       CheckAndLabelAxesToSqueezeMinusOne(axes, &dim_vec);
       int32_t out_axis = 0;
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
-        if (in_axis != -1) {
+        if (dim_vec.at(in_axis) != -1) {
           SbpSignatureBuilder()
               .Split("in", 0, in_axis)
               .Split("out", 0, out_axis)

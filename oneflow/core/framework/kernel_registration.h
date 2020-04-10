@@ -43,7 +43,7 @@ class KernelRegContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-using CreateFn = std::function<OpKernel*(KernelInitContext*)>;
+using CreateFn = std::function<const OpKernel*()>;
 using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
@@ -68,7 +68,10 @@ struct KernelRegistryWrapper final {
 class KernelRegistryWrapperBuilder final {
  public:
   KernelRegistryWrapperBuilder(const std::string& op_type_name);
-  KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
+  template<typename T>
+  KernelRegistryWrapperBuilder& SetCreateFn() {
+    return SetCreateFn([]() -> const OpKernel* { return new T(); });
+  }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
@@ -76,6 +79,8 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapper Build();
 
  private:
+  KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
+
   KernelRegistryWrapper wrapper_;
 };
 
