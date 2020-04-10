@@ -15,8 +15,7 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_mut_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
     if (instr_operand->has_const_host_operand()) { return false; }
-    if (instr_operand->has_mut_host_operand()) { return false; }
-    if (instr_operand->has_mut2_host_operand()) { return false; }
+    if (instr_operand->has_init_const_host_operand()) { return false; }
     CHECK(instr_operand->has_sep() || instr_operand->has_double_i_operand()
           || instr_operand->has_double_i_operand() || instr_operand->has_int64_i_operand()
           || instr_operand->has_uint64_i_operand() || instr_operand->has_bool_i_operand());
@@ -208,16 +207,11 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
                                                          operand->mut2_operand(), parallel_id,
                                                          ConsumeMutMirroredObject);
-      } else if (operand->has_mut_host_operand()) {
-        CHECK(operand->mut_host_operand().operand().has_mirrored_parallel_id());
-        ForEachMutMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                       operand->mut_host_operand(), machine_id,
-                                                       ConsumeMutMirroredObject);
-      } else if (operand->has_mut2_host_operand()) {
-        CHECK(operand->mut2_host_operand().operand().has_mirrored_parallel_id());
-        ForEachMutMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                       operand->mut2_host_operand(), machine_id,
-                                                       ConsumeMutMirroredObject);
+      } else if (operand->has_init_const_host_operand()) {
+        CHECK(operand->init_const_host_operand().operand().has_mirrored_parallel_id());
+        ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                            operand->init_const_host_operand(),
+                                                            machine_id, ConsumeMutMirroredObject);
       } else {
         // do nothing
       }
@@ -233,14 +227,14 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                            ConsumeConstMirroredObject);
       } else if (operand->has_const_host_operand()) {
         CHECK(operand->const_host_operand().operand().has_mirrored_parallel_id());
-        ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->const_host_operand(), machine_id,
-                                                         ConsumeConstMirroredObject);
-      } else if (operand->has_mut_host_operand()) {
-        CHECK(operand->mut_host_operand().operand().has_mirrored_parallel_id());
-        ForEachConstMirroredObject<kHostMemZoneModifier>(interpret_type, id2logical_object,
-                                                         operand->mut_host_operand(), machine_id,
-                                                         ConsumeConstMirroredObject);
+        ForEachConstMirroredObject<kHostConstMemZoneModifier>(
+            interpret_type, id2logical_object, operand->const_host_operand(), machine_id,
+            ConsumeConstMirroredObject);
+      } else if (operand->has_init_const_host_operand()) {
+        CHECK(operand->init_const_host_operand().operand().has_mirrored_parallel_id());
+        ForEachConstMirroredObject<kHostConstMemZoneModifier>(
+            interpret_type, id2logical_object, operand->init_const_host_operand(), machine_id,
+            ConsumeConstMirroredObject);
       } else {
         // do nothing
       }

@@ -39,11 +39,10 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllParallelId&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_host_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_init_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllParallelId&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_host_operand(LogicalObjectId logical_object_id);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }

@@ -14,10 +14,8 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
     mutable_mut2_operand()->mutable_operand()->__Init__(proto.mut2_operand());
   } else if (proto.has_const_host_operand()) {
     mutable_const_host_operand()->mutable_operand()->__Init__(proto.const_host_operand());
-  } else if (proto.has_mut_host_operand()) {
-    mutable_mut_host_operand()->mutable_operand()->__Init__(proto.mut_host_operand());
-  } else if (proto.has_mut2_host_operand()) {
-    mutable_mut2_host_operand()->mutable_operand()->__Init__(proto.mut2_host_operand());
+  } else if (proto.has_init_const_host_operand()) {
+    mutable_init_const_host_operand()->mutable_operand()->__Init__(proto.init_const_host_operand());
   } else if (proto.has_sep()) {
     mutable_sep();
   } else if (proto.has_double_i_operand()) {
