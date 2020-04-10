@@ -20,6 +20,44 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
+__device__ float Xdivy4GpuFloat(float x, float y) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  x / y;
+  }
+}
+
+__device__ float XdivyCalXDiff4GpuFloat(float x, float y, float dz) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  Xdivy4GpuFloat(dz, y);
+  }
+}
+
+__device__ float XdivyCalYDiff4GpuFloat(float x, float y, float dz) {
+    return dz * Xdivy4GpuFloat((-x), powf(y, 2));
+}
+
+__device__ float Xlogy4GpuFloat(float x, float y) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  x * logf(y);
+  }
+}
+__device__ float XlogyCalXDiff4GpuFloat(float x, float y, float dz) {
+  if (0 == x) {
+    return 0;
+  } else {
+    return  Xlogy4GpuFloat(dz, y);
+  }
+}
+
+__device__ float XlogyCalYDiff4GpuFloat(float x, float y, float dz) {
+    return dz * Xdivy4GpuFloat(x, y);
+}
 __device__ float FloordivFuc(float x, float y) { return floor(fdividef(x, y)); }
 
 __device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) { return 0; }
@@ -71,12 +109,16 @@ __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 
                               ctx->cuda_stream()>>>(n, x, y, dz, dy);                            \
   }
 
-#define MATH_BINARY_GPU_FLOAT_SEQ  \
-  OF_PP_MAKE_TUPLE_SEQ("Pow", Pow) \
-  OF_PP_MAKE_TUPLE_SEQ("Floordiv", Floordiv)
+#define MATH_BINARY_GPU_FLOAT_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)           \
+  OF_PP_MAKE_TUPLE_SEQ("Floordiv", Floordiv) \
+  OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)       \
+  OF_PP_MAKE_TUPLE_SEQ("Xlogy", Xlogy)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
@@ -90,13 +132,17 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_FORWARD(binary_math_type_str, func_name_prefix)             \
   if (binary_math_type == binary_math_type_str) {                               \
+    is_find = true;                                                             \
     func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z); \
   }
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  CHECK(is_find);
+
 #undef MATH_BINARY_FORWARD
   }
 };
@@ -106,6 +152,8 @@ REGISTER_USER_KERNEL("binary")
     .SetIsMatchedPred([](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
+      const user_op::TensorDesc* z_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);
+
       if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
           && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
@@ -126,13 +174,17 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                          \
   if (binary_math_type == binary_math_type_str) {                                             \
+    is_find = true;                                                                           \
     func_name_prefix##XBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dx); \
   }
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  CHECK(is_find);
+
 #undef MATH_BINARY_FORWARD
   }
 };
@@ -150,13 +202,17 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
     const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
 
 #define MATH_BINARY_BACKWARD(binary_math_type_str, func_name_prefix)                          \
   if (binary_math_type == binary_math_type_str) {                                             \
+    is_find = true;                                                                           \
     func_name_prefix##YBackward(ctx->device_ctx(), tensor_x, tensor_y, tensor_dz, tensor_dy); \
   }
 
-    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  OF_PP_FOR_EACH_TUPLE(MATH_BINARY_BACKWARD, MATH_BINARY_GPU_FLOAT_SEQ);
+  CHECK(is_find);
+
 #undef MATH_BINARY_FORWARD
   }
 };
