@@ -21,7 +21,9 @@ class Storage final {
     return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
   }
 
-  const std::shared_ptr<T>& Get(int64_t logical_object_id) const {
+  const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }
+
+  const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
     return logical_object_id2data_.at(logical_object_id);
   }

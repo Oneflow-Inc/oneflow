@@ -18,6 +18,7 @@ class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
   JobDesc(const JobConfigProto& job_conf, int64_t job_id);
+  explicit JobDesc(const JobConfigProto& job_conf) : JobDesc(job_conf, -1) {}
   ~JobDesc() = default;
   // Common
   int64_t job_id() const { return job_id_; }

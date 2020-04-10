@@ -1,7 +1,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/eager/job_object.h"
+#include "oneflow/core/eager/object_wrapper.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/string_object.h"
@@ -27,15 +28,21 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
   void Infer(vm::InstrCtx* instr_ctx) const override {
     FlatMsgView<NewOpKernelObjectInstrOperand> view;
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
-    const auto& job_object = instr_ctx->operand_type(view->job()).Get<JobObject>();
+    CHECK_EQ(view->op_conf_size(), view->op_size());
+    const auto& job_desc_object =
+        instr_ctx->operand_type(view->job_desc()).Get<ObjectWrapper<JobDesc>>();
+    const auto& parallel_desc_object =
+        instr_ctx->operand_type(view->parallel_desc()).Get<ObjectWrapper<ParallelDesc>>();
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
-      const OperatorConf& op_conf =
-          job_object.OpConf4LogicalObjectId(view->op(i).logical_object_id());
-      CHECK(op_conf.has_user_conf());
+      const auto& op_conf_object =
+          instr_ctx->operand_type(view->op_conf(i)).Get<ObjectWrapper<OperatorConf>>();
+      CHECK(op_conf_object->has_user_conf());
+      CHECK(op_conf_object->user_conf().input().empty());
+      CHECK(op_conf_object->user_conf().output().empty());
       instr_ctx->mut_operand_type(view->op(i))
-          ->Mutable<OpKernelObject>(op_conf, job_object.job_desc(),
-                                    job_object.parallel_desc().device_type());
+          ->Mutable<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
+                                    parallel_desc_object->device_type());
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {
