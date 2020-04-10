@@ -70,11 +70,11 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
 template<typename T>
 class GpuL2NormalizeKernel final : public user_op::OpKernel {
  public:
-  GpuL2NormalizeKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  GpuL2NormalizeKernel() = default;
   ~GpuL2NormalizeKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
@@ -88,14 +88,13 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("l2_normalize")                                                          \
-      .SetCreateFn(                                                                             \
-          [](user_op::KernelInitContext* ctx) { return new GpuL2NormalizeKernel<dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);             \
-        return ctx.device_type() == DeviceType::kGPU                                            \
-               && y_desc->data_type() == GetDataType<dtype>::value;                             \
+#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("l2_normalize")                                              \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                                   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                \
+               && y_desc->data_type() == GetDataType<dtype>::value;                 \
       });
 
 REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
@@ -103,11 +102,11 @@ REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
  public:
-  GpuL2NormalizeGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {}
+  GpuL2NormalizeGradKernel() = default;
   ~GpuL2NormalizeGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
@@ -125,9 +124,7 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                                  \
   REGISTER_USER_KERNEL("l2_normalize_grad")                                           \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                              \
-        return new GpuL2NormalizeGradKernel<dtype>(ctx);                              \
-      })                                                                              \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                                 \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kGPU                                  \
