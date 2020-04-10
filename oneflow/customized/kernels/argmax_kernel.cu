@@ -8,6 +8,7 @@ namespace {
 template<typename T>
 class TmpBufferManager final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(int32_t capacity, void* ptr, int32_t instance_num)
       : capacity_{capacity}, key_value_out_elem_cnt_{instance_num} {
     const int32_t key_value_out_aligned_bytes =
@@ -18,7 +19,6 @@ class TmpBufferManager final {
     temp_storage_bytes_ = capacity_ - key_value_out_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
-  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
 
   cub::KeyValuePair<int32_t, T>* KeyValueOutPtr() const { return key_value_out_ptr_; }
