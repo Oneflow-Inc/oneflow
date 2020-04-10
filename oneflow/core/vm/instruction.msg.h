@@ -35,9 +35,15 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_i_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_host_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_host_operand(LogicalObjectId logical_object_id);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -61,6 +67,9 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
+template<OperandMemZoneModifier mem_zone_modifier>
+int64_t GetOperandDefaultParallelId(const InstrChain&);
+
 // clang-format off
 OBJECT_MSG_BEGIN(InstrCtx);
   // methods
@@ -68,29 +77,42 @@ OBJECT_MSG_BEGIN(InstrCtx);
     set_instr_chain(instr_chain);
     reset_instr_msg(instr_msg);
   }
-  PUBLIC const MirroredObject& operand_type(const Operand& operand) const;
-  PUBLIC const MirroredObject& operand_value(const Operand& operand) const;
-  PUBLIC MirroredObject* mut_operand_type(const Operand& operand);
-  PUBLIC MirroredObject* mut_operand_value(const Operand& operand);
-  PUBLIC template<OperandModifier operand_modifier>
+  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+      const MirroredObject& operand_type(const Operand& operand) const {
+    return operand_type(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+  }
+  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+      const MirroredObject& operand_value(const Operand& operand) const {
+    return operand_value(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+  }
+  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+      MirroredObject* mut_operand_type(const Operand& operand) {
+    return mut_operand_type(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+  }
+  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+      MirroredObject* mut_operand_value(const Operand& operand) {
+    return mut_operand_value(operand, GetOperandDefaultParallelId<mem_zone_modifier>(instr_chain()));
+  }
+
+  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const MirroredObject& operand_type(
-      const ModifiedOperand<operand_modifier>& operand) const {
-    return operand_type(operand.operand());
+      const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
+    return operand_type<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandModifier operand_modifier>
+  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const MirroredObject& operand_value(
-      const ModifiedOperand<operand_modifier>& operand) const {
-    return operand_value(operand.operand());
+      const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
+    return operand_value<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandModifier operand_modifier>
+  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   MirroredObject* mut_operand_type(
-      const ModifiedOperand<operand_modifier>& operand) {
-    return mut_operand_type(operand.operand());
+      const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
+    return mut_operand_type<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandModifier operand_modifier>
+  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   MirroredObject* mut_operand_value(
-      const ModifiedOperand<operand_modifier>& operand) {
-    return mut_operand_value(operand.operand());
+      const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
+    return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
 
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
@@ -111,6 +133,11 @@ OBJECT_MSG_BEGIN(InstrCtx);
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
                                                             int64_t default_parallel_id) const;
+  PRIVATE const MirroredObject& operand_type(const Operand& operand, int64_t default_parallel_id) const;
+  PRIVATE const MirroredObject& operand_value(const Operand& operand, int64_t default_parallel_id) const;
+  PRIVATE MirroredObject* mut_operand_type(const Operand& operand, int64_t default_parallel_id);
+  PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_parallel_id);
+
 OBJECT_MSG_END(InstrCtx);
 // clang-format on
 

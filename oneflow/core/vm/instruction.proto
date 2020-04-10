@@ -20,11 +20,15 @@ message InstructionOperandProto {
     OperandProto const_operand = 1;
     OperandProto mutable_operand = 2;
     OperandProto mut2_operand = 3;
-    OperandSeparatorProto sep = 4;
-    double double_i_operand = 5;
-    int64 int64_i_operand = 6;
-    uint64 uint64_i_operand = 7;
-    bool bool_i_operand = 8;
+    OperandProto const_host_operand = 4;
+    OperandProto mutable_host_operand = 5;
+    OperandProto mut2_host_operand = 6;
+
+    OperandSeparatorProto sep = 7;
+    double double_i_operand = 8;
+    int64 int64_i_operand = 9;
+    uint64 uint64_i_operand = 10;
+    bool bool_i_operand = 11;
   }
 }
 

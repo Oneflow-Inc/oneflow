@@ -58,25 +58,25 @@ OBJECT_MSG_BEGIN(Scheduler);
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const Operand& operand,
                              int64_t parallel_id, const DoEachT& DoEach);
-  template<typename DoEachT>
+  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
-                                  const ConstOperand& const_operand,
+                                  const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
                                   int64_t parallel_id, const DoEachT& DoEach);
-  template<typename DoEachT>
+  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
-                                  const MutableOperand& mutable_operand,
+                                  const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
                                   int64_t parallel_id, const DoEachT& DoEach);
-  template<typename DoEachT>
+  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
-                                const MutableOperand& mutable_operand,
+                                const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
                                 int64_t parallel_id, const DoEachT& DoEach);
-  template<typename DoEachT>
+  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
-                                const Mut2Operand& mut2_operand,
+                                const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
                                 int64_t parallel_id, const DoEachT& DoEach);
   enum OperandAccessType {
     kMutableOperandAccess = 0,

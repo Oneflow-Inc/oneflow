@@ -17,8 +17,11 @@ FLAT_MSG_END(AllParallelId);
 
 FLAT_MSG_BEGIN(Operand);
   // methods
+  // init mirrored_parallel_id
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
+  // init fixed_parallel_id
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, int64_t parallel_id);
+  // init all_parallel_id
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const AllParallelId&);
   PUBLIC void __Init__(const OperandProto& proto);
   PUBLIC int64_t GetParallelId(int64_t default_parallel_id) const;
