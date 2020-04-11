@@ -2,10 +2,11 @@
 ARG CUDA=10.0
 
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
+
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
-    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-RUN yum update -y && yum install -y epel-release
-RUN yum update -y && yum install -y rdma-core-devel \
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
+    yum update -y && yum install -y epel-release && \
+    yum update -y && yum install -y rdma-core-devel \
     nasm \
     make \
     git \
@@ -14,7 +15,11 @@ RUN yum update -y && yum install -y rdma-core-devel \
     intel-mkl-2020.0-088 \
     zlib-devel \
     curl-devel \
-    which
+    which \
+    rh-python36 python36-devel.x86_64 python36-devel && \
+    python3 -m ensurepip && \
+    pip3 install numpy protobuf && \
+    yum clean all
 
 RUN mkdir -p /tmp/download && \
     mkdir /cmake-extracted && \
@@ -24,8 +29,3 @@ RUN mkdir -p /tmp/download && \
     rm -rf /tmp/download
 
 ENV PATH="/cmake-extracted/bin:${PATH}"
-
-RUN yum update -y \
-    && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
-    && python3 -m ensurepip \
-    && pip3 install numpy protobuf  && yum clean all
