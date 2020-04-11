@@ -19,7 +19,7 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(HostStreamType, basic) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "Malloc"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
@@ -48,7 +48,7 @@ TEST(HostStreamType, basic) {
 
 TEST(HostStreamType, two_device) {
   int64_t parallel_num = 2;
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num, {"Malloc"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());

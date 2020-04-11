@@ -7,6 +7,11 @@
 namespace oneflow {
 namespace vm {
 
+ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {
+  HashMap<std::string, int64_t> map{{"cpu", device_num}, {"gpu", device_num}};
+  return ObjectMsgPtr<VmResourceDesc>::New(machine_num, map);
+}
+
 void TestUtil::AddStreamDescByInstrNames(VmDesc* vm_desc,
                                          const std::vector<std::string>& instr_names) {
   TestUtil::AddStreamDescByInstrNames(vm_desc, 1, instr_names);

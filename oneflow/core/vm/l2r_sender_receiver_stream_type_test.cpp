@@ -18,7 +18,7 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 ObjectMsgPtr<VmDesc> NewVmDesc() {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Malloc", "L2RSend", "L2RReceive"});
   return vm_desc;
 }

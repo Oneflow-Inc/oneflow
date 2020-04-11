@@ -7,6 +7,7 @@
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/object.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -109,8 +110,16 @@ class Scheduler;
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id) {
-    set_logical_object_id(logical_object_id);
+    __Init__(logical_object_id, std::shared_ptr<ParallelDesc>());
   }
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id,
+                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    set_logical_object_id(logical_object_id);
+    *mutable_parallel_desc() = parallel_desc;
+  }
+
+  // fields
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<ParallelDesc>, parallel_desc);
 
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);

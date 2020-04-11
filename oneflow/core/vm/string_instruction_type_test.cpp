@@ -17,7 +17,7 @@ namespace test {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(StringStreamType, init_string_object) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewConstHostSymbol", "InitStringObject"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());

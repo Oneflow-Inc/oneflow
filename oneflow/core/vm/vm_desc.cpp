@@ -14,7 +14,7 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
     if (instr_type_id.type() != vm_type) { return; }
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(ObjectMsgPtr<VmResourceDesc>::New(resource).Get());
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {
     const StreamType& stream_type = stream_type_id.stream_type();

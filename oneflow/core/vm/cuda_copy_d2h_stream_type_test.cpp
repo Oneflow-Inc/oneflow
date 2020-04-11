@@ -19,7 +19,7 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 void TestSimple(int64_t parallel_num) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num,
                                       {"Malloc", "CudaMalloc", "CudaCopyD2H"});
