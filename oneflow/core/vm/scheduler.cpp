@@ -89,7 +89,7 @@ void Scheduler::ForEachMirroredObject(Id2LogicalObject* id2logical_object, const
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
-  if (operand.has_all_mirrored()) {
+  if (operand.has_all_mirrored_object()) {
     OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
     return;
   }
@@ -196,7 +196,6 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   if (begin != nullptr) { CHECK_EQ(begin->instr_ctx_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
     int64_t global_device_id = instr_chain->stream().global_device_id();
-    int64_t machine_id = instr_chain->stream().machine_id();
     InterpretType interpret_type = instr_chain->stream().stream_type_id().interpret_type();
     CHECK_EQ(instr_chain->instr_ctx_list().size(), 1);
     auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
@@ -218,11 +217,10 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                          ConsumeMutMirroredObject);
       } else if (operand->has_init_const_host_operand()) {
         const auto& const_host_operand = operand->init_const_host_operand().operand();
-        CHECK(const_host_operand.has_fixed_global_device_id());
-        CHECK_EQ(const_host_operand.fixed_global_device_id(), 0);
+        CHECK(const_host_operand.has_sole_mirrored_object());
         ForEachMutMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
-                                                            operand->init_const_host_operand(),
-                                                            machine_id, ConsumeMutMirroredObject);
+                                                            operand->init_const_host_operand(), 0,
+                                                            ConsumeMutMirroredObject);
       } else {
         // do nothing
       }
@@ -238,18 +236,16 @@ void Scheduler::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                            ConsumeConstMirroredObject);
       } else if (operand->has_const_host_operand()) {
         const auto& const_host_operand = operand->const_host_operand().operand();
-        CHECK(const_host_operand.has_fixed_global_device_id());
-        CHECK_EQ(const_host_operand.fixed_global_device_id(), 0);
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(
-            interpret_type, id2logical_object, operand->const_host_operand(), machine_id,
-            ConsumeConstMirroredObject);
+        CHECK(const_host_operand.has_sole_mirrored_object());
+        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                              operand->const_host_operand(), 0,
+                                                              ConsumeConstMirroredObject);
       } else if (operand->has_init_const_host_operand()) {
         const auto& const_host_operand = operand->init_const_host_operand().operand();
-        CHECK(const_host_operand.has_fixed_global_device_id());
-        CHECK_EQ(const_host_operand.fixed_global_device_id(), 0);
-        ForEachConstMirroredObject<kHostConstMemZoneModifier>(
-            interpret_type, id2logical_object, operand->init_const_host_operand(), machine_id,
-            ConsumeConstMirroredObject);
+        CHECK(const_host_operand.has_sole_mirrored_object());
+        ForEachConstMirroredObject<kHostConstMemZoneModifier>(interpret_type, id2logical_object,
+                                                              operand->init_const_host_operand(), 0,
+                                                              ConsumeConstMirroredObject);
       } else {
         // do nothing
       }

@@ -35,16 +35,16 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
   PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllMirrored&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllMirrored&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_init_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllMirrored&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }

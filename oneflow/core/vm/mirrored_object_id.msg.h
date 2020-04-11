@@ -9,29 +9,32 @@ namespace oneflow {
 namespace vm {
 
 // clang-format off
+FLAT_MSG_BEGIN(SoleMirroredObject);
+FLAT_MSG_END(SoleMirroredObject);
+
 FLAT_MSG_BEGIN(CurrentGlobalDeviceId);
 FLAT_MSG_END(CurrentGlobalDeviceId);
 
-FLAT_MSG_BEGIN(AllMirrored);
-FLAT_MSG_END(AllMirrored);
+FLAT_MSG_BEGIN(AllMirroredObject);
+FLAT_MSG_END(AllMirroredObject);
 
 FLAT_MSG_BEGIN(Operand);
   // methods
   // init current_global_device_id
   PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
-  // init fixed_global_device_id
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, int64_t global_device_id);
-  // init all_mirrored
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const AllMirrored&);
+  // init sole_mirrored_object
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const SoleMirroredObject&);
+  // init all_mirrored_object
+  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const AllMirroredObject&);
   PUBLIC void __Init__(const OperandProto& proto);
   PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
 
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, logical_object_id);
   FLAT_MSG_DEFINE_ONEOF(operand_type,
-    FLAT_MSG_ONEOF_FIELD(int64_t, fixed_global_device_id)
     FLAT_MSG_ONEOF_FIELD(CurrentGlobalDeviceId, current_global_device_id)
-    FLAT_MSG_ONEOF_FIELD(AllMirrored, all_mirrored));
+    FLAT_MSG_ONEOF_FIELD(SoleMirroredObject, sole_mirrored_object)
+    FLAT_MSG_ONEOF_FIELD(AllMirroredObject, all_mirrored_object));
 FLAT_MSG_END(Operand);
 // clang-format on
 
