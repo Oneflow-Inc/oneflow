@@ -35,4 +35,4 @@ ENV PATH="/cmake-install/bin:${PATH}"
 RUN yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
     && python3 -m ensurepip \
-    && pip3 install numpy protobuf 
+    && pip3 install numpy protobuf  && yum clean all
