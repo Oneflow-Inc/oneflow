@@ -1,4 +1,5 @@
-FROM oneflow-base
+ARG from
+FROM ${from}
 WORKDIR /workspace/build
 
 COPY cmake /workspace/cmake
@@ -21,7 +22,7 @@ RUN pip3 install wheel
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 
-FROM oneflow-base
+FROM ${from}
 WORKDIR /workspace
 COPY --from=0 /workspace/dist/*.whl .
 COPY --from=0 /workspace/build/bin/oneflow_testexe .
