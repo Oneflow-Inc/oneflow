@@ -20,7 +20,7 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(ControlStreamType, new_symbol) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
@@ -47,7 +47,7 @@ TEST(ControlStreamType, new_symbol) {
 }
 
 TEST(ControlStreamType, delete_symbol) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
@@ -78,7 +78,7 @@ TEST(ControlStreamType, delete_symbol) {
 }
 
 TEST(ControlStreamType, new_const_host_symbol) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewConstHostSymbol"});
   CachedObjectMsgAllocator allocator(20, 100);
   auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());

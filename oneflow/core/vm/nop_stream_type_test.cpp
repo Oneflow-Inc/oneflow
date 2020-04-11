@@ -40,7 +40,7 @@ ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
 
 void TestNopStreamTypeNoArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
@@ -72,7 +72,7 @@ TEST(NopStreamType, cached_allocator_no_argument) {
 
 void TestNopStreamTypeOneArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
@@ -102,7 +102,7 @@ TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
 }
 
 TEST(NopStreamType, one_argument_triger_next_chain) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
@@ -124,7 +124,7 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
 }
 
 TEST(NopStreamType, one_argument_triger_all_chains) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;

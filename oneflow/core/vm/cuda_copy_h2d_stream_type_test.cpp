@@ -19,7 +19,7 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(CudaCopyH2DStreamType, basic) {
-  auto vm_desc = ObjectMsgPtr<VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                       {"NewSymbol", "Malloc", "CudaMalloc", "CudaCopyH2D"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());

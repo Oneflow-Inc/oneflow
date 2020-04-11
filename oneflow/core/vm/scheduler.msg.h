@@ -9,6 +9,7 @@
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/vm_resource_desc.msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -28,6 +29,7 @@ OBJECT_MSG_BEGIN(Scheduler);
   PUBLIC bool Empty() const;
 
   // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
   OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
 
   //links

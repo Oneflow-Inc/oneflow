@@ -22,7 +22,7 @@ using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 template<typename T, typename SerializedT>
 void TestConstObjectInstructionType(const std::string& instr_type_name) {
-  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New();
+  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
                                           {"NewConstHostSymbol", instr_type_name});
   auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
