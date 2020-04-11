@@ -16,7 +16,7 @@ OBJECT_MSG_BEGIN(Stream);
   PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
   PUBLIC ObjectMsgPtr<InstrChain> NewInstrChain(InstructionMsg* instr_msg);
   PUBLIC void DeleteInstrChain(ObjectMsgPtr<InstrChain>&&);
-  PUBLIC int64_t parallel_id() const { return stream_id().parallel_id(); }
+  PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   PUBLIC int64_t machine_id() const;
   PUBLIC const StreamType& stream_type() const;
   PUBLIC const StreamTypeId& stream_type_id() const;

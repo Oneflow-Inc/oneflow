@@ -12,7 +12,7 @@ void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id) {
 }
 
 int64_t Stream::machine_id() const {
-  return parallel_id() / thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
+  return global_device_id() / thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
 }
 
 const StreamType& Stream::stream_type() const {

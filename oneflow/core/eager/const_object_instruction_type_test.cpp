@@ -39,7 +39,7 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
   auto* logical_object =
       scheduler->mut_id2logical_object()->FindPtr(vm::GetTypeLogicalObjectId(symbol_value));
   ASSERT_NE(logical_object, nullptr);
-  auto* mirrored_object = logical_object->mut_parallel_id2mirrored_object()->FindPtr(0);
+  auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
   ASSERT_TRUE(mirrored_object->Has<ObjectWrapper<T>>());
 }

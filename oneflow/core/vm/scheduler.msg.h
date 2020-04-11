@@ -57,27 +57,27 @@ OBJECT_MSG_BEGIN(Scheduler);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const Operand& operand,
-                             int64_t parallel_id, const DoEachT& DoEach);
+                             int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
                                   const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
-                                  int64_t parallel_id, const DoEachT& DoEach);
+                                  int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachConstMirroredObject(const InterpretType interpret_type,
                                   Id2LogicalObject* id2logical_object,
                                   const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-                                  int64_t parallel_id, const DoEachT& DoEach);
+                                  int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
                                 const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-                                int64_t parallel_id, const DoEachT& DoEach);
+                                int64_t global_device_id, const DoEachT& DoEach);
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachMutMirroredObject(const InterpretType interpret_type,
                                 Id2LogicalObject* id2logical_object,
                                 const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
-                                int64_t parallel_id, const DoEachT& DoEach);
+                                int64_t global_device_id, const DoEachT& DoEach);
   enum OperandAccessType {
     kMutableOperandAccess = 0,
     kConstOperandAccess

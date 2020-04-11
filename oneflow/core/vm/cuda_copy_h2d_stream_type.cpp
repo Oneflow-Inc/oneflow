@@ -123,7 +123,7 @@ ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeRemoteStreamDesc(
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(this_machine_id * device_num);
+  ret->set_start_global_device_id(this_machine_id * device_num);
   return ret;
 }
 

@@ -1,15 +1,15 @@
 syntax = "proto2";
 package oneflow.vm;
 
-message MirroredParallelIdProto {}
-message AllParallelIdProto {}
+message CurrentGlobalDeviceIdProto {}
+message AllMirroredProto {}
 
 message OperandProto {
   required int64 logical_object_id = 1;
   oneof operand_type {
-    int64 fixed_parallel_id = 2;
-    MirroredParallelIdProto mirrored_parallel_id = 3;
-    AllParallelIdProto all_parallel_id = 4;
+    int64 fixed_global_device_id = 2;
+    CurrentGlobalDeviceIdProto current_global_device_id = 3;
+    AllMirroredProto all_mirrored = 4;
   }
 }
 

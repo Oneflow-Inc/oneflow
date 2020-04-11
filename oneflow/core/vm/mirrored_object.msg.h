@@ -65,7 +65,7 @@ class LogicalObject;
 // clang-format off
 OBJECT_MSG_BEGIN(MirroredObject);
   // methods
-  PUBLIC void __Init__(LogicalObject* logical_object, int64_t parallel_id);
+  PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   PUBLIC template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
@@ -99,7 +99,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
 
   // links
-  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, parallel_id);
+  OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
   OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
 OBJECT_MSG_END(MirroredObject);
 // clang-format on
@@ -113,8 +113,8 @@ OBJECT_MSG_BEGIN(LogicalObject);
   }
 
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2mirrored_object);
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, parallel_id, parallel_id2type_mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2type_mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(LogicalObjectId, logical_object_id);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on

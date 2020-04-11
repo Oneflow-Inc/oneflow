@@ -34,7 +34,7 @@ TEST(StringStreamType, init_string_object) {
   auto* logical_object =
       scheduler->mut_id2logical_object()->FindPtr(GetTypeLogicalObjectId(symbol_value));
   ASSERT_NE(logical_object, nullptr);
-  auto* mirrored_object = logical_object->mut_parallel_id2mirrored_object()->FindPtr(0);
+  auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
   ASSERT_TRUE(mirrored_object->Get<StringObject>().str() == "foobar");
 }

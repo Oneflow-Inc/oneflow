@@ -198,7 +198,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& re
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(this_machine_id);
+  ret->set_start_global_device_id(this_machine_id);
   return ret;
 }
 
@@ -208,7 +208,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& res
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(0);
+  ret->set_start_global_device_id(0);
   return ret;
 }
 

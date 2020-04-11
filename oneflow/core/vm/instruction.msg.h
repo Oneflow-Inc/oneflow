@@ -35,16 +35,16 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
   PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllMirrored&);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllMirrored&);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_init_const_host_operand(LogicalObjectId logical_object_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, int64_t parallel_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllParallelId&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, int64_t global_device_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllMirrored&);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -81,22 +81,22 @@ OBJECT_MSG_BEGIN(InstrCtx);
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const MirroredObject& operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
-    return operand_type(operand, GetOperandDefaultParallelId());
+    return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const MirroredObject& operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
-    return operand_value(operand, GetOperandDefaultParallelId());
+    return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       MirroredObject* mut_operand_type(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
-    return mut_operand_type(operand, GetOperandDefaultParallelId());
+    return mut_operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       MirroredObject* mut_operand_value(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
-    return mut_operand_value(operand, GetOperandDefaultParallelId());
+    return mut_operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
 
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
@@ -121,8 +121,8 @@ OBJECT_MSG_BEGIN(InstrCtx);
   }
 
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
-                                                     int64_t default_parallel_id) {
-    return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
+                                                     int64_t default_global_device_id) {
+    return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
   }
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
@@ -134,15 +134,15 @@ OBJECT_MSG_BEGIN(InstrCtx);
   // private methods
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
-                                                      int64_t default_parallel_id);
+                                                      int64_t default_global_device_id);
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
-                                                            int64_t default_parallel_id) const;
-  PRIVATE const MirroredObject& operand_type(const Operand& operand, int64_t default_parallel_id) const;
-  PRIVATE const MirroredObject& operand_value(const Operand& operand, int64_t default_parallel_id) const;
-  PRIVATE MirroredObject* mut_operand_type(const Operand& operand, int64_t default_parallel_id);
-  PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_parallel_id);
-  PRIVATE int64_t GetOperandDefaultParallelId() const;
+                                                            int64_t default_global_device_id) const;
+  PRIVATE const MirroredObject& operand_type(const Operand& operand, int64_t default_global_device_id) const;
+  PRIVATE const MirroredObject& operand_value(const Operand& operand, int64_t default_global_device_id) const;
+  PRIVATE MirroredObject* mut_operand_type(const Operand& operand, int64_t default_global_device_id);
+  PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_global_device_id);
+  PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
 
 OBJECT_MSG_END(InstrCtx);
 // clang-format on

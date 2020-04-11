@@ -92,11 +92,13 @@ class NewSymbolInstructionType final : public InstructionType {
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
           scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
       CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-      for (int64_t parallel_id = 0; parallel_id < view->parallel_num(); ++parallel_id) {
+      auto* global_device_id2mirrored_object =
+          logical_object->mut_global_device_id2mirrored_object();
+      for (int64_t global_device_id = 0; global_device_id < view->parallel_num();
+           ++global_device_id) {
         auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-            scheduler->mut_allocator(), logical_object.Mutable(), parallel_id);
-        CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+            scheduler->mut_allocator(), logical_object.Mutable(), global_device_id);
+        CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
       }
     }
   }
@@ -137,11 +139,13 @@ class DeleteSymbolInstructionType final : public InstructionType {
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
-      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
-      for (int parallel_id = 0; parallel_id < parallel_id2mirrored_object->size(); ++parallel_id) {
-        auto* mirrored_object = parallel_id2mirrored_object->FindPtr(parallel_id);
+      auto* global_device_id2mirrored_object =
+          logical_object->mut_global_device_id2mirrored_object();
+      for (int global_device_id = 0; global_device_id < global_device_id2mirrored_object->size();
+           ++global_device_id) {
+        auto* mirrored_object = global_device_id2mirrored_object->FindPtr(global_device_id);
         CHECK(!mirrored_object->has_object());
-        parallel_id2mirrored_object->Erase(mirrored_object);
+        global_device_id2mirrored_object->Erase(mirrored_object);
       }
       scheduler->mut_id2logical_object()->Erase(logical_object);
     }
@@ -182,10 +186,11 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
           scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
       CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-      auto* parallel_id2mirrored_object = logical_object->mut_parallel_id2mirrored_object();
+      auto* global_device_id2mirrored_object =
+          logical_object->mut_global_device_id2mirrored_object();
       auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
                                                                    logical_object.Mutable(), 0);
-      CHECK(parallel_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+      CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
 };
@@ -245,7 +250,7 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource&
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(this_machine_id);
+  ret->set_start_global_device_id(this_machine_id);
   return ret;
 }
 
@@ -255,7 +260,7 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& 
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(0);
+  ret->set_start_global_device_id(0);
   return ret;
 }
 
