@@ -59,7 +59,8 @@ TEST(ControlStreamType, delete_symbol) {
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllMirrored()));
+  list.EmplaceBack(
+      NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllMirroredObject()));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3 * 2);

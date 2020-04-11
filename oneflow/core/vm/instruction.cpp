@@ -64,27 +64,27 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId l
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id,
-                                                               int64_t global_device_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
+    LogicalObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                            global_device_id);
+                                                                            sole_mirrored_object);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id,
-                                                               const AllMirrored& all_mirrored) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
+    LogicalObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                            all_mirrored);
+                                                                            all_mirrored_object);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_host_operand(
     LogicalObjectId logical_object_id) {
   CHECK(IsConstHostLogicalObjectId(logical_object_id));
-  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                                 0);
+  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(
+      logical_object_id, SoleMirroredObject());
   return this;
 }
 
@@ -94,19 +94,19 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
-                                                             int64_t global_device_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+    LogicalObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                          global_device_id);
+                                                                          sole_mirrored_object);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
-                                                             const AllMirrored& all_mirrored) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
+    LogicalObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                          all_mirrored);
+                                                                          all_mirrored_object);
   return this;
 }
 
@@ -114,7 +114,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_const_host_operand(
     LogicalObjectId logical_object_id) {
   CHECK(IsConstHostLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_init_const_host_operand()->mutable_operand()->__Init__(
-      logical_object_id, 0);
+      logical_object_id, SoleMirroredObject());
   return this;
 }
 
@@ -124,19 +124,19 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId lo
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
-                                                              int64_t global_device_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+    LogicalObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                           global_device_id);
+                                                                           sole_mirrored_object);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
-                                                              const AllMirrored& all_mirrored) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
+    LogicalObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                           all_mirrored);
+                                                                           all_mirrored_object);
   return this;
 }
 
@@ -150,8 +150,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
 
 template<>
 void CheckOperand<kHostConstMemZoneModifier>(const Operand& operand) {
-  CHECK(operand.has_fixed_global_device_id());
-  CHECK_EQ(operand.fixed_global_device_id(), 0);
+  CHECK(operand.has_sole_mirrored_object());
   CHECK(IsConstHostLogicalObjectId(operand.logical_object_id()));
 }
 
