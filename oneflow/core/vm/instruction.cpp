@@ -65,18 +65,18 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId l
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id,
-                                                               int64_t parallel_id) {
+                                                               int64_t global_device_id) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                            parallel_id);
+                                                                            global_device_id);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
-    LogicalObjectId logical_object_id, const AllParallelId& all_parallel_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(LogicalObjectId logical_object_id,
+                                                               const AllMirrored& all_mirrored) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                            all_parallel_id);
+                                                                            all_mirrored);
   return this;
 }
 
@@ -95,18 +95,18 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId log
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
-                                                             int64_t parallel_id) {
+                                                             int64_t global_device_id) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                          parallel_id);
+                                                                          global_device_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(LogicalObjectId logical_object_id,
-                                                             const AllParallelId& all_parallel_id) {
+                                                             const AllMirrored& all_mirrored) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                          all_parallel_id);
+                                                                          all_mirrored);
   return this;
 }
 
@@ -125,18 +125,18 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId lo
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
-                                                              int64_t parallel_id) {
+                                                              int64_t global_device_id) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                           parallel_id);
+                                                                           global_device_id);
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
-    LogicalObjectId logical_object_id, const AllParallelId& all_parallel_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(LogicalObjectId logical_object_id,
+                                                              const AllMirrored& all_mirrored) {
   CHECK(IsNaiveLogicalObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
-                                                                           all_parallel_id);
+                                                                           all_mirrored);
   return this;
 }
 
@@ -150,8 +150,8 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
 
 template<>
 void CheckOperand<kHostConstMemZoneModifier>(const Operand& operand) {
-  CHECK(operand.has_fixed_parallel_id());
-  CHECK_EQ(operand.fixed_parallel_id(), 0);
+  CHECK(operand.has_fixed_global_device_id());
+  CHECK_EQ(operand.fixed_global_device_id(), 0);
   CHECK(IsConstHostLogicalObjectId(operand.logical_object_id()));
 }
 
@@ -161,51 +161,53 @@ void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
 }
 
 const MirroredObject& InstrCtx::operand_type(const Operand& operand,
-                                             int64_t default_parallel_id) const {
+                                             int64_t default_global_device_id) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
-  return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_parallel_id);
+  return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_global_device_id);
 }
 
 const MirroredObject& InstrCtx::operand_value(const Operand& operand,
-                                              int64_t default_parallel_id) const {
+                                              int64_t default_global_device_id) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
+  return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_type(const Operand& operand, int64_t default_parallel_id) {
+MirroredObject* InstrCtx::mut_operand_type(const Operand& operand,
+                                           int64_t default_global_device_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_parallel_id);
+  return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_global_device_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_value(const Operand& operand, int64_t default_parallel_id) {
+MirroredObject* InstrCtx::mut_operand_value(const Operand& operand,
+                                            int64_t default_global_device_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_parallel_id);
+  return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
 MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
-                                                      int64_t default_parallel_id) {
+                                                      int64_t default_global_device_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
-  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);
+  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
   if (access == nullptr) { return nullptr; }
   return access->mut_mirrored_object();
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-const MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
-                                                            int64_t default_parallel_id) const {
+const MirroredObject* InstrCtx::FindMirroredObjectByOperand(
+    const Operand& operand, int64_t default_global_device_id) const {
   FlatMsg<MirroredObjectId> mirrored_object_id;
-  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_parallel_id);
+  mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
   const auto* access = mirrored_object_id2access().FindPtr(mirrored_object_id.Get());
   if (access == nullptr) { return nullptr; }
   return &access->mirrored_object();
 }
 
-int64_t InstrCtx::GetOperandDefaultParallelId() const {
-  return instr_chain().stream().parallel_id();
+int64_t InstrCtx::GetOperandDefaultGlobalDeviceId() const {
+  return instr_chain().stream().global_device_id();
 }
 
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {

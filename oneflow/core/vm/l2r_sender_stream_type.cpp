@@ -71,7 +71,7 @@ void MakeSendRequests(InstrCtx* instr_ctx, TransportKey2SendRequest* transport_k
     FlatMsgView<L2RSenderInstruction> view;
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
-    data_token->mutable_mirrored_token()->set_parallel_id(stream.parallel_id());
+    data_token->mutable_mirrored_token()->set_global_device_id(stream.global_device_id());
     data_size = view->size();
     const auto& src_buffer_type = instr_ctx->operand_type(view->src()).Get<MemBufferObjectType>();
     CHECK_LE(data_size, src_buffer_type.size());
@@ -135,7 +135,7 @@ ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeRemoteStreamDesc(const Resourc
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(this_machine_id);
+  ret->set_start_global_device_id(this_machine_id);
   return ret;
 }
 
@@ -145,7 +145,7 @@ ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeLocalStreamDesc(const Resource
   ret->set_num_machines(resource.machine_num());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_parallel_id(0);
+  ret->set_start_global_device_id(0);
   return ret;
 }
 

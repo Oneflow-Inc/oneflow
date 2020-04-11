@@ -29,7 +29,7 @@ TEST(DeviceHelperStreamType, basic) {
   list.EmplaceBack(
       NewInstruction("CudaMalloc")->add_mut_operand(symbol_value)->add_int64_operand(1024));
   list.EmplaceBack(NewInstruction("CudaFree")->add_mut_operand(symbol_value));
-  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllParallelId()));
+  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllMirrored()));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();

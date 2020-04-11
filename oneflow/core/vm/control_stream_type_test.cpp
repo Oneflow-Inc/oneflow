@@ -42,7 +42,7 @@ TEST(ControlStreamType, new_symbol) {
   ASSERT_EQ(scheduler->id2logical_object().size(), 1 * 2);
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(symbol_value);
   ASSERT_NE(logical_object, nullptr);
-  ASSERT_EQ(logical_object->parallel_id2mirrored_object().size(), parallel_num);
+  ASSERT_EQ(logical_object->global_device_id2mirrored_object().size(), parallel_num);
   ASSERT_TRUE(scheduler->Empty());
 }
 
@@ -59,7 +59,7 @@ TEST(ControlStreamType, delete_symbol) {
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(symbol_value);
   list.PushBack(nop0_instr_msg.Mutable());
-  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllParallelId()));
+  list.EmplaceBack(NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllMirrored()));
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
   ASSERT_EQ(scheduler->pending_msg_list().size(), 3 * 2);
@@ -96,7 +96,7 @@ TEST(ControlStreamType, new_const_host_symbol) {
   ASSERT_EQ(scheduler->id2logical_object().size(), 1 * 2);
   auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(symbol_value);
   ASSERT_NE(logical_object, nullptr);
-  ASSERT_EQ(logical_object->parallel_id2mirrored_object().size(), 1);
+  ASSERT_EQ(logical_object->global_device_id2mirrored_object().size(), 1);
   ASSERT_TRUE(scheduler->Empty());
 }
 

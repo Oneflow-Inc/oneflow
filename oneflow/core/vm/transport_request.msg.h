@@ -11,7 +11,7 @@ namespace vm {
 
 FLAT_MSG_BEGIN(TransportMirroredDataToken);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, logical_token);
-  FLAT_MSG_DEFINE_OPTIONAL(int64_t, parallel_id);
+  FLAT_MSG_DEFINE_OPTIONAL(int64_t, global_device_id);
 FLAT_MSG_END(TransportMirroredDataToken);
 
 FLAT_MSG_BEGIN(TransportDataToken);

@@ -29,29 +29,29 @@ class StreamId final {
  public:
   using self_type = StreamId;
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int64_t parallel_id) {
+  void __Init__(const StreamTypeId& stream_type_id, int64_t global_device_id) {
     stream_type_id_.CopyFrom(stream_type_id);
-    parallel_id_ = parallel_id;
+    global_device_id_ = global_device_id;
   }
 
-  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_id_, rhs.parallel_id_); }
+  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_id_, rhs.global_device_id_); }
 
   const StreamTypeId& stream_type_id() const { return stream_type_id_; }
-  int64_t parallel_id() const { return parallel_id_; }
+  int64_t global_device_id() const { return global_device_id_; }
 
   bool operator==(const StreamId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_ && parallel_id_ == rhs.parallel_id_;
+    return stream_type_id_ == rhs.stream_type_id_ && global_device_id_ == rhs.global_device_id_;
   }
 
   bool operator<(const StreamId& rhs) const {
     if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
-    return parallel_id_ < rhs.parallel_id_;
+    return global_device_id_ < rhs.global_device_id_;
   }
   bool operator<=(const StreamId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
   StreamTypeId stream_type_id_;
-  int64_t parallel_id_;
+  int64_t global_device_id_;
 };
 
 // clang-format off
@@ -67,7 +67,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_machine);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_parallel_id);
+  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_global_device_id);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);
