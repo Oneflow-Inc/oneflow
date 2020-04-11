@@ -7,7 +7,6 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
     nasm \
-    cmake3 \
     make \
     git \
     centos-release-scl \
@@ -17,20 +16,14 @@ RUN yum update -y && yum install -y rdma-core-devel \
     curl-devel \
     which
 
-RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake
-
-RUN mkdir -p /tmp/download/cmake-extracted && \
+RUN mkdir -p /tmp/download && \
+    mkdir /cmake-extracted && \
     cd /tmp/download && \
-    curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0.tar.gz --output cmake.tar.gz && \
-    tar -xvzf cmake.tar.gz --directory cmake-extracted && \
-    cd cmake-extracted/* && \
-    mkdir /cmake-install
+    curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz --output cmake.tar.gz && \
+    tar -xvzf cmake.tar.gz --directory /cmake-extracted && \
+    rm -rf /tmp/download
 
-RUN cd /tmp/download/cmake-extracted/* && \
-    cmake . -DCMAKE_USE_SYSTEM_CURL=ON -DCMAKE_INSTALL_PREFIX=/cmake-install && \
-    make -j $(nproc) && \
-    make install
-ENV PATH="/cmake-install/bin:${PATH}"
+ENV PATH="/cmake-extracted/bin:${PATH}"
 
 RUN yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
