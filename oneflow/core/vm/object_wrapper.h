@@ -1,14 +1,14 @@
-#ifndef ONEFLOW_CORE_EAGER_OBJECT_WRAPPER_H_
-#define ONEFLOW_CORE_EAGER_OBJECT_WRAPPER_H_
+#ifndef ONEFLOW_CORE_VM_OBJECT_WRAPPER_H_
+#define ONEFLOW_CORE_VM_OBJECT_WRAPPER_H_
 
 #include <memory>
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 template<typename T>
-class ObjectWrapper final : public vm::Object {
+class ObjectWrapper final : public Object {
  public:
   template<typename... Args>
   explicit ObjectWrapper(Args&&... args)
@@ -29,7 +29,7 @@ class ObjectWrapper final : public vm::Object {
   std::shared_ptr<T> data_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_OBJECT_WRAPPER_H_
+#endif  // ONEFLOW_CORE_VM_OBJECT_WRAPPER_H_
