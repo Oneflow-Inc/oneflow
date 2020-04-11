@@ -9,7 +9,7 @@
 #include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/eager/object_wrapper.h"
+#include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -41,7 +41,7 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
-  ASSERT_TRUE(mirrored_object->Has<ObjectWrapper<T>>());
+  ASSERT_TRUE(mirrored_object->Has<vm::ObjectWrapper<T>>());
 }
 
 TEST(ConstObjectInstructionType, job_desc) {

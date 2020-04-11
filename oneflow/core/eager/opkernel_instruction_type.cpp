@@ -2,9 +2,9 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/eager/object_wrapper.h"
 #include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
@@ -30,13 +30,13 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
     CHECK_EQ(view->op_conf_size(), view->op_size());
     const auto& job_desc_object =
-        instr_ctx->operand_type(view->job_desc()).Get<ObjectWrapper<JobDesc>>();
+        instr_ctx->operand_type(view->job_desc()).Get<vm::ObjectWrapper<JobDesc>>();
     const auto& parallel_desc_object =
-        instr_ctx->operand_type(view->parallel_desc()).Get<ObjectWrapper<ParallelDesc>>();
+        instr_ctx->operand_type(view->parallel_desc()).Get<vm::ObjectWrapper<ParallelDesc>>();
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
       const auto& op_conf_object =
-          instr_ctx->operand_type(view->op_conf(i)).Get<ObjectWrapper<OperatorConf>>();
+          instr_ctx->operand_type(view->op_conf(i)).Get<vm::ObjectWrapper<OperatorConf>>();
       CHECK(op_conf_object->has_user_conf());
       CHECK(op_conf_object->user_conf().input().empty());
       CHECK(op_conf_object->user_conf().output().empty());

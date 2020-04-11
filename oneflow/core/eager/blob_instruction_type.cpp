@@ -2,7 +2,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/eager/object_wrapper.h"
+#include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -49,9 +49,9 @@ class InitBlobObjectInstructionType final : public vm::InstructionType {
     FlatMsgView<InitBlobObjectInstrOperand> view;
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
     const auto& job_desc_object =
-        instr_ctx->operand_type(view->job_desc()).Get<ObjectWrapper<JobDesc>>();
+        instr_ctx->operand_type(view->job_desc()).Get<vm::ObjectWrapper<JobDesc>>();
     const auto& parallel_desc_object =
-        instr_ctx->operand_type(view->parallel_desc()).Get<ObjectWrapper<ParallelDesc>>();
+        instr_ctx->operand_type(view->parallel_desc()).Get<vm::ObjectWrapper<ParallelDesc>>();
     auto mem_case = MakeMemCase(parallel_desc_object->device_type(),
                                 instr_ctx->instr_chain().stream().thread_ctx().device_id());
     DataType data_type = job_desc_object->DefaultDataType();
