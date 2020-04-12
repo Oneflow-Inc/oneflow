@@ -757,3 +757,21 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
         raise ValueError("min_value and max_value cannot be None at the same time")
 
     return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
+
+
+@oneflow_export("math.l2_normalize")
+def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
+    if axis < 0: axis += len(input.shape)
+    assert axis >=0 and axis < len(input.shape)
+    y, square_x_sum = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("L2Normalize_"))
+        .Op("l2_normalize")
+        .Input("x", [input])
+        .Output("y")
+        .Output("square_x_sum")
+        .SetAttr("axis", int(axis), "AttrTypeInt32")
+        .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Build()
+        .RemoteBlobList()
+    )
+    return y
