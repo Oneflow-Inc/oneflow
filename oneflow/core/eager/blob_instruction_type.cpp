@@ -14,57 +14,6 @@
 namespace oneflow {
 namespace eager {
 
-namespace {
-
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
-  auto mem_case = std::make_shared<MemoryCase>();
-  if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return mem_case;
-}
-
-}  // namespace
-
-class InitBlobObjectInstructionType final : public vm::InstructionType {
- public:
-  InitBlobObjectInstructionType() = default;
-  ~InitBlobObjectInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(InitBlobObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstHostOperand, job_desc);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstHostOperand, parallel_desc);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, blob);
-  FLAT_MSG_VIEW_END(InitBlobObjectInstrOperand);
-  // clang-format on
-
-  void Infer(vm::InstrCtx* instr_ctx) const override {
-    FlatMsgView<InitBlobObjectInstrOperand> view;
-    CHECK(view.Match(instr_ctx->instr_msg().operand()));
-    const auto& job_desc_object =
-        instr_ctx->operand_type(view->job_desc()).Get<vm::ObjectWrapper<JobDesc>>();
-    const auto& parallel_desc_object =
-        instr_ctx->operand_type(view->parallel_desc()).Get<vm::ObjectWrapper<ParallelDesc>>();
-    auto mem_case = MakeMemCase(parallel_desc_object->device_type(),
-                                instr_ctx->instr_chain().stream().thread_ctx().device_id());
-    DataType data_type = job_desc_object->DefaultDataType();
-    for (int i = 0; i < view->blob_size(); ++i) {
-      CHECK_GT(view->blob(i).logical_object_id(), 0);
-      instr_ctx->mut_operand_type(view->blob(i))->Init<BlobObject>(mem_case, data_type);
-    }
-  }
-  void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }
-};
-COMMAND(vm::RegisterInstructionType<InitBlobObjectInstructionType>("InitBlobObject"));
-COMMAND(vm::RegisterLocalInstructionType<InitBlobObjectInstructionType>("LocalInitBlobObject"));
-
 class DeleteBlobObjectInstructionType final : public vm::InstructionType {
  public:
   DeleteBlobObjectInstructionType() = default;
@@ -90,7 +39,7 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
   void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }
 };
 COMMAND(vm::RegisterInstructionType<DeleteBlobObjectInstructionType>("DeleteBlobObject"));
-COMMAND(vm::RegisterLocalInstructionType<DeleteBlobObjectInstructionType>("DeleteLocalBlobObject"));
+COMMAND(vm::RegisterLocalInstructionType<DeleteBlobObjectInstructionType>("LocalDeleteBlobObject"));
 
 }  // namespace eager
 }  // namespace oneflow

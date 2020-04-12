@@ -83,10 +83,9 @@ OBJECT_MSG_BEGIN(MirroredObject);
   }
   PUBLIC template<typename T, typename... Args> T* Init(Args&&... args) {
     T* object = dynamic_cast<T*>(object_ptr().get());
-    if (object == nullptr) {
-      object = new T(std::forward<Args>(args)...);
-      reset_object(object);
-    }
+    CHECK(object == nullptr);
+    object = new T(std::forward<Args>(args)...);
+    reset_object(object);
     return object;
   }
   PUBLIC const Object& object() const { return *object_ptr().get(); }

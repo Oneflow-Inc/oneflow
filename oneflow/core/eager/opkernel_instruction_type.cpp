@@ -7,6 +7,7 @@
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/eager/opkernel_instruction.msg.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
@@ -203,12 +204,37 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::InstrCtx* 
   };
 }
 
-}  // namespace
+std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
+  auto mem_case = std::make_shared<MemoryCase>();
+  if (device_type == DeviceType::kCPU) {
+    mem_case->mutable_host_mem();
+  } else if (device_type == DeviceType::kGPU) {
+    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return mem_case;
+}
 
 template<typename T>
-void CallOpKernelInstructionType::UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx,
-                                                                 UserOpConf* user_op_conf,
-                                                                 const T& args) const {
+void InitOutputBlobObjects(vm::InstrCtx* instr_ctx, const T& args, DataType data_type) {
+  int64_t device_id = instr_ctx->instr_chain().stream().thread_ctx().device_id();
+  auto InitMirroredObject = [&](vm::MirroredObject* mirrored_object) {
+    DeviceType device_type = mirrored_object->logical_object().parallel_desc()->device_type();
+    const auto& mem_case = MakeMemCase(device_type, device_id);
+    mirrored_object->Init<BlobObject>(mem_case, data_type);
+  };
+  FOR_RANGE(int, i, 0, args.output_blob_size()) {
+    InitMirroredObject(instr_ctx->mut_operand_type(args.output_blob(i)));
+  }
+  FOR_RANGE(int, i, 0, args.mut2_output_blob_size()) {
+    InitMirroredObject(instr_ctx->mut_operand_type(args.mut2_output_blob(i)));
+  }
+}
+
+template<typename T>
+void UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx, UserOpConf* user_op_conf,
+                                    const T& args) {
   user_op_conf->clear_input();
   ForEachIbnAndLogicalObjectId(
       instr_ctx, args,
@@ -227,6 +253,8 @@ void CallOpKernelInstructionType::UpdateUserOpConfInputAndOutput(const vm::Instr
       });
 }
 
+}  // namespace
+
 void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
   Infer(instr_ctx, args.Get());
@@ -235,6 +263,7 @@ void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
 template<typename T>
 void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx, const T& args) const {
   auto* opkernel_obj = instr_ctx->mut_operand_type(args.opkernel())->template Mut<OpKernelObject>();
+  InitOutputBlobObjects(instr_ctx, args, opkernel_obj->job_desc().DefaultDataType());
   UpdateUserOpConfInputAndOutput(*instr_ctx, opkernel_obj->mut_user_op_conf(), args);
   opkernel_obj->ResetOpAndKernel(MakeBlobDesc4BnInOp(instr_ctx, args));
   ForEachObnAndBlobObject(instr_ctx, args, [](const std::string& _, BlobObject* blob_object) {
