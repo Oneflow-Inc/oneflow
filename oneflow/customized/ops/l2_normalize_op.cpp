@@ -34,7 +34,7 @@ REGISTER_USER_OP("l2_normalize")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
       const int32_t axis = ctx->GetAttr<int32_t>("axis");
       for (int64_t i = 0; i < num_axes; ++i) {
         if (i != axis) {
@@ -80,7 +80,7 @@ REGISTER_USER_OP("l2_normalize_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes();
       const int32_t axis = ctx->GetAttr<int32_t>("axis");
       for (int64_t i = 0; i < num_axes; ++i) {
         if (i != axis) {
