@@ -27,6 +27,8 @@ class OpKernelObject : public vm::Object {
   }
   ~OpKernelObject() override = default;
 
+  const JobDesc& job_desc() const { return *job_desc_; }
+
   UserOpConf* mut_user_op_conf() { return op_conf_.mutable_user_conf(); }
 
   const std::shared_ptr<user_op::OpKernelState>& opkernel_state() const { return opkernel_state_; }
