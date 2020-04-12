@@ -41,8 +41,8 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
       CHECK(op_conf_object->user_conf().input().empty());
       CHECK(op_conf_object->user_conf().output().empty());
       instr_ctx->mut_operand_type(view->op(i))
-          ->Mutable<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
-                                    parallel_desc_object->device_type());
+          ->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
+                                 parallel_desc_object->device_type());
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {
