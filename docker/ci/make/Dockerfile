@@ -15,7 +15,7 @@ RUN pip3 install wheel
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 
-FROM ${from}
+FROM centos:7
 WORKDIR /workspace
 COPY --from=0 /workspace/dist/*.whl .
 COPY --from=0 /workspace/build/bin/oneflow_testexe .
