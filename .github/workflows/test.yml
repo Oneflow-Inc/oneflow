@@ -55,9 +55,6 @@ jobs:
         docker run -u $(id -u ${USER}):$(id -g ${USER}) --shm-size=8g --rm \
           -v $PWD:$PWD oneflow-build-make:${git_hash} \
           bash -c "cp /workspace/*.whl $PWD/ci_tmp/ && cp /workspace/oneflow_testexe $PWD/ci_tmp/"
-    - name: Run test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test.sh
     - name: Teardown
       run: |
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
@@ -65,3 +62,6 @@ jobs:
         docker rmi oneflow-build-base:${git_hash}
         docker rmi oneflow-build-third-party:${git_hash}
         docker rmi oneflow-build-make:${git_hash}
+    - name: Run test
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test.sh
