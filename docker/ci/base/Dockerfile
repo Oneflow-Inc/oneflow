@@ -26,6 +26,7 @@ RUN mkdir -p /tmp/download && \
     cd /tmp/download && \
     curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz --output cmake.tar.gz && \
     tar -xvzf cmake.tar.gz --directory /cmake-extracted && \
+    mv /cmake-extracted/* /cmake-extracted/cmake-install && \
     rm -rf /tmp/download
 
-ENV PATH="$(realpath /cmake-extracted/*/bin):${PATH}"
+ENV PATH="/cmake-extracted/cmake-install/bin:${PATH}"
