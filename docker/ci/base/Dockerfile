@@ -28,4 +28,4 @@ RUN mkdir -p /tmp/download && \
     tar -xvzf cmake.tar.gz --directory /cmake-extracted && \
     rm -rf /tmp/download
 
-ENV PATH="/cmake-extracted/bin:${PATH}"
+ENV PATH="$(realpath /cmake-extracted/*/bin):${PATH}"
