@@ -48,10 +48,6 @@ TEST(ConstObjectInstructionType, job_desc) {
   TestConstObjectInstructionType<JobDesc, JobConfigProto>("InitJobDescObject");
 }
 
-TEST(ConstObjectInstructionType, parallel_desc) {
-  TestConstObjectInstructionType<ParallelDesc, ParallelConf>("InitParallelDescObject");
-}
-
 TEST(ConstObjectInstructionType, operator_conf) {
   TestConstObjectInstructionType<OperatorConf, OperatorConf>("InitOperatorConfObject");
 }

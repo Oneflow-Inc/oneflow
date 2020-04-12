@@ -25,7 +25,9 @@ class Storage final {
 
   const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    return logical_object_id2data_.at(logical_object_id);
+    const auto& iter = logical_object_id2data_.find(logical_object_id);
+    CHECK(iter != logical_object_id2data_.end());
+    return iter->second;
   }
 
   void Add(int64_t logical_object_id, const std::shared_ptr<T>& data) {

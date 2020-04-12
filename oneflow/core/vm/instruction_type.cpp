@@ -15,14 +15,6 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 
 }  // namespace
 
-void InstructionType::Compute(Scheduler* scheduler, InstrCtx* instr_ctx) const {
-  Compute(scheduler, instr_ctx->mut_instr_msg());
-}
-
-void InstructionType::Infer(Scheduler* scheduler, InstrCtx* instr_ctx) const {
-  Infer(scheduler, instr_ctx->mut_instr_msg());
-}
-
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
   const auto& map = *InstrTypeId4InstructionName();
   const auto& iter = map.find(name);

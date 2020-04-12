@@ -25,8 +25,6 @@ class InstructionType {
   virtual void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(Scheduler* scheduler, InstrCtx* instr_ctx) const;
-  virtual void Infer(Scheduler* scheduler, InstrCtx* instr_ctx) const;
 
  protected:
   InstructionType() = default;

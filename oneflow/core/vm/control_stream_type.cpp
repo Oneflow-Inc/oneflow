@@ -205,9 +205,7 @@ void ControlStreamType::Infer(Scheduler* scheduler, InstructionMsg* instr_msg) c
 
 void ControlStreamType::Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    const auto& instr_type_id = instr_ctx->instr_msg().instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-    instr_type_id.instruction_type().Infer(scheduler, instr_ctx);
+    Infer(scheduler, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
@@ -221,9 +219,7 @@ void ControlStreamType::Compute(Scheduler* scheduler, InstructionMsg* instr_msg)
 
 void ControlStreamType::Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    const auto& instr_type_id = instr_ctx->instr_msg().instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    instr_type_id.instruction_type().Compute(scheduler, instr_ctx);
+    Compute(scheduler, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();

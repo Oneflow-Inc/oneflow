@@ -14,7 +14,11 @@ namespace vm {
 OBJECT_MSG_BEGIN(VmDesc);
   // methods
   PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc) {
+    __Init__(vm_resource_desc, Range(0, 1));
+  }
+  PUBLIC void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
     mutable_vm_resource_desc()->CopyFrom(vm_resource_desc);
+    *mutable_machine_id_range() = machine_id_range;
   }
   
   // fields
