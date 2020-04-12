@@ -46,13 +46,13 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 template<DeviceType device_type, typename T>
 class PadKernel final : public user_op::OpKernel {
  public:
-  PadKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {
+  PadKernel(){
     device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
   }
   ~PadKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T constant_value =
@@ -88,12 +88,11 @@ class PadKernel final : public user_op::OpKernel {
   std::unique_ptr<MemoryCopier> device_memory_copier_;
 };
 
-#define REGISTER_PAD_KERNEL(dev, dtype)                                                            \
-  REGISTER_USER_KERNEL("pad")                                                                      \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) { return new PadKernel<dev, dtype>(ctx); }) \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);                \
-        return ctx.device_type() == dev && y_desc->data_type() == GetDataType<dtype>::value;       \
+#define REGISTER_PAD_KERNEL(dev, dtype)                                                      \
+  REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel<dev, dtype>>().SetIsMatchedPred(         \
+      [](const user_op::KernelRegContext& ctx) {                                             \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);          \
+        return ctx.device_type() == dev && y_desc->data_type() == GetDataType<dtype>::value; \
       });
 
 REGISTER_PAD_KERNEL(DeviceType::kGPU, double)
@@ -110,13 +109,13 @@ REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
 template<DeviceType device_type, typename T>
 class PadGradKernel final : public user_op::OpKernel {
  public:
-  PadGradKernel(user_op::KernelInitContext* ctx) : user_op::OpKernel(ctx) {
+  PadGradKernel(){
     device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
   }
   ~PadGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
@@ -149,8 +148,7 @@ class PadGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_PAD_GRAD_KERNEL(dev, dtype)                                                  \
   REGISTER_USER_KERNEL("pad_grad")                                                            \
-      .SetCreateFn(                                                                           \
-          [](user_op::KernelInitContext* ctx) { return new PadGradKernel<dev, dtype>(ctx); }) \
+      .SetCreateFn<PadGradKernel<dev, dtype>>()                                               \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);         \
         return ctx.device_type() == dev && dx_desc->data_type() == GetDataType<dtype>::value; \
