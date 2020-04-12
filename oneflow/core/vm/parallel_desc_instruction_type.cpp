@@ -50,7 +50,7 @@ class NewParallelDescObjectInstructionType final : public InstructionType {
       {
         const auto& serialized_conf =
             Global<Storage<ParallelConf>>::Get()->Get(view->logical_object_id(i));
-        mirrored_object->Mutable<ObjectWrapper<ParallelDesc>>(serialized_conf);
+        mirrored_object->Init<ObjectWrapper<ParallelDesc>>(serialized_conf);
       }
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }

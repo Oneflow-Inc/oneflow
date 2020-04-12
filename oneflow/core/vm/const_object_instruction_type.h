@@ -33,7 +33,7 @@ class InitConstObjectInstructionType final : public InstructionType {
       int64_t logical_object_id = operand.logical_object_id();
       const auto& serialized_conf = Global<Storage<SerializedT>>::Get()->Get(logical_object_id);
       auto* mirrored_object = instr_ctx->mut_operand_type(operand);
-      mirrored_object->Mutable<ObjectWrapper<T>>(serialized_conf);
+      mirrored_object->Init<ObjectWrapper<T>>(serialized_conf);
     }
   }
   void Compute(InstrCtx* instr_ctx) const override {

@@ -35,7 +35,7 @@ class InitStringObjectInstructionType final : public InstructionType {
       int64_t logical_object_id = args->string(i).logical_object_id();
       const auto& str = Global<Storage<std::string>>::Get()->Get(logical_object_id);
       auto* mirrored_object = instr_ctx->mut_operand_type(args->string(i));
-      mirrored_object->Mutable<StringObject>(str);
+      mirrored_object->Init<StringObject>(str);
     }
   }
   void Compute(InstrCtx* instr_ctx) const override {

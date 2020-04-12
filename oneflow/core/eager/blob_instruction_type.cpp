@@ -57,7 +57,7 @@ class InitBlobObjectInstructionType final : public vm::InstructionType {
     DataType data_type = job_desc_object->DefaultDataType();
     for (int i = 0; i < view->blob_size(); ++i) {
       CHECK_GT(view->blob(i).logical_object_id(), 0);
-      instr_ctx->mut_operand_type(view->blob(i))->Mutable<BlobObject>(mem_case, data_type);
+      instr_ctx->mut_operand_type(view->blob(i))->Init<BlobObject>(mem_case, data_type);
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }

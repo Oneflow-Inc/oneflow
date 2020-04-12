@@ -30,7 +30,7 @@ class CudaMallocInstructionType final : public InstructionType {
       CHECK(view.Match(instr_ctx->instr_msg().operand()));
       size = view->size();
       MirroredObject* mirrored_object = instr_ctx->mut_operand_type(view->mem_buffer());
-      mem_buffer_object_type = mirrored_object->Mutable<MemBufferObjectType>();
+      mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
       device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
     }
     mem_buffer_object_type->set_size(size);
@@ -45,7 +45,7 @@ class CudaMallocInstructionType final : public InstructionType {
       CHECK(view.Match(instr_ctx->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
       buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_operand_value(operand)->Mutable<MemBufferObjectValue>();
+      buffer_value = instr_ctx->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     const auto& stream = instr_ctx->mut_instr_chain()->stream();
     cudaSetDevice(stream.thread_ctx().device_id());
