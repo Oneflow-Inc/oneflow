@@ -18,14 +18,9 @@ void VmResourceDesc::CopyFrom(const VmResourceDesc& vm_resource_desc) {
   __Init__(vm_resource_desc.machine_num(), vm_resource_desc.device_tag2device_num());
 }
 
-int64_t VmResourceDesc::GetGlobalDeviceId(const ParallelDesc& parallel_desc,
-                                          int64_t parallel_id) const {
-  int64_t machine_parallel_id = parallel_id / parallel_desc.device_num_of_each_machine();
-  int64_t device_parallel_id = parallel_id % parallel_desc.device_num_of_each_machine();
-  int64_t machine_id = parallel_desc.sorted_machine_ids().at(machine_parallel_id);
-  int64_t device_id = parallel_desc.sorted_dev_phy_ids(machine_id).at(device_parallel_id);
-  int64_t device_num =
-      device_tag2device_num().at(DeviceTag4DeviceType(parallel_desc.device_type()));
+int64_t VmResourceDesc::GetGlobalDeviceId(int64_t machine_id, const std::string& device_tag,
+                                          int64_t device_id) const {
+  int64_t device_num = device_tag2device_num().at(device_tag);
   return machine_id * device_num + device_id;
 }
 

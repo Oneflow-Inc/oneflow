@@ -14,6 +14,32 @@
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+template<typename DoEachT>
+void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
+                                        const Range& machine_id_range, const DoEachT& DoEach) {
+  if (machine_id_range.size() < parallel_desc.sorted_machine_ids().size()) {
+    FOR_RANGE(int64_t, machine_id, machine_id_range.begin(), machine_id_range.end()) {
+      if (parallel_desc.HasMachineId(machine_id)) {
+        for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+          DoEach(machine_id, device_id);
+        }
+      }
+    }
+  } else {
+    for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
+      if (machine_id >= machine_id_range.begin() && machine_id < machine_id_range.end()) {
+        for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+          DoEach(machine_id, device_id);
+        }
+      }
+    }
+  }
+}
+
+}  // namespace
+
 class NewObjectInstructionType final : public InstructionType {
  public:
   NewObjectInstructionType() = default;
@@ -41,8 +67,9 @@ class NewObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(Scheduler* scheduler, InstrCtx* instr_ctx) const {
     FlatMsgView<NewObjectInstruction> view(instr_ctx->instr_msg().operand());
-    const auto& parallel_desc_obj =
-        instr_ctx->operand_type(view->parallel_desc()).Get<ObjectWrapper<ParallelDesc>>();
+    const auto& parallel_desc =
+        instr_ctx->operand_type(view->parallel_desc()).Get<ObjectWrapper<ParallelDesc>>().Get();
+    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc.device_type());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
@@ -50,13 +77,14 @@ class NewObjectInstructionType final : public InstructionType {
       CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_obj->parallel_num()) {
-        int64_t global_device_id =
-            scheduler->vm_resource_desc().GetGlobalDeviceId(parallel_desc_obj.Get(), parallel_id);
-        auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-            scheduler->mut_allocator(), logical_object.Mutable(), global_device_id);
-        CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
-      }
+      ForEachMachineIdAndDeviceIdInRange(
+          parallel_desc, scheduler->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+            int64_t global_device_id =
+                scheduler->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+            auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
+                scheduler->mut_allocator(), logical_object.Mutable(), global_device_id);
+            CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+          });
     }
   }
 };
