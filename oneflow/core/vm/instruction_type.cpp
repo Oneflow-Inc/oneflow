@@ -1,5 +1,6 @@
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -13,6 +14,14 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 }
 
 }  // namespace
+
+void InstructionType::Compute(Scheduler* scheduler, InstrCtx* instr_ctx) const {
+  Compute(scheduler, instr_ctx->mut_instr_msg());
+}
+
+void InstructionType::Infer(Scheduler* scheduler, InstrCtx* instr_ctx) const {
+  Infer(scheduler, instr_ctx->mut_instr_msg());
+}
 
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
   const auto& map = *InstrTypeId4InstructionName();

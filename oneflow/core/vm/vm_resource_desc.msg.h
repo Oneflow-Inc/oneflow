@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 namespace vm {
@@ -17,6 +18,7 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   PUBLIC void __Init__(
       int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
+  PUBLIC int64_t GetGlobalDeviceId(const ParallelDesc& parallel_desc, int64_t parallel_id) const;
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, machine_num);
