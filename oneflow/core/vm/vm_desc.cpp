@@ -7,6 +7,23 @@
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+template<VmType vm_type>
+void SetMachineIdRange(Range* range, int64_t machine_num, int64_t this_machine_id);
+
+template<>
+void SetMachineIdRange<kRemote>(Range* range, int64_t machine_num, int64_t this_machine_id) {
+  *range = Range(this_machine_id, this_machine_id + 1);
+}
+
+template<>
+void SetMachineIdRange<kLocal>(Range* range, int64_t machine_num, int64_t this_machine_id) {
+  *range = Range(0, machine_num);
+}
+
+}  // namespace
+
 template<VmType vm_type>
 ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id) {
   std::set<StreamTypeId> stream_type_ids;
@@ -15,6 +32,8 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(ObjectMsgPtr<VmResourceDesc>::New(resource).Get());
+  SetMachineIdRange<vm_type>(vm_desc->mutable_machine_id_range(), resource.machine_num(),
+                             this_machine_id);
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {
     const StreamType& stream_type = stream_type_id.stream_type();

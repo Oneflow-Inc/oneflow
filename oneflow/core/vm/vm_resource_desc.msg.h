@@ -18,7 +18,7 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   PUBLIC void __Init__(
       int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
-  PUBLIC int64_t GetGlobalDeviceId(const ParallelDesc& parallel_desc, int64_t parallel_id) const;
+  PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, const std::string& device_tag, int64_t device_id) const;
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, machine_num);

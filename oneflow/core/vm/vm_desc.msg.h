@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/scheduler.msg.h"
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
+#include "oneflow/core/common/range.h"
 
 namespace oneflow {
 namespace vm {
@@ -18,6 +19,7 @@ OBJECT_MSG_BEGIN(VmDesc);
   
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
+  OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamDesc, stream_type_id, stream_type_id2desc);
