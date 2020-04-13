@@ -21,30 +21,60 @@ namespace test {
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
-TEST(OpkernelInstructionType, new_opkernel) {
-  InstructionMsgList list;
+// return opkernel logical object id
+int64_t InitOpKernelObject(InstructionMsgList* list,
+                           const std::shared_ptr<JobConfigProto>& job_conf,
+                           const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t job_desc_id = 0;
   {
-    job_desc_id = vm::TestUtil::NewSymbol(&list);
-    Global<vm::Storage<JobConfigProto>>::Get()->Add(job_desc_id,
-                                                    std::make_shared<JobConfigProto>());
-    list.EmplaceBack(
+    job_desc_id = vm::TestUtil::NewSymbol(list);
+    Global<vm::Storage<JobConfigProto>>::Get()->Add(job_desc_id, job_conf);
+    list->EmplaceBack(
         vm::NewInstruction("InitJobDescSymbol")->add_init_const_host_operand(job_desc_id));
   }
   int64_t op_conf_id = 0;
   {
-    op_conf_id = vm::TestUtil::NewSymbol(&list);
-    auto op_conf = std::make_shared<OperatorConf>();
-    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    op_conf_id = vm::TestUtil::NewSymbol(list);
     Global<vm::Storage<OperatorConf>>::Get()->Add(op_conf_id, op_conf);
-    list.EmplaceBack(
+    list->EmplaceBack(
         vm::NewInstruction("InitOperatorConfSymbol")->add_init_const_host_operand(op_conf_id));
   }
-  int64_t op_id = vm::TestUtil::NewObject(&list, "0:cpu:0");
-  list.EmplaceBack(vm::NewInstruction("InitOpKernelObject")
-                       ->add_const_host_operand(job_desc_id)
-                       ->add_const_host_operand(op_conf_id)
-                       ->add_mut_operand(op_id));
+  int64_t opkernel_id = vm::TestUtil::NewObject(list, "0:cpu:0");
+  list->EmplaceBack(vm::NewInstruction("InitOpKernelObject")
+                        ->add_const_host_operand(job_desc_id)
+                        ->add_const_host_operand(op_conf_id)
+                        ->add_mut_operand(opkernel_id));
+  return opkernel_id;
+}
+
+TEST(OpkernelInstructionType, new_opkernel) {
+  InstructionMsgList list;
+  {
+    auto op_conf = std::make_shared<OperatorConf>();
+    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+  }
+  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  vm::TestUtil::AddStreamDescByInstrNames(
+      vm_desc.Mutable(),
+      {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
+  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
+  scheduler->Receive(&list);
+  while (!scheduler->Empty()) {
+    scheduler->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  }
+}
+
+TEST(OpkernelInstructionType, delete_opkernel) {
+  InstructionMsgList list;
+  int64_t opkernel_id = 0;
+  {
+    auto op_conf = std::make_shared<OperatorConf>();
+    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+  }
+  list.EmplaceBack(vm::NewInstruction("DeleteOpKernelObject")->add_mut_operand(opkernel_id));
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
