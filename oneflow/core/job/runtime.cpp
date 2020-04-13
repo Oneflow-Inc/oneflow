@@ -44,8 +44,10 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   NewAllGlobal(plan, total_piece_num, is_experiment_phase);
+#if defined(WITH_ONEFLOW_EXTENSION)
   set_runtime_ext_ctx(std::shared_ptr<extension::RuntimeExtensionContext>(
       new extension::RuntimeExtensionContext()));
+#endif
   get_runtime_ext_ctx()->set_runtime(this);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
@@ -67,7 +69,9 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(mdupdt_tasks);
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
+#if defined(WITH_ONEFLOW_EXTENSION)
   Global<ThreadMgr>::Get()->SetupExtensionContext(this->get_runtime_ext_ctx());
+#endif
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   LOG(INFO) << "Actors on this machine constructed";
   OF_BARRIER();

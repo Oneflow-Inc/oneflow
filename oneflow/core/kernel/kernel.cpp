@@ -30,8 +30,10 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
+#if defined(WITH_ONEFLOW_EXTENSION)
   set_kernel_ext_ctx(
       std::shared_ptr<extension::KernelExtensionContext>(new extension::KernelExtensionContext()));
+#endif
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
@@ -129,8 +131,10 @@ std::unique_ptr<const Kernel> ConstructKernel(
   if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
+#if defined(WITH_ONEFLOW_EXTENSION)
   rptr->get_kernel_ext_ctx()->set_actor_ext_ctx(actor_ext_ctx);
   rptr->get_kernel_ext_ctx()->set_kernel(rptr);
+#endif
   return std::unique_ptr<const Kernel>(rptr);
 }
 

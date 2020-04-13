@@ -693,10 +693,12 @@ std::unique_ptr<Actor> NewActor(
     const TaskProto& task_proto, const ThreadCtx& thread_ctx,
     const std::shared_ptr<extension::ThreadExtensionContext> thread_ext_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
+#if defined(WITH_ONEFLOW_EXTENSION)
   rptr->set_actor_ext_ctx(
       std::shared_ptr<extension::ActorExtensionContext>(new extension::ActorExtensionContext()));
   rptr->get_actor_ext_ctx()->set_actor(rptr);
   rptr->get_actor_ext_ctx()->set_thread_ext_ctx(thread_ext_ctx);
+#endif
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
