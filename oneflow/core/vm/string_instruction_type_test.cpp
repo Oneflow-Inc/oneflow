@@ -19,13 +19,13 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 TEST(StringStreamType, init_string_object) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
-                                      {"NewConstHostSymbol", "InitStringObject"});
+                                      {"NewConstHostSymbol", "InitStringSymbol"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_value = NewConstHostLogicalObjectId();
   Global<Storage<std::string>>::Get()->Add(symbol_value, std::make_shared<std::string>("foobar"));
   list.EmplaceBack(NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_value));
-  list.EmplaceBack(NewInstruction("InitStringObject")->add_init_const_host_operand(symbol_value));
+  list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_const_host_operand(symbol_value));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();

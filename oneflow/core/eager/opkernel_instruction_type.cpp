@@ -49,9 +49,9 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
     // do nothing
   }
 };
-COMMAND(vm::RegisterInstructionType<NewOpKernelObjectInstructionType>("NewOpKernelObject"));
+COMMAND(vm::RegisterInstructionType<NewOpKernelObjectInstructionType>("InitOpKernelObject"));
 COMMAND(
-    vm::RegisterLocalInstructionType<NewOpKernelObjectInstructionType>("NewLocalOpKernelObject"));
+    vm::RegisterLocalInstructionType<NewOpKernelObjectInstructionType>("LocalInitOpKernelObject"));
 
 class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
  public:

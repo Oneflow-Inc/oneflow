@@ -12,10 +12,10 @@
 namespace oneflow {
 namespace vm {
 
-class NewParallelDescObjectInstructionType final : public InstructionType {
+class NewParallelDescSymbolInstructionType final : public InstructionType {
  public:
-  NewParallelDescObjectInstructionType() = default;
-  ~NewParallelDescObjectInstructionType() override = default;
+  NewParallelDescSymbolInstructionType() = default;
+  ~NewParallelDescSymbolInstructionType() override = default;
 
   using stream_type = ControlStreamType;
 
@@ -57,9 +57,9 @@ class NewParallelDescObjectInstructionType final : public InstructionType {
   }
 };
 COMMAND(Global<Storage<ParallelConf>>::SetAllocated(new Storage<ParallelConf>()));
-COMMAND(RegisterInstructionType<NewParallelDescObjectInstructionType>("NewParallelDescObject"));
-COMMAND(RegisterLocalInstructionType<NewParallelDescObjectInstructionType>(
-    "LocalNewParallelDescObject"));
+COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
+COMMAND(RegisterLocalInstructionType<NewParallelDescSymbolInstructionType>(
+    "LocalNewParallelDescSymbol"));
 
 }  // namespace vm
 }  // namespace oneflow

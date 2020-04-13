@@ -25,6 +25,8 @@ struct TestUtil {
 
   // return logical_object_id
   static int64_t NewObject(InstructionMsgList*, const std::string& device_name);
+  static int64_t NewSymbol(InstructionMsgList*);
+  static int64_t NewStringSymbol(InstructionMsgList*, const std::string& str);
 
   static void AddStreamDescByInstrNames(VmDesc* vm_desc,
                                         const std::vector<std::string>& instr_names);

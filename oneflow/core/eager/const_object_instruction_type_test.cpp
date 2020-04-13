@@ -45,11 +45,11 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(ConstObjectInstructionType, job_desc) {
-  TestConstObjectInstructionType<JobDesc, JobConfigProto>("InitJobDescObject");
+  TestConstObjectInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
 }
 
 TEST(ConstObjectInstructionType, operator_conf) {
-  TestConstObjectInstructionType<OperatorConf, OperatorConf>("InitOperatorConfObject");
+  TestConstObjectInstructionType<OperatorConf, OperatorConf>("InitOperatorConfSymbol");
 }
 
 }  // namespace test
