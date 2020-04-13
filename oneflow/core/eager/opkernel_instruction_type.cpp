@@ -235,21 +235,19 @@ template<typename T>
 void UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx, UserOpConf* user_op_conf,
                                     const std::string& op_name, const T& args) {
   user_op_conf->clear_input();
-  ForEachIbnAndLogicalObjectId(
-      instr_ctx, args,
-      [&](const std::string& ibn, int64_t i, int64_t logical_object_id) {
-        auto* str_list = &(*user_op_conf->mutable_input())[ibn];
-        CHECK_EQ(str_list->s_size(), i);
-        str_list->add_s(op_name + "/" + std::to_string(logical_object_id));
-      });
+  ForEachIbnAndLogicalObjectId(instr_ctx, args,
+                               [&](const std::string& ibn, int64_t i, int64_t logical_object_id) {
+                                 auto* str_list = &(*user_op_conf->mutable_input())[ibn];
+                                 CHECK_EQ(str_list->s_size(), i);
+                                 str_list->add_s(op_name + "/" + GenRepeatedBn(ibn, i));
+                               });
   user_op_conf->clear_output();
-  ForEachObnAndLogicalObjectId(
-      instr_ctx, args,
-      [&](const std::string& obn, int64_t i, int64_t logical_object_id) {
-        auto* str_list = &(*user_op_conf->mutable_output())[obn];
-        CHECK_EQ(str_list->s_size(), i);
-        str_list->add_s(op_name + "/" + std::to_string(logical_object_id));
-      });
+  ForEachObnAndLogicalObjectId(instr_ctx, args,
+                               [&](const std::string& obn, int64_t i, int64_t logical_object_id) {
+                                 auto* str_list = &(*user_op_conf->mutable_output())[obn];
+                                 CHECK_EQ(str_list->s_size(), i);
+                                 str_list->add_s(op_name + "/" + GenRepeatedBn(obn, i));
+                               });
 }
 
 }  // namespace
