@@ -85,7 +85,7 @@
 
 ### Build with XLA
 
-- Install Bazel
+- #### Install Bazel
 
   Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
 
@@ -93,7 +93,7 @@
   bazel version
   ```
 
-- Build Third Parties
+- #### Build Third Parties
 
   Inside directory `build`, run:
 
@@ -104,7 +104,7 @@
 
   If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
 
-- Build OneFlow
+- #### Build OneFlow
 
   Inside directory `build`, run:
   ```shell
@@ -120,7 +120,7 @@
 
 ### Build with TensorRT
 
-- Build Third Parties
+- #### Build Third Parties
 
   1. Download TensorRT(>=6.0) .tgz and unzip the package.
   
@@ -130,7 +130,7 @@
   cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
   make -j$(nproc)
   ```
-- Build OneFlow
+- #### Build OneFlow
 
   Inside directory `build`, run:
   ```shell
@@ -147,6 +147,6 @@
 
 ### Documents
 
- - XRT Documents
+ - #### XRT Documents
 
    You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
