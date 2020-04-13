@@ -132,8 +132,10 @@ Your should find a `.whl` package in `dist`.
 
 - Build third-parties
 
-Download TensorRT(>=6.0) .tgz and unzip the package, then run the following command to build third-parties.
-  inside directory `build`, run:
+  1. Download TensorRT(>=6.0) .tgz and unzip the package.
+  
+  2. Inside directory `build`, run:
+  
   ```shell
   cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
   make -j$(nproc)
