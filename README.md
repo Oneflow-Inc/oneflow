@@ -98,7 +98,7 @@
   Inside directory `build`, run:
 
   ```shell
-  cd build && cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
+  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
   make -j$(nproc)
   ```
 
