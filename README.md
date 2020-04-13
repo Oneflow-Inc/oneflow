@@ -1,5 +1,5 @@
 # Oneflow
-
+![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
 ### 1.1 Linux 
 
 ### Build
