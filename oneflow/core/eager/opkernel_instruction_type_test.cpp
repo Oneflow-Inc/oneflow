@@ -87,6 +87,37 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   }
 }
 
+TEST(OpkernelInstructionType, call_opkernel) {
+  InstructionMsgList list;
+  int64_t opkernel_id = 0;
+  {
+    auto op_conf = std::make_shared<OperatorConf>();
+    op_conf->set_name("test_source_op_name");
+    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+  }
+  int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
+  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:cpu:0");
+  list.EmplaceBack(vm::NewInstruction("CpuCallOpKernel")
+                       ->add_mut_operand(opkernel_id)
+                       ->add_separator()
+                       ->add_separator()
+                       ->add_const_host_operand(obn_id)
+                       ->add_int64_operand(0)
+                       ->add_mut_operand(output_blob_id)
+                       ->add_separator());
+  auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
+  vm::TestUtil::AddStreamDescByInstrNames(
+      vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
+                          "InitOpKernelObject", "CpuCallOpKernel"});
+  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
+  scheduler->Receive(&list);
+  while (!scheduler->Empty()) {
+    scheduler->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  }
+}
+
 }  // namespace test
 }  // namespace eager
 }  // namespace oneflow
