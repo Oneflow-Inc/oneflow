@@ -45,7 +45,8 @@
 
   Inside directory `build`, run:
   ```
-  cmake -DTHIRD_PARTY=ON .. && make -j
+  cmake -DTHIRD_PARTY=ON .. 
+  make -j
   ```
 
 - #### Build OneFlow
