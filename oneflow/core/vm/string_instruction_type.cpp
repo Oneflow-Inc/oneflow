@@ -22,10 +22,10 @@ FLAT_MSG_VIEW_END(StringObjectInstrOperand);
 
 }  // namespace
 
-class InitStringObjectInstructionType final : public InstructionType {
+class InitStringSymbolInstructionType final : public InstructionType {
  public:
-  InitStringObjectInstructionType() = default;
-  ~InitStringObjectInstructionType() override = default;
+  InitStringSymbolInstructionType() = default;
+  ~InitStringSymbolInstructionType() override = default;
 
   using stream_type = HostStreamType;
 
@@ -42,8 +42,8 @@ class InitStringObjectInstructionType final : public InstructionType {
     // do nothing
   }
 };
-COMMAND(RegisterInstructionType<InitStringObjectInstructionType>("InitStringObject"));
-COMMAND(RegisterLocalInstructionType<InitStringObjectInstructionType>("LocalInitStringObject"));
+COMMAND(RegisterInstructionType<InitStringSymbolInstructionType>("InitStringSymbol"));
+COMMAND(RegisterLocalInstructionType<InitStringSymbolInstructionType>("LocalInitStringSymbol"));
 
 }  // namespace vm
 }  // namespace oneflow

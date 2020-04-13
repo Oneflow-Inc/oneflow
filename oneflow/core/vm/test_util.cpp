@@ -21,12 +21,27 @@ int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::strin
   int64_t parallel_conf_logical_object_id = NewConstHostLogicalObjectId();
   Global<Storage<ParallelConf>>::Get()->Add(parallel_conf_logical_object_id, parallel_conf);
   instr_msg_list->EmplaceBack(
-      NewInstruction("NewParallelDescObject")->add_int64_operand(parallel_conf_logical_object_id));
+      NewInstruction("NewParallelDescSymbol")->add_int64_operand(parallel_conf_logical_object_id));
   int64_t logical_object_id = NewNaiveLogicalObjectId();
   instr_msg_list->EmplaceBack(NewInstruction("NewObject")
                                   ->add_int64_operand(parallel_conf_logical_object_id)
                                   ->add_int64_operand(logical_object_id));
   return logical_object_id;
+}
+
+int64_t TestUtil::NewSymbol(InstructionMsgList* instr_msg_list) {
+  int64_t symbol_value = vm::NewConstHostLogicalObjectId();
+  instr_msg_list->EmplaceBack(
+      NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_value));
+  return symbol_value;
+}
+
+int64_t TestUtil::NewStringSymbol(InstructionMsgList* instr_msg_list, const std::string& str) {
+  int64_t str_id = NewSymbol(instr_msg_list);
+  Global<Storage<std::string>>::Get()->Add(str_id, std::make_shared<std::string>(str));
+  instr_msg_list->EmplaceBack(
+      NewInstruction("InitStringSymbol")->add_init_const_host_operand(str_id));
+  return str_id;
 }
 
 void TestUtil::AddStreamDescByInstrNames(VmDesc* vm_desc,

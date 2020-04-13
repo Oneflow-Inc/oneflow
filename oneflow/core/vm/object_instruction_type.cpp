@@ -67,7 +67,7 @@ class NewObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
-    const ParallelDesc* parallel_desc = nullptr;
+    std::shared_ptr<ParallelDesc> parallel_desc;
     {
       auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(view->parallel_desc());
       CHECK_NOTNULL(logical_object);
@@ -75,13 +75,13 @@ class NewObjectInstructionType final : public InstructionType {
           logical_object->mut_global_device_id2mirrored_object();
       CHECK_EQ(global_device_id2mirrored_object->size(), 1);
       auto* mirrored_object = global_device_id2mirrored_object->Begin();
-      parallel_desc = &mirrored_object->Get<ObjectWrapper<ParallelDesc>>().Get();
+      parallel_desc = mirrored_object->Get<ObjectWrapper<ParallelDesc>>().GetPtr();
     }
     const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
+          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id, parallel_desc);
       CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
