@@ -32,8 +32,6 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
     CHECK_EQ(view->op_conf_size(), view->op_size());
     const auto& job_desc_object =
         instr_ctx->operand_type(view->job_desc()).Get<vm::ObjectWrapper<JobDesc>>();
-    const auto& parallel_desc_object =
-        instr_ctx->operand_type(view->parallel_desc()).Get<vm::ObjectWrapper<ParallelDesc>>();
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
       const auto& op_conf_object =
@@ -41,9 +39,10 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
       CHECK(op_conf_object->has_user_conf());
       CHECK(op_conf_object->user_conf().input().empty());
       CHECK(op_conf_object->user_conf().output().empty());
-      instr_ctx->mut_operand_type(view->op(i))
-          ->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
-                                 parallel_desc_object->device_type());
+      vm::MirroredObject* mirrored_object = instr_ctx->mut_operand_type(view->op(i));
+      DeviceType device_type = mirrored_object->logical_object().parallel_desc()->device_type();
+      mirrored_object->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
+                                            device_type);
     }
   }
   void Compute(vm::InstrCtx* instr_ctx) const override {

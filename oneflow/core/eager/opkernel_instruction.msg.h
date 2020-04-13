@@ -11,7 +11,6 @@ namespace eager {
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(NewOpKernelObjectInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstHostOperand, job_desc);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstHostOperand, parallel_desc);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstHostOperand, op_conf);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, op);
 FLAT_MSG_VIEW_END(NewOpKernelObjectInstrOperand);
