@@ -15,6 +15,11 @@
   sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
   ```
 
+  If installed CMake doesn't support https scheme, please install a release with support for it. For instance:
+  ```
+  https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
+  ```
+
 - #### Clone Source Code
 
   Clone source code and submodules (faster, recommended)
@@ -70,7 +75,7 @@
   export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
   ```
 
-- #### Generate Pip package
+- #### Generate Pip Package
 
   In the root path of OneFlow repo, run:
   ```
@@ -80,7 +85,7 @@
 
 ### Build with XLA
 
-- Install bazel
+- Install Bazel
 
   Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
 
@@ -88,21 +93,7 @@
   bazel version
   ```
 
-- Update cmake
-
-  It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
-
-  Download cmake(>=3.7) from [here](https://cmake.org/download/) , configure and install it by the following command:
-
-  ```shell
-  # Install curl develop toolkit
-  sudo yum install libcurl-devel
- 
-  # install cmake
-  cd cmake && ./bootstrap --system-curl --prefix=$your_path && make install
-  ```
-
-- Build third-parties
+- Build Third Parties
 
   Inside directory `build`, run:
 
@@ -129,7 +120,7 @@
 
 ### Build with TensorRT
 
-- Build third-parties
+- Build Third Parties
 
   1. Download TensorRT(>=6.0) .tgz and unzip the package.
   
@@ -156,6 +147,6 @@
 
 ### Documents
 
- - XRT documents
+ - XRT Documents
 
    You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
