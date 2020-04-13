@@ -39,14 +39,14 @@ cd build
 
 #### Build Third Party from Source
 
-inside directory `build`, run:
+Inside directory `build`, run:
 ```
 cmake -DTHIRD_PARTY=ON .. && make -j
 ```
 
 #### Build OneFlow
 
-inside directory `build`, run:
+Inside directory `build`, run:
 ```
 cmake .. \
 -DTHIRD_PARTY=OFF \
@@ -105,7 +105,7 @@ Your should find a `.whl` package in `dist`.
 
 - Build third-parties
 
-  inside directory `build`, run the following command to build third-parties.
+  Inside directory `build`, run:
 
   ```shell
   cd build && cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
@@ -116,7 +116,7 @@ Your should find a `.whl` package in `dist`.
 
 - Build OneFlow
 
-  inside directory `build`, run:
+  Inside directory `build`, run:
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
@@ -142,7 +142,7 @@ Your should find a `.whl` package in `dist`.
   ```
 - Build OneFlow
 
-  inside directory `build`, run:
+  Inside directory `build`, run:
   ```shell
   cmake .. \
   -DWITH_TENSORRT=ON \
