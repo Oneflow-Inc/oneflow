@@ -47,8 +47,8 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
 #if defined(WITH_ONEFLOW_EXTENSION)
   set_runtime_ext_ctx(std::shared_ptr<extension::RuntimeExtensionContext>(
       new extension::RuntimeExtensionContext()));
-#endif
   get_runtime_ext_ctx()->set_runtime(this);
+#endif
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
