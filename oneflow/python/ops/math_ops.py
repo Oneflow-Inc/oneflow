@@ -645,23 +645,6 @@ def broadcast_max(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-# only do argmax operation in the last dimension and set output int32_t data type for now
-# TODO: support argmax in arbitrary axis and allow user to specify output data type
-@oneflow_export("math.argmax")
-def argmax(input, axis=None, output_type=None, name=None):
-    assert axis is None and output_type is None
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Argmax_")
-    )
-    setattr(op_conf.argmax_conf, "in", input.logical_blob_name)
-    setattr(op_conf.argmax_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
 @oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -710,6 +693,16 @@ def top_k(input, k=1, sorted=True, name=None):
         .RemoteBlobList()[0]
     )
 
+@oneflow_export("math.argmax")
+def argmax(input, name=None):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
+        .Op("argmax")
+        .Input("in", [input])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(x, compatible, name=None):
@@ -764,3 +757,21 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
         raise ValueError("min_value and max_value cannot be None at the same time")
 
     return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
+
+
+@oneflow_export("math.l2_normalize")
+def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
+    if axis < 0: axis += len(input.shape)
+    assert axis >=0 and axis < len(input.shape)
+    y, square_x_sum = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("L2Normalize_"))
+        .Op("l2_normalize")
+        .Input("x", [input])
+        .Output("y")
+        .Output("square_x_sum")
+        .SetAttr("axis", int(axis), "AttrTypeInt32")
+        .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Build()
+        .RemoteBlobList()
+    )
+    return y
