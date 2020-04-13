@@ -17,12 +17,12 @@ REGISTER_USER_OP("zero_like")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
-          .Split("like", 0)
-          .Split("out", 0)
+          .Split("like", 0, 0)
+          .Split("out", 0, 0)
           .MakeSplitSignatureListBuilder(
               ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes())
           .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder().PartialSum("like").Broadcast("out").Build(
+      SbpSignatureBuilder().PartialSum("like", 0).Broadcast("out", 0).Build(
           ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });

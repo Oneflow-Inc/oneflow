@@ -18,7 +18,7 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
-  int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0).shape().NumAxes();
+  int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape().NumAxes();
   SbpSignatureBuilder()
       .Split("condition", 0, 0)
       .Split("x", 0, 0)
@@ -44,6 +44,10 @@ REGISTER_USER_OP("where")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
+      cond_arg_modifier->set_requires_grad(false);
+    })
     .SetGetSbpFn(GetWhereSbpSignatures);
 
 REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
