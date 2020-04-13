@@ -1,47 +1,83 @@
 # Oneflow
-
+![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
 ### 1.1 Linux 
 
 ### Build
 
 Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
-```shell
-    export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+```
+export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 ```
 
 Or you can install OpenBLAS and other tools through:
 
-```shell
-    sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
+```
+sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
 ```
 
-#### clone source code
+#### Clone Source Code
 
-> note: with `--recursive` flag to clone third_party submodules
+Clone source code and submodules (faster, recommended)
 
-```shell
-    git clone https://github.com/Oneflow-Inc/oneflow --recursive
+```
+git clone https://github.com/Oneflow-Inc/oneflow
+git submodule update --init --recursive
 ```
 
-or you can just clone source code and submodules step by step
+or you can also clone the repo with `--recursive` flag to clone third_party submodules together
 
-```shell
-    git clone https://github.com/Oneflow-Inc/oneflow
-    git submodule update --init --recursive
+```
+git clone https://github.com/Oneflow-Inc/oneflow --recursive
 ```
 
-#### build third party from source
+#### Enter Build Directory
 
-```shell
-  cmake -DTHIRD_PARTY=ON .. && make -j
+```
+cd build
 ```
 
-#### build oneflow
+#### Build Third Party from Source
 
-```shell
-    cmake -DTHIRD_PARTY=OFF .. && make -j
+inside directory `build`, run:
 ```
+cmake -DTHIRD_PARTY=ON .. && make -j
+```
+
+#### Build OneFlow
+
+inside directory `build`, run:
+```
+cmake .. \
+-DTHIRD_PARTY=OFF \
+-DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+-DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+-DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+
+make -j$(nproc)
+```
+
+#### Install OneFlow
+
+In the root path of OneFlow repo, run:
+```
+pip3 install -e . --user
+```
+
+Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`
+
+For example:
+```
+export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
+```
+
+#### Generate Pip package
+
+In the root path of OneFlow repo, run:
+```
+python3 setup.py bdist_wheel
+```
+Your should find a `.whl` package in `dist`.
 
 ### Build with XLA
 
@@ -55,7 +91,7 @@ or you can just clone source code and submodules step by step
 
 - Update cmake
 
-  It is needed only if cmake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall cmake if you encountered a downloading error while building the third-parties.
+  It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
 
   Download cmake(>=3.7) from [here](https://cmake.org/download/) , configure and install it by the following command:
 
@@ -69,7 +105,7 @@ or you can just clone source code and submodules step by step
 
 - Build third-parties
 
-  Run the following command to build third-parties.
+  inside directory `build`, run the following command to build third-parties.
 
   ```shell
   cd build && cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
@@ -80,12 +116,14 @@ or you can just clone source code and submodules step by step
 
 - Build OneFlow
 
+  inside directory `build`, run:
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
-  -DPYTHON_LIBRARY=your_python_lib_path \
-  -DPYTHON_INCLUDE_DIR=your_python_include_dir \
-  -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
+  -DTHIRD_PARTY=OFF \
+  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
   
   make -j$(nproc)
   ```
@@ -94,21 +132,23 @@ or you can just clone source code and submodules step by step
 
 - Build third-parties
 
-  Download TensorRT(>=6.0) .tgz and unzip the package, then run the following command to build third-parties.
-
+Download TensorRT(>=6.0) .tgz and unzip the package, then run the following command to build third-parties.
+  inside directory `build`, run:
   ```shell
-  cd build && cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
+  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
   make -j$(nproc)
   ```
 - Build OneFlow
 
+  inside directory `build`, run:
   ```shell
   cmake .. \
   -DWITH_TENSORRT=ON \
   -DTENSORRT_ROOT=your_tensorrt_path \
-  -DPYTHON_LIBRARY=your_python_lib_path \
-  -DPYTHON_INCLUDE_DIR=your_python_include_dir \
-  -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
+  -DTHIRD_PARTY=OFF \
+  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
 
   make -j$(nproc)
   ```
@@ -118,4 +158,3 @@ or you can just clone source code and submodules step by step
  - XRT documents
 
    You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
-
