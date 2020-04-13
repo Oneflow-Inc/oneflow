@@ -233,22 +233,22 @@ void InitOutputBlobObjects(vm::InstrCtx* instr_ctx, const T& args, DataType data
 
 template<typename T>
 void UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx, UserOpConf* user_op_conf,
-                                    const T& args) {
+                                    const std::string& op_name, const T& args) {
   user_op_conf->clear_input();
   ForEachIbnAndLogicalObjectId(
       instr_ctx, args,
-      [user_op_conf](const std::string& ibn, int64_t i, int64_t logical_object_id) {
+      [&](const std::string& ibn, int64_t i, int64_t logical_object_id) {
         auto* str_list = &(*user_op_conf->mutable_input())[ibn];
         CHECK_EQ(str_list->s_size(), i);
-        str_list->add_s(std::string("0/") + std::to_string(logical_object_id));
+        str_list->add_s(op_name + "/" + std::to_string(logical_object_id));
       });
   user_op_conf->clear_output();
   ForEachObnAndLogicalObjectId(
       instr_ctx, args,
-      [user_op_conf](const std::string& obn, int64_t i, int64_t logical_object_id) {
+      [&](const std::string& obn, int64_t i, int64_t logical_object_id) {
         auto* str_list = &(*user_op_conf->mutable_output())[obn];
         CHECK_EQ(str_list->s_size(), i);
-        str_list->add_s(std::string("0/") + std::to_string(logical_object_id));
+        str_list->add_s(op_name + "/" + std::to_string(logical_object_id));
       });
 }
 
@@ -263,7 +263,8 @@ template<typename T>
 void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx, const T& args) const {
   auto* opkernel_obj = instr_ctx->mut_operand_type(args.opkernel())->template Mut<OpKernelObject>();
   InitOutputBlobObjects(instr_ctx, args, opkernel_obj->job_desc().DefaultDataType());
-  UpdateUserOpConfInputAndOutput(*instr_ctx, opkernel_obj->mut_user_op_conf(), args);
+  UpdateUserOpConfInputAndOutput(*instr_ctx, opkernel_obj->mut_user_op_conf(),
+                                 opkernel_obj->op_name(), args);
   opkernel_obj->ResetOpAndKernel(MakeBlobDesc4BnInOp(instr_ctx, args));
   ForEachObnAndBlobObject(instr_ctx, args, [](const std::string& _, BlobObject* blob_object) {
     blob_object->mutable_blob();

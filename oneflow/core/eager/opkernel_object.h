@@ -29,6 +29,7 @@ class OpKernelObject : public vm::Object {
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
+  const std::string& op_name() const { return op_conf_.name(); }
   UserOpConf* mut_user_op_conf() { return op_conf_.mutable_user_conf(); }
 
   const std::shared_ptr<user_op::OpKernelState>& opkernel_state() const { return opkernel_state_; }
