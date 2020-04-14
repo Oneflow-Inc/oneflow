@@ -1,3 +1,4 @@
+#include <sstream>
 #define private public
 #include "oneflow/core/common/nd_index_offset_helper.h"
 

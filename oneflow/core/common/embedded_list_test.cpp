@@ -1,3 +1,4 @@
+#include <sstream>
 #define private public
 #include "oneflow/core/common/embedded_list.h"
 #include "oneflow/core/common/util.h"
