@@ -4,10 +4,10 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReluKernel final : public user_op::OpKernel {
+class ReluKernel2 final : public user_op::OpKernel {
  public:
-  ReluKernel() = default;
-  ~ReluKernel() = default;
+  ReluKernel2() = default;
+  ~ReluKernel2() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -19,7 +19,7 @@ class ReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_RELU_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel<device, dtype>>().SetIsMatchedPred(       \
+  REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel2<device, dtype>>().SetIsMatchedPred(       \
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
@@ -32,10 +32,10 @@ REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
 REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
 
 template<DeviceType device_type, typename T>
-class ReluGradKernel final : public user_op::OpKernel {
+class ReluGradKernel2 final : public user_op::OpKernel {
  public:
-  ReluGradKernel() = default;
-  ~ReluGradKernel() = default;
+  ReluGradKernel2() = default;
+  ~ReluGradKernel2() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -50,7 +50,7 @@ class ReluGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn<ReluGradKernel<device, dtype>>()                                              \
+      .SetCreateFn<ReluGradKernel2<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
