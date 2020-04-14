@@ -20,9 +20,12 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     setattr(op_conf.reduce_sum_conf, "in", input_tensor.logical_blob_name)
     setattr(op_conf.reduce_sum_conf, "out", "out")
     if axis is not None:
-        op_conf.reduce_sum_conf.axis[:] = (
-            list(axis) if isinstance(axis, collections.Sized) else [axis]
-        )
+        if isinstance(axis, list) and len(axis) == 0:
+            return input_tensor
+        else:
+            op_conf.reduce_sum_conf.axis[:] = (
+                list(axis) if isinstance(axis, collections.Sized) else [axis]
+            )
     setattr(op_conf.reduce_sum_conf, "keep_dims", keepdims)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
