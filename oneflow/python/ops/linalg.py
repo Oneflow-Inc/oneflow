@@ -21,3 +21,10 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("matmul_v2")
+def matmul_v2(a, b, transpose_a=False, transpose_b=False, name = None):
+    if name is None:
+        name = id_util.UniqueStr("Matmul_")
+    op = flow.user_op_builder(name).Op("matmul").Input("a", a).Input("b", b).Output("out").SetAttr("transpose_a", transpose_a, "AttrTypeBool").SetAttr("transpose_b", transpose_b, "AttrTypeBool").Build()
+    return op.RemoteBlobList()[0]
