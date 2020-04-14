@@ -63,7 +63,6 @@ def test_pool(_):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
-    # arg_dict["pooling_type"] = ["AVG"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
 
     for case in GenArgList(arg_dict):
@@ -85,16 +84,23 @@ def test_pool(_):
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
-            pooling_f = None
-            if pooling_type == "AVG":
-                pooling_f = tf.nn.avg_pool2d
-            elif pooling_type == "MAX":
-                pooling_f = tf.nn.max_pool2d
-            else:
-                raise ValueError("pooling_type must be AVG or MAX")
-            y_tf = pooling_f(
-                x_tf, ksize, strides, padding, data_format=data_format
+            # pooling_f = None
+            # if pooling_type == "AVG":
+            #     pooling_f = tf.nn.avg_pool2d
+            # elif pooling_type == "MAX":
+            #     pooling_f = tf.nn.max_pool2d
+            # else:
+            #     raise ValueError("pooling_type must be AVG or MAX")
+            # y_tf = pooling_f(
+            #     x_tf, ksize, strides, padding, data_format=data_format
+            # )
+            window_shape = [ksize, ksize]
+            strides = [strides, strides]
+            y_tf = tf.nn.pool(
+                x_tf, window_shape, pooling_type, strides=strides, padding=padding,
+                data_format=data_format
             )
+
 
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
