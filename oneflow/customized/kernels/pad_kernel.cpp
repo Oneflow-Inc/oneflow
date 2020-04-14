@@ -46,7 +46,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 template<DeviceType device_type, typename T>
 class PadKernel final : public user_op::OpKernel {
  public:
-  PadKernel(){
+  PadKernel() {
     device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
   }
   ~PadKernel() = default;
@@ -109,7 +109,7 @@ REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
 template<DeviceType device_type, typename T>
 class PadGradKernel final : public user_op::OpKernel {
  public:
-  PadGradKernel(){
+  PadGradKernel() {
     device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
   }
   ~PadGradKernel() = default;
