@@ -20,25 +20,25 @@ Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& d
 }
 
 Shape Params3D::GetYShape() {
-  DimVector out_shape;
+  DimVector y_dim_vec;
   if (dim_ == 1) {
-    out_shape = {y_3d_.at(2)};
+    y_dim_vec = {y_3d_.at(2)};
   } else if (dim_ == 2) {
-    out_shape = {y_3d_.at(1), y_3d_.at(2)};
+    y_dim_vec = {y_3d_.at(1), y_3d_.at(2)};
   } else if (dim_ == 3) {
-    out_shape = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
+    y_dim_vec = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
   } else {
     UNIMPLEMENTED();
   }
   if (data_format_ == "channels_first") {
-    out_shape.insert(out_shape.begin(), channel_num_);
+    y_dim_vec.insert(y_dim_vec.begin(), channel_num_);
   } else if (data_format_ == "channels_last") {
-    out_shape.insert(out_shape.end(), channel_num_);
+    y_dim_vec.insert(y_dim_vec.end(), channel_num_);
   } else {
     UNIMPLEMENTED();
   }
-  out_shape.insert(out_shape.begin(), batch_num_);
-  return Shape(out_shape);
+  y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
+  return Shape(y_dim_vec);
 }
 
 }  // namespace oneflow
