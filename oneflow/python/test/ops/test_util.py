@@ -60,7 +60,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     @flow.function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
-            x += flow.get_variable(name = 'v1', shape = (1,), dtype = flow.float, initializer = flow.random_uniform_initializer(minval=0, maxval=0)) 
+            x += flow.get_variable(name = 'v1', shape = (1,), dtype = flow.float, initializer = flow.zeros_initializer()) 
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
