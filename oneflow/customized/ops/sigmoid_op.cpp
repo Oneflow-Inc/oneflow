@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("relu")
+REGISTER_USER_OP("sigmoid")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -27,7 +27,7 @@ REGISTER_USER_OP("relu")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("relu_grad")
+REGISTER_USER_OP("sigmoid_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
@@ -56,18 +56,18 @@ REGISTER_USER_OP("relu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("relu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+REGISTER_USER_OP_GRAD("sigmoid").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                         user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper relu_grad_op =
-        builder.Op("relu_grad")
+    user_op::UserOpConfWrapper sigmoid_grad_op =
+        builder.Op("sigmoid_grad")
             .Input("y", op.output("out", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
             .Build();
-    op.BindGradTensorWithOpInput(relu_grad_op.output("dx", 0), "in", 0);
-    AddOp(relu_grad_op);
+    op.BindGradTensorWithOpInput(sigmoid_grad_op.output("dx", 0), "in", 0);
+    AddOp(sigmoid_grad_op);
   }
 });
 
