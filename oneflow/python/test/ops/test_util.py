@@ -86,21 +86,9 @@ def RunTensorFlowOp(tf_op, x, tf_args):
     return y.numpy(), x_diff.numpy()
 
 
-def CompareOpWithTensorFlow(param_dict):
-    # necessary params
-    device_type = param_dict['device_type']
-    flow_op = param_dict['flow_op']
-    tf_op = param_dict['tf_op']
-    input_shape = param_dict['input_shape']
-    # optional params
-    op_args = param_dict.get('op_args')
-    input_minval = param_dict.get('input_minval', -10)
-    input_maxval = param_dict.get('input_maxval', 10)
-    y_rtol = param_dict.get('y_rtol', 1e-5)
-    y_atol = param_dict.get('y_atol', 1e-5)
-    x_diff_rtol = param_dict.get('x_diff_rtol', 1e-5)
-    x_diff_atol = param_dict.get('x_diff_atol', 1e-5)
-
+def CompareOpWithTensorFlow(device_type, flow_op, tf_op, input_shape,
+                            op_args=None, input_minval=-10, input_maxval=10, y_rtol=1e-5,
+                            y_atol=1e-5, x_diff_rtol=1e-5, x_diff_atol=1e-5):
     assert device_type in ["gpu", "cpu"]
     if op_args is None:
         flow_args, tf_args = [], []

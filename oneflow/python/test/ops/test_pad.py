@@ -24,7 +24,7 @@ def test_pad_gpu(test_case):
                             Args([([0, 0], [0, 0], [10, 20], [0, 0])], tf.constant([([0, 0], [0, 0], [10, 20], [0, 0])])), 
                            ]
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(arg)
+        CompareOpWithTensorFlow(**arg)
 
 def test_pad_cpu(test_case):
     arg_dict = OrderedDict()
@@ -38,4 +38,4 @@ def test_pad_cpu(test_case):
                             Args([([0, 0], [0, 0], [10, 20], [0, 0])], tf.constant([([0, 0], [0, 0], [10, 20], [0, 0])])), 
                            ]
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(arg)
+        CompareOpWithTensorFlow(**arg)

@@ -23,4 +23,4 @@ def test_reshape(test_case):
     arg_dict["input_shape"] = [(10, 10, 10)]
     arg_dict['op_args'] = [Args([(100, 10)]), Args([(10, 100)]), Args([(5, 20, 10)])] 
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(arg)
+        CompareOpWithTensorFlow(**arg)

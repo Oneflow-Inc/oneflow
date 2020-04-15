@@ -23,4 +23,4 @@ def test_sqrt(test_case):
     arg_dict['input_minval'] = [0]
     arg_dict['input_maxval'] = [100]
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(arg)
+        CompareOpWithTensorFlow(**arg)
