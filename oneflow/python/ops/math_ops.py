@@ -367,6 +367,18 @@ def sigmoid(x, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+    
+@oneflow_export("nn.sigmoid_v2")
+def sigmoid(features, name=None):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
+        .Op("sigmoid")
+        .Input("in", [features])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
+
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
