@@ -14,7 +14,7 @@ namespace vm {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(ConstObjectInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(InitConstHostOperand, serialized_logical_object_id);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(InitSymbolOperand, serialized_logical_object_id);
 FLAT_MSG_VIEW_END(ConstObjectInstrOperand);
 // clang-format on
 

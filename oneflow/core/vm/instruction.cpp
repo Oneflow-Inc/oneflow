@@ -80,11 +80,10 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_host_operand(
-    LogicalObjectId logical_object_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_symbol_operand(LogicalObjectId logical_object_id) {
   CHECK(IsConstHostLogicalObjectId(logical_object_id));
-  add_instr_operand()->mutable_const_host_operand()->mutable_operand()->__Init__(
-      logical_object_id, SoleMirroredObject());
+  add_instr_operand()->mutable_symbol_operand()->mutable_operand()->__Init__(logical_object_id,
+                                                                             SoleMirroredObject());
   return this;
 }
 
@@ -110,10 +109,10 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_const_host_operand(
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_symbol_operand(
     LogicalObjectId logical_object_id) {
   CHECK(IsConstHostLogicalObjectId(logical_object_id));
-  add_instr_operand()->mutable_init_const_host_operand()->mutable_operand()->__Init__(
+  add_instr_operand()->mutable_init_symbol_operand()->mutable_operand()->__Init__(
       logical_object_id, SoleMirroredObject());
   return this;
 }

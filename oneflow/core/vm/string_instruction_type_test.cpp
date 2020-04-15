@@ -22,17 +22,17 @@ TEST(StringStreamType, init_string_object) {
                                       {"NewConstHostSymbol", "InitStringSymbol"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = NewConstHostLogicalObjectId();
-  Global<Storage<std::string>>::Get()->Add(symbol_value, std::make_shared<std::string>("foobar"));
-  list.EmplaceBack(NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_value));
-  list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_const_host_operand(symbol_value));
+  int64_t symbol_id = NewConstHostLogicalObjectId();
+  Global<Storage<std::string>>::Get()->Add(symbol_id, std::make_shared<std::string>("foobar"));
+  list.EmplaceBack(NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_id));
+  list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(symbol_id));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   auto* logical_object =
-      scheduler->mut_id2logical_object()->FindPtr(GetTypeLogicalObjectId(symbol_value));
+      scheduler->mut_id2logical_object()->FindPtr(GetTypeLogicalObjectId(symbol_id));
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
