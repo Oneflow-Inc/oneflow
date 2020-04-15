@@ -32,6 +32,8 @@ class StreamType {
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
   void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
 
+  virtual const char* device_tag() const = 0;
+
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,
