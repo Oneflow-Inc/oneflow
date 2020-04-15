@@ -42,7 +42,8 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenBackwardOpConf4Matmul(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
+                              user_op::AddOpFn AddOp) {
   bool transpose_a = op.attr<bool>("transpose_a");
   bool transpose_b = op.attr<bool>("transpose_b");
   auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
@@ -55,7 +56,7 @@ void GenBackwardOpConf4Matmul(const user_op::UserOpWrapper& op, user_op::AddOpFn
     if (transpose_a) {
       user_op::UserOpConfWrapper grad_a_op =
           user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_a")
-              .Op("matmul")
+              .Op(op_type_name)
               .Input("a", op.input("b", 0))
               .Input("b", op.GetGradTensorWithOpOutput("out", 0))
               .Output("out")
@@ -66,7 +67,7 @@ void GenBackwardOpConf4Matmul(const user_op::UserOpWrapper& op, user_op::AddOpFn
     } else {
       user_op::UserOpConfWrapper grad_a_op =
           user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_a")
-              .Op("matmul")
+              .Op(op_type_name)
               .Input("a", op.GetGradTensorWithOpOutput("out", 0))
               .Input("b", op.input("b", 0))
               .Output("out")
@@ -80,7 +81,7 @@ void GenBackwardOpConf4Matmul(const user_op::UserOpWrapper& op, user_op::AddOpFn
     if (transpose_b) {
       user_op::UserOpConfWrapper grad_b_op =
           user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_b")
-              .Op("matmul")
+              .Op(op_type_name)
               .Input("a", op.GetGradTensorWithOpOutput("out", 0))
               .Input("b", op.input("a", 0))
               .Output("out")
@@ -91,7 +92,7 @@ void GenBackwardOpConf4Matmul(const user_op::UserOpWrapper& op, user_op::AddOpFn
     } else {
       user_op::UserOpConfWrapper grad_b_op =
           user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_b")
-              .Op("matmul")
+              .Op(op_type_name)
               .Input("a", op.input("a", 0))
               .Input("b", op.GetGradTensorWithOpOutput("out", 0))
               .Output("out")
@@ -181,7 +182,10 @@ REGISTER_USER_OP("matmul")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn(GenBackwardOpConf4Matmul);
+REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                          user_op::AddOpFn AddOp) {
+  return GenBackwardOpConf4Matmul("matmul", op, AddOp);
+});
 
 REGISTER_USER_OP("batch_matmul")
     .Input("a")
@@ -211,6 +215,9 @@ REGISTER_USER_OP("batch_matmul")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("batch_matmul").SetGenBackwardOpConfFn(GenBackwardOpConf4Matmul);
+REGISTER_USER_OP_GRAD("batch_matmul")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      return GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
+    });
 
 }  // namespace oneflow

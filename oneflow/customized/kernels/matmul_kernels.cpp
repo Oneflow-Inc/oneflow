@@ -35,6 +35,7 @@ class MatmulGpuFloatingKernel final : public user_op::OpKernel {
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(2, a->shape().NumAxes());
 
     int32_t m, n, k;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
@@ -67,6 +68,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(2, a->shape().NumAxes());
 
     int32_t m, n, k;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
@@ -101,7 +103,7 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
     CBLAS_TRANSPOSE trans_b = ctx->GetAttr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buf", 0);
+    user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t num_axes = a->shape().NumAxes();
     CHECK_GT(num_axes, 2);
@@ -110,7 +112,7 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
 
     size_t batch_size = a->shape().Count(0, num_axes - 2);
-    T** buf_dptr = reinterpret_cast<T**>(tmp_buf->mut_dptr<int64_t>());
+    T** buf_dptr = reinterpret_cast<T**>(tmp_buf->mut_dptr<void>());
     NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
         ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<T>(), a->dptr<T>(),
         b->dptr<T>(), GetZeroVal<T>(), out->mut_dptr<T>(), buf_dptr);
@@ -155,7 +157,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
 
     size_t batch_size = a->shape().Count(0, num_axes - 2);
-    float16** buf_dptr = reinterpret_cast<float16**>(tmp_buf->mut_dptr<int64_t>());
+    float16** buf_dptr = reinterpret_cast<float16**>(tmp_buf->mut_dptr<void>());
     if (ctx->job_desc().Bool("enable_float_compute_for_half_gemm")) {
       NewKernelUtil<DeviceType::kGPU>::OFBatchedHGemmWithFloat(
           ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<float>(),
