@@ -41,7 +41,7 @@ ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
 void TestNopStreamTypeNoArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop"});
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
   auto nop_instr_msg = NewInstruction("Nop");
@@ -72,27 +72,24 @@ TEST(NopStreamType, cached_allocator_no_argument) {
 
 void TestNopStreamTypeOneArgument(
     std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto scheduler = NewScheduler(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = 9527;
-  auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
-  list.PushBack(ctrl_instr_msg.Mutable());
+  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
-  nop0_instr_msg->add_mut_operand(symbol_value);
+  nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NewInstruction("Nop");
-  nop1_instr_msg->add_mut_operand(symbol_value);
+  nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
   ASSERT_TRUE(scheduler->pending_msg_list().empty());
   scheduler->Receive(&list);
-  ASSERT_EQ(scheduler->pending_msg_list().size(), 3 * 2);
-  scheduler->Schedule();
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 3);
-  ASSERT_EQ(scheduler->active_stream_list().size(), 1);
+  while (!scheduler->Empty()) {
+    scheduler->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  }
 }
 
 TEST(NopStreamType, one_argument_dispatch) { TestNopStreamTypeOneArgument(&NaiveNewScheduler); }
@@ -103,18 +100,15 @@ TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
 
 TEST(NopStreamType, one_argument_triger_next_chain) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = 9527;
-  auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
-  list.PushBack(ctrl_instr_msg.Mutable());
+  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
-  nop0_instr_msg->add_mut_operand(symbol_value);
+  nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NewInstruction("Nop");
-  nop1_instr_msg->add_mut_operand(symbol_value);
+  nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
@@ -125,18 +119,15 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
 
 TEST(NopStreamType, one_argument_triger_all_chains) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto scheduler = NaiveNewScheduler(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = 9527;
-  auto ctrl_instr_msg =
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value);
-  list.PushBack(ctrl_instr_msg.Mutable());
+  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
-  nop0_instr_msg->add_mut_operand(symbol_value);
+  nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
   auto nop1_instr_msg = NewInstruction("Nop");
-  nop1_instr_msg->add_mut_operand(symbol_value);
+  nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
