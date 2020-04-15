@@ -17,6 +17,7 @@ def GenCartesianProduct(sets):
 
 def GenArgList(arg_dict):
     assert isinstance(arg_dict, OrderedDict)
+    assert all([isinstance(x, list) for x in arg_dict.values()])
     sets = [arg_set for _, arg_set in arg_dict.items()]
     return GenCartesianProduct(sets)
 
