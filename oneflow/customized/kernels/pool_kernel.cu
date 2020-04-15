@@ -38,7 +38,7 @@ class GPUPoolKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    // TODO: tsai: reset op kernel state when is dynamic if ready
+    // TODO: tsai: reset op kernel state when is_dynamic if ready
     GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
     CudaCheck(cudnnPoolingForward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
