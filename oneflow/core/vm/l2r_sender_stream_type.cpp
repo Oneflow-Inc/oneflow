@@ -16,6 +16,8 @@ class L2RSenderStreamType final : public StreamType {
   L2RSenderStreamType() = default;
   ~L2RSenderStreamType() = default;
 
+  const char* device_tag() const override { return "cpu"; }
+
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,

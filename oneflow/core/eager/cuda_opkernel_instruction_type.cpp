@@ -19,6 +19,9 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
   ~CudaCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("CudaCallOpKernel"));
 

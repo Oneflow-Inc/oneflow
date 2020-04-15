@@ -20,6 +20,8 @@ class CudaCopyH2DStreamType final : public StreamType {
   CudaCopyH2DStreamType() = default;
   ~CudaCopyH2DStreamType() = default;
 
+  const char* device_tag() const override { return "gpu"; }
+
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,

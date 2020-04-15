@@ -17,6 +17,8 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual ~CallOpKernelInstructionType() = default;
 
  private:
+  virtual const char* device_tag() const = 0;
+
   template<typename T>
   void Infer(vm::InstrCtx* instr_ctx, const T& args) const;
   template<typename T>

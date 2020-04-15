@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/kernel/eager_kernel.h"
+#include "oneflow/core/eager/blob_object.h"
 
 namespace oneflow {
 
@@ -41,6 +42,13 @@ class OpKernelObject : public vm::Object {
 
   void ResetOpAndKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
+  const BlobObject& tmp_buffer_blob_object() const { return *tmp_buffer_blob_object_; }
+  BlobObject* mut_tmp_buffer_blob_object() { return tmp_buffer_blob_object_.get(); }
+
+  void reset_tmp_buffer_blob_object(BlobObject* blob_object) {
+    tmp_buffer_blob_object_.reset(blob_object);
+  }
+
  private:
   void InferBlobDescs(const Operator& op,
                       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -51,6 +59,7 @@ class OpKernelObject : public vm::Object {
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
+  std::unique_ptr<BlobObject> tmp_buffer_blob_object_;
   DeviceType device_type_;
   std::unique_ptr<EagerKernel> kernel_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
