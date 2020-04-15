@@ -67,8 +67,26 @@ class GpuPoolGradKernel final : public user_op::OpKernel {
   ~GpuPoolGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // add your code
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return DoCreateOpKernelState(ctx);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    // TODO: tsai: reset op kernel state when is_dynamic if ready
+    const OpKernelStateWrapper<GPUPoolOpKernelState>* gpu_pool_op_kernel_state =
+        dynamic_cast<OpKernelStateWrapper<GPUPoolOpKernelState>*>(state);
+    CHECK(gpu_pool_op_kernel_state != nullptr);
+    CudaCheck(cudnnPoolingBackward(
+        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->Get().cudnn_pooling_desc(),
+        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), y->dptr(),
+        gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), dy->dptr(),
+        gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), x_blob->dptr(), CudnnSPZeroPtr<T>(),
+        x.Get(), dx->mut_dptr()));
   };
 };
 
