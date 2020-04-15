@@ -121,7 +121,8 @@ bool L2RReceiverStreamType::QueryInstructionStatusDone(
 void L2RReceiverStreamType::Compute(InstrChain* instr_chain) const {
   char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
   TransportKey2ReceiveRequest transport_key2receive_request;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+  {
+    auto* instr_ctx = instr_chain->mut_instr_ctx();
     MakeReceiveRequests(instr_ctx, &transport_key2receive_request);
   }
   // inital val is one

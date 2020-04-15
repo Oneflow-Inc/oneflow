@@ -212,14 +212,11 @@ void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
   set_stream(stream);
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
-  auto instr_ctx = ObjectMsgPtr<InstrCtx>::NewFrom(mut_allocator(), this, instr_msg);
-  mut_instr_ctx_list()->EmplaceBack(std::move(instr_ctx));
-  CHECK_EQ(instr_ctx_list().size(), 1);
+  mutable_instr_ctx()->__Init__(this, instr_msg);
 }
 
 void InstrChain::__Delete__() {
   stream_type().DeleteInstructionStatus(stream(), mut_status_buffer());
-  mut_instr_ctx_list()->Clear();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
