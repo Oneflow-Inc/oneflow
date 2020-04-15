@@ -368,7 +368,7 @@ def sigmoid(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
     
-@oneflow_export("nn.sigmoid_v2")
+@oneflow_export("math.sigmoid_v2")
 def sigmoid(features, name=None):
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
