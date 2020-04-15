@@ -57,16 +57,14 @@ class GPUPoolOpKernelState final {
                        const Params3D& params_3d);
   ~GPUPoolOpKernelState() = default;
 
- private:
   const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
   const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const { return y_desc_->Get(); }
   const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const { return pooling_desc_->Get(); }
-  const cudnnPoolingMode_t& cudnn_pooling_mode() const { return pooling_mode_; }
 
+ private:
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
   std::unique_ptr<CudnnPoolDesc> pooling_desc_;
-  cudnnPoolingMode_t pooling_mode_;
 };
 
 }  // namespace oneflow

@@ -75,6 +75,7 @@ GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string&
                                            const Shape& x_shape, const Shape& y_shape,
                                            const std::string& data_format, const DataType& dtype,
                                            const Params3D& params_3d) {
+  cudnnPoolingMode_t pooling_mode_;
   if (pooling_type == "AVG") {
     pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
   } else if (pooling_type == "MAX") {

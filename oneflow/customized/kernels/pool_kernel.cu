@@ -4,6 +4,25 @@
 
 namespace oneflow {
 
+namespace {
+
+std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelInitContext* ctx) {
+  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const int32_t dim = ctx->GetAttr<int32_t>("dim");
+  const std::string pooling_type = ctx->GetAttr<std::string>("pooling_type");
+  const std::string data_format = ctx->GetAttr<std::string>("data_format");
+  const std::string padding = ctx->GetAttr<std::string>("padding");
+  const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
+  const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+  const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
+  const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+  const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
+  return std::make_shared<OpKernelStateWrapper<GPUPoolOpKernelState>>(
+      dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+}
+
+}  // namespace
+
 template<typename T>
 class GPUPoolKernel final : public user_op::OpKernel {
  public:
@@ -13,23 +32,17 @@ class GPUPoolKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-    const int32_t dim = ctx->GetAttr<int32_t>("dim");
-    const std::string pooling_type = ctx->GetAttr<std::string>("pooling_type");
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
-    const std::string padding = ctx->GetAttr<std::string>("padding");
-    const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-    const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
-    const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
-    const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-    const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
-    return std::make_shared<OpKernelStateWrapper<GPUPoolOpKernelState>>(
-        dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+    return DoCreateOpKernelState(ctx);
   }
 
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
+    CudaCheck(cudnnPoolingForward(
+        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
+        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
+        CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
   };
 };
 
