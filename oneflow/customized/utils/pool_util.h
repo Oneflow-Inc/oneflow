@@ -5,6 +5,21 @@
 
 namespace oneflow {
 
+class CudnnPoolDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolDesc);
+  CudnnPoolDesc() = delete;
+  ~CudnnPoolDesc();
+
+  CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window, const int* padding,
+                const int* stride);
+
+  const cudnnPoolingDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnPoolingDescriptor_t val_;
+};
+
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
@@ -17,15 +32,19 @@ class Params3D {
 
   Shape GetYShape() const;
 
+  const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
+  const std::vector<int32_t>& strides_3d() const { return strides_3d_; }
+  const std::vector<int32_t>& padding_before_3d() const { return padding_before_3d_; }
+  const std::vector<int32_t>& padding_after_3d() const { return padding_after_3d_; }
+
  private:
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
-  FixedVector pool_size_;
-  FixedVector strides_;
-  FixedVector padding_;
-  std::vector<int32_t> padding_before_;
-  std::vector<int32_t> padding_after_;
+  std::vector<int32_t> pool_size_3d_;
+  std::vector<int32_t> strides_3d_;
+  std::vector<int32_t> padding_before_3d_;
+  std::vector<int32_t> padding_after_3d_;
   std::string data_format_;
   int64_t batch_num_;
   int64_t channel_num_;
@@ -33,18 +52,21 @@ class Params3D {
 
 class GPUPoolOpKernelState final {
  public:
-  GPUPoolOpKernelState();
+  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
+                       const Shape& y_shape, const std::string& data_format, const DataType& dtype,
+                       const Params3D& params_3d);
   ~GPUPoolOpKernelState() = default;
 
  private:
-  const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const;
-  const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const;
-  const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const;
+  const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
+  const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const { return y_desc_->Get(); }
+  const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const { return pooling_desc_->Get(); }
+  const cudnnPoolingMode_t& cudnn_pooling_mode() const { return pooling_mode_; }
 
-  cudnnPoolingMode_t pooling_mode_;
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
-  std::unique_ptr<cudnnPoolingDescriptor_t> pooling_desc_;
+  std::unique_ptr<CudnnPoolDesc> pooling_desc_;
+  cudnnPoolingMode_t pooling_mode_;
 };
 
 }  // namespace oneflow

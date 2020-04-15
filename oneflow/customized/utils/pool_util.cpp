@@ -1,14 +1,42 @@
 #include "oneflow/customized/utils/pool_util.h"
 #include "oneflow/core/operator/operator_util.h"
+#include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
+
+namespace {
+std::vector<int32_t> Get3DVec(const std::vector<int32_t>& val, int32_t NDims) {
+  std::vector<int32_t> vec;
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
+    if (index < 0) {
+      vec.push_back(1);
+    } else {
+      vec.push_back(val.at(index));
+    }
+  }
+  return vec;
+}
+}  // namespace
+
+CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
+
+CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
+                             const int* padding, const int* stride) {
+  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
+  CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
+                                        padding, stride));
+}
 
 Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
                    const std::vector<int32_t>& strides) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, pool_size, strides, padding, &y_3d_, &padding_before_, &padding_after_);
+  pool_size_3d_ = Get3DVec(pool_size, dim);
+  strides_3d_ = Get3DVec(strides, dim);
+  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding, &y_3d_, &padding_before_3d_,
+                  &padding_after_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
   } else if (data_format == "channels_last") {
@@ -39,6 +67,35 @@ Shape Params3D::GetYShape() const {
   }
   y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
   return Shape(y_dim_vec);
+}
+
+GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type,
+                                           const Shape& x_shape, const Shape& y_shape,
+                                           const std::string& data_format, const DataType& dtype,
+                                           const Params3D& params_3d) {
+  if (pooling_type == "AVG") {
+    pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+  } else if (pooling_type == "MAX") {
+    pooling_mode_ = CUDNN_POOLING_MAX;
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  FixedVector pool_size(dim);
+  FixedVector padding(dim);
+  FixedVector strides(dim);
+  FOR_RANGE(int, i, 0, dim) {
+    int32_t index_in_3d = i + 3 - dim;
+    pool_size[i] = params_3d.pool_size_3d().at(index_in_3d);
+    padding[i] = std::max<int>(params_3d.padding_before_3d().at(index_in_3d),
+                               params_3d.padding_after_3d().at(index_in_3d));
+    strides[i] = params_3d.strides_3d().at(index_in_3d);
+  }
+
+  x_desc_ = std::make_unique<CudnnTensorDesc>(new CudnnTensorDesc(dtype, x_shape, data_format));
+  y_desc_ = std::make_unique<CudnnTensorDesc>(new CudnnTensorDesc(dtype, y_shape, data_format));
+  pooling_desc_ = std::make_unique<CudnnPoolDesc>(
+      new CudnnPoolDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
 }
 
 }  // namespace oneflow
