@@ -33,6 +33,7 @@ CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_))
 Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
                    const std::vector<int32_t>& strides) {
+  dim_ = dim;
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
   pool_size_3d_ = Get3DVec(pool_size, dim);
