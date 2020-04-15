@@ -124,6 +124,7 @@ OBJECT_MSG_BEGIN(InstrCtx);
                                                      int64_t default_global_device_id) {
     return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
   }
+  const Stream& stream() const;
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
   OBJECT_MSG_DEFINE_PTR(InstrChain, instr_chain);

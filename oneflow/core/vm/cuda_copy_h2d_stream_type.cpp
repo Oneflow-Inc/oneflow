@@ -50,7 +50,7 @@ class CudaCopyH2DInstructionType final : public InstructionType {
     void* dst = nullptr;
     const void* src = nullptr;
     size_t size = 0;
-    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    const auto& stream = instr_ctx->stream();
     {
       FlatMsgView<CopyInstruction> view;
       CHECK(view.Match(instr_ctx->instr_msg().operand()));

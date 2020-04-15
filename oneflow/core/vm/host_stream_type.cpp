@@ -32,7 +32,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
       size = view->size();
       MirroredObject* mirrored_object = instr_ctx->mut_operand_type(view->mem_buffer());
       mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
-      device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
+      device_id = instr_ctx->stream().thread_ctx().device_id();
     }
     mem_buffer_object_type->set_size(size);
     auto* mem_case = mem_buffer_object_type->mut_mem_case();

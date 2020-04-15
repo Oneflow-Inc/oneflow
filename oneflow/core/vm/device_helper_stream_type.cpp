@@ -31,7 +31,7 @@ class CudaMallocInstructionType final : public InstructionType {
       size = view->size();
       MirroredObject* mirrored_object = instr_ctx->mut_operand_type(view->mem_buffer());
       mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
-      device_id = instr_ctx->mut_instr_chain()->stream().thread_ctx().device_id();
+      device_id = instr_ctx->stream().thread_ctx().device_id();
     }
     mem_buffer_object_type->set_size(size);
     mem_buffer_object_type->mut_mem_case()->mutable_device_cuda_mem()->set_device_id(device_id);
@@ -47,7 +47,7 @@ class CudaMallocInstructionType final : public InstructionType {
       buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
       buffer_value = instr_ctx->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
-    const auto& stream = instr_ctx->mut_instr_chain()->stream();
+    const auto& stream = instr_ctx->stream();
     cudaSetDevice(stream.thread_ctx().device_id());
     CudaCheck(cudaMalloc(&dptr, buffer_type->size()));
     buffer_value->reset_data(dptr);

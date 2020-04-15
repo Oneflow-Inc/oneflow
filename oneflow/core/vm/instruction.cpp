@@ -204,9 +204,9 @@ const MirroredObject* InstrCtx::FindMirroredObjectByOperand(
   return &access->mirrored_object();
 }
 
-int64_t InstrCtx::GetOperandDefaultGlobalDeviceId() const {
-  return instr_chain().stream().global_device_id();
-}
+const Stream& InstrCtx::stream() const { return instr_chain().stream(); }
+
+int64_t InstrCtx::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
 void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
