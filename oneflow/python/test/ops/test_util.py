@@ -50,38 +50,15 @@ class Args:
         self.tf_args = tf_args
 
 
-def GenerateNdArray(shape, initializer):
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    @flow.function(func_config)
-    def FlowJob():
-        with flow.device_prior_placement('cpu'):
-            x = flow.get_variable(
-                "x",
-                shape=shape,
-                dtype=flow.float,
-                initializer=initializer,
-            )
-            return x
-    return FlowJob().get().ndarray()
-
-
-def RunOneflowOp(device_type, flow_op, flow_args, input_shape, flow_initializer):
+def RunOneflowOp(device_type, flow_op, flow_args, x):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
     @flow.function(func_config)
-    def FlowJob():
+    def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
-            x = flow.get_variable(
-                "x",
-                shape=input_shape,
-                dtype=flow.float,
-                initializer=flow_initializer,
-                trainable=True,
-            )
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
@@ -93,10 +70,10 @@ def RunOneflowOp(device_type, flow_op, flow_args, input_shape, flow_initializer)
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    y = FlowJob().get().ndarray()
+    y = FlowJob(x).get().ndarray()
     x = np.load(os.path.join(GetSavePath(), "x.npy"))
     x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
-    return x, y, x_diff
+    return y, x_diff
 
 
 def RunTensorFlowOp(x, tf_op, tf_args):
@@ -116,21 +93,21 @@ def compare_with_tensorflow(param_dict):
     input_shape = param_dict['input_shape']
     # optional params
     op_args = param_dict.get('op_args')
-    flow_initializer = param_dict.get('flow_initializer')
+    input_minval = param_dict.get('input_minval', -10)
+    input_maxval = param_dict.get('input_maxval', 10)
     y_rtol = param_dict.get('y_rtol', 1e-5)
     y_atol = param_dict.get('y_atol', 1e-5)
     x_diff_rtol = param_dict.get('x_diff_rtol', 1e-5)
     x_diff_atol = param_dict.get('x_diff_atol', 1e-5)
 
     assert device_type in ["gpu", "cpu"]
-    if flow_initializer is None:
-        flow_initializer = flow.random_uniform_initializer(minval=-10, maxval=10)
     if op_args is None:
         flow_args, tf_args = [], []
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
-    x, of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, flow_args, input_shape, flow_initializer)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
+    of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, flow_args, x)
     tf_y, tf_x_diff = RunTensorFlowOp(x, tf_op, tf_args)
 
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
