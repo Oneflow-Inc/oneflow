@@ -82,7 +82,7 @@ REGISTER_USER_OP_GRAD("pool").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     user_op::UserOpConfWrapper grad_op =
         builder.Op("pool_grad")
             .Input("x", op.input("x", 0))
-            .Input("y", op.input("y", 0))
+            .Input("y", op.output("y", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
             .Output("dx")
             .Attr("dim", op.attr<int32_t>("dim"))
