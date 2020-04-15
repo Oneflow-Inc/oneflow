@@ -50,29 +50,28 @@ class Args:
         self.tf_args = tf_args
 
 
-def compare_with_tensorflow(param_dict):
-    # necessary params
-    device_type = param_dict['device_type']
-    flow_op = param_dict['flow_op']
-    tf_op = param_dict['tf_op']
-    input_shape = param_dict['input_shape']
-    # optional params
-    op_args = param_dict.get('op_args')
-    flow_initializer = param_dict.get('flow_initializer')
+def GenerateNdArray(shape, initializer):
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    @flow.function(func_config)
+    def FlowJob():
+        with flow.device_prior_placement('cpu'):
+            x = flow.get_variable(
+                "x",
+                shape=shape,
+                dtype=flow.float,
+                initializer=initializer,
+            )
+            return x
+    return FlowJob().get().ndarray()
 
-    assert device_type in ["gpu", "cpu"]
+
+def RunOneflowOp(device_type, flow_op, flow_args, input_shape, flow_initializer):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
+    func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    if flow_initializer is None:
-        flow_initializer = flow.random_uniform_initializer(minval=-10, maxval=10)
-    if op_args is None:
-        flow_args, tf_args = [], []
-    else:
-        flow_args, tf_args = op_args.flow_args, op_args.tf_args
-
     @flow.function(func_config)
     def FlowJob():
         with flow.device_prior_placement(device_type, "0:0"):
@@ -88,26 +87,57 @@ def compare_with_tensorflow(param_dict):
 
             flow.watch(x, Save("x"))
             flow.watch_diff(x, Save("x_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
 
             return loss
 
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = FlowJob().get()
+    y = FlowJob().get().ndarray()
+    x = np.load(os.path.join(GetSavePath(), "x.npy"))
+    x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+    return x, y, x_diff
+
+
+def RunTensorFlowOp(x, tf_op, tf_args):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        tf_out = tf_op(x, *tf_args)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        x = tf.Variable(x)
+        y = tf_op(x, *tf_args)
+    x_diff = tape.gradient(y, x)
+    return y.numpy(), x_diff.numpy()
+    
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+def compare_with_tensorflow(param_dict):
+    # necessary params
+    device_type = param_dict['device_type']
+    flow_op = param_dict['flow_op']
+    tf_op = param_dict['tf_op']
+    input_shape = param_dict['input_shape']
+    # optional params
+    op_args = param_dict.get('op_args')
+    flow_initializer = param_dict.get('flow_initializer')
+    y_rtol = param_dict.get('y_rtol', 1e-5)
+    y_atol = param_dict.get('y_atol', 1e-5)
+    x_diff_rtol = param_dict.get('x_diff_rtol', 1e-5)
+    x_diff_atol = param_dict.get('x_diff_atol', 1e-5)
+
+    assert device_type in ["gpu", "cpu"]
+    if flow_initializer is None:
+        flow_initializer = flow.random_uniform_initializer(minval=-10, maxval=10)
+    if op_args is None:
+        flow_args, tf_args = [], []
+    else:
+        flow_args, tf_args = op_args.flow_args, op_args.tf_args
+
+    x, of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, flow_args, input_shape, flow_initializer)
+    tf_y, tf_x_diff = RunTensorFlowOp(x, tf_op, tf_args)
+
+    assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
     )
+
 
 type_name_to_flow_type = {
     "float16": flow.float16,
