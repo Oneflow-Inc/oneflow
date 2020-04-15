@@ -13,18 +13,18 @@ namespace oneflow {
 
 namespace vm {
 
-class InstrCtx;
+class Instruction;
 class MirroredObject;
 
 // clang-format off
 OBJECT_MSG_BEGIN(MirroredObjectAccess);
   // methods
-  PUBLIC void __Init__(InstrCtx* instr_ctx, MirroredObject* mirrored_object,
+  PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
-  OBJECT_MSG_DEFINE_PTR(InstrCtx, instr_ctx);
+  OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
 
   // links

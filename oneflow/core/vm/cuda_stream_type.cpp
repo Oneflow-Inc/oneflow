@@ -32,17 +32,16 @@ bool CudaStreamType::QueryInstructionStatusDone(
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaStreamType::Compute(InstrChain* instr_chain) const {
-  auto* stream = instr_chain->mut_stream();
+void CudaStreamType::Compute(Instruction* instruction) const {
+  auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->thread_ctx().device_id());
   {
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
-    const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    instr_type_id.instruction_type().Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instruction);
   }
-  stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
-  char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
+  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 

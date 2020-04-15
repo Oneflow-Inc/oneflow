@@ -15,7 +15,7 @@ class Resource;
 namespace vm {
 
 class Stream;
-class InstrChain;
+class Instruction;
 class InstructionStatusBuffer;
 
 struct InferStreamTypeUtil final {
@@ -23,7 +23,7 @@ struct InferStreamTypeUtil final {
   static void DeleteInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
   static bool QueryInstructionStatusDone(const Stream& stream,
                                          const InstructionStatusBuffer& status_buffer);
-  static void Infer(InstrChain* instr_chain);
+  static void Infer(Instruction* instruction);
 };
 
 template<typename T>
@@ -48,8 +48,8 @@ class InferStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override {
     return InferStreamTypeUtil::QueryInstructionStatusDone(stream, status_buffer);
   }
-  void Infer(InstrChain* instr_chain) const override { InferStreamTypeUtil::Infer(instr_chain); }
-  void Compute(InstrChain* instr_chain) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void Infer(Instruction* instruction) const override { InferStreamTypeUtil::Infer(instruction); }
+  void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override {

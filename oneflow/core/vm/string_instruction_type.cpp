@@ -29,16 +29,16 @@ class InitStringSymbolInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override {
-    FlatMsgView<StringObjectInstrOperand> args(instr_ctx->instr_msg().operand());
+  void Infer(Instruction* instruction) const override {
+    FlatMsgView<StringObjectInstrOperand> args(instruction->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
       const auto& str = Global<Storage<std::string>>::Get()->Get(logical_object_id);
-      auto* mirrored_object = instr_ctx->mut_operand_type(args->string(i));
+      auto* mirrored_object = instruction->mut_operand_type(args->string(i));
       mirrored_object->Init<StringObject>(str);
     }
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     // do nothing
   }
 };

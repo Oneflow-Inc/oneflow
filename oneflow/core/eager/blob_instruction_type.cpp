@@ -27,16 +27,16 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
   FLAT_MSG_VIEW_END(DeleteBlobObjectInstrOperand);
   // clang-format on
 
-  void Infer(vm::InstrCtx* instr_ctx) const override {
+  void Infer(vm::Instruction* instruction) const override {
     FlatMsgView<DeleteBlobObjectInstrOperand> view;
-    CHECK(view.Match(instr_ctx->instr_msg().operand()));
+    CHECK(view.Match(instruction->instr_msg().operand()));
     for (int i = 0; i < view->blob_size(); ++i) {
-      auto* type_mirrored_object = instr_ctx->mut_operand_type(view->blob(i));
+      auto* type_mirrored_object = instruction->mut_operand_type(view->blob(i));
       CHECK(type_mirrored_object->Has<BlobObject>());
       type_mirrored_object->reset_object();
     }
   }
-  void Compute(vm::InstrCtx* instr_ctx) const override { TODO(); }
+  void Compute(vm::Instruction* instruction) const override { TODO(); }
 };
 COMMAND(vm::RegisterInstructionType<DeleteBlobObjectInstructionType>("DeleteBlobObject"));
 COMMAND(vm::RegisterLocalInstructionType<DeleteBlobObjectInstructionType>("LocalDeleteBlobObject"));

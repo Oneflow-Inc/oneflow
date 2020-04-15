@@ -71,13 +71,36 @@ OBJECT_MSG_END(InstructionMsg);
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
 
+static const int kInstructionStatusBufferBytes = 32;
 // clang-format off
-OBJECT_MSG_BEGIN(InstrCtx);
+FLAT_MSG_BEGIN(InstructionStatusBuffer);
+  FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
+FLAT_MSG_END(InstructionStatusBuffer);
+// clang-format on
+
+class Instruction;
+// clang-format off
+OBJECT_MSG_BEGIN(InstructionEdge);
   // methods
-  PUBLIC void __Init__(InstrChain* instr_chain, InstructionMsg* instr_msg) {
-    set_instr_chain(instr_chain);
-    reset_instr_msg(instr_msg);
+  PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
+    set_src_instruction(src_instruction);
+    set_dst_instruction(dst_instruction);
   }
+  // links
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, Instruction*, src_instruction);
+  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, Instruction*, dst_instruction);
+OBJECT_MSG_END(InstructionEdge);
+// clang-format on
+
+class Stream;
+// clang-format off
+OBJECT_MSG_BEGIN(Instruction);
+  // methods
+  PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream);
+  PUBLIC void __Delete__();
+  PUBLIC bool Done() const;
+  PUBLIC const StreamType& stream_type() const;
+
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const MirroredObject& operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
@@ -124,13 +147,8 @@ OBJECT_MSG_BEGIN(InstrCtx);
                                                      int64_t default_global_device_id) {
     return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
   }
-  const Stream& stream() const;
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
-  OBJECT_MSG_DEFINE_PTR(InstrChain, instr_chain);
 
   // links
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
   // private methods
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
@@ -144,51 +162,19 @@ OBJECT_MSG_BEGIN(InstrCtx);
   PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_global_device_id);
   PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
 
-OBJECT_MSG_END(InstrCtx);
-// clang-format on
-
-static const int kInstructionStatusBufferBytes = 32;
-// clang-format off
-FLAT_MSG_BEGIN(InstructionStatusBuffer);
-  FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
-FLAT_MSG_END(InstructionStatusBuffer);
-// clang-format on
-
-class InstrChain;
-// clang-format off
-OBJECT_MSG_BEGIN(InstrChainEdge);
-  // methods
-  PUBLIC void __Init__(InstrChain* src_instr_chain, InstrChain* dst_instr_chain) {
-    set_src_instr_chain(src_instr_chain);
-    set_dst_instr_chain(dst_instr_chain);
-  }
-  // links
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, InstrChain*, src_instr_chain);
-  OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, InstrChain*, dst_instr_chain);
-OBJECT_MSG_END(InstrChainEdge);
-// clang-format on
-
-class Stream;
-// clang-format off
-OBJECT_MSG_BEGIN(InstrChain);
-  // methods
-  PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream);
-  PUBLIC void __Delete__();
-  PUBLIC bool Done() const;
-  PUBLIC const StreamType& stream_type() const;
-
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
+  OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
-  OBJECT_MSG_DEFINE_OPTIONAL(InstrCtx, instr_ctx);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instr_chain_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, src_instr_chain, in_edges);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, dst_instr_chain, out_edges);
-OBJECT_MSG_END(InstrChain);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
+OBJECT_MSG_END(Instruction);
 // clang-format on
 
 }  // namespace vm

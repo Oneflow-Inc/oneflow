@@ -25,11 +25,10 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 
 }  // namespace
 
-void VirtualMachine::ReleaseInstruction(InstrChain* instr_chain,
-                                        /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
+void VirtualMachine::ReleaseInstruction(Instruction* instruction,
+                                        /*out*/ ReadyInstructionList* ready_instruction_list) {
   {
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
-    auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
+    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
       mirrored_object_accesses->Erase(access);
       if (access->is_mirrored_object_access_link_empty()) { continue; }
@@ -37,27 +36,27 @@ void VirtualMachine::ReleaseInstruction(InstrChain* instr_chain,
       mirrored_object->mut_access_list()->Erase(access);
     }
   }
-  auto* wait_instr_chain_list = mut_waiting_instr_chain_list();
-  auto* out_edges = instr_chain->mut_out_edges();
+  auto* wait_instruction_list = mut_waiting_instruction_list();
+  auto* out_edges = instruction->mut_out_edges();
   OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(out_edges, out_edge) {
-    InstrChain* out_instr_chain = out_edge->dst_instr_chain();
-    out_instr_chain->mut_in_edges()->Erase(out_edge);
-    if (out_instr_chain->in_edges().empty()) {
-      wait_instr_chain_list->MoveToDstBack(out_instr_chain, ready_instr_chain_list);
+    Instruction* out_instruction = out_edge->dst_instruction();
+    out_instruction->mut_in_edges()->Erase(out_edge);
+    if (out_instruction->in_edges().empty()) {
+      wait_instruction_list->MoveToDstBack(out_instruction, ready_instruction_list);
     }
     out_edges->Erase(out_edge);
   }
 }
 
-void VirtualMachine::TryReleaseFinishedInstrChains(
+void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
-    /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
+    /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_chain_list = stream->mut_running_chain_list();
   while (true) {
-    auto* instr_chain_ptr = running_chain_list->Begin();
-    if (instr_chain_ptr == nullptr || !instr_chain_ptr->Done()) { break; }
-    ReleaseInstruction(instr_chain_ptr, /*out*/ ready_instr_chain_list);
-    stream->DeleteInstrChain(running_chain_list->Erase(instr_chain_ptr));
+    auto* instruction_ptr = running_chain_list->Begin();
+    if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
+    ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
+    stream->DeleteInstruction(running_chain_list->Erase(instruction_ptr));
   }
 }
 
@@ -72,13 +71,13 @@ void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* inst
   }
 }
 
-void VirtualMachine::MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
-                                     /*out*/ NewInstrChainList* new_instr_chain_list) {
+void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
+                                      /*out*/ NewInstructionList* new_instruction_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
-      new_instr_chain_list->EmplaceBack(stream->NewInstrChain(instr_msg));
+      new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg));
     }
     instr_msg_list->Erase(instr_msg);
   }
@@ -174,38 +173,39 @@ void VirtualMachine::ForEachMutMirroredObject(
 }
 
 void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
-                                           MirroredObject* mirrored_object, InstrCtx* instr_ctx) {
+                                           MirroredObject* mirrored_object,
+                                           Instruction* instruction) {
   bool is_const_operand = (access_type == kConstOperandAccess);
   auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
-      instr_ctx->mut_allocator(), instr_ctx, mirrored_object, is_const_operand);
+      instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
   bool success =
-      instr_ctx->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
+      instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
   if (success) {
     mirrored_object->mut_access_list()->EmplaceBack(std::move(mirrored_object_access));
   }
 }
 
-void VirtualMachine::ConnectInstruction(InstrChain* src_instr_chain, InstrChain* dst_instr_chain) {
-  auto edge = ObjectMsgPtr<InstrChainEdge>::NewFrom(mut_vm_thread_only_allocator(), src_instr_chain,
-                                                    dst_instr_chain);
-  bool src_inserted = src_instr_chain->mut_out_edges()->Insert(edge.Mutable()).second;
-  bool dst_inserted = dst_instr_chain->mut_in_edges()->Insert(edge.Mutable()).second;
+void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
+                                        Instruction* dst_instruction) {
+  auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
+                                                     src_instruction, dst_instruction);
+  bool src_inserted = src_instruction->mut_out_edges()->Insert(edge.Mutable()).second;
+  bool dst_inserted = dst_instruction->mut_in_edges()->Insert(edge.Mutable()).second;
   CHECK_EQ(src_inserted, dst_inserted);
 }
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                            NewInstrChainList* new_instr_chain_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
-    int64_t global_device_id = instr_chain->stream().global_device_id();
-    InterpretType interpret_type = instr_chain->stream().stream_type_id().interpret_type();
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
+                                            NewInstructionList* new_instruction_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
+    int64_t global_device_id = instruction->stream().global_device_id();
+    InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instr_ctx);
+      ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
     };
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instr_ctx);
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
     };
-    const auto& operands = instr_ctx->instr_msg().operand();
+    const auto& operands = instruction->instr_msg().operand();
     for (const auto& operand : operands) {
       if (operand->has_mut_operand()) {
         ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
@@ -250,20 +250,20 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         // do nothing
       }
     }
-    auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
+    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
       auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
       if (mirrored_object->access_list().size() == 1) { continue; }
       if (mirrored_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
-          ConnectInstruction(first->mut_instr_ctx()->mut_instr_chain(), instr_chain);
+          ConnectInstruction(first->mut_instruction(), instruction);
         }
       } else {
         auto* access_list = mirrored_object->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == mirrored_object_access) { break; }
-          ConnectInstruction(access->mut_instr_ctx()->mut_instr_chain(), instr_chain);
+          ConnectInstruction(access->mut_instruction(), instruction);
           access_list->Erase(access);
         }
       }
@@ -271,30 +271,26 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void VirtualMachine::MergeChains(NewInstrChainList* new_instr_chain_list) {
-  // TODO(lixinqi)
-}
-
-void VirtualMachine::FilterReadyChains(NewInstrChainList* new_instr_chain_list,
-                                       /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
-  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
-    if (instr_chain->in_edges().empty()) {
-      new_instr_chain_list->MoveToDstBack(instr_chain, ready_instr_chain_list);
+void VirtualMachine::FilterReadyChains(NewInstructionList* new_instruction_list,
+                                       /*out*/ ReadyInstructionList* ready_instruction_list) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
+    if (instruction->in_edges().empty()) {
+      new_instruction_list->MoveToDstBack(instruction, ready_instruction_list);
     }
   }
 }
 
-void VirtualMachine::DispatchInstruction(ReadyInstrChainList* ready_chain_list) {
+void VirtualMachine::DispatchInstruction(ReadyInstructionList* ready_chain_list) {
   auto* active_stream_list = mut_active_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instr_chain) {
-    auto* stream = instr_chain->mut_stream();
-    ready_chain_list->MoveToDstBack(instr_chain, stream->mut_running_chain_list());
+  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instruction) {
+    auto* stream = instruction->mut_stream();
+    ready_chain_list->MoveToDstBack(instruction, stream->mut_running_chain_list());
     if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
     if (stream_type.SharingVirtualMachineThread()) {
-      stream_type.Run(this, instr_chain);
+      stream_type.Run(this, instruction);
     } else {
-      stream->mut_thread_ctx()->mut_pending_chain_list()->PushBack(instr_chain);
+      stream->mut_thread_ctx()->mut_pending_chain_list()->PushBack(instruction);
     }
   }
   ready_chain_list->Clear();
@@ -341,29 +337,28 @@ void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
 }
 
 void VirtualMachine::Schedule() {
-  ReadyInstrChainList ready_instr_chain_list;
+  ReadyInstructionList ready_instruction_list;
   auto* active_stream_list = mut_active_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
-    TryReleaseFinishedInstrChains(stream, /*out*/ &ready_instr_chain_list);
+    TryReleaseFinishedInstructions(stream, /*out*/ &ready_instruction_list);
     if (stream->running_chain_list().empty()) { active_stream_list->Erase(stream); }
   };
-  auto* waiting_instr_chain_list = mut_waiting_instr_chain_list();
+  auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunSourceInstructions(&tmp_pending_msg_list);
-    NewInstrChainList new_instr_chain_list;
-    MakeInstrChains(&tmp_pending_msg_list, /*out*/ &new_instr_chain_list);
-    ConsumeMirroredObjects(mut_id2logical_object(), &new_instr_chain_list);
-    MergeChains(&new_instr_chain_list);
-    FilterReadyChains(&new_instr_chain_list, /*out*/ &ready_instr_chain_list);
-    new_instr_chain_list.MoveTo(waiting_instr_chain_list);
+    NewInstructionList new_instruction_list;
+    MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
+    ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
+    FilterReadyChains(&new_instruction_list, /*out*/ &ready_instruction_list);
+    new_instruction_list.MoveTo(waiting_instruction_list);
   }
-  DispatchInstruction(&ready_instr_chain_list);
+  DispatchInstruction(&ready_instruction_list);
 }
 
 bool VirtualMachine::Empty() const {
-  return pending_msg_list().empty() && waiting_instr_chain_list().empty()
+  return pending_msg_list().empty() && waiting_instruction_list().empty()
          && active_stream_list().empty();
 }
 

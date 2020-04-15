@@ -27,7 +27,7 @@ class NopStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(InstrChain* instr_chain) const override;
+  void Compute(Instruction* instruction) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
@@ -40,9 +40,9 @@ class NopInstructionType final : public InstructionType {
 
   using stream_type = NopStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  void Infer(Instruction* instruction) const override { /* do nothing */
   }
-  void Compute(InstrCtx* instr_ctx) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<NopInstructionType>("Nop"));
 COMMAND(RegisterLocalInstructionType<NopInstructionType>("LocalNop"));
@@ -63,8 +63,8 @@ bool NopStreamType::QueryInstructionStatusDone(const Stream& stream,
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void NopStreamType::Compute(InstrChain* instr_chain) const {
-  auto* status_buffer = instr_chain->mut_status_buffer();
+void NopStreamType::Compute(Instruction* instruction) const {
+  auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 

@@ -26,17 +26,17 @@ class InitConstObjectInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override {
-    FlatMsgView<ConstObjectInstrOperand> args(instr_ctx->instr_msg().operand());
+  void Infer(Instruction* instruction) const override {
+    FlatMsgView<ConstObjectInstrOperand> args(instruction->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->serialized_logical_object_id_size()) {
       const auto& operand = args->serialized_logical_object_id(i);
       int64_t logical_object_id = operand.logical_object_id();
       const auto& serialized_conf = Global<Storage<SerializedT>>::Get()->Get(logical_object_id);
-      auto* mirrored_object = instr_ctx->mut_operand_type(operand);
+      auto* mirrored_object = instruction->mut_operand_type(operand);
       mirrored_object->Init<ObjectWrapper<T>>(serialized_conf);
     }
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     // do nothing
   }
 };

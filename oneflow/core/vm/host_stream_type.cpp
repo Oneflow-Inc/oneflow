@@ -22,32 +22,32 @@ class CudaMallocHostInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override {
+  void Infer(Instruction* instruction) const override {
     MemBufferObjectType* mem_buffer_object_type = nullptr;
     size_t size = 0;
     int64_t device_id = 0;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       size = view->size();
-      MirroredObject* mirrored_object = instr_ctx->mut_operand_type(view->mem_buffer());
+      MirroredObject* mirrored_object = instruction->mut_operand_type(view->mem_buffer());
       mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
-      device_id = instr_ctx->stream().thread_ctx().device_id();
+      device_id = instruction->stream().thread_ctx().device_id();
     }
     mem_buffer_object_type->set_size(size);
     auto* mem_case = mem_buffer_object_type->mut_mem_case();
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     const MemBufferObjectType* buffer_type = nullptr;
     MemBufferObjectValue* buffer_value = nullptr;
     char* dptr = nullptr;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_operand_value(operand)->Init<MemBufferObjectValue>();
+      buffer_type = &instruction->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     CudaCheck(cudaMallocHost(&dptr, buffer_type->size()));
     buffer_value->reset_data(dptr);
@@ -62,30 +62,30 @@ class MallocInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override {
+  void Infer(Instruction* instruction) const override {
     MemBufferObjectType* mem_buffer_object_type = nullptr;
     size_t size = 0;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       size = view->size();
       const auto& operand = view->mem_buffer();
-      MirroredObject* mirrored_object = instr_ctx->mut_operand_type(operand);
+      MirroredObject* mirrored_object = instruction->mut_operand_type(operand);
       mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
     }
     mem_buffer_object_type->set_size(size);
     mem_buffer_object_type->mut_mem_case()->mutable_host_mem();
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     const MemBufferObjectType* buffer_type = nullptr;
     MemBufferObjectValue* buffer_value = nullptr;
     char* dptr = nullptr;
     {
       FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      buffer_type = &instr_ctx->mut_operand_type(operand)->Get<MemBufferObjectType>();
-      buffer_value = instr_ctx->mut_operand_value(operand)->Init<MemBufferObjectValue>();
+      buffer_type = &instruction->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     dptr = reinterpret_cast<char*>(std::malloc(buffer_type->size()));
     buffer_value->reset_data(dptr);
@@ -101,26 +101,26 @@ class CudaFreeHostInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override {
+  void Infer(Instruction* instruction) const override {
     MirroredObject* type_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      type_mirrored_object = instr_ctx->mut_operand_type(operand);
+      type_mirrored_object = instruction->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
     }
     type_mirrored_object->reset_object();
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     MirroredObject* value_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      value_mirrored_object = instr_ctx->mut_operand_value(operand);
+      value_mirrored_object = instruction->mut_operand_value(operand);
     }
     CudaCheck(cudaFreeHost(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data()));
     value_mirrored_object->reset_object();
@@ -135,26 +135,26 @@ class FreeInstructionType final : public InstructionType {
 
   using stream_type = HostStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  void Infer(Instruction* instruction) const override {
     MirroredObject* type_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      type_mirrored_object = instr_ctx->mut_operand_type(operand);
+      type_mirrored_object = instruction->mut_operand_type(operand);
       const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(!buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
     }
     type_mirrored_object->reset_object();
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     MirroredObject* value_mirrored_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      value_mirrored_object = instr_ctx->mut_operand_value(operand);
+      value_mirrored_object = instruction->mut_operand_value(operand);
     }
     std::free(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data());
     value_mirrored_object->reset_object();
@@ -181,14 +181,13 @@ bool HostStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void HostStreamType::Compute(InstrChain* instr_chain) const {
+void HostStreamType::Compute(Instruction* instruction) const {
   {
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
-    const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    instr_type_id.instruction_type().Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instruction);
   }
-  auto* status_buffer = instr_chain->mut_status_buffer();
+  auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
