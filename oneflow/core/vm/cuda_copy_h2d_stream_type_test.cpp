@@ -19,25 +19,22 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(CudaCopyH2DStreamType, basic) {
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
-                                      {"NewSymbol", "Malloc", "CudaMalloc", "CudaCopyH2D"});
+                                      {"NewObject", "Malloc", "CudaMalloc", "CudaCopyH2D"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t src_symbol = 9527;
-  int64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
+  int64_t src_object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  int64_t dst_object_id = TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(src_symbol));
+      NewInstruction("CudaMallocHost")->add_mut_operand(src_object_id)->add_int64_operand(size));
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(dst_symbol));
-  list.EmplaceBack(
-      NewInstruction("CudaMallocHost")->add_mut_operand(src_symbol)->add_int64_operand(size));
-  list.EmplaceBack(
-      NewInstruction("CudaMalloc")->add_mut_operand(dst_symbol)->add_int64_operand(size));
+      NewInstruction("CudaMalloc")->add_mut_operand(dst_object_id)->add_int64_operand(size));
   list.EmplaceBack(NewInstruction("CudaCopyH2D")
-                       ->add_mut_operand(dst_symbol)
-                       ->add_const_operand(src_symbol)
+                       ->add_mut_operand(dst_object_id)
+                       ->add_const_operand(src_object_id)
                        ->add_int64_operand(size));
   scheduler->Receive(&list);
   size_t count = 0;
