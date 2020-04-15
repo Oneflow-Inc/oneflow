@@ -60,6 +60,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     @flow.function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
+            x += flow.get_variable(name = 'v1', shape = (1,), dtype = flow.float, initializer = flow.random_uniform_initializer(minval=0, maxval=0)) 
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
@@ -107,7 +108,7 @@ def compare_with_tensorflow(param_dict):
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
-    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(np.float32)
     of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, x, flow_args)
     tf_y, tf_x_diff = RunTensorFlowOp(tf_op, x, tf_args)
 
