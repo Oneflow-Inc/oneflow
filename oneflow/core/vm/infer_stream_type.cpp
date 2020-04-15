@@ -24,14 +24,13 @@ bool InferStreamTypeUtil::QueryInstructionStatusDone(const Stream& stream,
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void InferStreamTypeUtil::Infer(InstrChain* instr_chain) {
+void InferStreamTypeUtil::Infer(Instruction* instruction) {
   {
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
-    const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-    instr_type_id.instruction_type().Infer(instr_ctx);
+    instr_type_id.instruction_type().Infer(instruction);
   }
-  auto* status_buffer = instr_chain->mut_status_buffer();
+  auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 

@@ -33,14 +33,14 @@ TEST(HostStreamType, basic) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  ASSERT_EQ(vm->waiting_instr_chain_list().size(), 0);
+  ASSERT_EQ(vm->waiting_instruction_list().size(), 0);
   ASSERT_EQ(vm->active_stream_list().size(), 0);
   auto* thread_ctx = vm->mut_thread_ctx_list()->Begin();
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
-  auto* instr_chain = stream->mut_running_chain_list()->Begin();
-  ASSERT_TRUE(instr_chain == nullptr);
+  auto* instruction = stream->mut_running_chain_list()->Begin();
+  ASSERT_TRUE(instruction == nullptr);
 }
 
 TEST(HostStreamType, two_device) {

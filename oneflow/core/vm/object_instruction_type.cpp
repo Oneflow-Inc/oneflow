@@ -60,8 +60,8 @@ class NewObjectInstructionType final : public InstructionType {
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
     Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
-  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
@@ -119,8 +119,8 @@ class DeleteObjectInstructionType final : public InstructionType {
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
     Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
-  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>

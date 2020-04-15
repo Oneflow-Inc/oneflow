@@ -14,8 +14,8 @@ class ThreadCtx;
 OBJECT_MSG_BEGIN(Stream);
   // methods
   PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
-  PUBLIC ObjectMsgPtr<InstrChain> NewInstrChain(InstructionMsg* instr_msg);
-  PUBLIC void DeleteInstrChain(ObjectMsgPtr<InstrChain>&&);
+  PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg);
+  PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
   PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   PUBLIC int64_t machine_id() const;
   PUBLIC const StreamType& stream_type() const;
@@ -29,8 +29,8 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstrChain, instr_chain_link, running_chain_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstrChain, instr_chain_link, free_chain_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, running_chain_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, free_chain_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
 OBJECT_MSG_END(Stream);
 // clang-format on

@@ -9,15 +9,15 @@ namespace oneflow {
 namespace vm {
 
 class InstructionMsg;
-class InstrCtx;
+class Instruction;
 class VirtualMachine;
 
 class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  virtual void Compute(InstrCtx* instr_ctx) const = 0;
-  virtual void Infer(InstrCtx* instr_ctx) const = 0;
+  virtual void Compute(Instruction* instruction) const = 0;
+  virtual void Infer(Instruction* instruction) const = 0;
 
   virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";

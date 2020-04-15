@@ -158,35 +158,35 @@ void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
   CHECK(IsNaiveLogicalObjectId(operand.logical_object_id()));
 }
 
-const MirroredObject& InstrCtx::operand_type(const Operand& operand,
-                                             int64_t default_global_device_id) const {
+const MirroredObject& Instruction::operand_type(const Operand& operand,
+                                                int64_t default_global_device_id) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return *FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_global_device_id);
 }
 
-const MirroredObject& InstrCtx::operand_value(const Operand& operand,
-                                              int64_t default_global_device_id) const {
+const MirroredObject& Instruction::operand_value(const Operand& operand,
+                                                 int64_t default_global_device_id) const {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return *FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_type(const Operand& operand,
-                                           int64_t default_global_device_id) {
+MirroredObject* Instruction::mut_operand_type(const Operand& operand,
+                                              int64_t default_global_device_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   return FindMirroredObjectByOperand<&GetTypeLogicalObjectId>(operand, default_global_device_id);
 }
 
-MirroredObject* InstrCtx::mut_operand_value(const Operand& operand,
-                                            int64_t default_global_device_id) {
+MirroredObject* Instruction::mut_operand_value(const Operand& operand,
+                                               int64_t default_global_device_id) {
   CHECK(IsValueLogicalObjectId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
-                                                      int64_t default_global_device_id) {
+MirroredObject* Instruction::FindMirroredObjectByOperand(const Operand& operand,
+                                                         int64_t default_global_device_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
@@ -195,7 +195,7 @@ MirroredObject* InstrCtx::FindMirroredObjectByOperand(const Operand& operand,
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-const MirroredObject* InstrCtx::FindMirroredObjectByOperand(
+const MirroredObject* Instruction::FindMirroredObjectByOperand(
     const Operand& operand, int64_t default_global_device_id) const {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
@@ -204,28 +204,26 @@ const MirroredObject* InstrCtx::FindMirroredObjectByOperand(
   return &access->mirrored_object();
 }
 
-const Stream& InstrCtx::stream() const { return instr_chain().stream(); }
+int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
-int64_t InstrCtx::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
-
-void InstrChain::__Init__(InstructionMsg* instr_msg, Stream* stream) {
+void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream) {
   mutable_status_buffer();
+  reset_instr_msg(instr_msg);
   set_stream(stream);
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
-  mutable_instr_ctx()->__Init__(this, instr_msg);
 }
 
-void InstrChain::__Delete__() {
+void Instruction::__Delete__() {
   stream_type().DeleteInstructionStatus(stream(), mut_status_buffer());
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
 
-bool InstrChain::Done() const {
+bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-const StreamType& InstrChain::stream_type() const { return stream().stream_type(); }
+const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
 
 }  // namespace vm
 }  // namespace oneflow

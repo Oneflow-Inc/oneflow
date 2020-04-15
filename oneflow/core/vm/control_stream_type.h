@@ -29,11 +29,11 @@ class ControlStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
-  void Compute(InstrChain* instr_chain) const override;
+  void Compute(Instruction* instruction) const override;
 
   bool SharingVirtualMachineThread() const override { return true; }
-  void Infer(VirtualMachine* vm, InstrChain* instr_chain) const override;
-  void Compute(VirtualMachine* vm, InstrChain* instr_chain) const override;
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override;
+  void Compute(VirtualMachine* vm, Instruction* instruction) const override;
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
 };

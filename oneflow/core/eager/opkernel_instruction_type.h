@@ -9,8 +9,8 @@ namespace eager {
 
 class CallOpKernelInstructionType : public vm::InstructionType {
  public:
-  void Infer(vm::InstrCtx* instr_ctx) const override;
-  void Compute(vm::InstrCtx* instr_ctx) const override;
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
 
  protected:
   CallOpKernelInstructionType() = default;
@@ -22,8 +22,8 @@ class CallOpKernelInstructionType : public vm::InstructionType {
 
 class StatelessCallOpKernelInstructionType : public vm::InstructionType {
  public:
-  void Infer(vm::InstrCtx* instr_ctx) const override;
-  void Compute(vm::InstrCtx* instr_ctx) const override;
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
 
  protected:
   StatelessCallOpKernelInstructionType() = default;

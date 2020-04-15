@@ -19,7 +19,7 @@ namespace vm {
 
 class Stream;
 class InstructionStatusBuffer;
-class InstrChain;
+class Instruction;
 class VirtualMachine;
 class InstructionMsg;
 class InstructionType;
@@ -28,9 +28,9 @@ class StreamType {
  public:
   virtual ~StreamType() = default;
 
-  void Run(InstrChain* instr_chain) const;
+  void Run(Instruction* instruction) const;
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const;
-  void Run(VirtualMachine* vm, InstrChain* instr_chain) const;
+  void Run(VirtualMachine* vm, Instruction* instruction) const;
 
   virtual const char* device_tag() const = 0;
 
@@ -42,8 +42,8 @@ class StreamType {
                                        InstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Compute(InstrChain* instr_chain) const = 0;
-  virtual void Infer(InstrChain* instr_chain) const { LOG(FATAL) << "UNIMPLEMENTED"; }
+  virtual void Compute(Instruction* instruction) const = 0;
+  virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   virtual ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                         int64_t this_machine_id) const = 0;
@@ -52,10 +52,10 @@ class StreamType {
   }
 
   virtual bool SharingVirtualMachineThread() const { return false; }
-  virtual void Infer(VirtualMachine* vm, InstrChain* instr_chain) const {
+  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(VirtualMachine* vm, InstrChain* instr_chain) const {
+  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
   virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {

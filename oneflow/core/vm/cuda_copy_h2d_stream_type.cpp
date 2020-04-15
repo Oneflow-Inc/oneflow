@@ -30,7 +30,7 @@ class CudaCopyH2DStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(InstrChain* instr_chain) const override;
+  void Compute(Instruction* instruction) const override;
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
 };
@@ -44,32 +44,34 @@ class CudaCopyH2DInstructionType final : public InstructionType {
 
   using stream_type = CudaCopyH2DStreamType;
 
-  void Infer(InstrCtx* instr_ctx) const override { /* do nothing */
+  void Infer(Instruction* instruction) const override { /* do nothing */
   }
-  void Compute(InstrCtx* instr_ctx) const override {
+  void Compute(Instruction* instruction) const override {
     void* dst = nullptr;
     const void* src = nullptr;
     size_t size = 0;
-    const auto& stream = instr_ctx->stream();
+    const auto& stream = instruction->stream();
     {
       FlatMsgView<CopyInstruction> view;
-      CHECK(view.Match(instr_ctx->instr_msg().operand()));
+      CHECK(view.Match(instruction->instr_msg().operand()));
       size = view->size();
-      const auto& dst_buffer_type = instr_ctx->operand_type(view->dst()).Get<MemBufferObjectType>();
+      const auto& dst_buffer_type =
+          instruction->operand_type(view->dst()).Get<MemBufferObjectType>();
       CHECK_LE(size, dst_buffer_type.size());
       CHECK(dst_buffer_type.mem_case().has_device_cuda_mem());
       CHECK_EQ(dst_buffer_type.mem_case().device_cuda_mem().device_id(),
                stream.thread_ctx().device_id());
       auto* dst_buffer_value =
-          instr_ctx->mut_operand_value(view->dst())->Mut<MemBufferObjectValue>();
+          instruction->mut_operand_value(view->dst())->Mut<MemBufferObjectValue>();
       dst = dst_buffer_value->mut_data();
 
-      const auto& src_buffer_type = instr_ctx->operand_type(view->src()).Get<MemBufferObjectType>();
+      const auto& src_buffer_type =
+          instruction->operand_type(view->src()).Get<MemBufferObjectType>();
       CHECK_LE(size, src_buffer_type.size());
       CHECK(src_buffer_type.mem_case().has_host_mem());
       CHECK(src_buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
       const auto& src_buffer_value =
-          instr_ctx->operand_value(view->src()).Get<MemBufferObjectValue>();
+          instruction->operand_value(view->src()).Get<MemBufferObjectValue>();
       src = src_buffer_value.data();
     }
     Memcpy<DeviceType::kGPU>(stream.device_ctx().get(), dst, src, size,
@@ -104,17 +106,16 @@ bool CudaCopyH2DStreamType::QueryInstructionStatusDone(
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void CudaCopyH2DStreamType::Compute(InstrChain* instr_chain) const {
-  auto* stream = instr_chain->mut_stream();
+void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
+  auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->thread_ctx().device_id());
   {
-    auto* instr_ctx = instr_chain->mut_instr_ctx();
-    const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    instr_type_id.instruction_type().Compute(instr_ctx);
+    instr_type_id.instruction_type().Compute(instruction);
   }
-  stream->mut_callback_list()->MoveTo(instr_chain->mut_callback_list());
-  char* data_ptr = instr_chain->mut_status_buffer()->mut_buffer()->mut_data();
+  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 

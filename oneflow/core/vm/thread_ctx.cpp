@@ -11,22 +11,22 @@ void ThreadCtx::LoopRun() {
 
 ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
+  OBJECT_MSG_LIST(Instruction, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->MoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instr_chain) {
-    stream_type.Run(instr_chain);
-    tmp_list.Erase(instr_chain);
+  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
+    stream_type.Run(instruction);
+    tmp_list.Erase(instruction);
   }
   return status;
 }
 
 ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
-  OBJECT_MSG_LIST(InstrChain, pending_chain_link) tmp_list;
+  OBJECT_MSG_LIST(Instruction, pending_chain_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_chain_list()->TryMoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instr_chain) {
-    stream_type.Run(instr_chain);
-    tmp_list.Erase(instr_chain);
+  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
+    stream_type.Run(instruction);
+    tmp_list.Erase(instruction);
   }
   return status;
 }

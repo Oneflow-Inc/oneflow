@@ -23,22 +23,22 @@ const StreamTypeId& Stream::stream_type_id() const {
   return thread_ctx().stream_rt_desc().stream_type_id();
 }
 
-ObjectMsgPtr<InstrChain> Stream::NewInstrChain(InstructionMsg* instr_msg) {
+ObjectMsgPtr<Instruction> Stream::NewInstruction(InstructionMsg* instr_msg) {
   if (free_chain_list().empty()) {
-    return ObjectMsgPtr<InstrChain>::NewFrom(mut_allocator(), instr_msg, this);
+    return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this);
   }
-  ObjectMsgPtr<InstrChain> instr_chain = mut_free_chain_list()->PopFront();
-  instr_chain->__Init__(instr_msg, this);
-  return instr_chain;
+  ObjectMsgPtr<Instruction> instruction = mut_free_chain_list()->PopFront();
+  instruction->__Init__(instr_msg, this);
+  return instruction;
 }
 
-void Stream::DeleteInstrChain(ObjectMsgPtr<InstrChain>&& instr_chain) {
-  CHECK(instr_chain->is_pending_chain_link_empty());
-  CHECK(instr_chain->is_instr_chain_link_empty());
-  CHECK_EQ(instr_chain->ref_cnt(), 1);
-  auto* instr_chain_ptr = instr_chain.Mutable();
-  mut_free_chain_list()->EmplaceBack(std::move(instr_chain));
-  instr_chain_ptr->__Delete__();
+void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
+  CHECK(instruction->is_pending_chain_link_empty());
+  CHECK(instruction->is_instruction_link_empty());
+  CHECK_EQ(instruction->ref_cnt(), 1);
+  auto* instruction_ptr = instruction.Mutable();
+  mut_free_chain_list()->EmplaceBack(std::move(instruction));
+  instruction_ptr->__Delete__();
 }
 
 }  // namespace vm

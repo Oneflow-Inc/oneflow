@@ -51,17 +51,15 @@ void TestNopStreamTypeNoArgument(
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  ASSERT_EQ(vm->waiting_instr_chain_list().size(), 0);
+  ASSERT_EQ(vm->waiting_instruction_list().size(), 0);
   ASSERT_EQ(vm->active_stream_list().size(), 1 * 2);
   auto* thread_ctx = FindNopThreadCtx(vm.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
-  auto* instr_chain = stream->mut_running_chain_list()->Begin();
-  ASSERT_TRUE(instr_chain != nullptr);
-  auto* instr_ctx = instr_chain->mut_instr_ctx();
-  ASSERT_TRUE(instr_ctx != nullptr);
-  ASSERT_EQ(instr_ctx->mut_instr_msg(), nop_instr_msg.Mutable());
+  auto* instruction = stream->mut_running_chain_list()->Begin();
+  ASSERT_TRUE(instruction != nullptr);
+  ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
 TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine); }

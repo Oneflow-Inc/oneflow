@@ -36,7 +36,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstrChain, instr_chain_link, waiting_instr_chain_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
@@ -44,20 +44,20 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // methods
  private:
-  using ReadyInstrChainList = OBJECT_MSG_LIST(InstrChain, instr_chain_link);
+  using ReadyInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-  using NewInstrChainList = OBJECT_MSG_LIST(InstrChain, instr_chain_link);
-  using WaitingInstrChainList = VirtualMachine::waiting_instr_chain_list_ObjectMsgListType;
+  using NewInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
+  using WaitingInstructionList = VirtualMachine::waiting_instruction_list_ObjectMsgListType;
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
   using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
-  void ReleaseInstruction(InstrChain* instr_chain,
-                            /*out*/ ReadyInstrChainList* ready_instr_chain_list);
-  void TryReleaseFinishedInstrChains(
-          Stream* stream, /*out*/ ReadyInstrChainList* ready_instr_chain_list);
+  void ReleaseInstruction(Instruction* instruction,
+                            /*out*/ ReadyInstructionList* ready_instruction_list);
+  void TryReleaseFinishedInstructions(
+          Stream* stream, /*out*/ ReadyInstructionList* ready_instruction_list);
   void FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list);
-  void MakeInstrChains(TmpPendingInstrMsgList* instr_msg_list,
-                         /*out*/ NewInstrChainList* ret_instr_chain_list);
+  void MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
+                         /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const Operand& operand,
@@ -87,15 +87,14 @@ OBJECT_MSG_BEGIN(VirtualMachine);
     kConstOperandAccess
   };
 
-  void ConnectInstruction(InstrChain* src_instr_chain, InstrChain* dst_instr_chain);
+  void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
-                             InstrCtx* instrution);
+                             Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                              NewInstrChainList* new_instr_chain_list);
-  void MergeChains(NewInstrChainList* new_instr_chain_list);
-  void FilterReadyChains(NewInstrChainList* new_instr_chain_list,
-                         /*out*/ ReadyInstrChainList* ready_instr_chain_list);
-  void DispatchInstruction(ReadyInstrChainList* ready_instr_chain_list);
+                              NewInstructionList* new_instruction_list);
+  void FilterReadyChains(NewInstructionList* new_instruction_list,
+                         /*out*/ ReadyInstructionList* ready_instruction_list);
+  void DispatchInstruction(ReadyInstructionList* ready_instruction_list);
 
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on

@@ -34,14 +34,14 @@ class InferStreamType<ControlStreamType> final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override {
     return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
   }
-  void Infer(InstrChain* instr_chain) const override { UNIMPLEMENTED(); }
-  void Infer(VirtualMachine* vm, InstrChain* instr_chain) const override {
-    ControlStreamType().Infer(vm, instr_chain);
+  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
+    ControlStreamType().Infer(vm, instruction);
   }
   void Infer(VirtualMachine* vm, InstructionMsg* instruction_msg) const override {
     ControlStreamType().Infer(vm, instruction_msg);
   }
-  void Compute(InstrChain* instr_chain) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   bool SharingVirtualMachineThread() const override { return true; }
@@ -80,8 +80,8 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
     Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
-  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
@@ -110,9 +110,9 @@ void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) con
   instr_type_id.instruction_type().Infer(vm, instr_msg);
 }
 
-void ControlStreamType::Infer(VirtualMachine* vm, InstrChain* instr_chain) const {
-  Infer(vm, instr_chain->mut_instr_ctx()->mut_instr_msg());
-  auto* status_buffer = instr_chain->mut_status_buffer();
+void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) const {
+  Infer(vm, instruction->mut_instr_msg());
+  auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
@@ -122,9 +122,9 @@ void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) c
   instr_type_id.instruction_type().Compute(vm, instr_msg);
 }
 
-void ControlStreamType::Compute(VirtualMachine* vm, InstrChain* instr_chain) const {
-  Compute(vm, instr_chain->mut_instr_ctx()->mut_instr_msg());
-  auto* status_buffer = instr_chain->mut_status_buffer();
+void ControlStreamType::Compute(VirtualMachine* vm, Instruction* instruction) const {
+  Compute(vm, instruction->mut_instr_msg());
+  auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
@@ -144,7 +144,7 @@ bool ControlStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void ControlStreamType::Compute(InstrChain* instr_chain) const { UNIMPLEMENTED(); }
+void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
 ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
                                                                  int64_t this_machine_id) const {

@@ -26,13 +26,13 @@ const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_t
   return InferStreamTypeId4ComputeStreamTypeId()->at(compute_stream_type_id);
 }
 
-void StreamType::Run(InstrChain* instr_chain) const {
-  const auto& stream_type_id = instr_chain->stream().stream_id().stream_type_id();
+void StreamType::Run(Instruction* instruction) const {
+  const auto& stream_type_id = instruction->stream().stream_id().stream_type_id();
   auto interpret_type = stream_type_id.interpret_type();
   if (interpret_type == InterpretType::kCompute) {
-    Compute(instr_chain);
+    Compute(instruction);
   } else if (interpret_type == InterpretType::kInfer) {
-    Infer(instr_chain);
+    Infer(instruction);
   } else {
     UNIMPLEMENTED();
   }
@@ -49,12 +49,12 @@ void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   }
 }
 
-void StreamType::Run(VirtualMachine* vm, InstrChain* instr_chain) const {
-  auto interpret_type = instr_chain->stream().stream_id().stream_type_id().interpret_type();
+void StreamType::Run(VirtualMachine* vm, Instruction* instruction) const {
+  auto interpret_type = instruction->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
-    Compute(vm, instr_chain);
+    Compute(vm, instruction);
   } else if (interpret_type == InterpretType::kInfer) {
-    Infer(vm, instr_chain);
+    Infer(vm, instruction);
   } else {
     UNIMPLEMENTED();
   }
