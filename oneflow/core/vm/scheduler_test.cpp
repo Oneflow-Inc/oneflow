@@ -19,7 +19,7 @@ namespace {
 
 TEST(Scheduler, __Init__) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   ASSERT_EQ(scheduler->thread_ctx_list().size(), 2 * 2);
   ASSERT_EQ(scheduler->stream_type_id2stream_rt_desc().size(), 2 * 2);

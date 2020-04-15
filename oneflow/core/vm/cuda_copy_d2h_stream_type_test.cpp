@@ -19,26 +19,24 @@ namespace {
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 void TestSimple(int64_t parallel_num) {
+  TestResourceDescScope scope(parallel_num, parallel_num);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num,
                                       {"Malloc", "CudaMalloc", "CudaCopyD2H"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t src_symbol = 9527;
-  int64_t dst_symbol = 9528;
   std::size_t size = 1024 * 1024;
+  std::string last_device_id = std::to_string(parallel_num - 1);
+  int64_t src_object_id = TestUtil::NewObject(&list, std::string("0:gpu:0-") + last_device_id);
+  int64_t dst_object_id = TestUtil::NewObject(&list, std::string("0:cpu:0-") + last_device_id);
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(parallel_num)->add_int64_operand(src_symbol));
+      NewInstruction("CudaMalloc")->add_mut_operand(src_object_id)->add_int64_operand(size));
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(parallel_num)->add_int64_operand(dst_symbol));
-  list.EmplaceBack(
-      NewInstruction("CudaMalloc")->add_mut_operand(src_symbol)->add_int64_operand(size));
-  list.EmplaceBack(
-      NewInstruction("CudaMallocHost")->add_mut_operand(dst_symbol)->add_int64_operand(size));
+      NewInstruction("CudaMallocHost")->add_mut_operand(dst_object_id)->add_int64_operand(size));
   list.EmplaceBack(NewInstruction("CudaCopyD2H")
-                       ->add_mut_operand(dst_symbol)
-                       ->add_const_operand(src_symbol)
+                       ->add_mut_operand(dst_object_id)
+                       ->add_const_operand(src_object_id)
                        ->add_int64_operand(size));
   scheduler->Receive(&list);
   size_t count = 0;

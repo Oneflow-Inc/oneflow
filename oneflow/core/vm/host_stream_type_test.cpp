@@ -20,17 +20,14 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(HostStreamType, basic) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "Malloc"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject", "Malloc"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = 9527;
+  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   list.EmplaceBack(
-      NewInstruction("NewSymbol")->add_uint64_operand(1)->add_int64_operand(symbol_value));
-  list.EmplaceBack(
-      NewInstruction("CudaMallocHost")->add_mut_operand(symbol_value)->add_int64_operand(1024));
-  list.EmplaceBack(NewInstruction("CudaFreeHost")->add_mut_operand(symbol_value));
-  list.EmplaceBack(
-      NewInstruction("DeleteSymbol")->add_mut_operand(symbol_value, AllMirroredObject()));
+      NewInstruction("CudaMallocHost")->add_mut_operand(object_id)->add_int64_operand(1024));
+  list.EmplaceBack(NewInstruction("CudaFreeHost")->add_mut_operand(object_id));
+  list.EmplaceBack(NewInstruction("DeleteObject")->add_mut_operand(object_id, AllMirroredObject()));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();
@@ -49,16 +46,13 @@ TEST(HostStreamType, basic) {
 TEST(HostStreamType, two_device) {
   int64_t parallel_num = 2;
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num, {"Malloc"});
   auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = 9527;
-  list.EmplaceBack(NewInstruction("NewSymbol")
-                       ->add_uint64_operand(parallel_num)
-                       ->add_int64_operand(symbol_value));
+  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0-1");
   list.EmplaceBack(
-      NewInstruction("CudaMallocHost")->add_mut_operand(symbol_value)->add_int64_operand(1024));
+      NewInstruction("CudaMallocHost")->add_mut_operand(object_id)->add_int64_operand(1024));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();

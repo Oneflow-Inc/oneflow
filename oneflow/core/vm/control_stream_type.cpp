@@ -61,101 +61,6 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   }
 };
 
-class NewSymbolInstructionType final : public InstructionType {
- public:
-  NewSymbolInstructionType() = default;
-  ~NewSymbolInstructionType() override = default;
-
-  using stream_type = ControlStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, parallel_num);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
-  FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
-  // clang-format on
-
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
-  }
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
-  }
-  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
-
- private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
-    FlatMsgView<NewSymbolCtrlInstruction> view;
-    CHECK(view.Match(instr_msg->operand()));
-    FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
-      int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
-      CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-      auto* global_device_id2mirrored_object =
-          logical_object->mut_global_device_id2mirrored_object();
-      for (int64_t global_device_id = 0; global_device_id < view->parallel_num();
-           ++global_device_id) {
-        auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-            scheduler->mut_allocator(), logical_object.Mutable(), global_device_id);
-        CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
-      }
-    }
-  }
-};
-COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
-COMMAND(RegisterLocalInstructionType<NewSymbolInstructionType>("LocalNewSymbol"));
-
-class DeleteSymbolInstructionType final : public InstructionType {
- public:
-  DeleteSymbolInstructionType() = default;
-  ~DeleteSymbolInstructionType() override = default;
-
-  using stream_type = ControlStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(DeleteSymbolCtrlInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, symbol);
-  FLAT_MSG_VIEW_END(DeleteSymbolCtrlInstruction);
-  // clang-format on
-
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    // do nothing, delete symbol in Compute method
-    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
-  }
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
-  }
-  void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
-  void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
-
- private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
-    FlatMsgView<DeleteSymbolCtrlInstruction> view;
-    CHECK(view.Match(instr_msg->operand()));
-    FOR_RANGE(int, i, 0, view->symbol_size()) {
-      int64_t logical_object_id = view->symbol(i).operand().logical_object_id();
-      logical_object_id = GetLogicalObjectId(logical_object_id);
-      auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
-      CHECK_NOTNULL(logical_object);
-      auto* global_device_id2mirrored_object =
-          logical_object->mut_global_device_id2mirrored_object();
-      for (int global_device_id = 0; global_device_id < global_device_id2mirrored_object->size();
-           ++global_device_id) {
-        auto* mirrored_object = global_device_id2mirrored_object->FindPtr(global_device_id);
-        CHECK(!mirrored_object->has_object());
-        global_device_id2mirrored_object->Erase(mirrored_object);
-      }
-      scheduler->mut_id2logical_object()->Erase(logical_object);
-    }
-  }
-};
-COMMAND(RegisterInstructionType<DeleteSymbolInstructionType>("DeleteSymbol"));
-COMMAND(RegisterLocalInstructionType<DeleteSymbolInstructionType>("LocalDeleteSymbol"));
-
 class NewConstHostSymbolInstructionType final : public InstructionType {
  public:
   NewConstHostSymbolInstructionType() = default;
@@ -164,9 +69,9 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
   using stream_type = ControlStreamType;
 
   // clang-format off
-  FLAT_MSG_VIEW_BEGIN(NewSymbolCtrlInstruction);
+  FLAT_MSG_VIEW_BEGIN(NewConstHostInstruction);
     FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
-  FLAT_MSG_VIEW_END(NewSymbolCtrlInstruction);
+  FLAT_MSG_VIEW_END(NewConstHostInstruction);
   // clang-format on
 
   void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
@@ -181,7 +86,7 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
-    FlatMsgView<NewSymbolCtrlInstruction> view;
+    FlatMsgView<NewConstHostInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
