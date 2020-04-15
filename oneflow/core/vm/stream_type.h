@@ -20,7 +20,7 @@ namespace vm {
 class Stream;
 class InstructionStatusBuffer;
 class InstrChain;
-class Scheduler;
+class VirtualMachine;
 class InstructionMsg;
 class InstructionType;
 
@@ -29,8 +29,8 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(InstrChain* instr_chain) const;
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const;
-  void Run(Scheduler* scheduler, InstrChain* instr_chain) const;
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const;
+  void Run(VirtualMachine* vm, InstrChain* instr_chain) const;
 
   virtual const char* device_tag() const = 0;
 
@@ -51,17 +51,17 @@ class StreamType {
     return ObjectMsgPtr<StreamDesc>();
   }
 
-  virtual bool SharingSchedulerThread() const { return false; }
-  virtual void Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
+  virtual bool SharingVirtualMachineThread() const { return false; }
+  virtual void Infer(VirtualMachine* vm, InstrChain* instr_chain) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
+  virtual void Compute(VirtualMachine* vm, InstrChain* instr_chain) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 

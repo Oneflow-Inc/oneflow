@@ -8,7 +8,7 @@
 namespace oneflow {
 namespace vm {
 
-class Scheduler;
+class VirtualMachine;
 class InstructionMsg;
 
 class ControlStreamType final : public StreamType {
@@ -31,11 +31,11 @@ class ControlStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
   void Compute(InstrChain* instr_chain) const override;
 
-  bool SharingSchedulerThread() const override { return true; }
-  void Infer(Scheduler* scheduler, InstrChain* instr_chain) const override;
-  void Compute(Scheduler* scheduler, InstrChain* instr_chain) const override;
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override;
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override;
+  bool SharingVirtualMachineThread() const override { return true; }
+  void Infer(VirtualMachine* vm, InstrChain* instr_chain) const override;
+  void Compute(VirtualMachine* vm, InstrChain* instr_chain) const override;
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override;
 };
 
 }  // namespace vm

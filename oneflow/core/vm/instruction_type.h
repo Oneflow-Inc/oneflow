@@ -10,7 +10,7 @@ namespace vm {
 
 class InstructionMsg;
 class InstrCtx;
-class Scheduler;
+class VirtualMachine;
 
 class InstructionType {
  public:
@@ -19,10 +19,10 @@ class InstructionType {
   virtual void Compute(InstrCtx* instr_ctx) const = 0;
   virtual void Infer(InstrCtx* instr_ctx) const = 0;
 
-  virtual void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
-  virtual void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
 

@@ -18,7 +18,7 @@ namespace vm {
 class VmDesc;
 
 // clang-format off
-OBJECT_MSG_BEGIN(Scheduler);
+OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
   using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
@@ -32,7 +32,7 @@ OBJECT_MSG_BEGIN(Scheduler);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
-  OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, scheduler_thread_only_allocator);
+  OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, vm_thread_only_allocator);
 
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
@@ -47,9 +47,9 @@ OBJECT_MSG_BEGIN(Scheduler);
   using ReadyInstrChainList = OBJECT_MSG_LIST(InstrChain, instr_chain_link);
   using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
   using NewInstrChainList = OBJECT_MSG_LIST(InstrChain, instr_chain_link);
-  using WaitingInstrChainList = Scheduler::waiting_instr_chain_list_ObjectMsgListType;
-  using Id2LogicalObject = Scheduler::id2logical_object_ObjectMsgSkipListType;
-  using ActiveStreamList = Scheduler::active_stream_list_ObjectMsgListType;
+  using WaitingInstrChainList = VirtualMachine::waiting_instr_chain_list_ObjectMsgListType;
+  using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
+  using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
   void ReleaseInstruction(InstrChain* instr_chain,
                             /*out*/ ReadyInstrChainList* ready_instr_chain_list);
@@ -97,7 +97,7 @@ OBJECT_MSG_BEGIN(Scheduler);
                          /*out*/ ReadyInstrChainList* ready_instr_chain_list);
   void DispatchInstruction(ReadyInstrChainList* ready_instr_chain_list);
 
-OBJECT_MSG_END(Scheduler);
+OBJECT_MSG_END(VirtualMachine);
 // clang-format on
 
 }  // namespace vm

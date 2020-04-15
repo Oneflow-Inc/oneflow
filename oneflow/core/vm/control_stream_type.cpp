@@ -3,7 +3,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/flat_msg_view.h"
@@ -35,16 +35,16 @@ class InferStreamType<ControlStreamType> final : public StreamType {
     return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
   }
   void Infer(InstrChain* instr_chain) const override { UNIMPLEMENTED(); }
-  void Infer(Scheduler* scheduler, InstrChain* instr_chain) const override {
-    ControlStreamType().Infer(scheduler, instr_chain);
+  void Infer(VirtualMachine* vm, InstrChain* instr_chain) const override {
+    ControlStreamType().Infer(vm, instr_chain);
   }
-  void Infer(Scheduler* scheduler, InstructionMsg* instruction_msg) const override {
-    ControlStreamType().Infer(scheduler, instruction_msg);
+  void Infer(VirtualMachine* vm, InstructionMsg* instruction_msg) const override {
+    ControlStreamType().Infer(vm, instruction_msg);
   }
   void Compute(InstrChain* instr_chain) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void Compute(Scheduler*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  bool SharingSchedulerThread() const override { return true; }
+  bool SharingVirtualMachineThread() const override { return true; }
 
   ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override {
@@ -74,29 +74,29 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewConstHostInstruction);
   // clang-format on
 
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&GetTypeLogicalObjectId>(vm, instr_msg);
   }
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewConstHostInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id);
-      CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
+                                                                 logical_object_id);
+      CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(scheduler->mut_allocator(),
-                                                                   logical_object.Mutable(), 0);
+      auto mirrored_object =
+          ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
@@ -104,29 +104,29 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
 COMMAND(RegisterInstructionType<NewConstHostSymbolInstructionType>("NewConstHostSymbol"));
 COMMAND(RegisterLocalInstructionType<NewConstHostSymbolInstructionType>("LocalNewConstHostSymbol"));
 
-void ControlStreamType::Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-  instr_type_id.instruction_type().Infer(scheduler, instr_msg);
+  instr_type_id.instruction_type().Infer(vm, instr_msg);
 }
 
-void ControlStreamType::Infer(Scheduler* scheduler, InstrChain* instr_chain) const {
+void ControlStreamType::Infer(VirtualMachine* vm, InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    Infer(scheduler, instr_ctx->mut_instr_msg());
+    Infer(vm, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-void ControlStreamType::Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-  instr_type_id.instruction_type().Compute(scheduler, instr_msg);
+  instr_type_id.instruction_type().Compute(vm, instr_msg);
 }
 
-void ControlStreamType::Compute(Scheduler* scheduler, InstrChain* instr_chain) const {
+void ControlStreamType::Compute(VirtualMachine* vm, InstrChain* instr_chain) const {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    Compute(scheduler, instr_ctx->mut_instr_msg());
+    Compute(vm, instr_ctx->mut_instr_msg());
   }
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();

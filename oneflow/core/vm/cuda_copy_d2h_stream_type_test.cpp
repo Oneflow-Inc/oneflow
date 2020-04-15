@@ -3,9 +3,9 @@
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
@@ -24,7 +24,7 @@ void TestSimple(int64_t parallel_num) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num,
                                       {"Malloc", "CudaMalloc", "CudaCopyD2H"});
-  auto scheduler = ObjectMsgPtr<Scheduler>::New(vm_desc.Get());
+  auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   std::size_t size = 1024 * 1024;
   std::string last_device_id = std::to_string(parallel_num - 1);
@@ -38,11 +38,11 @@ void TestSimple(int64_t parallel_num) {
                        ->add_mut_operand(dst_object_id)
                        ->add_const_operand(src_object_id)
                        ->add_int64_operand(size));
-  scheduler->Receive(&list);
+  vm->Receive(&list);
   size_t count = 0;
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
     ++count;
     if (count % 1000 == 0) { std::cout << count << std::endl; }
   }

@@ -38,23 +38,23 @@ void StreamType::Run(InstrChain* instr_chain) const {
   }
 }
 
-void StreamType::Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+void StreamType::Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   InterpretType interpret_type = instr_msg->instr_type_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
-    Compute(scheduler, instr_msg);
+    Compute(vm, instr_msg);
   } else if (interpret_type == InterpretType::kInfer) {
-    Infer(scheduler, instr_msg);
+    Infer(vm, instr_msg);
   } else {
     UNIMPLEMENTED();
   }
 }
 
-void StreamType::Run(Scheduler* scheduler, InstrChain* instr_chain) const {
+void StreamType::Run(VirtualMachine* vm, InstrChain* instr_chain) const {
   auto interpret_type = instr_chain->stream().stream_id().stream_type_id().interpret_type();
   if (interpret_type == InterpretType::kCompute) {
-    Compute(scheduler, instr_chain);
+    Compute(vm, instr_chain);
   } else if (interpret_type == InterpretType::kInfer) {
-    Infer(scheduler, instr_chain);
+    Infer(vm, instr_chain);
   } else {
     UNIMPLEMENTED();
   }
