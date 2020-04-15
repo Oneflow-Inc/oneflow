@@ -127,7 +127,6 @@ class TestSourceGpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceGpuKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       return ctx.device_type() == DeviceType::kGPU;
     })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });

@@ -25,5 +25,18 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
 };
 COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("CudaCallOpKernel"));
 
+class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKernelInstructionType {
+ public:
+  CudaStatelessCallOpKernelInstructionType() = default;
+  ~CudaStatelessCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
+    "CudaStatelessCallOpKernel"));
+
 }  // namespace eager
 }  // namespace oneflow
