@@ -59,7 +59,7 @@ void TestNopStreamTypeNoArgument(
   ASSERT_TRUE(stream != nullptr);
   auto* instr_chain = stream->mut_running_chain_list()->Begin();
   ASSERT_TRUE(instr_chain != nullptr);
-  auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+  auto* instr_ctx = instr_chain->mut_instr_ctx();
   ASSERT_TRUE(instr_ctx != nullptr);
   ASSERT_EQ(instr_ctx->mut_instr_msg(), nop_instr_msg.Mutable());
 }

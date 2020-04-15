@@ -111,9 +111,7 @@ void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) con
 }
 
 void ControlStreamType::Infer(VirtualMachine* vm, InstrChain* instr_chain) const {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    Infer(vm, instr_ctx->mut_instr_msg());
-  }
+  Infer(vm, instr_chain->mut_instr_ctx()->mut_instr_msg());
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
@@ -125,9 +123,7 @@ void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) c
 }
 
 void ControlStreamType::Compute(VirtualMachine* vm, InstrChain* instr_chain) const {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
-    Compute(vm, instr_ctx->mut_instr_msg());
-  }
+  Compute(vm, instr_chain->mut_instr_ctx()->mut_instr_msg());
   auto* status_buffer = instr_chain->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }

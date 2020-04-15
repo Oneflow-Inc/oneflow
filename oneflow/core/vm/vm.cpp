@@ -27,7 +27,8 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 
 void VirtualMachine::ReleaseInstruction(InstrChain* instr_chain,
                                         /*out*/ ReadyInstrChainList* ready_instr_chain_list) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+  {
+    auto* instr_ctx = instr_chain->mut_instr_ctx();
     auto* mirrored_object_accesses = instr_ctx->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
       mirrored_object_accesses->Erase(access);
@@ -194,13 +195,10 @@ void VirtualMachine::ConnectInstruction(InstrChain* src_instr_chain, InstrChain*
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                             NewInstrChainList* new_instr_chain_list) {
-  auto* begin = new_instr_chain_list->Begin();
-  if (begin != nullptr) { CHECK_EQ(begin->instr_ctx_list().size(), 1); }
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instr_chain_list, instr_chain) {
     int64_t global_device_id = instr_chain->stream().global_device_id();
     InterpretType interpret_type = instr_chain->stream().stream_type_id().interpret_type();
-    CHECK_EQ(instr_chain->instr_ctx_list().size(), 1);
-    auto* instr_ctx = instr_chain->mut_instr_ctx_list()->Begin();
+    auto* instr_ctx = instr_chain->mut_instr_ctx();
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instr_ctx);
     };

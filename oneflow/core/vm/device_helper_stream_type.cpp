@@ -107,7 +107,8 @@ bool DeviceHelperStreamType::QueryInstructionStatusDone(
 }
 
 void DeviceHelperStreamType::Compute(InstrChain* instr_chain) const {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(instr_chain->mut_instr_ctx_list(), instr_ctx) {
+  {
+    auto* instr_ctx = instr_chain->mut_instr_ctx();
     const auto& instr_type_id = instr_ctx->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instr_ctx);

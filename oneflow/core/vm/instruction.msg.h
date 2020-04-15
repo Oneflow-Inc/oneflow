@@ -129,7 +129,6 @@ OBJECT_MSG_BEGIN(InstrCtx);
   OBJECT_MSG_DEFINE_PTR(InstrChain, instr_chain);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(instr_ctx_link);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
   // private methods
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
@@ -180,11 +179,11 @@ OBJECT_MSG_BEGIN(InstrChain);
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
+  OBJECT_MSG_DEFINE_OPTIONAL(InstrCtx, instr_ctx);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_chain_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
-  OBJECT_MSG_DEFINE_LIST_HEAD(InstrCtx, instr_ctx_link, instr_ctx_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, src_instr_chain, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstrChainEdge, dst_instr_chain, out_edges);
