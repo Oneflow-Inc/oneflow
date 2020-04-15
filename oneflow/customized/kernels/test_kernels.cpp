@@ -115,6 +115,23 @@ REGISTER_USER_KERNEL("TestSource")
     })
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
+class TestSourceGpuKernel final : public user_op::OpKernel {
+ public:
+  TestSourceGpuKernel() = default;
+  ~TestSourceGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {}
+};
+
+REGISTER_USER_KERNEL("TestSource")
+    .SetCreateFn<TestSourceGpuKernel>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      return ctx.device_type() == DeviceType::kGPU;
+    })
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
+
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
  public:
   TestMultiOutputOrderKernel() = default;

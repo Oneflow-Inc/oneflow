@@ -14,13 +14,23 @@ namespace vm {
 class VmDesc;
 class VmResourceDesc;
 
+class TestResourceDescScope final {
+ public:
+  TestResourceDescScope(const TestResourceDescScope&) = delete;
+  TestResourceDescScope(TestResourceDescScope&&) = delete;
+  TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num);
+  ~TestResourceDescScope();
+};
+
 struct TestUtil {
   using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
+
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {
     return NewVmResourceDesc(device_num, 1);
   }
+
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num, int64_t machine_num);
 
   // return logical_object_id
