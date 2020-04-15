@@ -16,12 +16,12 @@ class TanHKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     NewKernelUtil<device_type>::TanH(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
-                                        y->mut_dptr<T>());
+                                     y->mut_dptr<T>());
   };
 };
 
 #define REGISTER_RELU_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("tanh").SetCreateFn<TanHKernel<device, dtype>>().SetIsMatchedPred( \
+  REGISTER_USER_KERNEL("tanh").SetCreateFn<TanHKernel<device, dtype>>().SetIsMatchedPred(       \
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
@@ -45,14 +45,14 @@ class TanHGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     NewKernelUtil<device_type>::TanHBackward(ctx->device_ctx(), y_blob->shape().elem_cnt(),
-                                                y_blob->dptr<T>(), y_blob->dptr<T>(),
-                                                dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
+                                             y_blob->dptr<T>(), y_blob->dptr<T>(),
+                                             dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
   };
 };
 
 #define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("tanh_grad")                                                           \
-      .SetCreateFn<TanHGradKernel<device, dtype>>()                                           \
+  REGISTER_USER_KERNEL("tanh_grad")                                                              \
+      .SetCreateFn<TanHGradKernel<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
