@@ -327,6 +327,18 @@ def tanh(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("math.tanh_v2")
+def tanh_v2(features, name=None):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
+        .Op("tanh")
+        .Input("in", [features])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("math.gelu")
 def gelu(x, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -368,18 +380,6 @@ def sigmoid(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
     
-@oneflow_export("math.sigmoid_v2")
-def sigmoid(features, name=None):
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
-        .Op("sigmoid")
-        .Input("in", [features])
-        .Output("out")
-        .Build()
-        .RemoteBlobList()[0]
-    )
-
-
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:

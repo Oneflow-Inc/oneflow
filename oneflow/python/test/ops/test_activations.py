@@ -30,9 +30,9 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
 
     of_activation_map = {
         "relu": flow.keras.activations.relu,
-        #"sigmoid": flow.keras.activations.sigmoid,
-        "sigmoid": flow.math.sigmoid_v2,
-        "tanh": flow.keras.activations.tanh,
+        "sigmoid": flow.keras.activations.sigmoid,
+        #"tanh": flow.keras.activations.tanh,
+        "tanh": flow.math.tanh_v2,
 #        "gelu": flow.keras.activations.gelu,
     }
     tf_activation_map = {
