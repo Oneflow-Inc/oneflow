@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/customized/utils/pool_util.h"
 
 namespace oneflow {
 
