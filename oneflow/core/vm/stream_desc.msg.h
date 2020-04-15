@@ -12,19 +12,6 @@
 namespace oneflow {
 namespace vm {
 
-// clang-format off
-FLAT_MSG_BEGIN(AllStreamEnabledMask);
-FLAT_MSG_END(AllStreamEnabledMask);
-// clang-format on
-
-// clang-format off
-FLAT_MSG_BEGIN(StreamMask);
-  FLAT_MSG_DEFINE_ONEOF(mask_type,
-    FLAT_MSG_ONEOF_FIELD(AllStreamEnabledMask, all_stream_enabled)
-    FLAT_MSG_ONEOF_FIELD(LogicalObjectId, enabled_parallel_desc_symbol));
-FLAT_MSG_END(StreamMask);
-// clang-format on
-
 class StreamId final {
  public:
   using self_type = StreamId;

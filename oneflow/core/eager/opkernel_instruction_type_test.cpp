@@ -26,8 +26,7 @@ int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
   Global<vm::Storage<JobConfigProto>>::Get()->Add(job_desc_id, job_conf);
-  list->EmplaceBack(
-      vm::NewInstruction("InitJobDescSymbol")->add_init_const_host_operand(job_desc_id));
+  list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
@@ -35,7 +34,7 @@ int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<Operator
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
   Global<vm::Storage<OperatorConf>>::Get()->Add(op_conf_id, op_conf);
   list->EmplaceBack(
-      vm::NewInstruction("InitOperatorConfSymbol")->add_init_const_host_operand(op_conf_id));
+      vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
 }
 
@@ -47,8 +46,8 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
   int64_t op_conf_id = NewOpConfSymbol(list, op_conf);
   int64_t opkernel_id = vm::TestUtil::NewObject(list, "0:gpu:0");
   list->EmplaceBack(vm::NewInstruction("InitOpKernelObject")
-                        ->add_const_host_operand(job_desc_id)
-                        ->add_const_host_operand(op_conf_id)
+                        ->add_symbol_operand(job_desc_id)
+                        ->add_symbol_operand(op_conf_id)
                         ->add_mut_operand(opkernel_id));
   return opkernel_id;
 }
@@ -111,7 +110,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
-                       ->add_const_host_operand(obn_id)
+                       ->add_symbol_operand(obn_id)
                        ->add_int64_operand(0)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
@@ -146,7 +145,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_mut_operand(test_source_id)
                          ->add_separator()
                          ->add_separator()
-                         ->add_const_host_operand(out_id)
+                         ->add_symbol_operand(out_id)
                          ->add_int64_operand(0)
                          ->add_mut_operand(x)
                          ->add_separator());
@@ -164,11 +163,11 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     list.EmplaceBack(vm::NewInstruction("CudaCallOpKernel")
                          ->add_mut_operand(ccrelu_id)
                          ->add_separator()
-                         ->add_const_host_operand(in_id)
+                         ->add_symbol_operand(in_id)
                          ->add_int64_operand(0)
                          ->add_const_operand(x)
                          ->add_separator()
-                         ->add_const_host_operand(out_id)
+                         ->add_symbol_operand(out_id)
                          ->add_int64_operand(0)
                          ->add_mut_operand(y)
                          ->add_separator());
@@ -200,12 +199,12 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
-                       ->add_const_host_operand(job_desc_id)
-                       ->add_const_host_operand(op_conf_id)
+                       ->add_symbol_operand(job_desc_id)
+                       ->add_symbol_operand(op_conf_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
-                       ->add_const_host_operand(obn_id)
+                       ->add_symbol_operand(obn_id)
                        ->add_int64_operand(0)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
@@ -236,12 +235,12 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   }
   int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
-                       ->add_const_host_operand(job_desc_id)
-                       ->add_const_host_operand(test_source_id)
+                       ->add_symbol_operand(job_desc_id)
+                       ->add_symbol_operand(test_source_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
-                       ->add_const_host_operand(out_id)
+                       ->add_symbol_operand(out_id)
                        ->add_int64_operand(0)
                        ->add_mut_operand(x)
                        ->add_separator());
@@ -255,15 +254,15 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   }
   int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
-                       ->add_const_host_operand(job_desc_id)
-                       ->add_const_host_operand(ccrelu_id)
+                       ->add_symbol_operand(job_desc_id)
+                       ->add_symbol_operand(ccrelu_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
-                       ->add_const_host_operand(in_id)
+                       ->add_symbol_operand(in_id)
                        ->add_int64_operand(0)
                        ->add_const_operand(x)
                        ->add_separator()
-                       ->add_const_host_operand(out_id)
+                       ->add_symbol_operand(out_id)
                        ->add_int64_operand(0)
                        ->add_mut_operand(y)
                        ->add_separator());

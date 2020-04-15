@@ -27,17 +27,17 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
                                           {"NewConstHostSymbol", instr_type_name});
   auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_value = vm::NewConstHostLogicalObjectId();
-  Global<vm::Storage<SerializedT>>::Get()->Add(symbol_value, std::make_shared<SerializedT>());
-  list.EmplaceBack(vm::NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_value));
-  list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_const_host_operand(symbol_value));
+  int64_t symbol_id = vm::NewConstHostLogicalObjectId();
+  Global<vm::Storage<SerializedT>>::Get()->Add(symbol_id, std::make_shared<SerializedT>());
+  list.EmplaceBack(vm::NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_id));
+  list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   scheduler->Receive(&list);
   while (!scheduler->Empty()) {
     scheduler->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   auto* logical_object =
-      scheduler->mut_id2logical_object()->FindPtr(vm::GetTypeLogicalObjectId(symbol_value));
+      scheduler->mut_id2logical_object()->FindPtr(vm::GetTypeLogicalObjectId(symbol_id));
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);

@@ -36,8 +36,8 @@ using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
 using MutOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
 using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
 
-using ConstHostOperand = ModifiedOperand<kConstModifier, kHostConstMemZoneModifier>;
-using InitConstHostOperand = ModifiedOperand<kDataMutableModifier, kHostConstMemZoneModifier>;
+using SymbolOperand = ModifiedOperand<kConstModifier, kHostConstMemZoneModifier>;
+using InitSymbolOperand = ModifiedOperand<kDataMutableModifier, kHostConstMemZoneModifier>;
 
 FLAT_MSG_BEGIN(OperandSeparator);
 FLAT_MSG_END(OperandSeparator);
@@ -52,8 +52,8 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutOperand, mut_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
-    FLAT_MSG_ONEOF_FIELD(ConstHostOperand, const_host_operand)
-    FLAT_MSG_ONEOF_FIELD(InitConstHostOperand, init_const_host_operand)
+    FLAT_MSG_ONEOF_FIELD(SymbolOperand, symbol_operand)
+    FLAT_MSG_ONEOF_FIELD(InitSymbolOperand, init_symbol_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, separator)
     FLAT_MSG_ONEOF_FIELD(double, double_operand)
     FLAT_MSG_ONEOF_FIELD(int64_t, int64_operand)
