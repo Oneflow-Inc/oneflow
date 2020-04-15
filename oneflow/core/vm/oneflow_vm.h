@@ -3,7 +3,7 @@
 
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 
 namespace oneflow {
 
@@ -13,14 +13,14 @@ class OneflowVM final {
   OneflowVM(const OneflowVM&) = delete;
   OneflowVM(OneflowVM&&) = delete;
   OneflowVM(const Resource& resource, int64_t this_machine_id)
-      : scheduler_(ObjectMsgPtr<vm::Scheduler>::New(
+      : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(
             vm::MakeVmDesc<vm_type>(resource, this_machine_id).Get())) {}
   ~OneflowVM() = default;
 
-  vm::Scheduler* mut_scheduler() { return scheduler_.Mutable(); }
+  vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
 
  private:
-  ObjectMsgPtr<vm::Scheduler> scheduler_;
+  ObjectMsgPtr<vm::VirtualMachine> vm_;
 };
 
 }  // namespace oneflow

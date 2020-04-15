@@ -104,7 +104,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
 OBJECT_MSG_END(MirroredObject);
 // clang-format on
 
-class Scheduler;
+class VirtualMachine;
 // clang-format off
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods

@@ -1,8 +1,8 @@
 #define private public
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -22,14 +22,14 @@ TEST(ControlStreamType, new_object) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
-  auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
+  auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
   TestUtil::NewObject(&list, "0:cpu:0");
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  ASSERT_TRUE(vm->pending_msg_list().empty());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -37,16 +37,16 @@ TEST(ControlStreamType, delete_object) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
-  auto scheduler = ObjectMsgPtr<Scheduler>::NewFrom(&allocator, vm_desc.Get());
+  auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
   int64_t logical_object_id = TestUtil::NewObject(&list, "0:cpu:0");
   list.EmplaceBack(
       NewInstruction("DeleteObject")->add_mut_operand(logical_object_id, AllMirroredObject()));
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  ASSERT_TRUE(vm->pending_msg_list().empty());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 

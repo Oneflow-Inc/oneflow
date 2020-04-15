@@ -3,7 +3,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
@@ -54,22 +54,22 @@ class NewObjectInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(NewObjectInstruction);
   // clang-format on
 
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&GetTypeLogicalObjectId>(vm, instr_msg);
   }
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
     std::shared_ptr<ParallelDesc> parallel_desc;
     {
-      auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(view->parallel_desc());
+      auto* logical_object = vm->mut_id2logical_object()->FindPtr(view->parallel_desc());
       CHECK_NOTNULL(logical_object);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -80,18 +80,17 @@ class NewObjectInstructionType final : public InstructionType {
     const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
-          scheduler->mut_scheduler_thread_only_allocator(), logical_object_id, parallel_desc);
-      CHECK(scheduler->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
+                                                                 logical_object_id, parallel_desc);
+      CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
       ForEachMachineIdAndDeviceIdInRange(
-          *parallel_desc, scheduler->machine_id_range(),
-          [&](int64_t machine_id, int64_t device_id) {
+          *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
             int64_t global_device_id =
-                scheduler->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
             auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-                scheduler->mut_allocator(), logical_object.Mutable(), global_device_id);
+                vm->mut_allocator(), logical_object.Mutable(), global_device_id);
             CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
           });
     }
@@ -113,25 +112,25 @@ class DeleteObjectInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(DeleteObjectInstruction);
   // clang-format on
 
-  void Infer(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
     // do nothing, delete objects in Compute method
-    Run<&GetTypeLogicalObjectId>(scheduler, instr_msg);
+    Run<&GetTypeLogicalObjectId>(vm, instr_msg);
   }
-  void Compute(Scheduler* scheduler, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(scheduler, instr_msg);
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&GetSelfLogicalObjectId>(vm, instr_msg);
   }
   void Infer(InstrCtx*) const override { UNIMPLEMENTED(); }
   void Compute(InstrCtx*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(Scheduler* scheduler, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<DeleteObjectInstruction> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->object_size()) {
       CHECK(view->object(i).operand().has_all_mirrored_object());
       int64_t logical_object_id = view->object(i).operand().logical_object_id();
       logical_object_id = GetLogicalObjectId(logical_object_id);
-      auto* logical_object = scheduler->mut_id2logical_object()->FindPtr(logical_object_id);
+      auto* logical_object = vm->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -139,7 +138,7 @@ class DeleteObjectInstructionType final : public InstructionType {
         CHECK(!mirrored_object->has_object());
         global_device_id2mirrored_object->Erase(mirrored_object);
       }
-      scheduler->mut_id2logical_object()->Erase(logical_object);
+      vm->mut_id2logical_object()->Erase(logical_object);
     }
   }
 };

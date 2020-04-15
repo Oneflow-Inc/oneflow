@@ -1,9 +1,9 @@
 #define private public
 
 #include "oneflow/core/vm/logical_object_id.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -64,11 +64,11 @@ TEST(OpkernelInstructionType, new_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -86,11 +86,11 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -118,11 +118,11 @@ TEST(OpkernelInstructionType, call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "CudaCallOpKernel"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -176,11 +176,11 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "CudaCallOpKernel"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -212,11 +212,11 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "CudaCallOpKernel"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
@@ -270,11 +270,11 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "CudaStatelessCallOpKernel"});
-  auto scheduler = ObjectMsgPtr<vm::Scheduler>::New(vm_desc.Get());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 

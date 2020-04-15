@@ -4,7 +4,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/logical_object_id.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

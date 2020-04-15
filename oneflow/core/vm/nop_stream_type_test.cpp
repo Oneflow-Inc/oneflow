@@ -1,9 +1,9 @@
 #define private public
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/scheduler.msg.h"
+#include "oneflow/core/vm/vm.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
@@ -17,20 +17,20 @@ namespace {
 
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
-ObjectMsgPtr<Scheduler> NaiveNewScheduler(const VmDesc& vm_desc) {
-  return ObjectMsgPtr<Scheduler>::New(vm_desc);
+ObjectMsgPtr<VirtualMachine> NaiveNewVirtualMachine(const VmDesc& vm_desc) {
+  return ObjectMsgPtr<VirtualMachine>::New(vm_desc);
 }
 
-std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> CachedAllocatorNewScheduler() {
+std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> CachedAllocatorNewVirtualMachine() {
   auto allocator = std::make_shared<CachedObjectMsgAllocator>(20, 100);
-  return [allocator](const VmDesc& vm_desc) -> ObjectMsgPtr<Scheduler> {
-    return ObjectMsgPtr<Scheduler>::NewFrom(allocator.get(), vm_desc);
+  return [allocator](const VmDesc& vm_desc) -> ObjectMsgPtr<VirtualMachine> {
+    return ObjectMsgPtr<VirtualMachine>::NewFrom(allocator.get(), vm_desc);
   };
 }
 
-ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
+ThreadCtx* FindNopThreadCtx(VirtualMachine* vm) {
   const StreamTypeId& nop_stream_type_id = LookupInstrTypeId("Nop").stream_type_id();
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), thread_ctx) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
     if (nop_stream_type_id == thread_ctx->stream_rt_desc().stream_desc().stream_type_id()) {
       return thread_ctx;
     }
@@ -39,21 +39,21 @@ ThreadCtx* FindNopThreadCtx(Scheduler* scheduler) {
 }
 
 void TestNopStreamTypeNoArgument(
-    std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
+    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop"});
-  auto scheduler = NewScheduler(vm_desc.Get());
+  auto vm = NewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
   auto nop_instr_msg = NewInstruction("Nop");
   list.PushBack(nop_instr_msg.Mutable());
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  scheduler->Receive(&list);
-  ASSERT_EQ(scheduler->pending_msg_list().size(), 1 * 2);
-  scheduler->Schedule();
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  ASSERT_EQ(scheduler->waiting_instr_chain_list().size(), 0);
-  ASSERT_EQ(scheduler->active_stream_list().size(), 1 * 2);
-  auto* thread_ctx = FindNopThreadCtx(scheduler.Mutable());
+  ASSERT_TRUE(vm->pending_msg_list().empty());
+  vm->Receive(&list);
+  ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
+  vm->Schedule();
+  ASSERT_TRUE(vm->pending_msg_list().empty());
+  ASSERT_EQ(vm->waiting_instr_chain_list().size(), 0);
+  ASSERT_EQ(vm->active_stream_list().size(), 1 * 2);
+  auto* thread_ctx = FindNopThreadCtx(vm.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
@@ -64,18 +64,18 @@ void TestNopStreamTypeNoArgument(
   ASSERT_EQ(instr_ctx->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
-TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewScheduler); }
+TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine); }
 
 TEST(NopStreamType, cached_allocator_no_argument) {
-  TestNopStreamTypeNoArgument(CachedAllocatorNewScheduler());
+  TestNopStreamTypeNoArgument(CachedAllocatorNewVirtualMachine());
 }
 
 void TestNopStreamTypeOneArgument(
-    std::function<ObjectMsgPtr<Scheduler>(const VmDesc&)> NewScheduler) {
+    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
   TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
-  auto scheduler = NewScheduler(vm_desc.Get());
+  auto vm = NewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
   int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
@@ -84,24 +84,26 @@ void TestNopStreamTypeOneArgument(
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  ASSERT_TRUE(scheduler->pending_msg_list().empty());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  ASSERT_TRUE(vm->pending_msg_list().empty());
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
-TEST(NopStreamType, one_argument_dispatch) { TestNopStreamTypeOneArgument(&NaiveNewScheduler); }
+TEST(NopStreamType, one_argument_dispatch) {
+  TestNopStreamTypeOneArgument(&NaiveNewVirtualMachine);
+}
 
 TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
-  TestNopStreamTypeOneArgument(CachedAllocatorNewScheduler());
+  TestNopStreamTypeOneArgument(CachedAllocatorNewVirtualMachine());
 }
 
 TEST(NopStreamType, one_argument_triger_next_chain) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
-  auto scheduler = NaiveNewScheduler(vm_desc.Get());
+  auto vm = NaiveNewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
   int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
@@ -110,17 +112,17 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
 TEST(NopStreamType, one_argument_triger_all_chains) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
-  auto scheduler = NaiveNewScheduler(vm_desc.Get());
+  auto vm = NaiveNewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
   int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
   auto nop0_instr_msg = NewInstruction("Nop");
@@ -129,10 +131,10 @@ TEST(NopStreamType, one_argument_triger_all_chains) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  scheduler->Receive(&list);
-  while (!scheduler->Empty()) {
-    scheduler->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(scheduler->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  vm->Receive(&list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
 }
 
