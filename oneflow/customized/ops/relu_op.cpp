@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+namespace {
+
 REGISTER_USER_OP("relu")
     .Input("in")
     .Output("out")
@@ -68,5 +70,7 @@ REGISTER_USER_OP_GRAD("relu").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     AddOp(relu_grad_op);
   }
 });
+
+}  // namespace
 
 }  // namespace oneflow
