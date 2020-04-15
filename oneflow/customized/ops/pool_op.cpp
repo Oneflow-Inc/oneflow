@@ -18,6 +18,12 @@ REGISTER_USER_OP("pool")
       const std::string padding = ctx->GetAttr<std::string>("padding");
       const std::vector<int32_t> pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t> strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+
+      CHECK_EQ_OR_RETURN(pool_size.size(), dim);
+      for (int32_t pool_dim : pool_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
+      CHECK_EQ_OR_RETURN(strides.size(), dim);
+      for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
+
       const Params3D params_3d(dim, *x_shape, data_format, padding, pool_size, strides);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *y_shape = params_3d.GetYShape();

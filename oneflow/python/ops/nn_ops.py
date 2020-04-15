@@ -126,6 +126,32 @@ def bias_add(value, bias, data_format=None, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def pool(input, window_shape, pooling_type, strides=None, padding='VALID',
+        data_format=None, name=None
+    ):
+    assert pooling_type in ["MAX", "AVG"]
+    dim = len(input.shape) - 2
+    op = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Pool"))
+        .Op("pool")
+        .Input("x", [input])
+        .Output("y")
+    )
+    op.SetAttr("dim", dim, "AttrTypeInt32")
+    op.SetAttr("pooling_type", pooling_type, "AttrTypeString")
+    op.SetAttr("padding", padding, "AttrTypeString")
+    op.SetAttr("data_format", data_format, "AttrTypeString")
+    op.SetAttr("pool_size", window_shape, "AttrTypeListInt32")
+    if strides is not None:
+        op.SetAttr("strides", seed, "AttrTypeListInt32")
+    else:
+        op.SetAttr("strides", [1] * dim, "AttrTypeListInt32")
+    return (
+        op
+        .Build()
+        .RemoteBlobList()[0]
+    )
+
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
     # TODO: fix cuDNN bugs in pooling_1d
