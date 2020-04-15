@@ -88,6 +88,7 @@ REGISTER_USER_OP_GRAD("pool").SetGenBackwardOpConfFn([](const user_op::UserOpWra
             .Attr("dim", op.attr<int32_t>("dim"))
             .Attr("data_format", op.attr<std::string>("data_format"))
             .Attr("padding", op.attr<std::string>("padding"))
+            .Attr("pooling_type", op.attr<std::string>("pooling_type"))
             .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
             .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
             .Build();
