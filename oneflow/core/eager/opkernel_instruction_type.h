@@ -18,11 +18,19 @@ class CallOpKernelInstructionType : public vm::InstructionType {
 
  private:
   virtual const char* device_tag() const = 0;
+};
 
-  template<typename T>
-  void Infer(vm::InstrCtx* instr_ctx, const T& args) const;
-  template<typename T>
-  void Compute(vm::InstrCtx* instr_ctx, const T& args) const;
+class StatelessCallOpKernelInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::InstrCtx* instr_ctx) const override;
+  void Compute(vm::InstrCtx* instr_ctx) const override;
+
+ protected:
+  StatelessCallOpKernelInstructionType() = default;
+  virtual ~StatelessCallOpKernelInstructionType() = default;
+
+ private:
+  virtual const char* device_tag() const = 0;
 };
 
 }  // namespace eager

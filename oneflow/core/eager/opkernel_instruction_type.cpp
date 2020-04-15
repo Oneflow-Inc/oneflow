@@ -15,14 +15,15 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
+#include "oneflow/core/framework/kernel_registration.h"
 
 namespace oneflow {
 namespace eager {
 
-class NewOpKernelObjectInstructionType final : public vm::InstructionType {
+class InitOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
-  NewOpKernelObjectInstructionType() = default;
-  ~NewOpKernelObjectInstructionType() override = default;
+  InitOpKernelObjectInstructionType() = default;
+  ~InitOpKernelObjectInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
 
@@ -49,9 +50,9 @@ class NewOpKernelObjectInstructionType final : public vm::InstructionType {
     // do nothing
   }
 };
-COMMAND(vm::RegisterInstructionType<NewOpKernelObjectInstructionType>("InitOpKernelObject"));
+COMMAND(vm::RegisterInstructionType<InitOpKernelObjectInstructionType>("InitOpKernelObject"));
 COMMAND(
-    vm::RegisterLocalInstructionType<NewOpKernelObjectInstructionType>("LocalInitOpKernelObject"));
+    vm::RegisterLocalInstructionType<InitOpKernelObjectInstructionType>("LocalInitOpKernelObject"));
 
 class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
@@ -257,28 +258,20 @@ void UpdateUserOpConfInputAndOutput(const vm::InstrCtx& instr_ctx, UserOpConf* u
                                });
 }
 
-}  // namespace
-
-void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
-  Infer(instr_ctx, args.Get());
-}
-
-void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, const char* device_tag,
+void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_type,
                               int64_t device_id, DataType default_data_type) {
-  DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const auto& mem_case = MakeMemCase(device_type, device_id);
   opkernel_obj->reset_tmp_buffer_blob_object(new BlobObject(mem_case, default_data_type));
 }
 
 template<typename T>
-void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx, const T& args) const {
-  auto* opkernel_obj = instr_ctx->mut_operand_type(args.opkernel())->template Mut<OpKernelObject>();
+void CallOpKernelInfer(OpKernelObject* opkernel_obj, vm::InstrCtx* instr_ctx, const T& args,
+                       DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     int64_t device_id = instr_ctx->instr_chain().stream().thread_ctx().device_id();
     InitOutputBlobObjects(instr_ctx, args, device_id, default_data_type);
-    ResetTmpBufferBlobObject(opkernel_obj, this->device_tag(), device_id, default_data_type);
+    ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
   UpdateUserOpConfInputAndOutput(*instr_ctx, opkernel_obj->mut_user_op_conf(),
                                  opkernel_obj->op_name(), args);
@@ -291,14 +284,8 @@ void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx, const T& args) 
   }
 }
 
-void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
-  Compute(instr_ctx, args.Get());
-}
-
 template<typename T>
-void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx, const T& args) const {
-  auto* opkernel_obj = instr_ctx->mut_operand_type(args.opkernel())->template Mut<OpKernelObject>();
+void CallInstructionCompute(OpKernelObject* opkernel_obj, vm::InstrCtx* instr_ctx, const T& args) {
   auto Blob4BnInOp = MakeBlob4BnInOp(instr_ctx, args, opkernel_obj);
   DeviceCtx* device_ctx = instr_ctx->mut_instr_chain()->stream().device_ctx().get();
   ForEachObnAndBlobObject(instr_ctx, args, [&](const std::string&, BlobObject* blob_object) {
@@ -314,6 +301,44 @@ void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx, const T& args
     new_state = eager_kernel->EagerModelForward(old_state, device_ctx, Blob4BnInOp);
   }
   opkernel_obj->reset_opkernel_state(new_state);
+}
+
+}  // namespace
+
+void CallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
+  FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
+  auto* opkernel_obj = instr_ctx->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
+  DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  CallOpKernelInfer(opkernel_obj, instr_ctx, args.Get(), device_type);
+}
+
+void CallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
+  FlatMsgView<CallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
+  auto* opkernel_obj = instr_ctx->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
+  CallInstructionCompute(opkernel_obj, instr_ctx, args.Get());
+}
+
+void StatelessCallOpKernelInstructionType::Infer(vm::InstrCtx* instr_ctx) const {
+  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
+  const auto& job_desc_ptr =
+      instr_ctx->operand_type(args->job_desc()).Get<vm::ObjectWrapper<JobDesc>>().GetPtr();
+  const auto& op_conf =
+      instr_ctx->mut_operand_type(args->op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
+  CHECK(op_conf.has_user_conf());
+  CHECK(user_op::IsStateless4OpTypeName(op_conf.user_conf().op_type_name()));
+  DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  vm::MirroredObject* mirrored_object = instr_ctx->mut_operand_type(args->shared_opkernel());
+  if (mirrored_object->has_object()) { CHECK(mirrored_object->Has<OpKernelObject>()); }
+  CHECK_EQ(device_type, mirrored_object->logical_object().parallel_desc()->device_type());
+  mirrored_object->reset_object();
+  auto* opkernel_obj = mirrored_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
+  CallOpKernelInfer(opkernel_obj, instr_ctx, args.Get(), device_type);
+}
+
+void StatelessCallOpKernelInstructionType::Compute(vm::InstrCtx* instr_ctx) const {
+  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instr_ctx->instr_msg().operand());
+  auto* opkernel_obj = instr_ctx->mut_operand_type(args->shared_opkernel())->Mut<OpKernelObject>();
+  CallInstructionCompute(opkernel_obj, instr_ctx, args.Get());
 }
 
 }  // namespace eager

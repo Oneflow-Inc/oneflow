@@ -55,7 +55,7 @@ HashMap<std::string, bool>* IsStateless4OpTypeName() {
   return &op_type_name2is_stateless;
 }
 
-bool IsStatefull4OpTypeName(const std::string& op_type_name) {
+bool IsStateless4OpTypeName(const std::string& op_type_name) {
   return IsStateless4OpTypeName()->at(op_type_name);
 }
 
