@@ -86,7 +86,7 @@ class GpuPoolGradKernel final : public user_op::OpKernel {
         CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), y->dptr(),
         gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), dy->dptr(),
         gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
-        x.Get(), dx->mut_dptr()));
+        gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), dx->mut_dptr()));
   };
 };
 
