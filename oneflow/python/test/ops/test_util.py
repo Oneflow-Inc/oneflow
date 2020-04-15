@@ -50,7 +50,7 @@ class Args:
         self.tf_args = tf_args
 
 
-def RunOneflowOp(device_type, flow_op, flow_args, x):
+def RunOneflowOp(device_type, flow_op, x, flow_args):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -76,7 +76,7 @@ def RunOneflowOp(device_type, flow_op, flow_args, x):
     return y, x_diff
 
 
-def RunTensorFlowOp(x, tf_op, tf_args):
+def RunTensorFlowOp(tf_op, x, tf_args):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
@@ -107,8 +107,8 @@ def compare_with_tensorflow(param_dict):
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
-    of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, flow_args, x)
-    tf_y, tf_x_diff = RunTensorFlowOp(x, tf_op, tf_args)
+    of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, x, flow_args)
+    tf_y, tf_x_diff = RunTensorFlowOp(tf_op, x, tf_args)
 
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
     assert np.allclose(
