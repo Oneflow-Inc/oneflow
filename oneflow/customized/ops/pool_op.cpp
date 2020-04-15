@@ -56,11 +56,7 @@ REGISTER_USER_OP("pool_grad")
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *x_shape);
-      *dx_shape = *dy_shape;
+      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
