@@ -10,6 +10,16 @@
 namespace oneflow {
 namespace vm {
 
+TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num) {
+  Resource resource;
+  resource.set_machine_num(1);
+  resource.set_gpu_device_num(gpu_device_num);
+  resource.set_cpu_device_num(cpu_device_num);
+  Global<ResourceDesc>::New(resource);
+}
+
+TestResourceDescScope::~TestResourceDescScope() { Global<ResourceDesc>::Delete(); }
+
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {
   HashMap<std::string, int64_t> map{{"cpu", device_num}, {"gpu", device_num}};
   return ObjectMsgPtr<VmResourceDesc>::New(machine_num, map);
