@@ -49,5 +49,8 @@ def PrependOpNamePrefixIfNeed(op_conf):
     if op_conf.HasField("decode_ofrecord_conf"):
         return
 
+    if op_conf.HasField("user_conf"):
+        return
+
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     op_conf.name = GetJobNameScopePrefix(job_name) + op_conf.name
