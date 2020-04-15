@@ -7,7 +7,7 @@ from collections import OrderedDict
 from test_util import GenArgDict
 from test_util import GetSavePath
 from test_util import Save
-from test_util import compare_with_tensorflow
+from test_util import CompareOpWithTensorFlow
 from test_util import Args
 
 
@@ -24,7 +24,7 @@ def test_pad_gpu(test_case):
                             Args([([0, 0], [0, 0], [10, 20], [0, 0])], tf.constant([([0, 0], [0, 0], [10, 20], [0, 0])])), 
                            ]
     for arg in GenArgDict(arg_dict):
-        compare_with_tensorflow(arg)
+        CompareOpWithTensorFlow(arg)
 
 def test_pad_cpu(test_case):
     arg_dict = OrderedDict()
@@ -38,4 +38,4 @@ def test_pad_cpu(test_case):
                             Args([([0, 0], [0, 0], [10, 20], [0, 0])], tf.constant([([0, 0], [0, 0], [10, 20], [0, 0])])), 
                            ]
     for arg in GenArgDict(arg_dict):
-        compare_with_tensorflow(arg)
+        CompareOpWithTensorFlow(arg)

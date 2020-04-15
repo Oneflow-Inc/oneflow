@@ -86,7 +86,7 @@ def RunTensorFlowOp(tf_op, x, tf_args):
     return y.numpy(), x_diff.numpy()
 
 
-def compare_with_tensorflow(param_dict):
+def CompareOpWithTensorFlow(param_dict):
     # necessary params
     device_type = param_dict['device_type']
     flow_op = param_dict['flow_op']

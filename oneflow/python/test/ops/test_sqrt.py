@@ -7,7 +7,7 @@ from collections import OrderedDict
 from test_util import GenArgDict
 from test_util import GetSavePath
 from test_util import Save
-from test_util import compare_with_tensorflow
+from test_util import CompareOpWithTensorFlow
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -23,4 +23,4 @@ def test_sqrt(test_case):
     arg_dict['input_minval'] = [0]
     arg_dict['input_maxval'] = [100]
     for arg in GenArgDict(arg_dict):
-        compare_with_tensorflow(arg)
+        CompareOpWithTensorFlow(arg)

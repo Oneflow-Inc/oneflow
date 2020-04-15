@@ -7,7 +7,7 @@ from collections import OrderedDict
 from test_util import GenArgDict
 from test_util import GetSavePath
 from test_util import Save
-from test_util import compare_with_tensorflow
+from test_util import CompareOpWithTensorFlow
 from test_util import Args
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -23,4 +23,4 @@ def test_reshape(test_case):
     arg_dict["input_shape"] = [(10, 10, 10)]
     arg_dict['op_args'] = [Args([(100, 10)]), Args([(10, 100)]), Args([(5, 20, 10)])] 
     for arg in GenArgDict(arg_dict):
-        compare_with_tensorflow(arg)
+        CompareOpWithTensorFlow(arg)
