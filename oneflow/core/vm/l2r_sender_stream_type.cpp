@@ -69,7 +69,7 @@ void MakeSendRequests(InstrCtx* instr_ctx, TransportKey2SendRequest* transport_k
   const char* data_ptr = nullptr;
   size_t data_size = 0;
   {
-    const auto& stream = instr_chain->stream();
+    const auto& stream = instr_ctx->stream();
     FlatMsgView<L2RSenderInstruction> view;
     CHECK(view.Match(instr_ctx->instr_msg().operand()));
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());

@@ -269,7 +269,7 @@ void CallOpKernelInfer(OpKernelObject* opkernel_obj, vm::InstrCtx* instr_ctx, co
                        DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
-    int64_t device_id = instr_ctx->instr_chain().stream().thread_ctx().device_id();
+    int64_t device_id = instr_ctx->stream().thread_ctx().device_id();
     InitOutputBlobObjects(instr_ctx, args, device_id, default_data_type);
     ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
@@ -287,7 +287,7 @@ void CallOpKernelInfer(OpKernelObject* opkernel_obj, vm::InstrCtx* instr_ctx, co
 template<typename T>
 void CallInstructionCompute(OpKernelObject* opkernel_obj, vm::InstrCtx* instr_ctx, const T& args) {
   auto Blob4BnInOp = MakeBlob4BnInOp(instr_ctx, args, opkernel_obj);
-  DeviceCtx* device_ctx = instr_ctx->mut_instr_chain()->stream().device_ctx().get();
+  DeviceCtx* device_ctx = instr_ctx->stream().device_ctx().get();
   ForEachObnAndBlobObject(instr_ctx, args, [&](const std::string&, BlobObject* blob_object) {
     blob_object->TryAllocateBlobBodyMemory(device_ctx);
   });
