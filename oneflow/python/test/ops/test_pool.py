@@ -73,10 +73,6 @@ def test_pool(_):
         padding = pool_conf["padding"]
         data_format = pool_conf["data_format"]
         flow.clear_default_session()
-        func_config = flow.FunctionConfig()
-        func_config.default_data_type(flow.float)
-        func_config.train.primary_lr(1e-4)
-        func_config.train.model_update_conf(dict(naive_conf={}))
 
         # Random inputs
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
@@ -113,6 +109,11 @@ def test_pool(_):
 
         # 1F results
         dtype = type_name_to_flow_type[data_type]
+
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float)
+        func_config.train.primary_lr(1e-4)
+        func_config.train.model_update_conf(dict(naive_conf={}))
 
         @flow.function(func_config)
         def pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
