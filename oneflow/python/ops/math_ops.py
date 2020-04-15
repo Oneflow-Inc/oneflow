@@ -369,9 +369,9 @@ def sigmoid(x, name=None):
 
     
 @oneflow_export("math.sigmoid_v2")
-def sigmoid(features, name=None):
+def sigmoid_v2(features, name=None):
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sigmoid_"))
         .Op("sigmoid")
         .Input("in", [features])
         .Output("out")
