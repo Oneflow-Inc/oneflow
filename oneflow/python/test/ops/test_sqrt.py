@@ -20,6 +20,7 @@ def test_sqrt(test_case):
     arg_dict['flow_op'] = [flow.math.sqrt]
     arg_dict['tf_op'] = [tf.math.sqrt]
     arg_dict["input_shape"] = [(10, 20, 30)]
-    arg_dict['flow_initializer'] = [flow.random_uniform_initializer(minval=0, maxval=100)]
+    arg_dict['input_minval'] = [0]
+    arg_dict['input_maxval'] = [100]
     for arg in GenArgDict(arg_dict):
         compare_with_tensorflow(arg)
