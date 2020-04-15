@@ -13,14 +13,14 @@ REGISTER_USER_OP("pool")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const int32_t dim = ctx->GetAttr<int32_t>("dim");
       const std::string data_format = ctx->GetAttr<std::string>("data_format");
       const std::string padding = ctx->GetAttr<std::string>("padding");
       const std::vector<int32_t> pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t> strides = ctx->GetAttr<std::vector<int32_t>>("strides");
-      const Params3D param3d(dim, *x_shape, data_format, padding, pool_size, strides);
-      *y_shape = param3d.GetYShape();
+      const Params3D params_3d(dim, *x_shape, data_format, padding, pool_size, strides);
+      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      *y_shape = params_3d.GetYShape();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
