@@ -15,7 +15,7 @@ class Params3D {
            const std::vector<int32_t>& strides);
   ~Params3D() = default;
 
-  Shape GetYShape();
+  Shape GetYShape() const;
 
  private:
   int32_t dim_;
@@ -37,14 +37,14 @@ class GPUPoolOpKernelState final {
   ~GPUPoolOpKernelState() = default;
 
  private:
-  const cudnnTensorDescriptor_t& cudnn_in_tensor_desc() const;
-  const cudnnTensorDescriptor_t& cudnn_out_tensor_desc() const;
+  const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const;
+  const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const;
   const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const;
 
   cudnnPoolingMode_t pooling_mode_;
-  std::unique_ptr<CudnnTensorDesc> in_desc_;
-  std::unique_ptr<CudnnTensorDesc> out_desc_;
-  cudnnPoolingDescriptor_t pooling_desc_;
+  std::unique_ptr<CudnnTensorDesc> x_desc_;
+  std::unique_ptr<CudnnTensorDesc> y_desc_;
+  std::unique_ptr<cudnnPoolingDescriptor_t> pooling_desc_;
 };
 
 }  // namespace oneflow

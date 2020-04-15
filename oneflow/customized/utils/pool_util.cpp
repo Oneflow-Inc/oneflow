@@ -19,7 +19,7 @@ Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& d
   batch_num_ = x_shape.At(0);
 }
 
-Shape Params3D::GetYShape() {
+Shape Params3D::GetYShape() const {
   DimVector y_dim_vec;
   if (dim_ == 1) {
     y_dim_vec = {y_3d_.at(2)};
