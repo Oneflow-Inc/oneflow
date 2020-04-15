@@ -5,21 +5,21 @@
 namespace oneflow {
 
 namespace {
-std::vector<int32_t> Get3DVec(const std::vector<int32_t>& val, int32_t NDims) {
+
+std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
   std::vector<int32_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
       vec.push_back(1);
     } else {
-      vec.push_back(val.at(index));
+      vec.push_back(original_vec.at(index));
     }
   }
   return vec;
 }
-}  // namespace
 
-CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
+}  // namespace
 
 CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
                              const int* padding, const int* stride) {
@@ -27,6 +27,8 @@ CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const in
   CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
                                         padding, stride));
 }
+
+CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
 
 Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
@@ -92,9 +94,9 @@ GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string&
     strides[i] = params_3d.strides_3d().at(index_in_3d);
   }
 
-  x_desc_ = std::make_unique<CudnnTensorDesc>(new CudnnTensorDesc(dtype, x_shape, data_format));
-  y_desc_ = std::make_unique<CudnnTensorDesc>(new CudnnTensorDesc(dtype, y_shape, data_format));
-  pooling_desc_ = std::make_unique<CudnnPoolDesc>(
+  x_desc_.reset(new CudnnTensorDesc(dtype, x_shape, data_format));
+  y_desc_.reset(new CudnnTensorDesc(dtype, y_shape, data_format));
+  pooling_desc_.reset(
       new CudnnPoolDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
 }
 
