@@ -23,7 +23,7 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("CudaCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("gpu_CallOpKernel"));
 
 class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKernelInstructionType {
  public:
@@ -36,7 +36,7 @@ class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKer
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
-    "CudaStatelessCallOpKernel"));
+    "gpu_StatelessCallOpKernel"));
 
 }  // namespace eager
 }  // namespace oneflow

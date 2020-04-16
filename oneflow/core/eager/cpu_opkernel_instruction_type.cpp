@@ -23,7 +23,7 @@ class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuCallOpKernelInstructionType>("CpuCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CpuCallOpKernelInstructionType>("cpu_CallOpKernel"));
 
 class CpuStatelessCallOpKernelInstructionType final : public StatelessCallOpKernelInstructionType {
  public:
@@ -36,7 +36,7 @@ class CpuStatelessCallOpKernelInstructionType final : public StatelessCallOpKern
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuStatelessCallOpKernelInstructionType>(
-    "CpuStatelessCallOpKernel"));
+    "cpu_StatelessCallOpKernel"));
 
 }  // namespace eager
 }  // namespace oneflow
