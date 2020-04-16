@@ -26,6 +26,31 @@ REGISTER_USER_OP("binary")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("binary_bool")
+    .Input("x")
+    .Inpuy("y")
+    .Output("z")
+    .Attr("binary_math_type", UserOpAttrType::kAtString)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      Shape* z_shape = ctx->Shape4ArgNameAndIndex("z", 0);
+      CHECK(*y_shape ==*x_shape);
+      *z_shape = *x_shape;
+ DataType* y_dtype = ctx->Dtype4ArgNameAndIndex("y", 0);
+      *y_dtype = kFloat32;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      SbpSignatureBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("binary_x_grad")
     .Input("x")
     .Input("y")
@@ -105,4 +130,5 @@ REGISTER_USER_OP_GRAD("binary").SetGenBackwardOpConfFn([](const user_op::UserOpW
     AddOp(binary_grad_op);
   }
 });
+
 }  // namespace oneflow

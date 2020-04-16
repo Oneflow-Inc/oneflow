@@ -423,3 +423,14 @@ def xlogy(x, y, name=None):
             .Output("z")\
             .SetAttr("binary_math_type", "Xlogy", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
+
+@oneflow_export("math.geater")
+def geater(x, y, name=None):
+    if name is None:
+        name -id_util.UniqueStr("Geater_")
+    return user_op_builder.UserOpConfWrapprtBuilder(name).Op(geater)\
+            .Input("x",[x])\
+            .Input("y",[y])\
+            .SetAttr("binary_math_type", "Greater", "AttrTypeString")\
+            .Output("z")\
+            .Build().RemoteBlobList()[0]

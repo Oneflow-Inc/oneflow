@@ -54,7 +54,6 @@ __device__ float XlogyCalXDiff4GpuFloat(float x, float y, float dz) {
     return Xlogy4GpuFloat(dz, y);
   }
 }
-
 __device__ float XlogyCalYDiff4GpuFloat(float x, float y, float dz) {
   return dz * Xdivy4GpuFloat(x, y);
 }
@@ -63,6 +62,8 @@ __device__ float FloordivFuc(float x, float y) { return floor(fdividef(x, y)); }
 __device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) { return 0; }
 
 __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 0; }
+
+__device__ float Greater4GpuFloat(float x, float y) { return x>y?1:0; } //use int8 1 as true; int8 0 as false
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
@@ -109,16 +110,35 @@ __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 
                               ctx->cuda_stream()>>>(n, x, y, dz, dy);                            \
   }
 
+#define MATH_BINARY_GPU_BOOL(func_name, fw_func, x_dtype, y_dtype, z_dtype)                     \
+  __global__ void func_name##ForwardGpu(const int n, const x_dtype* x, const y_dtype* y, z_dtype* z) {  \
+    CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                               \
+  }                                                                                   \
+  void func_name##Forward(DeviceCtx* ctx, const Tensor* tensor_x, const Tensor* tensor_y, \
+          Tensor* tensor_z) { \
+    const x_dtype* x = tensor_x->dptr<x_dtype>();                                     \
+    const y_dtype* y = tensor_y->dptr<x_dtype>();                                     \
+    z_dtype* z = tensor_z->mut_dptr<z_dtype>();                                       \
+    int64_t n = tensor_x->shape().elem_cnt();                                         \
+    CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                            \
+    func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,      \
+                            ctx->cuda_stream()>>>(n, x, y);                           \
+  }
+
 #define MATH_BINARY_GPU_FLOAT_SEQ            \
   OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)           \
   OF_PP_MAKE_TUPLE_SEQ("Floordiv", Floordiv) \
   OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)       \
   OF_PP_MAKE_TUPLE_SEQ("Xlogy", Xlogy)
 
+#define MATH_BINARY_GPU_BOOL_SEQ             \
+  OF_PP_MAKE_TUPLE_SEQ("Greater", Greater)
+
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU_BOOL(Greater, Greater4GpuFloat, float, float, int8_t);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
@@ -146,12 +166,49 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
   }
 };
 
+class MathBinaryBoolGpuFloatKernel final : public OpKernel {
+ public:
+ // MathBinaryBoolGpuFloatKernel(KernelInitContext* ctx) : OpKernel(ctx) {}
+  MathBinaryBoolGpuFloatKernel() = default;
+  ~MathBinaryBoolGpuFloatKernel() = default;
+ private:
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    std::string binary_math_type = ctx->GetAttr<std::string>("binary_math_type");
+    bool is_find = false;
+#define MATH_BINARY_FORWARD(binary_math_type_str, func_name_prefix)     \
+  if (binary_math_type == binary_math_type_str) {                       \
+      is_find = true;                                                   \
+      func_name_prefix##Forward(ctx->device_ctx(), tensor_x, tensor_y, tensor_z); \
+  }
+    OF_PP_FOR_EACH_TUPLE(MATH_BINARY_FORWARD, MATH_BINARY_GPU_BOOL_SEQ);
+    CHECK(is_find);
+
+#undef MATH_BINARY_FORWORD
+  }
+};
+
 REGISTER_USER_KERNEL("binary").SetCreateFn<MathBinaryGpuFloatKernel>().SetIsMatchedPred(
     [](const KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       const user_op::TensorDesc* z_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);
 
+      if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
+          && y_tensor_desc->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
+REGISTER_USER_KERNEL("binary_bool")
+    .SetCreateFn<MathBinaryBoolGpuFloatKernel>().SetIsMatchedPred(
+            [](const KernelRegContext& ctx) {
+      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
+      const user_op::TensorDesc* z_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);
       if (ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
           && y_tensor_desc->data_type() == DataType::kFloat) {
         return true;
