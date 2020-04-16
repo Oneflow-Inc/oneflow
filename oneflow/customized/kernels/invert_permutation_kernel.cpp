@@ -14,18 +14,20 @@ class CpuInvertPermutationKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = in->shape().elem_cnt();
     const T* x_ptr = in->dptr<T>();
     T* y_ptr = out->mut_dptr<T>();
     std::fill_n(y_ptr, elem_cnt, -1);
 
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
 
-      const T d = x_ptr(i);
-      CHECK_OR_RETURN(d < elem_cnt) << d << " is not between 0 and " << elem_cnt;
-      CHECK_OR_RETURN( y_ptr(d) == -1 ) << d << " is duplicated in the input.";
+      const T d = x_ptr[i];
 
-      y_ptr(d) = i;
+      CHECK(d < elem_cnt && d>=0) << d << " is not between 0 and " << elem_cnt;
+      CHECK( y_ptr[d] == -1 ) << d << " is duplicated in the input.";
+
+      y_ptr[d] = i;
+
     }
 
   };
