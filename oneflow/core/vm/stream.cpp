@@ -24,20 +24,20 @@ const StreamTypeId& Stream::stream_type_id() const {
 }
 
 ObjectMsgPtr<Instruction> Stream::NewInstruction(InstructionMsg* instr_msg) {
-  if (free_chain_list().empty()) {
+  if (free_instruction_list().empty()) {
     return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this);
   }
-  ObjectMsgPtr<Instruction> instruction = mut_free_chain_list()->PopFront();
+  ObjectMsgPtr<Instruction> instruction = mut_free_instruction_list()->PopFront();
   instruction->__Init__(instr_msg, this);
   return instruction;
 }
 
 void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
-  CHECK(instruction->is_pending_chain_link_empty());
+  CHECK(instruction->is_pending_instruction_link_empty());
   CHECK(instruction->is_instruction_link_empty());
   CHECK_EQ(instruction->ref_cnt(), 1);
   auto* instruction_ptr = instruction.Mutable();
-  mut_free_chain_list()->EmplaceBack(std::move(instruction));
+  mut_free_instruction_list()->EmplaceBack(std::move(instruction));
   instruction_ptr->__Delete__();
 }
 

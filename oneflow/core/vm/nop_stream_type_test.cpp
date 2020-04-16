@@ -57,7 +57,7 @@ void TestNopStreamTypeNoArgument(
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
-  auto* instruction = stream->mut_running_chain_list()->Begin();
+  auto* instruction = stream->mut_running_instruction_list()->Begin();
   ASSERT_TRUE(instruction != nullptr);
   ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
 }
@@ -98,7 +98,7 @@ TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
   TestNopStreamTypeOneArgument(CachedAllocatorNewVirtualMachine());
 }
 
-TEST(NopStreamType, one_argument_triger_next_chain) {
+TEST(NopStreamType, one_argument_triger_next_instruction) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
@@ -117,7 +117,7 @@ TEST(NopStreamType, one_argument_triger_next_chain) {
   }
 }
 
-TEST(NopStreamType, one_argument_triger_all_chains) {
+TEST(NopStreamType, one_argument_triger_all_instructions) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());

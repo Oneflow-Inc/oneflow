@@ -39,7 +39,7 @@ TEST(HostStreamType, basic) {
   ASSERT_TRUE(thread_ctx != nullptr);
   auto* stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
-  auto* instruction = stream->mut_running_chain_list()->Begin();
+  auto* instruction = stream->mut_running_instruction_list()->Begin();
   ASSERT_TRUE(instruction == nullptr);
 }
 
