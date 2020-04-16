@@ -90,7 +90,7 @@ def filter_args(arg_list):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["a_shape"] = [(512, 256), (256, 512)],
+    arg_dict["a_shape"] = [(512, 256), (256, 512)]
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
