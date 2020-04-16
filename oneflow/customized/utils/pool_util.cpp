@@ -298,4 +298,8 @@ void PoolKernelUtil<T>::CLastBackward(const Params3D& params_3d,
   }
 }
 
+// TODO: tsai: initilize template of definition in interfaces
+template struct PoolKernelUtil<float>;
+template struct PoolKernelUtil<double>;
+
 }  // namespace oneflow
