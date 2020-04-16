@@ -70,6 +70,7 @@ class GPUPoolOpKernelState final {
 
 template<typename T>
 struct PoolKernelUtil {
+ public:
   typedef std::function<T()> ForwardInitialize;
   typedef std::function<void(const T& lhs, T& rhs)> CFirstProcess;
   typedef std::function<void(const int64_t in_col, const int64_t out_col,
