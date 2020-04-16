@@ -79,6 +79,62 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   UserKernelBaseContext base_ctx_;
 };
 
+class UserKernelInferShapeContext final : public user_op::KernelInferShapeContext {
+ public:
+  explicit UserKernelInferShapeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+      : user_op::KernelInferShapeContext(
+            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+        base_ctx_(UserKernelBaseContext(kernel_conf)),
+        device_ctx_(device_ctx) {
+    auto InitArg2ShapView = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          arg2blob_.emplace(std::make_pair(arg_name, i), nullptr);
+        }
+      }
+    };
+    InitArg2ShapView(kernel_conf.op_attribute().op_conf().user_conf().input());
+    InitArg2ShapView(kernel_conf.op_attribute().op_conf().user_conf().output());
+  }
+  ~UserKernelInferShapeContext() = default;
+
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+
+  DeviceCtx* device_ctx() override { return device_ctx_; }
+
+  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) {
+    auto it = arg2blob_.find(std::make_pair(arg_name, arg_index));
+    CHECK(it != arg2blob_.end()) << "arg (" << arg_name << "," << arg_index << ") not found";
+    return it->second->shape_view();
+  }
+
+  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) {
+    auto it = arg2blob_.find(std::make_pair(arg_name, arg_index));
+    CHECK(it != arg2blob_.end()) << "arg (" << arg_name << "," << arg_index << ") not found";
+    return it->second->mut_shape_view();
+  }
+
+  void UpdateArg2Blob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    for (auto& pair : arg2blob_) {
+      std::string bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
+      pair.second = BnInOp2Blob(bn_in_op);
+    }
+  }
+
+ private:
+  UserKernelBaseContext base_ctx_;
+  DeviceCtx* device_ctx_;
+  HashMap<std::pair<std::string, int32_t>, Blob*> arg2blob_;
+};
+
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
@@ -159,6 +215,7 @@ class UserKernel final : public Kernel {
 
   void InitUserKernel(DeviceCtx* device_ctx) {
     ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
+    shape_infer_ctx_.reset(new UserKernelInferShapeContext(device_ctx, kernel_conf()));
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
@@ -190,9 +247,19 @@ class UserKernel final : public Kernel {
     ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
   }
 
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    if (true) {
+      Kernel::ForwardShape(ctx, BnInOp2Blob);
+    } else {
+      // TODO
+    }
+  }
+
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
+  std::unique_ptr<UserKernelInferShapeContext> shape_infer_ctx_;
 };
 
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
