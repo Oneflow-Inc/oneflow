@@ -148,8 +148,8 @@ void PoolKernelUtil<T>::CFirstBackward(const Params3D& params_3d,
               FOR_RANGE(int64_t, h, hstart, hend) {
                 FOR_RANGE(int64_t, w, wstart, wend) {
                   const int64_t index = d * in.Count(3) + h * in.At(4) + w;
-                  NCDHWProcessGrad(input[index], output[pool_index], output_diff[pool_index], size,
-                                   input_diff[index]);
+                  process(input[index], output[pool_index], output_diff[pool_index], size,
+                          input_diff[index]);
                 }
               }
             }
