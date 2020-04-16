@@ -51,12 +51,12 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
 void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
-  auto* running_chain_list = stream->mut_running_chain_list();
+  auto* running_instruction_list = stream->mut_running_instruction_list();
   while (true) {
-    auto* instruction_ptr = running_chain_list->Begin();
+    auto* instruction_ptr = running_instruction_list->Begin();
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
-    stream->DeleteInstruction(running_chain_list->Erase(instruction_ptr));
+    stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
   }
 }
 
@@ -271,8 +271,8 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   }
 }
 
-void VirtualMachine::FilterReadyChains(NewInstructionList* new_instruction_list,
-                                       /*out*/ ReadyInstructionList* ready_instruction_list) {
+void VirtualMachine::FilterReadyInstructions(NewInstructionList* new_instruction_list,
+                                             /*out*/ ReadyInstructionList* ready_instruction_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
     if (instruction->in_edges().empty()) {
       new_instruction_list->MoveToDstBack(instruction, ready_instruction_list);
@@ -280,20 +280,21 @@ void VirtualMachine::FilterReadyChains(NewInstructionList* new_instruction_list,
   }
 }
 
-void VirtualMachine::DispatchInstruction(ReadyInstructionList* ready_chain_list) {
+void VirtualMachine::DispatchInstructions(ReadyInstructionList* ready_instruction_list) {
   auto* active_stream_list = mut_active_stream_list();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_chain_list, instruction) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
     auto* stream = instruction->mut_stream();
-    ready_chain_list->MoveToDstBack(instruction, stream->mut_running_chain_list());
+    ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
     if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
     if (stream_type.SharingVirtualMachineThread()) {
       stream_type.Run(this, instruction);
     } else {
-      stream->mut_thread_ctx()->mut_pending_chain_list()->PushBack(instruction);
+      stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
     }
   }
-  ready_chain_list->Clear();
+  CHECK(ready_instruction_list->empty());
+  ready_instruction_list->Clear();
 }
 
 void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
@@ -337,11 +338,11 @@ void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
 }
 
 void VirtualMachine::Schedule() {
-  ReadyInstructionList ready_instruction_list;
+  ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
   auto* active_stream_list = mut_active_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
-    TryReleaseFinishedInstructions(stream, /*out*/ &ready_instruction_list);
-    if (stream->running_chain_list().empty()) { active_stream_list->Erase(stream); }
+    TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
+    if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
   };
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
@@ -351,10 +352,10 @@ void VirtualMachine::Schedule() {
     NewInstructionList new_instruction_list;
     MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
-    FilterReadyChains(&new_instruction_list, /*out*/ &ready_instruction_list);
+    FilterReadyInstructions(&new_instruction_list, /*out*/ ready_instruction_list);
     new_instruction_list.MoveTo(waiting_instruction_list);
   }
-  DispatchInstruction(&ready_instruction_list);
+  DispatchInstructions(ready_instruction_list);
 }
 
 bool VirtualMachine::Empty() const {

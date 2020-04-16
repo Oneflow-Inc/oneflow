@@ -37,6 +37,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   //links
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
@@ -44,10 +45,10 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // methods
  private:
-  using ReadyInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
   using NewInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using WaitingInstructionList = VirtualMachine::waiting_instruction_list_ObjectMsgListType;
+  using ReadyInstructionList = VirtualMachine::ready_instruction_list_ObjectMsgListType;
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
   using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
@@ -92,9 +93,9 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
-  void FilterReadyChains(NewInstructionList* new_instruction_list,
+  void FilterReadyInstructions(NewInstructionList* new_instruction_list,
                          /*out*/ ReadyInstructionList* ready_instruction_list);
-  void DispatchInstruction(ReadyInstructionList* ready_instruction_list);
+  void DispatchInstructions(ReadyInstructionList* ready_instruction_list);
 
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on

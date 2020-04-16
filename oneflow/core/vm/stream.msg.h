@@ -29,8 +29,8 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, running_chain_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, free_chain_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, running_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, free_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
 OBJECT_MSG_END(Stream);
 // clang-format on

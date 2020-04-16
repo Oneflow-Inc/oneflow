@@ -169,7 +169,7 @@ OBJECT_MSG_BEGIN(Instruction);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(pending_chain_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);
