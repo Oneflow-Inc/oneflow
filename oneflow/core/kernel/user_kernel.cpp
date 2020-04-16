@@ -223,6 +223,7 @@ class UserKernel final : public Kernel {
           user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
+      infer_shape_fn_ = kernel_reg_val->infer_shape_fn;
     }
   }
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
@@ -249,10 +250,11 @@ class UserKernel final : public Kernel {
 
   void ForwardShape(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    if (true) {
+    if (infer_shape_fn_ == nullptr) {
       Kernel::ForwardShape(ctx, BnInOp2Blob);
     } else {
-      // TODO
+      shape_infer_ctx_->UpdateArg2Blob(BnInOp2Blob);
+      infer_shape_fn_(shape_infer_ctx_.get());
     }
   }
 
@@ -260,6 +262,7 @@ class UserKernel final : public Kernel {
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInferShapeContext> shape_infer_ctx_;
+  user_op::InferShapeFn infer_shape_fn_;
 };
 
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
