@@ -9,6 +9,7 @@ import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 
 import collections
+import os
 
 
 @oneflow_export("nn.conv2d")
@@ -313,28 +314,42 @@ def softmax_grad(y, dy, axis=None, name=None):
 def sparse_cross_entropy(
     labels=None, prediction=None, name=None
 ):
-    assert labels is not None
-    assert prediction is not None
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
-    )
-    setattr(
-        op_conf.sparse_cross_entropy_conf,
-        "prediction",
-        prediction.logical_blob_name,
-    )
-    setattr(
-        op_conf.sparse_cross_entropy_conf, "label", labels.logical_blob_name
-    )
-    setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        print("use user op")
+        assert labels is not None
+        assert prediction is not None
+        return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
+        .Op("sparse_cross_entropy")
+        .Input("prediction", [prediction])
+        .Input("label", [labels])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+        )
+    else:
+        assert labels is not None
+        assert prediction is not None
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
+        )
+        setattr(
+            op_conf.sparse_cross_entropy_conf,
+            "prediction",
+            prediction.logical_blob_name,
+        )
+        setattr(
+            op_conf.sparse_cross_entropy_conf, "label", labels.logical_blob_name
+        )
+        setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(
