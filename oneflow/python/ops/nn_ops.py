@@ -538,7 +538,7 @@ def leaky_relu(x, alpha=0.2, name=None):
     )
 
 @oneflow_export("nn.gelu")
-def leaky_relu(x, name=None):
+def gelu(x, name=None):
     return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
         .Op("gelu")
