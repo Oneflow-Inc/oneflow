@@ -7,15 +7,6 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
-
-def Transpose(x, perm):
-    return flow.user_op_builder("transpose").Op("transpose")\
-        .Input("input", [x])\
-        .Output("output")\
-        .SetAttr("perm", perm, "AttrTypeListInt32")\
-        .Build().RemoteBlobList()[0]
-
-
 def compare_with_tensorflow(device_type, input_shape, perm):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -37,7 +28,7 @@ def compare_with_tensorflow(device_type, input_shape, perm):
                 trainable=True,
             )
 
-            loss = Transpose(x, perm)
+            loss = flow.transpose(x, perm)
             flow.losses.add_loss(loss)
 
             flow.watch(x, Save("x"))
