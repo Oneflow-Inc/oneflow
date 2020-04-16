@@ -3,7 +3,6 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/kernel_context.h"
 
 namespace oneflow {
 
@@ -80,10 +79,11 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   UserKernelBaseContext base_ctx_;
 };
 
-class UserKernelContext final : public user_op::KernelContext {
+class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit UserKernelContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
-      : user_op::KernelContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+  explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+      : user_op::KernelComputeContext(
+            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -98,7 +98,7 @@ class UserKernelContext final : public user_op::KernelContext {
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output());
     arg2tensor_.emplace(std::make_pair("tmp_buffer", 0), std::unique_ptr<user_op::Tensor>());
   }
-  ~UserKernelContext() = default;
+  ~UserKernelComputeContext() = default;
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, index));
@@ -157,30 +157,42 @@ class UserKernel final : public Kernel {
   UserKernel() = default;
   ~UserKernel() = default;
 
- private:
-  std::unique_ptr<user_op::OpKernel> kernel_;
-  std::unique_ptr<UserKernelContext> ctx_;
-
-  void VirtualKernelInit(DeviceCtx* device_ctx) override {
-    ctx_.reset(new UserKernelContext(device_ctx, kernel_conf()));
-
-    const std::string& op_type_name =
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
+  void InitUserKernel(DeviceCtx* device_ctx) {
+    ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
     {
+      const std::string& op_type_name =
+          kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
       auto kernel_reg_val =
           user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
       CHECK_NOTNULL(kernel_reg_val);
-
-      UserKernelInitContext init_ctx(device_ctx, kernel_conf());
-      kernel_.reset(kernel_reg_val->create_fn(&init_ctx));
+      kernel_.reset(kernel_reg_val->create_fn());
     }
+  }
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+    return kernel_->CreateOpKernelState(&init_ctx);
+  }
+  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         user_op::OpKernelState* opkernel_state) const {
+    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+    kernel_->Compute(ctx_.get(), opkernel_state);
+  }
+
+ private:
+  void VirtualKernelInit(DeviceCtx* device_ctx) override {
+    InitUserKernel(device_ctx);
+    CHECK(opkernel_state_.get() == nullptr);
+    opkernel_state_ = CreateOpKernelState(device_ctx);
   }
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->Compute(ctx_.get());
+    ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
   }
+
+  std::shared_ptr<user_op::OpKernelState> opkernel_state_;
+  std::unique_ptr<const user_op::OpKernel> kernel_;
+  std::unique_ptr<UserKernelComputeContext> ctx_;
 };
 
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {

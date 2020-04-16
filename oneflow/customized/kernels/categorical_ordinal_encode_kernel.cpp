@@ -6,12 +6,11 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
  public:
-  explicit CategoricalOrdinalEncodeKernel(user_op::KernelInitContext* ctx)
-      : user_op::OpKernel(ctx) {}
+  CategoricalOrdinalEncodeKernel() = default;
   ~CategoricalOrdinalEncodeKernel() override = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     bool hash_precomputed = ctx->GetAttr<bool>("hash_precomputed");
     CHECK(hash_precomputed);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -29,9 +28,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 
 #define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
   REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
-      .SetCreateFn([](user_op::KernelInitContext* ctx) {                         \
-        return new CategoricalOrdinalEncodeKernel<device, cpp_type>(ctx);        \
-      })                                                                         \
+      .SetCreateFn<CategoricalOrdinalEncodeKernel<device, cpp_type>>()           \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {               \
         const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
         return ctx.device_type() == device && in->data_type() == proto_type;     \

@@ -8,6 +8,10 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5):
     assert device_type in ["gpu", "cpu"]
@@ -30,7 +34,7 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims, rtol=1e-5,
 #    print(of_out.ndarray())
 #    print("diff: ")
 #    print(of_out.ndarray() - tf_out.numpy())
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol), (of_out.ndarray(), tf_out.numpy())
 
 def test_reduce_sum(test_case):
     arg_dict = OrderedDict()
@@ -48,7 +52,7 @@ def test_col_reduce(test_case):
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+        compare_with_tensorflow(*arg, atol=1e-1)
 
 def test_row_reduce(test_case):
     arg_dict = OrderedDict()
