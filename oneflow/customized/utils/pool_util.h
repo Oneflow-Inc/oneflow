@@ -3,6 +3,7 @@
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/eigen_util.h"
+#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 
@@ -58,6 +59,8 @@ class GPUPoolOpKernelState final {
                        const Params3D& params_3d);
   ~GPUPoolOpKernelState() = default;
 
+  static std::shared_ptr<user_op::OpKernelState> FromKernelInitContext(
+      const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx);
   const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
   const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const { return y_desc_->Get(); }
   const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const { return pooling_desc_->Get(); }

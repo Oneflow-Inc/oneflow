@@ -103,6 +103,20 @@ GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string&
       new CudnnPoolDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
 }
 
+std::shared_ptr<user_op::OpKernelState> GPUPoolOpKernelState::FromKernelInitContext(
+    const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx) {
+  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const std::string data_format = ctx->GetAttr<std::string>("data_format");
+  const std::string padding = ctx->GetAttr<std::string>("padding");
+  const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
+  const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+  const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
+  const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+  const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
+  return std::make_shared<OpKernelStateWrapper<GPUPoolOpKernelState>>(
+      dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+}
+
 template<typename T>
 void PoolKernelUtil<T>::CFirstForward(const Params3D& params_3d, const user_op::Tensor* in_blob,
                                       user_op::Tensor* out_blob,
