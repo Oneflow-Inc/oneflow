@@ -14,11 +14,9 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         assert(len(a.static_shape) == len(b.static_shape))
         assert(len(a.static_shape) >= 2)
-        print("get into the matmul_v2")
         if name is None:
             name = id_util.UniqueStr("Matmul_")
         if len(a.static_shape) == 2:
-            print("matmul")
             op = flow.user_op_builder(name)\
                     .Op("matmul")\
                     .Input("a", [a])\
@@ -28,7 +26,6 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
                     .SetAttr("transpose_b", transpose_b, "AttrTypeBool")\
                     .Build()
         else:
-            print("batch_matmul")
             op = flow.user_op_builder(name)\
                     .Op("batch_matmul")\
                     .Input("a", [a])\
