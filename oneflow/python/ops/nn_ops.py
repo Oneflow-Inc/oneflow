@@ -126,33 +126,6 @@ def bias_add(value, bias, data_format=None, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-def pool(input, pool_size, pooling_type, strides=None, padding='VALID',
-        data_format=None, name=None
-    ):
-    assert pooling_type in ["MAX", "AVG"]
-    dim = len(input.shape) - 2
-    op = (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pool"))
-        .Op("pool")
-        .Input("x", [input])
-        .Output("y")
-    )
-    op.SetAttr("dim", dim, "AttrTypeInt32")
-    op.SetAttr("pooling_type", pooling_type, "AttrTypeString")
-    op.SetAttr("padding", padding.lower(), "AttrTypeString")
-    assert data_format in ["channels_first", "channels_last"], data_format
-    op.SetAttr("data_format", data_format, "AttrTypeString")
-    op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
-    if strides is not None:
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
-    else:
-        op.SetAttr("strides", [1] * dim, "AttrTypeListInt32")
-    return (
-        op
-        .Build()
-        .RemoteBlobList()[0]
-    )
-
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
     # TODO: fix cuDNN bugs in pooling_1d
@@ -180,11 +153,10 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
     setattr(
         op_conf.max_pooling_2d_conf,
         "data_format",
-        data_format,
+        "channels_last" if data_format == "NHWC" else "channels_first",
     )
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -203,24 +175,19 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     )
     setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.average_pooling_2d_conf, "out", "out")
-    pool_size = _GetSequence(
+    op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(
         ksize, 2, "ksize"
     )
-    op_conf.average_pooling_2d_conf.pool_size[:] = pool_size
     op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(
         strides, 2, "strides"
     )
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
     setattr(
         op_conf.average_pooling_2d_conf,
         "data_format",
-        data_format,
-    )
-    return pool(input, pool_size, "AVG", strides=strides, padding=padding,
-        data_format=data_format
+        "channels_last" if data_format == "NHWC" else "channels_first",
     )
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
