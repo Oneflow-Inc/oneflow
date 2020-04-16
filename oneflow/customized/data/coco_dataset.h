@@ -1,0 +1,38 @@
+#ifndef ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_
+#define ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_
+
+#include "oneflow/customized/data/dataset.h"
+#include "oneflow/core/framework/op_kernel.h"
+
+namespace oneflow {
+
+struct COCODataInstance {
+  TensorBuffer image;
+  int64_t label;
+  int64_t image_height;
+  int64_t image_width;
+  // ... store other data like bbox , segmentation
+};
+
+class COCODataSet final : public DataSet<COCODataInstance> {
+ public:
+  COCODataSet(user_op::KernelInitContext* ctx) { TODO(); }
+  ~COCODataSet() = default;
+
+  void Next(COCODataInstance& tensor) override;
+  void At(int64_t idx, COCODataInstance& tensor) override;
+
+  int64_t Size() override { return image_ids_.size(); }
+
+  bool EnableRandomAccess() override { return true; }
+  bool EnableGetSize() override { return true; }
+
+ private:
+  // maybe not this member
+  std::vector<int64_t> image_ids_;
+  // other member list like image name, anno ...
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_
