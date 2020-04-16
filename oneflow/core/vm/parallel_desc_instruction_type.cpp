@@ -6,7 +6,7 @@
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/vm.msg.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {

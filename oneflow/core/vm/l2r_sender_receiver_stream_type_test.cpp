@@ -2,7 +2,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/vm.msg.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"

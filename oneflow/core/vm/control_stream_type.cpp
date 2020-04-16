@@ -3,7 +3,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
-#include "oneflow/core/vm/vm.msg.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/flat_msg_view.h"
