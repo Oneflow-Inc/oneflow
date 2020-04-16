@@ -90,7 +90,7 @@ class GpuPoolGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_POOL_KERNEL(dtype)                                               \
+#define REGISTER_GPU_POOL_GRAD_KERNEL(dtype)                                          \
   REGISTER_USER_KERNEL("pool_grad")                                                   \
       .SetCreateFn<GpuPoolGradKernel<dtype>>()                                        \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
@@ -99,7 +99,7 @@ class GpuPoolGradKernel final : public user_op::OpKernel {
                && dx_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
-REGISTER_GPU_POOL_KERNEL(float)
-REGISTER_GPU_POOL_KERNEL(double)
+REGISTER_GPU_POOL_GRAD_KERNEL(float)
+REGISTER_GPU_POOL_GRAD_KERNEL(double)
 
 }  // namespace oneflow
