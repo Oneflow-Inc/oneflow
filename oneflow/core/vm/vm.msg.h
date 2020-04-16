@@ -47,6 +47,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
  private:
   using TmpPendingInstrMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
   using NewInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
+  using PrescheduledInstructionList = OBJECT_MSG_LIST(Instruction, instruction_link);
   using WaitingInstructionList = VirtualMachine::waiting_instruction_list_ObjectMsgListType;
   using ReadyInstructionList = VirtualMachine::ready_instruction_list_ObjectMsgListType;
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
@@ -95,7 +96,11 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                               NewInstructionList* new_instruction_list);
   void FilterReadyInstructions(NewInstructionList* new_instruction_list,
                          /*out*/ ReadyInstructionList* ready_instruction_list);
-  void DispatchInstructions(ReadyInstructionList* ready_instruction_list);
+  void DispatchAndPrescheduleInstructions(ReadyInstructionList* ready_instruction_list);
+
+  template<typename ReadyList, typename IsEdgeReadyT>
+  void TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
+                             const IsEdgeReadyT& IsEdgeReady);
 
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on
