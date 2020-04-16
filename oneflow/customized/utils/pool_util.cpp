@@ -109,6 +109,7 @@ void PoolKernelUtil<T>::CFirstForward(const Params3D& params_3d, const user_op::
                                       const ForwardInitialize& initialize,
                                       const CFirstProcess& process,
                                       const CFirstFinalize& finalize) {}
+
 template<typename T>
 void PoolKernelUtil<T>::CFirstBackward(const Params3D& params_3d,
                                        const user_op::Tensor* out_diff_blob,
@@ -116,11 +117,13 @@ void PoolKernelUtil<T>::CFirstBackward(const Params3D& params_3d,
                                        const user_op::Tensor* in_blob,
                                        user_op::Tensor* in_diff_blob,
                                        const CFirstProcessGrad& process) {}
+
 template<typename T>
 void PoolKernelUtil<T>::CLastForward(const Params3D& params_3d, const user_op::Tensor* in_blob,
                                      user_op::Tensor* out_blob,
                                      const ForwardInitialize& forward_initialize,
                                      const CLastProcess& process, const CLastFinalize& finalize) {}
+
 template<typename T>
 void PoolKernelUtil<T>::CLastBackward(const Params3D& params_3d,
                                       const user_op::Tensor* out_diff_blob,
