@@ -5,7 +5,7 @@
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/vm/vm.msg.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 

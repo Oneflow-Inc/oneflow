@@ -3,7 +3,7 @@
 
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/vm.msg.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
 
 namespace oneflow {
 
