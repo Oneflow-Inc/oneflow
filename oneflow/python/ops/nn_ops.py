@@ -9,7 +9,7 @@ import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 
 import collections
-
+import os
 
 @oneflow_export("nn.conv2d")
 def conv2d(
@@ -140,60 +140,104 @@ def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
 
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("MaxPool2D_"),
-    )
-    setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
-    setattr(op_conf.max_pooling_2d_conf, "out", "out")
-    op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
-    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
-    assert padding in ["VALID", "SAME"]
-    setattr(op_conf.max_pooling_2d_conf, "padding", padding)
-    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    setattr(
-        op_conf.max_pooling_2d_conf,
-        "data_format",
-        "channels_last" if data_format == "NHWC" else "channels_first",
-    )
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    if os.getenv("ENABLE_USER_OP") == "True":
+        op = (
+            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool2d"))
+            .Op("max_pool_2d")
+            .Input("x", [input])
+            .Output("y")
+        )
+        assert padding in ["VALID", "SAME"]
+        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+        op.SetAttr("data_format", data_format, "AttrTypeString")
+        pool_size = _GetSequence(ksize, 2, "ksize")
+        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        strides = _GetSequence(strides, 2, "strides")
+        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        return (
+            op
+            .Build()
+            .RemoteBlobList()[0]
+        )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("MaxPool2D_"),
+        )
+        setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.max_pooling_2d_conf, "out", "out")
+        op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
+        op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
+        assert padding in ["VALID", "SAME"]
+        setattr(op_conf.max_pooling_2d_conf, "padding", padding)
+        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+        setattr(
+            op_conf.max_pooling_2d_conf,
+            "data_format",
+            "channels_last" if data_format == "NHWC" else "channels_first",
+        )
+        compile_context.CurJobAddOp(op_conf)
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out")
+        return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("AveragePool2D_"),
-    )
-    setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
-    setattr(op_conf.average_pooling_2d_conf, "out", "out")
-    op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(
-        ksize, 2, "ksize"
-    )
-    op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(
-        strides, 2, "strides"
-    )
-    assert padding in ["VALID", "SAME"]
-    setattr(op_conf.average_pooling_2d_conf, "padding", padding)
-    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    setattr(
-        op_conf.average_pooling_2d_conf,
-        "data_format",
-        "channels_last" if data_format == "NHWC" else "channels_first",
-    )
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    if os.getenv("ENABLE_USER_OP") == "True":
+        op = (
+            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool2d"))
+            .Op("avg_pool_2d")
+            .Input("x", [input])
+            .Output("y")
+        )
+        assert padding in ["VALID", "SAME"]
+        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+        op.SetAttr("data_format", data_format, "AttrTypeString")
+        pool_size = _GetSequence(ksize, 2, "ksize")
+        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        strides = _GetSequence(strides, 2, "strides")
+        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        return (
+            op
+            .Build()
+            .RemoteBlobList()[0]
+        )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("AveragePool2D_"),
+        )
+        setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.average_pooling_2d_conf, "out", "out")
+        op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(
+            ksize, 2, "ksize"
+        )
+        op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(
+            strides, 2, "strides"
+        )
+        assert padding in ["VALID", "SAME"]
+        setattr(op_conf.average_pooling_2d_conf, "padding", padding)
+        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+        setattr(
+            op_conf.average_pooling_2d_conf,
+            "data_format",
+            "channels_last" if data_format == "NHWC" else "channels_first",
+        )
+        compile_context.CurJobAddOp(op_conf)
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out")
+        return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("nn.max_pool3d")

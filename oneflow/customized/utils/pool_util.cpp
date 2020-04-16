@@ -64,6 +64,26 @@ Shape Params3D::GetYShape() const {
   return Shape(y_dim_vec);
 }
 
+Shape Params3D::GetXShape5D() const {
+  if (data_format_ == "channels_first") {
+    return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
+  } else if (data_format_ == "channels_last") {
+    return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+Shape Params3D::GetYShape5D() const {
+  if (data_format_ == "channels_first") {
+    Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
+  } else if (data_format_ == "channels_last") {
+    Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
                              const int* padding, const int* stride) {
   CudaCheck(cudnnCreatePoolingDescriptor(&val_));

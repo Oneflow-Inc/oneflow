@@ -18,6 +18,8 @@ class Params3D {
   ~Params3D() = default;
 
   Shape GetYShape() const;
+  Shape GetXShape5D() const;
+  Shape GetYShape5D() const;
 
   const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
   const std::vector<int32_t>& strides_3d() const { return strides_3d_; }

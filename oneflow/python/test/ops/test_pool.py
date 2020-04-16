@@ -60,7 +60,7 @@ pool_confs = [
 
 def test_pool(_):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
