@@ -155,18 +155,18 @@ REGISTER_USER_OP("matmul")
         n_axis = 1;
       }
       SbpSignatureBuilder()
-          .Split("a", m_axis)
+          .Split("a", 0, m_axis)
           .Broadcast("b")
           .Split(ctx->outputs(), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
           .Broadcast("a")
-          .Split("b", n_axis)
+          .Split("b", 0, n_axis)
           .Split(ctx->outputs(), 1)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
-          .Split("a", k_a_axis)
-          .Split("b", k_b_axis)
+          .Split("a", 0, k_a_axis)
+          .Split("b", 0, k_b_axis)
           .PartialSum(ctx->outputs())
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
