@@ -56,7 +56,7 @@ REGISTER_USER_OP("gelu_grad")
 
 REGISTER_USER_OP_GRAD("gelu")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("gelu_grad")
                                                  .Input("x", op.input("in", 0))
