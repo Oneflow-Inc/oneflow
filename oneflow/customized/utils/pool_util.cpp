@@ -21,15 +21,6 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
 
 }  // namespace
 
-CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
-                             const int* padding, const int* stride) {
-  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
-  CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
-                                        padding, stride));
-}
-
-CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
-
 Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
                    const std::vector<int32_t>& strides) {
@@ -72,6 +63,15 @@ Shape Params3D::GetYShape() const {
   y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
   return Shape(y_dim_vec);
 }
+
+CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
+                             const int* padding, const int* stride) {
+  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
+  CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
+                                        padding, stride));
+}
+
+CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
 
 GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type,
                                            const Shape& x_shape, const Shape& y_shape,

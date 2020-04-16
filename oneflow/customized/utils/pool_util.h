@@ -5,21 +5,6 @@
 
 namespace oneflow {
 
-class CudnnPoolDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolDesc);
-  CudnnPoolDesc() = delete;
-  ~CudnnPoolDesc();
-
-  CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window, const int* padding,
-                const int* stride);
-
-  const cudnnPoolingDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnPoolingDescriptor_t val_;
-};
-
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
@@ -48,6 +33,21 @@ class Params3D {
   std::string data_format_;
   int64_t batch_num_;
   int64_t channel_num_;
+};
+
+class CudnnPoolDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolDesc);
+  CudnnPoolDesc() = delete;
+  ~CudnnPoolDesc();
+
+  CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window, const int* padding,
+                const int* stride);
+
+  const cudnnPoolingDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnPoolingDescriptor_t val_;
 };
 
 class GPUPoolOpKernelState final {
