@@ -75,9 +75,9 @@ Shape Params3D::GetXShape5D() const {
 
 Shape Params3D::GetYShape5D() const {
   if (data_format_ == "channels_first") {
-    Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
+    return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
   } else if (data_format_ == "channels_last") {
-    Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
+    return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
   }
   UNIMPLEMENTED();
 }
