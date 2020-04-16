@@ -8,6 +8,7 @@ bool CheckUseXrtEngine(const ClusteringOptions &options, const XrtEngine &engine
     switch (engine) {
       case XrtEngine::XLA: return XrtEngineOptionBit::kUseXlaJit;
       case XrtEngine::TENSORRT: return XrtEngineOptionBit::kUseTensorRT;
+      case XrtEngine::TVM: return XrtEngineOptionBit::kUseTVM;
       default: return XrtEngineOptionBit::kUseDefault;
     }
   }();

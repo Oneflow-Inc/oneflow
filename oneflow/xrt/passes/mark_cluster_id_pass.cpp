@@ -184,9 +184,11 @@ void MarkClusterIdPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
   if (clustering_options.train_phase) {
     ClusteringSubgraphs(clustering_options, XrtEngine::XLA);
     ClusteringSubgraphs(clustering_options, XrtEngine::TENSORRT);
+    ClusteringSubgraphs(clustering_options, XrtEngine::TVM);
   } else {
     ClusteringSubgraphs(clustering_options, XrtEngine::TENSORRT);
     ClusteringSubgraphs(clustering_options, XrtEngine::XLA);
+    ClusteringSubgraphs(clustering_options, XrtEngine::TVM);
   }
 
   RemoveInvalidClusterNodes(clustering_options);

@@ -4,6 +4,7 @@
 #include "glog/logging.h"
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 namespace xrt {

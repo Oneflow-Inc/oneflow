@@ -19,10 +19,17 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
-if (WITH_TENSORRT)
+if (WITH_TVM OR WITH_TRT)
   if (NOT WITH_XLA)
-    include(absl)
+    include(absl)  # Xrt framework depends on absl, and TensorFlow take certain version of absl as third_party, so exclude WITH_XLA
   endif()
+endif()
+
+if (WITH_TVM)
+  include(tvm)
+endif()
+
+if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
@@ -185,6 +192,10 @@ if(BUILD_RDMA)
   endif()
 endif()
 
+if(WITH_TVM)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${TVM_INCLUDE_DIR})
+endif()
+
 include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
@@ -192,11 +203,19 @@ if(WITH_XLA)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
-if(WITH_TENSORRT)
+if (WITH_TVM OR WITH_TRT)
   if (NOT WITH_XLA)
+    # Xrt framework depends on absl, and TensorFlow take certain version of absl as third_party, so exclude WITH_XLA
     list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
   endif()
+endif()
+
+if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
+endif()
+
+if(WITH_TVM)
+  list(APPEND oneflow_third_party_libs ${TVM_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})

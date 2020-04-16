@@ -54,6 +54,7 @@ message XrtConfig {
   optional bool use_tensorrt = 2 [default = false];
   optional XlaConfig xla_config = 3;
   optional TensorRTConfig tensorrt_config = 4;
+  optional bool use_tvm = 5 [default = false];
 }
 
 message IndexedSlicesOptimizerConf {
