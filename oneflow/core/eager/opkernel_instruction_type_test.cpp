@@ -106,7 +106,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   }
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("CudaCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu_CallOpKernel")
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
@@ -117,7 +117,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "InitOpKernelObject", "CudaCallOpKernel"});
+                          "InitOpKernelObject", "gpu_CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -141,7 +141,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   int64_t x = 0;
   {
     x = vm::TestUtil::NewObject(&list, "0:gpu:0");
-    list.EmplaceBack(vm::NewInstruction("CudaCallOpKernel")
+    list.EmplaceBack(vm::NewInstruction("gpu_CallOpKernel")
                          ->add_mut_operand(test_source_id)
                          ->add_separator()
                          ->add_separator()
@@ -160,7 +160,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   int64_t y = 0;
   {
     y = vm::TestUtil::NewObject(&list, "0:gpu:0");
-    list.EmplaceBack(vm::NewInstruction("CudaCallOpKernel")
+    list.EmplaceBack(vm::NewInstruction("gpu_CallOpKernel")
                          ->add_mut_operand(ccrelu_id)
                          ->add_separator()
                          ->add_symbol_operand(in_id)
@@ -175,7 +175,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "InitOpKernelObject", "CudaCallOpKernel"});
+                          "InitOpKernelObject", "gpu_CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -198,7 +198,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   }
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu_StatelessCallOpKernel")
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(op_conf_id)
                        ->add_mut_operand(opkernel_id)
@@ -211,7 +211,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "InitOpKernelObject", "CudaCallOpKernel"});
+                          "InitOpKernelObject", "gpu_CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -234,7 +234,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     test_source_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu_StatelessCallOpKernel")
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(test_source_id)
                        ->add_mut_operand(opkernel_id)
@@ -253,7 +253,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("CudaStatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu_StatelessCallOpKernel")
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(ccrelu_id)
                        ->add_mut_operand(opkernel_id)
@@ -269,7 +269,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(),
-      {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "CudaStatelessCallOpKernel"});
+      {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "gpu_StatelessCallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
