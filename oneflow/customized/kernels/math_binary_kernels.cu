@@ -63,7 +63,7 @@ __device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) { return 
 
 __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 0; }
 
-__device__ float Greater4GpuFloat(float x, float y) { return x>y?1:0; } //use int8 1 as true; int8 0 as false
+__device__ int8_t Greater4GpuFloat(float x, float y) { return x>y?1:0; } //use int8 1 as true; int8 0 as false
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
@@ -122,7 +122,7 @@ __device__ float Greater4GpuFloat(float x, float y) { return x>y?1:0; } //use in
     int64_t n = tensor_x->shape().elem_cnt();                                         \
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);                                            \
     func_name##ForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,      \
-                            ctx->cuda_stream()>>>(n, x, y);                           \
+                            ctx->cuda_stream()>>>(n, x, y, z);                           \
   }
 
 #define MATH_BINARY_GPU_FLOAT_SEQ            \
