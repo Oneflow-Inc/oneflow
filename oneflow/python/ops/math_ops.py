@@ -343,16 +343,7 @@ def gelu(x, name=None):
 
 @oneflow_export("math.relu", "nn.relu")
 def relu(x, name=None):
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
-            .Op("relu")
-            .Input("in", [x])
-            .Output("out")
-            .Build()
-            .RemoteBlobList()[0]
-        )
-    else:
+    if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_"))
         setattr(op_conf.relu_conf, "in", x.logical_blob_name)
@@ -362,6 +353,15 @@ def relu(x, name=None):
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
+
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
+        .Op("relu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.sigmoid")
