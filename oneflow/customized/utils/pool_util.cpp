@@ -108,7 +108,50 @@ void PoolKernelUtil<T>::CFirstForward(const Params3D& params_3d, const user_op::
                                       user_op::Tensor* out_blob,
                                       const ForwardInitialize& initialize,
                                       const CFirstProcess& process,
-                                      const CFirstFinalize& finalize) {}
+                                      const CFirstFinalize& finalize) {
+  const ShapeView& in = in_blob->shape();
+  const ShapeView& out = out_blob->shape();
+  const std::vector<int32_t>& pool_size = params_3d.pool_size_3d();
+  const std::vector<int32_t>& strides = params_3d.strides_3d();
+  const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
+
+  const T* input = in_blob->dptr<T>();
+  T* output = out_blob->mut_dptr<T>();
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, c, 0, in.At(1)) {
+      FOR_RANGE(int64_t, pd, 0, out.At(2)) {
+        int64_t dstart = pd * strides.at(0) - padding_before.at(0);
+        int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+        dstart = std::max(dstart, static_cast<int64_t>(0));
+        FOR_RANGE(int64_t, ph, 0, out.At(3)) {
+          int64_t hstart = ph * strides.at(1) - padding_before.at(1);
+          int64_t hend = std::min(hstart + pool_size.at(1), in.At(3));
+          hstart = std::max(hstart, static_cast<int64_t>(0));
+          FOR_RANGE(int64_t, pw, 0, out.At(4)) {
+            int64_t wstart = pw * strides.at(2) - padding_before.at(2);
+            int64_t wend = std::min(wstart + pool_size.at(2), in.At(4));
+            wstart = std::max(wstart, static_cast<int64_t>(0));
+
+            const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
+            T res = initialize();
+            FOR_RANGE(int64_t, d, dstart, dend) {
+              FOR_RANGE(int64_t, h, hstart, hend) {
+                FOR_RANGE(int64_t, w, wstart, wend) {
+                  const int64_t input_index = d * in.Count(3) + h * in.At(4) + w;
+                  process(input[input_index], res);
+                }
+              }
+            }
+            finalize((dend - dstart) * (hend - hstart) * (wend - wstart), res);
+            output[pool_index] = res;
+          }
+        }
+      }
+      input += in.Count(2);
+      output += out.Count(2);
+    }
+  }
+}
 
 template<typename T>
 void PoolKernelUtil<T>::CFirstBackward(const Params3D& params_3d,
