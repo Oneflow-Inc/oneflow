@@ -37,7 +37,7 @@ class CpuPoolGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_POOL_KERNEL(dtype)                                               \
+#define REGISTER_CPU_POOL_GRAD_KERNEL(dtype)                                          \
   REGISTER_USER_KERNEL("pool_grad")                                                   \
       .SetCreateFn<CpuPoolGradKernel<dtype>>()                                        \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
@@ -46,7 +46,7 @@ class CpuPoolGradKernel final : public user_op::OpKernel {
                && dx_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
-REGISTER_CPU_POOL_KERNEL(float)
-REGISTER_CPU_POOL_KERNEL(double)
+REGISTER_CPU_POOL_GRAD_KERNEL(float)
+REGISTER_CPU_POOL_GRAD_KERNEL(double)
 
 }  // namespace oneflow
