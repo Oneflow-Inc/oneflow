@@ -32,7 +32,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         "relu": flow.keras.activations.relu,
         "sigmoid": flow.keras.activations.sigmoid,
         #"tanh": flow.keras.activations.tanh,
-        "tanh": flow.math.tanh_v2,
+        "tanh": flow.math.tanh,
 #        "gelu": flow.keras.activations.gelu,
     }
     tf_activation_map = {
@@ -90,4 +90,5 @@ def test_activations(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-    compare_with_tensorflow('gpu', 'relu', (1024, 1024), flow.float16)
+    for act_type in arg_dict["activation_type"]:
+        compare_with_tensorflow('gpu', act_type, (1024, 1024), flow.float16)
