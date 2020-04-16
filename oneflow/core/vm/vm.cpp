@@ -36,16 +36,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
       mirrored_object->mut_access_list()->Erase(access);
     }
   }
-  auto* wait_instruction_list = mut_waiting_instruction_list();
-  auto* out_edges = instruction->mut_out_edges();
-  OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(out_edges, out_edge) {
-    Instruction* out_instruction = out_edge->dst_instruction();
-    out_instruction->mut_in_edges()->Erase(out_edge);
-    if (out_instruction->in_edges().empty()) {
-      wait_instruction_list->MoveToDstBack(out_instruction, ready_instruction_list);
-    }
-    out_edges->Erase(out_edge);
-  }
+  TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
 }
 
 void VirtualMachine::TryReleaseFinishedInstructions(
@@ -280,7 +271,9 @@ void VirtualMachine::FilterReadyInstructions(NewInstructionList* new_instruction
   }
 }
 
-void VirtualMachine::DispatchInstructions(ReadyInstructionList* ready_instruction_list) {
+void VirtualMachine::DispatchAndPrescheduleInstructions(
+    ReadyInstructionList* ready_instruction_list) {
+  PrescheduledInstructionList prescheduled;
   auto* active_stream_list = mut_active_stream_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
     auto* stream = instruction->mut_stream();
@@ -292,9 +285,25 @@ void VirtualMachine::DispatchInstructions(ReadyInstructionList* ready_instructio
     } else {
       stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
     }
+    TryMoveWaitingToReady(instruction, &prescheduled,
+                          [stream](Instruction* dst) { return &dst->stream() == stream; });
   }
-  CHECK(ready_instruction_list->empty());
-  ready_instruction_list->Clear();
+  prescheduled.MoveTo(ready_instruction_list);
+}
+
+template<typename ReadyList, typename IsEdgeReadyT>
+void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
+                                           const IsEdgeReadyT& IsEdgeReady) {
+  auto* wait_instruction_list = mut_waiting_instruction_list();
+  auto* out_edges = instruction->mut_out_edges();
+  OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(out_edges, out_edge) {
+    Instruction* out_instruction = out_edge->dst_instruction();
+    if (!IsEdgeReady(out_instruction)) { continue; }
+    out_edges->Erase(out_edge);
+    out_instruction->mut_in_edges()->Erase(out_edge);
+    if (!out_instruction->in_edges().empty()) { continue; }
+    wait_instruction_list->MoveToDstBack(out_instruction, ready_list);
+  }
 }
 
 void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
@@ -355,7 +364,7 @@ void VirtualMachine::Schedule() {
     FilterReadyInstructions(&new_instruction_list, /*out*/ ready_instruction_list);
     new_instruction_list.MoveTo(waiting_instruction_list);
   }
-  DispatchInstructions(ready_instruction_list);
+  DispatchAndPrescheduleInstructions(ready_instruction_list);
 }
 
 bool VirtualMachine::Empty() const {
