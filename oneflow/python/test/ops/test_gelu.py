@@ -14,12 +14,12 @@ for gpu in gpus:
 
 
 def tf_gelu(x):
-    inv_sqrt2 = math.sqrt(0.5);
+    inv_sqrt2 = math.sqrt(0.5)
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
         y = 0.5 * x * (1 + tf.math.erf(inv_sqrt2 * x))
-        x_diff = tape.gradient(y, x)
-        return y.numpy(), x_diff.numpy()
+    x_diff = tape.gradient(y, x)
+    return y.numpy(), x_diff.numpy()
 
 
 def test_gelu(test_case):
