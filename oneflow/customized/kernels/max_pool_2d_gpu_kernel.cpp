@@ -4,10 +4,10 @@
 namespace oneflow {
 
 template<typename T>
-class GPUMaxpool2dKernel final : public user_op::OpKernel {
+class MaxPool2DGpuKernel final : public user_op::OpKernel {
  public:
-  GPUMaxpool2dKernel() = default;
-  ~GPUMaxpool2dKernel() = default;
+  MaxPool2DGpuKernel() = default;
+  ~MaxPool2DGpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -29,23 +29,23 @@ class GPUMaxpool2dKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_MAX_POOL_2D_KERNEL(dtype)                                      \
+#define REGISTER_MAX_POOL_2D_GPU_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("max_pool_2d")                                               \
-      .SetCreateFn<GPUMaxpool2dKernel<dtype>>()                                     \
+      .SetCreateFn<MaxPool2DGpuKernel<dtype>>()                                     \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
         return ctx.device_type() == DeviceType::kGPU                                \
                && y_desc->data_type() == GetDataType<dtype>::value;                 \
       });
 
-REGISTER_GPU_MAX_POOL_2D_KERNEL(float)
-REGISTER_GPU_MAX_POOL_2D_KERNEL(double)
+REGISTER_MAX_POOL_2D_GPU_KERNEL(float)
+REGISTER_MAX_POOL_2D_GPU_KERNEL(double)
 
 template<typename T>
-class GpuMaxpool2dGradKernel final : public user_op::OpKernel {
+class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
  public:
-  GpuMaxpool2dGradKernel() = default;
-  ~GpuMaxpool2dGradKernel() = default;
+  MaxPool2DGradGpuKernel() = default;
+  ~MaxPool2DGradGpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -71,16 +71,16 @@ class GpuMaxpool2dGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_GPU_MAX_POOL_2D_GRAD_KERNEL(dtype)                                   \
+#define REGISTER_MAX_POOL_2D_GRAD_GPU_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("max_pool_2d_grad")                                            \
-      .SetCreateFn<GpuMaxpool2dGradKernel<dtype>>()                                   \
+      .SetCreateFn<MaxPool2DGradGpuKernel<dtype>>()                                   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kGPU                                  \
                && dx_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
-REGISTER_GPU_MAX_POOL_2D_GRAD_KERNEL(float)
-REGISTER_GPU_MAX_POOL_2D_GRAD_KERNEL(double)
+REGISTER_MAX_POOL_2D_GRAD_GPU_KERNEL(float)
+REGISTER_MAX_POOL_2D_GRAD_GPU_KERNEL(double)
 
 }  // namespace oneflow

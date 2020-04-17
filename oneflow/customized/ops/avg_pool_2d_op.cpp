@@ -78,16 +78,17 @@ REGISTER_USER_OP_GRAD("avg_pool_2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("avg_pool_2d_grad")
-            .Input("x", op.input("x", 0))
-            .Input("y", op.output("y", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Output("dx")
-            .Attr("data_format", op.attr<std::string>("data_format"))
-            .Attr("padding", op.attr<std::string>("padding"))
-            .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
-            .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
-                                                 .Build();
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("avg_pool_2d_grad")
+                .Input("x", op.input("x", 0))
+                .Input("y", op.output("y", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("dx")
+                .Attr("data_format", op.attr<std::string>("data_format"))
+                .Attr("padding", op.attr<std::string>("padding"))
+                .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
+                .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
+                .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }

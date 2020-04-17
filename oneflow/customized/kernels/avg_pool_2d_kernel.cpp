@@ -1,14 +1,14 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/utils/pool_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/customized/utils/pool_util.h"
 
 namespace oneflow {
 
 template<typename T>
-class CPUAvgpool2dKernel final : public user_op::OpKernel {
+class CPUAvgPool2DKernel final : public user_op::OpKernel {
  public:
-  CPUAvgpool2dKernel() = default;
-  ~CPUAvgpool2dKernel() = default;
+  CPUAvgPool2DKernel() = default;
+  ~CPUAvgPool2DKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -51,7 +51,7 @@ class CPUAvgpool2dKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_AVG_POOL_2D_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("avg_pool_2d")                                               \
-      .SetCreateFn<CPUAvgpool2dKernel<dtype>>()                                     \
+      .SetCreateFn<CPUAvgPool2DKernel<dtype>>()                                     \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
         return ctx.device_type() == DeviceType::kCPU                                \
@@ -62,10 +62,10 @@ REGISTER_CPU_AVG_POOL_2D_KERNEL(float)
 REGISTER_CPU_AVG_POOL_2D_KERNEL(double)
 
 template<typename T>
-class CpuAvgpool2dGradKernel final : public user_op::OpKernel {
+class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
  public:
-  CpuAvgpool2dGradKernel() = default;
-  ~CpuAvgpool2dGradKernel() = default;
+  CpuAvgPool2DGradKernel() = default;
+  ~CpuAvgPool2DGradKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -112,7 +112,7 @@ class CpuAvgpool2dGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_AVG_POOL_2D_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("avg_pool_2d_grad")                                            \
-      .SetCreateFn<CpuAvgpool2dGradKernel<dtype>>()                                   \
+      .SetCreateFn<CpuAvgPool2DGradKernel<dtype>>()                                   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kCPU                                  \

@@ -1,14 +1,14 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/utils/pool_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/customized/utils/pool_util.h"
 
 namespace oneflow {
 
 template<typename T>
-class CPUMaxpool2dKernel final : public user_op::OpKernel {
+class CPUMaxPool2DKernel final : public user_op::OpKernel {
  public:
-  CPUMaxpool2dKernel() = default;
-  ~CPUMaxpool2dKernel() = default;
+  CPUMaxPool2DKernel() = default;
+  ~CPUMaxPool2DKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -54,7 +54,7 @@ class CPUMaxpool2dKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_MAX_POOL_2D_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("max_pool_2d")                                               \
-      .SetCreateFn<CPUMaxpool2dKernel<dtype>>()                                     \
+      .SetCreateFn<CPUMaxPool2DKernel<dtype>>()                                     \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
         return ctx.device_type() == DeviceType::kCPU                                \
@@ -65,10 +65,10 @@ REGISTER_CPU_MAX_POOL_2D_KERNEL(float)
 REGISTER_CPU_MAX_POOL_2D_KERNEL(double)
 
 template<typename T>
-class CpuMaxpool2dGradKernel final : public user_op::OpKernel {
+class CpuMaxPool2DGradKernel final : public user_op::OpKernel {
  public:
-  CpuMaxpool2dGradKernel() = default;
-  ~CpuMaxpool2dGradKernel() = default;
+  CpuMaxPool2DGradKernel() = default;
+  ~CpuMaxPool2DGradKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -117,7 +117,7 @@ class CpuMaxpool2dGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_MAX_POOL_2D_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("max_pool_2d_grad")                                            \
-      .SetCreateFn<CpuMaxpool2dGradKernel<dtype>>()                                   \
+      .SetCreateFn<CpuMaxPool2DGradKernel<dtype>>()                                   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kCPU                                  \
