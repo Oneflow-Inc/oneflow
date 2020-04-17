@@ -60,7 +60,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 def test_softmax(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20), (20,)]
+    arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20)]
     arg_dict["data_type"] = ["float32", "double"]
     arg_dict["axis"] = [1, 2]
     for arg in GenArgList(arg_dict):
