@@ -18,7 +18,6 @@ class OpKernel;
 class KernelInitContext;
 class TensorDesc;
 class InferContext;
-class KernelShapeInferContext;
 
 class KernelRegContext {
  public:
