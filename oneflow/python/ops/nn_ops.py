@@ -536,14 +536,3 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
-
-@oneflow_export("nn.gelu")
-def gelu(x, name=None):
-    return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
-        .Op("gelu")
-        .Input("in", [x])
-        .Output("out")
-        .Build()
-        .RemoteBlobList()[0]
-    )

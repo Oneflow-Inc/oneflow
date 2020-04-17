@@ -25,7 +25,7 @@ def tf_gelu(x):
 def test_gelu(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict['flow_op'] = [flow.nn.gelu]
+    arg_dict['flow_op'] = [flow.math.gelu]
     arg_dict['flow_args'] = [[]]
     arg_dict['x'] = [np.random.uniform(low=-100, high=100,
                           size=(10,20,30,40)).astype(np.float32)]
