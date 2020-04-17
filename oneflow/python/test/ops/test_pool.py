@@ -6,6 +6,7 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 import tensorflow as tf
 import collections
+import os
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 assert len(gpus) > 0, "No GPU found"
