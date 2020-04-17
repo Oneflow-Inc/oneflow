@@ -3,7 +3,7 @@ import math
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
 from test_util import GenArgDict
 from test_util import RunOneflowOp
@@ -28,11 +28,11 @@ def test_gelu(test_case):
     arg_dict['flow_op'] = [flow.math.gelu]
     arg_dict['flow_args'] = [[]]
     arg_dict['x'] = [np.random.uniform(low=-100, high=100,
-                          size=(10,20,30,40)).astype(np.float32)]
+                                       size=(10, 20, 30, 40)).astype(np.float32)]
     for arg in GenArgDict(arg_dict):
         of_y, of_x_diff = RunOneflowOp(**arg)
         tf_y, tf_x_diff = tf_gelu(arg["x"])
-        
+
         assert np.allclose(of_y, tf_y, rtol=1e-5, atol=1e-5)
         assert np.allclose(
             of_x_diff, tf_x_diff, rtol=1e-5, atol=1e-5

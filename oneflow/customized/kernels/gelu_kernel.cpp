@@ -22,13 +22,12 @@ class CpuGeluKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_GELU_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("gelu")                                                \
-      .SetCreateFn<CpuGeluKernel<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
+#define REGISTER_CPU_GELU_KERNEL(dtype)                                                 \
+  REGISTER_USER_KERNEL("gelu").SetCreateFn<CpuGeluKernel<dtype>>().SetIsMatchedPred(    \
+      [](const user_op::KernelRegContext& ctx) {                                        \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                \
-               && out_desc->data_type() == GetDataType<dtype>::value;                 \
+        return ctx.device_type() == DeviceType::kCPU                                    \
+               && out_desc->data_type() == GetDataType<dtype>::value;                   \
       });
 
 REGISTER_CPU_GELU_KERNEL(float)
@@ -52,15 +51,17 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
     T inv_sqrt2 = std::sqrt(0.5);
     T coef = std::sqrt(2.0 / std::acos(-1.0));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = 0.5 * (1.0 + std::erf(inv_sqrt2 * x_ptr[i]) + x_ptr[i] * coef * std::exp(-0.5 * x_ptr[i] * x_ptr[i]))
-              * dy_ptr[i];
+      dx_ptr[i] = 0.5
+                  * (1.0 + std::erf(inv_sqrt2 * x_ptr[i])
+                     + x_ptr[i] * coef * std::exp(-0.5 * x_ptr[i] * x_ptr[i]))
+                  * dy_ptr[i];
     }
   };
 };
 
-#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("gelu_grad")                                             \
-      .SetCreateFn<CpuGeluGradKernel<dtype>>()                                   \
+#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                                          \
+  REGISTER_USER_KERNEL("gelu_grad")                                                   \
+      .SetCreateFn<CpuGeluGradKernel<dtype>>()                                        \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kCPU                                  \
@@ -71,4 +72,3 @@ REGISTER_CPU_GELU_GRAD_KERNEL(float)
 REGISTER_CPU_GELU_GRAD_KERNEL(double)
 
 }  // namespace oneflow
-

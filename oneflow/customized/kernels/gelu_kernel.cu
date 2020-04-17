@@ -80,8 +80,8 @@ class GpuGeluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     const T inv_sqrt2 = sqrt(0.5);
-    RUN_CUDA_KERNEL((GeluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    x->dptr<T>(), inv_sqrt2, y->mut_dptr<T>());
+    RUN_CUDA_KERNEL((GeluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
+                    inv_sqrt2, y->mut_dptr<T>());
   };
 };
 
@@ -98,20 +98,17 @@ class GpuGeluKernel<float16> final : public user_op::OpKernel {
     const int32_t elem_cnt = x->shape().elem_cnt();
     const float inv_sqrt2 = sqrt(0.5);
     RUN_CUDA_KERNEL(NaiveHalfGeluForwardGpu, ctx->device_ctx(), elem_cnt, elem_cnt,
-                    reinterpret_cast<const half *>(x->dptr<float16>()), 
-                    inv_sqrt2, 
-                    reinterpret_cast<half *>(y->mut_dptr<float16>())
-                    );
+                    reinterpret_cast<const half*>(x->dptr<float16>()), inv_sqrt2,
+                    reinterpret_cast<half*>(y->mut_dptr<float16>()));
   };
 };
 
-#define REGISTER_GPU_GELU_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("gelu")                                                \
-      .SetCreateFn<GpuGeluKernel<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
+#define REGISTER_GPU_GELU_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedPred(  \
+      [](const user_op::KernelRegContext& ctx) {                                      \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
+        return ctx.device_type() == DeviceType::kGPU                                  \
+               && y_desc->data_type() == GetDataType<dtype>::value;                   \
       });
 
 REGISTER_GPU_GELU_KERNEL(float)
@@ -132,8 +129,8 @@ class GpuGeluGradKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = x->shape().elem_cnt();
     const T inv_sqrt2 = sqrt(0.5);
     const T coef = sqrt(2.0 / acos(-1.0));
-    RUN_CUDA_KERNEL((GeluBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    x->dptr<T>(), dy->dptr<T>(), inv_sqrt2, coef,  dx->mut_dptr<T>());
+    RUN_CUDA_KERNEL((GeluBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
+                    dy->dptr<T>(), inv_sqrt2, coef, dx->mut_dptr<T>());
   };
 };
 
@@ -152,17 +149,15 @@ class GpuGeluGradKernel<float16> final : public user_op::OpKernel {
     const float inv_sqrt2 = sqrt(0.5);
     const float coef = sqrt(2.0 / acos(-1.0));
     RUN_CUDA_KERNEL(NaiveHalfGeluBackwardGpu, ctx->device_ctx(), elem_cnt, elem_cnt,
-                    reinterpret_cast<const half *>(x->dptr<float16>()), 
-                    reinterpret_cast<const half *>(dy->dptr<float16>()), 
-                    inv_sqrt2, coef,  
-                    reinterpret_cast<half *>(dx->mut_dptr<float16>())
-                    );
+                    reinterpret_cast<const half*>(x->dptr<float16>()),
+                    reinterpret_cast<const half*>(dy->dptr<float16>()), inv_sqrt2, coef,
+                    reinterpret_cast<half*>(dx->mut_dptr<float16>()));
   };
 };
 
-#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("gelu_grad")                                             \
-      .SetCreateFn<GpuGeluGradKernel<dtype>>()                                   \
+#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                                          \
+  REGISTER_USER_KERNEL("gelu_grad")                                                   \
+      .SetCreateFn<GpuGeluGradKernel<dtype>>()                                        \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
         return ctx.device_type() == DeviceType::kGPU                                  \
@@ -174,4 +169,3 @@ REGISTER_GPU_GELU_GRAD_KERNEL(double)
 REGISTER_GPU_GELU_GRAD_KERNEL(float16)
 
 }  // namespace oneflow
-
