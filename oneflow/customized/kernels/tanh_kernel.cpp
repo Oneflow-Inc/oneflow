@@ -20,18 +20,18 @@ class TanHKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_RELU_KERNEL(device, dtype)                                                     \
+#define REGISTER_TANH_KERNEL(device, dtype)                                                     \
   REGISTER_USER_KERNEL("tanh").SetCreateFn<TanHKernel<device, dtype>>().SetIsMatchedPred(       \
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-REGISTER_RELU_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
+REGISTER_TANH_KERNEL(DeviceType::kCPU, float)
+REGISTER_TANH_KERNEL(DeviceType::kCPU, double)
+REGISTER_TANH_KERNEL(DeviceType::kGPU, float)
+REGISTER_TANH_KERNEL(DeviceType::kGPU, double)
+REGISTER_TANH_KERNEL(DeviceType::kGPU, float16)
 
 template<DeviceType device_type, typename T>
 class TanHGradKernel final : public user_op::OpKernel {
@@ -50,7 +50,7 @@ class TanHGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
+#define REGISTER_TANH_GRAD_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("tanh_grad")                                                              \
       .SetCreateFn<TanHGradKernel<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
@@ -58,11 +58,11 @@ class TanHGradKernel final : public user_op::OpKernel {
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float16)
+REGISTER_TANH_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_TANH_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, double)
+REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, float16)
 
 }  // namespace
 
