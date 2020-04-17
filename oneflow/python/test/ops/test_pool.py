@@ -5,6 +5,7 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 import tensorflow as tf
+import collections
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 assert len(gpus) > 0, "No GPU found"
@@ -55,8 +56,33 @@ pool_confs = [
         "padding": "VALID",
         "data_format": "NCHW",
     },
+    {
+        "x_shape": (1, 1, 9, 9, 9),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NCDHW",
+    },
 ]
 
+def _GetSequence(value, n, name):
+    """Formats value from input"""
+    if value is None:
+        value = [1]
+    elif not isinstance(value, collections.Sized):
+        value = [value]
+
+    current_n = len(value)
+    if current_n == 1:
+        return list(value * n)
+    elif current_n == n:
+        return list(value)
+    else:
+        raise ValueError(
+            "{} should be of length 1 or {} but was {}".format(
+                name, n, current_n
+            )
+        )
 
 def test_pool(_):
     arg_dict = OrderedDict()
@@ -76,6 +102,7 @@ def test_pool(_):
 
         # Random inputs
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
+        dim = len(x.shape) - 2
 
         # TF results
         with tf.GradientTape(persistent=True) as tape:
@@ -90,8 +117,8 @@ def test_pool(_):
             # y_tf = pooling_f(
             #     x_tf, ksize, strides, padding, data_format=data_format
             # )
-            window_shape = [ksize, ksize]
-            strides = [strides, strides]
+            window_shape = _GetSequence(ksize, dim, "ksize")
+            strides = _GetSequence(strides, dim, "strides")
             y_tf = tf.nn.pool(
                 x_tf, window_shape, pooling_type, strides=strides, padding=padding,
                 data_format=data_format
@@ -129,9 +156,9 @@ def test_pool(_):
             with flow.device_prior_placement(device_type, "0:0"):
                 pooling_f = None
                 if pooling_type == "AVG":
-                    pooling_f = flow.nn.avg_pool2d
+                    pooling_f = getattr(flow.nn, "avg_pool{}d".format(dim))
                 elif pooling_type == "MAX":
-                    pooling_f = flow.nn.max_pool2d
+                    pooling_f = getattr(flow.nn, "max_pool{}d".format(dim))
                 else:
                     raise ValueError("pooling_type must be AVG or MAX")
                 y = pooling_f(
