@@ -71,7 +71,7 @@ class CpuAvgPool3DGradKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-    const int32_t dim = 2;
+    const int32_t dim = 3;
     const std::string data_format = ctx->GetAttr<std::string>("data_format");
     const std::string padding = ctx->GetAttr<std::string>("padding");
     const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
