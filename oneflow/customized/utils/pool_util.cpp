@@ -123,6 +123,7 @@ GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string&
 
 std::shared_ptr<user_op::OpKernelState> GPUPoolOpKernelState::FromKernelInitContext(
     const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx) {
+  if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string data_format = ctx->GetAttr<std::string>("data_format");
   const std::string padding = ctx->GetAttr<std::string>("padding");
