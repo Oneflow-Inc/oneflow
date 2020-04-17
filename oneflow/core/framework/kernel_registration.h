@@ -18,7 +18,7 @@ class OpKernel;
 class KernelInitContext;
 class TensorDesc;
 class InferContext;
-class KernelInferShapeContext;
+class KernelShapeInferContext;
 
 class KernelRegContext {
  public:
@@ -46,7 +46,6 @@ class KernelRegContext {
 
 using CreateFn = std::function<const OpKernel*()>;
 using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
-using InferShapeFn = std::function<void(KernelInferShapeContext*)>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
@@ -56,7 +55,6 @@ using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInpl
 struct KernelRegistrationVal {
   CreateFn create_fn;
   IsMatchedPredicator is_matched_fn;
-  InferShapeFn infer_shape_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
 };
@@ -76,7 +74,6 @@ class KernelRegistryWrapperBuilder final {
     return SetCreateFn([]() -> const OpKernel* { return new T(); });
   }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
-  KernelRegistryWrapperBuilder& SetInferShapeFn(InferShapeFn fn);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 

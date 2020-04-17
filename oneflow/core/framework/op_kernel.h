@@ -39,9 +39,9 @@ class KernelInitContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-class KernelInferShapeContext {
+class KernelShapeInferContext {
  public:
-  virtual ~KernelInferShapeContext() = default;
+  virtual ~KernelShapeInferContext() = default;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -50,10 +50,12 @@ class KernelInferShapeContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
 
   virtual DeviceCtx* device_ctx() = 0;
-  virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-  virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
+  virtual ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
+  virtual MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                    int32_t arg_index) = 0;
+
+  virtual void InferShape() { UNIMPLEMENTED(); }
+  virtual void ForwardShape(std::function<void(KernelShapeInferContext*)>) { UNIMPLEMENTED(); }
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
@@ -61,8 +63,8 @@ class KernelInferShapeContext {
   }
 
  protected:
-  KernelInferShapeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
-  KernelInferShapeContext(const KernelInferShapeContext&) = delete;
+  KernelShapeInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelShapeInferContext(const KernelShapeInferContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
@@ -115,6 +117,11 @@ class OpKernel {
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
+
+  virtual void InferShape(KernelShapeInferContext* ctx) const { ctx->InferShape(); }
+  virtual void ForwardShape(KernelShapeInferContext* ctx) const {
+    ctx->ForwardShape([this](KernelShapeInferContext* ctx) { this->InferShape(ctx); });
+  }
 
  protected:
   OpKernel() = default;

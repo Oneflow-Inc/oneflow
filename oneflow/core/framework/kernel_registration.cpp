@@ -65,11 +65,6 @@ KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetIsMatchedPred(
   return *this;
 }
 
-KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInferShapeFn(InferShapeFn fn) {
-  wrapper_.reg_val.infer_shape_fn = std::move(fn);
-  return *this;
-}
-
 KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInferTmpSizeFn(InferTmpSizeFn fn) {
   wrapper_.reg_val.infer_tmp_size_fn = std::move(fn);
   return *this;
