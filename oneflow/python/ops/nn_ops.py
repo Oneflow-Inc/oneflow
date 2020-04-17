@@ -55,7 +55,32 @@ def conv2d(
             dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
-
+    
+    if channel_pos == "channels_first":
+        kernel_size = filters.static_shape[2:4]
+        input_size = input.static_shape[2:4]
+    elif channel_pos == "channels_last":
+        kernel_size = filters.static_shape[-3:-1]
+        input_size = input.static_shape[1:3]
+    else:
+        raise ValueError("invalid data_format")
+    
+    if padding.upper() == "SAME":
+        need_pad = False
+        padding_needed = [0, 0]
+        for i in range(2):
+            effective_kernel_size = (dilations[i] * kernel_size[i] - 1) + 1
+            out = (input_size[i] + strides[i] - 1) // strides[i]
+            padding_needed[i] = max(0, (out - 1) * strides[i]
+                                        + effective_kernel_size - input_size[i])
+            if padding_needed[i] % 2 != 0: need_pad = True
+        if need_pad:
+            assert channel_pos == "channels_first", ValueError("NHWC not supported when need odd pad!")
+            input = oneflow.pad(input, [(0, 0), (0, 0),
+                    (padding_needed[0]//2, padding_needed[0] - padding_needed[0]//2),
+                    (padding_needed[1]//2, padding_needed[1] - padding_needed[1]//2)])
+            padding = 'VALID'
+    
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
     setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
@@ -64,12 +89,7 @@ def conv2d(
     op_conf.conv_2d_conf.filters = filters.static_shape[0]
     op_conf.conv_2d_conf.padding = padding.lower()
     op_conf.conv_2d_conf.data_format = channel_pos
-    if channel_pos == "channels_first":
-        op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[2:4])
-    elif channel_pos == "channels_last":
-        op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[-3:-1])
-    else:
-        raise ValueError("invalid data_format")
+    op_conf.conv_2d_conf.kernel_size.extend(kernel_size)
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
