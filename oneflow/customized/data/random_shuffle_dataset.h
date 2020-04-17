@@ -28,7 +28,8 @@ class RandomShuffleDataSet final : public DataSet<LoadTarget> {
     int64_t total_empty_size = initial_buffer_fill_ + 2 * 2 * batch_size;  // maybe 2 * batch_size
     int64_t tensor_init_bytes = ctx->GetAttr<int64_t>("tensor_init_bytes");
 
-    empty_tensor_mgr_ = EmptyTensorManager<LoadTarget>(total_empty_size, tensor_init_bytes);
+    empty_tensor_mgr_.reset(
+        new EmptyTensorManager<LoadTarget>(total_empty_size, tensor_init_bytes));
   }
   ~RandomShuffleDataSet() = default;
 
@@ -39,9 +40,9 @@ class RandomShuffleDataSet final : public DataSet<LoadTarget> {
       int offset = dis(e_);
       LoadTargetSharedPtr sample_ptr(
           sample_buffer_.at(offset).release(),
-          [this](LoadTarget* sample) { empty_tensor_mgr_.Recycle(sample); });
+          [this](LoadTarget* sample) { empty_tensor_mgr_->Recycle(sample); });
       ret.push_back(std::move(sample_ptr));
-      LoadTargetUniquePtr new_sample = std::move(empty_tensor_mgr_.Get());
+      LoadTargetUniquePtr new_sample = std::move(empty_tensor_mgr_->Get());
       Next(*new_sample);
       sample_buffer_.at(offset) = std::move(new_sample);
     }
@@ -60,12 +61,12 @@ class RandomShuffleDataSet final : public DataSet<LoadTarget> {
   std::unique_ptr<DataSet<LoadTarget>> loader_;
   std::vector<LoadTargetUniquePtr> sample_buffer_;
 
-  const int initial_buffer_fill_;
+  int32_t initial_buffer_fill_;
 
   std::default_random_engine e_;
   int64_t seed_;
 
-  EmptyTensorManager<LoadTarget> empty_tensor_mgr_;
+  std::unique_ptr<EmptyTensorManager<LoadTarget>> empty_tensor_mgr_;
 };
 
 }  // namespace oneflow
