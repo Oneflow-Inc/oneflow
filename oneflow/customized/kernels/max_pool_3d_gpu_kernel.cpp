@@ -12,7 +12,7 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return GPUPoolOpKernelState::FromKernelInitContext(2, "MAX", ctx);
+    return GPUPoolOpKernelState::FromKernelInitContext(3, "MAX", ctx);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
@@ -50,7 +50,7 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return GPUPoolOpKernelState::FromKernelInitContext(2, "MAX", ctx);
+    return GPUPoolOpKernelState::FromKernelInitContext(3, "MAX", ctx);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
