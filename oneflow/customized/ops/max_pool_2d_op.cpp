@@ -69,8 +69,6 @@ REGISTER_USER_OP("max_pool_2d_grad")
           .Split("dx", 0, 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder().Broadcast("x", 0).PartialSum("dy", 0).PartialSum("dx", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
