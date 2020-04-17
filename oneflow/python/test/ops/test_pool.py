@@ -125,16 +125,6 @@ def test_pool(_):
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
-            # pooling_f = None
-            # if pooling_type == "AVG":
-            #     pooling_f = tf.nn.avg_pool2d
-            # elif pooling_type == "MAX":
-            #     pooling_f = tf.nn.max_pool2d
-            # else:
-            #     raise ValueError("pooling_type must be AVG or MAX")
-            # y_tf = pooling_f(
-            #     x_tf, ksize, strides, padding, data_format=data_format
-            # )
             window_shape = _GetSequence(ksize, dim, "ksize")
             strides = _GetSequence(strides, dim, "strides")
             y_tf = tf.nn.pool(
