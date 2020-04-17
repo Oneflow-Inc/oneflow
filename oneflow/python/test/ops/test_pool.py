@@ -63,6 +63,20 @@ pool_confs = [
         "padding": "VALID",
         "data_format": "NCDHW",
     },
+    {
+        "x_shape": (1, 7, 5, 5, 5),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NCDHW",
+    },
+    {
+        "x_shape": (1, 3, 3, 3, 3),
+        "ksize": 1,
+        "strides": 1,
+        "padding": "VALID",
+        "data_format": "NCDHW",
+    },
 ]
 
 def _GetSequence(value, n, name):
