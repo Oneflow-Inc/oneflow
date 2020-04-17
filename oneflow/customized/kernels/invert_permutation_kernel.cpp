@@ -20,28 +20,24 @@ class CpuInvertPermutationKernel final : public user_op::OpKernel {
     std::fill_n(y_ptr, elem_cnt, -1);
 
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-
       const T d = x_ptr[i];
 
-      CHECK(d < elem_cnt && d>=0) << d << " is not between 0 and " << elem_cnt;
-      CHECK( y_ptr[d] == -1 ) << d << " is duplicated in the input.";
+      CHECK(d < elem_cnt && d >= 0) << d << " is not between 0 and " << elem_cnt;
+      CHECK(y_ptr[d] == -1) << d << " is duplicated in the input.";
 
       y_ptr[d] = i;
-
     }
-
   };
 };
 
-#define REGISTER_CPU_INVERT_PERMUTATION_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("invert_permutation")                                                    \
+#define REGISTER_CPU_INVERT_PERMUTATION_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("invert_permutation")                                          \
       .SetCreateFn<CpuInvertPermutationKernel<dtype>>()                               \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
         return ctx.device_type() == DeviceType::kCPU                                  \
                && in_desc->data_type() == GetDataType<dtype>::value;                  \
       });
-
 
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int32_t)
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int64_t)
