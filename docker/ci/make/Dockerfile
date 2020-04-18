@@ -7,7 +7,7 @@ COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
 RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH; \
-    cmake -DTHIRD_PARTY=OFF .. && make -j $(nproc) ;
+    cmake -G Ninja -DTHIRD_PARTY=OFF .. && ninja ;
 
 ## BUILD WHEEL
 WORKDIR /workspace

@@ -29,4 +29,11 @@ RUN mkdir -p /tmp/download && \
     mv /cmake-extracted/* /cmake-extracted/cmake-install && \
     rm -rf /tmp/download
 
+
 ENV PATH="/cmake-extracted/cmake-install/bin:${PATH}"
+
+RUN mkdir /ninja-bin && cd /ninja-bin && \
+    wget https://github.com/ninja-build/ninja/releases/download/v1.10.0/ninja-linux.zip && \
+    unzip ninja-linux.zip
+
+ENV PATH="/ninja-bin:${PATH}"
