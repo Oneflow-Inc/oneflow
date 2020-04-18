@@ -16,6 +16,8 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     zlib-devel \
     curl-devel \
     which \
+    unzip \
+    wget \
     rh-python36 python36-devel.x86_64 python36-devel && \
     python3 -m ensurepip && \
     pip3 install numpy protobuf && \
