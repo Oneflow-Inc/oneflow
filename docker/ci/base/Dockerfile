@@ -29,7 +29,6 @@ RUN mkdir -p /tmp/download && \
     mv /cmake-extracted/* /cmake-extracted/cmake-install && \
     rm -rf /tmp/download
 
-
 ENV PATH="/cmake-extracted/cmake-install/bin:${PATH}"
 
 RUN mkdir /ninja-bin && cd /ninja-bin && \
