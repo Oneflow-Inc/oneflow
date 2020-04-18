@@ -21,7 +21,7 @@ class ReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_RELU_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel<device, dtype>>().SetIsMatchedPred(      \
+  REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel<device, dtype>>().SetIsMatchedPred(       \
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
@@ -52,7 +52,7 @@ class ReluGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn<ReluGradKernel<device, dtype>>()                                             \
+      .SetCreateFn<ReluGradKernel<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
