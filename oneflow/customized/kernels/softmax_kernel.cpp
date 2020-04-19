@@ -6,10 +6,10 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-class ReluKernel final : public user_op::OpKernel {
+class SoftmaxKernel final : public user_op::OpKernel {
  public:
-  ReluKernel() = default;
-  ~ReluKernel() = default;
+  SoftmaxKernel() = default;
+  ~SoftmaxKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -20,24 +20,24 @@ class ReluKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_RELU_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel<device, dtype>>().SetIsMatchedPred(       \
+#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                                     \
+  REGISTER_USER_KERNEL("softmax").SetCreateFn<SoftmaxKernel<device, dtype>>().SetIsMatchedPred(       \
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-REGISTER_RELU_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, double)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float16)
 
 template<DeviceType device_type, typename T>
-class ReluGradKernel final : public user_op::OpKernel {
+class SoftmaxGradKernel final : public user_op::OpKernel {
  public:
-  ReluGradKernel() = default;
-  ~ReluGradKernel() = default;
+  SoftmaxGradKernel() = default;
+  ~SoftmaxGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -50,19 +50,19 @@ class ReluGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn<ReluGradKernel<device, dtype>>()                                              \
+#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                                 \
+  REGISTER_USER_KERNEL("softmax_grad")                                                              \
+      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float16)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, double)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float16)
 
 }  // namespace
 
