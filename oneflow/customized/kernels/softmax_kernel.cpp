@@ -5,6 +5,10 @@ namespace oneflow {
 
 namespace {
 
+size_t InferTmpSize(user_op::InferContext* ctx) {
+  return 10;
+}
+
 template<DeviceType device_type, typename T>
 class SoftmaxKernel final : public user_op::OpKernel {
  public:
@@ -25,7 +29,8 @@ class SoftmaxKernel final : public user_op::OpKernel {
       [](const user_op::KernelRegContext& ctx) {                                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
-      });
+      })                                                                                    \
+      .SetInferTmpSizeFn(InferTmpSize);
 
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
@@ -56,7 +61,8 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
-      });
+      })                                                                                    \
+      .SetInferTmpSizeFn(InferTmpSize);
 
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
