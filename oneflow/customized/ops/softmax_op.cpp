@@ -64,6 +64,7 @@ REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOp
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper softmax_grad_op =
         builder.Op("softmax_grad")
+            .Attr("axis", op.attr<int32_t>("axis"))
             .Input("y", op.output("out", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
