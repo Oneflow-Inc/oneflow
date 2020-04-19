@@ -276,11 +276,13 @@ def softmax(logits, axis=None, name=None):
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
+    assert axis == -1, 'axis <> -1 is not supported'
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
         .Op("softmax")
-        .Input("in", [x])
+        .Input("in", [logits])
         .Output("out")
+        .SetAttr("axis", axis, "AttrTypeInt32")
         .Build()
         .RemoteBlobList()[0]
     )
