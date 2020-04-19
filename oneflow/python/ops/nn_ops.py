@@ -257,6 +257,9 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
+    if axis is None:
+        axis = -1
+
     if os.getenv("ENABLE_USER_OP") != 'True':
         if axis is None:
             axis = -1
