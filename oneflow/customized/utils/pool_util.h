@@ -112,22 +112,6 @@ struct PoolKernelUtil {
   static void CpuMaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
 };
 
-struct PoolOpUtil {
- public:
-  typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-  typedef std::function<Maybe<void>(user_op::SbpContext* ctx)> GetSbpFn;
-  typedef std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> BatchAxisInferFn;
-  typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-      GenBackwardOpConfFn;
-  static TensorDescInferFn MakeFwTensorDescInferFn(const int32_t& dim);
-  static TensorDescInferFn MakeBwTensorDescInferFn();
-  static BatchAxisInferFn MakeFwBatchAxisInferFn();
-  static BatchAxisInferFn MakeBwBatchAxisInferFn();
-  static GetSbpFn MakeFwGetSbpFn();
-  static GetSbpFn MakeBwGetSbpFn();
-  static GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t& dim);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_UTILS_POOL_UTIL_H_
