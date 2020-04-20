@@ -344,7 +344,7 @@ std::shared_ptr<user_op::OpKernelState> PoolKernelUtil<T>::CreateOpKernelState(
 }
 
 template<typename T>
-void PoolKernelUtil<T>::CPUAvgFWCompute(user_op::KernelComputeContext* ctx,
+void PoolKernelUtil<T>::CpuAvgFWCompute(user_op::KernelComputeContext* ctx,
                                         user_op::OpKernelState* state) {
   const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
   user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -370,7 +370,7 @@ void PoolKernelUtil<T>::CPUAvgFWCompute(user_op::KernelComputeContext* ctx,
   }
 }
 template<typename T>
-void PoolKernelUtil<T>::CPUAvgBWCompute(user_op::KernelComputeContext* ctx,
+void PoolKernelUtil<T>::CpuAvgBWCompute(user_op::KernelComputeContext* ctx,
                                         user_op::OpKernelState* state) {
   const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
   const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -401,12 +401,67 @@ void PoolKernelUtil<T>::CPUAvgBWCompute(user_op::KernelComputeContext* ctx,
 }
 
 template<typename T>
-void PoolKernelUtil<T>::CPUMaxFWCompute(user_op::KernelComputeContext* ctx,
-                                        user_op::OpKernelState* state) {}
+void PoolKernelUtil<T>::CpuMaxFWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {
+  const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+  user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+  // TODO: tsai: reset op kernel state when is_dynamic if ready
+  const OpKernelStateWrapper<Params3D>* params_3d =
+      dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
+  CHECK(params_3d != nullptr);
+  const std::string data_format = ctx->GetAttr<std::string>("data_format");
+  if (data_format == "channels_first") {
+    PoolKernelUtil<T>::CFirstForward(
+        params_3d->Get(), x, y, GetMinVal<T>,
+        [](const T& lhs, T& rhs) {
+          if (lhs > rhs) { rhs = lhs; }
+        },
+        [](const int64_t size, T& out) {});
+  } else if (data_format == "channels_last") {
+    PoolKernelUtil<T>::CLastForward(
+        params_3d->Get(), x, y, GetMinVal<T>,
+        [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+           EigenMatrixMap<T>& out_mat) {
+          out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
+        },
+        [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 template<typename T>
-void PoolKernelUtil<T>::CPUMaxBWCompute(user_op::KernelComputeContext* ctx,
-                                        user_op::OpKernelState* state) {}
+void PoolKernelUtil<T>::CpuMaxBWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {
+  const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+  const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+  user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  // TODO: tsai: reset op kernel state when is_dynamic if ready
+  const OpKernelStateWrapper<Params3D>* params_3d =
+      dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
+  CHECK(params_3d != nullptr);
+  const std::string data_format = ctx->GetAttr<std::string>("data_format");
+  if (data_format == "channels_first") {
+    PoolKernelUtil<T>::CFirstBackward(
+        params_3d->Get(), dy, y, x, dx,
+        [](const T& in, const T& out, const T& out_diff, const int64_t size, T& in_diff) {
+          if (in == out) { in_diff += out_diff; }
+        });
+  } else if (data_format == "channels_last") {
+    PoolKernelUtil<T>::CLastBackward(
+        params_3d->Get(), dy, y, x, dx,
+        [](const int64_t out_col, const int64_t in_col, const int64_t size,
+           ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
+           ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
+          in_diff_arr.col(in_col) +=
+              out_diff_arr.col(out_col)
+              * (in_arr.col(in_col).cwiseEqual(out_arr.col(out_col)).template cast<T>());
+        });
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 template struct PoolKernelUtil<float>;
 template struct PoolKernelUtil<double>;
