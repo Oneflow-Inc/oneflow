@@ -5,6 +5,7 @@
 #include "oneflow/customized/data/ofrecord_dataset.h"
 #include "oneflow/customized/data/ofrecord_parser.h"
 #include "oneflow/customized/data/random_shuffle_dataset.h"
+#include "oneflow/customized/data/sequential_dataset.h"
 
 namespace oneflow {
 
@@ -14,11 +15,9 @@ class OFRecordDataReader final : public DataReader<TensorBuffer> {
     loader_.reset(new OFRecordDataset(ctx));
     parser_.reset(new OFRecordParser());
     if (ctx->GetAttr<bool>("random_shuffle")) {
-      // std::unique_ptr<RandomShuffleDataset<TensorBuffer>> random_shuffle(
-      //    new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
       loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
     } else {
-      TODO();
+      loader_.reset(new SequentialDataset<TensorBuffer>(ctx, std::move(loader_)));
     }
   }
   ~OFRecordDataReader() = default;

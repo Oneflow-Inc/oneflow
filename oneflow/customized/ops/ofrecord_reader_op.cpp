@@ -9,8 +9,10 @@ REGISTER_USER_OP("OFRecordReader")
     .Attr("batch_size", UserOpAttrType::kAtInt32)
     .Attr<std::string>("part_name_prefix", UserOpAttrType::kAtString, "part-")
     .Attr<bool>("random_shuffle", UserOpAttrType::kAtBool, false)
+    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<int32_t>("shuffle_buffer_size", UserOpAttrType::kAtInt32, 1024)
     .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, false)
+    .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t local_batch_size = ctx->GetAttr<int32_t>("batch_size");
