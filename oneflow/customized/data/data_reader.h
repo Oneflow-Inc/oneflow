@@ -42,7 +42,7 @@ class DataReader {
   }
 
  protected:
-  std::unique_ptr<DataSet<LoadTarget>> loader_;
+  std::unique_ptr<Dataset<LoadTarget>> loader_;
   std::unique_ptr<Parser<LoadTarget>> parser_;
 
  private:
@@ -58,8 +58,8 @@ class DataReader {
     batch_buffer_.Send(batch_data);
   }
 
-  Buffer<std::shared_ptr<BatchLoadTargetPtr>> batch_buffer_;
   std::atomic<bool> is_closed_;
+  Buffer<std::shared_ptr<BatchLoadTargetPtr>> batch_buffer_;
   std::thread load_thrd_;
   int64_t batch_size_;
 };

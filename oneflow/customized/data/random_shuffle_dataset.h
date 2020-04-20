@@ -8,13 +8,13 @@
 namespace oneflow {
 
 template<typename LoadTarget>
-class RandomShuffleDataSet final : public DataSet<LoadTarget> {
+class RandomShuffleDataset final : public Dataset<LoadTarget> {
  public:
   using LoadTargetSharedPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetUniquePtr = std::unique_ptr<LoadTarget>;
   using BatchLoadTargetPtr = std::vector<LoadTargetSharedPtr>;
-  RandomShuffleDataSet(user_op::KernelInitContext* ctx,
-                       std::unique_ptr<DataSet<LoadTarget>>&& data_set)
+  RandomShuffleDataset(user_op::KernelInitContext* ctx,
+                       std::unique_ptr<Dataset<LoadTarget>>&& data_set)
       : loader_(std::move(data_set)) {
     // random
     seed_ = ctx->GetAttr<int64_t>("seed");
@@ -31,7 +31,7 @@ class RandomShuffleDataSet final : public DataSet<LoadTarget> {
     empty_tensor_mgr_.reset(
         new EmptyTensorManager<LoadTarget>(total_empty_size, tensor_init_bytes));
   }
-  ~RandomShuffleDataSet() = default;
+  ~RandomShuffleDataset() = default;
 
   BatchLoadTargetPtr LoadBatch(int64_t batch_size) override {
     BatchLoadTargetPtr ret;
@@ -58,7 +58,7 @@ class RandomShuffleDataSet final : public DataSet<LoadTarget> {
   bool EnableGetSize() override { return loader_->EnableGetSize(); }
 
  private:
-  std::unique_ptr<DataSet<LoadTarget>> loader_;
+  std::unique_ptr<Dataset<LoadTarget>> loader_;
   std::vector<LoadTargetUniquePtr> sample_buffer_;
 
   int32_t initial_buffer_fill_;

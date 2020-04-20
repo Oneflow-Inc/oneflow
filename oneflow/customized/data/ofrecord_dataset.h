@@ -6,10 +6,10 @@
 
 namespace oneflow {
 
-class OFRecordDataSet final : public DataSet<TensorBuffer> {
+class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
-  OFRecordDataSet(user_op::KernelInitContext* ctx) { TODO(); }
-  ~OFRecordDataSet() = default;
+  OFRecordDataset(user_op::KernelInitContext* ctx) { TODO(); }
+  ~OFRecordDataset() = default;
 
   void Next(TensorBuffer& tensor) override {}
 

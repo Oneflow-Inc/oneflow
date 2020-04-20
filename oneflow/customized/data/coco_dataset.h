@@ -14,10 +14,10 @@ struct COCODataInstance {
   // ... store other data like bbox , segmentation
 };
 
-class COCODataSet final : public DataSet<COCODataInstance> {
+class COCODataset final : public Dataset<COCODataInstance> {
  public:
-  COCODataSet(user_op::KernelInitContext* ctx) { TODO(); }
-  ~COCODataSet() = default;
+  COCODataset(user_op::KernelInitContext* ctx) { TODO(); }
+  ~COCODataset() = default;
 
   void Next(COCODataInstance& tensor) override;
   void At(int64_t idx, COCODataInstance& tensor) override;

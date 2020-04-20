@@ -7,12 +7,12 @@
 namespace oneflow {
 
 template<typename LoadTarget>
-class DataSet {
+class Dataset {
  public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using BatchLoadTargetPtr = std::vector<LoadTargetPtr>;
-  DataSet() = default;
-  ~DataSet() = default;
+  Dataset() = default;
+  ~Dataset() = default;
 
   virtual BatchLoadTargetPtr LoadBatch(int64_t batch_size) { UNIMPLEMENTED(); }
   virtual void Next(LoadTarget& tensor) = 0;
@@ -27,7 +27,7 @@ class DataSet {
   virtual bool EnableGetSize() { return false; }
 };
 
-static constexpr int kOneflowDataSetSeed = 524287;
+static constexpr int kOneflowDatasetSeed = 524287;
 
 template<typename LoadTarget>
 class EmptyTensorManager {

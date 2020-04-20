@@ -11,12 +11,12 @@ namespace oneflow {
 class OFRecordDataReader final : public DataReader<TensorBuffer> {
  public:
   OFRecordDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
-    loader_.reset(new OFRecordDataSet(ctx));
+    loader_.reset(new OFRecordDataset(ctx));
     parser_.reset(new OFRecordParser());
     if (ctx->GetAttr<bool>("random_shuffle")) {
-      // std::unique_ptr<RandomShuffleDataSet<TensorBuffer>> random_shuffle(
-      //    new RandomShuffleDataSet<TensorBuffer>(ctx, std::move(loader_)));
-      loader_.reset(new RandomShuffleDataSet<TensorBuffer>(ctx, std::move(loader_)));
+      // std::unique_ptr<RandomShuffleDataset<TensorBuffer>> random_shuffle(
+      //    new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
+      loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
     } else {
       TODO();
     }
