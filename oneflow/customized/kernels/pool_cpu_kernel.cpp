@@ -8,7 +8,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct PoolKernelUtil {
+struct PoolCpuKernelUtil {
  public:
   typedef std::function<T()> ForwardInitialize;
   typedef std::function<void(const T& lhs, T& rhs)> CFirstProcess;
@@ -210,7 +210,7 @@ struct PoolKernelUtil {
     }
   }
 
-  static void CpuAvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void AvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     // TODO: tsai: reset op kernel state when is_dynamic if ready
@@ -235,7 +235,7 @@ struct PoolKernelUtil {
     }
   }
 
-  static void CpuAvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void AvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -261,7 +261,7 @@ struct PoolKernelUtil {
     }
   }
 
-  static void CpuMaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void MaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     // TODO: tsai: reset op kernel state when is_dynamic if ready
@@ -289,7 +289,7 @@ struct PoolKernelUtil {
     }
   }
 
-  static void CpuMaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void MaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -355,7 +355,7 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
 };
 
@@ -372,7 +372,7 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
 };
 
@@ -389,7 +389,7 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
 };
 
@@ -406,7 +406,7 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
 };
 
@@ -423,7 +423,7 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
 };
 
@@ -440,7 +440,7 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuAvgBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
 };
 
@@ -457,7 +457,7 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
 };
 
@@ -474,7 +474,7 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
 };
 
@@ -491,7 +491,7 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
 };
 
@@ -508,7 +508,7 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
 };
 
@@ -525,7 +525,7 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxFWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
 };
 
@@ -542,7 +542,7 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::CpuMaxBWCompute(ctx, state);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
 };
 
