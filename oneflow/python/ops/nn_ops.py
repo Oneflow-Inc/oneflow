@@ -536,3 +536,35 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("nn.gather")
+def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Gather_")
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        if axis = None:
+            axis = 0
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("gather")\
+            .Input("in", [params])\
+            .Input("indices", [indices])\
+            .Output("out")\
+            .SeAttr("validate_indices", validate_indices)\
+            .SetAttr("axis"i, axis)\
+            .SetAttr("batch_dims", batch_dims)\
+            .Build().RemoteBlobList()[0]
+
+@oneflow_export("nn.unsorted_segment_sum")
+def gather(data, segment_ids, axis=None, num_segments=0, name=None):
+    if name is None:
+        name = id_util.UniqueStr("UnsortedSegmentSum_")
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        if axis = None:
+            axis = 0
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("gather_grad")\
+            .Input("data", [data])\
+            .Input("segment_ids", [segment_ids])\
+            .Output("out")\
+            .SetAttr("axis", axis)\
+            .SetAttr("num_segments", num_segments)\
+            .Build().RemoteBlobList()[0]
+
