@@ -34,9 +34,7 @@ def compare_with_tensorflow(device_type, num_classes, batch_size):
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            prediction = flow.nn.softmax(logits=x)
-            loss = flow.nn.sparse_cross_entropy(labels=labels, prediction=prediction)
-            #loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
 
@@ -70,7 +68,9 @@ def compare_with_tensorflow(device_type, num_classes, batch_size):
 
 def test_sparse_softmax_cross_entropy_with_logits(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["label_type"] = ["int32", "int64"]
     arg_dict["num_classes"] = [1000]
     arg_dict["batch_size"] = [64]
     for arg in GenArgList(arg_dict):

@@ -314,10 +314,10 @@ def softmax_grad(y, dy, axis=None, name=None):
 def sparse_cross_entropy(
     labels=None, prediction=None, name=None
 ):
+    assert labels is not None
+    assert prediction is not None
     if os.getenv("ENABLE_USER_OP") == 'True':
         print("use user op")
-        assert labels is not None
-        assert prediction is not None
         return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
         .Op("sparse_cross_entropy")
@@ -328,8 +328,6 @@ def sparse_cross_entropy(
         .RemoteBlobList()[0]
         )
     else:
-        assert labels is not None
-        assert prediction is not None
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf,
@@ -357,7 +355,21 @@ def sparse_softmax_cross_entropy_with_logits(
 ):
     assert labels is not None
     assert logits is not None
-    return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        print("use user op")
+        prob, out = (
+            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
+            .Op("sparse_cross_entropy")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("prob")
+            .Output("out")
+            .Build()
+            .RemoteBlobList()
+            )
+        return out
+    else:
+        return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(

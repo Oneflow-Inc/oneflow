@@ -1,0 +1,90 @@
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/customized/kernels/sparse_cross_entropy_kernel_util.h"
+
+namespace oneflow {
+
+template<DeviceType device_type, typename T, typename K>
+class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
+ public:
+  SparseSoftmaxCrossEntropyKernel() = default;
+  ~SparseSoftmaxCrossEntropyKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
+    const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
+    user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t num_instances = label->shape().elem_cnt();
+    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    // TODO();
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
+        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(),
+        out->mut_dptr<T>());
+  }
+};
+
+#define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)     \
+  REGISTER_USER_KERNEL("sparse_softmax_cross_entropy")                                          \
+      .SetCreateFn<SparseSoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                                   OF_PP_PAIR_FIRST(ltype_pair)>>()             \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);     \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
+        return ctx.device_type() == device_type_v                                               \
+               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                      \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                       \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+template<DeviceType device_type, typename T, typename K>
+class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
+ public:
+  SparseSoftmaxCrossEntropyGradKernel() = default;
+  ~SparseSoftmaxCrossEntropyGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const int64_t num_instances = label->shape().elem_cnt();
+    CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
+
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), dx->mut_dptr<T>(), prob->dptr<T>(),
+                             dx->shape().elem_cnt() * sizeof(T));
+    SparseCrossEntropyKernelUtil<device_type, T, K>::BackwardSub(ctx->device_ctx(), num_instances,
+                                                                 num_classes, label->dptr<K>(),
+                                                                 dy->dptr<T>(), dx->mut_dptr<T>());
+  }
+};
+
+#define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL(device_type_v, dtype_pair, ltype_pair) \
+  REGISTER_USER_KERNEL("sparse_softmax_cross_entropy_grad")                                      \
+      .SetCreateFn<SparseSoftmaxCrossEntropyGradKernel<                                          \
+          device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()          \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
+        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);      \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
+        return ctx.device_type() == device_type_v                                                \
+               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                       \
+               && dx_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+}  // namespace oneflow
