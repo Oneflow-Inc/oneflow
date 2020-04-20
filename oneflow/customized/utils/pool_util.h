@@ -106,6 +106,18 @@ struct PoolKernelUtil {
                             user_op::Tensor* in_diff_blob, const CLastProcessGrad& process);
 };
 
+struct PoolOpUtil {
+ public:
+  typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
+  typedef std::function<Maybe<void>(user_op::SbpContext* ctx)> GetSbpFn;
+  typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
+      GenBackwardOpConfFn;
+  static TensorDescInferFn MakeFwTensorDescInferFn(const int32_t& dim);
+  static GetSbpFn MakeFwGetSbpFn();
+  static GetSbpFn MakeBwGetSbpFn();
+  static GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t& dim);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_UTILS_POOL_UTIL_H_
