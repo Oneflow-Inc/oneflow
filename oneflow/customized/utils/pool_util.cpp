@@ -408,7 +408,6 @@ template<typename T>
 void PoolKernelUtil<T>::CPUMaxBWCompute(user_op::KernelComputeContext* ctx,
                                         user_op::OpKernelState* state) {}
 
-// TODO: tsai: initilize template of definition in interfaces
 template struct PoolKernelUtil<float>;
 template struct PoolKernelUtil<double>;
 
