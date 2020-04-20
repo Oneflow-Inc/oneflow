@@ -13,7 +13,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, num_classes, batch_size):
+def compare_with_tensorflow(device_type, data_type, label_type, num_classes, batch_size):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()

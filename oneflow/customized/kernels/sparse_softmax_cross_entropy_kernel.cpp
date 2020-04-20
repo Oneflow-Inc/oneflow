@@ -1,5 +1,7 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/kernels/sparse_cross_entropy_kernel_util.h"
+//#include "oneflow/customized/kernels/softmax_kernel_util.h"
+#include "oneflow/core/kernel/softmax_kernel.h"
 
 namespace oneflow {
 
@@ -14,13 +16,20 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-    // TODO();
+    // SoftmaxKernelUtil<device_type, T>::ComputeProb(
+    //    ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
+    //    prob->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(), tmp_buffer->shape().elem_cnt() *
+    //    sizeof(T));
+    SoftmaxComputeProb<device_type, T>(
+        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
+        prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(),
+        ctx->device_ctx(), num_instances, num_classes, prob->dptr<T>(), label->dptr<K>(),
         out->mut_dptr<T>());
   }
 };
@@ -35,6 +44,10 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
         return ctx.device_type() == device_type_v                                               \
                && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                      \
                && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                       \
+      })                                                                                        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);            \
+        return prediction_shape->elem_cnt() * sizeof(OF_PP_PAIR_SECOND(dtype_pair));            \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
@@ -60,8 +73,8 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), dx->mut_dptr<T>(), prob->dptr<T>(),
-                             dx->shape().elem_cnt() * sizeof(T));
+    Memcpy<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), prob->dptr<T>(),
+                        dx->shape().elem_cnt() * sizeof(T));
     SparseCrossEntropyKernelUtil<device_type, T, K>::BackwardSub(ctx->device_ctx(), num_instances,
                                                                  num_classes, label->dptr<K>(),
                                                                  dy->dptr<T>(), dx->mut_dptr<T>());
