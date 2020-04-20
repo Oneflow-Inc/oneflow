@@ -56,9 +56,24 @@ def compare_with_tensorflow(device_type, input_shape, perm):
 
 def test_transpose(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["perm"] = [(2, 0, 1)]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["input_shape"] = [(10, 11, 12, 13)]
+    arg_dict["perm"] = [(2, 0, 1, 3), (1, 0, 2, 3), (3, 2, 1, 0), (3, 1, 2, 0)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+def test_transpose2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["input_shape"] = [(10, 11, 12)]
+    arg_dict["perm"] = [(2, 0, 1), (1, 0, 2), (2, 1, 0),  (1, 2, 0)]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
+
+def test_transpose3(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["input_shape"] = [(10, 11)]
+    arg_dict["perm"] = [(1, 0),  (0, 1)]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)

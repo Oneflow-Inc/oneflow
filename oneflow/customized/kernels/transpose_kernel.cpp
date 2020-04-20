@@ -39,6 +39,10 @@ class TransposeKernel final : public OpKernel {
       });
 
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
+
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, double)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float16)
 }  // namespace user_op
 }  // namespace oneflow
