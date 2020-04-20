@@ -49,6 +49,7 @@ class CpuAvgPool1DGradKernel final : public user_op::OpKernel {
     PoolKernelUtil<T>::CpuAvgBWCompute(ctx, state);
   };
 };
+
 template<typename T>
 class CpuAvgPool2DKernel final : public user_op::OpKernel {
  public:
@@ -82,6 +83,7 @@ class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
     PoolKernelUtil<T>::CpuAvgBWCompute(ctx, state);
   };
 };
+
 template<typename T>
 class CpuAvgPool3DKernel final : public user_op::OpKernel {
  public:
@@ -149,6 +151,7 @@ class CpuMaxPool1DGradKernel final : public user_op::OpKernel {
     PoolKernelUtil<T>::CpuMaxBWCompute(ctx, state);
   };
 };
+
 template<typename T>
 class CpuMaxPool2DKernel final : public user_op::OpKernel {
  public:
@@ -182,6 +185,7 @@ class CpuMaxPool2DGradKernel final : public user_op::OpKernel {
     PoolKernelUtil<T>::CpuMaxBWCompute(ctx, state);
   };
 };
+
 template<typename T>
 class CpuMaxPool3DKernel final : public user_op::OpKernel {
  public:
