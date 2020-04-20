@@ -317,7 +317,6 @@ def sparse_cross_entropy(
     assert labels is not None
     assert prediction is not None
     if os.getenv("ENABLE_USER_OP") == 'True':
-        print("use user op")
         return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
         .Op("sparse_cross_entropy")
@@ -356,7 +355,6 @@ def sparse_softmax_cross_entropy_with_logits(
     assert labels is not None
     assert logits is not None
     if os.getenv("ENABLE_USER_OP") == 'True':
-        print("use user op")
         prob, out = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseSoftmaxCrossEntropy_"))
             .Op("sparse_softmax_cross_entropy")

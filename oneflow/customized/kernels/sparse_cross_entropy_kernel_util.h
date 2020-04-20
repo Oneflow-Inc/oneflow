@@ -7,10 +7,10 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K>
 struct SparseCrossEntropyKernelUtil {
-  static void ComputeEntropy(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                             const K* labels, T* y);
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                          const K* labels, const T* dy, T* dx);
+  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                             const T* x, const K* labels, T* y);
+  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const T* x, const K* labels, const T* dy, T* dx);
   static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const K* labels, const T* dy, T* dx);
 };

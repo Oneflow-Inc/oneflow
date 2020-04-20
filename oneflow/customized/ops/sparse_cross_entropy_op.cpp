@@ -17,7 +17,6 @@ REGISTER_USER_OP("sparse_cross_entropy")
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         CHECK_EQ_OR_RETURN(prediction_shape->At(i), label_shape->At(i));
       }
-
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       *out_shape = Shape(
           DimVector(prediction_shape->dim_vec().cbegin(), prediction_shape->dim_vec().cend() - 1));
@@ -43,7 +42,6 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
     .Input("dy")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // todo add check
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();

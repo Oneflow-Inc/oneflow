@@ -5,8 +5,8 @@ namespace oneflow {
 
 template<typename T, typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
-  static void ComputeEntropy(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                             const K* labels, T* y) {
+  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                             const T* x, const K* labels, T* y) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       K label = labels[i];
       CHECK_GE(label, 0);
@@ -15,8 +15,8 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                          const K* labels, const T* dy, T* dx) {
+  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const T* x, const K* labels, const T* dy, T* dx) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       K label = labels[i];
       CHECK_GE(label, 0);

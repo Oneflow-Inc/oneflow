@@ -7,6 +7,8 @@ from collections import OrderedDict
 from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
+from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -30,7 +32,7 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
             x = flow.get_variable(
                 "x",
                 shape=(batch_size, num_classes),
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
@@ -45,7 +47,7 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
         return loss
 
     # fake labels
-    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(np.int32)
+    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(type_name_to_np_type[label_type])
 
     # OneFlow
     check_point = flow.train.CheckPoint()

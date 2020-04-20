@@ -1,7 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/kernels/sparse_cross_entropy_kernel_util.h"
-//#include "oneflow/customized/kernels/softmax_kernel_util.h"
-#include "oneflow/core/kernel/softmax_kernel.h"
+#include "oneflow/customized/kernels/softmax_kernel_util.h"
 
 namespace oneflow {
 
@@ -21,13 +20,9 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-    // SoftmaxKernelUtil<device_type, T>::ComputeProb(
-    //    ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
-    //    prob->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(), tmp_buffer->shape().elem_cnt() *
-    //    sizeof(T));
-    SoftmaxComputeProb<device_type, T>(
+    SoftmaxKernelUtil<device_type, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
-        prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));
+        prob->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(), tmp_buffer->shape().elem_cnt() * sizeof(T));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, prob->dptr<T>(), label->dptr<K>(),
         out->mut_dptr<T>());

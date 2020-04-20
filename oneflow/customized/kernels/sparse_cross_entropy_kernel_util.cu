@@ -7,8 +7,8 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename K>
-__global__ void ComputeEntropyGpu(int64_t num_instances, int64_t num_classes, const T* x,
-                                  const K* labels, T* y) {
+__global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num_classes,
+                                  const T* x, const K* labels, T* y) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i];
     assert(label >= 0);
@@ -18,8 +18,8 @@ __global__ void ComputeEntropyGpu(int64_t num_instances, int64_t num_classes, co
 }
 
 template<typename K>
-__global__ void ComputeEntropyGpuHalf(int64_t num_instances, int64_t num_classes, const half* x,
-                                      const K* labels, half* y) {
+__global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t num_classes,
+                                      const half* x, const K* labels, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i];
@@ -34,7 +34,7 @@ __global__ void ComputeEntropyGpuHalf(int64_t num_instances, int64_t num_classes
 }
 
 template<typename T, typename K>
-__global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes, const T* x,
+__global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes, const T* x,
                                const K* labels, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i];
@@ -45,8 +45,8 @@ __global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes, const
 }
 
 template<typename K>
-__global__ void ComputeDiffGpuHalf(int64_t num_instances, int64_t num_classes, const half* x,
-                                   const K* labels, const half* dy, half* dx) {
+__global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t num_classes,
+                                   const half* x, const K* labels, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i];
@@ -93,14 +93,14 @@ __global__ void BackwardSubGpuHalf(const int64_t num_instances, const int64_t nu
 
 template<typename T, typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
-  static void ComputeEntropy(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                             const K* labels, T* y) {
+  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                             const T* x, const K* labels, T* y) {
     ComputeEntropyGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                         ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, y);
   }
 
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                          const K* labels, const T* dy, T* dx) {
+  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const T* x, const K* labels, const T* dy, T* dx) {
     ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                      ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, dy, dx);
   }
@@ -114,7 +114,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
 
 template<typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
-  static void ComputeEntropy(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes,
+  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                              const float16* x, const K* labels, float16* y) {
     ComputeEntropyGpuHalf<K>
         <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -122,7 +122,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
             reinterpret_cast<half*>(y));
   }
 
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes,
+  static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const float16* x, const K* labels, const float16* dy, float16* dx) {
     ComputeDiffGpuHalf<K>
         <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
