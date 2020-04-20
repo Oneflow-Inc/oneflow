@@ -83,14 +83,6 @@ class CPUAvgPool2DKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_AVG_POOL_2D_KERNEL(dtype)  \
-  REGISTER_USER_KERNEL("avg_pool_2d")           \
-      .SetCreateFn<CPUAvgPool2DKernel<dtype>>() \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
-
-REGISTER_CPU_AVG_POOL_2D_KERNEL(float)
-REGISTER_CPU_AVG_POOL_2D_KERNEL(double)
-
 template<typename T>
 class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
  public:
@@ -108,17 +100,16 @@ class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CPU_AVG_POOL_2D_GRAD_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                            \
-      .SetCreateFn<CpuAvgPool2DGradKernel<dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_CPU_AVG_POOL_2D_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("avg_pool_2d")                                \
+      .SetCreateFn<CPUAvgPool2DKernel<dtype>>()                      \
+      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
+  REGISTER_USER_KERNEL("avg_pool_2d_grad")                           \
+      .SetCreateFn<CpuAvgPool2DGradKernel<dtype>>()                  \
+      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
 
-REGISTER_CPU_AVG_POOL_2D_GRAD_KERNEL(float)
-REGISTER_CPU_AVG_POOL_2D_GRAD_KERNEL(double)
+REGISTER_CPU_AVG_POOL_2D_KERNEL(float)
+REGISTER_CPU_AVG_POOL_2D_KERNEL(double)
 
 template<typename T>
 class CPUAvgPool3DKernel final : public user_op::OpKernel {
