@@ -41,18 +41,15 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
     .Input("prediction")
     .Input("label")
     .Input("dy")
-    .Output("prediction_diff")
+    .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // todo add check
-      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->Dtype4ArgNameAndIndex("prediction", 0);
-      *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->Shape4ArgNameAndIndex("prediction", 0);
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -60,7 +57,7 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
           .Split("prediction", 0, 0)
           .Split("label", 0, 0)
           .Split("dy", 0, 0)
-          .Split("prediction_diff", 0, 0)
+          .Split("dx", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
@@ -74,9 +71,9 @@ REGISTER_USER_OP_GRAD("sparse_cross_entropy")
                 .Input("prediction", op.input("prediction", 0))
                 .Input("label", op.input("label", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("prediction_diff")
+                .Output("dx")
                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "prediction", 0);
         AddOp(grad_op);
       }
     });
