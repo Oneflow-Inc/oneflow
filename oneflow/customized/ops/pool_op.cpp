@@ -4,6 +4,7 @@
 namespace oneflow {
 
 namespace {
+
 struct PoolOpUtil {
  public:
   typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
@@ -111,6 +112,7 @@ PoolOpUtil::GenBackwardOpConfFn PoolOpUtil::MakeGenBackwardOpConfFn(const std::s
 }
 
 }  // namespace
+
 REGISTER_USER_OP("avg_pool_1d")
     .Input("x")
     .Output("y")
