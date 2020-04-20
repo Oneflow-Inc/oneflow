@@ -6,13 +6,13 @@ namespace {
 
 template<typename T>
 __global__ void LeakyReluForwardGpu(const int n, const float alpha, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] >= 0 ? x[i] : x[i] * alpha; }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : x[i] * alpha; }
 }
 
 template<typename T>
 __global__ void LeakyReluBackwardGpu(const int n, const float alpha, const T* x, const T* dy,
                                      T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = x[i] >= 0 ? dy[i] : dy[i] * alpha; }
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = x[i] > 0 ? dy[i] : dy[i] * alpha; }
 }
 
 }  // namespace
