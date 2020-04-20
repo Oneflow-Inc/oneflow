@@ -5,10 +5,6 @@ namespace oneflow {
 
 namespace {
 
-size_t InferTmpSize(user_op::InferContext* ctx) {
-  return 10;
-}
-
 template<DeviceType device_type, typename T>
 class SoftmaxKernel final : public user_op::OpKernel {
  public:
@@ -24,13 +20,30 @@ class SoftmaxKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("softmax").SetCreateFn<SoftmaxKernel<device, dtype>>().SetIsMatchedPred(       \
-      [](const user_op::KernelRegContext& ctx) {                                                \
+//template<typename T>
+size_t InferTmpSize(user_op::InferContext* ctx, const std::string& bn) {
+  const Shape* in_shape = ctx->Shape4ArgNameAndIndex(bn, 0);
+  const int32_t instance_size = in_shape->dim_vec().back();
+  const int32_t instance_num = in_shape->elem_cnt() / instance_size;
+
+  /* softmax_num */
+  int32_t softmax_num_bytes = 10;
+  //    GetCudaAlignedSize(instance_num * sizeof(cub::KeyValuePair<int32_t, dtype>));
+
+  /* buf */
+  size_t buf_bytes = 10;
+
+  return softmax_num_bytes + buf_bytes;
+}
+
+#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                                  \
+  REGISTER_USER_KERNEL("softmax")                                                               \
+      .SetCreateFn<SoftmaxKernel<device, dtype>>()                                              \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
-      })                                                                                    \
-      .SetInferTmpSizeFn(InferTmpSize);
+      })                                                                                        \
+      .SetInferTmpSizeFn(InferTmpSize, "in");
 
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
@@ -55,14 +68,14 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("softmax_grad")                                                              \
-      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                              \
+#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                              \
+  REGISTER_USER_KERNEL("softmax_grad")                                                           \
+      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                           \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
-      })                                                                                    \
-      .SetInferTmpSizeFn(InferTmpSize);
+      })                                                                                         \
+      .SetInferTmpSizeFn(InferTmpSize, "dx");
 
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)

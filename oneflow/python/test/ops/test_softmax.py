@@ -49,8 +49,8 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        tf_out = tf.nn.softmax(x)
-        #tf_out = tf.nn.relu(x)
+        #tf_out = tf.nn.softmax(x)
+        tf_out = tf.nn.relu(x)
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)

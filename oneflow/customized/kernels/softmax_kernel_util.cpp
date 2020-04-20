@@ -11,7 +11,8 @@ namespace oneflow {
 //   auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
 //   // max | tmp[i] = Max_j(in[i][j])
 //   NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
-//                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+//                                          Var({static_cast<int64_t>(temp_storage_bytes /
+//                                          sizeof(T))},
 //                                              reinterpret_cast<T*>(temp_storage)));
 //   // sub | prob[i][j] = in[i][j] - tmp[i]
 //   NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, prob), Val({n, w}, in),
@@ -20,7 +21,8 @@ namespace oneflow {
 //   NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
 //   // sum | tmp[i] = Sum_j(prob[i][j])
 //   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
-//                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+//                                          Var({static_cast<int64_t>(temp_storage_bytes /
+//                                          sizeof(T))},
 //                                              reinterpret_cast<T*>(temp_storage)));
 //   // div | prob[i][j] /= tmp[i]
 //   NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
@@ -51,8 +53,10 @@ void SoftmaxKernelUtil<device_type, T>::ComputeProb(DeviceCtx* ctx, const int64_
 }
 
 template<DeviceType device_type, typename T>
-void SoftmaxKernelUtil<device_type, T>::ComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* dy, const T* out,
-                        T* sum_vec, T* dx, void* temp_storage, const size_t temp_storage_bytes) {
+void SoftmaxKernelUtil<device_type, T>::ComputeDiff(DeviceCtx* ctx, const int64_t n,
+                                                    const int64_t w, const T* dy, const T* out,
+                                                    T* sum_vec, T* dx, void* temp_storage,
+                                                    const size_t temp_storage_bytes) {
   auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
   auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
   // it's safe to use dx as tmp
