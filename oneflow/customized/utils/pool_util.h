@@ -2,7 +2,6 @@
 #define ONEFLOW_CUSTOMIZED_UTILS_POOL_UTIL_H_
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/eigen_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
@@ -71,45 +70,6 @@ class GPUPoolOpKernelState final {
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
   std::unique_ptr<CudnnPoolDesc> pooling_desc_;
-};
-
-template<typename T>
-struct PoolKernelUtil {
- public:
-  typedef std::function<T()> ForwardInitialize;
-  typedef std::function<void(const T& lhs, T& rhs)> CFirstProcess;
-  typedef std::function<void(const int64_t in_col, const int64_t out_col,
-                             ConstEigenMatrixMap<T>& in_mat, EigenMatrixMap<T>& out_mat)>
-      CLastProcess;
-  typedef std::function<void(const int64_t size, T& out)> CFirstFinalize;
-  typedef std::function<void(const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat)>
-      CLastFinalize;
-  typedef std::function<void(const T& in, const T& out, const T& out_diff, const int64_t size,
-                             T& in_diff)>
-      CFirstProcessGrad;
-  typedef std::function<void(const int64_t out_col, const int64_t in_col, const int64_t size,
-                             ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
-                             ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr)>
-      CLastProcessGrad;
-
-  static void CFirstForward(const Params3D& params_3d, const user_op::Tensor* in_blob,
-                            user_op::Tensor* out_blob, const ForwardInitialize& initialize,
-                            const CFirstProcess& process, const CFirstFinalize& finalize);
-  static void CFirstBackward(const Params3D& params_3d, const user_op::Tensor* out_diff_blob,
-                             const user_op::Tensor* out_blob, const user_op::Tensor* in_blob,
-                             user_op::Tensor* in_diff_blob, const CFirstProcessGrad& process);
-  static void CLastForward(const Params3D& params_3d, const user_op::Tensor* in_blob,
-                           user_op::Tensor* out_blob, const ForwardInitialize& forward_initialize,
-                           const CLastProcess& process, const CLastFinalize& finalize);
-  static void CLastBackward(const Params3D& params_3d, const user_op::Tensor* out_diff_blob,
-                            const user_op::Tensor* out_blob, const user_op::Tensor* in_blob,
-                            user_op::Tensor* in_diff_blob, const CLastProcessGrad& process);
-  static std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx, const int32_t& dim);
-  static void CpuAvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void CpuAvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void CpuMaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void CpuMaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
 };
 
 }  // namespace oneflow
