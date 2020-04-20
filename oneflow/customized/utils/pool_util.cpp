@@ -1,6 +1,5 @@
 #include "oneflow/customized/utils/pool_util.h"
 #include "oneflow/core/operator/operator_util.h"
-#include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
 
@@ -80,60 +79,6 @@ Shape Params3D::GetYShape5D() const {
     return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
   }
   UNIMPLEMENTED();
-}
-
-CudnnPoolDesc::CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window,
-                             const int* padding, const int* stride) {
-  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
-  CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
-                                        padding, stride));
-}
-
-CudnnPoolDesc::~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
-
-GPUPoolOpKernelState::GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type,
-                                           const Shape& x_shape, const Shape& y_shape,
-                                           const std::string& data_format, const DataType& dtype,
-                                           const Params3D& params_3d) {
-  cudnnPoolingMode_t pooling_mode_;
-  if (pooling_type == "AVG") {
-    pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-  } else if (pooling_type == "MAX") {
-    pooling_mode_ = CUDNN_POOLING_MAX;
-  } else {
-    UNIMPLEMENTED();
-  }
-
-  FixedVector pool_size(dim);
-  FixedVector padding(dim);
-  FixedVector strides(dim);
-  FOR_RANGE(int, i, 0, dim) {
-    int32_t index_in_3d = i + 3 - dim;
-    pool_size[i] = params_3d.pool_size_3d().at(index_in_3d);
-    padding[i] = std::max<int>(params_3d.padding_before_3d().at(index_in_3d),
-                               params_3d.padding_after_3d().at(index_in_3d));
-    strides[i] = params_3d.strides_3d().at(index_in_3d);
-  }
-
-  x_desc_.reset(new CudnnTensorDesc(dtype, x_shape, data_format));
-  y_desc_.reset(new CudnnTensorDesc(dtype, y_shape, data_format));
-  pooling_desc_.reset(
-      new CudnnPoolDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
-}
-
-std::shared_ptr<user_op::OpKernelState> GPUPoolOpKernelState::FromKernelInitContext(
-    const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx) {
-  if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
-  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-  const std::string data_format = ctx->GetAttr<std::string>("data_format");
-  const std::string padding = ctx->GetAttr<std::string>("padding");
-  const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-  const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
-  const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
-  const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-  const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
-  return std::make_shared<OpKernelStateWrapper<GPUPoolOpKernelState>>(
-      dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
 }
 
 }  // namespace oneflow

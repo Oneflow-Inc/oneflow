@@ -38,40 +38,6 @@ class Params3D {
   int64_t channel_num_;
 };
 
-class CudnnPoolDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolDesc);
-  CudnnPoolDesc() = delete;
-  ~CudnnPoolDesc();
-
-  CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window, const int* padding,
-                const int* stride);
-
-  const cudnnPoolingDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnPoolingDescriptor_t val_;
-};
-
-class GPUPoolOpKernelState final {
- public:
-  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
-                       const Shape& y_shape, const std::string& data_format, const DataType& dtype,
-                       const Params3D& params_3d);
-  ~GPUPoolOpKernelState() = default;
-
-  static std::shared_ptr<user_op::OpKernelState> FromKernelInitContext(
-      const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx);
-  const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
-  const cudnnTensorDescriptor_t& cudnn_y_tensor_desc() const { return y_desc_->Get(); }
-  const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const { return pooling_desc_->Get(); }
-
- private:
-  std::unique_ptr<CudnnTensorDesc> x_desc_;
-  std::unique_ptr<CudnnTensorDesc> y_desc_;
-  std::unique_ptr<CudnnPoolDesc> pooling_desc_;
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_UTILS_POOL_UTIL_H_
