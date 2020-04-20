@@ -10,10 +10,7 @@ REGISTER_USER_OP("sparse_cross_entropy")
       const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);
       const Shape* label_shape = ctx->Shape4ArgNameAndIndex("label", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(*ctx->Dtype4ArgNameAndIndex("label", 0)));
-      CHECK_OR_RETURN(
-          IsFloatingDataType(*ctx->Dtype4ArgNameAndIndex("prediction", 0)));  // to check float
-
+      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("label", 0)));
       const int64_t num_out_axes = prediction_shape->NumAxes() - 1;
       CHECK_GE_OR_RETURN(label_shape->NumAxes(), num_out_axes);
       CHECK_EQ_OR_RETURN(label_shape->Count(num_out_axes), 1);

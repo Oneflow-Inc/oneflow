@@ -16,16 +16,6 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
   }
 
   static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                          const K* labels, T* dx) {
-    FOR_RANGE(int64_t, i, 0, num_instances) {
-      K label = labels[i];
-      CHECK_GE(label, 0);
-      CHECK_LT(label, num_classes);
-      dx[i * num_classes + label] = -1 / MaxWithLogThreshold(x[i * num_classes + label]);
-    }
-  }
-
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
                           const K* labels, const T* dy, T* dx) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       K label = labels[i];
@@ -34,13 +24,23 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
       dx[i * num_classes + label] = -dy[i] / MaxWithLogThreshold(x[i * num_classes + label]);
     }
   }
+
+  static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const K* labels, const T* dy, T* dx) {
+    FOR_RANGE(int64_t, i, 0, num_instances) {
+      K label = labels[i];
+      CHECK_GE(label, 0);
+      CHECK_LT(label, num_classes);
+      dx[i * num_classes + label] = dy[i] * (dx[i * num_classes + label] - 1);
+    }
+  }
 };
 
 #define INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CPU(data_type_pair, index_type_pair)          \
   template struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                                OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CPU,
-                                 FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CPU
 
 }  // namespace oneflow

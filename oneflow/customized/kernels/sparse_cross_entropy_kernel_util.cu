@@ -35,34 +35,6 @@ __global__ void ComputeEntropyGpuHalf(int64_t num_instances, int64_t num_classes
 
 template<typename T, typename K>
 __global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes, const T* x,
-                               const K* labels, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    K label = labels[i];
-    assert(label >= 0);
-    assert(label < num_classes);
-    dx[i * num_classes + label] = -1 / MaxWithLogThreshold(x[i * num_classes + label]);
-  }
-}
-
-template<typename K>
-__global__ void ComputeDiffGpuHalf(int64_t num_instances, int64_t num_classes, const half* x,
-                                   const K* labels, half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    K label = labels[i];
-    assert(label >= 0);
-    assert(label < num_classes);
-    dx[i * num_classes + label] =
-        __hneg(__hdiv(__float2half(1.0), MaxWithLogThreshold<half>(x[i * num_classes + label])));
-  }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
-
-template<typename T, typename K>
-__global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes, const T* x,
                                const K* labels, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i];
@@ -89,6 +61,34 @@ __global__ void ComputeDiffGpuHalf(int64_t num_instances, int64_t num_classes, c
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
+template<typename T, typename K>
+__global__ void BackwardSubGpu(const int64_t num_instances, const int64_t num_classes,
+                               const K* labels, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+    K label = labels[i];
+    assert(label >= 0);
+    assert(label < num_classes);
+    dx[i * num_classes + label] = dy[i] * (dx[i * num_classes + label] - 1);
+  }
+}
+
+template<typename K>
+__global__ void BackwardSubGpuHalf(const int64_t num_instances, const int64_t num_classes,
+                                   const K* labels, const half* dy, half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+    K label = labels[i];
+    assert(label >= 0);
+    assert(label < num_classes);
+    dx[i * num_classes + label] =
+        __hmul(dy[i], __hsub(dx[i * num_classes + label], __float2half(1.0)));
+  }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+}
+
 }  // namespace
 
 template<typename T, typename K>
@@ -100,15 +100,15 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
   }
 
   static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
-                          const K* labels, T* dx) {
-    ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                     ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, dx);
-  }
-
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes, const T* x,
                           const K* labels, const T* dy, T* dx) {
     ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                      ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, dy, dx);
+  }
+
+  static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const K* labels, const T* dy, T* dx) {
+    BackwardSubGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
+                     ctx->cuda_stream()>>>(num_instances, num_classes, labels, dy, dx);
   }
 };
 
@@ -123,19 +123,19 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
   }
 
   static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes,
-                          const float16* x, const K* labels, float16* dx) {
-    ComputeDiffGpuHalf<K>
-        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            num_instances, num_classes, reinterpret_cast<const half*>(x), labels,
-            reinterpret_cast<half*>(dx));
-  }
-
-  static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, int64_t num_classes,
                           const float16* x, const K* labels, const float16* dy, float16* dx) {
     ComputeDiffGpuHalf<K>
         <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             num_instances, num_classes, reinterpret_cast<const half*>(x), labels,
-            reinterpret_cast<const half*>(x), reinterpret_cast<half*>(dx));
+            reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+  }
+
+  static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                          const K* labels, const float16* dy, float16* dx) {
+    BackwardSubGpuHalf<K>
+        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            num_instances, num_classes, labels, reinterpret_cast<const half*>(dy),
+            reinterpret_cast<half*>(dx));
   }
 };
 
@@ -143,7 +143,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
   template struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                                OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_GPU,
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_GPU
 
 }  // namespace oneflow
