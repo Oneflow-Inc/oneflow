@@ -222,6 +222,33 @@ def ofrecord_loader(
     compile_context.CurJobAddConsistentOp(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("data.ofrecord_reader")
+def ofrecord_reader(
+    ofrecord_dir,
+    batch_size=1,
+    data_part_num=1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    random_shuffle=False,
+    shuffle_buffer_size=1024,
+    shuffle_after_epoch=False,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OFRecord_Reader_")
+
+    return flow.user_op_builder(name)\
+        .Op("OFRecordReader")\
+        .Output("out")\
+        .SetAttr("data_dir", ofrecord_dir, "AttrTypeString")\
+        .SetAttr("data_part_num", data_part_num, "AttrTypeInt32")\
+        .SetAttr("batch_size", batch_size, "AttrTypeInt32")\
+        .SetAttr("part_name_prefix", part_name_prefix, "AttrTypeString")\
+        .SetAttr("random_shuffle", random_shuffle, "AttrTypeBool")\
+        .SetAttr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")\
+        .SetAttr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
+        .Build()\
+        .RemoteBlobList()[0]
 
 @oneflow_export("data.decode_random")
 def decode_random(
