@@ -3,6 +3,8 @@
 
 #include "oneflow/customized/data/parser.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -14,7 +16,18 @@ class OFRecordParser final : public Parser<TensorBuffer> {
   ~OFRecordParser() = default;
 
   void Parse(std::shared_ptr<BatchLoadTargetPtr> batch_data,
-             user_op::KernelComputeContext* ctx) override {}
+             user_op::KernelComputeContext* ctx) override {
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    OFRecord* dptr = out_tensor->mut_dptr<OFRecord>();
+    MultiThreadLoop(batch_data->size(), [&](size_t i) {
+      TensorBuffer* buffer = batch_data->at(i).get();
+      CHECK(dptr[i].ParseFromArray(buffer->data<uint8_t>(), buffer->shape().elem_cnt()));
+    });
+    if (batch_data->size() != out_tensor->shape().elem_cnt()) {
+      CHECK_EQ(out_tensor->mut_shape()->NumAxes(), 1);
+      out_tensor->mut_shape()->Set(0, batch_data->size());
+    }
+  }
 };
 
 }  // namespace oneflow
