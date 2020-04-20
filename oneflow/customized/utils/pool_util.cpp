@@ -356,6 +356,27 @@ PoolOpUtil::TensorDescInferFn PoolOpUtil::MakeFwTensorDescInferFn(const int32_t&
   };
 }
 
+PoolOpUtil::TensorDescInferFn PoolOpUtil::MakeBwTensorDescInferFn() {
+  return [](user_op::InferContext* ctx) -> Maybe<void> {
+    *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+    return Maybe<void>::Ok();
+  };
+}
+
+PoolOpUtil::BatchAxisInferFn PoolOpUtil::MakeFwBatchAxisInferFn() {
+  return [](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+    *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+    return Maybe<void>::Ok();
+  };
+}
+
+PoolOpUtil::BatchAxisInferFn PoolOpUtil::MakeBwBatchAxisInferFn() {
+  return [](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+    *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+    return Maybe<void>::Ok();
+  };
+}
+
 PoolOpUtil::GetSbpFn PoolOpUtil::MakeFwGetSbpFn() {
   return [](user_op::SbpContext* ctx) -> Maybe<void> {
     const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
