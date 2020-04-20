@@ -17,10 +17,10 @@ std::function<bool(const user_op::KernelRegContext& ctx)> MakeIsMatchedPred(
 }  // namespace
 
 template<typename T>
-class CpuAvgPool1DKernel final : public user_op::OpKernel {
+class AvgPool1DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool1DKernel() = default;
-  ~CpuAvgPool1DKernel() = default;
+  AvgPool1DCpuKernel() = default;
+  ~AvgPool1DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -34,10 +34,10 @@ class CpuAvgPool1DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuAvgPool1DGradKernel final : public user_op::OpKernel {
+class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool1DGradKernel() = default;
-  ~CpuAvgPool1DGradKernel() = default;
+  AvgPool1DGradCpuKernel() = default;
+  ~AvgPool1DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -51,10 +51,10 @@ class CpuAvgPool1DGradKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuAvgPool2DKernel final : public user_op::OpKernel {
+class AvgPool2DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool2DKernel() = default;
-  ~CpuAvgPool2DKernel() = default;
+  AvgPool2DCpuKernel() = default;
+  ~AvgPool2DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -68,10 +68,10 @@ class CpuAvgPool2DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
+class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool2DGradKernel() = default;
-  ~CpuAvgPool2DGradKernel() = default;
+  AvgPool2DGradCpuKernel() = default;
+  ~AvgPool2DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -85,10 +85,10 @@ class CpuAvgPool2DGradKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuAvgPool3DKernel final : public user_op::OpKernel {
+class AvgPool3DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool3DKernel() = default;
-  ~CpuAvgPool3DKernel() = default;
+  AvgPool3DCpuKernel() = default;
+  ~AvgPool3DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -102,10 +102,10 @@ class CpuAvgPool3DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuAvgPool3DGradKernel final : public user_op::OpKernel {
+class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuAvgPool3DGradKernel() = default;
-  ~CpuAvgPool3DGradKernel() = default;
+  AvgPool3DGradCpuKernel() = default;
+  ~AvgPool3DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -119,10 +119,10 @@ class CpuAvgPool3DGradKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool1DKernel final : public user_op::OpKernel {
+class MaxPool1DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool1DKernel() = default;
-  ~CpuMaxPool1DKernel() = default;
+  MaxPool1DCpuKernel() = default;
+  ~MaxPool1DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -136,10 +136,10 @@ class CpuMaxPool1DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool1DGradKernel final : public user_op::OpKernel {
+class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool1DGradKernel() = default;
-  ~CpuMaxPool1DGradKernel() = default;
+  MaxPool1DGradCpuKernel() = default;
+  ~MaxPool1DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -153,10 +153,10 @@ class CpuMaxPool1DGradKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool2DKernel final : public user_op::OpKernel {
+class MaxPool2DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool2DKernel() = default;
-  ~CpuMaxPool2DKernel() = default;
+  MaxPool2DCpuKernel() = default;
+  ~MaxPool2DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -170,10 +170,10 @@ class CpuMaxPool2DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool2DGradKernel final : public user_op::OpKernel {
+class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool2DGradKernel() = default;
-  ~CpuMaxPool2DGradKernel() = default;
+  MaxPool2DGradCpuKernel() = default;
+  ~MaxPool2DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -187,10 +187,10 @@ class CpuMaxPool2DGradKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool3DKernel final : public user_op::OpKernel {
+class MaxPool3DCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool3DKernel() = default;
-  ~CpuMaxPool3DKernel() = default;
+  MaxPool3DCpuKernel() = default;
+  ~MaxPool3DCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -204,10 +204,10 @@ class CpuMaxPool3DKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuMaxPool3DGradKernel final : public user_op::OpKernel {
+class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
  public:
-  CpuMaxPool3DGradKernel() = default;
-  ~CpuMaxPool3DGradKernel() = default;
+  MaxPool3DGradCpuKernel() = default;
+  ~MaxPool3DGradCpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -222,40 +222,40 @@ class CpuMaxPool3DGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_POOL_CPU_KERNEL(dtype)                              \
   REGISTER_USER_KERNEL("avg_pool_1d")                                \
-      .SetCreateFn<CpuAvgPool1DKernel<dtype>>()                      \
+      .SetCreateFn<AvgPool1DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("avg_pool_1d_grad")                           \
-      .SetCreateFn<CpuAvgPool1DGradKernel<dtype>>()                  \
+      .SetCreateFn<AvgPool1DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("avg_pool_2d")                                \
-      .SetCreateFn<CpuAvgPool2DKernel<dtype>>()                      \
+      .SetCreateFn<AvgPool2DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("avg_pool_2d_grad")                           \
-      .SetCreateFn<CpuAvgPool2DGradKernel<dtype>>()                  \
+      .SetCreateFn<AvgPool2DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("avg_pool_3d")                                \
-      .SetCreateFn<CpuAvgPool3DKernel<dtype>>()                      \
+      .SetCreateFn<AvgPool3DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("avg_pool_3d_grad")                           \
-      .SetCreateFn<CpuAvgPool3DGradKernel<dtype>>()                  \
+      .SetCreateFn<AvgPool3DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_1d")                                \
-      .SetCreateFn<CpuMaxPool1DKernel<dtype>>()                      \
+      .SetCreateFn<MaxPool1DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_1d_grad")                           \
-      .SetCreateFn<CpuMaxPool1DGradKernel<dtype>>()                  \
+      .SetCreateFn<MaxPool1DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_2d")                                \
-      .SetCreateFn<CpuMaxPool2DKernel<dtype>>()                      \
+      .SetCreateFn<MaxPool2DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_2d_grad")                           \
-      .SetCreateFn<CpuMaxPool2DGradKernel<dtype>>()                  \
+      .SetCreateFn<MaxPool2DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_3d")                                \
-      .SetCreateFn<CpuMaxPool3DKernel<dtype>>()                      \
+      .SetCreateFn<MaxPool3DCpuKernel<dtype>>()                      \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
   REGISTER_USER_KERNEL("max_pool_3d_grad")                           \
-      .SetCreateFn<CpuMaxPool3DGradKernel<dtype>>()                  \
+      .SetCreateFn<MaxPool3DGradCpuKernel<dtype>>()                  \
       .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
 
 REGISTER_POOL_CPU_KERNEL(float)
