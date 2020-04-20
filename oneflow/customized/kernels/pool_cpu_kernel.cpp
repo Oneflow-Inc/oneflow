@@ -4,6 +4,18 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename dtype>
+std::function<bool(const user_op::KernelRegContext& ctx)> MakeIsMatchedPred(
+    DeviceType device_type) {
+  return [device_type](const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
+    return ctx.device_type() == device_type && y_desc->data_type() == GetDataType<dtype>::value;
+  };
+}
+}  // namespace
+
 template<typename T>
 class CPUAvgPool1DKernel final : public user_op::OpKernel {
  public:
@@ -17,18 +29,14 @@ class CPUAvgPool1DKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::AvgFWCompute(ctx, state);
+    PoolKernelUtil<T>::CPUAvgFWCompute(ctx, state);
   };
 };
 
-#define REGISTER_CPU_AVG_POOL_1D_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("avg_pool_1d")                                               \
-      .SetCreateFn<CPUAvgPool1DKernel<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
-      });
+#define REGISTER_CPU_AVG_POOL_1D_KERNEL(dtype)  \
+  REGISTER_USER_KERNEL("avg_pool_1d")           \
+      .SetCreateFn<CPUAvgPool1DKernel<dtype>>() \
+      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
 
 REGISTER_CPU_AVG_POOL_1D_KERNEL(float)
 REGISTER_CPU_AVG_POOL_1D_KERNEL(double)
@@ -46,7 +54,7 @@ class CpuAvgPool1DGradKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolKernelUtil<T>::AvgBWCompute(ctx, state);
+    PoolKernelUtil<T>::CPUAvgBWCompute(ctx, state);
   };
 };
 

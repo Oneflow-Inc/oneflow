@@ -344,8 +344,8 @@ std::shared_ptr<user_op::OpKernelState> PoolKernelUtil<T>::CreateOpKernelState(
 }
 
 template<typename T>
-void PoolKernelUtil<T>::AvgFWCompute(user_op::KernelComputeContext* ctx,
-                                     user_op::OpKernelState* state) {
+void PoolKernelUtil<T>::CPUAvgFWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {
   const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
   user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
   // TODO: tsai: reset op kernel state when is_dynamic if ready
@@ -370,8 +370,8 @@ void PoolKernelUtil<T>::AvgFWCompute(user_op::KernelComputeContext* ctx,
   }
 }
 template<typename T>
-void PoolKernelUtil<T>::AvgBWCompute(user_op::KernelComputeContext* ctx,
-                                     user_op::OpKernelState* state) {
+void PoolKernelUtil<T>::CPUAvgBWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {
   const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
   const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
   const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -399,12 +399,14 @@ void PoolKernelUtil<T>::AvgBWCompute(user_op::KernelComputeContext* ctx,
     UNIMPLEMENTED();
   }
 }
+
 template<typename T>
-void PoolKernelUtil<T>::MaxFWCompute(user_op::KernelComputeContext* ctx,
-                                     user_op::OpKernelState* state) {}
+void PoolKernelUtil<T>::CPUMaxFWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {}
+
 template<typename T>
-void PoolKernelUtil<T>::MaxBWCompute(user_op::KernelComputeContext* ctx,
-                                     user_op::OpKernelState* state) {}
+void PoolKernelUtil<T>::CPUMaxBWCompute(user_op::KernelComputeContext* ctx,
+                                        user_op::OpKernelState* state) {}
 
 // TODO: tsai: initilize template of definition in interfaces
 template struct PoolKernelUtil<float>;

@@ -106,10 +106,10 @@ struct PoolKernelUtil {
                             user_op::Tensor* in_diff_blob, const CLastProcessGrad& process);
   static std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx, const int32_t& dim);
-  static void AvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void AvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void MaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
-  static void MaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
+  static void CPUAvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
+  static void CPUAvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
+  static void CPUMaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
+  static void CPUMaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state);
 };
 
 struct PoolOpUtil {
