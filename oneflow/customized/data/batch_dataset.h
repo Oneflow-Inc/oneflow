@@ -28,6 +28,13 @@ class BatchDataset final : public Dataset<LoadTarget> {
     return ret;
   }
 
+  LoadTargetPtr At(int64_t idx) override { return loader_->At(idx); }
+
+  int64_t Size() override { return loader_->Size(); }
+
+  bool EnableRandomAccess() override { return loader_->EnableRandomAccess(); }
+  bool EnableGetSize() override { return loader_->EnableGetSize(); }
+
  private:
   int32_t batch_size_;
   std::unique_ptr<Dataset<LoadTarget>> loader_;

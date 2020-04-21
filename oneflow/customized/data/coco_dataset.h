@@ -22,6 +22,12 @@ class COCODataset final : public Dataset<COCODataInstance> {
   ~COCODataset() = default;
 
   LoadTargetPtrList Next() override { TODO(); }
+  LoadTargetPtr At(int64_t idx) override { TODO(); }
+
+  int64_t Size() override { return image_ids_.size(); }
+
+  bool EnableRandomAccess() override { return true; }
+  bool EnableGetSize() override { return true; }
 
  private:
   // maybe not this member
