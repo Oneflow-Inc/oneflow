@@ -20,6 +20,14 @@ __device__ float PowCalYDiff4GpuFloat(float x, float y, float dz) {
   }
 }
 
+__device__ float Atan24GpuFloat(float x1, float x2) { return atan2(x1, x2); }
+
+__device__ float Atan2CalYDiff4GpuFloat(float x1, float x2, float dz) { return dz * -x1 / (x2 * x2 + x1 * x1); }
+
+__device__ float Atan2CalXDiff4GpuFloat(float x1, float x2, float dz) {
+  return dz * (x2 / (x1 * x1 + x2 * x2));
+}
+
 __device__ float Xdivy4GpuFloat(float x, float y) {
   if (0 == x) {
     return 0;
@@ -111,11 +119,13 @@ __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 
 
 #define MATH_BINARY_GPU_FLOAT_SEQ            \
   OF_PP_MAKE_TUPLE_SEQ("Pow", Pow)           \
+  OF_PP_MAKE_TUPLE_SEQ("Atan2", Atan2) \
   OF_PP_MAKE_TUPLE_SEQ("Floordiv", Floordiv) \
   OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)       \
   OF_PP_MAKE_TUPLE_SEQ("Xlogy", Xlogy)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
+MATH_BINARY_GPU(Atan2, Atan24GpuFloat, Atan2CalXDiff4GpuFloat, Atan2CalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);

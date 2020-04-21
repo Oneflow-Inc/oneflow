@@ -390,6 +390,17 @@ def pow(x, y, name=None):
             .SetAttr("binary_math_type", "Pow", "AttrTypeString")\
             .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.atan2")
+def atan2(x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Atan2_")
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("binary")\
+            .Input("x",[x])\
+            .Input("y",[y])\
+            .Output("z")\
+            .SetAttr("binary_math_type", "Atan2", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
 @oneflow_export("math.floordiv")
 def floordiv(x, y, name=None):
     if name is None:
