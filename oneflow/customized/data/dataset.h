@@ -10,21 +10,11 @@ template<typename LoadTarget>
 class Dataset {
  public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using BatchLoadTargetPtr = std::vector<LoadTargetPtr>;
+  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   Dataset() = default;
   ~Dataset() = default;
 
-  virtual BatchLoadTargetPtr LoadBatch(int64_t batch_size) { UNIMPLEMENTED(); }
-  virtual void Next(LoadTarget& tensor) = 0;
-  virtual void At(int64_t idx, LoadTarget& tensor) { UNIMPLEMENTED(); }
-
-  virtual int64_t Size() {
-    UNIMPLEMENTED();
-    return -1;
-  }
-
-  virtual bool EnableRandomAccess() { return false; }
-  virtual bool EnableGetSize() { return false; }
+  virtual LoadTargetPtrList Next() = 0;
 };
 
 static constexpr int kOneflowDatasetSeed = 524287;
@@ -33,13 +23,15 @@ template<typename LoadTarget>
 class EmptyTensorManager {
  public:
   using LoadTargetUniquePtr = std::unique_ptr<LoadTarget>;
+  using LoadTargetSharedPtr = std::shared_ptr<LoadTarget>;
   EmptyTensorManager(int64_t total_empty_size, int64_t tensor_init_bytes)
-      : total_empty_size_(total_empty_size), tensor_init_bytes_(tensor_init_bytes) {
+      : tensor_init_bytes_(tensor_init_bytes), total_tensor_count_(0) {
     for (int i = 0; i < total_empty_size; ++i) {
       auto tensor_ptr = LoadTargetUniquePtr(new LoadTarget());
       PrepareEmpty(*tensor_ptr);
       empty_tensors_.push_back(std::move(tensor_ptr));
     }
+    total_tensor_count_ += total_empty_size;
   }
 
   void Recycle(LoadTarget* tensor_ptr) {
@@ -48,13 +40,23 @@ class EmptyTensorManager {
     empty_tensors_.push_back(std::move(recycle_ptr));
   }
 
-  LoadTargetUniquePtr Get() {
-    LoadTargetUniquePtr ret;
-    std::lock_guard<std::mutex> lock(empty_tensors_mutex_);
-    CHECK_GT(empty_tensors_.size(), 0);
-    ret = std::move(empty_tensors_.back());
-    empty_tensors_.pop_back();
-    return ret;
+  LoadTargetSharedPtr Get() {
+    {
+      std::lock_guard<std::mutex> lock(empty_tensors_mutex_);
+      if (empty_tensors_.size() > 0) {
+        LoadTargetSharedPtr ret(empty_tensors_.back().release(),
+                                [this](LoadTarget* sample) { Recycle(sample); });
+        empty_tensors_.pop_back();
+        return ret;
+      }
+    }
+    auto tensor_ptr =
+        LoadTargetSharedPtr(new LoadTarget(), [this](LoadTarget* sample) { Recycle(sample); });
+    PrepareEmpty(*tensor_ptr);
+    total_tensor_count_++;
+    LOG(INFO) << "empty tensor is NOT enough , so we allocate one. The total tensor count is "
+              << total_tensor_count_;
+    return tensor_ptr;
   }
 
  protected:
@@ -75,8 +77,9 @@ class EmptyTensorManager {
         << "Please overload PrepareEmpty for custom LoadTarget type other than TensorBuffer";
   }
 
-  const int total_empty_size_;
   const int tensor_init_bytes_;
+
+  int64_t total_tensor_count_;
 
   std::mutex empty_tensors_mutex_;
   std::vector<LoadTargetUniquePtr> empty_tensors_;

@@ -8,12 +8,19 @@ namespace oneflow {
 
 class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
-  OFRecordDataset(user_op::KernelInitContext* ctx) { TODO(); }
+  using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
+  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  OFRecordDataset(user_op::KernelInitContext* ctx) {
+    int32_t batch_size = ctx->GetAttr<int32_t>("batch_size");
+    int64_t total_empty_size = 2 * 2 * batch_size;  // maybe 2 * batch_size
+    int64_t tensor_init_bytes = ctx->GetAttr<int64_t>("tensor_init_bytes");
+  }
   ~OFRecordDataset() = default;
 
-  void Next(TensorBuffer& tensor) override {}
+  LoadTargetPtrList Next() override { TODO(); }
 
  private:
+  std::unique_ptr<EmptyTensorManager<TensorBuffer>> empty_tensor_mgr_;
 };
 
 }  // namespace oneflow

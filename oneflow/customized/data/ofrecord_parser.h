@@ -11,11 +11,11 @@ namespace oneflow {
 class OFRecordParser final : public Parser<TensorBuffer> {
  public:
   using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
-  using BatchLoadTargetPtr = std::vector<LoadTargetPtr>;
+  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   OFRecordParser() = default;
   ~OFRecordParser() = default;
 
-  void Parse(std::shared_ptr<BatchLoadTargetPtr> batch_data,
+  void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     OFRecord* dptr = out_tensor->mut_dptr<OFRecord>();

@@ -10,11 +10,11 @@ template<typename LoadTarget>
 class Parser {
  public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using BatchLoadTargetPtr = std::vector<LoadTargetPtr>;
+  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   Parser() = default;
   virtual ~Parser() = default;
 
-  virtual void Parse(std::shared_ptr<BatchLoadTargetPtr> batch_data,
+  virtual void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
                      user_op::KernelComputeContext* ctx) = 0;
 };
 

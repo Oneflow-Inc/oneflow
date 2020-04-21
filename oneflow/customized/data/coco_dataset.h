@@ -16,16 +16,12 @@ struct COCODataInstance {
 
 class COCODataset final : public Dataset<COCODataInstance> {
  public:
+  using LoadTargetPtr = std::shared_ptr<COCODataInstance>;
+  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   COCODataset(user_op::KernelInitContext* ctx) { TODO(); }
   ~COCODataset() = default;
 
-  void Next(COCODataInstance& tensor) override;
-  void At(int64_t idx, COCODataInstance& tensor) override;
-
-  int64_t Size() override { return image_ids_.size(); }
-
-  bool EnableRandomAccess() override { return true; }
-  bool EnableGetSize() override { return true; }
+  LoadTargetPtrList Next() override { TODO(); }
 
  private:
   // maybe not this member
