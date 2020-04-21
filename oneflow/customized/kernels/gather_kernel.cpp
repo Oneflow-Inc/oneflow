@@ -17,15 +17,15 @@ class GatherKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-    int64_t axis = ctx->GetAttr<int64_t>("axis");
-    int64_t batch_dims = ctx->GetAttr<int64_t>("batch_dims");
-    int64_t num_indices = indices->shape().elem_cnt();
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
+    const int64_t axis = ctx->GetAttr<int64_t>("axis");
+    const int64_t batch_dims = ctx->GetAttr<int64_t>("batch_dims");
+    const int64_t num_indices = indices->shape().elem_cnt();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), indices->dptr<K>(),
-       num_indices, in->dptr<T>(), getFlatShape(in->shape(), axis), out->dptr<T>(), 0);
+       num_indices, in->dptr<T>(), getFlatShape(in->shape(), axis), out->mut_dptr<T>(), 0);
   }
 };
 
