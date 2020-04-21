@@ -32,7 +32,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = flow.nn.softmax(x)
+            loss = flow.nn.softmax(x, axis=axis)
             flow.losses.add_loss(loss)
 
             flow.watch(x, Save("x"))
@@ -49,8 +49,8 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        tf_out = tf.nn.softmax(x)
-        #tf_out = tf.nn.relu(x)
+        tf_out = tf.nn.softmax(x, axis=axis)
+
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
@@ -60,10 +60,10 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
 def test_softmax(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["device_type"] = ["gpu"]#, "cpu"]
     arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20)]
     arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["axis"] = [-1]
+    arg_dict["axis"] = [-1, 1]
     for arg in GenArgList(arg_dict):
         print(arg)
         compare_with_tensorflow(*arg)
