@@ -86,6 +86,14 @@ def reshape(x, shape, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         if name is None:
             name = id_util.UniqueStr("Reshape_")
+        dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
+        in_elem_cnt = reduce(operator.mul, x.shape, 1)
+        out_elem_cnt = reduce(operator.mul, shape, 1)
+        if dim_index_need_infer is not None:
+            assert (in_elem_cnt % out_elem_cnt) == 0
+            shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
+        else:
+            assert in_elem_cnt == out_elem_cnt
         return flow.user_op_builder(name).Op("reshape")\
             .Input("in", [x])\
             .Output("out")\

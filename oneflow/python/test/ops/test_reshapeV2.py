@@ -7,7 +7,7 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
-os.environ['ENABLE_USER_OP'] = 'True'
+#os.environ['ENABLE_USER_OP'] = 'True'
 
 def compare_with_tensorflow(device_type, input_shape, shape):
     assert device_type in ["gpu", "cpu"]
@@ -66,8 +66,8 @@ def compare_with_tensorflow(device_type, input_shape, shape):
 def test_reshape(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["shape"] = [(2, -1)]
+    arg_dict["input_shape"] = [(5)]
+    arg_dict["shape"] = [()]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
