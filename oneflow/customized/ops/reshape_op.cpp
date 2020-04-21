@@ -21,7 +21,7 @@ Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const std::vector<i
       OF_CHECK_LE(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
       total_elem_dim_exclude_minus_1 *= dim;
       OF_CHECK_LE(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
-          << "element number in reshape_conf is bigger than input blob";
+          << "element number in reshape is bigger than input blob";
     } else {
       OF_UNIMPLEMENTED() << "only positive number or -1 supported";
     }
@@ -31,7 +31,7 @@ Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const std::vector<i
     dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
   } else {
     OF_CHECK_EQ(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
-        << "input blob's element number not equals reshape_conf";
+        << "input blob's element number not equals reshape";
   }
   return std::make_shared<Shape>(dim_vec);
 }
@@ -49,7 +49,6 @@ REGISTER_USER_OP("reshape")
       FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GE_OR_RETURN(dim_vec.at(i), 0); }
       const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       const auto& parallel_ctx = ctx->parallel_ctx();
-
       if (sbp_parallel.has_split_parallel()) {
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
         BalancedSplitter spliter(shape.at(split_axis), parallel_ctx.parallel_num());
@@ -75,15 +74,11 @@ REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOp
                                                            user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    // const user_op::TensorDesc& tensor_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
-    // std::vector<int32_t> shape_vec = {tensor_desc.shape().dim_vec().begin(),
-    //                                   tensor_desc.shape().dim_vec().end()};
     user_op::UserOpConfWrapper reshape_grad_op =
         builder.Op("reshape_like")
             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
             .Input("like", op.input("in", 0))
             .Output("out")
-            //.Attr<std::vector<int32_t>>("shape", shape_vec)
             .Build();
     op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
     AddOp(reshape_grad_op);
