@@ -260,7 +260,7 @@ def _softmax_need_transpose(x, axis):
     dim_num = len(x.shape)
     assert dim_num >= 2
     if axis < 0: axis += dim_num
-    assert axis > 1
+    assert axis >= 1
     assert axis < dim_num
 
     need_transpose = False
