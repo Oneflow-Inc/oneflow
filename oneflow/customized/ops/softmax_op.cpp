@@ -7,7 +7,6 @@ namespace {
 REGISTER_USER_OP("softmax")
     .Input("in")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -32,7 +31,6 @@ REGISTER_USER_OP("softmax_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("axis", UserOpAttrType::kAtInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
@@ -64,7 +62,6 @@ REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOp
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper softmax_grad_op =
         builder.Op("softmax_grad")
-            .Attr("axis", op.attr<int32_t>("axis"))
             .Input("y", op.output("out", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")

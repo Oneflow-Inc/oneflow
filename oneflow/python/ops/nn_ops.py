@@ -285,7 +285,6 @@ def softmax(logits, axis=None, name=None):
         .Op("softmax")
         .Input("in", [logits])
         .Output("out")
-        .SetAttr("axis", axis, "AttrTypeInt32")
         .Build()
         .RemoteBlobList()[0]
     )
