@@ -78,7 +78,7 @@ class EmptyTensorManager {
   std::enable_if_t<std::is_same<T, TensorBuffer>::value> PrepareEmptyTensor(T& tensor) {
     tensor.reset();
     // Initialize tensors to a set size to limit expensive reallocations
-    tensor.Resize({tensor_init_bytes_}, DataType::kUInt8);
+    tensor.Resize({tensor_init_bytes_}, DataType::kChar);
   }
 
   template<typename T>
