@@ -58,7 +58,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
            return Maybe<void>::Ok();
      });
 
-REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+REGISTER_USER_OP_GRAD("unsorted_segment_sum").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                          user_op::AddOpFn AddOp) {
   bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
   if (need_grad_data) {
@@ -70,7 +70,7 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
                                                  .Attr("axis", op.attr<int64_t>("axis"))
                                                  .Attr("batch_dims", op.attr<int64_t>("num_segments"))
                                                  .Build();
-      op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "out", 0);
+      op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
       AddOp(data_grad_op);
     }
 });
