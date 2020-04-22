@@ -40,8 +40,8 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
     const size_t num_classes = x->dim_vec().back();
     // size_t temp_storage_bytes = GetCudaAlignedSize(x->elem_cnt() * sizeof(T)); // [i][j]
     // size_t tmp_or_sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes); //[i]
-    size_t temp_storage_bytes = x->elem_cnt() * sizeof(T); // [i][j]
-    size_t tmp_or_sum_vec_bytes = temp_storage_bytes / num_classes; //[i]
+    size_t temp_storage_bytes = x->elem_cnt() * sizeof(T);           // [i][j]
+    size_t tmp_or_sum_vec_bytes = temp_storage_bytes / num_classes;  //[i]
     return GetCudaAlignedSize(tmp_or_sum_vec_bytes + temp_storage_bytes);
   };
 }
