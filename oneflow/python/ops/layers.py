@@ -8,6 +8,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
+import os
 
 
 @oneflow_export("layers.dense")
@@ -320,27 +321,25 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if center:
-        beta = flow.get_variable(
-            name=name + "-beta",
-            shape=params_shape,
-            dtype=inputs.dtype,
-            initializer=beta_initializer or flow.zeros_initializer(),
-            regularizer=beta_regularizer,
-            trainable=trainable,
-            distribute=distribute_util.broadcast(),
-        )
+    beta = flow.get_variable(
+        name=name + "-beta",
+        shape=params_shape,
+        dtype=inputs.dtype,
+        initializer=beta_initializer if beta_initializer is not None and trainable else flow.zeros_initializer(),
+        regularizer=beta_regularizer,
+        trainable=trainable,
+        distribute=distribute_util.broadcast(),
+    )
 
-    if scale:
-        gamma = flow.get_variable(
-            name=name + "-gamma",
-            shape=params_shape,
-            dtype=inputs.dtype,
-            initializer=gamma_initializer or flow.ones_initializer(),
-            regularizer=gamma_regularizer,
-            trainable=trainable,
-            distribute=distribute_util.broadcast(),
-        )
+    gamma = flow.get_variable(
+        name=name + "-gamma",
+        shape=params_shape,
+        dtype=inputs.dtype,
+        initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
+        regularizer=gamma_regularizer,
+        trainable=trainable,
+        distribute=distribute_util.broadcast(),
+    )
 
     moving_mean = flow.get_variable(
         name=name + "-moving_mean",
@@ -359,6 +358,30 @@ def batch_normalization(
         trainable=trainable,
         distribute=distribute_util.broadcast(),
     )
+
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        builder = (flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("in", [inputs])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("out")
+            .SetAttr("axis", axis, "AttrTypeInt32")
+            .SetAttr("epsilon", epsilon, "AttrTypeFloat")
+            .SetAttr("is_training", trainable, "AttrTypeBool")
+            .SetAttr("momentum", momentum, "AttrTypeFloat")
+            .SetAttr("center", center, "AttrTypeBool")
+            .SetAttr("scale", scale, "AttrTypeBool")
+            )
+        if trainable:
+            builder = (builder
+                        .Output("mean")
+                        .Output("inv_variance"))
+        return (builder
+            .Build()
+            .RemoteBlobList()[0])
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
