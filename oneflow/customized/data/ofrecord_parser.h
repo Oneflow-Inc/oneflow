@@ -21,7 +21,7 @@ class OFRecordParser final : public Parser<TensorBuffer> {
     OFRecord* dptr = out_tensor->mut_dptr<OFRecord>();
     MultiThreadLoop(batch_data->size(), [&](size_t i) {
       TensorBuffer* buffer = batch_data->at(i).get();
-      CHECK(dptr[i].ParseFromArray(buffer->data<uint8_t>(), buffer->shape().elem_cnt()));
+      CHECK(dptr[i].ParseFromArray(buffer->data<char>(), buffer->shape().elem_cnt()));
     });
     if (batch_data->size() != out_tensor->shape().elem_cnt()) {
       CHECK_EQ(out_tensor->mut_shape()->NumAxes(), 1);

@@ -247,6 +247,7 @@ def ofrecord_reader(
         .SetAttr("random_shuffle", random_shuffle, "AttrTypeBool")\
         .SetAttr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")\
         .SetAttr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
+        .SetAttr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")\
         .Build()\
         .RemoteBlobList()[0]
 

@@ -13,17 +13,14 @@ class DataReader {
  public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
-  DataReader(user_op::KernelInitContext* ctx) : is_closed_(false), batch_buffer_(4) {
-    load_thrd_ = std::thread([this] {
-      while (!is_closed_.load()) { LoadBatch(); }
-    });
-  }
+  DataReader(user_op::KernelInitContext* ctx) : is_closed_(false), batch_buffer_(4) {}
   ~DataReader() {
     Close();
-    load_thrd_.join();
+    if (load_thrd_.joinable()) { load_thrd_.join(); }
   }
 
   void Read(user_op::KernelComputeContext* ctx) {
+    CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
     auto batch_data = FetchBatchData();
     parser_->Parse(batch_data, ctx);
   }
@@ -41,6 +38,13 @@ class DataReader {
   }
 
  protected:
+  void StartLoadThread() {
+    if (load_thrd_.joinable()) { return; }
+    load_thrd_ = std::thread([this] {
+      while (!is_closed_.load()) { LoadBatch(); }
+    });
+  }
+
   std::unique_ptr<Dataset<LoadTarget>> loader_;
   std::unique_ptr<Parser<LoadTarget>> parser_;
 
@@ -53,7 +57,7 @@ class DataReader {
 
   void LoadBatch() {
     std::shared_ptr<LoadTargetPtrList> batch_data =
-        std::make_shared<LoadTargetPtrList>(loader_->Next());
+        std::make_shared<LoadTargetPtrList>(std::move(loader_->Next()));
     batch_buffer_.Send(batch_data);
   }
 
