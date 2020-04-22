@@ -22,7 +22,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     int32_t initial_buffer_fill = ctx->GetAttr<int32_t>("shuffle_buffer_size");
     int32_t batch_size = ctx->GetAttr<int32_t>("batch_size");
     int64_t total_empty_size = initial_buffer_fill + 2 * 2 * batch_size;  // maybe 2 * batch_size
-    int64_t tensor_init_bytes = ctx->GetAttr<int64_t>("tensor_init_bytes");
+    int32_t tensor_init_bytes = ctx->GetAttr<int32_t>("tensor_init_bytes");
     empty_tensor_mgr_.reset(
         new EmptyTensorManager<TensorBuffer>(total_empty_size, tensor_init_bytes));
 

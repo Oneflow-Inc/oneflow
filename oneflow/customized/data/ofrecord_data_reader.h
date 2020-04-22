@@ -6,6 +6,7 @@
 #include "oneflow/customized/data/ofrecord_parser.h"
 #include "oneflow/customized/data/random_shuffle_dataset.h"
 #include "oneflow/customized/data/batch_dataset.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -19,6 +20,7 @@ class OFRecordDataReader final : public DataReader<TensorBuffer> {
     }
     int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
     loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    StartLoadThread();
   }
   ~OFRecordDataReader() = default;
 

@@ -35,7 +35,7 @@ class EmptyTensorManager {
  public:
   using LoadTargetUniquePtr = std::unique_ptr<LoadTarget>;
   using LoadTargetSharedPtr = std::shared_ptr<LoadTarget>;
-  EmptyTensorManager(int64_t total_empty_size, int64_t tensor_init_bytes)
+  EmptyTensorManager(int64_t total_empty_size, int32_t tensor_init_bytes)
       : tensor_init_bytes_(tensor_init_bytes), total_tensor_count_(0) {
     for (int i = 0; i < total_empty_size; ++i) {
       auto tensor_ptr = LoadTargetUniquePtr(new LoadTarget());
@@ -88,7 +88,7 @@ class EmptyTensorManager {
         << "Please overload PrepareEmpty for custom LoadTarget type other than TensorBuffer";
   }
 
-  const int tensor_init_bytes_;
+  const int32_t tensor_init_bytes_;
 
   int64_t total_tensor_count_;
 
