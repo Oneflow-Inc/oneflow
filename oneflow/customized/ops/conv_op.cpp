@@ -93,6 +93,31 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckAttr4Conv(const user_op::UserOpDefWrapper& def,
+                           const user_op::UserOpConfWrapper& conf) {
+  bool is_checked = true;
+  std::stringstream err;
+  err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name() << ": ";
+
+  std::string data_format = conf.attr<std::string>("data_format");
+  if (!(data_format == "channels_first" || data_format == "channels_last")) {
+    err << " data_format:" << data_format;
+    is_checked = false;
+  }
+
+  std::string padding = conf.attr<std::string>("padding");
+  if (!(padding == "valid" || padding == "same")) {
+    err << " padding:" << padding;
+    is_checked = false;
+  }
+
+  if (is_checked) {
+    return Maybe<void>::Ok();
+  } else {
+    return oneflow::Error::CheckFailed() << err;
+  }
+}
+
 }  // namespace
 
 REGISTER_USER_OP("conv2d")
@@ -108,17 +133,60 @@ REGISTER_USER_OP("conv2d")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtListInt32, 1)
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
-                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      std::string data_format = conf.attr<std::string>("data_format");
-      if (data_format == "channels_first" || data_format == "channels_last") {
-        return Maybe<void>::Ok();
-      }
-      return oneflow::Error::CheckFailed()
-             << "data_format value: " << data_format << " for Conv op is illegal";
-    })
+    .SetCheckAttrFn(CheckAttr4Conv)
     .SetTensorDescInferFn(InferTensorDesc4Conv)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
+
+REGISTER_USER_OP("conv_data_grad")
+    .Input("dy")
+    .Input("filter")
+    .Input("x_like")
+    .Output("dx")
+    .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
+    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("data_format", UserOpAttrType::kAtString)
+    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
+    .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
+    .Attr("groups", UserOpAttrType::kAtListInt32)
+    .SetCheckAttrFn(CheckAttr4Conv)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
+      CHECK_NOTNULL(x_like);
+      x_like->set_use_header_only(true);
+    })
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
+      const int32_t num_spatial_dims = ctx->GetAttr<int32_t>("num_spatial_dims");
+      CHECK_GE_OR_RETURN(num_spatial_dims, 1);
+      CHECK_LE_OR_RETURN(num_spatial_dims, 3);
+      CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
+      CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
+      CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
+
+      user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      *dx = *x_like;
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
+        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
+      };
+      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
+      CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
+      *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split("dy", 0, 0)
+          .Broadcast("filter", 0)
+          .Split("x_like", 0, 0)
+          .Split("dx", 0, 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
