@@ -84,10 +84,10 @@ struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-class ConvGpuFloatingKernel : public user_op::OpKernel {
+class Conv2dGpuKernel : public user_op::OpKernel {
  public:
-  ConvGpuFloatingKernel() = default;
-  ~ConvGpuFloatingKernel() = default;
+  Conv2dGpuKernel() = default;
+  ~Conv2dGpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -147,7 +147,7 @@ class ConvGpuFloatingKernel : public user_op::OpKernel {
 
 #define REGISTER_CONV_FLOATING_KERNEL(dtype)                                                    \
   REGISTER_USER_KERNEL("conv2d")                                                                \
-      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                                              \
+      .SetCreateFn<Conv2dGpuKernel<dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         return ctx.device_type() == DeviceType::kGPU                                            \
                && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()                          \
@@ -163,6 +163,7 @@ class ConvGpuFloatingKernel : public user_op::OpKernel {
 
 REGISTER_CONV_FLOATING_KERNEL(float);
 REGISTER_CONV_FLOATING_KERNEL(double);
+REGISTER_CONV_FLOATING_KERNEL(float16);
 
 template<typename T>
 class ConvDataGradGpuKernel final : public user_op::OpKernel {
