@@ -1,6 +1,7 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/tensor.h"
 #include <math.h>
+#include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 
@@ -8,12 +9,12 @@ namespace oneflow {
 
 namespace user_op {
 
-#define REDUCE_GPU_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ("Prod", Prod) \
-  OF_PP_MAKE_TUPLE_SEQ("Any", Any)   \
-  OF_PP_MAKE_TUPLE_SEQ("Min", Min)
+// #define REDUCE_GPU_SEQ               \
+//   OF_PP_MAKE_TUPLE_SEQ("Prod", Prod) \
+//   OF_PP_MAKE_TUPLE_SEQ("Any", Any)   \
+//   OF_PP_MAKE_TUPLE_SEQ("Min", Min)
 
-template<typename T>
+template<template<typename> class BinaryFunc, typename T>
 class ReduceGpuKernel final : public OpKernel {
  public:
   ReduceGpuKernel() = default;
@@ -37,30 +38,45 @@ class ReduceGpuKernel final : public OpKernel {
         XpuVarNdarray<const T>(tensor_in->shape(), tensor_in->dptr<T>()),              \
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));             \
   }
-    OF_PP_FOR_EACH_TUPLE(REDUCE_FORWARD, REDUCE_GPU_SEQ);
+    REDUCE_FORWARD("Prod", Prod)
+    REDUCE_FORWARD("Any", Any)
+    REDUCE_FORWARD("Min", Min)
 #undef REDUCE_FORWARD
   }
 };
 
-#define REGISTER_REDUCE_GPU_KERNEL(dtype)                                                    \
-  REGISTER_USER_KERNEL("reduce")                                                             \
-      .SetCreateFn<ReduceGpuKernel<dtype>>()                                                 \
-      .SetIsMatchedPred([](const KernelRegContext& ctx) {                                    \
-        const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("tensor_out", 0); \
-        if (ctx.device_type() == DeviceType::kGPU                                            \
-            && tensor_out_desc->data_type() == GetDataType<dtype>::value) {                  \
-          return true;                                                                       \
-        }                                                                                    \
-        return false;                                                                        \
-      })                                                                                     \
-      .SetInferTmpSizeFn([](InferContext* ctx) {                                             \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0);                  \
-        return in_shape->elem_cnt() * sizeof(dtype);                                         \
+template<typename T>
+bool IsMatchedPred(const KernelRegContext& ctx) {
+  const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("tensor_out", 0);
+  if (ctx.device_type() == DeviceType::kGPU
+      && tensor_out_desc->data_type() == GetDataType<T>::value) {
+    return true;
+  }
+  return false;
+}
+
+#define REGISTER_REDUCE_GPU_KERNEL(op_name, binary_func, dtype)             \
+  REGISTER_USER_KERNEL(op_name)                                             \
+      .SetCreateFn<ReduceGpuKernel<binary_func, dtype>>()                   \
+      .SetIsMatchedPred(IsMatchedPred<dtype>)                               \
+      .SetInferTmpSizeFn([](InferContext* ctx) {                            \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0); \
+        return in_shape->elem_cnt() * sizeof(dtype);                        \
       });
 
-REGISTER_REDUCE_GPU_KERNEL(float)
-REGISTER_REDUCE_GPU_KERNEL(double)
-REGISTER_REDUCE_GPU_KERNEL(int32_t)
-REGISTER_REDUCE_GPU_KERNEL(int64_t)
+REGISTER_REDUCE_GPU_KERNEL("reduce_prod", BinaryFuncProd, float)
+REGISTER_REDUCE_GPU_KERNEL("reduce_prod", BinaryFuncProd, double)
+REGISTER_REDUCE_GPU_KERNEL("reduce_prod", BinaryFuncProd, int32_t)
+REGISTER_REDUCE_GPU_KERNEL("reduce_prod", BinaryFuncProd, int64_t)
+
+REGISTER_REDUCE_GPU_KERNEL("reduce_min", BinaryFuncMin, float)
+REGISTER_REDUCE_GPU_KERNEL("reduce_min", BinaryFuncMin, double)
+REGISTER_REDUCE_GPU_KERNEL("reduce_min", BinaryFuncMin, int32_t)
+REGISTER_REDUCE_GPU_KERNEL("reduce_min", BinaryFuncMin, int64_t)
+
+REGISTER_REDUCE_GPU_KERNEL("reduce_any", BinaryFuncAny, float)
+REGISTER_REDUCE_GPU_KERNEL("reduce_any", BinaryFuncAny, double)
+REGISTER_REDUCE_GPU_KERNEL("reduce_any", BinaryFuncAny, int32_t)
+REGISTER_REDUCE_GPU_KERNEL("reduce_any", BinaryFuncAny, int64_t)
 }  // namespace user_op
 }  // namespace oneflow

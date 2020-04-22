@@ -16,7 +16,7 @@ def reduce_any(x, axis=None, keepdims=None, name=None):
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
         return math_ops.not_equal(x, constant_op.constant_scalar(value=0.0, dtype=x.dtype))
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce")\
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce_any")\
         .Input("tensor_in", [x])\
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
@@ -32,7 +32,7 @@ def reduce_min(x, axis=None, keepdims=None, name=None):
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
         return x
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce")\
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce_min")\
         .Input("tensor_in", [x])\
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
@@ -48,7 +48,7 @@ def reduce_prod(x, axis=None, keepdims=None, name=None):
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
         return x
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce")\
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce_prod")\
         .Input("tensor_in", [x])\
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
