@@ -166,8 +166,9 @@ REGISTER_USER_OP("normalization_grad")
 
 REGISTER_USER_OP_GRAD("normalization")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-            std::cout << __FILE__ << " " << __LINE__ << op.NeedGenGradTensor4OpInput("in", 0) << std::endl;
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+      if (op.NeedGenGradTensor4OpInput("in", 0) ||
+            op.NeedGenGradTensor4OpInput("gamma", 0) ||
+            op.NeedGenGradTensor4OpInput("beta", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("normalization_grad")
                                                  .Input("x", op.input("in", 0))
@@ -182,9 +183,15 @@ REGISTER_USER_OP_GRAD("normalization")
                                                  .Output("beta_diff")
                                                  .Output("dx")
                                                  .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
-        op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
-        op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
+        if (op.NeedGenGradTensor4OpInput("in", 0)) {
+            op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
+        }
+        if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
+            op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
+        }
+        if (op.NeedGenGradTensor4OpInput("beta", 0)) {
+            op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
+        }
         AddOp(grad_op);
       }
     });
