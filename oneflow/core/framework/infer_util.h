@@ -11,6 +11,7 @@ namespace oneflow {
 
 class Shape;
 enum DataType;
+class JobDesc;
 
 namespace user_op {
 
@@ -32,10 +33,13 @@ class InferContext {
   }
 
   virtual const ParallelContext& parallel_ctx() const = 0;
+  virtual const JobDesc& job_desc() const = 0;
   virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual bool* IsTensorList4ArgNameAndIndex(const std::string&, int32_t) = 0;
+
+  const UserOpConfWrapper& user_op_conf() const { return conf_; }
 
  protected:
   InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
