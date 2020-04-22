@@ -77,17 +77,43 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
   return workspace_size;
 }
 
+// for 1d and 2d
+template<size_t NDims>
+CudnnTensorDesc* GetBiasCudnnTensorDesc(const std::string& data_format, int32_t filters,
+                                        DataType data_type) {
+  if (data_format == "channels_first") {
+    return new CudnnTensorDesc(CUDNN_TENSOR_NCHW, data_type, 1, filters, 1, 1);
+  } else {
+    CHECK_EQ("channels_last", data_format);
+    CHECK_EQ(DataType::kFloat, data_type)
+        << "CUDNN 1d & 2d support channels last only if data type is float";
+    return new CudnnTensorDesc(CUDNN_TENSOR_NHWC, data_type, 1, filters, 1, 1);
+  }
+}
+
+// for 3d and Nd
+template<>
+CudnnTensorDesc* GetBiasCudnnTensorDesc<3>(const std::string& data_format, int32_t filters,
+                                           DataType data_type) {
+  CHECK_EQ("channels_first", data_format) << "CUDNN Nd API only support channels first";
+  std::vector<int32_t> bias_dim(3 + 2, 1);
+  std::vector<int32_t> stride_of_bias_tensor(3 + 2, 1);
+  bias_dim[1] = filters;
+  stride_of_bias_tensor[0] = filters;
+  return new CudnnTensorDesc(data_type, 3 + 2, bias_dim.data(), stride_of_bias_tensor.data());
+}
+
 }  // namespace
 
 struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> bias_desc;
 };
 
-template<typename T>
-class Conv2dGpuKernel : public user_op::OpKernel {
+template<typename T, size_t NDims>
+class ConvGpuKernel : public user_op::OpKernel {
  public:
-  Conv2dGpuKernel() = default;
-  ~Conv2dGpuKernel() = default;
+  ConvGpuKernel() = default;
+  ~ConvGpuKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -99,17 +125,8 @@ class Conv2dGpuKernel : public user_op::OpKernel {
 
     const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
-      if (data_format == "channels_first") {
-        state->bias_desc.reset(
-            new CudnnTensorDesc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
-      } else {
-        CHECK_EQ("channels_last", data_format);
-        CHECK_EQ(DataType::kFloat, GetDataType<T>::value)
-            << "CUDNN 1d & 2d support channels last only if data type "
-            << "is float";
-        state->bias_desc.reset(
-            new CudnnTensorDesc(CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
-      }
+      state->bias_desc.reset(
+          GetBiasCudnnTensorDesc<NDims>(data_format, filters, GetDataType<T>::value));
     }
 
     return std::move(state);
@@ -145,9 +162,9 @@ class Conv2dGpuKernel : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_FLOATING_KERNEL(dtype)                                                    \
+#define REGISTER_CONV_KERNEL(dtype, ndims)                                                      \
   REGISTER_USER_KERNEL("conv2d")                                                                \
-      .SetCreateFn<Conv2dGpuKernel<dtype>>()                                              \
+      .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                               \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         return ctx.device_type() == DeviceType::kGPU                                            \
                && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()                          \
@@ -161,9 +178,15 @@ class Conv2dGpuKernel : public user_op::OpKernel {
             in, weight, out, ctx->job_desc(), ctx->user_op_conf());                             \
       })
 
-REGISTER_CONV_FLOATING_KERNEL(float);
-REGISTER_CONV_FLOATING_KERNEL(double);
-REGISTER_CONV_FLOATING_KERNEL(float16);
+REGISTER_CONV_KERNEL(float, 1);
+REGISTER_CONV_KERNEL(float, 2);
+REGISTER_CONV_KERNEL(float, 3);
+REGISTER_CONV_KERNEL(double, 1);
+REGISTER_CONV_KERNEL(double, 2);
+REGISTER_CONV_KERNEL(double, 3);
+REGISTER_CONV_KERNEL(float16, 1);
+REGISTER_CONV_KERNEL(float16, 2);
+REGISTER_CONV_KERNEL(float16, 3);
 
 template<typename T>
 class ConvDataGradGpuKernel final : public user_op::OpKernel {

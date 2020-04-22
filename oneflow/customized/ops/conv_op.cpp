@@ -5,20 +5,27 @@ namespace oneflow {
 
 namespace {
 
+template<size_t NDims>
 Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
-  const int32_t NDims = 2;
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   CHECK_EQ(NDims + 2, in->shape().NumAxes());
 
   auto data_format = ctx->GetAttr<std::string>("data_format");
   auto kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+  CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   int32_t filters = ctx->GetAttr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
+
+  // only support data parallel
+  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
+                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
     auto padding = ctx->GetAttr<std::string>("padding");
     auto dilation_rate = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
     auto strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
+    CHECK_EQ_OR_RETURN(NDims, strides.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(in->shape().dim_vec());
@@ -120,11 +127,11 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 
 }  // namespace
 
-REGISTER_USER_OP("conv2d")
+REGISTER_USER_OP("conv1d")
     .Input("in")
     .Input("weight")
     .OptionalInput("bias")
-    .OptionalInput("bias_multiplier")
+    .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
     .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
@@ -134,7 +141,43 @@ REGISTER_USER_OP("conv2d")
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtListInt32, 1)
     .SetCheckAttrFn(CheckAttr)
-    .SetTensorDescInferFn(InferTensorDesc4Conv)
+    .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
+    .SetBatchAxisInferFn(InferBatchAxis4Conv)
+    .SetGetSbpFn(GetSbpSignatures4Conv);
+
+REGISTER_USER_OP("conv2d")
+    .Input("in")
+    .Input("weight")
+    .OptionalInput("bias")
+    .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
+    .Output("out")
+    .Attr("filters", UserOpAttrType::kAtInt32)
+    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
+    .Attr("data_format", UserOpAttrType::kAtString)
+    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
+    .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
+    .Attr<int32_t>("groups", UserOpAttrType::kAtListInt32, 1)
+    .SetCheckAttrFn(CheckAttr)
+    .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
+    .SetBatchAxisInferFn(InferBatchAxis4Conv)
+    .SetGetSbpFn(GetSbpSignatures4Conv);
+
+REGISTER_USER_OP("conv3d")
+    .Input("in")
+    .Input("weight")
+    .OptionalInput("bias")
+    .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
+    .Output("out")
+    .Attr("filters", UserOpAttrType::kAtInt32)
+    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
+    .Attr("data_format", UserOpAttrType::kAtString)
+    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
+    .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
+    .Attr<int32_t>("groups", UserOpAttrType::kAtListInt32, 1)
+    .SetCheckAttrFn(CheckAttr)
+    .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
 
