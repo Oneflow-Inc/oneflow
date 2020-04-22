@@ -196,16 +196,16 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                     \
   REGISTER_USER_KERNEL("conv2d_data_grad")                                 \
-      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                         \
+      .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                         \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
         return ctx.device_type() == DeviceType::kGPU                       \
-               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
+               && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type()     \
                       == GetDataType<dtype>::value;                        \
       })                                                                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
-        const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);         \
-        const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0); \
         const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);         \
+        const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0); \
+        const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);         \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t,    \
                                      cudnnConvolutionBwdDataAlgo_t>(       \
             dx, filter, dy, ctx->job_desc(), ctx->user_op_conf());         \
@@ -245,25 +245,76 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("conv2d_filter_grad")                               \
-      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
-        return ctx.device_type() == DeviceType::kGPU                       \
-               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
-                      == GetDataType<dtype>::value;                        \
-      })                                                                   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
-        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);         \
-        const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);         \
+#define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                             \
+  REGISTER_USER_KERNEL("conv2d_filter_grad")                                         \
+      .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                 \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                   \
+        return ctx.device_type() == DeviceType::kGPU                                 \
+               && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type()               \
+                      == GetDataType<dtype>::value;                                  \
+      })                                                                             \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                  \
+        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                   \
+        const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);                     \
         const auto* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0); \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t,  \
-                                     cudnnConvolutionBwdFilterAlgo_t>(     \
-            x, filter_diff, dy, ctx->job_desc(), ctx->user_op_conf());         \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t,            \
+                                     cudnnConvolutionBwdFilterAlgo_t>(               \
+            x, filter_diff, dy, ctx->job_desc(), ctx->user_op_conf());               \
       })
 
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float);
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(double);
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float16);
+
+template<typename T>
+class ConvBiasGradGpuKernel final : public user_op::OpKernel {
+ public:
+  ConvBiasGradGpuKernel() = default;
+  ~ConvBiasGradGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
+    CHECK_EQ(bias_diff->shape().NumAxes(), 1);
+    CHECK_GE(dy->shape().NumAxes(), 3);
+    CHECK_LE(dy->shape().NumAxes(), 5);
+
+    std::string data_format = ctx->GetAttr<std::string>("data_format");
+
+    std::unique_ptr<CudnnTensorDesc> dy_desc;
+    dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
+    std::unique_ptr<CudnnTensorDesc> bias_diff_desc;
+    if (data_format == "channels_first") {
+      CHECK_EQ(dy->shape().At(1), bias_diff->shape().At(0));
+      bias_diff_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NCHW, bias_diff->data_type(), 1,
+                                               static_cast<int32_t>(bias_diff->shape().At(0)), 1,
+                                               1));
+    } else if (data_format == "channels_last") {
+      CHECK_EQ(dy->shape().At(dy->shape().NumAxes() - 1), bias_diff->shape().At(0));
+      bias_diff_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
+                                               static_cast<int32_t>(bias_diff->shape().At(0)), 1,
+                                               1));
+    } else {
+      UNIMPLEMENTED();
+    }
+    CudaCheck(cudnnConvolutionBackwardBias(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
+                                           dy_desc->Get(), dy->dptr<T>(), CudnnSPZeroPtr<T>(),
+                                           bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
+  }
+};
+
+#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("conv2d_bias_grad")                             \
+      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                     \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {     \
+        return ctx.device_type() == DeviceType::kGPU                   \
+               && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type() \
+                      == GetDataType<dtype>::value;                    \
+      })
+
+REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);
+REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(double);
+REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float16);
 
 }  // namespace oneflow

@@ -266,4 +266,51 @@ REGISTER_USER_OP("conv_filter_grad")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("conv_bias_grad")
+    .Input("dy")
+    .Output("bias_diff")
+    .Attr("data_format", UserOpAttrType::kAtString)
+    .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
+                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+      std::string data_format = conf.attr<std::string>("data_format");
+      if (data_format == "channels_first" || data_format == "channels_last") {
+        return Maybe<void>::Ok();
+      }
+      return oneflow::Error::CheckFailed() << "Illegal value for " << conf.op_type_name() << " op "
+                                           << conf.op_name() << ": data_format:" << data_format;
+    })
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+
+      int32_t num_spatial_dims = ctx->GetAttr<int32_t>("num_spatial_dims");
+      std::string data_format = ctx->GetAttr<std::string>("data_format");
+
+      CHECK_GE_OR_RETURN(num_spatial_dims, 1);
+      CHECK_LE_OR_RETURN(num_spatial_dims, 3);
+      CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
+      *bias_diff->mut_data_type() = dy->data_type();
+      if (data_format == "channels_first") {
+        *bias_diff->mut_shape() = Shape({dy->shape().At(1)});
+      } else if (data_format == "channels_last") {
+        *bias_diff->mut_shape() = Shape({dy->shape().At(dy->shape().NumAxes() - 1)});
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("dy", 0)->has_value());
+      ctx->BatchAxis4ArgNameAndIndex("bias_diff", 0)->clear_value();
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      SbpSignatureBuilder()
+          .Split("dy", 0, 0)
+          .PartialSum("bias_diff", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
