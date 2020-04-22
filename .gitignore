@@ -8,4 +8,3 @@ log/
 core.*
 *.pyc
 *.ipynb
-/.vscode
