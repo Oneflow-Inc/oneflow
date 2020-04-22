@@ -8,6 +8,43 @@ namespace oneflow {
 namespace {
 
 template<typename PerfT, typename AlgoT>
+struct CudnnConvArgsAndAlgo final {
+  CudnnConvArgs args;
+  PerfT algo_perf;
+
+  CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
+                       user_op::Tensor* buf, const JobDesc& job_desc,
+                       const user_op::UserOpConfWrapper& user_op_conf, DeviceCtx* device_ctx,
+                       bool has_forced_algo, int32_t forced_algo)
+      : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
+             y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
+             job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
+             job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
+             job_desc.job_conf().cudnn_conv_enable_pseudo_half()) {
+    size_t byte_size_of_buf = buf->shape().elem_cnt();
+    AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
+                                   const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
+                                   buf->mut_dptr());
+    PerfT algo_perf;
+    if (has_forced_algo) {
+      algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
+          &args, &res, static_cast<AlgoT>(forced_algo));
+    } else {
+      algo_perf = FindCudnnConvAlgorithmWithResource<PerfT>(&args, &res);
+    }
+    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+        << "op (" << user_op_conf.op_name()
+        << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    CHECK_LE(algo_perf.memory, byte_size_of_buf)
+        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
+        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+        << byte_size_of_buf;
+  }
+  CudnnConvArgsAndAlgo() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgsAndAlgo);
+};
+
+template<typename PerfT, typename AlgoT>
 size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::TensorDesc* w,
                              const user_op::TensorDesc* y, const JobDesc& job_desc,
                              const user_op::UserOpConfWrapper& user_op_conf) {
@@ -80,47 +117,27 @@ class ConvGpuFloatingKernel : public user_op::OpKernel {
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const JobDesc& job_desc = ctx->job_desc();
-    const user_op::UserOpConfWrapper& user_op_conf = ctx->user_op_conf();
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    size_t byte_size_of_buf = buf->shape().elem_cnt();
-    CudnnConvArgs args(user_op_conf, in->data_type(), in->shape(), weight->data_type(),
-                       weight->shape(), out->data_type(), out->shape(),
-                       ctx->GetAttr<std::string>("data_format"), byte_size_of_buf,
-                       job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
-                       job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-                       job_desc.job_conf().cudnn_conv_enable_pseudo_half());
-    AllocatedCudnnConvResource res(ctx->device_ctx()->cudnn_handle(), const_cast<void*>(in->dptr()),
-                                   const_cast<void*>(weight->dptr()), out->mut_dptr(),
-                                   buf->mut_dptr());
-    using perf_t = cudnnConvolutionFwdAlgoPerf_t;
-    using algo_t = cudnnConvolutionFwdAlgo_t;
-    perf_t algo_perf;
-    if (job_desc.job_conf().has_cudnn_conv_force_fwd_algo()) {
-      algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
-          &args, &res, static_cast<algo_t>(job_desc.job_conf().cudnn_conv_force_fwd_algo()));
-    } else {
-      algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
-    }
-    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-        << "op (" << user_op_conf.op_name()
-        << ") find algorithm perference failed. algo: " << algo_perf.algo;
-    CHECK_LE(algo_perf.memory, byte_size_of_buf)
-        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
-        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-        << byte_size_of_buf;
+    CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t, cudnnConvolutionFwdAlgo_t> args_and_algo(
+        in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+        job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),
+        job_desc.job_conf().cudnn_conv_force_fwd_algo());
+    CudnnConvArgs& args = args_and_algo.args;
+    cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+
     CudaCheck(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
         args.wdesc.Get(), weight->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.ydesc.Get(), out->mut_dptr()));
 
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    ConvCudnnOpKernelState* conv_state = dynamic_cast<ConvCudnnOpKernelState*>(state);
     if (bias != nullptr) {
+      ConvCudnnOpKernelState* conv_state = dynamic_cast<ConvCudnnOpKernelState*>(state);
       CudaCheck(cudnnAddTensor(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
                                conv_state->bias_desc->Get(), bias->dptr<T>(), CudnnSPOnePtr<T>(),
                                args.ydesc.Get(), out->mut_dptr<T>()));
@@ -157,40 +174,19 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const JobDesc& job_desc = ctx->job_desc();
-    const user_op::UserOpConfWrapper& user_op_conf = ctx->user_op_conf();
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    size_t byte_size_of_buf = buf->shape().elem_cnt();
-    CudnnConvArgs args(user_op_conf, dx->data_type(), dx->shape(), filter->data_type(),
-                       filter->shape(), dy->data_type(), dy->shape(),
-                       ctx->GetAttr<std::string>("data_format"), byte_size_of_buf,
-                       job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
-                       job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-                       job_desc.job_conf().cudnn_conv_enable_pseudo_half());
-    AllocatedCudnnConvResource res(ctx->device_ctx()->cudnn_handle(), dx->mut_dptr(),
-                                   const_cast<void*>(filter->dptr()), const_cast<void*>(dy->dptr()),
-                                   buf->mut_dptr());
-    using perf_t = cudnnConvolutionBwdDataAlgoPerf_t;
-    using algo_t = cudnnConvolutionBwdDataAlgo_t;
-    perf_t algo_perf;
-    if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
-      algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
-          &args, &res,
-          static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_bwd_data_algo()));
-    } else {
-      algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
-    }
-    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-        << "op (" << this->op_conf().name()
-        << ") find algorithm perference failed. algo: " << algo_perf.algo;
-    CHECK_LE(algo_perf.memory, byte_size_of_buf)
-        << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
-        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-        << byte_size_of_buf;
+    CudnnConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t, cudnnConvolutionBwdDataAlgo_t>
+        args_and_algo(dx, filter, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+                      job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),
+                      job_desc.job_conf().cudnn_conv_force_bwd_data_algo());
+    CudnnConvArgs& args = args_and_algo.args;
+    cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+
     CudaCheck(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), filter->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
@@ -198,24 +194,76 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                                          \
-  REGISTER_USER_KERNEL("conv2d_data_grad")                                                      \
-      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        return ctx.device_type() == DeviceType::kGPU                                            \
-               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()                          \
-                      == GetDataType<dtype>::value;                                             \
-      })                                                                                        \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
-        const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);                              \
-        const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);                      \
-        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                              \
-        return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t, cudnnConvolutionFwdAlgo_t>( \
-            dx, filter, dy, ctx->job_desc(), ctx->user_op_conf());                              \
+#define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("conv2d_data_grad")                                 \
+      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                         \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
+        return ctx.device_type() == DeviceType::kGPU                       \
+               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
+                      == GetDataType<dtype>::value;                        \
+      })                                                                   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
+        const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);         \
+        const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0); \
+        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);         \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t,    \
+                                     cudnnConvolutionBwdDataAlgo_t>(       \
+            dx, filter, dy, ctx->job_desc(), ctx->user_op_conf());         \
       })
 
 REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(float);
 REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(double);
 REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(float16);
+
+template<typename T>
+class ConvFilterGradGpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernel);
+  ConvFilterGradGpuKernel() = default;
+  ~ConvFilterGradGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const JobDesc& job_desc = ctx->job_desc();
+
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
+    user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    CudnnConvArgsAndAlgo<cudnnConvolutionBwdFilterAlgoPerf_t, cudnnConvolutionBwdFilterAlgo_t>
+        args_and_algo(x, filter_diff, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+                      job_desc.job_conf().has_cudnn_conv_force_bwd_filter_algo(),
+                      job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());
+    CudnnConvArgs& args = args_and_algo.args;
+    cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+
+    CudaCheck(cudnnConvolutionBackwardFilter(
+        ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
+        args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
+        args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
+  }
+};
+
+#define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("conv2d_filter_grad")                               \
+      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                         \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
+        return ctx.device_type() == DeviceType::kGPU                       \
+               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
+                      == GetDataType<dtype>::value;                        \
+      })                                                                   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
+        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);         \
+        const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);         \
+        const auto* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0); \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t,  \
+                                     cudnnConvolutionBwdFilterAlgo_t>(     \
+            x, filter_diff, dy, ctx->job_desc(), ctx->user_op_conf());         \
+      })
+
+REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float);
+REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(double);
+REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float16);
 
 }  // namespace oneflow
