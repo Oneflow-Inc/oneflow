@@ -33,6 +33,9 @@ class COCODataset final : public Dataset<COCODataInstance> {
   bool EnableGetSize() override { return true; }
 
  private:
+  bool ImageHasValidAnnotations(int64_t image_id) const;
+
+  static constexpr int kMinKeypointsPerImage = 10;
   nlohmann::json annotation_json_;
   std::vector<int64_t> image_ids_;
   HashMap<int64_t, const nlohmann::json&> image_id2image_;
