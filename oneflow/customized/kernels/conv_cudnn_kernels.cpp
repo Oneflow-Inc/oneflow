@@ -5,6 +5,47 @@
 
 namespace oneflow {
 
+namespace {
+
+size_t InferTmpSize4Conv(user_op::InferContext* ctx) {
+  const JobDesc& job_desc = ctx->job_desc();
+  const user_op::UserOpConfWrapper& user_op_conf = ctx->user_op_conf();
+  const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
+  const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  // TODO(niuchong): op_conf.cudnn_buf_limit_mbyte?
+  size_t workspace_size = job_desc.cudnn_buf_limit_mbyte();
+  if (!out->is_dynamic()) {
+    CudnnConvArgs args(user_op_conf, in->data_type(), ShapeView(in->shape()), weight->data_type(),
+                       ShapeView(weight->shape()), out->data_type(), ShapeView(out->shape()),
+                       ctx->GetAttr<std::string>("data_format"), workspace_size,
+                       job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
+                       job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       job_desc.job_conf().cudnn_conv_enable_pseudo_half());
+    using perf_t = cudnnConvolutionFwdAlgoPerf_t;
+    using algo_t = cudnnConvolutionFwdAlgo_t;
+    perf_t algo_perf;
+    if (job_desc.job_conf().has_cudnn_conv_force_fwd_algo()) {
+      algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
+          &args, static_cast<algo_t>(job_desc.job_conf().cudnn_conv_force_fwd_algo()));
+    } else {
+      algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
+    }
+    CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+        << "op (" << user_op_conf.op_name()
+        << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    CHECK_LE(algo_perf.memory, workspace_size)
+        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
+        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+        << workspace_size;
+    workspace_size = algo_perf.memory;
+  }
+  workspace_size = std::max(size_t(1), workspace_size);
+  return workspace_size;
+}
+
+}  // namespace
+
 struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> bias_desc;
 };
@@ -92,47 +133,17 @@ class ConvGpuFloatingKernel : public user_op::OpKernel {
   }
 };
 
-REGISTER_USER_KERNEL("conv2d")
-    .SetCreateFn<ConvGpuFloatingKernel<float>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU
-             && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type() == DataType::kFloat;
-    })
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
-      const JobDesc& job_desc = ctx->job_desc();
-      const user_op::UserOpConfWrapper& user_op_conf = ctx->user_op_conf();
-      const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      // TODO(niuchong): op_conf.cudnn_buf_limit_mbyte?
-      size_t workspace_size = job_desc.cudnn_buf_limit_mbyte();
-      if (!out->is_dynamic()) {
-        CudnnConvArgs args(user_op_conf, in->data_type(), ShapeView(in->shape()),
-                           weight->data_type(), ShapeView(weight->shape()), out->data_type(),
-                           ShapeView(out->shape()), ctx->GetAttr<std::string>("data_format"),
-                           workspace_size, job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
-                           job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-                           job_desc.job_conf().cudnn_conv_enable_pseudo_half());
-        using perf_t = cudnnConvolutionFwdAlgoPerf_t;
-        using algo_t = cudnnConvolutionFwdAlgo_t;
-        perf_t algo_perf;
-        if (job_desc.job_conf().has_cudnn_conv_force_fwd_algo()) {
-          algo_perf = GetCudnnConvAlgorithmPerference<perf_t>(
-              &args, static_cast<algo_t>(job_desc.job_conf().cudnn_conv_force_fwd_algo()));
-        } else {
-          algo_perf = FindCudnnConvAlgorithm<perf_t>(&args);
-        }
-        CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-            << "op (" << user_op_conf.op_name()
-            << ") find algorithm perference failed. algo: " << algo_perf.algo;
-        CHECK_LE(algo_perf.memory, workspace_size)
-            << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
-            << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-            << workspace_size;
-        workspace_size = algo_perf.memory;
-      }
-      workspace_size = std::max(size_t(1), workspace_size);
-      return workspace_size;
-    });
+#define REGISTER_CONV_FLOATING_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("conv2d")                                       \
+      .SetCreateFn<ConvGpuFloatingKernel<dtype>>()                     \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {     \
+        return ctx.device_type() == DeviceType::kGPU                   \
+               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type() \
+                      == GetDataType<dtype>::value;                    \
+      })                                                               \
+      .SetInferTmpSizeFn(InferTmpSize4Conv)
+
+REGISTER_CONV_FLOATING_KERNEL(float);
+REGISTER_CONV_FLOATING_KERNEL(double);
 
 }  // namespace oneflow
