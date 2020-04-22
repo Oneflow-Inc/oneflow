@@ -20,13 +20,15 @@ class SoftmaxKernel final : public user_op::OpKernel {
     const int64_t num_instances = x->shape().elem_cnt() / num_classes;
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t prob_bytes = GetCudaAlignedSize(x->shape().elem_cnt() * sizeof(T));
-    const size_t temp_storage_bytes = GetCudaAlignedSize(prob_bytes / num_classes);
+    // const size_t temp_storage_bytes = GetCudaAlignedSize(x->shape().elem_cnt() * sizeof(T));
+    // const size_t tmp_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
+    const size_t temp_storage_bytes = x->shape().elem_cnt() * sizeof(T);
+    const size_t tmp_bytes = temp_storage_bytes / num_classes;
 
-    T* prob_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(prob_ptr + prob_bytes);
+    T* tmp_ptr = tmp_buffer->mut_dptr<T>();
+    void* temp_storage_ptr = reinterpret_cast<void*>(tmp_ptr + tmp_bytes);
     SoftmaxKernelUtil<device_type, T>::ComputeProb(ctx->device_ctx(), num_instances, num_classes,
-                                                   x->dptr<T>(), prob_ptr, y->mut_dptr<T>(),
+                                                   x->dptr<T>(), tmp_ptr, y->mut_dptr<T>(),
                                                    temp_storage_ptr, temp_storage_bytes);
   };
 };
@@ -36,9 +38,11 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
   return [bn](user_op::InferContext* ctx) {
     const Shape* x = ctx->Shape4ArgNameAndIndex(bn, 0);
     const size_t num_classes = x->dim_vec().back();
-    size_t prob_bytes = GetCudaAlignedSize(x->elem_cnt() * sizeof(T));
-    size_t temp_storage_bytes = GetCudaAlignedSize(prob_bytes / num_classes);
-    return prob_bytes + temp_storage_bytes;
+    // size_t temp_storage_bytes = GetCudaAlignedSize(x->elem_cnt() * sizeof(T)); // [i][j]
+    // size_t tmp_or_sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes); //[i]
+    size_t temp_storage_bytes = x->elem_cnt() * sizeof(T); // [i][j]
+    size_t tmp_or_sum_vec_bytes = temp_storage_bytes / num_classes; //[i]
+    return GetCudaAlignedSize(tmp_or_sum_vec_bytes + temp_storage_bytes);
   };
 }
 
@@ -73,13 +77,15 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     const int64_t num_instances = y->shape().elem_cnt() / num_classes;
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t prob_bytes = GetCudaAlignedSize(y->shape().elem_cnt() * sizeof(T));
-    const size_t temp_storage_bytes = GetCudaAlignedSize(prob_bytes / num_classes);
+    // const size_t temp_storage_bytes = GetCudaAlignedSize(y->shape().elem_cnt() * sizeof(T));
+    // const size_t sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
+    const size_t temp_storage_bytes = y->shape().elem_cnt() * sizeof(T);
+    const size_t sum_vec_bytes = temp_storage_bytes / num_classes;
 
-    T* prob_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(prob_ptr + prob_bytes);
+    T* sum_vec_ptr = tmp_buffer->mut_dptr<T>();
+    void* temp_storage_ptr = reinterpret_cast<void*>(sum_vec_ptr + sum_vec_bytes);
     SoftmaxKernelUtil<device_type, T>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(), prob_ptr,
+        ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(), sum_vec_ptr,
         dx->mut_dptr<T>(), temp_storage_ptr, temp_storage_bytes);
   };
 };
