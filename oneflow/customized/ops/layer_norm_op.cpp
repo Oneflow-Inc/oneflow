@@ -41,12 +41,43 @@ REGISTER_USER_OP("layer_norm")
       user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
-      const float& alpha = ctx->GetAttr<float>("alpha");
       const bool& center = ctx->GetAttr<bool>("center");
       const bool& scale = ctx->GetAttr<bool>("scale");
-      const int64_t& begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
-      const int64_t& begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
-      const double& epsilon = ctx->GetAttr<double>("epsilon");
+      const int64_t begin_params_axis =
+          ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_params_axis"));
+      DimVector param_shape_dim_vec;
+      param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                                 x->shape().dim_vec().cbegin() + begin_params_axis,
+                                 x->shape().dim_vec().cend());
+      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
+      const Shape param_shape(param_shape_dim_vec);
+      if (center) {
+        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
+                        || ctx->SbpParallel4ArgNameAndIndex("beta", 0).has_broadcast_parallel());
+        CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
+        CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
+      }
+      if (scale) {
+        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
+                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
+        CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+        CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
+        *normalized = *x;
+      }
+      const int64_t begin_norm_axis =
+          ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_norm_axis"));
+      DimVector bn_param_shape_dim_vec;
+      bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x->shape().dim_vec().cbegin(),
+                                    x->shape().dim_vec().cbegin() + begin_norm_axis);
+      const Shape bn_param_shape(bn_param_shape_dim_vec);
+      *mean->mut_shape() = bn_param_shape;
+      DataType data_type = x->data_type() == DataType::kFloat16 ? DataType::kFloat : x->data_type();
+      *mean->mut_data_type() = data_type;
+      *inv_variance = *mean;
+      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->shape(), mean->shape());
+      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->data_type(), mean->data_type());
+      CHECK_EQ_OR_RETURN(cudnn_bn_bias_zeros->data_type(), mean->data_type());
+      CHECK_EQ_OR_RETURN(cudnn_bn_bias_zeros->data_type(), mean->data_type());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
