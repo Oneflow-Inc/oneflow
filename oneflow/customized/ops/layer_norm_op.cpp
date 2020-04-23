@@ -45,6 +45,7 @@ REGISTER_USER_OP("layer_norm")
       const bool& scale = ctx->GetAttr<bool>("scale");
       const int64_t begin_params_axis =
           ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_params_axis"));
+      *y = *x;
       DimVector param_shape_dim_vec;
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  x->shape().dim_vec().cbegin() + begin_params_axis,
@@ -97,9 +98,12 @@ REGISTER_USER_OP("layer_norm")
 REGISTER_USER_OP("layer_norm_grad")
     .Input("dy")
     .Input("x")
+    .Input("cudnn_bn_scale_ones")
     .OptionalInput("mean")
     .OptionalInput("inv_variance")
     .Output("dx")
+    .Output("cudnn_bn_scale_diff_buf")
+    .Output("cudnn_bn_bias_diff_buf")
     .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
     .Attr("epsilon", UserOpAttrType::kAtDouble)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -168,15 +172,52 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .OptionalOutput("normalized_diff")
     .OptionalOutput("beta_diff")
     .OptionalOutput("gamma_diff")
+    .OptionalOutput("reduce_buf")
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
       const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
+      const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
       user_op::TensorDesc* normalized_diff = ctx->TensorDesc4ArgNameAndIndex("normalized_diff", 0);
       user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
       user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
-      const int64_t& begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+      int64_t begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+      const bool& has_beta_diff = beta_diff != nullptr;
+      const bool& has_gamma_diff = gamma_diff != nullptr;
+      const bool& has_gamma = gamma != nullptr;
+      const bool& has_normalized_diff = normalized_diff != nullptr;
+      if (has_beta_diff || has_gamma_diff) {
+        CHECK_EQ_OR_RETURN(reduce_buf->data_type(), dy->data_type());
+        CHECK_EQ_OR_RETURN(reduce_buf->shape(), dy->shape());
+      }
+      begin_params_axis =
+          begin_params_axis < 0 ? dy->shape().NumAxes() + begin_params_axis : begin_params_axis;
+      CHECK_GE_OR_RETURN(begin_params_axis, 1);
+      CHECK_LT_OR_RETURN(begin_params_axis, dy->shape().NumAxes());
+      DimVector param_shape_dim_vec;
+      param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                                 dy->shape().dim_vec().cbegin() + begin_params_axis,
+                                 dy->shape().dim_vec().cend());
+      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
+      const Shape param_shape(param_shape_dim_vec);
+      if (has_beta_diff) {
+        CHECK_EQ_OR_RETURN(beta_diff->data_type(), beta_diff->data_type());
+        CHECK_EQ_OR_RETURN(beta_diff->shape(), beta_diff->shape());
+      }
+      if (has_gamma_diff) {
+        CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
+        CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
+        CHECK_EQ_OR_RETURN(gamma_diff->data_type(), gamma_diff->data_type());
+        CHECK_EQ_OR_RETURN(gamma_diff->shape(), gamma_diff->shape());
+      }
+      if (has_normalized_diff) { *normalized_diff = *dy; }
+      if (has_gamma) {
+        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
+                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
+        CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
+        CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+      }
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
