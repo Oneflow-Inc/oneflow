@@ -18,7 +18,13 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
+
+    if data_type == "float16":
+        func_config.enable_auto_mixed_precision(True)
+        dtype = flow.float
+    else:
+        dtype = type_name_to_flow_type[data_type]
+
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -28,7 +34,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
-                dtype=type_name_to_flow_type[data_type],
+                dtype=dtype,
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
@@ -64,6 +70,12 @@ def test_softmax(test_case):
     arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20)]
     arg_dict["data_type"] = ["float32", "double"]
     arg_dict["axis"] = [-1, 1]
+    for arg in GenArgList(arg_dict):
+        print(arg)
+        compare_with_tensorflow(*arg)
+        
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["data_type"] = ["float16"]
     for arg in GenArgList(arg_dict):
         print(arg)
         compare_with_tensorflow(*arg)
