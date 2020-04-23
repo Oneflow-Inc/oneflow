@@ -14,18 +14,19 @@ class SoftmaxKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    return;
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_classes = x->shape().At(x->shape().NumAxes() - 1);
     const int64_t num_instances = x->shape().elem_cnt() / num_classes;
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = GetCudaAlignedSize(x->shape().elem_cnt() * sizeof(T));
+    const size_t temp_storage_bytes = x->shape().elem_cnt() * sizeof(T);
     const size_t tmp_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
+    //const size_t temp_storage_bytes = GetCudaAlignedSize(x->shape().elem_cnt() * sizeof(T));
+    //const size_t tmp_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
 
     T* tmp_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(tmp_ptr + tmp_bytes);
+    void* temp_storage_ptr = reinterpret_cast<void*>(tmp_ptr + tmp_bytes / sizeof(T));
     SoftmaxKernelUtil<device_type, T>::ComputeProb(ctx->device_ctx(), num_instances, num_classes,
                                                    x->dptr<T>(), tmp_ptr, y->mut_dptr<T>(),
                                                    temp_storage_ptr, temp_storage_bytes);
@@ -54,6 +55,7 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
 
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
+REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, double)
 
@@ -65,7 +67,6 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    return;
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -74,11 +75,13 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     const int64_t num_instances = y->shape().elem_cnt() / num_classes;
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = GetCudaAlignedSize(y->shape().elem_cnt() * sizeof(T));
+    const size_t temp_storage_bytes = y->shape().elem_cnt() * sizeof(T);
     const size_t sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
+    // const size_t temp_storage_bytes = GetCudaAlignedSize(y->shape().elem_cnt() * sizeof(T));
+    // const size_t sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
 
     T* sum_vec_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(sum_vec_ptr + sum_vec_bytes);
+    void* temp_storage_ptr = reinterpret_cast<void*>(sum_vec_ptr + sum_vec_bytes/sizeof(T));
     SoftmaxKernelUtil<device_type, T>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(), sum_vec_ptr,
         dx->mut_dptr<T>(), temp_storage_ptr, temp_storage_bytes);
@@ -96,6 +99,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
 
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, double)
 
