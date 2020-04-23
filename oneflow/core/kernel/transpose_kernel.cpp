@@ -10,6 +10,6 @@ void TransposeKernel<device_type, T>::ForwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kTransposeConf, TransposeKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+                                         ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
