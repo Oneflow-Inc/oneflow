@@ -118,11 +118,7 @@ class PadGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-<<<<<<< HEAD
-    const auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
-=======
     const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
->>>>>>> develop
     const int64_t ndims = dy->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
 
