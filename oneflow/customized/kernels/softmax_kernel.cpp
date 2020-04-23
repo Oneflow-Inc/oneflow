@@ -59,7 +59,6 @@ REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, double)
-REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float16)
 
 template<DeviceType device_type, typename T>
 class SoftmaxGradKernel final : public user_op::OpKernel {
@@ -103,7 +102,6 @@ REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float16)
 
 }  // namespace
 
