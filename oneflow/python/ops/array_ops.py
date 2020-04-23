@@ -414,19 +414,28 @@ def nonzero(a, name=None):
 
 
 @oneflow_export("where")
-def where(condition, x, y, name=None):
-    assert condition.shape == x.shape and x.shape == y.shape
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Where_"))
-    setattr(op_conf.where_conf, "condition", condition.logical_blob_name)
-    setattr(op_conf.where_conf, "lhs", x.logical_blob_name)
-    setattr(op_conf.where_conf, "rhs", y.logical_blob_name)
-    setattr(op_conf.where_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+def where(condition, x=None, y=None, name=None): 
+    if x is None and y is None:
+        return argwhere(condition, name=name)
+    elif x is not None and y is not None:
+        if name is None:
+            name = id_util.UniqueStr("Where_")
+
+        broadcast_cond = flow.broadcast_to_compatible_with(condition, [x, y])
+        broadcast_x = flow.broadcast_to_compatible_with(x, [condition, y])
+        broadcast_y = flow.broadcast_to_compatible_with(y, [condition, x])
+        return (
+            flow.user_op_builder(name)
+            .Op("where")
+            .Input("condition", [broadcast_cond])
+            .Input("x", [broadcast_x])
+            .Input("y", [broadcast_y])
+            .Output("out")
+            .Build()
+            .RemoteBlobList()[0]
+        )
+    else:
+        raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
 @oneflow_export("piece_slice")

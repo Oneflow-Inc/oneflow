@@ -22,7 +22,7 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
 Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
   Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  Shape params_shape = ctx->GetAttr<Shape>("shape");
+  const Shape& params_shape = ctx->GetAttr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
@@ -168,7 +168,7 @@ REGISTER_USER_OP("scatter_nd")
             .Broadcast("out", 0)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
-      Shape out_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& out_shape = ctx->GetAttr<Shape>("shape");
       int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
       int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
       FOR_RANGE(int64_t, i, 0, slice_ndims) {
@@ -210,7 +210,7 @@ REGISTER_USER_OP("scatter_nd_like")
             .Broadcast("out", 0)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
-      Shape out_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& out_shape = ctx->GetAttr<Shape>("shape");
       int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
       int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
       FOR_RANGE(int64_t, i, 0, slice_ndims) {
