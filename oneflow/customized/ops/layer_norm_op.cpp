@@ -15,11 +15,11 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
 
 REGISTER_USER_OP("layer_norm")
     .Input("x")
+    .Output("y")
     .OptionalInput("beta")
     .OptionalInput("gamma")
     .OptionalInput("cudnn_bn_scale_ones")
     .OptionalInput("cudnn_bn_bias_zeros")
-    .Output("y")
     .OptionalOutput("normalized")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
@@ -28,51 +28,25 @@ REGISTER_USER_OP("layer_norm")
     .Attr("scale", UserOpAttrType::kAtBool)
     .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr("epsilon", UserOpAttrType::kAtDouble)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y = *x;
-
+      const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
+      const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
+      const user_op::TensorDesc* cudnn_bn_scale_ones =
+          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
+      const user_op::TensorDesc* cudnn_bn_bias_zeros =
+          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_zeros", 0);
+      user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
+      user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
+      user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
+      const float& alpha = ctx->GetAttr<float>("alpha");
+      const bool& center = ctx->GetAttr<bool>("center");
+      const bool& scale = ctx->GetAttr<bool>("scale");
+      const int64_t& begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
       const int64_t& begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
-      const int64_t begin_params_axis =
-          ShiftNegativeAxisIfNeed(x->shape(), conf.begin_params_axis());
-      DimVector param_shape_dim_vec;
-      param_shape_dim_vec.insert(param_shape_dim_vec.end(),
-                                 in->shape().dim_vec().cbegin() + begin_params_axis,
-                                 in->shape().dim_vec().cend());
-      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
-      const Shape param_shape(param_shape_dim_vec);
-      if (conf.center()) {
-        CHECK_OR_RETURN(
-            parallel_ctx->parallel_num() == 1
-            || sbp_signature->bn_in_op2sbp_parallel().at("beta").has_broadcast_parallel());
-        const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-        CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
-        CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
-      }
-      if (conf.scale()) {
-        CHECK_OR_RETURN(
-            parallel_ctx->parallel_num() == 1
-            || sbp_signature->bn_in_op2sbp_parallel().at("gamma").has_broadcast_parallel());
-        const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-        CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-        CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
-        *GetBlobDesc4BnInOp("normalized") = *in;
-      }
-      const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
-      DimVector bn_param_shape_dim_vec;
-      bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), in->shape().dim_vec().cbegin(),
-                                    in->shape().dim_vec().cbegin() + begin_norm_axis);
-      const Shape bn_param_shape(bn_param_shape_dim_vec);
-      BlobDesc* cudnn_bn_mean = GetBlobDesc4BnInOp("mean");
-      cudnn_bn_mean->mut_shape() = bn_param_shape;
-      DataType data_type =
-          in->data_type() == DataType::kFloat16 ? DataType::kFloat : in->data_type();
-      cudnn_bn_mean->set_data_type(data_type);
-      *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
-      *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
-      *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
+      const double& epsilon = ctx->GetAttr<double>("epsilon");
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -90,13 +64,53 @@ REGISTER_USER_OP("layer_norm")
     });
 
 REGISTER_USER_OP("layer_norm_grad")
+    .Input("dy")
     .Input("x")
-    .Output("y")
-    .Attr("alpha", UserOpAttrType::kAtFloat)
+    .OptionalInput("mean")
+    .OptionalInput("inv_variance")
+    .Output("dx")
+    .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
+    .Attr("epsilon", UserOpAttrType::kAtDouble)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      *y_shape = *x_shape;
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
+      const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
+      user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      const int64_t& begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
+      const double& epsilon = ctx->GetAttr<double>("epsilon");
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      SbpSignatureBuilder()
+          .Split("x", 0, 0)
+          .Split("y", 0, 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("layer_norm_param_grad")
+    .Input("dy")
+    .OptionalInput("normalized")
+    .OptionalInput("gamma")
+    .OptionalOutput("normalized_diff")
+    .OptionalOutput("beta_diff")
+    .OptionalOutput("gamma_diff")
+    .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
+      const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
+      user_op::TensorDesc* normalized_diff = ctx->TensorDesc4ArgNameAndIndex("normalized_diff", 0);
+      user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
+      user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
+      const int64_t& begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
