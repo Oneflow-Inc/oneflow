@@ -73,7 +73,7 @@ REGISTER_USER_OP("TestReshape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
       CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -86,7 +86,7 @@ REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
       CHECK_EQ(in_shape->elem_cnt(), conf_shape.elem_cnt());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -292,6 +292,33 @@ REGISTER_USER_OP("TestRandomSource")
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_shape() = Shape({5});
       *out_tensor->mut_data_type() = DataType::kFloat;
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestDataTypeAttr")
+    .Input("in")
+    .Output("out")
+    .Attr("output_type", UserOpAttrType::kAtDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = *in_shape;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->GetAttr<DataType>("output_type");
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
+    .Input("in")
+    .Output("out", 3)
+    .Attr("out_shapes", UserOpAttrType::kAtListShape)
+    .Attr("out_types", UserOpAttrType::kAtListDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto& out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
+      const auto& out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+      FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+        *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
+        *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
+      }
       return Maybe<void>::Ok();
     });
 

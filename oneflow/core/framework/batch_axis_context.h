@@ -35,6 +35,7 @@ class BatchAxisContext {
 
 struct BatchAxisInferFnUtil {
   static Maybe<void> DefaultAsFirstHasValueInput(BatchAxisContext*);
+  static Maybe<void> NaiveInferBatchAxis(BatchAxisContext*);
 };
 
 }  // namespace user_op

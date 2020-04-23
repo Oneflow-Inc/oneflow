@@ -8,6 +8,7 @@ namespace {
 template<typename T>
 class TmpBufferManager final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
         sorted_in_elem_cnt_{in_shape.elem_cnt()},
@@ -27,7 +28,6 @@ class TmpBufferManager final {
         capacity_ - sorted_in_aligned_bytes - indices_aligned_bytes - sorted_indices_aligned_bytes;
     CHECK_GE(temp_storage_bytes_, 0);
   }
-  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   ~TmpBufferManager() = default;
 
   T* SortedInPtr() const { return sorted_in_ptr_; }
