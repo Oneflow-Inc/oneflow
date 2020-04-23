@@ -68,7 +68,7 @@ def RunTensorFlowBn(x, tf_args):
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
         tf_op = tf.keras.layers.BatchNormalization(*tf_args)
-        y = tf_op(x)
+        y = tf_op(x, training=True)
     x_diff = tape.gradient(y, x)
     return y.numpy(), x_diff.numpy()
 
@@ -87,9 +87,6 @@ def CompareOpWithTensorFlow(device_type, flow_op, input_shape,
     of_y, of_x_diff = RunOneflowOp(device_type, flow_op, x, flow_args)
     tf_y, tf_x_diff = RunTensorFlowBn(x, tf_args)
 
-    print(of_y)
-    print(tf_y)
-
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
     assert np.allclose(
         of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
@@ -100,7 +97,7 @@ def test_batchnorm(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict['flow_op'] = [flow.layers.batch_normalization]
-    arg_dict['input_shape'] = [(1,1,1,1)]
-    arg_dict['op_args'] = [Args([1])]
+    arg_dict['input_shape'] = [(1,4,1,2)]
+    arg_dict['op_args'] = [Args([1]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False])]
     for arg in GenArgDict(arg_dict):
         CompareOpWithTensorFlow(**arg)

@@ -6,7 +6,6 @@ REGISTER_USER_OP("normalization")
     .Input("in")
     .Input("moving_mean")
     .Input("moving_variance")
-    // TODO: python 判断这里要不要传 const op
     .Input("gamma")
     .Input("beta")
     .Output("out")
@@ -138,8 +137,7 @@ REGISTER_USER_OP("normalization_grad")
 
       CheckParamBlobDesc("mean");
       CheckParamBlobDesc("inv_variance");
-      // TODO: 这是必要的吗
-      // (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
+      CheckParamBlobDesc("gamma");
       SetParamBlobDesc("gamma_diff");
       SetParamBlobDesc("beta_diff");
       return Maybe<void>::Ok();
@@ -151,7 +149,6 @@ REGISTER_USER_OP("normalization_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO: 确认这里对不对
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       SbpSignatureBuilder()
           .Broadcast(ctx->inputs())
@@ -166,31 +163,35 @@ REGISTER_USER_OP("normalization_grad")
 
 REGISTER_USER_OP_GRAD("normalization")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("in", 0) ||
-            op.NeedGenGradTensor4OpInput("gamma", 0) ||
-            op.NeedGenGradTensor4OpInput("beta", 0)) {
+      if (op.NeedGenGradTensor4OpInput("in", 0) || op.NeedGenGradTensor4OpInput("gamma", 0)
+          || op.NeedGenGradTensor4OpInput("beta", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("normalization_grad")
-                                                 .Input("x", op.input("in", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                                                 // TODO: use moving_mean when not training
-                                                 .Input("mean", op.output("mean", 0))
-                                                 .Input("inv_variance", op.output("inv_variance", 0))
-                                                 .Input("gamma", op.input("gamma", 0))
-                                                 .Attr("axis", op.attr<int32_t>("axis"))
-                                                 .Attr("epsilon", op.attr<float>("epsilon"))
-                                                 .Output("gamma_diff")
-                                                 .Output("beta_diff")
-                                                 .Output("dx")
-                                                 .Build();
+        auto grad_op_builder = builder.Op("normalization_grad")
+                                   .Input("x", op.input("in", 0))
+                                   .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                                   .Attr("axis", op.attr<int32_t>("axis"))
+                                   .Attr("epsilon", op.attr<float>("epsilon"))
+                                   .Output("gamma_diff")
+                                   .Output("beta_diff")
+                                   .Output("dx");
+        if (op.attr<bool>("is_training")) {
+          grad_op_builder = grad_op_builder.Input("mean", op.output("mean", 0))
+                                .Input("inv_variance", op.output("inv_variance", 0));
+        } else {
+          grad_op_builder = grad_op_builder.Input("mean", op.output("moving_mean", 0));
+          // TODO: add scalar add and rsqrt user op
+          auto scalar_add_op = user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon")
+          .Op("");
+        }
+        user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
         if (op.NeedGenGradTensor4OpInput("in", 0)) {
-            op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
+          op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
-            op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
+          op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
         }
         if (op.NeedGenGradTensor4OpInput("beta", 0)) {
-            op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
+          op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
         }
         AddOp(grad_op);
       }
