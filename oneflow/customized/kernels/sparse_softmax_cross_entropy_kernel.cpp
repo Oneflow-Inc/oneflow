@@ -22,7 +22,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     SoftmaxKernelUtil<device_type, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
-        prob->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(), tmp_buffer->shape().elem_cnt() * sizeof(T));
+        prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, prob->dptr<T>(), label->dptr<K>(),
         out->mut_dptr<T>());
@@ -42,7 +42,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
       })                                                                                        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
         const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);            \
-        return prediction_shape->elem_cnt() * sizeof(OF_PP_PAIR_SECOND(dtype_pair));            \
+        return prediction_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));             \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

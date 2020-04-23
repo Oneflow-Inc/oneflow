@@ -26,7 +26,7 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
 
     @flow.function(func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
-            labels=flow.FixedTensorDef((batch_size, ), dtype=flow.int32)
+            labels=flow.FixedTensorDef((batch_size, ), dtype=type_name_to_flow_type[label_type])
         ):
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
