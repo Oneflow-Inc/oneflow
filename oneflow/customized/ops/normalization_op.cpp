@@ -174,17 +174,82 @@ REGISTER_USER_OP_GRAD("normalization")
                                    .Output("gamma_diff")
                                    .Output("beta_diff")
                                    .Output("dx");
-        if (op.attr<bool>("is_training")) {
+        bool is_training = op.attr<bool>("is_training");
+        if (is_training) {
           grad_op_builder = grad_op_builder.Input("mean", op.output("mean", 0))
                                 .Input("inv_variance", op.output("inv_variance", 0));
         } else {
-          grad_op_builder = grad_op_builder.Input("mean", op.output("moving_mean", 0));
-          // TODO: add scalar add and rsqrt user op
-          auto scalar_add_op = user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon")
-          .Op("");
+          // this part has not been tested, blocked by reshape, broadcast_mul user op
+          // and the disability of getting attr in input arg modifier
+          grad_op_builder.Input("mean", op.output("moving_mean", 0));
+
+          // calculate inv_variance from moving_variance
+          const auto scalar_add_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
+          auto scalar_add_op = user_op::UserOpConfWrapperBuilder(scalar_add_op_name)
+                                   .Op("scalar_add")
+                                   .Input("in", op.output("moving_variance", 0))
+                                   .Attr("has_float_operand", true)
+                                   .Attr("has_int_operand", false)
+                                   .Attr("int_operand", 0)
+                                   .Attr("float_operand", op.attr<float>("epsilon"))
+                                   .Output("out")
+                                   .Build();
+          AddOp(scalar_add_op);
+
+          const auto rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt";
+          auto rsqrt_op = user_op::UserOpConfWrapperBuilder(rsqrt_op_name)
+                              .Op("rsqrt")
+                              .Input("in", scalar_add_op.output("out", 0))
+                              .Output("out")
+                              .Build();
+          AddOp(rsqrt_op);
+
+          grad_op_builder.Input("inv_variance", rsqrt_op.output("out", 0));
+
+          if (op.NeedGenGradTensor4OpInput("in", 0)) {
+            // calculate dx manually as cudnn cannot be used in evaluation mode
+            // reference: https://github.com/pytorch/pytorch/issues/4284
+            const auto axis = op.attr<int32_t>("axis");
+            auto BroadcastMulAtAxis = [&op, &axis, &AddOp](const std::string& scale_bn,
+                                                           const std::string& input_bn,
+                                                           const std::string& name) {
+              std::vector<int64_t> broadcast_shape;
+              auto in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+              FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
+                if (i != axis) {
+                  broadcast_shape.push_back(1);
+                } else {
+                  broadcast_shape.push_back(in_shape.At(axis));
+                }
+              }
+
+              const auto reshape_op_name = "System-AutoGrad-" + name + "-Reshape";
+              const auto reshape_op = user_op::UserOpConfWrapperBuilder(reshape_op_name)
+                                          .Op("reshape")
+                                          .Input("in", scale_bn)
+                                          .Attr("shape", broadcast_shape)
+                                          .Output("out")
+                                          .Build();
+              AddOp(reshape_op);
+              const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
+              const auto mul_op = user_op::UserOpConfWrapperBuilder(mul_op_name)
+                                      .Op("broadcast_mul")
+                                      .Input("a", reshape_op.output("out", 0))
+                                      .Input("b", input_bn)
+                                      .Output("out")
+                                      .Build();
+              AddOp(mul_op);
+              return mul_op;
+            };
+            const auto mul_gamma_op = BroadcastMulAtAxis(
+                op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "mul_gamma");
+            const auto mul_inv_var_op = BroadcastMulAtAxis(
+                rsqrt_op.output("out", 0), mul_gamma_op.output("out", 0), "mul_inv_var");
+            op.BindGradTensorWithOpInput(mul_inv_var_op.output("out", 0), "in", 0);
+          }
         }
         user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
-        if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        if (is_training && op.NeedGenGradTensor4OpInput("in", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {

@@ -21,7 +21,9 @@ class GpuNormalizationKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    bool training = true;
+    bool bn_training = ctx->GetAttr<bool>("is_training");
+    // TODO: get whether the network is training
+    bool networking_training = true;
     const auto* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -50,7 +52,7 @@ class GpuNormalizationKernel final : public user_op::OpKernel {
     CheckParamTensor(moving_variance);
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
 
-    if (training) {
+    if (bn_training && networking_training) {
       const auto momentum = ctx->GetAttr<float>("momentum");
       auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
       auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
