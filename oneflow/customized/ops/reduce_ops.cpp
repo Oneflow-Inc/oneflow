@@ -11,7 +11,7 @@ namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0);
-  auto axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->GetAttr<bool>("keepdims");
   Shape* out_shape = ctx->Shape4ArgNameAndIndex("tensor_out", 0);
   if (axis.empty()) {
