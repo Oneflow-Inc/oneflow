@@ -18,7 +18,7 @@ REGISTER_USER_OP("sigmoid")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       SbpSignatureBuilder()
           .Split("in", 0, 0)
           .Split("out", 0, 0)
@@ -44,15 +44,13 @@ REGISTER_USER_OP("sigmoid_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       SbpSignatureBuilder()
           .Split("y", 0, 0)
           .Split("dy", 0, 0)
           .Split("dx", 0, 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder().Broadcast("y", 0).PartialSum("dy", 0).PartialSum("dx", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
