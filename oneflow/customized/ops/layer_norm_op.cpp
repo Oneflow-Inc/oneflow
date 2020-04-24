@@ -247,9 +247,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
       if (has_beta_diff || has_gamma_diff || need_scale_out_diff) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_param_grad");
         auto grad_op_builder = builder.Op("layer_norm_param_grad")
-                                   .Input("x", op.input("x", 0))
                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                   .Output("dx")
                                    .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis));
         if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
         if (has_gamma_diff || need_scale_out_diff) {
@@ -274,12 +272,16 @@ REGISTER_USER_OP_GRAD("layer_norm")
       }
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("layer_norm_grad")
-                                                 .Input("x", op.input("x", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("alpha", op.attr<float>("alpha"))
-                                                 .Build();
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("layer_norm_grad")
+                .Input("x", op.input("x", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("mean", op.input("mean", 0))
+                .Input("inv_variance", op.input("inv_variance", 0))
+                .Output("dx")
+                .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis))
+                .Attr("epsilon", op.attr<float>("epsilon"))
+                .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
