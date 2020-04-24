@@ -9,9 +9,7 @@ class LayerNormCpuKernel final : public user_op::OpKernel {
   ~LayerNormCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
-  };
+  void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
 #define REGISTER_LAYER_NORM_CPU_KERNEL(dtype)                                       \
@@ -33,9 +31,7 @@ class LayerNormGradCpuKernel final : public user_op::OpKernel {
   ~LayerNormGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
-  };
+  void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
 #define REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(dtype)                                    \
@@ -57,9 +53,7 @@ class LayerNormParamGradCpuKernel final : public user_op::OpKernel {
   ~LayerNormParamGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
-  };
+  void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
 #define REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(dtype)                              \

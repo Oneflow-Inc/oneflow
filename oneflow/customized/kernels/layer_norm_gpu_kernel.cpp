@@ -158,8 +158,51 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
   ~LayerNormParamGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
+    auto Val = NdUtil::GetValNdarrayBuilder();
+    auto Var = NdUtil::GetVarNdarrayBuilder();
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* beta_diff = ctx->Tensor4ArgNameAndIndex("beta_diff", 0);
+    user_op::Tensor* gamma_diff = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0);
+    user_op::Tensor* normalized_diff = ctx->Tensor4ArgNameAndIndex("normalized_diff", 0);
+    user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    const bool& has_beta_diff = beta_diff != nullptr;
+    const bool& has_gamma_diff = gamma_diff != nullptr;
+    const bool& has_normalized_diff = normalized_diff != nullptr;
+    const bool& has_gamma = gamma != nullptr;
+    if (has_beta_diff) {
+      user_op::Tensor* reduce_buf = ctx->Tensor4ArgNameAndIndex("reduce_buf", 0);
+      const int64_t m = beta_diff->shape().elem_cnt();
+      CHECK_EQ(dy->shape().elem_cnt() % m, 0);
+      const int64_t n = dy->shape().elem_cnt() / m;
+      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<T>()),
+                        Val({n, m}, dy->dptr<T>()), Var({n, m}, reduce_buf->mut_dptr<T>()));
+    }
+    if (has_gamma_diff) {
+      const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
+      user_op::Tensor* reduce_buf = ctx->Tensor4ArgNameAndIndex("reduce_buf", 0);
+      const int64_t m = gamma_diff->shape().elem_cnt();
+      CHECK_EQ(dy->shape().elem_cnt() % m, 0);
+      const int64_t n = dy->shape().elem_cnt() / m;
+      NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, reduce_buf->mut_dptr<T>()),
+                           Val({n, m}, normalized->dptr<T>()), Val({n, m}, dy->dptr<T>()));
+      NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<T>()),
+                        Val({n, m}, reduce_buf->dptr<T>()), Var({n, m}, reduce_buf->mut_dptr<T>()));
+    }
+    if (has_normalized_diff) {
+      if (has_gamma) {
+        const int64_t m = gamma->shape().elem_cnt();
+        CHECK_EQ(dy->shape().elem_cnt() % m, 0);
+        const int64_t n = dy->shape().elem_cnt() / m;
+        NdUtil::BroadcastMul(ctx->device_ctx(), Var({n, m}, normalized_diff->mut_dptr<T>()),
+                             Val({n, m}, dy->dptr<T>()), Val({1, m}, gamma->dptr<T>()));
+      } else {
+        Memcpy<DeviceType::kGPU>(ctx->device_ctx(), normalized_diff->mut_dptr<void>(),
+                                 dy->dptr<void>(),
+                                 dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+      }
+    }
   };
 };
 
