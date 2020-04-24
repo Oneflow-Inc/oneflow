@@ -27,8 +27,8 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype)                         \
-  REGISTER_USER_KERNEL("unsorted_segment_sum")                                                 \
+#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype, kernel_type)                         \
+  REGISTER_USER_KERNEL(kernel_type)                                                 \
   .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),                     \
                             OF_PP_PAIR_FIRST(K_dtype)>>()                                      \
   .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
@@ -39,28 +39,16 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
              && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                           \
   });
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL(device, T_dtype, K_dtype)                         \
-  REGISTER_USER_KERNEL("unsorted_segment_sum_like")                                                 \
-  .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),                     \
-                            OF_PP_PAIR_FIRST(K_dtype)>>()                                      \
-  .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
-      const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);  \
-      return ctx.device_type() == device                                                       \
-             && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)                        \
-             && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                           \
-  });
-
-//#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, T_type, K_type) \
+#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, T_type, K_type) \
  REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum"))
 
-//#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE(device_type, T_type, K_type) \
+#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE(device_type, T_type, K_type) \
  REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum_like"))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL, DEVICE_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL, DEVICE_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
