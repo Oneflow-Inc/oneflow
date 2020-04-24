@@ -18,11 +18,11 @@ REGISTER_USER_OP("softmax")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       SbpSignatureBuilder()
           .Split("in", 0, 0)
           .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes() - 1)
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
@@ -44,12 +44,12 @@ REGISTER_USER_OP("softmax_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       SbpSignatureBuilder()
           .Split("y", 0, 0)
           .Split("dy", 0, 0)
           .Split("dx", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes() - 1)
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
