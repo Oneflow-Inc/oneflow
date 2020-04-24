@@ -65,6 +65,8 @@ class Session(object):
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto
 
+    def GetFunctionDesc(self, job_name): return self.job_name2function_desc_[job_name]
+
     def UpdateFunctionFlagName2DefaultVal(self):
         items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
         self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
