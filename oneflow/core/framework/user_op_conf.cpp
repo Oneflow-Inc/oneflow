@@ -37,6 +37,16 @@ const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_
   return it->second.s(index);
 }
 
+bool UserOpConfWrapper::has_input(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  return (it != op_conf_.user_conf().input().end());
+}
+
+bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  return (it != op_conf_.user_conf().output().end());
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
