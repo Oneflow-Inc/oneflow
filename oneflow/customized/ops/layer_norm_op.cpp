@@ -270,6 +270,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         if (need_scale_out_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("normalized_diff", 0), "y", 0);
         }
+        AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
