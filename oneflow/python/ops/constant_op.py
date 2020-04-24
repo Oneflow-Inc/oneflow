@@ -7,6 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
+import os
 import oneflow as flow
 
 
@@ -49,12 +50,26 @@ def constant_scalar(value, dtype=None, name=None):
 
 @oneflow_export("constant_like")
 def constant_like(like, value, dtype=None, name=None):
+    assert like is not None
+    assert value is not None
+    if name is None:
+        name = id_util.UniqueStr("ConstantLike_")
+
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        if dtype is None:
+            dtype = like.data_type
+
+        return flow.user_op_builder(name).Op("constant_like")\
+            .Input("like", like)\
+            .SetAttr("integer_value", int(value), "AttrTypeInt64")\
+            .SetAttr("floating_value", float(value), "AttrTypeDouble")\
+            .SetAttr("is_floating_value", isinstance(value, float), "AttrTypeBool")\
+            .SetAttr("dtype", dtype, "AttrTypeDataType")\
+            .Output("out")\
+            .Build().RemoteBlobList()[0]
+
     op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ConstantLike_"),
-    )
+    setattr(op_conf, "name", name)
     setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
