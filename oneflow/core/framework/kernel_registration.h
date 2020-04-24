@@ -74,7 +74,8 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapperBuilder(const std::string& op_type_name);
   template<typename T>
   KernelRegistryWrapperBuilder& SetCreateFn() {
-    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived OpKernel");
+    //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
+    //    OpKernel");
     bool is_stateless = typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState);
     CheckStatefulnessConsistency(wrapper_.op_type_name, is_stateless);
     return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
