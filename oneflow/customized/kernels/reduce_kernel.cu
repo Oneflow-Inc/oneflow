@@ -9,11 +9,6 @@ namespace oneflow {
 
 namespace user_op {
 
-// #define REDUCE_GPU_SEQ               \
-//   OF_PP_MAKE_TUPLE_SEQ("Prod", Prod) \
-//   OF_PP_MAKE_TUPLE_SEQ("Any", Any)   \
-//   OF_PP_MAKE_TUPLE_SEQ("Min", Min)
-
 template<template<typename> class BinaryFunc, typename T>
 class ReduceGpuKernel final : public OpKernel {
  public:
@@ -29,19 +24,10 @@ class ReduceGpuKernel final : public OpKernel {
     const Shape& reduced_shape =
         axis.empty() ? Shape::Ones(tensor_in->shape().NumAxes())
                      : CreateReducedShape(tensor_in->shape(), {axis.begin(), axis.end()});
-    std::string reduce_func_type = ctx->GetAttr<std::string>("reduce_func_type");
-
-#define REDUCE_FORWARD(reduce_func_type_str, func_name_postfix)                        \
-  if (reduce_func_type == reduce_func_type_str) {                                      \
-    NdarrayUtil<DeviceType::kGPU, T>::Reduce##func_name_postfix(                       \
-        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, tensor_out->mut_dptr<T>()), \
-        XpuVarNdarray<const T>(tensor_in->shape(), tensor_in->dptr<T>()),              \
-        XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));             \
-  }
-    REDUCE_FORWARD("Prod", Prod)
-    REDUCE_FORWARD("Any", Any)
-    REDUCE_FORWARD("Min", Min)
-#undef REDUCE_FORWARD
+    NdarrayReduce<DeviceType::kGPU, T, BinaryFunc>::Reduce(
+        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, tensor_out->mut_dptr<T>()),
+        XpuVarNdarray<const T>(tensor_in->shape(), tensor_in->dptr<T>()),
+        XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
 };
 

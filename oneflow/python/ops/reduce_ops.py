@@ -21,7 +21,6 @@ def reduce_any(x, axis=None, keepdims=None, name=None):
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
         .SetAttr("keepdims", keepdims, "AttrTypeBool")\
-        .SetAttr("reduce_func_type", "Any", "AttrTypeString")\
         .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.reduce_min")
@@ -37,7 +36,6 @@ def reduce_min(x, axis=None, keepdims=None, name=None):
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
         .SetAttr("keepdims", keepdims, "AttrTypeBool")\
-        .SetAttr("reduce_func_type", "Min", "AttrTypeString")\
         .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.reduce_prod")
@@ -53,7 +51,6 @@ def reduce_prod(x, axis=None, keepdims=None, name=None):
         .Output("tensor_out")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
         .SetAttr("keepdims", keepdims, "AttrTypeBool")\
-        .SetAttr("reduce_func_type", "Prod", "AttrTypeString")\
         .Build().RemoteBlobList()[0]
 
 

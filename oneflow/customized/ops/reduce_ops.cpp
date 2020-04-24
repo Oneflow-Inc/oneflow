@@ -60,15 +60,14 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_USER_OP(op_name)                   \
-  REGISTER_USER_OP(op_name)                                \
-      .Input("tensor_in")                                  \
-      .Output("tensor_out")                                \
-      .Attr("axis", UserOpAttrType::kAtListInt32)          \
-      .Attr("keepdims", UserOpAttrType::kAtBool)           \
-      .Attr("reduce_func_type", UserOpAttrType::kAtString) \
-      .SetTensorDescInferFn(InferTensorDescFn)             \
-      .SetBatchAxisInferFn(InferBatchAxisFn)               \
+#define REGISTER_REDUCE_USER_OP(op_name)          \
+  REGISTER_USER_OP(op_name)                       \
+      .Input("tensor_in")                         \
+      .Output("tensor_out")                       \
+      .Attr("axis", UserOpAttrType::kAtListInt32) \
+      .Attr("keepdims", UserOpAttrType::kAtBool)  \
+      .SetTensorDescInferFn(InferTensorDescFn)    \
+      .SetBatchAxisInferFn(InferBatchAxisFn)      \
       .SetGetSbpFn(GetSbpFn);
 
 REGISTER_REDUCE_USER_OP("reduce_any")

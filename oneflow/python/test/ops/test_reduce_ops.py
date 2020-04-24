@@ -29,7 +29,7 @@ def compare_reduceany_with_tensorflow(device_type, input_shape, axis, keepdims, 
 
 def test_reduceany_func(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(64,64,64)]
     arg_dict["axis"] = [None, [], [1], [0, 2]]
     arg_dict["keepdims"] = [True, False]
@@ -38,7 +38,7 @@ def test_reduceany_func(test_case):
 
 def test_reduceany_col_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
@@ -47,7 +47,7 @@ def test_reduceany_col_reduce(test_case):
 
 def test_reduceany_row_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(25, 1024 * 1024)]
     arg_dict["axis"] = [[1]]
     arg_dict["keepdims"] = [True, False]
@@ -56,7 +56,7 @@ def test_reduceany_row_reduce(test_case):
 
 def test_reduceany_scalar(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0, 1]]
     arg_dict["keepdims"] = [True, False]
@@ -93,7 +93,7 @@ def compare_reduceprod_with_tensorflow(device_type, input_shape, axis, keepdims,
 
 def test_reduceprod_func(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(64,64,64)]
     arg_dict["axis"] = [None, [], [1], [0, 2]]
     arg_dict["keepdims"] = [True, False]
@@ -102,7 +102,7 @@ def test_reduceprod_func(test_case):
 
 def test_reduceprod_col_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
@@ -111,7 +111,7 @@ def test_reduceprod_col_reduce(test_case):
 
 def test_reduceprod_row_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(25, 1024 * 1024)]
     arg_dict["axis"] = [[1]]
     arg_dict["keepdims"] = [True, False]
@@ -120,7 +120,7 @@ def test_reduceprod_row_reduce(test_case):
 
 def test_reduceprod_scalar(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0, 1]]
     arg_dict["keepdims"] = [True, False]
@@ -158,7 +158,7 @@ def compare_reducemin_with_tensorflow(device_type, input_shape, axis, keepdims, 
 
 def test_reducemin_func(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(64,64,64)]
     arg_dict["axis"] = [None, [], [1], [0, 2]]
     arg_dict["keepdims"] = [True, False]
@@ -168,7 +168,7 @@ def test_reducemin_func(test_case):
 
 def test_reducemin_col_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
@@ -177,7 +177,7 @@ def test_reducemin_col_reduce(test_case):
 
 def test_reducemin_row_reduce(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(25, 1024 * 1024)]
     arg_dict["axis"] = [[1]]
     arg_dict["keepdims"] = [True, False]
@@ -186,7 +186,7 @@ def test_reducemin_row_reduce(test_case):
 
 def test_reducemin_scalar(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(1024 * 64, 25)]
     arg_dict["axis"] = [[0, 1]]
     arg_dict["keepdims"] = [True, False]
@@ -203,3 +203,6 @@ def test_reducemin_batch_axis_reduced(test_case):
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
     Foo(np.ndarray((10,), dtype=np.float32))
+
+
+test_reducemin_func(1)
