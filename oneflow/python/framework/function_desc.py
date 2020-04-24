@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.core.job.job_pb2 as job_util
+import oneflow.python.framework.session_context as session_ctx
 
 class FunctionAttribute(object):
   def __init__(self):
@@ -15,3 +16,28 @@ class FunctionDesc(object):
         self.job_func = job_func
         self.job_config_proto = job_config_proto
         self.function_attribute = function_attribute
+
+    def HasAttr(self, attr_name):
+        if attr_name == 'flag_name2flag_value': return False
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
+        if attr_name in self.job_config_proto.flag_name2flag_value: return True
+        return self.job_config_proto.HasField(attr_name)
+
+    def __getattr__(self, attr_name):
+        assert attr_name != 'flag_name2flag_value'
+        flag_name2flag_value = self.job_config_proto.flag_name2flag_value
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
+        if attr_name not in name2default:
+            assert self.job_config_proto.HasField(attr_name)
+            return getattr(self.job_config_proto, attr_name)
+        attr_value = name2default[attr_name]
+        if attr_name in flag_name2flag_value: attr_value = flag_name2flag_value[attr_name]
+        if attr_value.HasField('at_bool'):
+            return attr_value.at_bool
+        elif attr_value.HasField('at_int64'):
+            return attr_value.at_int64
+        elif attr_value.HasField('at_double'):
+            return attr_value.at_double
+        elif attr_value.HasField('at_string'):
+            return attr_value.at_string
+        else: raise NotImplementedError()
