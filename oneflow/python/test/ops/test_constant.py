@@ -33,5 +33,3 @@ def test_constant(test_case):
     arg_dict["shape"] = [(2,3), (3,3,3)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-
-test_constant(1)
