@@ -21,7 +21,7 @@
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/vm.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
