@@ -20,10 +20,13 @@ def _random_inputs(params_shape, indices_shape):
         ).reshape(indices_shape[:-1])
         indices.append(indices_col)
     indices = np.stack(indices, axis=len(indices_shape) - 1)
+    #print("=============================================")
+    #print("indices: ", indices)
+    #print("=============================================")
     return params, indices
 
 
-def _make_gather_fn(params, indices, device_type, mirrored, compare_fn):
+def _make_gather_fn(params, indices, axis, device_type, mirrored, compare_fn):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -43,7 +46,7 @@ def _make_gather_fn(params, indices, device_type, mirrored, compare_fn):
                 initializer=flow.constant_initializer(0),
             )
             x = x + x_blob
-            y = flow.gather(x, i_blob)
+            y = flow.gather(x, i_blob, axis=axis)
             flow.losses.add_loss(y)
         flow.watch_diff(x, compare_fn)
         return y
@@ -68,32 +71,43 @@ def _make_gather_fn(params, indices, device_type, mirrored, compare_fn):
 
     return gather_fn
 
-def _compare_gather_with_tf(test_case, device_type, params_shape, indices_shape, mirrored=False):
+def _compare_gather_with_tf(test_case, device_type, params_shape,
+        indices_shape, axis, mirrored=False):
     params, indices = _random_inputs(params_shape, indices_shape)
 
     i = tf.constant(indices)
     with tf.GradientTape() as t:
         x = tf.Variable(params)
-        y = tf.gather(x, i, axis=0)
+        y = tf.gather(x, i, axis=axis)
 
     dy = t.gradient(y, x)
-    print(type(dy))
+    #print(type(dy))
     if isinstance(dy, tf.IndexedSlices):
         test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
         zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
-        dy = tf.scatter_nd(indices, dy, params.shape)
+        dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
 
     if mirrored:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray_list()[0]))
+            #print("----------------------------------------------------")
+            #print("dy.numpy: ", dy.numpy)
+            #print("param_grad.ndarray: ", params_grad.ndarray_list()[0])
+            #print("------------------------------------------------------")
+
+            test_case.assertTrue(np.array_equal(dy.numpy(),
+                params_grad.ndarray_list()[0]))
 
     else:
 
         def compare_dy(params_grad):
+            #print("----------------------------------------------------")
+            #print("dy.numpy: ", dy.numpy)
+            #print("param_grad.ndarray: ", params_grad.ndarray())
+            #print("------------------------------------------------------")
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
-    gather_fn = _make_gather_fn(params, indices, device_type, mirrored, compare_dy)
+    gather_fn = _make_gather_fn(params, indices, axis, device_type, mirrored, compare_dy)
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -108,47 +122,41 @@ def _compare_gather_with_tf(test_case, device_type, params_shape, indices_shape,
 def test_gather(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(2,10)]
+    arg_dict["params_shape"] = [(2, 8)]
     arg_dict["indices_shape"] = [(2, 1)]
+    arg_dict["axis"] = [0]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
 
 
-#def test_gather_case_1(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
-#    arg_dict["indices_shape"] = [(2, 3, 3)]
-#    for arg in GenArgList(arg_dict):
-#        _compare_gather_with_tf(test_case, *arg)
+def test_gather_case_1(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(2, 10, 2)]
+    arg_dict["indices_shape"] = [(2, 1)]
+    arg_dict["axis"] = [0]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_with_tf(test_case, *arg)
 
 
-#def test_gather_case_2(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["cpu", "gpu"]
-#    arg_dict["params_shape"] = [(10, 8, 4)]
-#    arg_dict["indices_shape"] = [(2, 2)]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        _compare_gather_with_tf(test_case, *arg)
-#
-#
-#def test_gather_case_3(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["params_shape"] = [(32, 60, 80, 25)]
-#    arg_dict["indices_shape"] = [(128, 2)]
-#    for arg in GenArgList(arg_dict):
-#        _compare_gather_with_tf(test_case, *arg)
-#
-#
-#def test_gather_case_4(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["params_shape"] = [(128, 64, 2, 16, 7)]
-#    arg_dict["indices_shape"] = [(30, 10, 3)]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        _compare_gather_with_tf(test_case, *arg)
+def test_gather_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["params_shape"] = [(2, 8)]
+    arg_dict["indices_shape"] = [(2, 1)]
+    arg_dict["axis"] = [0]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_with_tf(test_case, *arg)
+
+def test_gather_case_3(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["params_shape"] = [(2, 5, 2, 2)]
+    arg_dict["indices_shape"] = [(2, 2, 2)]
+    arg_dict["axis"] = [1]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        _compare_gather_with_tf(test_case, *arg)
 
 

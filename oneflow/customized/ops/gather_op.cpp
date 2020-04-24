@@ -19,7 +19,7 @@ REGISTER_USER_OP("gather")
       dim_vec.insert(dim_vec.end(), indices_shape->dim_vec().cbegin(), indices_shape->dim_vec().cend());
       dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin() + axis + 1, in_shape->dim_vec().end());
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt64;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -55,12 +55,12 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
   bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
   if (need_grad_in) {
       user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper in_grad_op = in_grad_builder.Op("unsorted_segment_sum")
+      user_op::UserOpConfWrapper in_grad_op = in_grad_builder.Op("unsorted_segment_sum_like")
                                                  .Input("data", op.GetGradTensorWithOpOutput("out", 0))
                                                  .Input("segment_ids", op.input("indices", 0))
+                                                 .Input("like", op.input("in", 0))
                                                  .Output("out")
                                                  .Attr("axis", op.attr<int64_t>("axis"))
-                                                 .Attr("num_segments", op.attr<int64_t>("batch_dims"))
                                                  .Build();
       op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
       AddOp(in_grad_op);

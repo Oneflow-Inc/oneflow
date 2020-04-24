@@ -18,13 +18,14 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("gather")
 def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        if axis is None:
-            axis = batch_dims
         if name is None:
             name = id_util.UniqueStr("Gather_")
         if axis is None:
-           axis = 0
-
+            if batch_dims > 0:
+                axis = batch_dims
+            else:
+                axis = 0
+                batch_dims = 0
         return flow.user_op_builder(name if name is
                 not None else id_util.UniqueStr("Gather_"))\
            .Op("gather")\
