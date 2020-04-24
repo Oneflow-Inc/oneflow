@@ -80,7 +80,7 @@ class PadKernel final : public user_op::OpKernel {
     memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
-    std::unique_ptr<MemoryCopier> device_memory_copier =
+    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
         std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
     device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
