@@ -12,7 +12,7 @@ class TmpBufferManager final {
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(int32_t capacity, void* ptr, const ShapeView& in_shape)
       : capacity_{capacity},
-        sorted_in_elem_cnt_{static_cast<int32_t>(in_shape.elem_cnt())},
+        sorted_in_elem_cnt_{in_shape.elem_cnt()},
         indices_elem_cnt_{sorted_in_elem_cnt_} {
     const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(T));
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int32_t));
@@ -41,8 +41,8 @@ class TmpBufferManager final {
   int32_t* indices_ptr_;
   void* temp_storage_ptr_;
 
-  int32_t sorted_in_elem_cnt_;
-  int32_t indices_elem_cnt_;
+  int64_t sorted_in_elem_cnt_;
+  int64_t indices_elem_cnt_;
   int32_t temp_storage_bytes_;
 };
 
