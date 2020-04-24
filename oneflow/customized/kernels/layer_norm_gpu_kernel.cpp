@@ -110,8 +110,32 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
   ~LayerNormGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    if (mean || inv_variance) {
+      CHECK_NOTNULL(mean);
+      CHECK_NOTNULL(inv_variance);
+    }
+    const user_op::Tensor* cudnn_bn_scale_ones =
+        ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* cudnn_bn_scale_diff_buf =
+        ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
+    user_op::Tensor* cudnn_bn_bias_diff_buf =
+        ctx->Tensor4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
+    const T& epsilon = ctx->GetAttr<T>("epsilon");
+    CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
+    LayerNormCudnnBnCtx bn_ctx(x->shape(), cudnn_bn_scale_diff_buf->shape(), x->data_type());
+    CudaCheck(cudnnBatchNormalizationBackward(
+        ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
+        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(),
+        bn_ctx.data_tensor_desc(), dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(),
+        bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones->dptr(),
+        cudnn_bn_scale_diff_buf->mut_dptr(), cudnn_bn_bias_diff_buf->mut_dptr(), epsilon,
+        mean ? mean->dptr() : nullptr, inv_variance ? inv_variance->dptr() : nullptr));
   };
 };
 
