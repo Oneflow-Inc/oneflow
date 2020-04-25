@@ -253,6 +253,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
       const auto ShiftAxisIfNeed = [num_in_axes](const int64_t axis) {
         return axis < 0 ? axis + num_in_axes : axis;
       };
+      std::string dy = op.GetGradTensorWithOpOutput("y", 0);
       if (has_beta_diff || has_gamma_diff || need_scale_out_diff) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_param_grad");
         auto grad_op_builder = builder.Op("layer_norm_param_grad")
@@ -274,9 +275,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         if (has_gamma_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
         }
-        if (need_scale_out_diff) {
-          op.BindGradTensorWithOpInput(grad_op.output("normalized_diff", 0), "y", 0);
-        }
+        if (need_scale_out_diff) { dy = grad_op.output("normalized_diff", 0); }
         AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -284,7 +283,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         user_op::UserOpConfWrapper grad_op =
             builder.Op("layer_norm_grad")
                 .Input("x", op.input("x", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("dy", dy)
                 .Input("mean", op.input("mean", 0))
                 .Input("inv_variance", op.input("inv_variance", 0))
                 .Output("dx")
