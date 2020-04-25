@@ -60,7 +60,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     const bool& scale = ctx->GetAttr<bool>("scale");
     const bool& center = ctx->GetAttr<bool>("center");
     user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
-    const T& epsilon = ctx->GetAttr<T>("epsilon");
+    const T& epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     CudaCheck(cudnnBatchNormalizationForwardTraining(
@@ -126,7 +126,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
     user_op::Tensor* cudnn_bn_bias_diff_buf =
         ctx->Tensor4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
-    const T& epsilon = ctx->GetAttr<T>("epsilon");
+    const T& epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), cudnn_bn_scale_diff_buf->shape(), x->data_type());
     CudaCheck(cudnnBatchNormalizationBackward(
