@@ -248,6 +248,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
       const bool has_beta_diff = op.NeedGenGradTensor4OpInput("beta", 0);
       const bool has_gamma_diff = op.NeedGenGradTensor4OpInput("gamma", 0);
       const bool need_scale_out_diff = op.NeedGenGradTensor4OpInput("x", 0);
+      const int64_t& begin_norm_axis = op.attr<int64_t>("begin_norm_axis");
       const int64_t& begin_params_axis = op.attr<int64_t>("begin_params_axis");
       const int64_t num_in_axes = op.TensorDesc4ArgNameAndIndex("x", 0).shape().NumAxes();
       const auto ShiftAxisIfNeed = [num_in_axes](const int64_t axis) {
@@ -287,7 +288,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
                 .Input("mean", op.output("mean", 0))
                 .Input("inv_variance", op.output("inv_variance", 0))
                 .Output("dx")
-                .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis))
+                .Attr("begin_norm_axis", ShiftAxisIfNeed(begin_norm_axis))
                 .Attr("epsilon", op.attr<double>("epsilon"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
