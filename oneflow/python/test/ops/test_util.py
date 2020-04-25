@@ -63,7 +63,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=flow.float, initializer=flow.zeros_initializer())
-            loss = flow_op(x, *flow_args, trainable=False, training=False)
+            loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
             flow.watch_diff(x, Save("x_diff"))
