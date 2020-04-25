@@ -197,8 +197,9 @@ def layer_norm(
             assert shifted >= 0
             assert shifted <= len(shape)
             return shifted
+        name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("LayerNorm_"))
+            flow.user_op_builder(name)
             .Op("layer_norm")
             .Input("x", [inputs])
             .Output("y")
