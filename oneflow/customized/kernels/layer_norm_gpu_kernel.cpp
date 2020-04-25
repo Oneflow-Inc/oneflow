@@ -65,9 +65,10 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     CudaCheck(cudnnBatchNormalizationForwardTraining(
         ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
-        bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(), y->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones->dptr(), cudnn_bn_bias_zeros->dptr(), 1.0,
-        nullptr, nullptr, epsilon, mean->mut_dptr(), inv_variance->mut_dptr()));
+        bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
+        normalized->mut_dptr<T>(), bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones->dptr(),
+        cudnn_bn_bias_zeros->dptr(), 1.0, nullptr, nullptr, epsilon, mean->mut_dptr(),
+        inv_variance->mut_dptr()));
     if (scale) {
       const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
       const int64_t m = gamma->shape().elem_cnt();
