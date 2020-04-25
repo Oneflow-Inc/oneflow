@@ -206,7 +206,7 @@ def layer_norm(
             .Output("mean")
             .Output("inv_variance")
         )
-        if center == False or scale:
+        if center == False and scale == False:
             trainable = False
         param_shape = inputs.shape[begin_params_axis:]
         if center:
