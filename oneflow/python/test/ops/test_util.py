@@ -63,7 +63,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=flow.float, initializer=flow.zeros_initializer())
-            loss = flow_op(x, *flow_args)
+            loss = flow_op(x, *flow_args, trainable=False, training=False)
             flow.losses.add_loss(loss)
 
             flow.watch_diff(x, Save("x_diff"))
@@ -78,18 +78,21 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     return y, x_diff
 
 
-def RunTensorFlowOp(tf_op, x, tf_args):
+def RunTensorFlowOp(tf_op, x, tf_args, training=True):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
         y = tf_op(x, *tf_args)
-    x_diff = tape.gradient(y, x)
-    return y.numpy(), x_diff.numpy()
+    if training:
+        x_diff = tape.gradient(y, x)
+        return y.numpy(), x_diff.numpy()
+    else:
+        return y.numpy()
 
 
-def CompareOpWithTensorFlow(device_type, flow_op, tf_op, input_shape,
+def CompareOpWithTensorFlow(device_type, flow_op, input_shape,
                             op_args=None, input_minval=-10, input_maxval=10, y_rtol=1e-5,
-                            y_atol=1e-5, x_diff_rtol=1e-5, x_diff_atol=1e-5):
+                            y_atol=1e-5, x_diff_rtol=1e-5, x_diff_atol=1e-5, training=True):
     assert device_type in ["gpu", "cpu"]
     if op_args is None:
         flow_args, tf_args = [], []
@@ -98,13 +101,17 @@ def CompareOpWithTensorFlow(device_type, flow_op, tf_op, input_shape,
 
     x = np.random.uniform(low=input_minval, high=input_maxval,
                           size=input_shape).astype(np.float32)
-    of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, x, flow_args)
-    tf_y, tf_x_diff = RunTensorFlowOp(tf_op, x, tf_args)
-
-    assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(
-        of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
-    )
+    if training:
+        of_y, of_x_diff = RunOneflowOp(device_type, flow_op, x, flow_args, training)
+        tf_y, tf_x_diff = RunTensorFlowOp(x, tf_args, training)
+        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
+        assert np.allclose(
+            of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
+        )
+    else:
+        of_y = RunOneflowOp(device_type, flow_op, x, flow_args, training)
+        tf_y = RunTensorFlowOp(x, tf_args, training)
+        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
 
 
 type_name_to_flow_type = {
