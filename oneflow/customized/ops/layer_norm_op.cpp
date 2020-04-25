@@ -179,6 +179,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
     .Attr("has_gamma", UserOpAttrType::kAtBool)
     .Attr("has_beta_diff", UserOpAttrType::kAtBool)
+    .Attr("has_gamma_diff", UserOpAttrType::kAtBool)
     .Attr("has_normalized_diff", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
