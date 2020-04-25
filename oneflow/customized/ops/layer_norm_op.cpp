@@ -142,8 +142,8 @@ REGISTER_USER_OP("layer_norm_grad")
         CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       }
       *dx = *dy;
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->shape(),
-                         Shape({dy->shape().Count(0, begin_norm_axis)}));
+      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->shape().Count(0),
+                         dy->shape().Count(0, begin_norm_axis));
       DataType data_type =
           dy->data_type() == DataType::kFloat16 ? DataType::kFloat : dy->data_type();
       CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->data_type(), data_type);
