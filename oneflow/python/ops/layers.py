@@ -312,6 +312,7 @@ def batch_normalization(
     moving_mean_initializer=None,
     moving_variance_initializer=None,
     trainable=True,
+    training=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
@@ -370,12 +371,13 @@ def batch_normalization(
             .Output("out")
             .SetAttr("axis", axis, "AttrTypeInt32")
             .SetAttr("epsilon", epsilon, "AttrTypeFloat")
-            .SetAttr("is_training", trainable, "AttrTypeBool")
+            .SetAttr("trainable", trainable, "AttrTypeBool")
+            .SetAttr("training", training, "AttrTypeBool")
             .SetAttr("momentum", momentum, "AttrTypeFloat")
             .SetAttr("center", center, "AttrTypeBool")
             .SetAttr("scale", scale, "AttrTypeBool")
             )
-        if trainable:
+        if trainable and training:
             builder = (builder
                         .Output("mean")
                         .Output("inv_variance"))
@@ -407,8 +409,11 @@ def batch_normalization(
     if trainable:
         setattr(op_conf.normalization_conf, "mean", "mean")
         setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
-        setattr(op_conf.normalization_conf, "is_training", True)
+        setattr(op_conf.normalization_conf, "is_training", training)
     else:
+        if not training:
+            # TODO(daquexian): throw a exception here
+            pass
         setattr(op_conf.normalization_conf, "is_training", False)
 
     compile_context.CurJobAddOp(op_conf)

@@ -29,7 +29,6 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
   void Compute(user_op::KernelComputeContext* ctx) const override {
     bool training = ctx->GetAttr<bool>("training");
     bool trainable = ctx->GetAttr<bool>("trainable");
-    // TODO: get whether the network is training
     const auto* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -74,8 +73,8 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
       CudaCheck(cudnnBatchNormalizationForwardInference(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), moving_mean->mut_dptr(),
-          moving_variance->mut_dptr(), epsilon));
+          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), moving_mean->dptr(),
+          moving_variance->dptr(), epsilon));
     }
   };
 };

@@ -13,21 +13,22 @@ REGISTER_USER_OP("normalization")
     .OptionalOutput("inv_variance")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr("is_training", UserOpAttrType::kAtBool)
+    .Attr("training", UserOpAttrType::kAtBool)
+    .Attr("trainable", UserOpAttrType::kAtBool)
     .Attr("momentum", UserOpAttrType::kAtFloat)
     .Attr("center", UserOpAttrType::kAtBool)
     .Attr("scale", UserOpAttrType::kAtBool)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
       CHECK(moving_mean_modifier != nullptr);
-      // TODO: get is_training
-      bool is_training = true;
-      moving_mean_modifier->set_is_mutable(is_training);
+      // TODO(daquexian): get training
+      bool training = true;
+      moving_mean_modifier->set_is_mutable(training);
       moving_mean_modifier->set_requires_grad(false);
       user_op::InputArgModifier* moving_variance_modifier =
           GetInputArgModifierFn("moving_variance", 0);
       CHECK(moving_variance_modifier != nullptr);
-      moving_variance_modifier->set_is_mutable(is_training);
+      moving_variance_modifier->set_is_mutable(training);
       moving_variance_modifier->set_requires_grad(false);
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -68,7 +69,7 @@ REGISTER_USER_OP("normalization")
       } else {
         SetParamTensorDesc("gamma");
       }
-      if (ctx->GetAttr<bool>("is_training")) {
+      if (ctx->GetAttr<bool>("training") && ctx->GetAttr<bool>("trainable")) {
         SetParamTensorDesc("mean");
         SetParamTensorDesc("inv_variance");
       }
@@ -76,7 +77,7 @@ REGISTER_USER_OP("normalization")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      if (ctx->GetAttr<bool>("is_training")) {
+      if (ctx->GetAttr<bool>("training") && ctx->GetAttr<bool>("trainable")) {
         ctx->BatchAxis4ArgNameAndIndex("mean", 0)->clear_value();
         ctx->BatchAxis4ArgNameAndIndex("inv_variance", 0)->clear_value();
       }
@@ -169,13 +170,14 @@ REGISTER_USER_OP_GRAD("normalization")
         auto grad_op_builder = builder.Op("normalization_grad")
                                    .Input("x", op.input("in", 0))
                                    .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                                   .Input("gamma", op.input("gamma", 0))
                                    .Attr("axis", op.attr<int32_t>("axis"))
                                    .Attr("epsilon", op.attr<float>("epsilon"))
                                    .Output("gamma_diff")
                                    .Output("beta_diff")
                                    .Output("dx");
-        bool is_training = op.attr<bool>("is_training");
-        if (is_training) {
+        bool training = op.attr<bool>("training");
+        if (training) {
           grad_op_builder = grad_op_builder.Input("mean", op.output("mean", 0))
                                 .Input("inv_variance", op.output("inv_variance", 0));
         } else {
@@ -210,11 +212,11 @@ REGISTER_USER_OP_GRAD("normalization")
             // calculate dx manually as cudnn cannot be used in evaluation mode
             // reference: https://github.com/pytorch/pytorch/issues/4284
             const auto axis = op.attr<int32_t>("axis");
-            auto BroadcastMulAtAxis = [&op, &axis, &AddOp](const std::string& scale_bn,
-                                                           const std::string& input_bn,
-                                                           const std::string& name) {
+            const auto BroadcastMulAtAxis = [&op, &axis, &AddOp](const std::string& scale_bn,
+                                                                 const std::string& input_bn,
+                                                                 const std::string& name) {
               std::vector<int64_t> broadcast_shape;
-              auto in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+              const auto &in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
               FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
                 if (i != axis) {
                   broadcast_shape.push_back(1);
@@ -248,8 +250,9 @@ REGISTER_USER_OP_GRAD("normalization")
             op.BindGradTensorWithOpInput(mul_inv_var_op.output("out", 0), "in", 0);
           }
         }
+
         user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
-        if (is_training && op.NeedGenGradTensor4OpInput("in", 0)) {
+        if (training && op.NeedGenGradTensor4OpInput("in", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
