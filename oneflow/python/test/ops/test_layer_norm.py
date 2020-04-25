@@ -15,7 +15,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 tf.debugging.set_log_device_placement(True)
 
-def test_pool(_):
+def test_layer_norm(_):
     confs = [
         {
             "x_shape": (1, 4, 2, 6),
@@ -28,8 +28,8 @@ def test_pool(_):
     arg_dict["confs"] = confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["trainable"] = [True, False]
-    arg_dict["center"] = [True, False]
-    arg_dict["scale"] = [True, False]
+    arg_dict["center"] = [True]
+    arg_dict["scale"] = [True]
     arg_dict["epsilon"] = [0.0, 0.001]
 
     for case in GenArgList(arg_dict):
@@ -55,9 +55,7 @@ def test_pool(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
-            print("assert_grad")
-            return 
-            assert np.allclose(dx_tf.numpy(), b.ndarray()), (
+            assert np.allclose(dx_tf.numpy(), b.ndarray(), rtol=1e-5, atol=1e-5), (
                 case,
                 dx_tf.numpy(),
                 b.ndarray(),
