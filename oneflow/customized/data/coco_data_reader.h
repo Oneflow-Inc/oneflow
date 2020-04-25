@@ -3,7 +3,6 @@
 
 #include "oneflow/customized/data/data_reader.h"
 #include "oneflow/customized/data/coco_parser.h"
-#include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/common/str_util.h"
 #include <json.hpp>
 

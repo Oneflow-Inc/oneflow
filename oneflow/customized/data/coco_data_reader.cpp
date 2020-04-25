@@ -1,4 +1,6 @@
 #include "oneflow/customized/data/coco_data_reader.h"
+#include "oneflow/customized/data/epoch_shuffle_dataset.h"
+// #include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
@@ -8,9 +10,10 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   meta_.reset(new COCOMeta(ctx));
   loader_.reset(new COCODataset(ctx, meta_.get()));
   parser_.reset(new COCOParser(meta_.get()));
-  // if (ctx->GetAttr<bool>("random_shuffle")) {
-  //   loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
-  // }
+  if (ctx->GetAttr<bool>("shuffle_after_epoch")) {
+    loader_.reset(new EpochShuffleDataset<COCOImage>(ctx->GetAttr<int64_t>("random_seed"),
+                                                     std::move(loader_)));
+  }
   // int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
   // loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
   StartLoadThread();
