@@ -47,8 +47,28 @@ class Args:
         super().__init__()
         if tf_args is None:
             tf_args = flow_args
+        assert isinstance(flow_args, (OrderedDict, list, tuple))
+        assert isinstance(tf_args, (OrderedDict, list, tuple))
+        if isinstance(flow_args, OrderedDict):
+            flow_args = flow_args.values()
+        if isinstance(tf_args, OrderedDict):
+            tf_args = tf_args.values()
         self.flow_args = flow_args
         self.tf_args = tf_args
+
+    @staticmethod
+    def CartesianProduct(flow_args, tf_args=None):
+        if tf_args is None:
+            tf_args = flow_args
+        assert isinstance(flow_args, (OrderedDict, list, tuple))
+        assert isinstance(tf_args, (OrderedDict, list, tuple))
+        if isinstance(flow_args, OrderedDict):
+            flow_args = flow_args.values()
+        if isinstance(tf_args, OrderedDict):
+            tf_args = tf_args.values()
+        flow_product_list = list(GenCartesianProduct(flow_args))
+        tf_product_list = list(GenCartesianProduct(tf_args))
+        return [Args(args[0], args[1]) for args in zip(flow_product_list, tf_product_list)]
 
 
 def RunOneflowOp(device_type, flow_op, x, flow_args):
