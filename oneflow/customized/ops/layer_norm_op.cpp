@@ -284,6 +284,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         user_op::UserOpConfWrapper grad_op =
             builder.Op("layer_norm_grad")
                 .Input("x", op.input("x", 0))
+                .Input("cudnn_bn_scale_ones", op.input("cudnn_bn_scale_ones", 0))
                 .Input("dy", dy)
                 .Input("mean", op.output("mean", 0))
                 .Input("inv_variance", op.output("inv_variance", 0))
