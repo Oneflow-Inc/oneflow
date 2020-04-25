@@ -288,7 +288,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
                 .Input("inv_variance", op.input("inv_variance", 0))
                 .Output("dx")
                 .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis))
-                .Attr("epsilon", op.attr<float>("epsilon"))
+                .Attr("epsilon", op.attr<double>("epsilon"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
