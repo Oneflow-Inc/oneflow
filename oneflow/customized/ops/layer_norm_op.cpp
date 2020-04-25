@@ -277,10 +277,11 @@ REGISTER_USER_OP_GRAD("layer_norm")
           grad_op_builder.Input("gamma", op.input("gamma", 0));
         }
         if (has_gamma_diff) {
-          grad_op_builder.Input("normalized", op.input("normalized", 0));
+          grad_op_builder.Input("normalized", op.output("normalized", 0));
           grad_op_builder.Output("gamma_diff");
         }
         if (need_scale_out_diff) { grad_op_builder.Output("normalized_diff"); }
+        if (has_beta_diff || has_gamma_diff) { grad_op_builder.Output("reduce_buf"); }
         auto grad_op = grad_op_builder.Build();
         if (has_beta_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
