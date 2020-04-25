@@ -115,9 +115,9 @@ REGISTER_USER_OP("layer_norm_grad")
       const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
       const user_op::TensorDesc* cudnn_bn_scale_ones =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
-      const user_op::TensorDesc* cudnn_bn_scale_diff_buf =
+      user_op::TensorDesc* cudnn_bn_scale_diff_buf =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
-      const user_op::TensorDesc* cudnn_bn_bias_diff_buf =
+      user_op::TensorDesc* cudnn_bn_bias_diff_buf =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       int64_t begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
@@ -147,10 +147,8 @@ REGISTER_USER_OP("layer_norm_grad")
       DataType data_type =
           dy->data_type() == DataType::kFloat16 ? DataType::kFloat : dy->data_type();
       CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->data_type(), data_type);
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_diff_buf->shape(), cudnn_bn_scale_ones->shape());
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_diff_buf->data_type(), cudnn_bn_scale_ones->data_type());
-      CHECK_EQ_OR_RETURN(cudnn_bn_bias_diff_buf->shape(), cudnn_bn_scale_ones->shape());
-      CHECK_EQ_OR_RETURN(cudnn_bn_bias_diff_buf->data_type(), cudnn_bn_scale_ones->data_type());
+      *cudnn_bn_scale_diff_buf = *cudnn_bn_scale_ones;
+      *cudnn_bn_bias_diff_buf = *cudnn_bn_scale_ones;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
