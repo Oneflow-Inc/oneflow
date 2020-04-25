@@ -189,12 +189,50 @@ def layer_norm(
     name=None,
 ):
     if os.getenv("ENABLE_USER_OP") == "True":
+        def shift_negative_axis_if_need(shape, axis) {
+            shifted = axis
+            if axis < 0:
+                shifted = axis + len(shape)
+            assert shifted >= 0
+            assert shifted <= len(shape)
+            return shifted
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("LayerNorm_"))
             .Op("layer_norm")
             .Input("x", [inputs])
             .Output("y")
         )
+        if center:
+            beta = flow.get_variable(
+                name="{}-beta".format(name),
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(0.0),
+                trainable=trainable,
+                model_name="beta",
+                distribute=distribute_util.broadcast(),
+            )
+            op.Input("beta", [beta])
+        if scale:
+            gamma = flow.get_variable(
+                name="{}-gamma".format(name),
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(1.0),
+                trainable=trainable,
+                model_name="gamma",
+                distribute=distribute_util.broadcast(),
+            )
+            op.Input("gamma", [gamma])
+            op.Output("normalized")
+        dtype = inputs.dtype
+        if inputs.dtype == flow.float16:
+            dtype = flow.float32
+        begin_norm_axis = shift_negative_axis_if_need(inputs.shape, begin_norm_axis)
+        cudnn_bn_scale_ones = flow.constant(1.0, dtype=dtype, shape=inputs.shape[0:(begin_norm_axis + 1)])
+        op.Input("cudnn_bn_scale_ones", [cudnn_bn_scale_ones])
+        cudnn_bn_bias_zeros = flow.constant(0.0, dtype=dtype, shape=inputs.shape[0:(begin_norm_axis + 1)])
+        op.Input("cudnn_bn_bias_zeros", [cudnn_bn_bias_zeros])
         op.SetAttr("center", center, "AttrTypeBool")
         op.SetAttr("scale", scale, "AttrTypeBool")
         op.SetAttr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
