@@ -35,7 +35,6 @@ REGISTER_USER_OP("layer_norm")
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
       const user_op::TensorDesc* cudnn_bn_bias_zeros =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_zeros", 0);
-      user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
       const bool& center = ctx->GetAttr<bool>("center");
@@ -57,6 +56,7 @@ REGISTER_USER_OP("layer_norm")
         CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
       }
       if (scale) {
+        user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
                         || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
