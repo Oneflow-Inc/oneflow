@@ -71,6 +71,7 @@ class EmptyTensorManager {
   }
 
  protected:
+  int64_t GetTenosrInitBytes() const { return tensor_init_bytes_; }
   virtual void PrepareEmpty(LoadTarget& tensor) { PrepareEmptyTensor(tensor); }
 
  private:
