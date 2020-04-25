@@ -31,8 +31,6 @@ REGISTER_USER_OP("layer_norm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
-      const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
       const user_op::TensorDesc* cudnn_bn_scale_ones =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
       const user_op::TensorDesc* cudnn_bn_bias_zeros =
@@ -52,12 +50,14 @@ REGISTER_USER_OP("layer_norm")
       if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
+        const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
         CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
                         || ctx->SbpParallel4ArgNameAndIndex("beta", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
         CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
       }
       if (scale) {
+        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
                         || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
@@ -177,20 +177,18 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .OptionalOutput("gamma_diff")
     .OptionalOutput("reduce_buf")
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
+    .Attr("has_gamma", UserOpAttrType::kAtBool)
+    .Attr("has_beta_diff", UserOpAttrType::kAtBool)
+    .Attr("has_beta_diff", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
-      const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-      const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
-      user_op::TensorDesc* normalized_diff = ctx->TensorDesc4ArgNameAndIndex("normalized_diff", 0);
-      user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
-      user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
       int64_t begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
-      const bool& has_beta_diff = beta_diff != nullptr;
-      const bool& has_gamma_diff = gamma_diff != nullptr;
-      const bool& has_gamma = gamma != nullptr;
-      const bool& has_normalized_diff = normalized_diff != nullptr;
+      const bool& has_beta_diff = ctx->GetAttr<bool>("has_beta_diff");
+      const bool& has_gamma_diff = ctx->GetAttr<bool>("has_gamma_diff");
+      const bool& has_gamma = ctx->GetAttr<bool>("has_gamma");
+      const bool& has_normalized_diff = ctx->GetAttr<bool>("has_normalized_diff");
       if (has_beta_diff || has_gamma_diff) {
+        const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
         CHECK_EQ_OR_RETURN(reduce_buf->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(reduce_buf->shape(), dy->shape());
       }
@@ -205,17 +203,25 @@ REGISTER_USER_OP("layer_norm_param_grad")
       if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
+        user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
         CHECK_EQ_OR_RETURN(beta_diff->data_type(), beta_diff->data_type());
         CHECK_EQ_OR_RETURN(beta_diff->shape(), beta_diff->shape());
       }
       if (has_gamma_diff) {
+        user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
+        const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
         CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
         CHECK_EQ_OR_RETURN(gamma_diff->data_type(), gamma_diff->data_type());
         CHECK_EQ_OR_RETURN(gamma_diff->shape(), gamma_diff->shape());
       }
-      if (has_normalized_diff) { *normalized_diff = *dy; }
+      if (has_normalized_diff) {
+        user_op::TensorDesc* normalized_diff =
+            ctx->TensorDesc4ArgNameAndIndex("normalized_diff", 0);
+        *normalized_diff = *dy;
+      }
       if (has_gamma) {
+        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
                         || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
@@ -247,7 +253,8 @@ REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       const bool has_beta_diff = op.NeedGenGradTensor4OpInput("beta", 0);
       const bool has_gamma_diff = op.NeedGenGradTensor4OpInput("gamma", 0);
-      const bool need_scale_out_diff = op.NeedGenGradTensor4OpInput("x", 0);
+      const bool need_scale_out_diff =
+          op.attr<bool>("scale") || op.NeedGenGradTensor4OpInput("x", 0);
       const int64_t& begin_norm_axis = op.attr<int64_t>("begin_norm_axis");
       const int64_t& begin_params_axis = op.attr<int64_t>("begin_params_axis");
       const int64_t num_in_axes = op.TensorDesc4ArgNameAndIndex("x", 0).shape().NumAxes();
@@ -260,15 +267,31 @@ REGISTER_USER_OP_GRAD("layer_norm")
         auto grad_op_builder = builder.Op("layer_norm_param_grad")
                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                                    .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis));
-        if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
+        if (has_beta_diff) {
+          grad_op_builder.Output("beta_diff");
+          grad_op_builder.Attr("has_beta_diff", true);
+        } else {
+          grad_op_builder.Attr("has_beta_diff", false);
+        }
         if (has_gamma_diff || need_scale_out_diff) {
           grad_op_builder.Input("gamma", op.input("gamma", 0));
+          grad_op_builder.Attr("has_gamma", true);
+        } else {
+          grad_op_builder.Attr("has_gamma", false);
         }
         if (has_gamma_diff) {
           grad_op_builder.Input("normalized", op.input("normalized", 0));
           grad_op_builder.Output("gamma_diff");
+          grad_op_builder.Attr("has_gamma_diff", true);
+        } else {
+          grad_op_builder.Attr("has_gamma_diff", false);
         }
-        if (need_scale_out_diff) { grad_op_builder.Output("normalized_diff"); }
+        if (need_scale_out_diff) {
+          grad_op_builder.Output("normalized_diff");
+          grad_op_builder.Attr("has_normalized_diff", true);
+        } else {
+          grad_op_builder.Attr("has_normalized_diff", false);
+        }
         auto grad_op = grad_op_builder.Build();
         if (has_beta_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
