@@ -25,14 +25,16 @@ const std::string& UserOpConfWrapper::op_type_name() const {
 
 const std::string& UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().input().find(arg_name);
-  CHECK(it != op_conf_.user_conf().input().end());
+  CHECK(it != op_conf_.user_conf().input().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
 
 const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().output().find(arg_name);
-  CHECK(it != op_conf_.user_conf().output().end());
+  CHECK(it != op_conf_.user_conf().output().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
