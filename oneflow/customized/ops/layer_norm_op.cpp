@@ -256,10 +256,11 @@ REGISTER_USER_OP("layer_norm_param_grad")
 
 REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      const bool has_beta_diff = op.NeedGenGradTensor4OpInput("beta", 0);
-      const bool has_gamma_diff = op.NeedGenGradTensor4OpInput("gamma", 0);
-      const bool need_scale_out_diff =
-          op.attr<bool>("scale") || op.NeedGenGradTensor4OpInput("x", 0);
+      const bool& center = op.attr<bool>("center");
+      const bool& scale = op.attr<bool>("scale");
+      const bool has_beta_diff = center && op.NeedGenGradTensor4OpInput("beta", 0);
+      const bool has_gamma_diff = scale && op.NeedGenGradTensor4OpInput("gamma", 0);
+      const bool need_scale_out_diff = scale || op.NeedGenGradTensor4OpInput("x", 0);
       const int64_t& begin_norm_axis = op.attr<int64_t>("begin_norm_axis");
       const int64_t& begin_params_axis = op.attr<int64_t>("begin_params_axis");
       const int64_t num_in_axes = op.TensorDesc4ArgNameAndIndex("x", 0).shape().NumAxes();
