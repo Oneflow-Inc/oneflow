@@ -81,16 +81,19 @@ REGISTER_USER_OP("layer_norm")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      for (const auto& ob : ctx->outputs()) {
+        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
+            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("y", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .Broadcast("gamma", 0)
+          .Broadcast("beta", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -151,16 +154,17 @@ REGISTER_USER_OP("layer_norm_grad")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      for (const auto& ob : ctx->outputs()) {
+        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
+            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("y", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -220,16 +224,22 @@ REGISTER_USER_OP("layer_norm_param_grad")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      for (const auto& ob : ctx->outputs()) {
+        ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second)->clear_value();
+      }
+      // TODO: tsai: normalized_diff could be null
+      *ctx->BatchAxis4ArgNameAndIndex("normalized_diff", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("y", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+          .Split(ctx->inputs(), 0)
+          .Broadcast("gamma")
+          .Split(ctx->outputs(), 0)
+          .Broadcast("gamma_diff", 0)
+          .Broadcast("beta_diff", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 

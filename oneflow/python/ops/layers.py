@@ -9,6 +9,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 
+import os
 
 @oneflow_export("layers.dense")
 def dense(
@@ -189,7 +190,7 @@ def layer_norm(
     name=None,
 ):
     if os.getenv("ENABLE_USER_OP") == "True":
-        def shift_negative_axis_if_need(shape, axis) {
+        def shift_negative_axis_if_need(shape, axis):
             shifted = axis
             if axis < 0:
                 shifted = axis + len(shape)
@@ -197,11 +198,16 @@ def layer_norm(
             assert shifted <= len(shape)
             return shifted
         op = (
-            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("LayerNorm_"))
+            flow.user_op_builder(name if name is not None else id_util.UniqueStr("LayerNorm_"))
             .Op("layer_norm")
             .Input("x", [inputs])
             .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
         )
+        if center == False or scale:
+            trainable = False
+        param_shape = inputs.shape[begin_params_axis:]
         if center:
             beta = flow.get_variable(
                 name="{}-beta".format(name),
@@ -229,9 +235,9 @@ def layer_norm(
         if inputs.dtype == flow.float16:
             dtype = flow.float32
         begin_norm_axis = shift_negative_axis_if_need(inputs.shape, begin_norm_axis)
-        cudnn_bn_scale_ones = flow.constant(1.0, dtype=dtype, shape=inputs.shape[0:(begin_norm_axis + 1)])
+        cudnn_bn_scale_ones = flow.constant(1.0, dtype=dtype, shape=inputs.shape[0:begin_norm_axis])
         op.Input("cudnn_bn_scale_ones", [cudnn_bn_scale_ones])
-        cudnn_bn_bias_zeros = flow.constant(0.0, dtype=dtype, shape=inputs.shape[0:(begin_norm_axis + 1)])
+        cudnn_bn_bias_zeros = flow.constant(0.0, dtype=dtype, shape=inputs.shape[0:begin_norm_axis])
         op.Input("cudnn_bn_bias_zeros", [cudnn_bn_bias_zeros])
         op.SetAttr("center", center, "AttrTypeBool")
         op.SetAttr("scale", scale, "AttrTypeBool")
