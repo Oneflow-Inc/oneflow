@@ -110,7 +110,7 @@ def RunOneflowBn(device_type, flow_op, x, flow_args, training=True):
         return y
 
 
-def CompareOpWithTensorFlow(device_type, flow_op, input_shape,
+def CompareBnWithTensorFlow(device_type, flow_op, input_shape,
                             op_args=None, input_minval=-10, input_maxval=10, y_rtol=1e-5,
                             y_atol=1e-5, x_diff_rtol=1e-5, x_diff_atol=1e-5, training=True):
     assert device_type in ["gpu", "cpu"]
@@ -131,8 +131,6 @@ def CompareOpWithTensorFlow(device_type, flow_op, input_shape,
     else:
         of_y = RunOneflowBn(device_type, flow_op, x, flow_args, training)
         tf_y = RunTensorFlowBn(x, tf_args, training)
-        print(of_y)
-        print(tf_y)
         assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
 
 
@@ -141,9 +139,9 @@ def test_batchnorm(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict['flow_op'] = [flow.layers.batch_normalization]
     arg_dict['input_shape'] = [(1,4,1,2)]
-    arg_dict['op_args'] = [Args([1]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
+    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
+        CompareBnWithTensorFlow(**arg)
 
 
 def test_batchnorm_inference(test_case):
@@ -151,6 +149,6 @@ def test_batchnorm_inference(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict['flow_op'] = [flow.layers.batch_normalization]
     arg_dict['input_shape'] = [(1,4,1,2)]
-    arg_dict['op_args'] = [Args([1]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
+    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
     for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg, training=False)
+        CompareBnWithTensorFlow(**arg, training=False)
