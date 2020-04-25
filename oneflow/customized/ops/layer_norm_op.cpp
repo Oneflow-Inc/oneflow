@@ -238,9 +238,20 @@ REGISTER_USER_OP("layer_norm_param_grad")
       for (const auto& ob : ctx->outputs()) {
         ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second)->clear_value();
       }
-      // TODO: tsai: normalized_diff could be null
-      *ctx->BatchAxis4ArgNameAndIndex("normalized_diff", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
+      auto has_tensor = [ctx](const std::string& bn) -> bool {
+        bool ret = false;
+        for (auto t : ctx->inputs()) {
+          if (bn == t.first) { return true; }
+        }
+        for (auto t : ctx->outputs()) {
+          if (bn == t.first) { return true; }
+        }
+        return ret;
+      };
+      if (has_tensor("normalized_diff")) {
+        *ctx->BatchAxis4ArgNameAndIndex("normalized_diff", 0) =
+            *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
+      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
