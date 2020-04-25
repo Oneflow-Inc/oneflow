@@ -175,17 +175,23 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .OptionalOutput("gamma_diff")
     .OptionalOutput("reduce_buf")
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
-    .Attr("has_gamma", UserOpAttrType::kAtBool)
-    .Attr("has_beta_diff", UserOpAttrType::kAtBool)
-    .Attr("has_gamma_diff", UserOpAttrType::kAtBool)
-    .Attr("has_normalized_diff", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      auto has_tensor = [ctx](const std::string& bn) -> bool {
+        bool ret = false;
+        for (auto t : ctx->inputs()) {
+          if (bn == t.first) { return true; }
+        }
+        for (auto t : ctx->outputs()) {
+          if (bn == t.first) { return true; }
+        }
+        return ret;
+      };
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       int64_t begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
-      const bool& has_beta_diff = ctx->GetAttr<bool>("has_beta_diff");
-      const bool& has_gamma_diff = ctx->GetAttr<bool>("has_gamma_diff");
-      const bool& has_gamma = ctx->GetAttr<bool>("has_gamma");
-      const bool& has_normalized_diff = ctx->GetAttr<bool>("has_normalized_diff");
+      const bool& has_beta_diff = has_tensor("beta_diff");
+      const bool& has_gamma_diff = has_tensor("gamma_diff");
+      const bool& has_gamma = has_tensor("gamma");
+      const bool& has_normalized_diff = has_tensor("normalized_diff");
       if (has_beta_diff || has_gamma_diff) {
         const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
         CHECK_EQ_OR_RETURN(reduce_buf->data_type(), dy->data_type());
@@ -266,31 +272,15 @@ REGISTER_USER_OP_GRAD("layer_norm")
         auto grad_op_builder = builder.Op("layer_norm_param_grad")
                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                                    .Attr("begin_params_axis", ShiftAxisIfNeed(begin_params_axis));
-        if (has_beta_diff) {
-          grad_op_builder.Output("beta_diff");
-          grad_op_builder.Attr("has_beta_diff", true);
-        } else {
-          grad_op_builder.Attr("has_beta_diff", false);
-        }
+        if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
         if (has_gamma_diff || need_scale_out_diff) {
           grad_op_builder.Input("gamma", op.input("gamma", 0));
-          grad_op_builder.Attr("has_gamma", true);
-        } else {
-          grad_op_builder.Attr("has_gamma", false);
         }
         if (has_gamma_diff) {
           grad_op_builder.Input("normalized", op.input("normalized", 0));
           grad_op_builder.Output("gamma_diff");
-          grad_op_builder.Attr("has_gamma_diff", true);
-        } else {
-          grad_op_builder.Attr("has_gamma_diff", false);
         }
-        if (need_scale_out_diff) {
-          grad_op_builder.Output("normalized_diff");
-          grad_op_builder.Attr("has_normalized_diff", true);
-        } else {
-          grad_op_builder.Attr("has_normalized_diff", false);
-        }
+        if (need_scale_out_diff) { grad_op_builder.Output("normalized_diff"); }
         auto grad_op = grad_op_builder.Build();
         if (has_beta_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
