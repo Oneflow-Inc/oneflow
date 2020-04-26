@@ -16,7 +16,6 @@ def InputOpByArgBlobDef(blob_def):
     op_conf.name = blob_def.op_name
     op_conf.input_conf.out = blob_def.blob_name
     op_conf.input_conf.blob_conf.CopyFrom(blob_def.ToInterfaceBlobConf())
-    op_conf.input_conf.blob_conf.batch_axis.value = 0
     blob_def.AddAndInferOp(op_conf)
     return remote_blob_util.RemoteBlob(blob_def.lbi)
 
