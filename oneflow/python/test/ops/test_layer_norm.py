@@ -28,8 +28,8 @@ def test_layer_norm(_):
     arg_dict["confs"] = confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["trainable"] = [True, False]
-    arg_dict["center"] = [True]
-    arg_dict["scale"] = [True]
+    arg_dict["center"] = [True, False]
+    arg_dict["scale"] = [True, False]
     arg_dict["epsilon"] = [0.0, 0.001]
 
     for case in GenArgList(arg_dict):
@@ -76,7 +76,7 @@ def test_layer_norm(_):
                 shape=x_shape,
                 dtype=dtype,
                 initializer=flow.constant_initializer(0),
-                trainable=trainable,
+                trainable=True,
             )
             flow.watch_diff(v, assert_grad)
             x += v
@@ -88,4 +88,4 @@ def test_layer_norm(_):
         check_point.init()
         y = test_job(x).get()
         assert y.ndarray().shape == y_tf.numpy().shape, (y.ndarray().shape, y_tf.numpy().shape)
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-2), (case, y.ndarray() - y_tf.numpy())
+        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-1), (case, y.ndarray() - y_tf.numpy())
