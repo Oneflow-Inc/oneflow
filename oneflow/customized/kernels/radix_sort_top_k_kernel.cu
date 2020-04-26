@@ -48,9 +48,9 @@ class TmpBufferManager final {
   int32_t* sorted_indices_ptr_;
   void* temp_storage_ptr_;
 
-  int32_t sorted_in_elem_cnt_;
-  int32_t indices_elem_cnt_;
-  int32_t sorted_indices_elem_cnt_;
+  int64_t sorted_in_elem_cnt_;
+  int64_t indices_elem_cnt_;
+  int64_t sorted_indices_elem_cnt_;
   int32_t temp_storage_bytes_;
 };
 
