@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import os
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -100,6 +101,7 @@ def constant_like(like, value, dtype=None, name=None):
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
         return remote_blob_util.RemoteBlob(out_lbi)
+
 
 
 @oneflow_export("ones_like")
