@@ -15,7 +15,7 @@ REGISTER_USER_OP("constant_like")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
-      const auto& dtype = ctx->GetAttr<DataType>("data_type");
+      const auto& dtype = ctx->GetAttr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
 
       return Maybe<void>::Ok();
