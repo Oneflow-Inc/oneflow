@@ -21,7 +21,7 @@ REGISTER_USER_OP("normalization")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
       CHECK(moving_mean_modifier != nullptr);
-      // TODO(daquexian): get training
+      // TODO(daquexian): training attr cannot be got until the api is implemented
       bool training = true;
       moving_mean_modifier->set_is_mutable(training);
       moving_mean_modifier->set_requires_grad(false);

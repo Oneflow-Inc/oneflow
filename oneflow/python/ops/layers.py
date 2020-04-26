@@ -409,11 +409,13 @@ def batch_normalization(
     if trainable:
         setattr(op_conf.normalization_conf, "mean", "mean")
         setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
+        # TODO(daquexian): training == False doesn't work yet,
+        # blocked by unimplemented/unmerged user ops, e.g., reshape, broadcast_mul, rsqrt
         setattr(op_conf.normalization_conf, "is_training", training)
     else:
-        if not training:
-            # TODO(daquexian): throw a exception here
-            pass
+        if training:
+            raise ValueError('"training" of normalization cannot be True \
+                    when "trainable" is False')
         setattr(op_conf.normalization_conf, "is_training", False)
 
     compile_context.CurJobAddOp(op_conf)
