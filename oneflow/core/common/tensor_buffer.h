@@ -10,7 +10,7 @@ namespace oneflow {
 
 class TensorBuffer {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
+  OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
   TensorBuffer()
       : shape_(Shape()), data_(nullptr), data_type_(DataType::kInvalidDataType), num_bytes_(0) {
     mem_case_.mutable_host_mem();
