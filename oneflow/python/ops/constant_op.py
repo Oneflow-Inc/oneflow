@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import os
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -10,7 +9,6 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import os
 import oneflow as flow
-
 
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
@@ -75,34 +73,33 @@ def constant_like(like, value, dtype=None, name=None):
 
     if os.getenv("ENABLE_USER_OP") == 'True':
         if dtype is None:
-            dtype = like.data_type
-
+            dtype = like.dtype
         return flow.user_op_builder(name).Op("constant_like")\
-            .Input("like", like)\
+            .Input("like", [like])\
             .SetAttr("integer_value", int(value), "AttrTypeInt64")\
             .SetAttr("floating_value", float(value), "AttrTypeDouble")\
-            .SetAttr("is_floating_value", isinstance(value, float), "AttrTypeBool")\
+            .SetAttr("is_floating_value", type(value) is float, "AttrTypeBool")\
             .SetAttr("dtype", dtype, "AttrTypeDataType")\
             .Output("out")\
             .Build().RemoteBlobList()[0]
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
-    if isinstance(value, int):
-        op_conf.constant_like_conf.int_operand = value
-    elif isinstance(value, float):
-        op_conf.constant_like_conf.float_operand = value
     else:
-        raise NotImplementedError
-    if dtype is not None:
-        setattr(op_conf.constant_like_conf, "data_type", dtype)
-    setattr(op_conf.constant_like_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
+        if isinstance(value, int):
+            op_conf.constant_like_conf.int_operand = value
+        elif isinstance(value, float):
+            op_conf.constant_like_conf.float_operand = value
+        else:
+            raise NotImplementedError
+        if dtype is not None:
+            setattr(op_conf.constant_like_conf, "data_type", dtype)
+        setattr(op_conf.constant_like_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out")
+        return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("ones_like")
