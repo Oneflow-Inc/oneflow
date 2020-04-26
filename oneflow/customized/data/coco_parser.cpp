@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-void COCOParser::Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
+void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
                        user_op::KernelComputeContext* ctx) {
   user_op::Tensor* image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
   CHECK_NOTNULL(image_tensor);

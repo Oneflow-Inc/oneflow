@@ -10,13 +10,13 @@ class COCOMeta;
 
 class COCOParser final : public Parser<COCOImage> {
  public:
-  using LoadTargetPtr = std::shared_ptr<COCOImage>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
+  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
   COCOParser(COCOMeta* meta) : meta_(meta){};
   ~COCOParser() = default;
 
-  void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
+  void Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
              user_op::KernelComputeContext* ctx) override;
 
  private:
