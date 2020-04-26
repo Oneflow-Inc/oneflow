@@ -10,6 +10,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
+import os
 
 @oneflow_export("math.add")
 def add(x, y, name=None):
@@ -108,9 +109,30 @@ def floor_mod(x, y, name=None):
 
 
 def scalar_add(x, operand, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ScalarAdd_")
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        builder = (flow.user_op_builder(name)
+            .Op("scalar_add")
+            .Input("in", [x])
+            .Output("out")
+            )
+        if isinstance(operand, int):
+            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
+                .SetAttr("has_float_operand", False, "AttrTypeBool")
+                .SetAttr("int_operand", operand, "AttrTypeInt64")
+                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+        elif isinstance(operand, float):
+            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
+                .SetAttr("has_float_operand", True, "AttrTypeBool")
+                .SetAttr("int_operand", 0, "AttrTypeInt64")
+                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+        return (builder
+            .Build()
+            .RemoteBlobList()[0])
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarAdd_")
+        op_conf, "name", name
     )
     setattr(op_conf.scalar_add_conf, "in", x.logical_blob_name)
     if isinstance(operand, int):
