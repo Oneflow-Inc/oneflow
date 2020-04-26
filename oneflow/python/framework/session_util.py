@@ -15,6 +15,7 @@ import oneflow.python.framework.job_instance as job_instance_util
 from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+from contextlib import contextmanager
 
 class Session(object):
     def __init__(self):
@@ -30,7 +31,8 @@ class Session(object):
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
-        self.UpdateFunctionFlagName2DefaultVal()
+        self.eager_global_function_desc_stack_ = []
+        self._UpdateFunctionFlagName2DefaultVal()
 
     @property
     def status(self): return self.status_
@@ -62,12 +64,11 @@ class Session(object):
     @property
     def job_name2name_scope_stack(self): return self.job_name2name_scope_stack_
 
-    def GetJobConfigProto(self, job_name):
-      return self.job_name2function_desc_[job_name].job_config_proto
+    def GetLazyFunctionDesc(self, job_name):
+        if job_name in self.job_name2function_desc_: return self.job_name2function_desc_[job_name]
+        return None
 
-    def GetFunctionDesc(self, job_name): return self.job_name2function_desc_[job_name]
-
-    def UpdateFunctionFlagName2DefaultVal(self):
+    def _UpdateFunctionFlagName2DefaultVal(self):
         items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
         self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
 
@@ -110,11 +111,15 @@ class Session(object):
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
-    def Run(self, job_func, *arg):
+    def LazyRun(self, function_desc, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
         return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+
+    def EagerRun(self, function_desc, job_func, *arg):
+        with self._EagerGlobalFunctionDescScope(function_desc):
+            return TODO()
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
@@ -157,6 +162,18 @@ class Session(object):
             return None
 
         return var_name2var_blob[var_name]
+
+    def CurrentEagerGlobalFunctionDesc(self):
+        if len(self.eager_global_function_desc_stack_) == 0: return None
+        return self.eager_global_function_desc_stack_[0]
+
+    @contextmanager
+    def _EagerGlobalFunctionDescScope(self, function_desc):
+        self.eager_global_function_desc_stack_.insert(0, function_desc)
+        try:
+            yield
+        finally:
+            self.eager_global_function_desc_stack_.pop(0)
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

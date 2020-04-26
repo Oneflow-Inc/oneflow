@@ -45,12 +45,18 @@ def oneflow_function(function_config = FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
     def Decorator(job_func):
         sess = session_ctx.GetDefaultSession()
-        @functools.wraps(job_func)
-        def Func(*args):
-            return _RunJob(sess, job_func, *args)
+        function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
+        if function_desc.enable_eager_execution:
+            @functools.wraps(job_func)
+            def Func(*args):
+                return _RunEagerJob(sess, function_desc, job_func, *args)
+        else:
+            @functools.wraps(job_func)
+            def Func(*args):
+                return _RunLazyJob(sess, job_func, *args)
+            sess.AddJob(function_desc)
         for x in dir(job_func):
             if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
-        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         return Func
     return Decorator
 
@@ -94,8 +100,11 @@ def _MakeInnerJobConfigClassProperty(return_obj_class):
 def _MakeLeafJobConfigCall(method):
     return lambda self, *argv, **kwarg: method(self.function_desc, *argv, **kwarg)
 
-def _RunJob(session, job_func, *args):
-    return session.TryInit().Run(job_func, *args)
+def _RunEagerJob(session, function_desc, job_func, *args):
+    return session.TryInit().EagerRun(function_desc, job_func, *args)
+
+def _RunLazyJob(session, job_func, *args):
+    return session.TryInit().LazyRun(job_func, *args)
 
 @oneflow_function_config('default_data_type')
 def set_default_data_type(func_desc, value):

@@ -10,16 +10,14 @@ import oneflow
 
 def GetCurJobConfigProto():
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetJobConfigProto(job_name)
+    function_desc = session_ctx.GetDefaultSession().GetLazyFunctionDesc(job_name)
+    assert function_desc is not None
+    return function_desc.job_config_proto
 
 def CurJobAddOp(op_conf, parallel_conf=None):
-    function_desc = oneflow.current_global_function_desc()
-    if function_desc.enable_eager_execution:
-        TODO()
-    else:
-        if distribute_ctx.IsMirroredStrategyEnabled():
-            return CurJobAddMirroredOp(op_conf, parallel_conf)
-        return CurJobAddConsistentOp(op_conf, parallel_conf)
+    if distribute_ctx.IsMirroredStrategyEnabled():
+        return CurJobAddMirroredOp(op_conf, parallel_conf)
+    return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):
     op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
