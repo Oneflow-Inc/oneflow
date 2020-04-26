@@ -21,25 +21,25 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
     std::memcpy(image_buffer->mut_data(), image->data.data(), image_buffer->nbytes());
     if (image_size_tensor) {
       auto* image_size_ptr = image_size_tensor->mut_dptr<int32_t>() + i * 2;
-      image_size_ptr[0] = meta_->GetImageHeight(image->id);
-      image_size_ptr[1] = meta_->GetImageWidth(image->id);
+      image_size_ptr[0] = meta_->GetImageHeight(image->index);
+      image_size_ptr[1] = meta_->GetImageWidth(image->index);
     }
     if (bbox_tensor) {
       TensorBuffer* bbox_buffer = bbox_tensor->mut_dptr<TensorBuffer>() + i;
-      const auto& bbox_vec = meta_->GetBboxVec<float>(image->id);
+      const auto& bbox_vec = meta_->GetBboxVec<float>(image->index);
       bbox_buffer->reserve(bbox_vec.size() * sizeof(float));
       std::copy(bbox_vec.begin(), bbox_vec.end(), bbox_buffer->mut_data<float>());
     }
     if (label_tensor) {
       TensorBuffer* label_buffer = label_tensor->mut_dptr<TensorBuffer>() + i;
-      const auto& label_vec = meta_->GetLabelVec<int32_t>(image->id);
+      const auto& label_vec = meta_->GetLabelVec<int32_t>(image->index);
       label_buffer->reserve(label_vec.size() * sizeof(int32_t));
       std::copy(label_vec.begin(), label_vec.end(), label_buffer->mut_data<int32_t>());
     }
     if (segm_tensor && segm_offset_tensor) {
       TensorBuffer* segm_buffer = segm_tensor->mut_dptr<TensorBuffer>() + i;
       TensorBuffer* segm_offset_buffer = segm_offset_tensor->mut_dptr<TensorBuffer>() + i;
-      meta_->ReadSegmentationsToTensorBuffer<float>(image->id, segm_buffer, segm_offset_buffer);
+      meta_->ReadSegmentationsToTensorBuffer<float>(image->index, segm_buffer, segm_offset_buffer);
     }
   });
   // dynamic batch size

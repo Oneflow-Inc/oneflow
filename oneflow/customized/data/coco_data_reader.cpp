@@ -9,9 +9,11 @@
 namespace oneflow {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
-  meta_.reset(new COCOMeta(ctx));
-  loader_.reset(new COCODataset(ctx, meta_.get()));
-  parser_.reset(new COCOParser(meta_.get()));
+  std::shared_ptr<const COCOMeta> meta(new COCOMeta(
+      ctx->GetAttr<std::string>("annotation_file"), ctx->GetAttr<std::string>("image_dir"),
+      ctx->GetAttr<bool>("remove_images_without_annotations")));
+  loader_.reset(new COCODataset(ctx, meta));
+  parser_.reset(new COCOParser(meta));
   if (ctx->GetAttr<bool>("shuffle_after_epoch")) {
     loader_.reset(new EpochShuffleDataset<COCOImage>(ctx->GetAttr<int64_t>("random_seed"),
                                                      std::move(loader_)));
@@ -32,11 +34,11 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   StartLoadThread();
 }
 
-COCOMeta::COCOMeta(user_op::KernelInitContext* ctx)
-    : image_dir_(ctx->GetAttr<std::string>("image_dir")) {
+COCOMeta::COCOMeta(const std::string& annotation_file, const std::string& image_dir,
+                   bool remove_images_without_annotations)
+    : image_dir_(image_dir) {
   // Read content of annotation file (json format) to json obj
-  const std::string& anno_path = ctx->GetAttr<std::string>("annotation_file");
-  PersistentInStream in_stream(DataFS(), anno_path);
+  PersistentInStream in_stream(DataFS(), annotation_file);
   std::string json_str;
   std::string line;
   while (in_stream.ReadLine(&line) == 0) { json_str += line; }
@@ -67,7 +69,7 @@ COCOMeta::COCOMeta(user_op::KernelInitContext* ctx)
     image_id2anno_ids_.at(image_id).push_back(id);
   }
   // remove images without annotations if necessary
-  if (ctx->GetAttr<bool>("remove_images_without_annotations")) {
+  if (remove_images_without_annotations) {
     HashSet<int64_t> to_remove_image_ids;
     for (int64_t image_id : image_ids_) {
       if (!ImageHasValidAnnotations(image_id)) { to_remove_image_ids.insert(image_id); }

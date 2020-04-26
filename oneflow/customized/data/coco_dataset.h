@@ -8,6 +8,7 @@ namespace oneflow {
 
 struct COCOImage {
   TensorBuffer data;
+  int64_t index;
   int64_t id;
   int32_t height;
   int32_t width;
@@ -20,7 +21,7 @@ class COCODataset final : public Dataset<COCOImage> {
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  COCODataset(user_op::KernelInitContext* ctx, COCOMeta* meta);
+  COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta);
   ~COCODataset() = default;
 
   LoadTargetShdPtrVec Next() override;
@@ -32,7 +33,7 @@ class COCODataset final : public Dataset<COCOImage> {
 
  private:
   std::unique_ptr<EmptyTensorManager<COCOImage>> empty_tensor_mgr_;
-  const COCOMeta* meta_;
+  std::shared_ptr<const COCOMeta> meta_;
   int64_t cur_idx_;
 };
 

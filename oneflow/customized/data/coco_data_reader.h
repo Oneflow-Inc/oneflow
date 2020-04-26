@@ -16,34 +16,35 @@ class COCODataReader final : public DataReader<COCOImage> {
  protected:
   using DataReader<COCOImage>::loader_;
   using DataReader<COCOImage>::parser_;
-
- private:
-  std::unique_ptr<COCOMeta> meta_;
 };
 
 class COCOMeta final {
  public:
-  COCOMeta(user_op::KernelInitContext* ctx);
+  COCOMeta(const std::string& annotation_file, const std::string& image_dir,
+           bool remove_images_without_annotations);
   ~COCOMeta() = default;
 
   int64_t Size() const { return image_ids_.size(); }
   int64_t GetImageId(int64_t index) const { return image_ids_.at(index); }
-  int32_t GetImageHeight(int64_t image_id) const {
+  int32_t GetImageHeight(int64_t index) const {
+    int64_t image_id = image_ids_.at(index);
     return image_id2image_.at(image_id)["height"].get<int32_t>();
   }
-  int32_t GetImageWidth(int64_t image_id) const {
+  int32_t GetImageWidth(int64_t index) const {
+    int64_t image_id = image_ids_.at(index);
     return image_id2image_.at(image_id)["width"].get<int32_t>();
   }
-  std::string GetImageFilePath(int64_t image_id) const {
+  std::string GetImageFilePath(int64_t index) const {
+    int64_t image_id = image_ids_.at(index);
     const auto& image_json = image_id2image_.at(image_id);
     return JoinPath(image_dir_, image_json["file_name"].get<std::string>());
   }
   template<typename T>
-  std::vector<T> GetBboxVec(int64_t image_id) const;
+  std::vector<T> GetBboxVec(int64_t index) const;
   template<typename T>
-  std::vector<T> GetLabelVec(int64_t image_id) const;
+  std::vector<T> GetLabelVec(int64_t index) const;
   template<typename T>
-  void ReadSegmentationsToTensorBuffer(int64_t image_id, TensorBuffer* segm,
+  void ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm,
                                        TensorBuffer* segm_offset_mat) const;
 
  private:
@@ -60,8 +61,9 @@ class COCOMeta final {
 };
 
 template<typename T>
-std::vector<T> COCOMeta::GetBboxVec(int64_t image_id) const {
+std::vector<T> COCOMeta::GetBboxVec(int64_t index) const {
   std::vector<T> bbox_vec;
+  int64_t image_id = image_ids_.at(index);
   const auto& anno_ids = image_id2anno_ids_.at(image_id);
   for (int64_t anno_id : anno_ids) {
     const auto& bbox_json = anno_id2anno_.at(anno_id)["bbox"];
@@ -93,8 +95,9 @@ std::vector<T> COCOMeta::GetBboxVec(int64_t image_id) const {
 }
 
 template<typename T>
-std::vector<T> COCOMeta::GetLabelVec(int64_t image_id) const {
+std::vector<T> COCOMeta::GetLabelVec(int64_t index) const {
   std::vector<T> label_vec;
+  int64_t image_id = image_ids_.at(index);
   const auto& anno_ids = image_id2anno_ids_.at(image_id);
   for (int64_t anno_id : anno_ids) {
     int32_t category_id = anno_id2anno_.at(anno_id)["category_id"].get<int32_t>();
@@ -104,9 +107,10 @@ std::vector<T> COCOMeta::GetLabelVec(int64_t image_id) const {
 }
 
 template<typename T>
-void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t image_id, TensorBuffer* segm,
+void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm,
                                                TensorBuffer* segm_offset_mat) const {
   if (segm == nullptr || segm_offset_mat == nullptr) { return; }
+  int64_t image_id = image_ids_.at(index);
   const auto& anno_ids = image_id2anno_ids_.at(image_id);
   std::vector<T> segm_vec;
   for (int64_t anno_id : anno_ids) {

@@ -13,14 +13,14 @@ class COCOParser final : public Parser<COCOImage> {
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  COCOParser(COCOMeta* meta) : meta_(meta){};
+  COCOParser(const std::shared_ptr<const COCOMeta>& meta) : meta_(meta){};
   ~COCOParser() = default;
 
   void Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
              user_op::KernelComputeContext* ctx) override;
 
  private:
-  const COCOMeta* meta_;
+  std::shared_ptr<const COCOMeta> meta_;
 };
 
 }  // namespace oneflow

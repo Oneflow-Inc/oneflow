@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-COCODataset::COCODataset(user_op::KernelInitContext* ctx, COCOMeta* meta)
+COCODataset::COCODataset(user_op::KernelInitContext* ctx,
+                         const std::shared_ptr<const COCOMeta>& meta)
     : meta_(meta), cur_idx_(0) {
   int64_t total_empty_size = ctx->GetAttr<int64_t>("empty_tensor_size");
   int32_t tensor_init_bytes = ctx->GetAttr<int32_t>("tensor_init_bytes");
@@ -23,11 +24,11 @@ COCODataset::LoadTargetShdPtrVec COCODataset::Next() {
 
 COCODataset::LoadTargetShdPtr COCODataset::At(int64_t idx) {
   LoadTargetShdPtr ret = empty_tensor_mgr_->Get();
-  int64_t image_id = meta_->GetImageId(idx);
-  ret->id = image_id;
+  ret->index = idx;
+  ret->id = meta_->GetImageId(idx);
   ret->height = meta_->GetImageHeight(idx);
   ret->width = meta_->GetImageWidth(idx);
-  const std::string& image_file_path = meta_->GetImageFilePath(image_id);
+  const std::string& image_file_path = meta_->GetImageFilePath(idx);
   PersistentInStream in_stream(DataFS(), image_file_path);
   int64_t file_size = DataFS()->GetFileSize(image_file_path);
   ret->data.Resize(Shape({file_size}), DataType::kChar);
