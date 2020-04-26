@@ -53,5 +53,12 @@ class FunctionDesc(object):
 
 @oneflow_export('current_global_function_desc')
 def GetCurrentGlobalFunctionDesc():
+    sess = session_ctx.GetDefaultSession()
+    # try find eager global function descrition
+    ret = sess.CurrentEagerGlobalFunctionDesc()
+    if ret is not None: return ret
+    # try find lazy global function description
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
+    ret = sess.GetLazyFunctionDesc(job_name)
+    if ret is not None: return ret
+    raise NotImplementedError("no current global function found")
