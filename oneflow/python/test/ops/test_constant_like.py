@@ -66,5 +66,3 @@ def test_constant_like_gpu(test_case):
 def test_constant_like_cpu(test_case):
     x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
     _run_test(test_case, x, 12.0, dtype=flow.float, device='cpu')
-
-test_constant_like_gpu(1)
