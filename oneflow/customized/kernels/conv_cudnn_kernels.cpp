@@ -103,8 +103,6 @@ CudnnTensorDesc* GetBiasCudnnTensorDesc<3>(const std::string& data_format, int32
   return new CudnnTensorDesc(data_type, 3 + 2, bias_dim.data(), stride_of_bias_tensor.data());
 }
 
-}  // namespace
-
 struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> bias_desc;
 };
@@ -340,5 +338,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(double);
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float16);
+
+}  // namespace
 
 }  // namespace oneflow
