@@ -41,6 +41,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
+    func_config.enable_auto_mixed_precision(True)
 
     @flow.function(func_config)
     def ConvJob():
