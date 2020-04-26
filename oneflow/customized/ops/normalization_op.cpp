@@ -84,15 +84,12 @@ REGISTER_USER_OP("normalization")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-
       SbpSignatureBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
           .Split("in", 0)
           .Split("out", 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -150,15 +147,13 @@ REGISTER_USER_OP("normalization_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       SbpSignatureBuilder()
           .Broadcast(ctx->inputs())
           .PartialSum(ctx->outputs())
           .Split("x", 0)
           .Split("dx", 0)
           .Split("dy", 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
