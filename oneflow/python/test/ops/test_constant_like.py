@@ -7,9 +7,6 @@ os.environ['ENABLE_USER_OP'] = 'True'
 def _check(test_case, x, y, value, dtype=None):
     np_constant_like = np.full(x.shape, value)
     
-    # test_case.assertTrue(np.array_equal(np_constant_like, y))
-    print("*****", np_constant_like)
-    print("----------", y)
     assert np.allclose(np_constant_like, y, rtol=1e-5, atol=1e-5)
 
 def _run_test(test_case, x, value, dtype=None, device='gpu'):
@@ -68,4 +65,6 @@ def test_constant_like_gpu(test_case):
    
 def test_constant_like_cpu(test_case):
     x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
-    _run_test(test_case, x, 12.0, device='cpu')
+    _run_test(test_case, x, 12.0, dtype=flow.float, device='cpu')
+
+test_constant_like_gpu(1)
