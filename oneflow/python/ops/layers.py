@@ -407,10 +407,12 @@ def batch_normalization(
     if scale:
         setattr(op_conf.normalization_conf, "gamma", gamma.logical_blob_name)
     if trainable:
+        # TODO(daquexian): training == False && trainable == True doesn't work yet,
+        # blocked by unimplemented/unmerged user ops, e.g., reshape, broadcast_mul, rsqrt
+        if not training:
+            raise ValueError("training == False && trainable == True doesn't work yet")
         setattr(op_conf.normalization_conf, "mean", "mean")
         setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
-        # TODO(daquexian): training == False doesn't work yet,
-        # blocked by unimplemented/unmerged user ops, e.g., reshape, broadcast_mul, rsqrt
         setattr(op_conf.normalization_conf, "is_training", training)
     else:
         if training:
