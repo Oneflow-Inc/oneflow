@@ -30,7 +30,7 @@ def test_layer_norm(_):
     arg_dict["trainable"] = [True, False]
     arg_dict["center"] = [True, False]
     arg_dict["scale"] = [True, False]
-    arg_dict["epsilon"] = [0.0, 0.001]
+    arg_dict["epsilon"] = [0.0, 1e-5]
 
     for case in GenArgList(arg_dict):
         (device_type, confs, data_type, trainable, center, scale, epsilon) = case
@@ -88,4 +88,6 @@ def test_layer_norm(_):
         check_point.init()
         y = test_job(x).get()
         assert y.ndarray().shape == y_tf.numpy().shape, (y.ndarray().shape, y_tf.numpy().shape)
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-1), (case, y.ndarray() - y_tf.numpy())
+        diff = y.ndarray() - y_tf.numpy()
+        max_diff = np.max(np.abs(diff))
+        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-3), (case, max_diff)
