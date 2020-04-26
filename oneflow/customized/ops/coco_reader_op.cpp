@@ -16,6 +16,7 @@ REGISTER_USER_OP("COCOReader")
     .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, true)
     .Attr<int64_t>("random_seed", UserOpAttrType::kAtInt64, -1)
     .Attr<bool>("group_by_ratio", UserOpAttrType::kAtBool, true)
+    .Attr<bool>("remove_images_without_annotations", UserOpAttrType::kAtBool, true)
     .Attr<int32_t>("empty_tensor_size", UserOpAttrType::kAtInt64, 32)
     .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
