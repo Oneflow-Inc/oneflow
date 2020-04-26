@@ -1,7 +1,8 @@
 #include "oneflow/customized/data/coco_data_reader.h"
 #include "oneflow/customized/data/epoch_shuffle_dataset.h"
 #include "oneflow/customized/data/partition_dataset.h"
-// #include "oneflow/customized/data/batch_dataset.h"
+#include "oneflow/customized/data/group_batch_dataset.h"
+#include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
@@ -19,11 +20,14 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
     loader_.reset(new PartitionDataset<COCOImage>(
         ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(), std::move(loader_)));
   }
+  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->GetAttr<bool>("group_by_ratio")) {
-    // TODO
+    auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {
+      return static_cast<int64_t>(sample->height / sample->width);
+    };
+    loader_.reset(new GroupBatchDataset<COCOImage>(batch_size, GetGroupId, std::move(loader_)));
   } else {
-    // int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
-    // loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    loader_.reset(new BatchDataset<COCOImage>(batch_size, std::move(loader_)));
   }
   StartLoadThread();
 }
