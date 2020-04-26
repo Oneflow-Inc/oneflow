@@ -1,6 +1,5 @@
 #include "oneflow/customized/data/coco_data_reader.h"
-#include "oneflow/customized/data/epoch_shuffle_dataset.h"
-#include "oneflow/customized/data/partition_dataset.h"
+#include "oneflow/customized/data/epoch_partition_dataset.h"
 #include "oneflow/customized/data/group_batch_dataset.h"
 #include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -14,14 +13,10 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
       ctx->GetAttr<bool>("remove_images_without_annotations")));
   loader_.reset(new COCODataset(ctx, meta));
   parser_.reset(new COCOParser(meta));
-  if (ctx->GetAttr<bool>("shuffle_after_epoch")) {
-    loader_.reset(new EpochShuffleDataset<COCOImage>(ctx->GetAttr<int64_t>("random_seed"),
-                                                     std::move(loader_)));
-  }
-  if (ctx->parallel_ctx().parallel_num() > 1) {
-    loader_.reset(new PartitionDataset<COCOImage>(
-        ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(), std::move(loader_)));
-  }
+  loader_.reset(new EpochPartitionDataset<COCOImage>(
+      ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
+      ctx->GetAttr<bool>("shuffle_after_epoch"), ctx->GetAttr<int64_t>("random_seed"),
+      std::move(loader_)));
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->GetAttr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {

@@ -67,11 +67,8 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
     return ret;
   }
 
-  LoadTargetShdPtr At(int64_t idx) override { return base_->At(idx); }
-  int64_t Size() override { return base_->Size(); }
-
-  bool EnableRandomAccess() override { return base_->EnableRandomAccess(); }
-  bool EnableGetSize() override { return base_->EnableGetSize(); }
+  bool EnableRandomAccess() override { return false; }
+  bool EnableGetSize() override { return false; }
 
  private:
   BaseDatasetUnqPtr base_;
