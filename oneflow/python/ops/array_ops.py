@@ -27,8 +27,8 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
                 return flow.user_op_builder(name if name is not None else
                         id_util_UniqueStr("BatchGather_"))\
                                 .Op("batch_gather")\
-                                .Input("in")\
-                                .Input("indices")\
+                                .Input("in", [params])\
+                                .Input("indices", [indices])\
                                 .Output("out")\
                                 .Build().RemoteBlobList()[0]
             elif axis > batch_dims:
