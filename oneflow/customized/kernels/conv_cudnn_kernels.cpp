@@ -131,6 +131,7 @@ class ConvGpuKernel : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    LOG(WARNING) << "get into ConvGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -160,8 +161,8 @@ class ConvGpuKernel : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_KERNEL(dtype, ndims)                                                      \
-  REGISTER_USER_KERNEL("conv2d")                                                                \
+#define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                             \
+  REGISTER_USER_KERNEL(#op_name)                                                                \
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                               \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         return ctx.device_type() == DeviceType::kGPU                                            \
@@ -176,15 +177,15 @@ class ConvGpuKernel : public user_op::OpKernel {
             in, weight, out, ctx->job_desc(), ctx->user_op_conf());                             \
       })
 
-REGISTER_CONV_KERNEL(float, 1);
-REGISTER_CONV_KERNEL(float, 2);
-REGISTER_CONV_KERNEL(float, 3);
-REGISTER_CONV_KERNEL(double, 1);
-REGISTER_CONV_KERNEL(double, 2);
-REGISTER_CONV_KERNEL(double, 3);
-REGISTER_CONV_KERNEL(float16, 1);
-REGISTER_CONV_KERNEL(float16, 2);
-REGISTER_CONV_KERNEL(float16, 3);
+REGISTER_CONV_KERNEL(conv1d, float, 1);
+REGISTER_CONV_KERNEL(conv2d, float, 2);
+REGISTER_CONV_KERNEL(conv3d, float, 3);
+REGISTER_CONV_KERNEL(conv1d, double, 1);
+REGISTER_CONV_KERNEL(conv2d, double, 2);
+REGISTER_CONV_KERNEL(conv3d, double, 3);
+REGISTER_CONV_KERNEL(conv1d, float16, 1);
+REGISTER_CONV_KERNEL(conv2d, float16, 2);
+REGISTER_CONV_KERNEL(conv3d, float16, 3);
 
 template<typename T>
 class ConvDataGradGpuKernel final : public user_op::OpKernel {
@@ -195,6 +196,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(WARNING) << "get into ConvDataGradGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -246,6 +248,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(WARNING) << "get into ConvFilterGradGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
