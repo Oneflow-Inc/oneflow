@@ -131,7 +131,6 @@ class ConvGpuKernel : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    LOG(WARNING) << "get into ConvGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -196,7 +195,6 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(WARNING) << "get into ConvDataGradGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -219,7 +217,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("conv2d_data_grad")                                 \
+  REGISTER_USER_KERNEL("conv_data_grad")                                   \
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                         \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
         return ctx.device_type() == DeviceType::kGPU                       \
@@ -248,7 +246,6 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(WARNING) << "get into ConvFilterGradGpuKernel";
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -271,7 +268,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("conv2d_filter_grad")                                         \
+  REGISTER_USER_KERNEL("conv_filter_grad")                                           \
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                 \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                   \
         return ctx.device_type() == DeviceType::kGPU                                 \
@@ -330,7 +327,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                 \
-  REGISTER_USER_KERNEL("conv2d_bias_grad")                             \
+  REGISTER_USER_KERNEL("conv_bias_grad")                               \
       .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                     \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {     \
         return ctx.device_type() == DeviceType::kGPU                   \

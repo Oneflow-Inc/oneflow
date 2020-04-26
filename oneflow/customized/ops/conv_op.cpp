@@ -28,7 +28,9 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-    DimVector out_shape(in->shape().dim_vec());
+    DimVector out_shape(NDims + 2);
+    out_shape.at(0) = in->shape().At(0);
+    out_shape.at(1) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcOutAndPadding(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                         strides.at(i), padding, &out_shape.at(idx_offset + i), nullptr, nullptr);
@@ -126,7 +128,6 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 }
 
 void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-  int32_t filters = op.attr<int32_t>("filters");
   std::string padding = op.attr<std::string>("padding");
   std::string data_format = op.attr<std::string>("data_format");
   std::vector<int32_t> kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
@@ -178,7 +179,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
             .Op("conv_data_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("filter", op.input("weight", 0))
-            .Input("x_like", op.input("x", 0))
+            .Input("x_like", op.input("in", 0))
             .Output("dx")
             .Attr<int32_t>("num_spatial_dims", ndims)
             .Attr<std::string>("padding", padding)
@@ -188,7 +189,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
             .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
             .Attr<int32_t>("groups", groups)
             .Build();
-    op.BindGradTensorWithOpInput(data_grad_op.output("dx", 0), "x", 0);
+    op.BindGradTensorWithOpInput(data_grad_op.output("dx", 0), "in", 0);
     AddOp(data_grad_op);
   }
 }
@@ -264,7 +265,7 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr("groups", UserOpAttrType::kAtListInt32)
+    .Attr("groups", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn(CheckAttr)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
@@ -314,13 +315,8 @@ REGISTER_USER_OP("conv_filter_grad")
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr("groups", UserOpAttrType::kAtListInt32)
+    .Attr("groups", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn(CheckAttr)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
-      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
-      CHECK_NOTNULL(x_like);
-      x_like->set_use_header_only(true);
-    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -366,17 +362,15 @@ REGISTER_USER_OP("conv_filter_grad")
       auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
         return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
       };
-      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
-      CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
-      *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+      BatchAxis4BnInOp("filter_diff")->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
           .Split("dy", 0, 0)
-          .Broadcast("filter", 0)
-          .Split("x_like", 0, 0)
-          .Split("dx", 0, 0)
+          .Split("x", 0, 0)
+          .PartialSum("filter_diff", 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
