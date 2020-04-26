@@ -8,6 +8,7 @@ REGISTER_USER_OP("dropout")
     .Input("in")
     .Input("mask")
     .Output("out")
+    .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -29,12 +30,19 @@ REGISTER_USER_OP("dropout")
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
+    })
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
+                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
+      const float& scale = op_conf.attr<float>("scale");
+      CHECK_GT_OR_RETURN(scale, 1);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("dropout_grad")
     .Input("dy")
     .Input("mask")
     .Output("dx")
+    .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
@@ -54,6 +62,12 @@ REGISTER_USER_OP("dropout_grad")
           .Split("dx", 0, 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
+      return Maybe<void>::Ok();
+    })
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
+                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
+      const float& scale = op_conf.attr<float>("scale");
+      CHECK_GT_OR_RETURN(scale, 1);
       return Maybe<void>::Ok();
     });
 
