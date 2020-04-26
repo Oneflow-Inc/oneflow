@@ -80,6 +80,7 @@ REGISTER_USER_OP_GRAD("grad").SetGenBackwardOpConfFn([](const user_op::UserOpWra
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("mask", op.input("mask", 0))
             .Output("dx")
+            .Attr("scale", op.attr<float>("scale"))
             .Build();
     op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
     AddOp(dropout_grad_op);
@@ -90,6 +91,7 @@ REGISTER_USER_OP("random_mask_like")
     .Input("like")
     .Output("out")
     .Attr("rate", UserOpAttrType::kAtFloat)
+    .Attr("seed", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
