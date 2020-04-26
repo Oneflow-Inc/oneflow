@@ -1,79 +1,104 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/customized/kernels/dropout_kernel_util.h"
 
 namespace oneflow {
 
 namespace {
 
 template<DeviceType device_type, typename T>
-class ReluKernel final : public user_op::OpKernel {
+class DropoutKernel final : public user_op::OpKernel {
  public:
-  ReluKernel() = default;
-  ~ReluKernel() = default;
+  DropoutKernel() = default;
+  ~DropoutKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    NewKernelUtil<device_type>::Relu(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
-                                     y->mut_dptr<T>());
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const float scale = ctx->GetAttr<float>("scale");
+    DropoutKernelUtil<device_type, T>::MaskAndScale(
+        ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(), mask->dptr<int8_t>(), out->mut_dptr<T>());
   };
 };
 
-#define REGISTER_RELU_KERNEL(device, dtype)                                                     \
-  REGISTER_USER_KERNEL("relu")                                                                  \
-      .SetCreateFn<ReluKernel<device, dtype>>()                                                 \
+#define REGISTER_DROPOUT_KERNEL(device, dtype)                                                     \
+  REGISTER_USER_KERNEL("dropout")                                                                  \
+      .SetCreateFn<DropoutKernel<device, dtype>>()                                                 \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
-      })                                                                                        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_RELU_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, float)
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, double)
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float)
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, double)
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float16)
 
 template<DeviceType device_type, typename T>
-class ReluGradKernel final : public user_op::OpKernel {
+class DropoutGradKernel final : public user_op::OpKernel {
  public:
-  ReluGradKernel() = default;
-  ~ReluGradKernel() = default;
+  DropoutGradKernel() = default;
+  ~DropoutGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    NewKernelUtil<device_type>::ReluBackward(ctx->device_ctx(), y_blob->shape().elem_cnt(),
-                                             y_blob->dptr<T>(), y_blob->dptr<T>(),
-                                             dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const float scale = ctx->GetAttr<float>("scale");
+    DropoutKernelUtil<device_type, T>::MaskAndScale(
+        ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(), mask->dptr<int8_t>(), dx->mut_dptr<T>());
   };
 };
 
-#define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("relu_grad")                                                              \
-      .SetCreateFn<ReluGradKernel<device, dtype>>()                                              \
+#define REGISTER_DROPOUT_GRAD_KERNEL(device, dtype)                                                 \
+  REGISTER_USER_KERNEL("dropout_grad")                                                              \
+      .SetCreateFn<DropoutGradKernel<device, dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
-      })                                                                                         \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                         \
-        return Maybe<void>::Ok();                                                                \
       });
 
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float16)
+REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kGPU, double)
+REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kGPU, float16)
+
+template<DeviceType device_type>
+class RandomMaskLikeKernel final : public user_op::OpKernel {
+ public:
+  RandomMaskLikeKernel() = default;
+  ~RandomMaskLikeKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+        
+    int64_t elem_cnt = out->shape().elem_cnt();
+    float* random_tmp = temp_buffer->mut_dptr<float>();
+    int8_t* mask = out->mut_dptr<int8_t>();
+
+    random_generator_->Uniform(elem_cnt, random_tmp);
+    RandomMaskLikeKernelUtil<device_type>::GenMask(ctx.device_ctx, elem_cnt,
+                                                   this->op_conf().random_mask_like_conf().rate(),
+                                                   random_tmp, mask);
+  };
+};
+
+#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)                                                     \
+  REGISTER_USER_KERNEL("random_mask_like")                                                                  \
+      .SetCreateFn<RandomMaskLikeKernel<device, dtype>>()                                                 \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        return ctx.device_type() == device; \
+      });
+
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
 
 }  // namespace
 
