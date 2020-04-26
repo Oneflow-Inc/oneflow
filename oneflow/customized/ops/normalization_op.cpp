@@ -216,7 +216,7 @@ REGISTER_USER_OP_GRAD("normalization")
                                                                  const std::string& input_bn,
                                                                  const std::string& name) {
               std::vector<int64_t> broadcast_shape;
-              const auto &in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+              const auto& in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
               FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
                 if (i != axis) {
                   broadcast_shape.push_back(1);
