@@ -7,9 +7,9 @@ def test_is_non_decreasing(test_case):
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_data_type(flow.float)
 
-    arrLength = 5
+    arr_Length = 5
     @flow.function(func_config)
-    def IsNDJob(x = flow.FixedTensorDef((arrLength,), batch_axis=None, dtype=flow.int32)):
+    def IsNDJob(x = flow.FixedTensorDef((arr_Length,), batch_axis=None, dtype=flow.int32)):
         return flow.is_non_decreasing(x)
     
     data = []

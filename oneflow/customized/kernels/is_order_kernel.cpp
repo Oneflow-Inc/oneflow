@@ -1,5 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ndarray/binary_func.h"
 
 namespace oneflow {
 
@@ -20,24 +21,20 @@ class CpuIsOrderKernel final : public user_op::OpKernel {
     const T* x_ptr = in->dptr<T>();
     int8_t* y_ptr = out->mut_dptr<int8_t>();
     y_ptr[0] = 1;
+    auto TryForEach = [&](const int8_t (*Cmp)(const T, const T)) {
+      if (elem_cnt >= 2) {
+        FOR_RANGE(int32_t, i, 0, elem_cnt - 1) {
+          if (Cmp(x_ptr[i], x_ptr[i + 1])) {
+            y_ptr[0] = 0;
+            break;
+          }
+        }
+      }
+    };
     if (is_strictly_inc) {
-      if (elem_cnt >= 2) {
-        FOR_RANGE(int32_t, i, 0, elem_cnt - 1) {
-          if (x_ptr[i] >= x_ptr[i + 1]) {
-            y_ptr[0] = 0;
-            break;
-          }
-        }
-      }
+      TryForEach(&BinaryFuncGE<T>::Invoke);
     } else if (is_non_dec) {
-      if (elem_cnt >= 2) {
-        FOR_RANGE(int32_t, i, 0, elem_cnt - 1) {
-          if (x_ptr[i] > x_ptr[i + 1]) {
-            y_ptr[0] = 0;
-            break;
-          }
-        }
-      }
+      TryForEach(&BinaryFuncGT<T>::Invoke);
     } else {
       UNIMPLEMENTED();
     }  // use int8 1 as true; int8 0 as false

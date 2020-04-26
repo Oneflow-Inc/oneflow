@@ -17,6 +17,9 @@ REGISTER_USER_OP("is_order")
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
     })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();  // with default (B，…)->(B，…)
+    })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       const std::string& order_type = op_conf.attr<std::string>("order_type");
