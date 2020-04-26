@@ -58,7 +58,44 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        if channel_pos == "channels_first":
+            kernel_size_list = filters.static_shape[2:4]
+        elif channel_pos == "channels_last":
+            kernel_size_list = filters.static_shape[-3:-1]
+        else:
+            raise ValueError("invalid data_format")
+        assert(isinstance(kernel_size_list, tuple))
+        assert isinstance(groups, int)
+        assert groups > 0
+        if groups > 1:
+            if data_format.upper() == "NCHW":
+                assert groups <= filters.static_shape[0]
+                assert filters.static_shape[0] % groups == 0
+                assert groups <= input.static_shape[1]
+                assert input.static_shape[1] % groups == 0
+                assert filters.static_shape[1] == input.static_shape[1] // groups
+            elif data_format.upper() == "NHWC":
+                raise ValueError("data_format NHWC not support groups > 1")
+            else:
+                raise ValueError("invalid data_format")
+        return (
+                flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+                .Op("conv2d")
+                .Input("in", [input])
+                .Input("weight", [filters])
+                .Output("out")
+                .SetAttr("filters", filters.static_shape[0], "AttrTypeInt32")
+                .SetAttr("padding", padding.lower(), "AttrTypeString")
+                .SetAttr("data_format", channel_pos, "AttrTypeString")
+                .SetAttr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+                .SetAttr("strides", strides, "AttrTypeListInt32")
+                .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
+                .SetAttr("groups", groups, "AttrTypeInt32")
+                .Build()
+                .RemoteBlobList()[0]
+        )
+    else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
         setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
@@ -97,43 +134,6 @@ def conv2d(
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
-
-    if channel_pos == "channels_first":
-        kernel_size_list = filters.static_shape[2:4]
-    elif channel_pos == "channels_last":
-        kernel_size_list = filters.static_shape[-3:-1]
-    else:
-        raise ValueError("invalid data_format")
-    assert(isinstance(kernel_size_list, tuple))
-    assert isinstance(groups, int)
-    assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCHW":
-            assert groups <= filters.static_shape[0]
-            assert filters.static_shape[0] % groups == 0
-            assert groups <= input.static_shape[1]
-            assert input.static_shape[1] % groups == 0
-            assert filters.static_shape[1] == input.static_shape[1] // groups
-        elif data_format.upper() == "NHWC":
-            raise ValueError("data_format NHWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
-    return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-            .Op("conv2d")
-            .Input("in", [input])
-            .Input("weight", [filters])
-            .Output("out")
-            .SetAttr("filters", filters.static_shape[0], "AttrTypeInt32")
-            .SetAttr("padding", padding.lower(), "AttrTypeString")
-            .SetAttr("data_format", channel_pos, "AttrTypeString")
-            .SetAttr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-            .SetAttr("strides", strides, "AttrTypeListInt32")
-            .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
-            .SetAttr("groups", groups, "AttrTypeInt32")
-            .Build()
-            .RemoteBlobList()[0]
-    )
 
 
 @oneflow_export("nn.bias_add")
