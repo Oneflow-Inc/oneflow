@@ -139,7 +139,7 @@ def test_batchnorm(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict['flow_op'] = [flow.layers.batch_normalization]
     arg_dict['input_shape'] = [(1,4,1,2)]
-    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
+    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([]), Args([1, 0.95, 0.1])]
     for arg in GenArgDict(arg_dict):
         CompareBnWithTensorFlow(**arg)
 
@@ -149,6 +149,6 @@ def test_batchnorm_inference(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict['flow_op'] = [flow.layers.batch_normalization]
     arg_dict['input_shape'] = [(1,4,1,2)]
-    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([])]
+    arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([]), Args([1, 0.95, 0.1])]
     for arg in GenArgDict(arg_dict):
         CompareBnWithTensorFlow(**arg, training=False)
