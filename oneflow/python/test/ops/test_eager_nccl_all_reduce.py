@@ -12,6 +12,6 @@ def test_eager_nccl_all_reduce(test_case):
     def test_job(x=flow.FixedTensorDef((10000,), dtype=flow.float)):
         return flow.eager_nccl_all_reduce(x, device_set=((0, 0), (0, 1), (0, 2), (0, 3)))
 
-    x = np.random.rand((10000,)).astype(np.float32)
+    x = np.random.rand(10000).astype(np.float32)
     y = test_job(x).get()
     print(y)

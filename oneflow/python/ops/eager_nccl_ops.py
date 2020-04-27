@@ -16,7 +16,7 @@ def eager_nccl_all_reduce(x, device_set, name=None):
             .Input("in", [x])
             .Output("out")
             .SetAttr("device_set_machine_ids", machine_ids, "AttrTypeListInt64")
-            .SetAttr("device_set_machine_ids", device_ids, "AttrTypeListInt64")
+            .SetAttr("device_set_device_ids", device_ids, "AttrTypeListInt64")
             .Build()
             .RemoteBlobList()[0]
     )
