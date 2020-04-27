@@ -14,36 +14,36 @@ class ReduceKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("tensor_in", 0);
-    Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("tensor_out", 0);
+    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
+    Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
-        axis.empty() ? Shape::Ones(tensor_in->shape().NumAxes())
-                     : CreateReducedShape(tensor_in->shape(), {axis.begin(), axis.end()});
+        axis.empty() ? Shape::Ones(input_tensor->shape().NumAxes())
+                     : CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, tensor_out->mut_dptr<T>()),
-        XpuVarNdarray<const T>(tensor_in->shape(), tensor_in->dptr<T>()),
+        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
+        XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
 };
 
 template<DeviceType device, typename T>
 bool IsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("tensor_out", 0);
-  if (ctx.device_type() == device && tensor_out_desc->data_type() == GetDataType<T>::value) {
+  const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0);
+  if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
     return true;
   }
   return false;
 }
 
-#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)     \
-  REGISTER_USER_KERNEL(op_name)                                             \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()              \
-      .SetIsMatchedPred(IsMatchedPred<device, dtype>)                       \
-      .SetInferTmpSizeFn([](InferContext* ctx) {                            \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("tensor_in", 0); \
-        return in_shape->elem_cnt() * sizeof(dtype);                        \
+#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)        \
+  REGISTER_USER_KERNEL(op_name)                                                \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                 \
+      .SetIsMatchedPred(IsMatchedPred<device, dtype>)                          \
+      .SetInferTmpSizeFn([](InferContext* ctx) {                               \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0); \
+        return in_shape->elem_cnt() * sizeof(dtype);                           \
       });
 
 #define REGISTER_REDUCE_BY_DEVICETYPE(device, dtype)                       \
