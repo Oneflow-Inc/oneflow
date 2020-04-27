@@ -5,7 +5,19 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 
-def is_order_ops(input, order_type, unique_str, name=None):
+@oneflow_export("is_non_decreasing")
+def is_non_decreasing(input, name=None):
+    order_type = "NON_DECREASING"
+    unique_str = "IsNonDecreasing_"
+    return (_IsOrderOp(input, order_type, unique_str, name))
+
+@oneflow_export("is_strictly_increasing")
+def is_strictly_increasing(input, name=None):
+    order_type = "STRICTLY_INCREASING"
+    unique_str = "IsStrictlyIncreasing_"
+    return (_IsOrderOp(input, order_type, unique_str, name))
+
+def _IsOrderOp(input, order_type, unique_str, name=None):
     assert order_type in ["NON_DECREASING", "STRICTLY_INCREASING"]
     assert unique_str in ["IsNonDecreasing_", "IsStrictlyIncreasing_"]
     return (
@@ -17,15 +29,3 @@ def is_order_ops(input, order_type, unique_str, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
-
-@oneflow_export("is_non_decreasing")
-def is_non_decreasing(input, name=None):
-    order_type = "NON_DECREASING"
-    unique_str = "IsNonDecreasing_"
-    return (is_order_ops(input, order_type, unique_str, name))
-
-@oneflow_export("is_strictly_increasing")
-def is_strictly_increasing(input, name=None):
-    order_type = "STRICTLY_INCREASING"
-    unique_str = "IsStrictlyIncreasing_"
-    return (is_order_ops(input, order_type, unique_str, name))

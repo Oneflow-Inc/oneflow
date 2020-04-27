@@ -24,4 +24,4 @@ def test_is_non_decreasing(test_case):
     
     for i in range(len(data)):
         y=IsSIJob(data[i]).get().ndarray()
-        test_case.assertTrue(np.allclose(y,y_groundtruth[i]))
+        test_case.assertTrue(np.array_equal(y,y_groundtruth[i]))

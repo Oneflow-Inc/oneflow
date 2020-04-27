@@ -19,6 +19,7 @@ class CpuIsOrderKernel final : public user_op::OpKernel {
     const bool is_strictly_inc = order_type == "STRICTLY_INCREASING";
     const bool is_non_dec = order_type == "NON_DECREASING";
     const T* x_ptr = in->dptr<T>();
+    // use int8 1 as true; int8 0 as false
     int8_t* y_ptr = out->mut_dptr<int8_t>();
     y_ptr[0] = 1;
     auto TryForEach = [&](const int8_t (*Cmp)(const T, const T)) {
@@ -37,7 +38,7 @@ class CpuIsOrderKernel final : public user_op::OpKernel {
       TryForEach(&BinaryFuncGT<T>::Invoke);
     } else {
       UNIMPLEMENTED();
-    }  // use int8 1 as true; int8 0 as false
+    }
   };
 };
 
