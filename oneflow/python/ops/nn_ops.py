@@ -9,6 +9,7 @@ import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 
 import collections
+import os
 
 
 @oneflow_export("nn.conv2d")
@@ -112,6 +113,17 @@ def bias_add(value, bias, data_format=None, name=None):
         else:
             raise ValueError(
                 "data_format must be of the form `N...C` or `NC...`"
+            )
+
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (oneflow.user_op_builder(name)
+            .Op("bias_add")
+            .Input("a", [value])
+            .Input("b", [bias])
+            .Output("out")
+            .SetAttr("axis", bias_add_axis, "AttrTypeInt32")
+            .Build()
+            .RemoteBlobList()[0]
             )
 
     op_conf = op_conf_util.OperatorConf()
