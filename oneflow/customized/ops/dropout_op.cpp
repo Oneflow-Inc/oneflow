@@ -118,7 +118,7 @@ REGISTER_USER_OP("random_mask_like")
       CHECK_LT_OR_RETURN(rate, 1);
       return Maybe<void>::Ok();
     });
-    
+
 }  // namespace
 
 }  // namespace oneflow
