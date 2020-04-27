@@ -371,7 +371,6 @@ def batch_normalization(
             .Output("out")
             .SetAttr("axis", axis, "AttrTypeInt32")
             .SetAttr("epsilon", epsilon, "AttrTypeFloat")
-            .SetAttr("trainable", trainable, "AttrTypeBool")
             .SetAttr("training", training, "AttrTypeBool")
             .SetAttr("momentum", momentum, "AttrTypeFloat")
             .SetAttr("center", center, "AttrTypeBool")

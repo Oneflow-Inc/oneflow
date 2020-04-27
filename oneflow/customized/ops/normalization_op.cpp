@@ -14,7 +14,6 @@ REGISTER_USER_OP("normalization")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .Attr("training", UserOpAttrType::kAtBool)
-    .Attr("trainable", UserOpAttrType::kAtBool)
     .Attr("momentum", UserOpAttrType::kAtFloat)
     .Attr("center", UserOpAttrType::kAtBool)
     .Attr("scale", UserOpAttrType::kAtBool)
@@ -69,7 +68,7 @@ REGISTER_USER_OP("normalization")
       } else {
         SetParamTensorDesc("gamma");
       }
-      if (ctx->GetAttr<bool>("training") && ctx->GetAttr<bool>("trainable")) {
+      if (ctx->GetAttr<bool>("training")) {
         SetParamTensorDesc("mean");
         SetParamTensorDesc("inv_variance");
       }
@@ -77,7 +76,7 @@ REGISTER_USER_OP("normalization")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      if (ctx->GetAttr<bool>("training") && ctx->GetAttr<bool>("trainable")) {
+      if (ctx->GetAttr<bool>("training")) {
         ctx->BatchAxis4ArgNameAndIndex("mean", 0)->clear_value();
         ctx->BatchAxis4ArgNameAndIndex("inv_variance", 0)->clear_value();
       }

@@ -28,7 +28,6 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     bool training = ctx->GetAttr<bool>("training");
-    bool trainable = ctx->GetAttr<bool>("trainable");
     const auto* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -57,7 +56,7 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CheckParamTensor(moving_variance);
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
 
-    if (training && trainable) {
+    if (training) {
       const auto momentum = ctx->GetAttr<float>("momentum");
       auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
       auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
