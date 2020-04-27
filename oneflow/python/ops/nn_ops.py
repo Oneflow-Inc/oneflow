@@ -125,18 +125,18 @@ def bias_add(value, bias, data_format=None, name=None):
             .Build()
             .RemoteBlobList()[0]
             )
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
-    setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
-    setattr(op_conf.bias_add_conf, "out", "out")
-    setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "out", "out")
+        setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
