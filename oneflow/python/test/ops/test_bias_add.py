@@ -61,7 +61,6 @@ def CompareBiasAddWithTensorFlow(device_type, input_shapes,
 
     x = [np.random.uniform(low=input_minval, high=input_maxval,
                           size=input_shape).astype(np.float32) for input_shape in input_shapes]
-    print(x)
     of_y, of_x_diff1, of_x_diff2 = RunOneflowBiasAdd(device_type, *x, flow_args)
     tf_y, tf_x_diff1, tf_x_diff2 = RunTensorFlowBiasAdd(*x, tf_args)
 
