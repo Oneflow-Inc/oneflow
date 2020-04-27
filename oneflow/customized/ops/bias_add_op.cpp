@@ -23,13 +23,13 @@ REGISTER_USER_OP("bias_add")
       for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
            ++i) {
         if (i == axis) { continue; }
-        SbpSignatureBuilder().Split("a", i).Broadcast("b").Split("out", i).Build(
+        SbpSignatureBuilder().Split("a", i, 0).Broadcast("b").Split("out", i, 0).Build(
             ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
       SbpSignatureBuilder()
-          .Split("b", 0)
-          .Split("a", axis)
-          .Split("out", axis)
+          .Split("b", 0, 0)
+          .Split("a", axis, 0)
+          .Split("out", axis, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
