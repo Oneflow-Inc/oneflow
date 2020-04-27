@@ -74,6 +74,11 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
   ~RandomMaskLikeKernel() = default;
 
  private:
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    return std::make_shared<OpKernelStateWrapper<std::mt19937>>(seed);
+  }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
