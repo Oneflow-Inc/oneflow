@@ -18,6 +18,12 @@ struct Any {
     return a || b;
   }
 };
+struct All {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a && b;
+  }
+};
 }  // namespace cub
 
 namespace oneflow {

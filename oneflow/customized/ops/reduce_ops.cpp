@@ -1,11 +1,4 @@
-#include <cstdint>
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/framework/user_op_attr.pb.h"
 
 namespace oneflow {
 
@@ -73,5 +66,7 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 REGISTER_REDUCE_USER_OP("reduce_any")
 REGISTER_REDUCE_USER_OP("reduce_min")
 REGISTER_REDUCE_USER_OP("reduce_prod")
+REGISTER_REDUCE_USER_OP("reduce_all")
+REGISTER_REDUCE_USER_OP("reduce_sum")
 
 }  // namespace oneflow

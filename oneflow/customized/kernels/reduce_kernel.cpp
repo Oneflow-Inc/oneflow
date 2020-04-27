@@ -1,7 +1,4 @@
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/tensor.h"
-#include <math.h>
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 
@@ -52,7 +49,9 @@ bool IsMatchedPred(const KernelRegContext& ctx) {
 #define REGISTER_REDUCE_BY_DEVICETYPE(device, dtype)                       \
   REGISTER_REDUCE_XPU_KERNEL("reduce_prod", BinaryFuncProd, device, dtype) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, dtype)
+  REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, dtype)   \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, dtype)   \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, device, dtype)
 
 #define REGISTER_REDUCE_KERNEL(dtype)                    \
   REGISTER_REDUCE_BY_DEVICETYPE(DeviceType::kCPU, dtype) \

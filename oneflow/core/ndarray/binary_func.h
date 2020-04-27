@@ -24,7 +24,7 @@ namespace oneflow {
 #define BINARY_FUNC_NAME_SEQ ARITHMETIC_BINARY_FUNC_NAME_SEQ LOGICAL_BINARY_FUNC_NAME_SEQ
 #define BINARY_FUNC_SEQ ARITHMETIC_BINARY_FUNC_SEQ LOGICAL_BINARY_FUNC_SEQ
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 
@@ -136,6 +136,12 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 template<typename T>
 struct BinaryFuncAND final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
+};
+template<typename T>
+struct BinaryFuncAll final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) {
+    return BinaryFuncAND<T>::Invoke(x, y);
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
@@ -283,6 +289,7 @@ SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncProd, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAny, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAll, GetOneVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
 }  // namespace oneflow

@@ -53,6 +53,20 @@ def reduce_prod(x, axis=None, keepdims=None, name=None):
         .SetAttr("keepdims", keepdims, "AttrTypeBool")\
         .Build().RemoteBlobList()[0]
 
+@oneflow_export("math.reduce_all")
+def reduce_all(x, axis=None, keepdims=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ReduceAll_")
+    if axis is None:
+        axis = []
+    elif isinstance(axis, list) and len(axis) == 0:
+        return math_ops.not_equal(x, constant_op.constant_scalar(value=0.0, dtype=x.dtype))
+    return user_op_builder.UserOpConfWrapperBuilder(name).Op("reduce_all")\
+        .Input("tensor_in", [x])\
+        .Output("tensor_out")\
+        .SetAttr("axis", axis, "AttrTypeListInt32")\
+        .SetAttr("keepdims", keepdims, "AttrTypeBool")\
+        .Build().RemoteBlobList()[0]
 
 @oneflow_export("math.reduce_euclidean_norm")
 def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
