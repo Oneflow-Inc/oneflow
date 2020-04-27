@@ -1,5 +1,4 @@
-#include "oneflow/core/kernel/dropout_kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/customized/kernels/dropout_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -54,14 +53,14 @@ void DropoutKernelUtil<DeviceType::kGPU, float16>::MaskAndScale(DeviceCtx* ctx, 
 }
 
 template<>
-void RandomMaskLikeKernelUtil<DeviceType::kGPU>::GenMask(DeviceCtx* ctx, const int64_t n,
-                                                         float threshold, const float* random_tmp,
-                                                         int8_t* mask) {
+void RandomMaskLikeKernelUtil2<DeviceType::kGPU>::GenMask(DeviceCtx* ctx, const int64_t n,
+                                                          float threshold, const float* random_tmp,
+                                                          int8_t* mask) {
   GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, threshold, random_tmp, mask);
 }
 
-template struct RandomMaskLikeKernelUtil<DeviceType::kGPU>;
+template struct RandomMaskLikeKernelUtil2<DeviceType::kGPU>;
 
 #define INITIATE_DROPOUT_KERNEL_UTIL_GPU(T, type_proto) \
   template struct DropoutKernelUtil<DeviceType::kGPU, T>;
