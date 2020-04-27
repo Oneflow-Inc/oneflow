@@ -12,6 +12,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 namespace oneflow {
 
@@ -113,6 +114,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<ThreadMgr>::New(plan);
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
+  Global<EagerNcclCommMgr>::New();
 #endif  // WITH_CUDA
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 }
@@ -120,6 +122,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
 #ifdef WITH_CUDA
+  Global<EagerNcclCommMgr>::Delete();
   Global<NcclCommMgr>::Delete();
 #endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();
