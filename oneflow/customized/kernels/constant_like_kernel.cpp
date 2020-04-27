@@ -1,5 +1,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/kernel/kernel_registration.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel.h"
 
@@ -25,7 +27,7 @@ class ConstantLikeKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_CONSTANT_LIKE_KERNEL(device, dtype)                                  \
+#define REGISTER_CONSTANT_LIKE_KERNEL_WITH_DEVICE_AND_DTYPE(device, dtype)            \
   REGISTER_USER_KERNEL("constant_like")                                               \
       .SetCreateFn<ConstantLikeKernel<device, dtype>>()                               \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
@@ -33,16 +35,15 @@ class ConstantLikeKernel final : public user_op::OpKernel {
         return ctx.device_type() == device && data_type == GetDataType<dtype>::value; \
       });
 
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kCPU, float)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kCPU, double)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kCPU, int8_t)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kCPU, int64_t)
+#define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                   \
+  REGISTER_CONSTANT_LIKE_KERNEL_WITH_DEVICE_AND_DTYPE(DeviceType::kCPU, dtype) \
+  REGISTER_CONSTANT_LIKE_KERNEL_WITH_DEVICE_AND_DTYPE(DeviceType::kGPU, dtype)
 
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kGPU, float)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kGPU, double)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kGPU, int8_t)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_CONSTANT_LIKE_KERNEL(DeviceType::kGPU, int64_t)
+REGISTER_CONSTANT_LIKE_KERNEL(float);
+REGISTER_CONSTANT_LIKE_KERNEL(double);
+REGISTER_CONSTANT_LIKE_KERNEL(int8_t);
+REGISTER_CONSTANT_LIKE_KERNEL(int32_t);
+REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
 
+#undef REGISTER_CONSTANT_LIKE_KERNEL
 }  // namespace oneflow

@@ -2,12 +2,9 @@ import oneflow as flow
 import numpy as np
 import os
 
-os.environ['ENABLE_USER_OP'] = 'True'
-
 def _check(test_case, x, y, value, dtype=None):
     np_constant_like = np.full(x.shape, value)
-    
-    assert np.allclose(np_constant_like, y, rtol=1e-5, atol=1e-5)
+    assert np.array_equal(np_constant_like,y)
 
 def _run_test(test_case, x, value, dtype=None, device='gpu'):
     func_config = flow.FunctionConfig()
