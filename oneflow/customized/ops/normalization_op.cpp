@@ -86,8 +86,8 @@ REGISTER_USER_OP("normalization")
       SbpSignatureBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
-          .Split("in", 0)
-          .Split("out", 0)
+          .Split("in", 0, 0)
+          .Split("out", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
@@ -149,9 +149,9 @@ REGISTER_USER_OP("normalization_grad")
       SbpSignatureBuilder()
           .Broadcast(ctx->inputs())
           .PartialSum(ctx->outputs())
-          .Split("x", 0)
-          .Split("dx", 0)
-          .Split("dy", 0)
+          .Split("x", 0, 0)
+          .Split("dx", 0, 0)
+          .Split("dy", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
