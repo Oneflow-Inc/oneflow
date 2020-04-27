@@ -15,8 +15,8 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   parser_.reset(new COCOParser(meta));
   loader_.reset(new EpochPartitionDataset<COCOImage>(
       ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
-      ctx->GetAttr<bool>("shuffle_after_epoch"), ctx->GetAttr<int64_t>("random_seed"),
-      std::move(loader_)));
+      ctx->GetAttr<bool>("stride_partition"), ctx->GetAttr<bool>("shuffle_after_epoch"),
+      ctx->GetAttr<int64_t>("random_seed"), std::move(loader_)));
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->GetAttr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {

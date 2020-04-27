@@ -13,29 +13,46 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
   using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  EpochPartitionDataset(int32_t parallel_num, int32_t parallel_id, bool shuffle,
+  EpochPartitionDataset(int32_t parallel_num, int32_t parallel_id, bool stride_part, bool shuffle,
                         int64_t random_seed, BaseDatasetUnqPtr&& dataset)
       : base_(std::move(dataset)),
         shuffle_(shuffle),
         random_engine_(random_seed),
         num_partitions_(parallel_num),
-        pos_(parallel_id) {
+        pos_(parallel_id),
+        pos_in_partition_(0) {
     CHECK(base_->EnableRandomAccess());
     CHECK(base_->EnableGetSize());
+    partition_size_ = std::ceil(static_cast<float>(base_->Size()) / num_partitions_);
     index_seq_.resize(base_->Size());
     GenNewIndexSequence();
   }
   ~EpochPartitionDataset() = default;
 
   LoadTargetShdPtrVec Next() override {
+    // 2 partition strategy
+    // assume dataset size is 10, index seq don't shuffle and there are 4 parts
+    // stride partition strategy:
+    // |  part1   |  part2   |  part3   |  part4   |
+    // | 0, 4, 8, | 1, 5, 9, | 2, 6, 0, | 3, 7, 1, |
+    // contiguous partition strategy:
+    // |  part1   |  part2   |  part3   |  part4   |
+    // | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
     LoadTargetShdPtrVec ret;
-    if (pos_ >= index_seq_.size()) {
-      pos_ %= index_seq_.size();
-      GenNewIndexSequence();
-    }
+    CheckRanOutOfSize();
     LoadTargetShdPtr sample = base_->At(index_seq_.at(pos_));
     ret.push_back(std::move(sample));
-    pos_ += num_partitions_;
+    if (stride_partition_) {
+      pos_ += num_partitions_;
+    } else {
+      pos_ += 1;
+      pos_in_partition_ += 1;
+      if (pos_in_partition_ == partition_size_) {
+        pos_ += (num_partitions_ - 1) * partition_size_;
+        CheckRanOutOfSize();
+        pos_in_partition_ = 0;
+      }
+    }
     return ret;
   }
 
@@ -43,6 +60,12 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
   bool EnableGetSize() override { return false; }
 
  private:
+  void CheckRanOutOfSize() {
+    if (pos_ >= index_seq_.size()) {
+      GenNewIndexSequence();
+      pos_ %= index_seq_.size();
+    }
+  }
   void GenNewIndexSequence() {
     std::iota(index_seq_.begin(), index_seq_.end(), 0);
     if (shuffle_) { std::shuffle(index_seq_.begin(), index_seq_.end(), random_engine_); }
@@ -51,8 +74,11 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
   BaseDatasetUnqPtr base_;
   bool shuffle_;
   std::mt19937 random_engine_;
-  int32_t num_partitions_;
+  bool stride_partition_;
+  int64_t num_partitions_;
+  int64_t partition_size_;
   int64_t pos_;
+  int64_t pos_in_partition_;
   std::vector<int64_t> index_seq_;
 };
 
