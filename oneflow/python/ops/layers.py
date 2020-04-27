@@ -322,25 +322,31 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    beta = flow.get_variable(
-        name=name + "-beta",
-        shape=params_shape,
-        dtype=inputs.dtype,
-        initializer=beta_initializer if beta_initializer is not None and trainable else flow.zeros_initializer(),
-        regularizer=beta_regularizer,
-        trainable=trainable,
-        distribute=distribute_util.broadcast(),
-    )
+    if center and trainable:
+        beta = flow.get_variable(
+            name=name + "-beta",
+            shape=params_shape,
+            dtype=inputs.dtype,
+            initializer=beta_initializer if beta_initializer is not None else flow.zeros_initializer(),
+            regularizer=beta_regularizer,
+            trainable=True,
+            distribute=distribute_util.broadcast(),
+        )
+    else:
+        beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
 
-    gamma = flow.get_variable(
-        name=name + "-gamma",
-        shape=params_shape,
-        dtype=inputs.dtype,
-        initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
-        regularizer=gamma_regularizer,
-        trainable=trainable,
-        distribute=distribute_util.broadcast(),
-    )
+    if scale and trainable:
+        gamma = flow.get_variable(
+            name=name + "-gamma",
+            shape=params_shape,
+            dtype=inputs.dtype,
+            initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
+            regularizer=gamma_regularizer,
+            trainable=trainable,
+            distribute=distribute_util.broadcast(),
+        )
+    else:
+        gamma = flow.constant(1, dtype=inputs.dtype, shape=params_shape)
 
     moving_mean = flow.get_variable(
         name=name + "-moving_mean",
