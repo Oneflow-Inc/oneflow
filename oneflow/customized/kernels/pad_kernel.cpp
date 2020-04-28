@@ -142,8 +142,6 @@ class PadGradKernel final : public user_op::OpKernel {
                                reduced_memory_copy_nd_desc);
   }
   bool IsSkippable() const override { return true; }
-
-  std::unique_ptr<MemoryCopier> device_memory_copier_;
 };
 
 #define REGISTER_PAD_GRAD_KERNEL(dev, dtype)                                                  \
