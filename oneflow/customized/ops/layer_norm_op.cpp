@@ -242,8 +242,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
           .Split(ctx->inputs(), 0)
-          .Broadcast("gamma")
           .Split(ctx->outputs(), 0)
+          .Broadcast("gamma", 0)
           .Broadcast("gamma_diff", 0)
           .Broadcast("beta_diff", 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
