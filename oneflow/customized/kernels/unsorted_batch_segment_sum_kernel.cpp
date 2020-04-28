@@ -25,6 +25,8 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t axis = segment_ids->shape().NumAxes() - 1;
     const Shape& flat_data_shape = GetFlatShape(data->shape(), axis);
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+                                     out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(ctx->device_ctx(), data->dptr<T>(),
        segment_ids->dptr<K>(), flat_data_shape, out->shape().At(axis), out->mut_dptr<T>());
   }

@@ -46,7 +46,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
                 initializer=flow.constant_initializer(0),
             )
             x = x + x_blob
-            y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims )
+            y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
             flow.losses.add_loss(y)
         flow.watch_diff(x, compare_fn)
         return y
@@ -85,26 +85,26 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
     if isinstance(dy, tf.IndexedSlices):
         test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
         zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
-        print("dy.values: ", dy.values)
+        #print("dy.values: ", dy.values)
         dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
 
     if mirrored:
 
         def compare_dy(params_grad):
-            print("----------------------------------------------------")
-            print("tf: dy.numpy: ", dy.numpy)
-            print("of: param_grad.ndarray: ", params_grad.ndarray_list()[0])
-            print("------------------------------------------------------")
+            #print("----------------------------------------------------")
+            #print("tf: dy.numpy: ", dy.numpy)
+            #print("of: param_grad.ndarray: ", params_grad.ndarray_list()[0])
+            #print("------------------------------------------------------")
             test_case.assertTrue(np.array_equal(dy.numpy(),
                 params_grad.ndarray_list()[0]))
 
     else:
 
         def compare_dy(params_grad):
-            print("----------------------------------------------------")
-            print("tf: dy.numpy: ", dy.numpy)
-            print("of: param_grad.ndarray: ", params_grad.ndarray())
-            print("------------------------------------------------------")
+            #print("----------------------------------------------------")
+            #print("tf: dy.numpy: ", dy.numpy)
+            #print("of: param_grad.ndarray: ", params_grad.ndarray())
+            #print("------------------------------------------------------")
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
     gather_fn = _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_dy)
@@ -116,10 +116,10 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         of_y = gather_fn([params], [indices]).get().ndarray_list()[0]
     else:
         of_y = gather_fn(params, indices).get().ndarray()
-    print("----------------------------------------------------")
-    print("tf_y.numpy: ", y.numpy())
-    print("of_y.numpy: ", of_y)
-    print("------------------------------------------------------")
+    #print("----------------------------------------------------")
+    #print("tf_y.numpy: ", y.numpy())
+    #print("of_y.numpy: ", of_y)
+    #print("------------------------------------------------------")
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 #def test_gather(test_case):

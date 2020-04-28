@@ -17,8 +17,10 @@ class BatchGatherKernel final : public user_op::OpKernel {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t axis = indices->shape().NumAxes() - 1;
-    const Shape flat_out_shape = Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-
+    const Shape flat_out_shape = Shape({out->shape().Count(0, axis),
+                    out->shape().At(axis), out->shape().Count(axis + 1)});
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+                             out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(),
         in->dptr<T>(), indices->dptr<K>(), flat_out_shape,
         in->shape().At(axis), out->mut_dptr<T>());
