@@ -100,7 +100,7 @@ def reshape(x, shape, name=None):
         return flow.user_op_builder(name).Op("reshape")\
             .Input("in", [x])\
             .Output("out")\
-            .SetAttr("shape", infer_shape(x, shape), "AttrTypeListInt32")\
+            .SetAttr("shape", infer_shape(x, shape), "AttrTypeShape")\
             .Build().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()

@@ -5,13 +5,13 @@
 
 namespace oneflow {
 
-Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const std::vector<int32_t>& shape) {
+Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const Shape& shape) {
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
   DimVector dim_vec;
-  FOR_RANGE(int, axis, 0, shape.size()) {
-    int64_t dim = shape.at(axis);
+  FOR_RANGE(int, axis, 0, shape.NumAxes()) {
+    int64_t dim = shape.dim_vec().at(axis);
     dim_vec.push_back(dim);
     if (dim == -1) {
       OF_CHECK(has_minus_1 == false) << "only one `-1' supported";
@@ -39,20 +39,20 @@ Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const std::vector<i
 REGISTER_USER_OP("reshape")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtListInt32)
+    .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const auto& shape = ctx->GetAttr<std::vector<int32_t>>("shape");
-      CHECK_GE_OR_RETURN(shape.size(), 1);
-      DimVector dim_vec = {shape.begin(), shape.end()};
+      const Shape& shape = ctx->GetAttr<Shape>("shape");
+      CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+      DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
       FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GE_OR_RETURN(dim_vec.at(i), 0); }
       const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       const auto& parallel_ctx = ctx->parallel_ctx();
       if (sbp_parallel.has_split_parallel()) {
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
-        BalancedSplitter spliter(shape.at(split_axis), parallel_ctx.parallel_num());
-        CHECK_GE_OR_RETURN(shape.at(split_axis), parallel_ctx.parallel_num());
+        BalancedSplitter spliter(shape.dim_vec().at(split_axis), parallel_ctx.parallel_num());
+        CHECK_GE_OR_RETURN(shape.dim_vec().at(split_axis), parallel_ctx.parallel_num());
         dim_vec.at(split_axis) = spliter.At(parallel_ctx.parallel_id()).size();
       }
       *out_shape = Shape(dim_vec);
@@ -61,7 +61,7 @@ REGISTER_USER_OP("reshape")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-      const auto& shape = ctx->GetAttr<std::vector<int32_t>>("shape");
+      const Shape& shape = ctx->GetAttr<Shape>("shape");
       const auto& outshape = GetLogicalOutTensorShape(in_shape, shape)
                                  .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
       return ReshapeOpUtil::GetReshapeSbpSignatures(
