@@ -41,7 +41,7 @@ class CpuArgSortKernel final : public user_op::OpKernel {
       std::sort(out_ptr_i, out_ptr_i + instance_size, comp);
     }
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 #define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                           \

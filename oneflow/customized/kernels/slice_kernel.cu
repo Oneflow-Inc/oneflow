@@ -140,7 +140,7 @@ class SliceGpuKernel final : public user_op::OpKernel {
                          ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, input->dptr<T>(),
                                                              output->mut_dptr<T>());
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 template<typename T>
@@ -161,7 +161,7 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, dy->dptr<T>(), dx->mut_dptr<T>());
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 #define REGISTER_SLICE_GPU_KERNEL(dtype)                                              \

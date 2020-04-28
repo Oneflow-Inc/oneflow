@@ -73,7 +73,7 @@ class CpuL2NormalizeKernel final : public user_op::OpKernel {
     L2NormalizeForward<T>(n, c, d, static_cast<T>(epsilon), x->dptr<T>(),
                           square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 #define REGISTER_CPU_L2_NORMALIZE_KERNEL(dtype)                                     \
@@ -107,7 +107,7 @@ class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
     L2NormalizeBackward<T>(n, c, d, static_cast<T>(epsilon), y->dptr<T>(), dy->dptr<T>(),
                            square_x_sum->dptr<T>(), dx->mut_dptr<T>());
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 #define REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                                  \

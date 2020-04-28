@@ -79,7 +79,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
   }
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 #define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                    \

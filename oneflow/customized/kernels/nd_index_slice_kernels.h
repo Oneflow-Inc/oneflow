@@ -13,7 +13,7 @@ class GatherNdKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -24,7 +24,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -35,7 +35,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 template<DeviceType device_type, typename T, typename I>
@@ -46,7 +46,7 @@ class TensorScatterNdAddKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;
-  bool IsSkippable() const override { return true; }
+  bool IsComputeSkippableWhenEmpty() const override { return true; }
 };
 
 template<DeviceType device_type, typename T, typename I>
