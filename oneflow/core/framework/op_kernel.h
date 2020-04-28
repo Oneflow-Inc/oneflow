@@ -8,8 +8,11 @@
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/kernel/op_kernel_infer_cache_helper.h"
 
 namespace oneflow {
+
+class UserKernel;
 
 namespace user_op {
 
@@ -39,9 +42,9 @@ class KernelInitContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-class KernelShapeInferContext {
+class KernelInferContext {
  public:
-  virtual ~KernelShapeInferContext() = default;
+  virtual ~KernelInferContext() = default;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -50,21 +53,21 @@ class KernelShapeInferContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
 
   virtual DeviceCtx* device_ctx() = 0;
-  virtual ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
-  virtual MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                    int32_t arg_index) = 0;
-
-  virtual void InferShape() { UNIMPLEMENTED(); }
-  virtual void ForwardShape(std::function<void(KernelShapeInferContext*)>) { UNIMPLEMENTED(); }
+  virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t arg_index) = 0;
+  virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t arg_index) = 0;
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
 
+  void NaiveInferShape() { UNIMPLEMENTED(); }
+
  protected:
-  KernelShapeInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
-  KernelShapeInferContext(const KernelShapeInferContext&) = delete;
+  KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelInferContext(const KernelInferContext&) = delete;
 
  private:
   UserOpConfWrapper user_op_conf_;
@@ -106,6 +109,8 @@ class OpKernelState {
   OpKernelState() = default;
 };
 
+// class UserKernel;
+
 class OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
@@ -118,13 +123,19 @@ class OpKernel {
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
 
-  virtual void InferShape(KernelShapeInferContext* ctx) const { ctx->InferShape(); }
-  virtual void ForwardShape(KernelShapeInferContext* ctx) const {
-    ctx->ForwardShape([this](KernelShapeInferContext* ctx) { this->InferShape(ctx); });
-  }
+  virtual void InferShape(KernelInferContext* ctx) const { ctx->NaiveInferShape(); }
 
  protected:
   OpKernel() = default;
+
+ private:
+  friend UserKernel;
+
+  void ForwardShape(KernelInferContext* ctx) const {
+    infer_helper_->ForwardShape([this](KernelInferContext* ctx) { this->InferShape(ctx); }, ctx);
+  }
+
+  std::unique_ptr<OpKernelInferCacheHelper> infer_helper_;
 };
 
 }  // namespace user_op
