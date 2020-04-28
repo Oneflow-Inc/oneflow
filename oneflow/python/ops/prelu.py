@@ -35,7 +35,7 @@ def prelu(
         name + "-alpha",
         shape=alpha_shape,
         dtype=inputs.dtype,
-        initializer=alpha_initializer, #flow.constant_initializer(alpha_initializer),
+        initializer=alpha_initializer, 
         distribute=model_distribute
     )
     op_conf = op_conf_util.OperatorConf()
@@ -50,3 +50,4 @@ def prelu(
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi) 
+

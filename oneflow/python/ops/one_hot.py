@@ -30,3 +30,4 @@ def one_hot(indices, depth, dtype=None, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
