@@ -46,9 +46,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 template<DeviceType device_type, typename T>
 class PadKernel final : public user_op::OpKernel {
  public:
-  PadKernel() {
-    device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
-  }
+  PadKernel() = default;
   ~PadKernel() = default;
 
  private:
@@ -86,7 +84,9 @@ class PadKernel final : public user_op::OpKernel {
   }
   bool IsSkippable() const override { return true; }
 
-  std::unique_ptr<MemoryCopier> device_memory_copier_;
+  std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
+  device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
+                             reduced_memory_copy_nd_desc);
 };
 
 #define REGISTER_PAD_KERNEL(dev, dtype)                                                      \
@@ -110,9 +110,7 @@ REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
 template<DeviceType device_type, typename T>
 class PadGradKernel final : public user_op::OpKernel {
  public:
-  PadGradKernel() {
-    device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
-  }
+  PadGradKernel() = default;
   ~PadGradKernel() = default;
 
  private:
@@ -140,8 +138,10 @@ class PadGradKernel final : public user_op::OpKernel {
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
     memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-    device_memory_copier_->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
-                                reduced_memory_copy_nd_desc);
+
+    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
+    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
+                               reduced_memory_copy_nd_desc);
   }
   bool IsSkippable() const override { return true; }
 

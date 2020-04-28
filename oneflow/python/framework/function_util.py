@@ -21,8 +21,9 @@ class FunctionConfig(object):
         assert attr_name in name2default
         flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
-        def FunctionConfigSetter(attr_value):
+        def FunctionConfigSetter(attr_value = None):
             if default_val.HasField('at_bool'):
+                if attr_value is None: attr_value = True
                 assert type(attr_value) is bool
                 flag_name2flag_value[attr_name].at_bool = attr_value
             elif default_val.HasField('at_int64'):
