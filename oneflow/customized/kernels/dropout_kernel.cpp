@@ -97,7 +97,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
     random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
 
     RandomMaskLikeKernelUtil<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
-                                                    ctx->GetAttr<float>("rate"), random_tmp, mask);
+                                                   ctx->GetAttr<float>("rate"), random_tmp, mask);
   };
 };
 

@@ -87,12 +87,11 @@ struct DropoutKernelUtil<DeviceType::kCPU, T> final {
 };
 
 template<>
-struct RandomMaskLikeKernelUtil<DeviceType::kCPU> final {
-  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
-                      int8_t* mask) {
-    for (int64_t i = 0; i < n; ++i) { mask[i] = random_tmp[i] > threshold; }
-  }
-};
+void RandomMaskLikeKernelUtil<DeviceType::kCPU>::GenMask(DeviceCtx* ctx, const int64_t n,
+                                                         float threshold, const float* random_tmp,
+                                                         int8_t* mask) {
+  for (int64_t i = 0; i < n; ++i) { mask[i] = random_tmp[i] > threshold; }
+}
 
 template struct RandomMaskLikeKernelUtil<DeviceType::kCPU>;
 
