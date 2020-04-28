@@ -798,6 +798,7 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
     )
     return y
 
+
 @oneflow_export("math.squared_difference")
 def squared_difference(x, y, name=None):
     name_subtract, name_square=None, None
