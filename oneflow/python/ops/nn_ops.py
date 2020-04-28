@@ -534,5 +534,6 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Output("y")
         .SetAttr("alpha", float(alpha), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )

@@ -10,7 +10,7 @@ func_config.default_data_type(flow.float)
 def test_reshape(x, shape, name):
     return flow.user_op_builder(name).Op("TestReshape").Input("in",[x]).Output("out") \
             .SetAttr("shape", shape, "AttrTypeShape") \
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
 
 @flow.function(func_config)
 def ReshapeJob(x = flow.FixedTensorDef((10, 2))):

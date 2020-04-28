@@ -9,7 +9,7 @@ func_config.default_data_type(flow.float)
 
 def my_test_source(name):
     with flow.fixed_placement("cpu", "0:0"):
-        return flow.user_op_builder(name).Op("TestSource").Output("out").Build().RemoteBlobList()[0]
+        return flow.user_op_builder(name).Op("TestSource").Output("out").Build().InferAndTryRun().RemoteBlobList()[0]
 
 @flow.function(func_config)
 def TestSourceJob():

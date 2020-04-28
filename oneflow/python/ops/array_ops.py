@@ -292,7 +292,7 @@ def slice_v2(input, slice_tup_list, name=None):
         .SetAttr("has_end", has_end_list, "AttrTypeListInt64")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("concat")
@@ -323,7 +323,7 @@ def gather_nd(params, indices, name=None):
         .Output("out")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("scatter_nd")
@@ -339,7 +339,7 @@ def scatter_nd(indices, updates, shape, name=None):
         .Output("out")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("tensor_scatter_nd_update")
@@ -355,7 +355,7 @@ def tensor_scatter_nd_update(params, indices, updates, name=None):
         .Output("out")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("tensor_scatter_nd_add")
@@ -371,7 +371,7 @@ def tensor_scatter_nd_add(params, indices, updates, name=None):
         .Output("out")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("argwhere")
@@ -432,6 +432,7 @@ def where(condition, x=None, y=None, name=None):
             .Input("y", [broadcast_y])
             .Output("out")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -537,6 +538,7 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
     return (
         op
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -578,6 +580,7 @@ def squeeze(input, axis=None, name=None):
         .Output("out")
         .SetAttr("axes", list(axis), "AttrTypeListInt32")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -593,5 +596,6 @@ def expand_dims(input, axis, name=None):
         .Output("out")
         .SetAttr("axis", axis, "AttrTypeInt32")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )

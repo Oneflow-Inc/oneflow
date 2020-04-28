@@ -20,5 +20,6 @@ def smooth_l1_loss(prediction, label, beta=1.0, name=None):
     return (
         op
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )

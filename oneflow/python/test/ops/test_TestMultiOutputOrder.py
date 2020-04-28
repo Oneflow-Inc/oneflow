@@ -6,7 +6,7 @@ def TestMultiOutputOrder(x, name):
             .Input("in",[x])\
             .Output("out1")\
             .Output("out2")\
-            .Build().RemoteBlobList()
+            .Build().InferAndTryRun().RemoteBlobList()
 
 def GenerateTest(test_case, shape):
     func_config = flow.FunctionConfig()

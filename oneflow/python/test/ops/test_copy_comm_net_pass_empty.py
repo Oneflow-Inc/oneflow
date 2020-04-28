@@ -7,7 +7,7 @@ def ccrelu(x, name):
             .Op("ccrelu")\
             .Input("in",[x])\
             .Output("out")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
 
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_comm_net(test_case):

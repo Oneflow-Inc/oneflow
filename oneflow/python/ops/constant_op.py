@@ -40,7 +40,7 @@ def constant(value, dtype=None, shape=None, name=None):
             .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")\
             .SetAttr("dtype", dtype, "AttrTypeDataType")\
             .SetAttr("shape", shape, "AttrTypeShape")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)

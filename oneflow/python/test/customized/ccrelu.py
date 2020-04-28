@@ -8,7 +8,7 @@ func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
 
 def ccrelu(x, name):
-    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().RemoteBlobList()[0]
+    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().InferAndTryRun().RemoteBlobList()[0]
 
 @flow.function(func_config)
 def ReluJob(x = flow.FixedTensorDef((10, 2))):

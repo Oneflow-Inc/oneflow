@@ -128,6 +128,7 @@ def scalar_add(x, operand, name=None):
                 .SetAttr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -712,6 +713,7 @@ def top_k(input, k=1, sorted=True, name=None):
         .SetAttr("k", k, "AttrTypeInt32",)
         .SetAttr("sorted", sorted, "AttrTypeBool",)
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -723,6 +725,7 @@ def argmax(input, name=None):
         .Input("in", [input])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -778,7 +781,7 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
 
-    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
+    return op_builder.Input("x", [values]).Output("y").Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("math.l2_normalize")
@@ -794,6 +797,7 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .SetAttr("axis", int(axis), "AttrTypeInt32")
         .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()
     )
     return y
