@@ -14,10 +14,10 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   user_op::Tensor* segm_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm", 0);
   user_op::Tensor* segm_offset_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm_offset_mat", 0);
 
-  MultiThreadLoop(batch_data->size(), [=](size_t i) {
+  MultiThreadLoop(batch_data->size(), [&](size_t i) {
     TensorBuffer* image_buffer = image_tensor->mut_dptr<TensorBuffer>() + i;
     COCOImage* image = batch_data->at(i).get();
-    image_buffer->reserve(image->data.nbytes());
+    image_buffer->Resize(image->data.shape(), image->data.data_type());
     std::memcpy(image_buffer->mut_data(), image->data.data(), image_buffer->nbytes());
     if (image_size_tensor) {
       auto* image_size_ptr = image_size_tensor->mut_dptr<int32_t>() + i * 2;
@@ -27,13 +27,15 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
     if (bbox_tensor) {
       TensorBuffer* bbox_buffer = bbox_tensor->mut_dptr<TensorBuffer>() + i;
       const auto& bbox_vec = meta_->GetBboxVec<float>(image->index);
-      bbox_buffer->reserve(bbox_vec.size() * sizeof(float));
+      CHECK_EQ(bbox_vec.size() % 4, 0);
+      int64_t num_bboxes = bbox_vec.size() / 4;
+      bbox_buffer->Resize(Shape({num_bboxes, 4}), DataType::kFloat);
       std::copy(bbox_vec.begin(), bbox_vec.end(), bbox_buffer->mut_data<float>());
     }
     if (label_tensor) {
       TensorBuffer* label_buffer = label_tensor->mut_dptr<TensorBuffer>() + i;
       const auto& label_vec = meta_->GetLabelVec<int32_t>(image->index);
-      label_buffer->reserve(label_vec.size() * sizeof(int32_t));
+      label_buffer->Resize(Shape({static_cast<int64_t>(label_vec.size())}), DataType::kInt32);
       std::copy(label_vec.begin(), label_vec.end(), label_buffer->mut_data<int32_t>());
     }
     if (segm_tensor && segm_offset_tensor) {

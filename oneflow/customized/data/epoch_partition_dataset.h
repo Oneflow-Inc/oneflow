@@ -17,14 +17,19 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
                         int64_t random_seed, BaseDatasetUnqPtr&& dataset)
       : base_(std::move(dataset)),
         shuffle_(shuffle),
-        random_engine_(random_seed),
+        seed_(random_seed),
+        stride_partition_(stride_part),
         num_partitions_(parallel_num),
-        pos_(parallel_id),
-        pos_in_partition_(0) {
+        pos_(0),
+        pos_in_partition_(0),
+        epoch_cnt_(0) {
     CHECK(base_->EnableRandomAccess());
     CHECK(base_->EnableGetSize());
+    if (seed_ == -1) { seed_ = NewRandomSeed(); }
+    if (stride_part) { pos_ = parallel_id; }
     partition_size_ = std::ceil(static_cast<float>(base_->Size()) / num_partitions_);
     index_seq_.resize(base_->Size());
+    std::iota(index_seq_.begin(), index_seq_.end(), 0);
     GenNewIndexSequence();
   }
   ~EpochPartitionDataset() = default;
@@ -33,11 +38,13 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
     // 2 partition strategy
     // assume dataset size is 10, index seq don't shuffle and there are 4 parts
     // stride partition strategy:
-    // |  part1   |  part2   |  part3   |  part4   |
-    // | 0, 4, 8, | 1, 5, 9, | 2, 6, 0, | 3, 7, 1, |
+    //       |  part1   |  part2   |  part3   |  part4   |
+    // iter0 | 0, 4, 8, | 1, 5, 9, | 2, 6, 0, | 3, 7, 1, |
+    // iter1 | 2, 6, 0, | 3, 7, 1, | 4, 8, 2, | 5, 9, 3, |
     // contiguous partition strategy:
-    // |  part1   |  part2   |  part3   |  part4   |
-    // | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
+    //       |  part1   |  part2   |  part3   |  part4   |
+    // iter0 | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
+    // iter1 | 2, 3, 4, | 5, 6, 7, | 8, 9, 0, | 1, 2, 3, |
     LoadTargetShdPtrVec ret;
     CheckRanOutOfSize();
     LoadTargetShdPtr sample = base_->At(index_seq_.at(pos_));
@@ -66,19 +73,24 @@ class EpochPartitionDataset final : public Dataset<LoadTarget> {
       pos_ %= index_seq_.size();
     }
   }
+
   void GenNewIndexSequence() {
-    std::iota(index_seq_.begin(), index_seq_.end(), 0);
-    if (shuffle_) { std::shuffle(index_seq_.begin(), index_seq_.end(), random_engine_); }
+    if (shuffle_) {
+      std::mt19937 engine(seed_ + epoch_cnt_);
+      std::shuffle(index_seq_.begin(), index_seq_.end(), engine);
+    }
+    epoch_cnt_ += 1;
   }
 
   BaseDatasetUnqPtr base_;
   bool shuffle_;
-  std::mt19937 random_engine_;
+  int64_t seed_;
   bool stride_partition_;
   int64_t num_partitions_;
   int64_t partition_size_;
   int64_t pos_;
   int64_t pos_in_partition_;
+  int64_t epoch_cnt_;
   std::vector<int64_t> index_seq_;
 };
 

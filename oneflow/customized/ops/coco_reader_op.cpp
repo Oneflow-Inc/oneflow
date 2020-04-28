@@ -58,22 +58,14 @@ REGISTER_USER_OP("COCOReader")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
-          .Split("image", 0, 0)
-          .Split("image_size", 0, 0)
-          .Split("gt_bbox", 0, 0)
-          .Split("gt_label", 0, 0)
-          .Split("gt_segm", 0, 0)
-          .Split("gt_segm_offset", 0, 0)
+          .Split(ctx->outputs(), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("image", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("image_size", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("gt_bbox", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("gt_label", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("gt_segm", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("gt_segm_offset", 0)->set_value(0);
+      for (const auto& out_arg_pair : ctx->outputs()) {
+        ctx->BatchAxis4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)->set_value(0);
+      }
       return Maybe<void>::Ok();
     });
 
