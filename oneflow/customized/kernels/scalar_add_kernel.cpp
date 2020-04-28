@@ -26,12 +26,13 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
 
     KernelUtil<device_type, T>::AddByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
                                             scalar_operand, out_ptr);
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_KERNEL(kernel_device_type, dtype)                                    \
   REGISTER_USER_KERNEL("scalar_add")                                                  \
-      .SetCreateFn<ScalarAddUserKernel<DeviceType::k##kernel_device_type, dtype>>()       \
+      .SetCreateFn<ScalarAddUserKernel<DeviceType::k##kernel_device_type, dtype>>()   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
         return ctx.device_type() == DeviceType::k##kernel_device_type                 \

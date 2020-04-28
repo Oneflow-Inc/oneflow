@@ -88,7 +88,8 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     cudaMemcpy2DAsync(out->mut_dptr<int32_t>(), k * sizeof(int32_t), buf_manager.SortedIndicesPtr(),
                       instance_size * sizeof(int32_t), k * sizeof(int32_t), instance_num,
                       cudaMemcpyDeviceToDevice, ctx->device_ctx()->cuda_stream());
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \

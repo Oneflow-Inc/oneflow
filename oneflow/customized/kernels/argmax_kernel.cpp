@@ -35,7 +35,8 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
       });
     }
     bc.WaitUntilCntEqualZero();
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                \

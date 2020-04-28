@@ -86,7 +86,8 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \

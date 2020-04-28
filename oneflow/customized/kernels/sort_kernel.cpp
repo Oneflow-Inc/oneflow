@@ -31,7 +31,8 @@ class CpuSortKernel final : public user_op::OpKernel {
         UNIMPLEMENTED();
       }
     }
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_CPU_SORT_KERNEL(dtype)                                                 \

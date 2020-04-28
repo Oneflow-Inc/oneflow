@@ -83,7 +83,8 @@ class PadKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
     device_memory_copier_->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                 reduced_memory_copy_nd_desc);
-  };
+  }
+  bool IsSkippable() const override { return true; }
 
   std::unique_ptr<MemoryCopier> device_memory_copier_;
 };
@@ -141,7 +142,8 @@ class PadGradKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
     device_memory_copier_->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
                                 reduced_memory_copy_nd_desc);
-  };
+  }
+  bool IsSkippable() const override { return true; }
 
   std::unique_ptr<MemoryCopier> device_memory_copier_;
 };

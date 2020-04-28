@@ -24,7 +24,8 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
         loss[i] = abs_diff - 0.5 * beta;
       }
     }
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                                         \
@@ -64,7 +65,8 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
       }
       prediction_grad[i] = prediction_grad[i] * loss_grad[i];
     }
-  };
+  }
+  bool IsSkippable() const override { return true; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)                            \
