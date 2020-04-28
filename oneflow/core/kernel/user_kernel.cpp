@@ -190,7 +190,7 @@ class UserKernel final : public Kernel {
     ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
   }
 
-  bool IsStateless() const override { return kernel_->IsComputeSkippableWhenEmpty(); }
+  bool IsStateless() const override { return kernel_->AlwaysSkipWhenOutputEmpty(); }
 
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;

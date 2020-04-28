@@ -127,7 +127,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
                            ctx->device_ctx()->cuda_stream()>>>(
         instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int32_t>());
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \

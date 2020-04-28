@@ -23,7 +23,7 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
     std::shuffle(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(),
                  *random_generator->Mutable());
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")

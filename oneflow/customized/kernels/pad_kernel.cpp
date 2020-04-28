@@ -84,7 +84,7 @@ class PadKernel final : public user_op::OpKernel {
     device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_PAD_KERNEL(dev, dtype)                                                      \
@@ -141,7 +141,7 @@ class PadGradKernel final : public user_op::OpKernel {
     device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
                                reduced_memory_copy_nd_desc);
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_PAD_GRAD_KERNEL(dev, dtype)                                                  \

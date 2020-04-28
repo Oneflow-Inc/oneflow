@@ -54,7 +54,7 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, prediction, label, beta, loss);
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(dtype)                                         \
@@ -88,7 +88,7 @@ class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
                               ctx->device_ctx()->cuda_stream()>>>(elem_cnt, loss_grad, prediction,
                                                                   label, beta, prediction_grad);
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(dtype)                            \

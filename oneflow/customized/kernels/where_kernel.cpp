@@ -19,7 +19,7 @@ class WhereKernel final : public user_op::OpKernel {
                                                   cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
                                                   out->mut_dptr<T>());
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_WHERE_KERNEL(device_type_v, dtype_pair, ctype_pair)                           \

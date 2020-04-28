@@ -94,7 +94,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
                        buf_manager.TempStorageBytes(), buf_manager.SortedValuePtr(),
                        y->mut_dptr<int32_t>(), ctx->device_ctx()->cuda_stream());
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")

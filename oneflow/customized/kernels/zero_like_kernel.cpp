@@ -15,7 +15,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_ZERO_LIKE_KERNEL(device_type_v)                            \

@@ -36,7 +36,7 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
     }
     bc.WaitUntilCntEqualZero();
   }
-  bool IsComputeSkippableWhenEmpty() const override { return true; }
+  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
 };
 
 #define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                \
