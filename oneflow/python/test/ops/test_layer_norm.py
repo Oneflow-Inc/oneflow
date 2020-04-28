@@ -18,7 +18,7 @@ tf.debugging.set_log_device_placement(True)
 def test_layer_norm(_):
     confs = [
         {
-            "x_shape": (1, 4, 2, 6),
+            "x_shape": (4, 5, 2, 6),
             "begin_norm_axis": -1,
             "begin_params_axis": -1
         }
@@ -30,7 +30,7 @@ def test_layer_norm(_):
     arg_dict["trainable"] = [True, False]
     arg_dict["center"] = [True, False]
     arg_dict["scale"] = [True, False]
-    arg_dict["epsilon"] = [0.0, 1e-5]
+    arg_dict["epsilon"] = [0.0, 1e-10]
 
     for case in GenArgList(arg_dict):
         (device_type, confs, data_type, trainable, center, scale, epsilon) = case
