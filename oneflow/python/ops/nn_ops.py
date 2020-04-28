@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import os
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -385,44 +386,79 @@ def _GetSequence(value, n, name):
             )
         )
 
+def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
+    assert rate is not None and rate >= 0.0 and rate < 1.0
+    mask_op = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("RandomMaskLike_"))
+        .Op("random_mask_like")
+        .Input("like", [like])
+        .Output("out")
+        .SetAttr("rate", float(rate), "AttrTypeFloat")
+    )
+    if seed is not None:
+        mask_op.SetAttr("seed", seed, "AttrTypeInt64")
+    else:
+        mask_op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+        
+    if noise_shape is not None:
+        assert 0, "noise_shape will be supported later."
+        assert isinstance(noise_shape, (list, tuple))
+    return (
+        mask_op
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
-    # dropout op
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Dropout_")
-    else:
-        op_conf.name = name
-    setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
-    setattr(op_conf.dropout_conf, "out", "out")
-    # random mask like op
-    mask_op_conf = op_conf_util.OperatorConf()
-    mask_op_conf.name = "RandomMask4" + op_conf.name;
-    setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
-    setattr(mask_op_conf.random_mask_like_conf, "out", "out")
-    if noise_shape is not None:
-        assert isinstance(noise_shape, (list, tuple))
-        mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
-    if seed is not None:
-        setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        # dropout op
+        op_conf = op_conf_util.OperatorConf()
+        if name is None:
+            op_conf.name = id_util.UniqueStr("Dropout_")
+        else:
+            op_conf.name = name
+        setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
+        setattr(op_conf.dropout_conf, "out", "out")
+        # random mask like op
+        mask_op_conf = op_conf_util.OperatorConf()
+        mask_op_conf.name = "RandomMask4" + op_conf.name;
+        setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
+        setattr(mask_op_conf.random_mask_like_conf, "out", "out")
+        if noise_shape is not None:
+            assert isinstance(noise_shape, (list, tuple))
+            mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
+        if seed is not None:
+            setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
+        assert rate is not None and rate >= 0.0 and rate < 1.0
+        setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
+        compile_context.CurJobAddOp(mask_op_conf)
+        mask_lbi = logical_blob_id_util.LogicalBlobId()
+        mask_lbi.op_name = mask_op_conf.name
+        mask_lbi.blob_name = "out"
+        mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
+
+        setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
+        setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
+
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+    
     assert rate is not None and rate >= 0.0 and rate < 1.0
-    setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
-    compile_context.CurJobAddOp(mask_op_conf)
-    mask_lbi = logical_blob_id_util.LogicalBlobId()
-    mask_lbi.op_name = mask_op_conf.name
-    mask_lbi.blob_name = "out"
-    mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
-
-    setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
-    setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
+    mask = random_mask_like(x, rate, seed, noise_shape) 
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Dropout_"))
+        .Op("dropout")
+        .Input("in", [x])
+        .Input("mask", [mask])
+        .Output("out")
+        .SetAttr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
