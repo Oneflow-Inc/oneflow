@@ -22,21 +22,21 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
 
 Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
-                   const std::vector<int32_t>& strides) {
-  dim_ = dim;
-  data_format_ = data_format;
+                   const std::vector<int32_t>& strides)
+    : dim_(dim),
+      pool_size_3d_(Get3DVec(pool_size, dim)),
+      strides_3d_(Get3DVec(strides, dim)),
+      data_format_(data_format) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  pool_size_3d_ = Get3DVec(pool_size, dim);
-  strides_3d_ = Get3DVec(strides, dim);
   Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding, &y_3d_, &padding_before_3d_,
                   &padding_after_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
-  } else if (data_format == "channels_last") {
-    channel_num_ = x_shape.At(x_shape.NumAxes() - 1);
   } else {
-    UNIMPLEMENTED();
+    CHECK_EQ(data_format_, "channels_last")
+        << "data_format must be 'channels_first' or 'channels_last'";
+    channel_num_ = x_shape.At(x_shape.NumAxes() - 1);
   }
   batch_num_ = x_shape.At(0);
 }
@@ -54,10 +54,10 @@ Shape Params3D::GetYShape() const {
   }
   if (data_format_ == "channels_first") {
     y_dim_vec.insert(y_dim_vec.begin(), channel_num_);
-  } else if (data_format_ == "channels_last") {
-    y_dim_vec.insert(y_dim_vec.end(), channel_num_);
   } else {
-    UNIMPLEMENTED();
+    CHECK_EQ(data_format_, "channels_last")
+        << "data_format must be 'channels_first' or 'channels_last'";
+    y_dim_vec.insert(y_dim_vec.end(), channel_num_);
   }
   y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
   return Shape(y_dim_vec);
@@ -66,19 +66,21 @@ Shape Params3D::GetYShape() const {
 Shape Params3D::GetXShape5D() const {
   if (data_format_ == "channels_first") {
     return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
-  } else if (data_format_ == "channels_last") {
+  } else {
+    CHECK_EQ(data_format_, "channels_last")
+        << "data_format must be 'channels_first' or 'channels_last'";
     return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
   }
-  UNIMPLEMENTED();
 }
 
 Shape Params3D::GetYShape5D() const {
   if (data_format_ == "channels_first") {
     return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
-  } else if (data_format_ == "channels_last") {
+  } else {
+    CHECK_EQ(data_format_, "channels_last")
+        << "data_format must be 'channels_first' or 'channels_last'";
     return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
   }
-  UNIMPLEMENTED();
 }
 
 }  // namespace oneflow
