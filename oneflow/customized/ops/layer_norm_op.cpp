@@ -11,12 +11,22 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   return shifted;
 }
 
+Shape InferBnParamShape(const Shape& x_shape, const int64_t& begin_norm_axis) {
+  DimVector bn_param_shape_dim_vec;
+  bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x_shape.dim_vec().cbegin(),
+                                x_shape.dim_vec().cbegin() + begin_norm_axis);
+  const Shape bn_param_shape(bn_param_shape_dim_vec);
+  return bn_param_shape;
+}
+
+oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
+  return x_data_type == DataType::kFloat16 ? DataType::kFloat : x_data_type;
+}
+
 }  // namespace
 
 REGISTER_USER_OP("layer_norm")
     .Input("x")
-    .Input("cudnn_bn_scale_ones")
-    .Input("cudnn_bn_bias_zeros")
     .OptionalInput("beta")
     .OptionalInput("gamma")
     .Output("y")
@@ -31,10 +41,6 @@ REGISTER_USER_OP("layer_norm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      const user_op::TensorDesc* cudnn_bn_scale_ones =
-          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
-      const user_op::TensorDesc* cudnn_bn_bias_zeros =
-          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_zeros", 0);
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
       const bool& center = ctx->GetAttr<bool>("center");
@@ -66,18 +72,9 @@ REGISTER_USER_OP("layer_norm")
       }
       const int64_t begin_norm_axis =
           ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_norm_axis"));
-      DimVector bn_param_shape_dim_vec;
-      bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x->shape().dim_vec().cbegin(),
-                                    x->shape().dim_vec().cbegin() + begin_norm_axis);
-      const Shape bn_param_shape(bn_param_shape_dim_vec);
-      *mean->mut_shape() = bn_param_shape;
-      DataType data_type = x->data_type() == DataType::kFloat16 ? DataType::kFloat : x->data_type();
-      *mean->mut_data_type() = data_type;
+      *mean->mut_shape() = InferBnParamShape(x->shape(), begin_norm_axis);
+      *mean->mut_data_type() = InferBnParamDataType(x->data_type());
       *inv_variance = *mean;
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->shape(), mean->shape());
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->data_type(), mean->data_type());
-      CHECK_EQ_OR_RETURN(cudnn_bn_bias_zeros->shape(), mean->shape());
-      CHECK_EQ_OR_RETURN(cudnn_bn_bias_zeros->data_type(), mean->data_type());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -100,7 +97,6 @@ REGISTER_USER_OP("layer_norm")
 REGISTER_USER_OP("layer_norm_grad")
     .Input("dy")
     .Input("x")
-    .Input("cudnn_bn_scale_ones")
     .OptionalInput("mean")
     .OptionalInput("inv_variance")
     .Output("dx")
@@ -113,42 +109,29 @@ REGISTER_USER_OP("layer_norm_grad")
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
-      const user_op::TensorDesc* cudnn_bn_scale_ones =
-          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
       user_op::TensorDesc* cudnn_bn_scale_diff_buf =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
       user_op::TensorDesc* cudnn_bn_bias_diff_buf =
           ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      int64_t begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
-      CHECK_GE_OR_RETURN(begin_norm_axis, 1);
-      CHECK_LT_OR_RETURN(begin_norm_axis, dy->shape().NumAxes());
       CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
       CHECK_EQ_OR_RETURN(dy->shape(), x->shape());
-      begin_norm_axis =
-          begin_norm_axis < 0 ? dy->shape().NumAxes() + begin_norm_axis : begin_norm_axis;
-      CHECK_GE_OR_RETURN(begin_norm_axis, 1);
-      CHECK_LT_OR_RETURN(begin_norm_axis, x->shape().NumAxes());
-      DimVector bn_param_shape_dim_vec;
-      bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x->shape().dim_vec().cbegin(),
-                                    x->shape().dim_vec().cbegin() + begin_norm_axis);
-      const Shape bn_param_shape(bn_param_shape_dim_vec);
+      const int64_t begin_norm_axis =
+          ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_norm_axis"));
+      const DataType& bn_param_data_type = InferBnParamDataType(x->data_type());
+      const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
       if (mean || inv_variance) {
         CHECK_OR_RETURN(mean);
         CHECK_OR_RETURN(inv_variance);
-        // CHECK_EQ(mean->data_type(), x->data_type());
+        CHECK_EQ(mean->data_type(), bn_param_data_type);
         CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
-        // CHECK_EQ(inv_variance->data_type(), x->data_type());
+        CHECK_EQ(inv_variance->data_type(), bn_param_data_type);
         CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       }
       *dx = *dy;
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->shape().Count(0),
-                         dy->shape().Count(0, begin_norm_axis));
-      DataType data_type =
-          dy->data_type() == DataType::kFloat16 ? DataType::kFloat : dy->data_type();
-      CHECK_EQ_OR_RETURN(cudnn_bn_scale_ones->data_type(), data_type);
-      *cudnn_bn_scale_diff_buf = *cudnn_bn_scale_ones;
-      *cudnn_bn_bias_diff_buf = *cudnn_bn_scale_ones;
+      *cudnn_bn_scale_diff_buf->mut_data_type() = InferBnParamDataType(x->data_type());
+      *cudnn_bn_scale_diff_buf->mut_shape() = bn_param_shape;
+      *cudnn_bn_bias_diff_buf = *cudnn_bn_scale_diff_buf;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -228,7 +211,9 @@ REGISTER_USER_OP("layer_norm_param_grad")
       if (has_gamma) {
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
+                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel())
+            << "parallel_num: " << ctx->parallel_ctx().parallel_num() << ", "
+            << "gamma sbp:" << ctx->SbpParallel4ArgNameAndIndex("gamma", 0).DebugString();
         CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
       }
@@ -311,7 +296,6 @@ REGISTER_USER_OP_GRAD("layer_norm")
         user_op::UserOpConfWrapper grad_op =
             builder.Op("layer_norm_grad")
                 .Input("x", op.input("x", 0))
-                .Input("cudnn_bn_scale_ones", op.input("cudnn_bn_scale_ones", 0))
                 .Input("dy", dy)
                 .Input("mean", op.output("mean", 0))
                 .Input("inv_variance", op.output("inv_variance", 0))

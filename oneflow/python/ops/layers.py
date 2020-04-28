@@ -190,13 +190,6 @@ def layer_norm(
     name=None,
 ):
     if os.getenv("ENABLE_USER_OP") == "True":
-        def shift_negative_axis_if_need(shape, axis):
-            shifted = axis
-            if axis < 0:
-                shifted = axis + len(shape)
-            assert shifted >= 0
-            assert shifted <= len(shape)
-            return shifted
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
             flow.user_op_builder(name)
@@ -232,14 +225,6 @@ def layer_norm(
             )
             op.Input("gamma", [gamma])
             op.Output("normalized")
-        dtype = inputs.dtype
-        if inputs.dtype == flow.float16:
-            dtype = flow.float32
-        begin_norm_axis = shift_negative_axis_if_need(inputs.shape, begin_norm_axis)
-        cudnn_bn_scale_ones = flow.constant(1.0, dtype=dtype, shape=inputs.shape[0:begin_norm_axis])
-        op.Input("cudnn_bn_scale_ones", [cudnn_bn_scale_ones])
-        cudnn_bn_bias_zeros = flow.constant(0.0, dtype=dtype, shape=inputs.shape[0:begin_norm_axis])
-        op.Input("cudnn_bn_bias_zeros", [cudnn_bn_bias_zeros])
         op.SetAttr("center", center, "AttrTypeBool")
         op.SetAttr("scale", scale, "AttrTypeBool")
         op.SetAttr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")

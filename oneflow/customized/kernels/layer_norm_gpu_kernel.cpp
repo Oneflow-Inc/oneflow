@@ -50,10 +50,6 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* cudnn_bn_scale_ones =
-        ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
-    const user_op::Tensor* cudnn_bn_bias_zeros =
-        ctx->Tensor4ArgNameAndIndex("cudnn_bn_bias_zeros", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
@@ -63,11 +59,22 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     const T& epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    char* cudnn_bn_scale_ones_dptr = tmp_buffer->mut_dptr<char>();
+    char* cudnn_bn_bias_zeros_dptr =
+        cudnn_bn_scale_ones_dptr
+        + GetCudaAlignedSize(mean->shape().elem_cnt() * GetSizeOfDataType(mean->data_type()));
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
+                                          static_cast<T>(1),
+                                          reinterpret_cast<T*>(cudnn_bn_scale_ones_dptr));
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
+                                          static_cast<T>(0),
+                                          reinterpret_cast<T*>(cudnn_bn_bias_zeros_dptr));
     CudaCheck(cudnnBatchNormalizationForwardTraining(
         ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
         bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
-        normalized->mut_dptr<T>(), bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones->dptr(),
-        cudnn_bn_bias_zeros->dptr(), 1.0, nullptr, nullptr, epsilon, mean->mut_dptr(),
+        normalized->mut_dptr<T>(), bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones_dptr,
+        cudnn_bn_bias_zeros_dptr, 1.0, nullptr, nullptr, epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));
     if (scale) {
       const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -99,6 +106,12 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
         const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
         return ctx.device_type() == DeviceType::kGPU                                \
                && x_desc->data_type() == GetDataType<dtype>::value;                 \
+      })                                                                            \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                  \
+        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);     \
+        const DataType& data_type = mean->data_type();                              \
+        const int64_t& elem_cnt = mean->shape().elem_cnt();                         \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;     \
       });
 
 REGISTER_LAYER_NORM_GPU_KERNEL(float)
@@ -120,13 +133,15 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       CHECK_NOTNULL(mean);
       CHECK_NOTNULL(inv_variance);
     }
-    const user_op::Tensor* cudnn_bn_scale_ones =
-        ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_ones", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* cudnn_bn_scale_diff_buf =
         ctx->Tensor4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
     user_op::Tensor* cudnn_bn_bias_diff_buf =
         ctx->Tensor4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* cudnn_bn_scale_ones_dptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
+    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
+                                          static_cast<T>(1), cudnn_bn_scale_ones_dptr);
     const T& epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), cudnn_bn_scale_diff_buf->shape(), x->data_type());
@@ -134,19 +149,25 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
         CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(),
         bn_ctx.data_tensor_desc(), dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones->dptr(),
-        cudnn_bn_scale_diff_buf->mut_dptr(), cudnn_bn_bias_diff_buf->mut_dptr(), epsilon,
-        mean ? mean->dptr() : nullptr, inv_variance ? inv_variance->dptr() : nullptr));
+        bn_ctx.param_tensor_desc(), cudnn_bn_scale_ones_dptr, cudnn_bn_scale_diff_buf->mut_dptr(),
+        cudnn_bn_bias_diff_buf->mut_dptr(), epsilon, mean ? mean->dptr() : nullptr,
+        inv_variance ? inv_variance->dptr() : nullptr));
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("layer_norm_grad")                                             \
-      .SetCreateFn<LayerNormGradGpuKernel<dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dy_desc = ctx.TensorDesc4ArgNameAndIndex("dy", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && dy_desc->data_type() == GetDataType<dtype>::value;                  \
+#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype)                                                 \
+  REGISTER_USER_KERNEL("layer_norm_grad")                                                          \
+      .SetCreateFn<LayerNormGradGpuKernel<dtype>>()                                                \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
+        const user_op::TensorDesc* dy_desc = ctx.TensorDesc4ArgNameAndIndex("dy", 0);              \
+        return ctx.device_type() == DeviceType::kGPU                                               \
+               && dy_desc->data_type() == GetDataType<dtype>::value;                               \
+      })                                                                                           \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                                 \
+        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0); \
+        const DataType& data_type = mean->data_type();                                             \
+        const int64_t& elem_cnt = mean->shape().elem_cnt();                                        \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                        \
       });
 
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float)
