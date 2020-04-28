@@ -17,6 +17,10 @@ REGISTER_USER_OP("dropout")
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
+      mask->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
@@ -71,7 +75,7 @@ REGISTER_USER_OP("dropout_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("grad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                         user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
@@ -93,10 +97,14 @@ REGISTER_USER_OP("random_mask_like")
     .Attr("rate", UserOpAttrType::kAtFloat)
     .Attr("seed", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_arg_modifier != nullptr);
+      like_arg_modifier->set_use_header_only(true);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
