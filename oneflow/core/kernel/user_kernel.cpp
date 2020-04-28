@@ -6,6 +6,7 @@
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/kernel/op_kernel_infer_cache_helper.h"
 
 namespace oneflow {
 
@@ -171,12 +172,14 @@ class UserOpKernelInferContext : public user_op::InferContext {
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
-  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                  const JobDesc& job_desc)
       : user_op::KernelInferContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         kernel_conf_(kernel_conf),
+        device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
-        device_ctx_(device_ctx) {
+        infer_cache_helper_(kernel_conf, job_desc) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
@@ -223,7 +226,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     return it->second->mut_shape_view();
   }
 
-  void NaiveInferShape() {
+  void NaiveInferShape() override {
     op_infer_ctx_->UpdateArg2TensorDesc([this](const std::string& arg_name, int32_t arg_index) {
       return Blob4Arg(arg_name, arg_index);
     });
@@ -234,6 +237,8 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
       pair.second->mut_shape_view()->set_shape(shape);
     }
   }
+
+  user_op::OpKernelInferCacheHelper* GetInferCacheHelper() override { return &infer_cache_helper_; }
 
   void UpdateArg2Blob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
     for (auto& pair : arg2blob_) {
@@ -250,11 +255,12 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
 
  private:
   const KernelConf& kernel_conf_;
+  DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   std::unique_ptr<UserOpKernelInferContext> op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
-  DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, Blob*> arg2blob_;
+  user_op::OpKernelInferCacheHelper infer_cache_helper_;
 };
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
@@ -337,17 +343,14 @@ class UserKernel final : public Kernel {
 
   void InitUserKernel(DeviceCtx* device_ctx) {
     ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
-    infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf()));
+    infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
       const auto* kernel_reg_val =
           user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
       CHECK_NOTNULL(kernel_reg_val);
-      const user_op::OpKernel* kernel = kernel_reg_val->create_fn();
-      const_cast<user_op::OpKernel*>(kernel)->infer_helper_.reset(
-          new user_op::OpKernelInferCacheHelper(kernel_conf(), job_desc()));
-      kernel_.reset(kernel);
+      kernel_.reset(kernel_reg_val->create_fn());
     }
   }
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {

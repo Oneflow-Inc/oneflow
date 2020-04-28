@@ -63,7 +63,8 @@ class KernelInferContext {
     return user_op_conf_.attr<T>(attr_name);
   }
 
-  void NaiveInferShape() { UNIMPLEMENTED(); }
+  virtual void NaiveInferShape() { UNIMPLEMENTED(); }
+  virtual OpKernelInferCacheHelper* GetInferCacheHelper() { UNIMPLEMENTED(); }
 
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
@@ -130,10 +131,9 @@ class OpKernel {
   friend UserKernel;
 
   void ForwardShape(KernelInferContext* ctx) const {
-    infer_helper_->ForwardShape([this](KernelInferContext* ctx) { this->InferShape(ctx); }, ctx);
+    ctx->GetInferCacheHelper()->ForwardShape(
+        [this](KernelInferContext* ctx) { this->InferShape(ctx); }, ctx);
   }
-
-  std::unique_ptr<OpKernelInferCacheHelper> infer_helper_;
 };
 
 }  // namespace user_op
