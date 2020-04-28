@@ -5,37 +5,6 @@
 
 namespace oneflow {
 
-Maybe<Shape> GetLogicalOutTensorShape(const Shape& in_shape, const Shape& shape) {
-  size_t total_elem_dim_exclude_minus_1 = 1;
-  bool has_minus_1 = false;
-  bool minus_1_axis = -1;
-  DimVector dim_vec;
-  FOR_RANGE(int, axis, 0, shape.NumAxes()) {
-    int64_t dim = shape.dim_vec().at(axis);
-    dim_vec.push_back(dim);
-    if (dim == -1) {
-      OF_CHECK(has_minus_1 == false) << "only one `-1' supported";
-      has_minus_1 = true;
-      minus_1_axis = axis;
-    } else if (dim > 0) {
-      OF_CHECK_LE(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
-      total_elem_dim_exclude_minus_1 *= dim;
-      OF_CHECK_LE(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
-          << "element number in reshape is bigger than input blob";
-    } else {
-      OF_UNIMPLEMENTED() << "only positive number or -1 supported";
-    }
-  }
-  OF_CHECK_EQ(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
-  if (has_minus_1) {
-    dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
-  } else {
-    OF_CHECK_EQ(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
-        << "input blob's element number not equals reshape";
-  }
-  return std::make_shared<Shape>(dim_vec);
-}
-
 REGISTER_USER_OP("reshape")
     .Input("in")
     .Output("out")
@@ -62,7 +31,9 @@ REGISTER_USER_OP("reshape")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
       const Shape& shape = ctx->GetAttr<Shape>("shape");
-      const auto& outshape = GetLogicalOutTensorShape(in_shape, shape)
+      ShapeProto shape_proto;
+      shape.ToProto(&shape_proto);
+      const auto& outshape = ReshapeOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto)
                                  .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
       return ReshapeOpUtil::GetReshapeSbpSignatures(
           in_shape, *outshape, StdVec2PbRpf<std::string>({GenRepeatedBn("in", 0)}),
