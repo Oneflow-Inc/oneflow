@@ -11,7 +11,7 @@ typedef std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> BatchAxisInfe
 typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
-TensorDescInferFn MakeFwTensorDescInferFn(const int32_t& dim) {
+TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
     const std::string data_format = ctx->GetAttr<std::string>("data_format");
@@ -79,7 +79,7 @@ GetSbpFn MakeBwGetSbpFn() {
   };
 }
 
-GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t& dim) {
+GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t dim) {
   return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
