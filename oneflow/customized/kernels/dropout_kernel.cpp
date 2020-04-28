@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/kernels/dropout_kernel_util.h"
+#include "oneflow/core/kernel/dropout_kernel.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
 
@@ -82,7 +82,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
         seed, ctx->device_ctx());
-  };
+  }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -96,7 +96,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<device_type>>*>(state);
     random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
 
-    RandomMaskLikeKernelUtil2<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
+    RandomMaskLikeKernelUtil<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
                                                     ctx->GetAttr<float>("rate"), random_tmp, mask);
   };
 };
