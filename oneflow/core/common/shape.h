@@ -34,7 +34,6 @@ class Shape final {
 
   // Getters and Setters
   const DimVector& dim_vec() const { return dim_vec_; }
-  DimVector& dim_vec() { return dim_vec_; }
   int64_t elem_cnt() const { return elem_cnt_; }
   int64_t At(int64_t index) const { return dim_vec_.at(index); }
   void Set(int64_t index, int64_t val);

@@ -109,8 +109,6 @@ class OpKernelState {
   OpKernelState() = default;
 };
 
-// class UserKernel;
-
 class OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);

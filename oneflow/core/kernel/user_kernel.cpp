@@ -341,10 +341,10 @@ class UserKernel final : public Kernel {
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      auto* kernel_reg_val =
+      const auto* kernel_reg_val =
           user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
       CHECK_NOTNULL(kernel_reg_val);
-      const auto* kernel = kernel_reg_val->create_fn();
+      const user_op::OpKernel* kernel = kernel_reg_val->create_fn();
       const_cast<user_op::OpKernel*>(kernel)->infer_helper_.reset(
           new user_op::OpKernelInferCacheHelper(kernel_conf(), job_desc()));
       kernel_.reset(kernel);
