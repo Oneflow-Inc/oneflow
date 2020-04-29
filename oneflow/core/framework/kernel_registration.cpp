@@ -55,6 +55,7 @@ std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
     ss << "\n data_type of " << pair.first << "_" << pair.second << ": "
        << DataType2String(ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second)->data_type());
   }
+  return ss.str();
 }
 
 }  // namespace
@@ -70,7 +71,7 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
   const auto registry = MutKernelRegistry();
   auto it = registry->find(op_type_name);
   if (it == registry->end()) {
-    LOG(ERROR) << "Cannot find the kernel satisfied for current Op node. "
+    LOG(ERROR) << "There are no kernel registered for current Op node. "
                << GetErrorMsgOfSearchedOp(ctx);
     return nullptr;
   }
@@ -82,6 +83,10 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
                             << GetErrorMsgOfSearchedOp(ctx);
       ret = &reg_val;
     }
+  }
+  if (ret == nullptr) {
+    LOG(ERROR) << "Cannot find the kernel satisfied for current Op node. "
+               << GetErrorMsgOfSearchedOp(ctx);
   }
   return ret;
 }
