@@ -27,6 +27,8 @@ class ScalarMulUserKernel final : public user_op::OpKernel {
     NewKernelUtil<device_type>::MulByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
                                             scalar_operand, out_ptr);
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_KERNEL(kernel_device_type, dtype)                                    \
@@ -49,4 +51,3 @@ REGISTER_KERNEL(GPU, double)
 REGISTER_KERNEL(GPU, float16)
 
 }  // namespace oneflow
-
