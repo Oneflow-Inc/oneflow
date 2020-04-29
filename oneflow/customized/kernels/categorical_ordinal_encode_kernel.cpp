@@ -24,6 +24,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
         ctx->device_ctx(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(),
         in->shape().elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 #define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
