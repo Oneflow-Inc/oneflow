@@ -159,6 +159,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .OptionalOutput("reduce_buf")
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      // TODO: tsai: replace lambda with user op if
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
         for (auto t : ctx->inputs()) {
@@ -223,6 +224,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
       for (const auto& ob : ctx->outputs()) {
         ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second)->clear_value();
       }
+      // TODO: tsai: replace lambda with user op if
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
         for (auto t : ctx->inputs()) {
@@ -244,8 +246,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
           .Split(ctx->inputs(), 0)
           .Split(ctx->outputs(), 0)
           .Broadcast("gamma", 0)
-          .Broadcast("gamma_diff", 0)
-          .Broadcast("beta_diff", 0)
+          .PartialSum("gamma_diff", 0)
+          .PartialSum("beta_diff", 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
