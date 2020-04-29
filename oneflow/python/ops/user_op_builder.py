@@ -11,6 +11,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.experimental.name_scope as name_scope
 
 class UserOpConfWrapper(object):
     def __init__(self, op_name):
@@ -37,7 +38,9 @@ class UserOpConfWrapper(object):
 @oneflow_export('user_op_builder')
 class UserOpConfWrapperBuilder(object):
     def __init__(self, op_name):
-        self.user_op_ = UserOpConfWrapper(op_name)
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
+        self.user_op_ = UserOpConfWrapper(name_scope_prefix + op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""

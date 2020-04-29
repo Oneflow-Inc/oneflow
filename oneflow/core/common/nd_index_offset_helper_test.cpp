@@ -1,3 +1,7 @@
+// include sstream first to avoid some compiling error
+// caused by the following trick
+// reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
+#include <sstream>
 #define private public
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
