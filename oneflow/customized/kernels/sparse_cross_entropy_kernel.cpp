@@ -21,6 +21,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(),
         out->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SPARSE_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)         \
@@ -63,6 +64,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(),
         dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL(device_type_v, dtype_pair, ltype_pair)     \

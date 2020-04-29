@@ -27,6 +27,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
         ctx->device_ctx(), num_instances, num_classes, prob->dptr<T>(), label->dptr<K>(),
         out->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)     \
@@ -74,6 +75,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
                                                                  num_classes, label->dptr<K>(),
                                                                  dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL(device_type_v, dtype_pair, ltype_pair) \
