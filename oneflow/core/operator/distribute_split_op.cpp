@@ -105,7 +105,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  OF_CHECK_EQ(parallel_desc.parallel_num(), output_bns().size());
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), output_bns().size());
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));

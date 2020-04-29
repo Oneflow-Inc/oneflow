@@ -68,12 +68,12 @@ Maybe<void> DistributeAddOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  OF_CHECK_EQ(parallel_desc.parallel_num(), input_bns().size());
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), input_bns().size());
   const auto& first_in_hint = *JUST(SbpInferHint4Ibn(input_bns().Get(0)));
   FOR_RANGE(int, i, 0, input_bns().size()) {
     const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn(input_bns().Get(i)));
-    OF_CHECK_EQ(1, in_sbp_infer_hint.parallel_desc().parallel_num());
-    OF_CHECK_EQ(first_in_hint.logical_blob_desc().shape(),
+    CHECK_EQ_OR_RETURN(1, in_sbp_infer_hint.parallel_desc().parallel_num());
+    CHECK_EQ_OR_RETURN(first_in_hint.logical_blob_desc().shape(),
                 in_sbp_infer_hint.logical_blob_desc().shape());
   }
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();

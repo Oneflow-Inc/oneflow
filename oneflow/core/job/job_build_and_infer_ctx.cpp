@@ -254,7 +254,7 @@ Maybe<ParallelConf> JobBuildAndInferCtx::InferOpParallelConf(
     if (parallel_desc == nullptr) {
       parallel_desc = &ibn_parallel_desc;
     } else {
-      OF_CHECK_EQ(parallel_desc->parallel_num(), ibn_parallel_desc.parallel_num());
+      CHECK_EQ_OR_RETURN(parallel_desc->parallel_num(), ibn_parallel_desc.parallel_num());
     }
   }
   if (parallel_desc == nullptr) { return std::make_shared<ParallelConf>(origin_parallel_conf); }
@@ -345,7 +345,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operato
     } else {
       ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
     }
-    OF_CHECK_EQ(ibn_parallel_num, parallel_num)
+    CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
         << "is not equals to op' parallel_num";
   }
@@ -384,7 +384,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else if (sbp.has_split_parallel()) {
-    OF_CHECK_EQ(sbp.split_parallel().axis(), 0)
+    CHECK_EQ_RETURN(sbp.split_parallel().axis(), 0)
         << "only `S(0)' consistent blob is compatible to mirrored blob";
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
     auto* distribute_split = op_conf.mutable_distribute_split_conf();

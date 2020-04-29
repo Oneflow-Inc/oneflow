@@ -10,11 +10,11 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
   int64_t index_ndims = indices_shape.At(batch_ndims);
   OF_CHECK_LE(batch_ndims, updates_shape.NumAxes());
   OF_CHECK_LE(index_ndims, params_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, batch_ndims) { OF_CHECK_EQ(updates_shape.At(i), indices_shape.At(i)); }
+  FOR_RANGE(int64_t, i, 0, batch_ndims) { CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i)); }
   int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
-  OF_CHECK_EQ(slice_ndims, updates_shape.NumAxes() - batch_ndims);
+  CHECK_EQ_OR_RETURN(slice_ndims, updates_shape.NumAxes() - batch_ndims);
   FOR_RANGE(int64_t, i, 0, slice_ndims) {
-    OF_CHECK_EQ(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims));
+    CHECK_EQ_RETURN(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims));
   }
   return Maybe<void>::Ok();
 }

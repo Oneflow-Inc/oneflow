@@ -43,8 +43,8 @@ Maybe<void> NcclTupleReduceOp::InferBlobDescs(
   const NcclTupleReduceOpConf& conf = op_conf().nccl_tuple_reduce_conf();
   const int64_t num_blob = conf.in_size();
   OF_CHECK_GE(num_blob, 1);
-  OF_CHECK_EQ(conf.out_size(), num_blob);
-  OF_CHECK_EQ(conf.root_size(), num_blob);
+  CHECK_EQ_OR_RETURN(conf.out_size(), num_blob);
+  CHECK_EQ_OR_RETURN(conf.root_size(), num_blob);
   FOR_RANGE(int32_t, i, 0, num_blob) {
     BlobDesc* out_i = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
     BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
@@ -55,7 +55,7 @@ Maybe<void> NcclTupleReduceOp::InferBlobDescs(
 
 Maybe<void> NcclTupleReduceOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& ibn : input_bns()) { OF_CHECK_EQ(BatchAxis4BnInOp(ibn)->has_value(), false); }
+  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false); }
   for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
   return Maybe<void>::Ok();
 }

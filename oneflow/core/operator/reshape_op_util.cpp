@@ -23,11 +23,11 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
       OF_UNIMPLEMENTED() << "only positive number or -1 supported";
     }
   }
-  OF_CHECK_EQ(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
   if (has_minus_1) {
     dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
   } else {
-    OF_CHECK_EQ(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
         << "input blob's element number not equals reshape_conf";
   }
   return std::make_shared<Shape>(dim_vec);
@@ -75,7 +75,7 @@ Maybe<void> ReshapeOpUtil::GetGroupStartInAxis2OutAxis(
   OF_CHECK_GE(out_axis, -1);
   OF_CHECK_LE(in_axis, 0);
   OF_CHECK_LE(out_axis, 0);
-  OF_CHECK_EQ(in_axis == 0 && out_axis == 0, false);
+  CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);
   return Maybe<void>::Ok();
 }
 

@@ -146,7 +146,7 @@ Maybe<void> ParallelDesc::SanityCheck() {
     if (device_num_of_each_machine_ == -1) {
       device_num_of_each_machine_ = pair.second.size();
     } else {
-      OF_CHECK_EQ(device_num_of_each_machine_, pair.second.size());
+      CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second.size());
     }
   }
   return Maybe<void>::Ok();
