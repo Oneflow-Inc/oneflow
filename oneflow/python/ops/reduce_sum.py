@@ -20,8 +20,11 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if enable_user_op and flow.current_global_function_desc().IsTrainable() == False:
         if axis is None:
             axis = []
-        elif isinstance(axis, list) and len(axis) == 0:
-            return input_tensor
+        elif isinstance(axis, (list, tuple)):
+           if len(axis) == 0: return input_tensor
+        else:
+           assert type(axis) is int 
+           axis = [axis]
         return (
             flow.user_op_builder(name)
             .Op("reduce_sum")
