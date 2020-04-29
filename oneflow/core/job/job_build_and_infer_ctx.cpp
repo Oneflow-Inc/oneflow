@@ -108,7 +108,7 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
     const auto& lbi = op->BnInOp2Lbi(obn);
-    OF_CHECK(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
+    CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
              == iter->second->lbi().end());
     *iter->second->add_lbi() = lbi;
   }
@@ -292,14 +292,14 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
 
 Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2sbp_parallel_from_producer_view_.find(lbi);
-  OF_CHECK(iter != lbi2sbp_parallel_from_producer_view_.end())
+  CHECK_OR_RETURN(iter != lbi2sbp_parallel_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
   return &iter->second;
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::ParallelDesc4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2parallel_desc_from_producer_view_.find(lbi);
-  OF_CHECK(iter != lbi2parallel_desc_from_producer_view_.end())
+  CHECK_OR_RETURN(iter != lbi2parallel_desc_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
   return &iter->second;
 }
@@ -566,7 +566,7 @@ Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
   const auto& iter = lbi2disable_boxing_.find(lbi);
-  OF_CHECK(iter != lbi2disable_boxing_.end());
+  CHECK_OR_RETURN(iter != lbi2disable_boxing_.end());
   return iter->second;
 }
 
@@ -647,13 +647,13 @@ Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn
 }
 
 Maybe<bool> JobBuildAndInferCtx::MirroredBlobDisableBoxing(const std::string& lbn_with_hint) const {
-  OF_CHECK(IsMirroredBlob(lbn_with_hint));
+  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
   return true;
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetBatchAxis(
     const std::string& lbn_with_hint) const {
-  OF_CHECK(IsMirroredBlob(lbn_with_hint));
+  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
   auto ret = std::make_shared<OptInt64>();
   ret->set_value(0);
   return ret;

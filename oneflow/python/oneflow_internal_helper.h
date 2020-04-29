@@ -32,13 +32,13 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  OF_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
+  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
 Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
-  OF_CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
   OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
@@ -51,7 +51,7 @@ Maybe<void> InitEnv(const std::string& env_proto_str) {
 
 Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendHalt();
   return Maybe<void>::Ok();
 }
@@ -63,12 +63,12 @@ void FixCpuDeviceNum(ConfigProto* config_proto) {
 
 Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
   OF_CHECK_NOTNULL(Global<EnvDesc>::Get()) << "env not found";
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
   ClusterControl::MasterSendSessionStart();
 
   ConfigProto config_proto;
-  OF_CHECK(TxtString2PbMessage(config_proto_str, &config_proto))
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
       << "failed to parse config_proto: " << config_proto_str;
   FixCpuDeviceNum(&config_proto);
   Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
@@ -82,14 +82,14 @@ Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
 
 Maybe<void> DestroyGlobalSession() {
   if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   Global<SessionGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> StartGlobalSession() {
   OF_CHECK_NOTNULL(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
@@ -104,7 +104,7 @@ Maybe<void> StartGlobalSession() {
 
 Maybe<void> StopGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
   Global<const InterJobReuseMemStrategy>::Delete();
@@ -112,7 +112,7 @@ Maybe<void> StopGlobalSession() {
 }
 
 Maybe<std::string> GetSerializedInterUserJobInfo() {
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   OF_CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
   std::string ret;
@@ -127,7 +127,7 @@ Maybe<std::string> GetFunctionConfigDef() {
 }
 
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
@@ -150,7 +150,7 @@ Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
     const std::string& parallel_conf_str) {
   ParallelConf parallel_conf;
-  OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 

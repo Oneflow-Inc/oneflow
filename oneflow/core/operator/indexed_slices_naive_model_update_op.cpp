@@ -46,7 +46,7 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("model_diff_indices");
   const BlobDesc* values = GetBlobDesc4BnInOp("model_diff_values");
-  OF_CHECK(IsIndexDataType(indices->data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const int64_t num_indices_axes = indices->shape().NumAxes();
   const int64_t num_values_axes = values->shape().NumAxes();
   OF_CHECK_GE(num_values_axes, num_indices_axes);

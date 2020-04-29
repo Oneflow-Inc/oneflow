@@ -68,10 +68,10 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
     machine_id_set.insert(mchn_id);
     if (device_tag == "cpu") {
-      OF_CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
+      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
     } else if (device_tag == "gpu") {
-      OF_CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
+      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     } else {
       OF_UNIMPLEMENTED() << "device type not supported";

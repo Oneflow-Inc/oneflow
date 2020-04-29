@@ -33,7 +33,7 @@ Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
-  OF_CHECK(job_desc().job_conf().has_default_initializer_conf()
+  CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
            || job_desc().job_conf().has_default_initialize_with_snapshot_path()
            || variable_conf.has_initializer() || variable_conf.has_initialize_with_snapshot());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");

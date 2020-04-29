@@ -11,7 +11,7 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
     int64_t dim = reshape_proto.dim(axis);
     dim_vec.push_back(dim);
     if (dim == -1) {
-      OF_CHECK(has_minus_1 == false) << "only one `-1' supported";
+      CHECK_OR_RETURN(has_minus_1 == false) << "only one `-1' supported";
       has_minus_1 = true;
       minus_1_axis = axis;
     } else if (dim > 0) {
@@ -41,7 +41,7 @@ Maybe<void> ReshapeOpUtil::Squeeze(const Shape& origin, Shape* shape,
     int64_t dim = origin.At(axis);
     OF_CHECK_GT(dim, 0);
     if (dim == 1) { continue; }
-    OF_CHECK(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
+    CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.push_back(dim);
   }
   *shape = Shape(dim_vec);

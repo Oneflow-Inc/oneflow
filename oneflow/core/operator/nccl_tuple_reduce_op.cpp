@@ -66,7 +66,7 @@ Maybe<void> NcclTupleReduceOp::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    OF_CHECK(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();

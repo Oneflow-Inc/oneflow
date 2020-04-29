@@ -57,7 +57,7 @@ Maybe<void> DistributeAddOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-    OF_CHECK(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
   }
   *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp(input_bns().Get(0));
   return Maybe<void>::Ok();

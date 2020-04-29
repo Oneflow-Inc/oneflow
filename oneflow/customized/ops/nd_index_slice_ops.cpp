@@ -152,7 +152,7 @@ REGISTER_USER_OP("scatter_nd")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OF_CHECK(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
+      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
                == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
@@ -193,7 +193,7 @@ REGISTER_USER_OP("scatter_nd_like")
     .Output("out")
     .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OF_CHECK(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
+      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
                == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();

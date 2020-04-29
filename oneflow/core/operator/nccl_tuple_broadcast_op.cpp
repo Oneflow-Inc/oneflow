@@ -82,7 +82,7 @@ Maybe<void> NcclTupleBroadcastOp::InferSbpSignature(
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
     if (ibn == "tick") { continue; }
-    OF_CHECK(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_broadcast_parallel()
+    CHECK_OR_RETURN(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_broadcast_parallel()
              || JUST(SbpInferHint4Ibn(ibn))->parallel_desc().parallel_num() == 1);
   }
   SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
