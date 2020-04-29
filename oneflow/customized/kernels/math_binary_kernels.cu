@@ -63,7 +63,8 @@ __device__ float FloordivCalXDiff4GpuFloat(float x, float y, float dz) { return 
 
 __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 0; }
 
-__device__ int8_t Greater(float x, float y) { return x>y?1:0; } //use int8 1 as true; int8 0 as false
+// use int8 1 as true; int8 0 as false
+__device__ int8_t Greater4GpuFloat(float x, float y) { return x>y?1:0; }
 
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
@@ -139,7 +140,7 @@ MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);
-MATH_BINARY_GPU_BOOL(Greater, Greater, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(Greater, Greater4GpuFloat, float, float, int8_t);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
