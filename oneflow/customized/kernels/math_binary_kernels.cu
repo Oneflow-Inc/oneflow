@@ -166,6 +166,7 @@ class MathBinaryGpuFloatKernel final : public OpKernel {
 
 #undef MATH_BINARY_FORWARD
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 class MathBinaryBoolGpuFloatKernel final : public OpKernel {
@@ -189,6 +190,7 @@ class MathBinaryBoolGpuFloatKernel final : public OpKernel {
 
 #undef MATH_BINARY_FORWORD
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("binary").SetCreateFn<MathBinaryGpuFloatKernel>().SetIsMatchedPred(
@@ -243,6 +245,7 @@ class MathBinaryXGradGpuFloatKernel final : public OpKernel {
 
 #undef MATH_BINARY_FORWARD
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 class MathBinaryYGradGpuFloatKernel final : public OpKernel {
@@ -270,6 +273,7 @@ class MathBinaryYGradGpuFloatKernel final : public OpKernel {
 
 #undef MATH_BINARY_FORWARD
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("binary_x_grad")
