@@ -79,7 +79,7 @@ def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
 
 
 def _get_remote_blob(x, name=None, op_name=None, keepdims=False, axis=None):
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op(op_name)\
+    return flow.user_op_builder(name).Op(op_name)\
         .Input("input_tensor", [x])\
         .Output("output_tensor")\
         .SetAttr("axis", axis, "AttrTypeListInt32")\
