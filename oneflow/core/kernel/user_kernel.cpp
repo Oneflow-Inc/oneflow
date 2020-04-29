@@ -58,7 +58,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op::KernelInitContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)) {}
   ~UserKernelInitContext() = default;
@@ -83,7 +83,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op::KernelComputeContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -190,7 +190,7 @@ class UserKernel final : public Kernel {
     ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
   }
 
-  bool IsStateless() const override { return kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
+  bool IsStateless() const override { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
 
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
