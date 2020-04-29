@@ -11,7 +11,7 @@
 namespace oneflow {
 
 Maybe<void> Cluster::WorkerLoop() {
-  OF_CHECK(!Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
   while (ClusterControl::WorkerReceiveHalt() == false) {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
