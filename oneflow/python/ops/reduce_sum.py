@@ -17,8 +17,6 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if name is None:
         name = id_util.UniqueStr("ReduceSum_")
     enable_user_op = os.getenv("ENABLE_USER_OP") == "True"
-    # TODO: hard coded to pass CI, rm the line below to debug
-    enable_user_op = False
     if enable_user_op and flow.current_global_function_desc().IsTrainable() == False:
         if axis is None:
             axis = []
