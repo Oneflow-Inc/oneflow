@@ -26,7 +26,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
             .Output("output_tensor")\
             .SetAttr("axis", axis, "AttrTypeListInt32")\
             .SetAttr("keepdims", keepdims, "AttrTypeBool")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
