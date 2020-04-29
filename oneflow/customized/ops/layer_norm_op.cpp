@@ -97,11 +97,9 @@ REGISTER_USER_OP("layer_norm")
 REGISTER_USER_OP("layer_norm_grad")
     .Input("dy")
     .Input("x")
-    .OptionalInput("mean")
-    .OptionalInput("inv_variance")
+    .Input("mean")
+    .Input("inv_variance")
     .Output("dx")
-    .Output("cudnn_bn_scale_diff_buf")
-    .Output("cudnn_bn_bias_diff_buf")
     .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
     .Attr("epsilon", UserOpAttrType::kAtDouble)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -109,10 +107,6 @@ REGISTER_USER_OP("layer_norm_grad")
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
-      user_op::TensorDesc* cudnn_bn_scale_diff_buf =
-          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0);
-      user_op::TensorDesc* cudnn_bn_bias_diff_buf =
-          ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_bias_diff_buf", 0);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
       CHECK_EQ_OR_RETURN(dy->shape(), x->shape());
@@ -120,18 +114,11 @@ REGISTER_USER_OP("layer_norm_grad")
           ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_norm_axis"));
       const DataType& bn_param_data_type = InferBnParamDataType(x->data_type());
       const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
-      if (mean || inv_variance) {
-        CHECK_OR_RETURN(mean);
-        CHECK_OR_RETURN(inv_variance);
-        CHECK_EQ(mean->data_type(), bn_param_data_type);
-        CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
-        CHECK_EQ(inv_variance->data_type(), bn_param_data_type);
-        CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
-      }
+      CHECK_EQ_OR_RETURN(mean->data_type(), bn_param_data_type);
+      CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
+      CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
+      CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       *dx = *dy;
-      *cudnn_bn_scale_diff_buf->mut_data_type() = InferBnParamDataType(x->data_type());
-      *cudnn_bn_scale_diff_buf->mut_shape() = bn_param_shape;
-      *cudnn_bn_bias_diff_buf = *cudnn_bn_scale_diff_buf;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
