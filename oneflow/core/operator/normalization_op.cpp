@@ -48,7 +48,7 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   const DataType data_type = in->data_type();
   *GetBlobDesc4BnInOp("out") = *in;
   int32_t axis = conf.axis();
-  OF_CHECK_GE(axis, 0);
+  CHECK_GE_OR_RETURN(axis, 0);
   OF_CHECK_LT(axis, in->shape().NumAxes());
   const Shape param_shape({in->shape().At(axis)});
   const std::function<void(const std::string&)> CheckParamBlobDesc =

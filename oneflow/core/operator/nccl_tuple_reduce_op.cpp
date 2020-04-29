@@ -42,7 +42,7 @@ Maybe<void> NcclTupleReduceOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const NcclTupleReduceOpConf& conf = op_conf().nccl_tuple_reduce_conf();
   const int64_t num_blob = conf.in_size();
-  OF_CHECK_GE(num_blob, 1);
+  CHECK_GE_OR_RETURN(num_blob, 1);
   CHECK_EQ_OR_RETURN(conf.out_size(), num_blob);
   CHECK_EQ_OR_RETURN(conf.root_size(), num_blob);
   FOR_RANGE(int32_t, i, 0, num_blob) {

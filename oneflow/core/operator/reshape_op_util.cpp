@@ -71,8 +71,8 @@ Maybe<void> ReshapeOpUtil::GetGroupStartInAxis2OutAxis(
       --out_axis;
     }
   }
-  OF_CHECK_GE(in_axis, -1);
-  OF_CHECK_GE(out_axis, -1);
+  CHECK_GE_OR_RETURN(in_axis, -1);
+  CHECK_GE_OR_RETURN(out_axis, -1);
   OF_CHECK_LE(in_axis, 0);
   OF_CHECK_LE(out_axis, 0);
   CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);

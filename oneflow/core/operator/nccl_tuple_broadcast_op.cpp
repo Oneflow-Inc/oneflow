@@ -43,7 +43,7 @@ Maybe<void> NcclTupleBroadcastOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const NcclTupleBroadcastOpConf& conf = op_conf().nccl_tuple_broadcast_conf();
   const int64_t num_blob = conf.in_size();
-  OF_CHECK_GE(num_blob, 1);
+  CHECK_GE_OR_RETURN(num_blob, 1);
   CHECK_EQ_OR_RETURN(conf.out_size(), num_blob);
   CHECK_EQ_OR_RETURN(conf.data_type_size(), num_blob);
   CHECK_EQ_OR_RETURN(conf.shape_size(), num_blob);

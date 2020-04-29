@@ -49,7 +49,7 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::InferBlobDescs(
   CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const int64_t num_indices_axes = indices->shape().NumAxes();
   const int64_t num_values_axes = values->shape().NumAxes();
-  OF_CHECK_GE(num_values_axes, num_indices_axes);
+  CHECK_GE_OR_RETURN(num_values_axes, num_indices_axes);
   FOR_RANGE(int64_t, i, 0, num_indices_axes) {
     CHECK_EQ_OR_RETURN(values->shape().At(i), indices->shape().At(i));
   }

@@ -233,9 +233,9 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const Sbp
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
-      OF_CHECK_GE(axis, 0);
+      CHECK_GE_OR_RETURN(axis, 0);
       OF_CHECK_LT(axis, num_axes);
-      OF_CHECK_GE(logical_blob_desc.shape().At(axis), blob_parallel_num)
+      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
           << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
           << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
     }
@@ -615,7 +615,7 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::MirroredBlobGetSubLbi(
     const std::string& lbn_with_hint, int index) const {
   const auto& mirrored_lbi = JUST(GetMirroredLbi(lbn_with_hint));
   const auto& vec = mirrored_lbi2sub_lbis_.at(*mirrored_lbi);
-  OF_CHECK_GE(index, 0);
+  CHECK_GE_OR_RETURN(index, 0);
   OF_CHECK_LT(index, vec.size());
   return &vec.at(index);
 }
