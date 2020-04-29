@@ -8,8 +8,6 @@ from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
-os.environ["ENABLE_USER_OP"] = "True"
-
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
@@ -43,3 +41,4 @@ def test_constant(test_case):
     arg_dict["shape"] = [(2, 3), (3, 3, 3)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
