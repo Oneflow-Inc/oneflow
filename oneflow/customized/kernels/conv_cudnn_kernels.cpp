@@ -108,10 +108,12 @@ struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T, size_t NDims>
-class ConvGpuKernel : public user_op::OpKernel {
+class ConvGpuKernel final : public user_op::OpKernel {
  public:
   ConvGpuKernel() = default;
   ~ConvGpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -196,6 +198,8 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
   ConvDataGradGpuKernel() = default;
   ~ConvDataGradGpuKernel() = default;
 
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const JobDesc& job_desc = ctx->job_desc();
@@ -250,6 +254,8 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
   ConvFilterGradGpuKernel() = default;
   ~ConvFilterGradGpuKernel() = default;
 
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const JobDesc& job_desc = ctx->job_desc();
@@ -302,6 +308,8 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
  public:
   ConvBiasGradGpuKernel() = default;
   ~ConvBiasGradGpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
