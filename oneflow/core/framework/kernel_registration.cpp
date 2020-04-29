@@ -71,7 +71,7 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
   const auto registry = MutKernelRegistry();
   auto it = registry->find(op_type_name);
   if (it == registry->end()) {
-    LOG(ERROR) << "There are no kernel registered for current Op node. "
+    LOG(ERROR) << "There is no kernel registered for current Op node. "
                << GetErrorMsgOfSearchedOp(ctx);
     return nullptr;
   }
@@ -79,13 +79,13 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
   const KernelRegistrationVal* ret = nullptr;
   for (const auto& reg_val : it->second) {
     if (reg_val.is_matched_fn(ctx)) {
-      CHECK(ret == nullptr) << "There are more than one kernels satisfied for current Op node. "
+      CHECK(ret == nullptr) << "There are more than one kernels satisfy current Op node. "
                             << GetErrorMsgOfSearchedOp(ctx);
       ret = &reg_val;
     }
   }
   if (ret == nullptr) {
-    LOG(ERROR) << "Cannot find the kernel satisfied for current Op node. "
+    LOG(ERROR) << "Cannot find the kernel satisfies current Op node. "
                << GetErrorMsgOfSearchedOp(ctx);
   }
   return ret;
