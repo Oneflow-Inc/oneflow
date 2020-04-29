@@ -1,4 +1,5 @@
 import os
+import shutil
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
@@ -14,7 +15,16 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, x_shape, data_type, rate, seed):
+def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        def backup_npy(name):
+            src = os.path.join(GetSavePath(), "{}.npy".format(name))
+            dst = os.path.join(GetSavePath(), "{}_bak.npy".format(name))
+            shutil.copyfile(src, dst)
+        for name in ['x', 'x_diff', 'loss', 'loss_diff']:
+            backup_npy(name)
+
+
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -50,31 +60,37 @@ def compare_with_tensorflow(device_type, x_shape, data_type, rate, seed):
 
     # OneFlow
     check_point = flow.train.CheckPoint()
-    check_point.init()
-    of_out = DropoutJob().get()
-    # TensorFlow
-    with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        tf_out = tf.nn.dropout(x, rate=rate, seed=seed)
+    model_load_dir='./log/init_snapshot'
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        check_point.load(model_load_dir)
+    else:
+        check_point.init()
+        shutil.rmtree(model_load_dir)
+        check_point.save(model_load_dir)
 
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    # assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    # assert np.allclose(
-    #     np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
-    # )
-    print(of_out.ndarray())
-    print(tf_out.numpy())
+    of_out = DropoutJob().get().ndarray()
+    assert np.allclose([1 - np.count_nonzero(of_out) / of_out.size], [rate], atol = rate/5)
 
 def test_dropout(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(4, 10)]
-    #arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20)]
+    arg_dict["x_shape"] = [(100, 100, 10, 20), (100, 100, 200), (1000, 2000)]
     arg_dict["data_type"] = ["float32", "double", "float16"]
-    arg_dict["rate"] = [0.1]
-    arg_dict['seed'] = [12345]
+    arg_dict["rate"] = [0.1, 0.4]
+    arg_dict['seed'] = [12345, None]
+
+    def check_npy(name):
+        ref = np.load(os.path.join(GetSavePath(), "{}.npy".format(name)))
+        user_op = np.load(os.path.join(GetSavePath(), "{}_bak.npy".format(name)))
+        assert np.array_equal(ref, user_op)
+        
     for arg in GenArgList(arg_dict):
         if arg[0] == "cpu" and arg[2] == "float16": continue
         print(arg)
-        compare_with_tensorflow(*arg)
+        os.environ['ENABLE_USER_OP'] = "True"
+        of_run_and_dump_to_numpy(*arg)
+        os.environ['ENABLE_USER_OP'] = "false"
+        of_run_and_dump_to_numpy(*arg)
+        if arg[4] is None: continue
+        for name in ['x', 'x_diff', 'loss', 'loss_diff']:
+            check_npy(name)
