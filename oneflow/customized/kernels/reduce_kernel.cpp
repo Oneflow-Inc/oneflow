@@ -26,6 +26,7 @@ class ReduceKernel final : public OpKernel {
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device, typename T>
