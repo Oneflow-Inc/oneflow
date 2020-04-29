@@ -35,11 +35,11 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 
 Maybe<void> ReshapeOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                    HashMap<int, int>* squeezed_axis2origin_axis) {
-  OF_CHECK_GT(origin.NumAxes(), 0);
+  CHECK_GT_OR_RETURN(origin.NumAxes(), 0);
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    OF_CHECK_GT(dim, 0);
+    CHECK_GT_OR_RETURN(dim, 0);
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.push_back(dim);

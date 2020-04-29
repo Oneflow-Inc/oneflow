@@ -22,7 +22,7 @@ Maybe<void> BatchAxisInferFnUtil::DefaultAsFirstHasValueInput(BatchAxisContext* 
 
 Maybe<void> BatchAxisInferFnUtil::NaiveInferBatchAxis(BatchAxisContext* ctx) {
   if (ctx->outputs().empty()) { return Maybe<void>::Ok(); }
-  OF_CHECK_GT(ctx->inputs().size(), 0);
+  CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
   CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1);
   const OptInt64* batch_axis = nullptr;
   for (const auto& in_arg_pair : ctx->inputs()) {
