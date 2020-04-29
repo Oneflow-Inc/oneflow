@@ -49,7 +49,7 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *in;
   int32_t axis = conf.axis();
   CHECK_GE_OR_RETURN(axis, 0);
-  OF_CHECK_LT(axis, in->shape().NumAxes());
+  CHECK_LT_OR_RETURN(axis, in->shape().NumAxes());
   const Shape param_shape({in->shape().At(axis)});
   const std::function<void(const std::string&)> CheckParamBlobDesc =
       [&](const std::string& bn) -> Maybe<void> {

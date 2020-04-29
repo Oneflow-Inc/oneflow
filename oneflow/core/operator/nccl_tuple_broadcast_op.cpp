@@ -50,7 +50,7 @@ Maybe<void> NcclTupleBroadcastOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(conf.root_size(), num_blob);
   FOR_RANGE(int32_t, i, 0, num_blob) {
     const int64_t root = conf.root(i);
-    OF_CHECK_LT(root, parallel_ctx->parallel_num());
+    CHECK_LT_OR_RETURN(root, parallel_ctx->parallel_num());
     const Shape shape(conf.shape(i));
     const DataType data_type = conf.data_type(i);
     if (parallel_ctx->parallel_id() == root) {

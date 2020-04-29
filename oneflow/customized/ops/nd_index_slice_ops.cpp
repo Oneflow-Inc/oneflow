@@ -109,7 +109,7 @@ REGISTER_USER_OP("gather_nd")
       OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("indices", 0);
       if (indices_batch_axis->has_value()) {
         CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        OF_CHECK_LT(
+        CHECK_LT_OR_RETURN(
             indices_batch_axis->value(),
             ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes() - 1);
       }

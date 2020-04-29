@@ -89,7 +89,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        OF_CHECK_LT(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
+        CHECK_LT_OR_RETURN(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }

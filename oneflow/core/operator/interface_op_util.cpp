@@ -26,7 +26,7 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
     int64_t split_axis = opt_split_axis.value();
     if (split_axis < 0) { split_axis += num_axes; }
     CHECK_GE_OR_RETURN(split_axis, 0);
-    OF_CHECK_LT(split_axis, num_axes);
+    CHECK_LT_OR_RETURN(split_axis, num_axes);
 
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
