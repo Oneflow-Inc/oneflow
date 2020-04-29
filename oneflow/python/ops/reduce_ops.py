@@ -7,7 +7,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow as flow
 
 @oneflow_export("math.reduce_any")
-def reduce_any(x, axis=None, keepdims=None, name=None):
+def reduce_any(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceAny_")
     if axis is None:
         axis = []
@@ -16,7 +16,7 @@ def reduce_any(x, axis=None, keepdims=None, name=None):
     return _get_remote_blob(x, name, "reduce_any", keepdims, axis)
 
 @oneflow_export("math.reduce_min")
-def reduce_min(x, axis=None, keepdims=None, name=None):
+def reduce_min(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceMin_")
     if axis is None:
         axis = []
@@ -25,7 +25,7 @@ def reduce_min(x, axis=None, keepdims=None, name=None):
     return _get_remote_blob(x, name, "reduce_min", keepdims, axis)
 
 @oneflow_export("math.reduce_prod")
-def reduce_prod(x, axis=None, keepdims=None, name=None):
+def reduce_prod(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceProd_")
     if axis is None:
         axis = []
@@ -34,7 +34,7 @@ def reduce_prod(x, axis=None, keepdims=None, name=None):
     return _get_remote_blob(x, name, "reduce_prod", keepdims, axis)
 
 @oneflow_export("math.reduce_all")
-def reduce_all(x, axis=None, keepdims=None, name=None):
+def reduce_all(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceAll_")
     if axis is None:
         axis = []
@@ -78,7 +78,7 @@ def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
     )
 
 
-def _get_remote_blob(x, name=None, op_name=None, keepdims=None, axis=None):
+def _get_remote_blob(x, name=None, op_name=None, keepdims=False, axis=None):
     return user_op_builder.UserOpConfWrapperBuilder(name).Op(op_name)\
         .Input("input_tensor", [x])\
         .Output("output_tensor")\
