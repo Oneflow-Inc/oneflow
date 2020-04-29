@@ -85,7 +85,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
+    return std::make_shared<OpKernelStateWrapper<RandomGenerator<device_type>>>(
         seed, ctx->device_ctx());
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
