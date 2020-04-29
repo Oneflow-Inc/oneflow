@@ -8,6 +8,7 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
                        user_op::KernelComputeContext* ctx) {
   user_op::Tensor* image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
   CHECK_NOTNULL(image_tensor);
+  user_op::Tensor* image_id_tensor = ctx->Tensor4ArgNameAndIndex("image_id", 0);
   user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
   user_op::Tensor* bbox_tensor = ctx->Tensor4ArgNameAndIndex("gt_bbox", 0);
   user_op::Tensor* label_tensor = ctx->Tensor4ArgNameAndIndex("gt_label", 0);
@@ -23,6 +24,10 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
       auto* image_size_ptr = image_size_tensor->mut_dptr<int32_t>() + i * 2;
       image_size_ptr[0] = meta_->GetImageHeight(image->index);
       image_size_ptr[1] = meta_->GetImageWidth(image->index);
+    }
+    if (image_id_tensor) {
+      auto* image_id_ptr = image_size_tensor->mut_dptr<int64_t>();
+      image_id_ptr[i] = image->id;
     }
     if (bbox_tensor) {
       TensorBuffer* bbox_buffer = bbox_tensor->mut_dptr<TensorBuffer>() + i;

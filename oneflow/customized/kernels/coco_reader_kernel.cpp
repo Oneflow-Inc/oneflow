@@ -40,6 +40,7 @@ REGISTER_USER_KERNEL("COCOReader")
     .SetCreateFn<COCOReaderKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* image_desc = ctx.TensorDesc4ArgNameAndIndex("image", 0);
+      const user_op::TensorDesc* image_id_desc = ctx.TensorDesc4ArgNameAndIndex("image_id", 0);
       const user_op::TensorDesc* image_size_desc = ctx.TensorDesc4ArgNameAndIndex("image_size", 0);
       const user_op::TensorDesc* bbox_desc = ctx.TensorDesc4ArgNameAndIndex("gt_bbox", 0);
       const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("gt_label", 0);
@@ -48,6 +49,7 @@ REGISTER_USER_KERNEL("COCOReader")
           ctx.TensorDesc4ArgNameAndIndex("gt_segm_offset", 0);
       return ctx.device_type() == DeviceType::kCPU
              && image_desc->data_type() == DataType::kTensorBuffer
+             && image_id_desc->data_type() == DataType::kInt64
              && image_size_desc->data_type() == DataType::kInt32
              && bbox_desc->data_type() == DataType::kTensorBuffer
              && label_desc->data_type() == DataType::kTensorBuffer

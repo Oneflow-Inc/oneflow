@@ -5,6 +5,7 @@ namespace oneflow {
 
 REGISTER_USER_OP("COCOReader")
     .Output("image")
+    .Output("image_id")
     .Output("image_size")
     .Output("gt_bbox")
     .Output("gt_label")
@@ -22,6 +23,7 @@ REGISTER_USER_OP("COCOReader")
     .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
       OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
       OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
       OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_label", 0));
@@ -39,6 +41,9 @@ REGISTER_USER_OP("COCOReader")
       user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
       *image_desc->mut_shape() = Shape({device_batch_size});
       *image_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* image_id_desc = ctx->TensorDesc4ArgNameAndIndex("image_id", 0);
+      *image_id_desc->mut_shape() = Shape({device_batch_size});
+      *image_id_desc->mut_data_type() = DataType::kInt64;
       user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
       *image_size_desc->mut_shape() = Shape({device_batch_size, 2});
       *image_size_desc->mut_data_type() = DataType::kInt32;
