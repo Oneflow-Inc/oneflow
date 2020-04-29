@@ -65,7 +65,8 @@ def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
         check_point.load(model_load_dir)
     else:
         check_point.init()
-        shutil.rmtree(model_load_dir)
+        if os.path.isdir(model_load_dir):
+            shutil.rmtree(model_load_dir)
         check_point.save(model_load_dir)
 
     of_out = DropoutJob().get().ndarray()
