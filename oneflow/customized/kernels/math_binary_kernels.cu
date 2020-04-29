@@ -66,6 +66,16 @@ __device__ float FloordivCalYDiff4GpuFloat(float x, float y, float dz) { return 
 // use int8 1 as true; int8 0 as false
 __device__ int8_t Greater4GpuFloat(float x, float y) { return x>y?1:0; }
 
+__device__ int8_t GreaterEqual4GpuFloat(float x, float y) { return x>=y?1:0; }
+
+__device__ int8_t Less4GpuFloat(float x, float y) { return x<y?1:0; }
+
+__device__ int8_t LessEqual4GpuFloat(float x, float y) { return x<=y?1:0; }
+
+__device__ int8_t Equal4GpuFloat(float x, float y) { return x==y?1:0; }
+
+__device__ int8_t NotEqual4GpuFloat(float x, float y) { return x!=y?1:0; }
+
 #define MATH_BINARY_GPU(func_name, fw_func, bw_func_cal_x_diff, bw_func_cal_y_diff, dtype)       \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, const dtype* y, dtype* z) { \
     CUDA_1D_KERNEL_LOOP(i, n) { z[i] = fw_func(x[i], y[i]); }                                    \
@@ -133,14 +143,24 @@ __device__ int8_t Greater4GpuFloat(float x, float y) { return x>y?1:0; }
   OF_PP_MAKE_TUPLE_SEQ("Xdivy", Xdivy)       \
   OF_PP_MAKE_TUPLE_SEQ("Xlogy", Xlogy)
 
-#define MATH_BINARY_GPU_BOOL_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ("Greater", Greater)
+#define MATH_BINARY_GPU_BOOL_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ("Greater", Greater)            \
+  OF_PP_MAKE_TUPLE_SEQ("GreaterEqual", GreaterEqual)  \
+  OF_PP_MAKE_TUPLE_SEQ("Less", Less)                  \
+  OF_PP_MAKE_TUPLE_SEQ("LessEqual", LessEqual)        \
+  OF_PP_MAKE_TUPLE_SEQ("Equal", Equal)                \
+  OF_PP_MAKE_TUPLE_SEQ("NotEqual", NotEqual)
 
 MATH_BINARY_GPU(Pow, powf, PowCalXDiff4GpuFloat, PowCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Floordiv, FloordivFuc, FloordivCalXDiff4GpuFloat, FloordivCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xdivy, Xdivy4GpuFloat, XdivyCalXDiff4GpuFloat, XdivyCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU(Xlogy, Xlogy4GpuFloat, XlogyCalXDiff4GpuFloat, XlogyCalYDiff4GpuFloat, float);
 MATH_BINARY_GPU_BOOL(Greater, Greater4GpuFloat, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(GreaterEqual, GreaterEqual4GpuFloat, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(Less, Less4GpuFloat, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(LessEqual, LessEqual4GpuFloat, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(Equal, Equal4GpuFloat, float, float, int8_t);
+MATH_BINARY_GPU_BOOL(NotEqual, NotEqual4GpuFloat, float, float, int8_t);
 
 class MathBinaryGpuFloatKernel final : public OpKernel {
  public:
