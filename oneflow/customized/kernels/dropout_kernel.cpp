@@ -22,7 +22,8 @@ class DropoutKernel final : public user_op::OpKernel {
     DropoutKernelUtil<device_type, T>::MaskAndScale(ctx->device_ctx(), in->shape().elem_cnt(),
                                                     scale, in->dptr<T>(), mask->dptr<int8_t>(),
                                                     out->mut_dptr<T>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_DROPOUT_KERNEL(device, dtype)                                                  \
@@ -53,7 +54,8 @@ class DropoutGradKernel final : public user_op::OpKernel {
     DropoutKernelUtil<device_type, T>::MaskAndScale(ctx->device_ctx(), dy->shape().elem_cnt(),
                                                     scale, dy->dptr<T>(), mask->dptr<int8_t>(),
                                                     dx->mut_dptr<T>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_DROPOUT_GRAD_KERNEL(device, dtype)                                              \
@@ -103,7 +105,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
 
     RandomMaskLikeKernelUtil<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
                                                    ctx->GetAttr<float>("rate"), random_tmp, mask);
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)                                            \
