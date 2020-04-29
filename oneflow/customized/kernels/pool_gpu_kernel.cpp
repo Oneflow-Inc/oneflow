@@ -137,7 +137,7 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(1, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -154,7 +154,7 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(1, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };
@@ -171,7 +171,7 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(2, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -188,7 +188,7 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(2, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };
@@ -205,7 +205,7 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(3, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -222,7 +222,7 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(3, "AVG", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };
@@ -239,7 +239,7 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(1, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -256,7 +256,7 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(1, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };
@@ -273,7 +273,7 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(2, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -290,7 +290,7 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(2, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };
@@ -307,7 +307,7 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(3, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::FWCompute(ctx, state);
   };
@@ -324,7 +324,7 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return GPUPoolOpKernelState::FromKernelInitContext(3, "MAX", ctx);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolGpuKernelUtil<T>::BWCompute(ctx, state);
   };

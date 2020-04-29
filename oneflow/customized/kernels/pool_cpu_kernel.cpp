@@ -353,7 +353,7 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
@@ -370,7 +370,7 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
@@ -387,7 +387,7 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
@@ -404,7 +404,7 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
@@ -421,7 +421,7 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
   };
@@ -438,7 +438,7 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
   };
@@ -455,7 +455,7 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
@@ -472,7 +472,7 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
@@ -489,7 +489,7 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
@@ -506,7 +506,7 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
@@ -523,7 +523,7 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
@@ -540,7 +540,7 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
-
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
