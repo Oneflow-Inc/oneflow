@@ -560,7 +560,8 @@ def less_equal(x, y, name=None):
 def greater(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name if name is not None
-                else id_util.UniqueStr("Greater_") ).Op("greater")\
+                else id_util.UniqueStr("Greater_"))\
+            .Op("binary_bool")\
             .Input("x", [x])\
             .Input("y", [y])\
             .Output("z")\
