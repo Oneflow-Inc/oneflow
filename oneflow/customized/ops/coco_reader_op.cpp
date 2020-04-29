@@ -30,7 +30,7 @@ REGISTER_USER_OP("COCOReader")
       OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm", 0));
       OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_offset", 0));
 
-      int64_t batch_size = ctx->GetAttr<int32_t>("batch_size");
+      int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       int64_t device_batch_size = batch_size;
       if (sbp.has_split_parallel() && parallel_num > 1) {
