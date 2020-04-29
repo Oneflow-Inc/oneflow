@@ -258,21 +258,43 @@ def broadcast_mul(x, y, name=None):
 
 
 def scalar_mul(x, operand, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMul_")
-    )
-    setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
-    if isinstance(operand, int):
-        op_conf.scalar_mul_conf.int_operand = operand
-    elif isinstance(operand, float):
-        op_conf.scalar_mul_conf.float_operand = operand
-    op_conf.scalar_mul_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if name is None:
+        name = id_util.UniqueStr("ScalarMul_")
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        builder = (flow.user_op_builder(name)
+            .Op("scalar_mul")
+            .Input("in", [x])
+            .Output("out")
+            )
+        if isinstance(operand, int):
+            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
+                .SetAttr("has_float_operand", False, "AttrTypeBool")
+                .SetAttr("int_operand", operand, "AttrTypeInt64")
+                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+        elif isinstance(operand, float):
+            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
+                .SetAttr("has_float_operand", True, "AttrTypeBool")
+                .SetAttr("int_operand", 0, "AttrTypeInt64")
+                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+        return (builder
+            .Build()
+            .RemoteBlobList()[0])
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf, "name", name
+        )
+        setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
+        if isinstance(operand, int):
+            op_conf.scalar_mul_conf.int_operand = operand
+        elif isinstance(operand, float):
+            op_conf.scalar_mul_conf.float_operand = operand
+        op_conf.scalar_mul_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_mul_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
