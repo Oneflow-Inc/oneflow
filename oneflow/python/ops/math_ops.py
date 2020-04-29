@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
+import os
 
 @oneflow_export("math.add")
 def add(x, y, name=None):
@@ -557,20 +558,30 @@ def less_equal(x, y, name=None):
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
-    )
-    op_conf.broadcast_greater_than_conf.a = x.logical_blob_name
-    op_conf.broadcast_greater_than_conf.b = y.logical_blob_name
-    op_conf.broadcast_greater_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is not None
+                else id_util.UniqueStr("Greater_") ).Op("greater")\
+            .Input("x", [x])\
+            .Input("y", [y])\
+            .Output("z")\
+            .SetAttr("binary_math_type", "Greater", "AttrTypeString")\
+            .Build().RemoteBlobList()[0]
+
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
+        )
+        op_conf.broadcast_greater_than_conf.a = x.logical_blob_name
+        op_conf.broadcast_greater_than_conf.b = y.logical_blob_name
+        op_conf.broadcast_greater_than_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.greater_equal")
