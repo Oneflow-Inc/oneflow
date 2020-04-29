@@ -196,7 +196,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
         in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
         GetMinVal<T>(), out->mut_dptr<int32_t>());
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                            \

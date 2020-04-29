@@ -25,7 +25,7 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
       }
     }
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                                         \
@@ -66,7 +66,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
       prediction_grad[i] = prediction_grad[i] * loss_grad[i];
     }
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)                            \

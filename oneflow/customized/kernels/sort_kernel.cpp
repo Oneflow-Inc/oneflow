@@ -32,7 +32,7 @@ class CpuSortKernel final : public user_op::OpKernel {
       }
     }
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_SORT_KERNEL(dtype)                                                 \

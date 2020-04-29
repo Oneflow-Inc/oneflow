@@ -33,7 +33,7 @@ class GpuSortKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \

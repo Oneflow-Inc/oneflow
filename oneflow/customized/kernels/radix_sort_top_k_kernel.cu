@@ -89,7 +89,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                       instance_size * sizeof(int32_t), k * sizeof(int32_t), instance_num,
                       cudaMemcpyDeviceToDevice, ctx->device_ctx()->cuda_stream());
   }
-  bool AlwaysSkipWhenOutputEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \
