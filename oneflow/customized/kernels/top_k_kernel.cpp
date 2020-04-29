@@ -78,7 +78,8 @@ class TopKCpuKernel final : public user_op::OpKernel {
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                    \

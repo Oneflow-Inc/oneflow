@@ -18,6 +18,7 @@ class CopyDataContentKernel final : public user_op::OpKernel {
     Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
                         in->shape().elem_cnt() * GetSizeOfDataType(in->data_type()));
   };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace oneflow
