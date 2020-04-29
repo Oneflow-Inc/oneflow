@@ -66,11 +66,6 @@ class DropoutGradKernel final : public user_op::OpKernel {
         return ctx.device_type() == device && dx_desc->data_type() == GetDataType<dtype>::value; \
       });
 
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_KERNEL, DEVICE_TYPE_SEQ,
-//                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
-
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_GRAD_KERNEL, DEVICE_TYPE_SEQ,
-//                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kCPU, double)
 REGISTER_DROPOUT_GRAD_KERNEL(DeviceType::kGPU, float)
