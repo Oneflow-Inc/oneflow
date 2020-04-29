@@ -11,7 +11,7 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   return shifted;
 }
 
-Shape InferBnParamShape(const Shape& x_shape, const int64_t& begin_norm_axis) {
+Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
   DimVector bn_param_shape_dim_vec;
   bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x_shape.dim_vec().cbegin(),
                                 x_shape.dim_vec().cbegin() + begin_norm_axis);
@@ -43,8 +43,8 @@ REGISTER_USER_OP("layer_norm")
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
-      const bool& center = ctx->GetAttr<bool>("center");
-      const bool& scale = ctx->GetAttr<bool>("scale");
+      const bool center = ctx->GetAttr<bool>("center");
+      const bool scale = ctx->GetAttr<bool>("scale");
       const int64_t begin_params_axis =
           ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_params_axis"));
       *y = *x;
@@ -171,10 +171,10 @@ REGISTER_USER_OP("layer_norm_param_grad")
       };
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       int64_t begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
-      const bool& has_beta_diff = has_tensor("beta_diff");
-      const bool& has_gamma_diff = has_tensor("gamma_diff");
-      const bool& has_gamma = has_tensor("gamma");
-      const bool& has_normalized_diff = has_tensor("normalized_diff");
+      const bool has_beta_diff = has_tensor("beta_diff");
+      const bool has_gamma_diff = has_tensor("gamma_diff");
+      const bool has_gamma = has_tensor("gamma");
+      const bool has_normalized_diff = has_tensor("normalized_diff");
       if (has_beta_diff || has_gamma_diff) {
         const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
         CHECK_EQ_OR_RETURN(reduce_buf->data_type(), dy->data_type());
@@ -252,15 +252,15 @@ REGISTER_USER_OP("layer_norm_param_grad")
 
 REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      const bool& center = op.attr<bool>("center");
-      const bool& scale = op.attr<bool>("scale");
-      const bool& has_beta = center;
-      const bool& has_gamma = scale;
+      const bool center = op.attr<bool>("center");
+      const bool scale = op.attr<bool>("scale");
+      const bool has_beta = center;
+      const bool has_gamma = scale;
       const bool has_beta_diff = has_beta && op.NeedGenGradTensor4OpInput("beta", 0);
       const bool has_gamma_diff = has_gamma && op.NeedGenGradTensor4OpInput("gamma", 0);
       const bool need_scale_out_diff = has_gamma && op.NeedGenGradTensor4OpInput("x", 0);
-      const int64_t& begin_norm_axis = op.attr<int64_t>("begin_norm_axis");
-      const int64_t& begin_params_axis = op.attr<int64_t>("begin_params_axis");
+      const int64_t begin_norm_axis = op.attr<int64_t>("begin_norm_axis");
+      const int64_t begin_params_axis = op.attr<int64_t>("begin_params_axis");
       const int64_t num_in_axes = op.TensorDesc4ArgNameAndIndex("x", 0).shape().NumAxes();
       const auto ShiftAxisIfNeed = [num_in_axes](const int64_t axis) {
         return axis < 0 ? axis + num_in_axes : axis;

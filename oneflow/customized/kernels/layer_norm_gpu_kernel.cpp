@@ -48,13 +48,14 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
   ~LayerNormGpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const bool& scale = ctx->GetAttr<bool>("scale");
-    const bool& center = ctx->GetAttr<bool>("center");
+    const bool scale = ctx->GetAttr<bool>("scale");
+    const bool center = ctx->GetAttr<bool>("center");
     user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
     const T& epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
@@ -111,7 +112,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                  \
         user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);     \
         const DataType& data_type = mean->data_type();                              \
-        const int64_t& elem_cnt = mean->shape().elem_cnt();                         \
+        const int64_t elem_cnt = mean->shape().elem_cnt();                          \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;     \
       });
 
@@ -125,6 +126,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
   ~LayerNormGradGpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -167,7 +169,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                                 \
         user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("cudnn_bn_scale_diff_buf", 0); \
         const DataType& data_type = mean->data_type();                                             \
-        const int64_t& elem_cnt = mean->shape().elem_cnt();                                        \
+        const int64_t elem_cnt = mean->shape().elem_cnt();                                         \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                        \
       });
 
@@ -181,6 +183,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
   ~LayerNormParamGradGpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
     auto Val = NdUtil::GetValNdarrayBuilder();
@@ -190,10 +193,10 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* gamma_diff = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0);
     user_op::Tensor* normalized_diff = ctx->Tensor4ArgNameAndIndex("normalized_diff", 0);
     user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const bool& has_beta_diff = beta_diff != nullptr;
-    const bool& has_gamma_diff = gamma_diff != nullptr;
-    const bool& has_normalized_diff = normalized_diff != nullptr;
-    const bool& has_gamma = gamma != nullptr;
+    const bool has_beta_diff = beta_diff != nullptr;
+    const bool has_gamma_diff = gamma_diff != nullptr;
+    const bool has_normalized_diff = normalized_diff != nullptr;
+    const bool has_gamma = gamma != nullptr;
     if (has_beta_diff) {
       user_op::Tensor* reduce_buf = ctx->Tensor4ArgNameAndIndex("reduce_buf", 0);
       const int64_t m = beta_diff->shape().elem_cnt();

@@ -9,6 +9,7 @@ class LayerNormCpuKernel final : public user_op::OpKernel {
   ~LayerNormCpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
@@ -31,6 +32,7 @@ class LayerNormGradCpuKernel final : public user_op::OpKernel {
   ~LayerNormGradCpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
@@ -53,6 +55,7 @@ class LayerNormParamGradCpuKernel final : public user_op::OpKernel {
   ~LayerNormParamGradCpuKernel() = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
