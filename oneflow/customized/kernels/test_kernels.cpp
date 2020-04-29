@@ -19,6 +19,7 @@ class ReluKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Relu(ctx->device_ctx(), in_blob->shape().elem_cnt(),
                                           in_blob->dptr<float>(), out_blob->mut_dptr<float>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 class ReluGradKernel final : public user_op::OpKernel {
@@ -35,6 +36,7 @@ class ReluGradKernel final : public user_op::OpKernel {
         ctx->device_ctx(), dx_blob->shape().elem_cnt(), y_blob->dptr<float>(),
         y_blob->dptr<float>(), dy_blob->dptr<float>(), dx_blob->mut_dptr<float>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("ccrelu")
@@ -64,6 +66,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestReshape")
@@ -82,6 +85,7 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
@@ -102,6 +106,7 @@ class TestSourceKernel final : public user_op::OpKernel {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestSource")
@@ -130,6 +135,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out2_blob->shape().elem_cnt(), 0.0,
                                           out2_blob->mut_dptr<float>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
@@ -154,6 +160,7 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
       *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
@@ -178,6 +185,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
                              x1_blob->shape().elem_cnt() * sizeof(float));
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestMultiInput")
@@ -204,6 +212,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x2_diff_blob->shape().elem_cnt(), 2.0,
                                           x2_diff_blob->mut_dptr<float>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestMultiInputGrad")
@@ -227,6 +236,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
     out_blob->mut_shape()->Set(0, 3);
     for (int i = 0; i < 3; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestDynamicSource")
@@ -258,6 +268,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
     random_generator->Mutable()->Uniform<float>(out_blob->shape().elem_cnt(), 0.0, 1.0,
                                                 out_blob->mut_dptr<float>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestRandomSource")
@@ -280,6 +291,7 @@ class TestDataTypeAttrKernel final : public user_op::OpKernel {
     CHECK_EQ(ctx->GetAttr<DataType>("output_type"),
              ctx->Tensor4ArgNameAndIndex("out", 0)->data_type());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestDataTypeAttr")
@@ -302,6 +314,7 @@ class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
       CHECK_EQ(out_types.at(i), ctx->Tensor4ArgNameAndIndex("out", i)->data_type());
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("TestListDataTypeAndListShapeAttr")

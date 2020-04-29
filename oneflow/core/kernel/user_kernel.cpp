@@ -190,6 +190,8 @@ class UserKernel final : public Kernel {
     ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
   }
 
+  bool IsStateless() const override { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
+
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
