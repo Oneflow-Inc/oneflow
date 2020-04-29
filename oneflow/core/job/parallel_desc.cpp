@@ -18,9 +18,9 @@ void ResetDeviceTag(std::string* device_name, const std::string& device_tag) {
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
                                 std::string* device_tag, std::string* device_id_str) {
   size_t second_delimiter_pos = device_name.rfind(":");
-  OF_CHECK_NE(second_delimiter_pos, std::string::npos);
+  CHECK_NE_OR_RETURN(second_delimiter_pos, std::string::npos);
   size_t first_delimiter_pos = device_name.rfind(":", second_delimiter_pos - 1);
-  OF_CHECK_NE(first_delimiter_pos, std::string::npos);
+  CHECK_NE_OR_RETURN(first_delimiter_pos, std::string::npos);
   *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, first_delimiter_pos));
   *device_tag =
       device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
