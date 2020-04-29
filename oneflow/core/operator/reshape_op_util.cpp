@@ -15,9 +15,9 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
       has_minus_1 = true;
       minus_1_axis = axis;
     } else if (dim > 0) {
-      OF_CHECK_LE(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
+      CHECK_LE_OR_RETURN(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
       total_elem_dim_exclude_minus_1 *= dim;
-      OF_CHECK_LE(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
+      CHECK_LE_OR_RETURN(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
           << "element number in reshape_conf is bigger than input blob";
     } else {
       OF_UNIMPLEMENTED() << "only positive number or -1 supported";
@@ -73,8 +73,8 @@ Maybe<void> ReshapeOpUtil::GetGroupStartInAxis2OutAxis(
   }
   CHECK_GE_OR_RETURN(in_axis, -1);
   CHECK_GE_OR_RETURN(out_axis, -1);
-  OF_CHECK_LE(in_axis, 0);
-  OF_CHECK_LE(out_axis, 0);
+  CHECK_LE_OR_RETURN(in_axis, 0);
+  CHECK_LE_OR_RETURN(out_axis, 0);
   CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);
   return Maybe<void>::Ok();
 }

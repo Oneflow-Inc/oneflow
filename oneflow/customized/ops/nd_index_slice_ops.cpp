@@ -8,8 +8,8 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
                                 const Shape& updates_shape) {
   int64_t batch_ndims = indices_shape.NumAxes() - 1;
   int64_t index_ndims = indices_shape.At(batch_ndims);
-  OF_CHECK_LE(batch_ndims, updates_shape.NumAxes());
-  OF_CHECK_LE(index_ndims, params_shape.NumAxes());
+  CHECK_LE_OR_RETURN(batch_ndims, updates_shape.NumAxes());
+  CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, batch_ndims) { CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i)); }
   int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
   CHECK_EQ_OR_RETURN(slice_ndims, updates_shape.NumAxes() - batch_ndims);
@@ -95,7 +95,7 @@ REGISTER_USER_OP("gather_nd")
       Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
       Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
       int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);
-      OF_CHECK_LE(index_ndims, params_shape->NumAxes());
+      CHECK_LE_OR_RETURN(index_ndims, params_shape->NumAxes());
       DimVector out_shape_vec(indices_shape->dim_vec().cbegin(),
                               indices_shape->dim_vec().cend() - 1);
       FOR_RANGE(int64_t, i, index_ndims, params_shape->NumAxes()) {
