@@ -1,4 +1,3 @@
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/kernel/kernel_registration.h"
@@ -6,6 +5,8 @@
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+namespace {
 
 template<DeviceType device_type, typename T>
 
@@ -46,4 +47,7 @@ REGISTER_CONSTANT_LIKE_KERNEL(int32_t);
 REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
 
 #undef REGISTER_CONSTANT_LIKE_KERNEL
+
+}  // namespace
+
 }  // namespace oneflow
