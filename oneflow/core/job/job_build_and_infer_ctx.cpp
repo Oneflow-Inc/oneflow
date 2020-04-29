@@ -384,7 +384,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else if (sbp.has_split_parallel()) {
-    CHECK_EQ_RETURN(sbp.split_parallel().axis(), 0)
+    CHECK_EQ_OR_RETURN(sbp.split_parallel().axis(), 0)
         << "only `S(0)' consistent blob is compatible to mirrored blob";
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
