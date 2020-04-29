@@ -381,6 +381,8 @@ class UserKernel final : public Kernel {
     kernel_->ForwardShape(infer_ctx_.get());
   }
 
+  bool IsStateless() const override { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
+
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
