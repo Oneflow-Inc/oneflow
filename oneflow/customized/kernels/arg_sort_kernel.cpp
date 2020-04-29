@@ -40,7 +40,8 @@ class CpuArgSortKernel final : public user_op::OpKernel {
       };
       std::sort(out_ptr_i, out_ptr_i + instance_size, comp);
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                           \

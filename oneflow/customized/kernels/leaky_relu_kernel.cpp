@@ -17,7 +17,8 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * alpha; }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)                                       \
@@ -49,7 +50,8 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();
     FOR_RANGE(int32_t, i, 0, elem_cnt) { dx_ptr[i] = x_ptr[i] > 0 ? dy_ptr[i] : dy_ptr[i] * alpha; }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)                                    \
