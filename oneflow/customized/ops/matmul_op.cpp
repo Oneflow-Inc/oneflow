@@ -156,11 +156,11 @@ REGISTER_USER_OP("matmul")
       }
       SbpSignatureBuilder()
           .Split("a", 0, m_axis)
-          .Broadcast("b")
+          .Broadcast("b", 0)
           .Split(ctx->outputs(), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
-          .Broadcast("a")
+          .Broadcast("a", 0)
           .Split("b", 0, n_axis)
           .Split(ctx->outputs(), 1)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
@@ -170,13 +170,13 @@ REGISTER_USER_OP("matmul")
           .PartialSum(ctx->outputs())
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
-          .PartialSum("a")
-          .Broadcast("b")
+          .PartialSum("a", 0)
+          .Broadcast("b", 0)
           .PartialSum(ctx->outputs())
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       SbpSignatureBuilder()
-          .Broadcast("a")
-          .PartialSum("b")
+          .Broadcast("a", 0)
+          .PartialSum("b", 0)
           .PartialSum(ctx->outputs())
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
