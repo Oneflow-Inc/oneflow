@@ -20,6 +20,8 @@ class CpuGeluKernel final : public user_op::OpKernel {
       out_ptr[i] = 0.5 * in_ptr[i] * (1.0 + std::erf(inv_sqrt2 * in_ptr[i]));
     }
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_GELU_KERNEL(dtype)                                                 \
@@ -57,6 +59,8 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
                   * dy_ptr[i];
     }
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                                          \

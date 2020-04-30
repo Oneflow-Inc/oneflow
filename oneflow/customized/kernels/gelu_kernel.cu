@@ -83,6 +83,8 @@ class GpuGeluKernel final : public user_op::OpKernel {
     RUN_CUDA_KERNEL((GeluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
                     inv_sqrt2, y->mut_dptr<T>());
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<>
@@ -101,6 +103,7 @@ class GpuGeluKernel<float16> final : public user_op::OpKernel {
                     reinterpret_cast<const half*>(x->dptr<float16>()), inv_sqrt2,
                     reinterpret_cast<half*>(y->mut_dptr<float16>()));
   };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_GELU_KERNEL(dtype)                                               \
@@ -132,6 +135,8 @@ class GpuGeluGradKernel final : public user_op::OpKernel {
     RUN_CUDA_KERNEL((GeluBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
                     dy->dptr<T>(), inv_sqrt2, coef, dx->mut_dptr<T>());
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<>
@@ -153,6 +158,8 @@ class GpuGeluGradKernel<float16> final : public user_op::OpKernel {
                     reinterpret_cast<const half*>(dy->dptr<float16>()), inv_sqrt2, coef,
                     reinterpret_cast<half*>(dx->mut_dptr<float16>()));
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                                          \
