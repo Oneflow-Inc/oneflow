@@ -43,11 +43,13 @@ const T* Symbol<T>::GetOrCreatePtr(const T& obj) {
   }
   static std::mutex mutex;
   typename HashSet::iterator iter;
+  bool obj_not_found_in_cache = false;
   {
     std::lock_guard<std::mutex> lock(mutex);
     iter = cached_objs.find(obj_ptr_wraper);
+    obj_not_found_in_cache = (iter == cached_objs.end());
   }
-  if (iter == cached_objs.end()) {
+  if (obj_not_found_in_cache) {
     HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
     std::lock_guard<std::mutex> lock(mutex);
     iter = cached_objs.emplace(new_obj_ptr_wraper).first;
