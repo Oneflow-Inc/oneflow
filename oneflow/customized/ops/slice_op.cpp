@@ -13,11 +13,11 @@ REGISTER_USER_OP("slice_v2")
     .Attr("has_end", UserOpAttrType::kAtListInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
-      auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
-      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      const auto& begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
+      const auto& end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
+      const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), begin_vec.size());
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), end_vec.size());
       CHECK_EQ_OR_RETURN(in_shape->NumAxes(), stride_vec.size());
@@ -57,9 +57,9 @@ REGISTER_USER_OP("slice_v2")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
-      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       FOR_RANGE(int64_t, axis, 0, num_axes) {
         if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           SbpSignatureBuilder()
@@ -84,11 +84,11 @@ REGISTER_USER_OP("slice_grad_v2")
     .Attr("has_end", UserOpAttrType::kAtListInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      auto begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
-      auto end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
-      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      const auto& begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
+      const auto& end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
+      const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       CHECK_EQ_OR_RETURN(like_shape->NumAxes(), begin_vec.size());
       CHECK_EQ_OR_RETURN(like_shape->NumAxes(), end_vec.size());
       CHECK_EQ_OR_RETURN(like_shape->NumAxes(), stride_vec.size());
@@ -114,9 +114,9 @@ REGISTER_USER_OP("slice_grad_v2")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-      auto stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-      auto has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-      auto has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+      const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
+      const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
+      const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
       FOR_RANGE(int64_t, axis, 0, num_axes) {
         if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           SbpSignatureBuilder()

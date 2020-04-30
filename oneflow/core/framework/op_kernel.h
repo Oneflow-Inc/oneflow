@@ -87,6 +87,8 @@ class OpKernel {
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
 
+  virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+
  protected:
   OpKernel() = default;
 };
