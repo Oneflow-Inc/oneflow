@@ -8,11 +8,8 @@
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/kernel/op_kernel_infer_cache_helper.h"
 
 namespace oneflow {
-
-class UserKernel;
 
 namespace user_op {
 
@@ -64,7 +61,6 @@ class KernelInferContext {
   }
 
   virtual void NaiveInferShape() { UNIMPLEMENTED(); }
-  virtual OpKernelInferCacheHelper* GetInferCacheHelper() { UNIMPLEMENTED(); }
 
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
@@ -121,19 +117,11 @@ class OpKernel {
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
-  virtual void InferShape(KernelInferContext* ctx) const { ctx->NaiveInferShape(); }
+  virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 
  protected:
   OpKernel() = default;
-
- private:
-  friend UserKernel;
-
-  void ForwardShape(KernelInferContext* ctx) const {
-    ctx->GetInferCacheHelper()->ForwardShape(
-        [this](KernelInferContext* ctx) { this->InferShape(ctx); }, ctx);
-  }
 };
 
 }  // namespace user_op
