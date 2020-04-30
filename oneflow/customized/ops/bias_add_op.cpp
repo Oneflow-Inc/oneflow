@@ -42,8 +42,8 @@ REGISTER_USER_OP_GRAD("bias_add")
       if (op.NeedGenGradTensor4OpInput("b", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         auto grad_op_builder = builder.Op("reduce_sum")
-                                   .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                   .Output("out");
+                                   .Input("input_tensor", op.GetGradTensorWithOpOutput("out", 0))
+                                   .Output("output_tensor");
 
         const int32_t bias_add_axis = op.attr<int32_t>("axis");
         const int32_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
@@ -51,10 +51,11 @@ REGISTER_USER_OP_GRAD("bias_add")
         FOR_RANGE(int32_t, i, 0, num_axes) {
           if (i != bias_add_axis) { reduce_sum_axes.push_back(i); }
         }
-        grad_op_builder.Attr("keep_dims", false);
+        grad_op_builder.Attr("axis", reduce_sum_axes);
+        grad_op_builder.Attr("keepdims", false);
         const auto grad_op = grad_op_builder.Build();
         AddOp(grad_op);
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "b", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
       }
     });
 

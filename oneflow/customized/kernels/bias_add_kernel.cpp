@@ -23,6 +23,9 @@ class BiasAddUserKernel final : public user_op::OpKernel {
                                          a_blob->dptr<T>(), b_blob->dptr<T>(),
                                          out_blob->mut_dptr<T>());
   }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
 };
 
 template<typename T>
