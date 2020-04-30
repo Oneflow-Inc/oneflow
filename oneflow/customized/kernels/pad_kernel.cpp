@@ -46,9 +46,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 template<DeviceType device_type, typename T>
 class PadKernel final : public user_op::OpKernel {
  public:
-  PadKernel() {
-    device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
-  }
+  PadKernel() = default;
   ~PadKernel() = default;
 
  private:
@@ -58,7 +56,7 @@ class PadKernel final : public user_op::OpKernel {
     const T constant_value =
         GetDtypeMatchedValue<T>(ctx->GetAttr<double>("floating_constant_value"),
                                 ctx->GetAttr<int64_t>("integral_constant_value"));
-    const auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
+    const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
@@ -81,11 +79,12 @@ class PadKernel final : public user_op::OpKernel {
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
     memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-    device_memory_copier_->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                                reduced_memory_copy_nd_desc);
-  };
 
-  std::unique_ptr<MemoryCopier> device_memory_copier_;
+    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
+    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
+                               reduced_memory_copy_nd_desc);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_PAD_KERNEL(dev, dtype)                                                      \
@@ -109,16 +108,14 @@ REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
 template<DeviceType device_type, typename T>
 class PadGradKernel final : public user_op::OpKernel {
  public:
-  PadGradKernel() {
-    device_memory_copier_ = std::unique_ptr<MemoryCopier>(NewDefaultMemoryCopier(device_type));
-  }
+  PadGradKernel() = default;
   ~PadGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
+    const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
     const int64_t ndims = dy->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
 
@@ -139,11 +136,12 @@ class PadGradKernel final : public user_op::OpKernel {
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
     memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-    device_memory_copier_->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
-                                reduced_memory_copy_nd_desc);
-  };
 
-  std::unique_ptr<MemoryCopier> device_memory_copier_;
+    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
+    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
+                               reduced_memory_copy_nd_desc);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_PAD_GRAD_KERNEL(dev, dtype)                                                  \
