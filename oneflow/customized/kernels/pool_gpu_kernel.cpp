@@ -370,5 +370,6 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
 
 REGISTER_POOL_GPU_KERNEL(float)
 REGISTER_POOL_GPU_KERNEL(double)
+REGISTER_POOL_GPU_KERNEL(float16)
 
 }  // namespace oneflow
