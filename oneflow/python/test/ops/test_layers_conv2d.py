@@ -95,7 +95,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
 
     assert np.allclose(of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")).transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        np.load(os.path.join(GetSavePath(), "x_diff.npy")).transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-5, atol=1e-4
     )
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "weight_diff.npy")).transpose(2, 3, 1, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
