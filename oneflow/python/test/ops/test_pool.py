@@ -138,7 +138,7 @@ def test_pool(_):
 
         # TODO: these cases will fail in old implementation
         if dim == 3 and data_format == "NDHWC":
-            return
+            continue
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
