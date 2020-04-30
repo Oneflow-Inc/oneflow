@@ -24,7 +24,7 @@
 namespace oneflow {
 
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
-  OF_CHECK_ISNULL(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
+  CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   // no delete
   Global<ForeignWatcher>::SetAllocated(watcher);
   return Maybe<void>::Ok();
@@ -40,7 +40,7 @@ Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
-  OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
@@ -62,7 +62,7 @@ void FixCpuDeviceNum(ConfigProto* config_proto) {
 }
 
 Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
-  OF_CHECK_NOTNULL(Global<EnvDesc>::Get()) << "env not found";
+  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
   ClusterControl::MasterSendSessionStart();
@@ -73,7 +73,7 @@ Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
   FixCpuDeviceNum(&config_proto);
   Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
 
-  OF_CHECK_ISNULL(Global<SessionGlobalObjectsScope>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
   Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
   JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
   LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
@@ -88,14 +88,14 @@ Maybe<void> DestroyGlobalSession() {
 }
 
 Maybe<void> StartGlobalSession() {
-  OF_CHECK_NOTNULL(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
+  CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
-  OF_CHECK_ISNULL(Global<Oneflow>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   Global<Oneflow>::New(job_set);
@@ -105,7 +105,7 @@ Maybe<void> StartGlobalSession() {
 Maybe<void> StopGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  OF_CHECK_NOTNULL(Global<Oneflow>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
   Global<const InterJobReuseMemStrategy>::Delete();
   return Maybe<void>::Ok();
@@ -113,8 +113,8 @@ Maybe<void> StopGlobalSession() {
 
 Maybe<std::string> GetSerializedInterUserJobInfo() {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  OF_CHECK_NOTNULL(Global<Oneflow>::Get());
-  OF_CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
   std::string ret;
   google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
   return ret;
@@ -128,7 +128,7 @@ Maybe<std::string> GetFunctionConfigDef() {
 
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  OF_CHECK_NOTNULL(Global<Oneflow>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
