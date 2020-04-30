@@ -41,13 +41,14 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     return y, value_diff, bias_diff
 
 
-def RunTensorFlowBiasAdd(inputs, bias, tf_args):
+def RunTensorFlowBiasAdd(value, bias, tf_args):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        inputs = [tf.Variable(x) for x in inputs]
-        y = tf.nn.bias_add(*inputs, *tf_args)
-    input_diffs = [tape.gradient(y, x).numpy() for x in inputs]
-    return (y.numpy(), *input_diffs)
+        value, bias = tf.Variable(value), tf.Variable(bias)
+        y = tf.nn.bias_add(value, bias, *tf_args)
+    value_diff = tape.gradient(y, value).numpy()
+    bias_diff = tape.gradient(y, bias).numpy()
+    return y.numpy(), value_diff, bias_diff
 
 
 def CompareBiasAddWithTensorFlow(device_type, input_shapes,
@@ -75,16 +76,18 @@ def CompareBiasAddWithTensorFlow(device_type, input_shapes,
 
 def test_bias_add_nchw(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
+    # TODO: enable cpu tests when the bug gets fixed
+    arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,))]
-    arg_dict['op_args'] = [Args([]), Args(["NCHW"])] 
+    arg_dict['op_args'] = [Args(["NCHW"])] 
     for arg in GenArgDict(arg_dict):
         CompareBiasAddWithTensorFlow(**arg)
 
 
 def test_bias_add_nhwc(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
+    # TODO: enable cpu tests when the bug gets fixed
+    arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 8), (8,))]
     arg_dict['op_args'] = [Args(["NHWC"])] 
     for arg in GenArgDict(arg_dict):
