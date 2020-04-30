@@ -25,7 +25,6 @@ struct CudnnConvArgsAndAlgo final {
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
                                    const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
                                    buf->mut_dptr());
-    PerfT algo_perf;
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
           &args, &res, static_cast<AlgoT>(forced_algo));
