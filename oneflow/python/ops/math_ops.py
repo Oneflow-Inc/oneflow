@@ -357,6 +357,7 @@ def tanh(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -393,6 +394,7 @@ def relu(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
