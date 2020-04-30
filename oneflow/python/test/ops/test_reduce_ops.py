@@ -14,13 +14,13 @@ def compare_reduce_any_with_tensorflow(device_type, input_shape, axis, keepdims,
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float32)
+    func_config.default_data_type(flow.int8)
 
     @flow.function(func_config)
-    def ReduceAnyJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
+    def ReduceAnyJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kInt8)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_any(x, axis=axis, keepdims=keepdims)
-    x = np.random.rand(*input_shape).astype(np.float32)
+    x = np.random.rand(*input_shape).astype(np.int8)
     # OneFlow
     of_out = ReduceAnyJob(x).get()
     # TensorFlow
@@ -209,13 +209,13 @@ def compare_reduce_all_with_tensorflow(device_type, input_shape, axis, keepdims,
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float32)
+    func_config.default_data_type(flow.int8)
 
     @flow.function(func_config)
-    def ReduceAllJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
+    def ReduceAllJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kInt8)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_all(x, axis=axis, keepdims=keepdims)
-    x = np.random.rand(*input_shape).astype(np.float32)
+    x = np.random.rand(*input_shape).astype(np.int8)
     # OneFlow
     of_out = ReduceAllJob(x).get()
     # TensorFlow

@@ -9,6 +9,8 @@ import oneflow as flow
 @oneflow_export("math.reduce_any")
 def reduce_any(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceAny_")
+    if len(x.shape) == 1:
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
@@ -36,6 +38,8 @@ def reduce_prod(x, axis=None, keepdims=False, name=None):
 @oneflow_export("math.reduce_all")
 def reduce_all(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceAll_")
+    if len(x.shape) == 1:
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
