@@ -173,7 +173,7 @@ def test_reduce_min_col_reduce(test_case):
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reducemin_with_tensorflow(*arg)
+        compare_reduce_min_with_tensorflow(*arg)
 
 def test_reduce_min_row_reduce(test_case):
     arg_dict = OrderedDict()
@@ -182,7 +182,7 @@ def test_reduce_min_row_reduce(test_case):
     arg_dict["axis"] = [[1]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reducemin_with_tensorflow(*arg)
+        compare_reduce_min_with_tensorflow(*arg)
 
 def test_reduce_min_scalar(test_case):
     arg_dict = OrderedDict()
@@ -191,7 +191,7 @@ def test_reduce_min_scalar(test_case):
     arg_dict["axis"] = [[0, 1]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reducemin_with_tensorflow(*arg)
+        compare_reduce_min_with_tensorflow(*arg)
 
 def test_reduce_min_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
@@ -239,7 +239,7 @@ def test_reduce_all_col_reduce(test_case):
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduceall_with_tensorflow(*arg)
+        compare_reduce_all_with_tensorflow(*arg)
 
 def test_reduce_all_row_reduce(test_case):
     arg_dict = OrderedDict()
