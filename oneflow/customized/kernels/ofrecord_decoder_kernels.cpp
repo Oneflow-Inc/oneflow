@@ -83,6 +83,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
       DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_RAW_DECODER_KERNEL(dtype)                                                         \
@@ -236,6 +237,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")

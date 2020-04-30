@@ -63,6 +63,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
       cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("ImageResize")
@@ -175,6 +176,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
                  mirror.at(i), mean_vec, inv_std_vec);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("CropMirrorNormalize")
@@ -228,6 +230,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
       *(dptr + i) = rand_bool_gen->GetNextBool() ? 1 : 0;
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("CoinFlip")
