@@ -57,7 +57,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     const bool scale = ctx->GetAttr<bool>("scale");
     const bool center = ctx->GetAttr<bool>("center");
     user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
-    const T& epsilon = ctx->GetAttr<double>("epsilon");
+    const double epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -118,6 +118,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
 
 REGISTER_LAYER_NORM_GPU_KERNEL(float, float)
 REGISTER_LAYER_NORM_GPU_KERNEL(double, double)
+REGISTER_LAYER_NORM_GPU_KERNEL(float16, float)
 
 template<typename T, typename BNParamT>
 class LayerNormGradGpuKernel final : public user_op::OpKernel {
@@ -142,7 +143,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
                                           static_cast<BNParamT>(1),
                                           reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
-    const T& epsilon = ctx->GetAttr<double>("epsilon");
+    const double epsilon = ctx->GetAttr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     CudaCheck(cudnnBatchNormalizationBackward(
@@ -173,6 +174,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
 
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(double, double)
+REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float16, float)
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
@@ -241,5 +243,6 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
 
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float16)
 
 }  // namespace oneflow
