@@ -29,7 +29,7 @@ OpKernelInferCache::ValueType OpKernelInferCache::GetCacheValue() const {
 }
 
 void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
-  auto GetSymbolOfShape = [=](const std::string& arg_name, int32_t arg_index) -> Symbol<Shape> {
+  auto GetSymbolOfShape = [&](const std::string& arg_name, int32_t arg_index) -> Symbol<Shape> {
     Shape shape;
     shape.LeftOnesExtendedAssign(ctx->ShapeView4ArgNameAndIndex(arg_name, arg_index));
     return SymbolOf(shape);
@@ -61,11 +61,11 @@ void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
 }
 
 void OpKernelInferCache::Reset() {
+  CHECK_EQ(cached_key2value_.size(), key_storage_.size());
   HashMap to_release_key2values;
   KeyStorage to_release_key_storage;
   std::swap(cached_key2value_, to_release_key2values);
   std::swap(key_storage_, to_release_key_storage);
-  CHECK_EQ(to_release_key2values.size(), to_release_key_storage.size());
   if (to_release_key2values.size() <= kReleaseInIndependentThreadThreshold) {
     to_release_key2values.clear();
     to_release_key_storage.clear();

@@ -11,7 +11,7 @@ namespace oneflow {
 
 namespace {
 
-user_op::TensorDesc GenTensorDescFromBlob(const Blob* blob) {
+void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) {
   BlobDescProto proto;
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
@@ -19,7 +19,7 @@ user_op::TensorDesc GenTensorDescFromBlob(const Blob* blob) {
   proto.set_is_body_disabled(blob->blob_desc().is_body_disabled());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
-  return user_op::TensorDesc(proto);
+  *tensor_desc = proto;
 }
 
 }  // namespace
@@ -103,7 +103,7 @@ class UserOpKernelInferContext : public user_op::InferContext {
                            const std::function<Blob*(const std::string&, int32_t)>& Arg2Blob)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
     auto* bn2sbp = sbp_signature_.mutable_bn_in_op2sbp_parallel();
-    auto InitArgs7TensorDesc7Sbp = [=](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+    auto InitArgs7TensorDesc7Sbp = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                                        ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
@@ -111,7 +111,9 @@ class UserOpKernelInferContext : public user_op::InferContext {
           std::pair<std::string, int32_t> arg_pair = std::make_pair(arg_name, i);
           arg_vec->emplace_back(arg_pair);
           Blob* blob = Arg2Blob(arg_name, i);
-          arg2tensor_desc_.emplace(arg_pair, GenTensorDescFromBlob(blob));
+          user_op::TensorDesc tensor_desc;
+          FillTensorDescWithBlob(blob, &tensor_desc);
+          arg2tensor_desc_.emplace(arg_pair, std::move(tensor_desc));
           const std::string& bn_in_op = GenRepeatedBn(arg_name, i);
           (*bn2sbp)[bn_in_op].mutable_split_parallel()->set_axis(0);
         }
