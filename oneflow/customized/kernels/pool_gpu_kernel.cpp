@@ -1,5 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/customized/utils/pool_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
@@ -25,7 +24,7 @@ class CudnnPoolDesc final {
   cudnnPoolingDescriptor_t val_;
 };
 
-class GPUPoolOpKernelState final {
+class GPUPoolOpKernelState final : public user_op::OpKernelState {
  public:
   GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
                        const Shape& y_shape, const std::string& data_format, const DataType& dtype,
@@ -67,8 +66,10 @@ class GPUPoolOpKernelState final {
     const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
     const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
     const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
-    return std::make_shared<OpKernelStateWrapper<GPUPoolOpKernelState>>(
-        dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+    std::shared_ptr<GPUPoolOpKernelState> state;
+    state.reset(new GPUPoolOpKernelState(dim, pooling_type, x_shape, y_shape, data_format, dtype,
+                                         params_3d));
+    return std::move(state);
   }
 
   const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
@@ -96,13 +97,13 @@ struct PoolGpuKernelUtil {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<GPUPoolOpKernelState>* gpu_pool_op_kernel_state =
-        dynamic_cast<OpKernelStateWrapper<GPUPoolOpKernelState>*>(state);
+    const GPUPoolOpKernelState* gpu_pool_op_kernel_state =
+        dynamic_cast<GPUPoolOpKernelState*>(state);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     CudaCheck(cudnnPoolingForward(
-        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->Get().cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), x->dptr(),
-        CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), y->mut_dptr()));
+        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
+        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
+        CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
   }
 
   static void BWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
@@ -111,15 +112,15 @@ struct PoolGpuKernelUtil {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<GPUPoolOpKernelState>* gpu_pool_op_kernel_state =
-        dynamic_cast<OpKernelStateWrapper<GPUPoolOpKernelState>*>(state);
+    const GPUPoolOpKernelState* gpu_pool_op_kernel_state =
+        dynamic_cast<GPUPoolOpKernelState*>(state);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     CudaCheck(cudnnPoolingBackward(
-        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->Get().cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), y->dptr(),
-        gpu_pool_op_kernel_state->Get().cudnn_y_tensor_desc(), dy->dptr(),
-        gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
-        gpu_pool_op_kernel_state->Get().cudnn_x_tensor_desc(), dx->mut_dptr()));
+        ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
+        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
+        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), dy->dptr(),
+        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), dx->mut_dptr()));
   }
 };
 
