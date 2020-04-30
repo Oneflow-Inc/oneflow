@@ -30,15 +30,6 @@ class GPUPoolOpKernelState final {
   GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
                        const Shape& y_shape, const std::string& data_format, const DataType& dtype,
                        const Params3D& params_3d) {
-    cudnnPoolingMode_t pooling_mode_;
-    if (pooling_type == "AVG") {
-      pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-    } else if (pooling_type == "MAX") {
-      pooling_mode_ = CUDNN_POOLING_MAX;
-    } else {
-      UNIMPLEMENTED();
-    }
-
     FixedVector pool_size(dim);
     FixedVector padding(dim);
     FixedVector strides(dim);
@@ -52,8 +43,16 @@ class GPUPoolOpKernelState final {
 
     x_desc_.reset(new CudnnTensorDesc(dtype, x_shape, data_format));
     y_desc_.reset(new CudnnTensorDesc(dtype, y_shape, data_format));
+    cudnnPoolingMode_t pooling_mode;
+    if (pooling_type == "AVG") {
+      pooling_mode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+    } else if (pooling_type == "MAX") {
+      pooling_mode = CUDNN_POOLING_MAX;
+    } else {
+      UNIMPLEMENTED();
+    }
     pooling_desc_.reset(
-        new CudnnPoolDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
+        new CudnnPoolDesc(pooling_mode, dim, pool_size.data(), padding.data(), strides.data()));
   }
   ~GPUPoolOpKernelState() = default;
 
