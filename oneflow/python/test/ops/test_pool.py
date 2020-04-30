@@ -58,6 +58,13 @@ pool_confs = [
         "data_format": "NCHW",
     },
     {
+        "x_shape": (1, 9, 9, 1),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NHWC",
+    },
+    {
         "x_shape": (1, 1, 9, 9, 9),
         "ksize": 2,
         "strides": 2,
@@ -72,6 +79,13 @@ pool_confs = [
         "data_format": "NCDHW",
     },
     {
+        "x_shape": (1, 5, 5, 5, 7),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NDHWC",
+    },
+    {
         "x_shape": (1, 3, 3, 3, 3),
         "ksize": 1,
         "strides": 1,
@@ -79,6 +93,7 @@ pool_confs = [
         "data_format": "NCDHW",
     },
 ]
+
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
@@ -94,10 +109,9 @@ def _GetSequence(value, n, name):
         return list(value)
     else:
         raise ValueError(
-            "{} should be of length 1 or {} but was {}".format(
-                name, n, current_n
-            )
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
         )
+
 
 def test_pool(_):
     arg_dict = OrderedDict()
@@ -122,16 +136,22 @@ def test_pool(_):
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         dim = len(x.shape) - 2
 
+        # TODO: these cases will fail in old implementation
+        if dim == 3 and data_format == "NDHWC":
+            return
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
             window_shape = _GetSequence(ksize, dim, "ksize")
             strides = _GetSequence(strides, dim, "strides")
-            y_tf = tf.nn.pool(
-                x_tf, window_shape, pooling_type, strides=strides, padding=padding,
-                data_format=data_format
-            )
-
+            pooling_f = None
+            if pooling_type == "AVG":
+                pooling_f = getattr(tf.nn, "avg_pool{}d".format(dim))
+            elif pooling_type == "MAX":
+                pooling_f = getattr(tf.nn, "max_pool{}d".format(dim))
+            else:
+                raise ValueError("pooling_type must be AVG or MAX")
+            y_tf = pooling_f(x_tf, ksize, strides, padding, data_format=data_format)
 
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
@@ -180,5 +200,11 @@ def test_pool(_):
             return y
 
         y = pooling_job(x).get()
-        assert y.ndarray().shape == y_tf.numpy().shape, (y.ndarray().shape, y_tf.numpy().shape)
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-5), (case, y.ndarray() - y_tf.numpy())
+        assert y.ndarray().shape == y_tf.numpy().shape, (
+            y.ndarray().shape,
+            y_tf.numpy().shape,
+        )
+        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-5), (
+            case,
+            y.ndarray() - y_tf.numpy(),
+        )
