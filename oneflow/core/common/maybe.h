@@ -193,7 +193,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 
 #define CHECK_NOTNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr != nullptr)
 
-#define CHECK_ISNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr != nullptr)
+#define CHECK_ISNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr == nullptr)
 
 #define TODO_THEN_RETURN() OF_TODO()
 
