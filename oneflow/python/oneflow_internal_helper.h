@@ -32,7 +32,8 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
+  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case))
+      << ": op_type_case = " << op_type_case;
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
@@ -150,7 +151,8 @@ Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
     const std::string& parallel_conf_str) {
   ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 

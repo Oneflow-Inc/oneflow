@@ -56,7 +56,8 @@ Maybe<void> CurJobBuildAndInferCtx_AddAndInferOp(const std::string& op_conf_str,
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "parallel conf parse failed";
   return JUST(GetCurInferCtx())->AddAndInferOp(op_conf, parallel_conf);
 }
 
@@ -65,7 +66,8 @@ Maybe<void> CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& op_c
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "parallel conf parse failed";
   return JUST(GetCurInferCtx())->AddAndInferMirroredOp(op_conf, parallel_conf);
 }
 
@@ -74,7 +76,8 @@ Maybe<void> CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& op
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "parallel conf parse failed";
   return JUST(GetCurInferCtx())->AddAndInferConsistentOp(op_conf, parallel_conf);
 }
 

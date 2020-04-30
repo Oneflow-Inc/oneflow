@@ -64,7 +64,7 @@ Maybe<void> UnsortedBatchSegmentSumOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("segment_ids"))->shape().NumAxes();
   CHECK_GT_OR_RETURN(indices_num_axes, 1) << "UnsortedBatchSegmentSumOp: indices_num_axes equals "
-                                   << indices_num_axes << " (should be bigger than 1).";
+                                          << indices_num_axes << " (should be bigger than 1).";
   FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
     SbpSignatureBuilder()
         .Split("segment_ids", i)
