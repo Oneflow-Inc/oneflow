@@ -17,43 +17,19 @@ HashMap<std::string, std::vector<KernelRegistrationVal>>* MutKernelRegistry() {
   return &registry;
 }
 
-std::string DataType2String(DataType dtype) {
-  switch (dtype) {
-    case DataType::kChar: return "DataType::kChar"; break;
-    case DataType::kFloat: return "DataType::kFloat"; break;
-    case DataType::kDouble: return "DataType::kDouble"; break;
-    case DataType::kInt8: return "DataType::kInt8"; break;
-    case DataType::kInt32: return "DataType::kInt32"; break;
-    case DataType::kInt64: return "DataType::kInt64"; break;
-    case DataType::kUInt8: return "DataType::kUInt8"; break;
-    case DataType::kFloat16: return "DataType::kFloat16"; break;
-    default: break;
-  };
-  return "Wrong DataType";
-}
-
-std::string DeviceType2String(DeviceType dev) {
-  switch (dev) {
-    case DeviceType::kCPU: return "DeviceType::kCPU"; break;
-    case DeviceType::kGPU: return "DeviceType::kGPU"; break;
-    default: break;
-  };
-  return "Wrong DeviceType";
-}
-
 std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
   const auto& op_conf = ctx.user_op_conf();
   std::stringstream ss;
   ss << " The info of Op node are "
      << "\n op_name: " << op_conf.op_name() << "\n op_type_name: " << op_conf.op_type_name()
-     << "\n device: " << DeviceType2String(ctx.device_type());
+     << "\n DeviceType_Name: " << DeviceType_Name(ctx.device_type());
   for (const auto& pair : ctx.inputs()) {
-    ss << "\n data_type of " << pair.first << "_" << pair.second << ": "
-       << DataType2String(ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second)->data_type());
+    ss << "\n DataType_Name of " << pair.first << "_" << pair.second << ": "
+       << DataType_Name(ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second)->data_type());
   }
   for (const auto& pair : ctx.outputs()) {
-    ss << "\n data_type of " << pair.first << "_" << pair.second << ": "
-       << DataType2String(ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second)->data_type());
+    ss << "\n DataType_Name of " << pair.first << "_" << pair.second << ": "
+       << DataType_Name(ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second)->data_type());
   }
   return ss.str();
 }
