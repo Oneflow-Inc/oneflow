@@ -23,7 +23,6 @@ class RegstMgr final {
   friend class Global<RegstMgr>;
 
   explicit RegstMgr(const Plan& plan);
-  void InitOFRecordBlobIfNeed(Blob* blob_ptr);
   void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
                           char* main_mem_ptr, char* separated_header_mem_ptr);
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
