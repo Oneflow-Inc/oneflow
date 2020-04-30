@@ -4,9 +4,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class NormalizationUserKernel final : public user_op::OpKernel {
+class NormalizationUserKernel;
+
+template<typename T>
+class NormalizationUserKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override { UNIMPLEMENTED(); };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 namespace {
@@ -75,13 +80,20 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
           param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), moving_mean->dptr(),
           moving_variance->dptr(), epsilon));
     }
-  };
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel;
+
+template<typename T>
+class NormalizationGradUserKernel<DeviceType::kCPU, T> final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override { UNIMPLEMENTED(); }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
@@ -128,7 +140,9 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
         xy_desc.Get(), dy->dptr(), xy_desc.Get(), dx->mut_dptr(), param_desc.Get(), gamma->dptr(),
         gamma_diff->mut_dptr(), beta_diff->mut_dptr(), epsilon, mean->dptr(),
         inv_variance->dptr()));
-  };
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_KERNEL(op_device_type, dtype)                                          \
