@@ -28,6 +28,8 @@ class MatmulGpuFloatingKernel final : public user_op::OpKernel {
   MatmulGpuFloatingKernel() = default;
   ~MatmulGpuFloatingKernel() = default;
 
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     CBLAS_TRANSPOSE trans_a = ctx->GetAttr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
@@ -60,6 +62,8 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
   MatmulGpuHalfKernel() = default;
   ~MatmulGpuHalfKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -96,6 +100,8 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
  public:
   BatchMatmulGpuFloatingKernel() = default;
   ~BatchMatmulGpuFloatingKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -141,6 +147,8 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
   BatchMatmulGpuHalfKernel() = default;
   ~BatchMatmulGpuHalfKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
