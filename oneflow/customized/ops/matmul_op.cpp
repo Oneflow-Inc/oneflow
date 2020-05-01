@@ -208,10 +208,13 @@ REGISTER_USER_OP("batch_matmul")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+      FOR_RANGE(int32_t, i, 0, num_axes - 2) {
+        SbpSignatureBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      }
       return Maybe<void>::Ok();
     });
 

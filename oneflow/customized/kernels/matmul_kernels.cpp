@@ -39,7 +39,7 @@ class MatmulGpuFloatingKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(2, a->shape().NumAxes());
 
-    int32_t m, n, k;
+    int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                             GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(),
@@ -74,7 +74,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(2, a->shape().NumAxes());
 
-    int32_t m, n, k;
+    int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
 
     if (ctx->job_desc().Bool("enable_float_compute_for_half_gemm")) {
@@ -82,7 +82,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
           ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<float>(), a->dptr<float16>(),
           b->dptr<float16>(), GetZeroVal<float>(), out->mut_dptr<float16>());
     } else {
-      NewKernelUtil<DeviceType::kGPU>::OFHGemmWithFloat(
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(
           ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<float16>(), a->dptr<float16>(),
           b->dptr<float16>(), GetZeroVal<float16>(), out->mut_dptr<float16>());
     }
@@ -114,7 +114,7 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
     int32_t num_axes = a->shape().NumAxes();
     CHECK_GT(num_axes, 2);
 
-    int32_t m, n, k;
+    int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
 
     size_t batch_size = a->shape().Count(0, num_axes - 2);
@@ -161,7 +161,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     int32_t num_axes = a->shape().NumAxes();
     CHECK_GT(num_axes, 2);
 
-    int32_t m, n, k;
+    int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
 
     size_t batch_size = a->shape().Count(0, num_axes - 2);
