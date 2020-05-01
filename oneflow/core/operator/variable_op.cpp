@@ -34,8 +34,9 @@ Maybe<void> VariableOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
-           || job_desc().job_conf().has_default_initialize_with_snapshot_path()
-           || variable_conf.has_initializer() || variable_conf.has_initialize_with_snapshot());
+                  || job_desc().job_conf().has_default_initialize_with_snapshot_path()
+                  || variable_conf.has_initializer()
+                  || variable_conf.has_initialize_with_snapshot());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()

@@ -10,7 +10,9 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
   int64_t index_ndims = indices_shape.At(batch_ndims);
   CHECK_LE_OR_RETURN(batch_ndims, updates_shape.NumAxes());
   CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, batch_ndims) { CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i)); }
+  FOR_RANGE(int64_t, i, 0, batch_ndims) {
+    CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i));
+  }
   int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
   CHECK_EQ_OR_RETURN(slice_ndims, updates_shape.NumAxes() - batch_ndims);
   FOR_RANGE(int64_t, i, 0, slice_ndims) {
@@ -153,7 +155,7 @@ REGISTER_USER_OP("scatter_nd")
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
-               == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+                      == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
     })
@@ -194,7 +196,7 @@ REGISTER_USER_OP("scatter_nd_like")
     .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
-               == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+                      == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })

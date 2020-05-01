@@ -109,7 +109,7 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
     }
     const auto& lbi = op->BnInOp2Lbi(obn);
     CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
-             == iter->second->lbi().end());
+                    == iter->second->lbi().end());
     *iter->second->add_lbi() = lbi;
   }
   return Maybe<void>::Ok();
