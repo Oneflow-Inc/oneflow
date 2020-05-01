@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/dropout_kernel.h"
+#include "oneflow/customized/kernels/dropout_kernel_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/random_generator.h"
 
@@ -19,7 +19,7 @@ class DropoutKernel final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->GetAttr<float>("scale");
-    DropoutKernelUtil<device_type, T>::MaskAndScale(ctx->device_ctx(), in->shape().elem_cnt(),
+    DropoutKernelUtil2<device_type, T>::MaskAndScale(ctx->device_ctx(), in->shape().elem_cnt(),
                                                     scale, in->dptr<T>(), mask->dptr<int8_t>(),
                                                     out->mut_dptr<T>());
   }
@@ -51,7 +51,7 @@ class DropoutGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->GetAttr<float>("scale");
-    DropoutKernelUtil<device_type, T>::MaskAndScale(ctx->device_ctx(), dy->shape().elem_cnt(),
+    DropoutKernelUtil2<device_type, T>::MaskAndScale(ctx->device_ctx(), dy->shape().elem_cnt(),
                                                     scale, dy->dptr<T>(), mask->dptr<int8_t>(),
                                                     dx->mut_dptr<T>());
   }
@@ -98,7 +98,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<device_type>>*>(state);
     random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
 
-    RandomMaskLikeKernelUtil<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
+    RandomMaskLikeKernelUtil2<device_type>::GenMask(ctx->device_ctx(), elem_cnt,
                                                    ctx->GetAttr<float>("rate"), random_tmp, mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
