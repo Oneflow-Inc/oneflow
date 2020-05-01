@@ -167,7 +167,7 @@ class RandCropGens final : public user_op::OpKernelState {
 
   RandomCropGenerator* Get(int32_t idx) { return gens_.at(idx).get(); }
 
-  void New(int32_t idx, AspectRatioRange aspect_ratio_range, AreaRange area_range, int64_t seed,
+  void New(int32_t idx, AspectRatioRange aspect_ratio_range, AreaRange area_range, int32_t seed,
            int32_t num_attempts) {
     CHECK_LT(idx, gens_.size());
     gens_.at(idx).reset(
@@ -201,11 +201,11 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     CHECK(out_tensor_desc->shape().NumAxes() == 1);
     int64_t batch_size = out_tensor_desc->shape().At(0);
     CHECK(batch_size > 0);
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    int32_t seed = ctx->GetAttr<int32_t>("seed");
     if (seed == -1) { seed = NewRandomSeed(); }
     CHECK(seed >= 0);
     std::seed_seq seq{seed};
-    std::vector<int> seeds(batch_size);
+    std::vector<int32_t> seeds(batch_size);
     seq.generate(seeds.begin(), seeds.end());
 
     std::shared_ptr<RandCropGens> crop_window_generators(new RandCropGens(batch_size));

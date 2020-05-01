@@ -4,7 +4,7 @@
 namespace oneflow {
 
 RandomCropGenerator::RandomCropGenerator(AspectRatioRange aspect_ratio_range, AreaRange area_range,
-                                         int64_t seed, int32_t num_attempts)
+                                         int32_t seed, int32_t num_attempts)
     : aspect_ratio_range_(aspect_ratio_range),
       aspect_ratio_log_dis_(std::log(aspect_ratio_range.first),
                             std::log(aspect_ratio_range.second)),
@@ -80,7 +80,7 @@ void RandomCropGenerator::GenerateCropWindow(const Shape& shape, CropWindow* cro
 void RandomCropGenerator::GenerateCropWindows(const Shape& shape, size_t n,
                                               std::vector<CropWindow>* crop_windows) {
   std::seed_seq seq{seed_};
-  std::vector<int64_t> seeds(n);
+  std::vector<int32_t> seeds(n);
   seq.generate(seeds.begin(), seeds.end());
   crop_windows->resize(n);
 
