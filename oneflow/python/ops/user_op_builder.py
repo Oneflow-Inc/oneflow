@@ -142,6 +142,6 @@ class UserOpConfWrapperBuilder(object):
         else:
             assert False, "Unknow distirbute strategy when set random seed to user op"
         self = self.SetAttr("has_seed", has_seed, "AttrTypeBool")\
-                .SetAttr("seed", seed, "AttrTypeInt32")
+                .SetAttr("seed", seed, "AttrTypeInt64")
         return self
 

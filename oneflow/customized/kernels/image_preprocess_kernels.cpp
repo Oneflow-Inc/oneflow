@@ -5,6 +5,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/image_util.h"
+#include "oneflow/customized/kernels/random_seed_util.h"
 
 namespace oneflow {
 
@@ -195,7 +196,7 @@ namespace {
 
 class RandBoolGen final : public user_op::OpKernelState {
  public:
-  explicit RandBoolGen(float prob, int32_t seed) : dis_(prob), rng_(seed) {}
+  explicit RandBoolGen(float prob, int64_t seed) : dis_(prob), rng_(seed) {}
   ~RandBoolGen() = default;
 
   bool GetNextBool() { return dis_(rng_); }
@@ -216,20 +217,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     float prob = ctx->GetAttr<float>("probability");
-    int32_t seed = ctx->GetAttr<int32_t>("seed");
-    if (!ctx->GetAttr<bool>("has_seed")) { seed = NewRandomSeed(); }
-    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    if (parallel_num > 1) {
-      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      if (out_sbp.has_split_parallel()) {
-        std::seed_seq seq{seed};
-        std::vector<int32_t> seeds(parallel_num);
-        seq.generate(seeds.begin(), seeds.end());
-        seed = seeds.at(ctx->parallel_ctx().parallel_id());
-      } else {
-        CHECK(out_sbp.has_broadcast_parallel());
-      }
-    }
+    int64_t seed = GetOpKernelRandomSeedFromKernelInitContext(ctx);
     std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
     return rand_bool_gen;
   }

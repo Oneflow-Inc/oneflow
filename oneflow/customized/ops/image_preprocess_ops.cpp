@@ -129,7 +129,7 @@ REGISTER_USER_OP("CoinFlip")
     .Output("out")
     .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
     .Attr("batch_size", UserOpAttrType::kAtInt64)
-    .Attr<int32_t>("seed", UserOpAttrType::kAtInt32, -1)
+    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);

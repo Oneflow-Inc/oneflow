@@ -8,6 +8,7 @@
 #include "oneflow/customized/image/random_crop_generator.h"
 #include "oneflow/customized/image/image_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/customized/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
 
@@ -201,11 +202,9 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     CHECK(out_tensor_desc->shape().NumAxes() == 1);
     int64_t batch_size = out_tensor_desc->shape().At(0);
     CHECK(batch_size > 0);
-    int32_t seed = ctx->GetAttr<int32_t>("seed");
-    if (seed == -1) { seed = NewRandomSeed(); }
-    CHECK(seed >= 0);
+    int64_t seed = GetOpKernelRandomSeedFromKernelInitContext(ctx);
     std::seed_seq seq{seed};
-    std::vector<int32_t> seeds(batch_size);
+    std::vector<int> seeds(batch_size);
     seq.generate(seeds.begin(), seeds.end());
 
     std::shared_ptr<RandCropGens> crop_window_generators(new RandCropGens(batch_size));
