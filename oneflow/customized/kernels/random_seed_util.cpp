@@ -10,7 +10,7 @@ int64_t GetOpKernelRandomSeedFromKernelInitContext(user_op::KernelInitContext* c
   CHECK_EQ(outputs.size(), 1);
   if (parallel_num > 1) {
     const SbpParallel& out_sbp =
-        ctx->SbpParallel4ArgNameAndIndex(outputs.at(0).first, outputs.at(1).second);
+        ctx->SbpParallel4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);
     if (out_sbp.has_split_parallel()) {
       std::seed_seq seq{seed};
       std::vector<int64_t> seeds(parallel_num);
