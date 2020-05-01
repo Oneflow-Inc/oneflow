@@ -119,7 +119,8 @@ Maybe<void> DistributeConcatOp::InferSbpSignature(
     }
     BalancedSplitter bs(dim, parallel_desc.parallel_num());
     FOR_RANGE(int, i, 0, input_bns().size()) {
-      CHECK_EQ_OR_RETURN(JUST(LogicalBlobDesc4Ibn(input_bns().Get(i)))->shape().At(axis), bs.At(i).size());
+      CHECK_EQ_OR_RETURN(JUST(LogicalBlobDesc4Ibn(input_bns().Get(i)))->shape().At(axis),
+                         bs.At(i).size());
     }
   }
   SbpSignatureList sbp_sig_list;

@@ -55,7 +55,9 @@ Maybe<void> NcclTupleReduceOp::InferBlobDescs(
 
 Maybe<void> NcclTupleReduceOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false); }
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
   for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
   return Maybe<void>::Ok();
 }
