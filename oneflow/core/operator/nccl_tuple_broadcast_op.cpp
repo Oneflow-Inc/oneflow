@@ -43,20 +43,20 @@ Maybe<void> NcclTupleBroadcastOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const NcclTupleBroadcastOpConf& conf = op_conf().nccl_tuple_broadcast_conf();
   const int64_t num_blob = conf.in_size();
-  OF_CHECK_GE(num_blob, 1);
-  OF_CHECK_EQ(conf.out_size(), num_blob);
-  OF_CHECK_EQ(conf.data_type_size(), num_blob);
-  OF_CHECK_EQ(conf.shape_size(), num_blob);
-  OF_CHECK_EQ(conf.root_size(), num_blob);
+  CHECK_GE_OR_RETURN(num_blob, 1);
+  CHECK_EQ_OR_RETURN(conf.out_size(), num_blob);
+  CHECK_EQ_OR_RETURN(conf.data_type_size(), num_blob);
+  CHECK_EQ_OR_RETURN(conf.shape_size(), num_blob);
+  CHECK_EQ_OR_RETURN(conf.root_size(), num_blob);
   FOR_RANGE(int32_t, i, 0, num_blob) {
     const int64_t root = conf.root(i);
-    OF_CHECK_LT(root, parallel_ctx->parallel_num());
+    CHECK_LT_OR_RETURN(root, parallel_ctx->parallel_num());
     const Shape shape(conf.shape(i));
     const DataType data_type = conf.data_type(i);
     if (parallel_ctx->parallel_id() == root) {
       const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
-      OF_CHECK_EQ(in_i->data_type(), data_type);
-      OF_CHECK_EQ(in_i->shape(), shape);
+      CHECK_EQ_OR_RETURN(in_i->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(in_i->shape(), shape);
     }
     BlobDesc* out_i = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
     out_i->mut_shape() = shape;
@@ -69,7 +69,7 @@ Maybe<void> NcclTupleBroadcastOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const auto& ibn : input_bns()) {
     if (ibn == "tick") { continue; }
-    OF_CHECK_EQ(BatchAxis4BnInOp(ibn)->has_value(), false);
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
   }
   for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
   return Maybe<void>::Ok();
@@ -82,8 +82,8 @@ Maybe<void> NcclTupleBroadcastOp::InferSbpSignature(
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
     if (ibn == "tick") { continue; }
-    OF_CHECK(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_broadcast_parallel()
-             || JUST(SbpInferHint4Ibn(ibn))->parallel_desc().parallel_num() == 1);
+    CHECK_OR_RETURN(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_broadcast_parallel()
+                    || JUST(SbpInferHint4Ibn(ibn))->parallel_desc().parallel_num() == 1);
   }
   SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();
