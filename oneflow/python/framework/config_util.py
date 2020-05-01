@@ -6,7 +6,7 @@ import oneflow
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.session_context as session_ctx

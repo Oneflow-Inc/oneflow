@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -58,7 +58,7 @@ def GetCurrentGlobalFunctionDesc():
     ret = sess.CurrentEagerGlobalFunctionDesc()
     if ret is not None: return ret
     # try find lazy global function description
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     ret = sess.GetLazyFunctionDesc(job_name)
     if ret is not None: return ret
     raise NotImplementedError("no current global function found")
