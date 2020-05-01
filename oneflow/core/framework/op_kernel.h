@@ -109,6 +109,8 @@ class OpKernel {
     }
   }
 
+  virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+
  protected:
   OpKernel() : statefullness_(kInvalidOpKernelStatefulness) {}
 

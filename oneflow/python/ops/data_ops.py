@@ -160,6 +160,8 @@ def decode_ofrecord(
     data_part_num=-1,
     part_name_prefix="part-",
     part_name_suffix_length=-1,
+    shuffle=False,
+    buffer_size=1024,
     name=None,
 ):
     if name is None:
@@ -177,6 +179,8 @@ def decode_ofrecord(
     op_conf.decode_ofrecord_conf.part_name_suffix_length = (
         part_name_suffix_length
     )
+    if shuffle == True:
+        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = buffer_size
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()

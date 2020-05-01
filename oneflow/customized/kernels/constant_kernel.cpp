@@ -22,6 +22,7 @@ class ConstantKernel final : public OpKernel {
                                          : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CONSTANT_KERNEL(device, dtype)                                       \
