@@ -1,6 +1,11 @@
 import oneflow as flow
 import numpy as np
 
+from collections import OrderedDict
+from test_util import type_name_to_flow_type
+from test_util import GenArgList
+from test_util import GetSavePath
+from test_util import Save
 
 def test_naive(test_case):
     func_config = flow.FunctionConfig()
@@ -60,18 +65,20 @@ def np_array(dtype, shape):
         assert False
 
 
-def GenerateTest(test_case, func, a_shape, b_shape, dtype=flow.int32):
+def GenerateTest(test_case, func, a_shape, b_shape, dtype=flow.int32, device_type="cpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
 
     @flow.function(func_config)
     def ModJob1(a=flow.FixedTensorDef(a_shape, dtype=dtype)):
-        return func(a, a)
+        with flow.device_prior_placement(device_type, "0:0"):
+            return func(a, a)
 
     @flow.function(func_config)
     def ModJob2(a=flow.FixedTensorDef(a_shape, dtype=dtype),
                b=flow.FixedTensorDef(b_shape, dtype=dtype)):
-        return func(a, b)
+        with flow.device_prior_placement(device_type, "0:0"):
+            return func(a, b)
 
     a = np_array(dtype, a_shape)
     b = np_array(dtype, b_shape)
@@ -84,7 +91,21 @@ def GenerateTest(test_case, func, a_shape, b_shape, dtype=flow.int32):
 
     flow.clear_default_session()
 
+def test_broadcast_logical(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["test_case"] = [test_case]
+    arg_dict["func"] = [func_equal, func_not_equal, func_greater_than, func_greater_equal, func_less_than, func_less_than]
+    arg_dict["a_shape"] = [(64, 64), (64, 64, 64)]
+    arg_dict["b_shape"] = [(1, 64), (64, 1), (64, 1, 64), (1, 64, 1)]
+    arg_dict["data_type"] = [flow.int8, flow.int32, flow.int64, flow.float, flow.double]
+    arg_dict["device_type"] = ["cpu", "gpu"]
 
+    for arg in GenArgList(arg_dict):
+        if arg[5] == "cpu" and arg[4] == "float16": continue
+        if len(arg[2]) < len(arg[3]): continue
+        print(arg)
+        GenerateTest(*arg)
+'''
 def test_xy_mod_x1(test_case):
     GenerateTest(test_case, func_less_than, (64, 64), (64, 1), flow.int8)
 
@@ -397,6 +418,6 @@ def test_less_equal_double_shape3(test_case):
     GenerateTest(test_case, func_less_equal, (64, 64, 64), (64, 1, 64), flow.double)
 def test_less_equal_double_shape4(test_case):
     GenerateTest(test_case, func_less_equal, (64, 64, 64), (1, 64, 1), flow.double)
-
+'''
 
 
