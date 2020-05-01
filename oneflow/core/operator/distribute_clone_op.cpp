@@ -91,9 +91,9 @@ Maybe<void> DistributeCloneOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  OF_CHECK_EQ(parallel_desc.parallel_num(), output_bns().size());
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), output_bns().size());
   const SbpInferHint& in_hint = *JUST(SbpInferHint4Ibn("in"));
-  OF_CHECK(in_hint.parallel_desc() == parallel_desc);
+  CHECK_OR_RETURN(in_hint.parallel_desc() == parallel_desc);
   SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_signature);
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
   (*bn2sbp)["in"] = in_hint.sbp_parallel();
