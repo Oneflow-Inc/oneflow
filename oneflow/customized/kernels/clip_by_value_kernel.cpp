@@ -68,6 +68,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -86,6 +87,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -104,6 +106,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -126,6 +129,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -145,6 +149,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T>
@@ -164,6 +169,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \

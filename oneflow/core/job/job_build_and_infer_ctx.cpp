@@ -108,8 +108,8 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
     const auto& lbi = op->BnInOp2Lbi(obn);
-    OF_CHECK(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
-             == iter->second->lbi().end());
+    CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
+                    == iter->second->lbi().end());
     *iter->second->add_lbi() = lbi;
   }
   return Maybe<void>::Ok();
@@ -233,9 +233,9 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const Sbp
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
-      OF_CHECK_GE(axis, 0);
-      OF_CHECK_LT(axis, num_axes);
-      OF_CHECK_GE(logical_blob_desc.shape().At(axis), blob_parallel_num)
+      CHECK_GE_OR_RETURN(axis, 0);
+      CHECK_LT_OR_RETURN(axis, num_axes);
+      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
           << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
           << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
     }
@@ -254,7 +254,7 @@ Maybe<ParallelConf> JobBuildAndInferCtx::InferOpParallelConf(
     if (parallel_desc == nullptr) {
       parallel_desc = &ibn_parallel_desc;
     } else {
-      OF_CHECK_EQ(parallel_desc->parallel_num(), ibn_parallel_desc.parallel_num());
+      CHECK_EQ_OR_RETURN(parallel_desc->parallel_num(), ibn_parallel_desc.parallel_num());
     }
   }
   if (parallel_desc == nullptr) { return std::make_shared<ParallelConf>(origin_parallel_conf); }
@@ -292,14 +292,14 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
 
 Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2sbp_parallel_from_producer_view_.find(lbi);
-  OF_CHECK(iter != lbi2sbp_parallel_from_producer_view_.end())
+  CHECK_OR_RETURN(iter != lbi2sbp_parallel_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
   return &iter->second;
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::ParallelDesc4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2parallel_desc_from_producer_view_.find(lbi);
-  OF_CHECK(iter != lbi2parallel_desc_from_producer_view_.end())
+  CHECK_OR_RETURN(iter != lbi2parallel_desc_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
   return &iter->second;
 }
@@ -345,7 +345,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operato
     } else {
       ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
     }
-    OF_CHECK_EQ(ibn_parallel_num, parallel_num)
+    CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
         << "is not equals to op' parallel_num";
   }
@@ -384,7 +384,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else if (sbp.has_split_parallel()) {
-    OF_CHECK_EQ(sbp.split_parallel().axis(), 0)
+    CHECK_EQ_OR_RETURN(sbp.split_parallel().axis(), 0)
         << "only `S(0)' consistent blob is compatible to mirrored blob";
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
@@ -566,7 +566,7 @@ Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
   const auto& iter = lbi2disable_boxing_.find(lbi);
-  OF_CHECK(iter != lbi2disable_boxing_.end());
+  CHECK_OR_RETURN(iter != lbi2disable_boxing_.end());
   return iter->second;
 }
 
@@ -615,8 +615,8 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::MirroredBlobGetSubLbi(
     const std::string& lbn_with_hint, int index) const {
   const auto& mirrored_lbi = JUST(GetMirroredLbi(lbn_with_hint));
   const auto& vec = mirrored_lbi2sub_lbis_.at(*mirrored_lbi);
-  OF_CHECK_GE(index, 0);
-  OF_CHECK_LT(index, vec.size());
+  CHECK_GE_OR_RETURN(index, 0);
+  CHECK_LT_OR_RETURN(index, vec.size());
   return &vec.at(index);
 }
 
@@ -647,13 +647,13 @@ Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn
 }
 
 Maybe<bool> JobBuildAndInferCtx::MirroredBlobDisableBoxing(const std::string& lbn_with_hint) const {
-  OF_CHECK(IsMirroredBlob(lbn_with_hint));
+  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
   return true;
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetBatchAxis(
     const std::string& lbn_with_hint) const {
-  OF_CHECK(IsMirroredBlob(lbn_with_hint));
+  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
   auto ret = std::make_shared<OptInt64>();
   ret->set_value(0);
   return ret;

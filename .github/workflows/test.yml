@@ -1,12 +1,6 @@
 name: Build and Test CI
 
 on:
-    push:
-      branches:
-        - develop
-      paths-ignore:
-        - '**.md'
-        - '.gitignore'
     pull_request:
       types: [synchronize, opened, reopened, ready_for_review]
       branches:

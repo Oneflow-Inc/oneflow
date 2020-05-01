@@ -179,7 +179,10 @@ class UserKernel final : public Kernel {
     kernel_->Run(ctx_.get(), opkernel_state_.get());
   }
 
+  bool IsStateless() const override { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
+
   std::unique_ptr<UserKernelComputeContext> ctx_;
+
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
 };
