@@ -31,7 +31,8 @@ Maybe<void> ReturnOp::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
-  OF_CHECK_EQ(in_sbp_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
+  CHECK_EQ_OR_RETURN(in_sbp_infer_hint.parallel_desc().parallel_num(),
+                     parallel_desc.parallel_num());
   if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
     SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   } else {
