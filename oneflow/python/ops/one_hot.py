@@ -13,23 +13,30 @@ import os
 
 @oneflow_export("one_hot")
 def one_hot(
-    indices, depth, on_value=None, off_value=None, axis=None, dtype=None, name=None
+    indices, depth, on_value=1, off_value=0, axis=-1, dtype=None, name=None
 ):  
-    if on_value is None:
-        on_value = 1
-    if off_value is None:
-        off_value = 0
-
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
-            .Op("one_hot")
-            .Input("indices", [indices])
-            .SetAttr("depth", int(depth), "AttrTypeInt64")
-            .SetAttr("on_value", float(on_value), "AttrTypeFloat")
-            .SetAttr("off_value", float(off_value), "AttrTypeFloat")
-            .SetAttr("dtype", dtype, "AttrTypeDataType")
-            .Output("out")
-            .Build()
-            .RemoteBlobList()[0]
-        )
+    out_ndims = len(indices.shape) + 1
+    assert axis >= -1 and axis < out_ndims, ValueError(
+            "Expected axis to be -1 or between [0, %d).  But received: %d " %(out_ndims, axis)
+            )
+    out = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
+        .Op("one_hot")
+        .Input("indices", [indices])
+        .SetAttr("depth", int(depth), "AttrTypeInt64")
+        .SetAttr("floating_on_value", float(on_value), "AttrTypeDouble")
+        .SetAttr("integer_on_value", int(on_value), "AttrTypeInt64")
+        .SetAttr("floating_off_value", float(off_value), "AttrTypeDouble")
+        .SetAttr("integer_off_value", int(off_value), "AttrTypeInt64")
+        .SetAttr("dtype", dtype, "AttrTypeDataType")
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
+    if axis != -1 or axis != (out_ndims - 1):
+        dim_list = list(range(0, out_ndims))
+        dim_list.insert(axis, out_ndims-1)
+        dim_list.pop()
+        return flow.transpose(out, dim_list)
+    else:
+        return out

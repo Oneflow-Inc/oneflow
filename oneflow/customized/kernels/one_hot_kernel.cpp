@@ -15,8 +15,13 @@ class CpuOneHotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_indices = indices->shape().elem_cnt();
     const int64_t depth = ctx->GetAttr<int64_t>("depth");
-    const float on_value = ctx->GetAttr<float>("on_value");
-    const float off_value = ctx->GetAttr<float>("off_value");
+    const DataType dtype = ctx->GetAttr<DataType>("dtype");
+    const T on_value = IsFloatingDataType(dtype)
+                           ? static_cast<T>(ctx->GetAttr<double>("floating_on_value"))
+                           : static_cast<T>(ctx->GetAttr<int64_t>("integer_on_value"));
+    const T off_value = IsFloatingDataType(dtype)
+                            ? static_cast<T>(ctx->GetAttr<double>("floating_off_value"))
+                            : static_cast<T>(ctx->GetAttr<int64_t>("integer_off_value"));
     const K* indices_dptr = indices->dptr<K>();
     T* out_dptr = out->mut_dptr<T>();
 
@@ -26,7 +31,7 @@ class CpuOneHotKernel final : public user_op::OpKernel {
       const int64_t idx = indices_dptr[i];
       CHECK_GE(idx, 0);
       CHECK_LT(idx, depth);
-      out_dptr[i * depth + idx] = static_cast<T>(on_value);
+      out_dptr[i * depth + idx] = on_value;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

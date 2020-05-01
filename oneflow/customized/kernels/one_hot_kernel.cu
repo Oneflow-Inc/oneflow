@@ -6,13 +6,12 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename K>
-__global__ void OneHotEncodeGpu(const int64_t num_indices, const int64_t depth,
-                                const float on_value, const float off_value, const K* indices,
-                                T* out) {
+__global__ void OneHotEncodeGpu(const int64_t num_indices, const int64_t depth, const T on_value,
+                                const K* indices, T* out) {
   CUDA_1D_KERNEL_LOOP(i, num_indices) {
     const int64_t idx = indices[i];
     assert(idx >= 0 && idx < depth);
-    out[i * depth + idx] = static_cast<T>(on_value);
+    out[i * depth + idx] = on_value;
   }
 }
 
@@ -30,12 +29,17 @@ class GpuOneHotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_indices = indices->shape().elem_cnt();
     const int64_t depth = ctx->GetAttr<int64_t>("depth");
-    const float on_value = ctx->GetAttr<float>("on_value");
-    const float off_value = ctx->GetAttr<float>("off_value");
+    const DataType dtype = ctx->GetAttr<DataType>("dtype");
+    const T on_value = IsFloatingDataType(dtype)
+                           ? static_cast<T>(ctx->GetAttr<double>("floating_on_value"))
+                           : static_cast<T>(ctx->GetAttr<int64_t>("integer_on_value"));
+    const T off_value = IsFloatingDataType(dtype)
+                            ? static_cast<T>(ctx->GetAttr<double>("floating_off_value"))
+                            : static_cast<T>(ctx->GetAttr<int64_t>("integer_off_value"));
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out->shape().elem_cnt(), off_value,
                                           out->mut_dptr<T>());
     RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices, num_indices, depth,
-                    on_value, off_value, indices->dptr<K>(), out->mut_dptr<T>());
+                    on_value, indices->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

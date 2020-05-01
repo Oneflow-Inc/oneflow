@@ -7,8 +7,10 @@ REGISTER_USER_OP("one_hot")
     .Input("indices")
     .Output("out")
     .Attr("depth", UserOpAttrType::kAtInt64)
-    .Attr("on_value", UserOpAttrType::kAtFloat)
-    .Attr("off_value", UserOpAttrType::kAtFloat)
+    .Attr("floating_on_value", UserOpAttrType::kAtDouble)
+    .Attr("integer_on_value", UserOpAttrType::kAtInt64)
+    .Attr("floating_off_value", UserOpAttrType::kAtDouble)
+    .Attr("integer_off_value", UserOpAttrType::kAtInt64)
     .Attr("dtype", UserOpAttrType::kAtDataType)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t depth = ctx->GetAttr<int64_t>("depth");
