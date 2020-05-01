@@ -30,6 +30,13 @@ pool_confs = [
         "data_format": "NCHW",
     },
     {
+        "x_shape": (1, 7, 7, 3),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NHWC",
+    },
+    {
         "x_shape": (1, 5, 6, 6),
         "ksize": 3,
         "strides": 2,
