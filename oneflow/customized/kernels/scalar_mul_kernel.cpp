@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
