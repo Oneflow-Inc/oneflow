@@ -64,23 +64,11 @@ Shape Params3D::GetYShape() const {
 }
 
 Shape Params3D::GetXShape5D() const {
-  if (data_format_ == "channels_first") {
-    return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
-  } else {
-    CHECK_EQ(data_format_, "channels_last")
-        << "data_format must be 'channels_first' or 'channels_last'";
-    return Shape({batch_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2), channel_num_});
-  }
+  return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
 }
 
 Shape Params3D::GetYShape5D() const {
-  if (data_format_ == "channels_first") {
-    return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
-  } else {
-    CHECK_EQ(data_format_, "channels_last")
-        << "data_format must be 'channels_first' or 'channels_last'";
-    return Shape({batch_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2), channel_num_});
-  }
+  return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
 }
 
 }  // namespace oneflow
