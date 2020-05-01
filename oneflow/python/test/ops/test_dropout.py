@@ -87,7 +87,6 @@ def test_dropout(test_case):
         
     for arg in GenArgList(arg_dict):
         if arg[0] == "cpu" and arg[2] == "float16": continue
-        print(arg)
         os.environ['ENABLE_USER_OP'] = "True"
         of_run_and_dump_to_numpy(*arg)
         os.environ['ENABLE_USER_OP'] = "false"
