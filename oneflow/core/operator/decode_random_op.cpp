@@ -25,7 +25,7 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
   DimVector dim_vec(1 + conf.shape().dim_size());
   int64_t batch_size = conf.batch_size();
-  OF_CHECK_GE(batch_size, parallel_ctx->parallel_num());
+  CHECK_GE_OR_RETURN(batch_size, parallel_ctx->parallel_num());
   CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
   dim_vec[0] = batch_size / parallel_ctx->parallel_num();
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }

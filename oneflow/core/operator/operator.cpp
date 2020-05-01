@@ -495,7 +495,7 @@ Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sb
   std::string split_hint = lbn_with_split_hint.substr(pos + 1);
   if (split_hint[0] == 'S') {
     std::string axis_str = split_hint.substr(1);
-    OF_CHECK(IsStrInt(axis_str));
+    CHECK_OR_RETURN(IsStrInt(axis_str));
     sbp->mutable_split_parallel()->set_axis(oneflow_cast<int64_t>(axis_str));
   } else if (split_hint[0] == 'B') {
     sbp->mutable_broadcast_parallel();
@@ -510,7 +510,7 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
   if (pos == std::string::npos) { return false; }
   CHECK_NE(pos, lbn_with_hint.length() - 1);
   std::string disable_boxing_str = lbn_with_hint.substr(pos + 1);
-  OF_CHECK(IsStrInt(disable_boxing_str));
+  CHECK_OR_RETURN(IsStrInt(disable_boxing_str));
   *disable_boxing = oneflow_cast<int64_t>(disable_boxing_str);
   return true;
 }
