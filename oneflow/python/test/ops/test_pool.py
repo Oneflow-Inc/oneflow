@@ -149,7 +149,6 @@ def test_pool(_):
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
-            window_shape = _GetSequence(ksize, dim, "ksize")
             strides = _GetSequence(strides, dim, "strides")
             pooling_f = None
             if pooling_type == "AVG":
