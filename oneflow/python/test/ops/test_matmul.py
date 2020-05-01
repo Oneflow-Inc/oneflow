@@ -64,8 +64,8 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.ndarray() - tf_out.numpy()))
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy())
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy())
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy(), atol=1e-03)
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy(), atol=1e-03)
 
 
 def filter_args(arg_list):
@@ -90,7 +90,7 @@ def filter_args(arg_list):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["a_shape"] = [(512, 256), (256, 512)],
+    arg_dict["a_shape"] = [(512, 256), (256, 512)]
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]

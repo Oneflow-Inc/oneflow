@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.lib.core.pb_util as pb_util
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -15,7 +15,7 @@ from oneflow.python.lib.core.box import Box
 from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 
 def Compile(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
@@ -29,9 +29,9 @@ def Compile(function_desc, config_proto):
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
 
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
-        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
+        g_func_ctx.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         _CompileJob(function_desc)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        g_func_ctx.CurJobBuildAndInferCtx_Complete()
 
 def _CompileJob(function_desc):
     func = function_desc.job_func
@@ -42,9 +42,9 @@ def _CompileJob(function_desc):
 
 @contextmanager
 def _JobBuildAndInferCtx(job_name):
-    c_api_util.JobBuildAndInferCtx_Open(job_name)
+    g_func_ctx.JobBuildAndInferCtx_Open(job_name)
     yield
-    c_api_util.JobBuildAndInferCtx_Close()
+    g_func_ctx.JobBuildAndInferCtx_Close()
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
