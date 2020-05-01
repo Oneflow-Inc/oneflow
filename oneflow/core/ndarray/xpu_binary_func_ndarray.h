@@ -16,8 +16,8 @@ class XpuBinaryFuncNdarray final {
   }
 
  private:
-  const A& a_;
-  const B& b_;
+  const A a_;
+  const B b_;
 };
 
 }  // namespace oneflow
