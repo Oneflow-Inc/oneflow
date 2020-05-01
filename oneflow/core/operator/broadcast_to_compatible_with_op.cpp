@@ -10,8 +10,8 @@ Maybe<void> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape, Shape*
   Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), max_shape.NumAxes());
   Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), max_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
-    OF_CHECK(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
-             || a_extend_shape.At(i) == b_extend_shape.At(i))
+    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
+                    || a_extend_shape.At(i) == b_extend_shape.At(i))
         << "shape " << a_shape.ToString() << " and shape " << b_shape.ToString()
         << " are not broadcastable";
     max_shape.Set(i, std::max(a_extend_shape.At(i), b_extend_shape.At(i)));
@@ -85,9 +85,10 @@ class BroadcastToCompatibleWithOp final : public Operator {
     HashMap<std::string, Shape> ibn2extend_shape;
     for (const std::string bn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(bn))->shape();
-      OF_CHECK(ibn2extend_shape
-                   .emplace(bn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
-                   .second);
+      CHECK_OR_RETURN(
+          ibn2extend_shape
+              .emplace(bn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
+              .second);
     }
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {

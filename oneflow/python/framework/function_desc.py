@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -53,5 +53,5 @@ class FunctionDesc(object):
 
 @oneflow_export('current_global_function_desc')
 def GetCurrentGlobalFunctionDesc():
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
