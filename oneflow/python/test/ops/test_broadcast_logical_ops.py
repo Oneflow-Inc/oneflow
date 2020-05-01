@@ -103,7 +103,6 @@ def test_broadcast_logical(test_case):
     for arg in GenArgList(arg_dict):
         if arg[5] == "cpu" and arg[4] == "float16": continue
         if len(arg[2]) < len(arg[3]): continue
-        print(arg)
         GenerateTest(*arg)
 
 def test_xy_mod_x1(test_case):
