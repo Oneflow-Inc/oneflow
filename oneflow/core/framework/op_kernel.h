@@ -11,6 +11,8 @@
 
 namespace oneflow {
 
+class JobDesc;
+
 namespace user_op {
 
 class KernelInitContext {
@@ -50,6 +52,7 @@ class KernelComputeContext {
 
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
+  virtual const JobDesc& job_desc() const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
