@@ -11,8 +11,7 @@ REGISTER_USER_OP("dropout")
     .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *in_shape);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
@@ -37,7 +36,7 @@ REGISTER_USER_OP("dropout")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      const float& scale = op_conf.attr<float>("scale");
+      float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
       return Maybe<void>::Ok();
     });
@@ -49,8 +48,7 @@ REGISTER_USER_OP("dropout_grad")
     .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *dy_shape;
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *dy_shape);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
@@ -71,7 +69,7 @@ REGISTER_USER_OP("dropout_grad")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      const float& scale = op_conf.attr<float>("scale");
+      float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
       return Maybe<void>::Ok();
     });
@@ -122,7 +120,7 @@ REGISTER_USER_OP("random_mask_like")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      const float& rate = op_conf.attr<float>("rate");
+      float rate = op_conf.attr<float>("rate");
       CHECK_GE_OR_RETURN(rate, 0);
       CHECK_LT_OR_RETURN(rate, 1);
       return Maybe<void>::Ok();
