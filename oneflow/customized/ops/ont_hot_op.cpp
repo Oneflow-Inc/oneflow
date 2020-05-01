@@ -11,22 +11,25 @@ REGISTER_USER_OP("one_hot")
     .Attr("off_value", UserOpAttrType::kAtFloat)
     .Attr("dtype", UserOpAttrType::kAtDataType)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-      const DataType indices_dtype = *ctx->Dtype4ArgNameAndIndex("indices", 0);
-      CHECK_OR_RETURN(IsIndexDataType(indices_dtype));
-      auto dtype = ctx->GetAttr<DataType>("dtype");
       const int64_t depth = ctx->GetAttr<int64_t>("depth");
-      DimVector dim_vec = indices_shape->dim_vec();
+      CHECK_GT_OR_RETURN(depth, 0);
+      const user_op::TensorDesc* indices_desc = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices_desc->data_type()));
+      CHECK_GT_OR_RETURN(indices_desc->shape().NumAxes(), 0);
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *indices_desc;
+      auto dtype = ctx->GetAttr<DataType>("dtype");
+      *out_desc->mut_data_type() = dtype;
+      DimVector dim_vec = indices_desc->shape().dim_vec();
       dim_vec.push_back(depth);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
+      *out_desc->mut_shape() = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
+          .Split("indices", 0, 0)
+          .Split("out", 0, 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();

@@ -7,12 +7,12 @@ namespace {
 
 template<typename T, typename K>
 __global__ void OneHotEncodeGpu(const int64_t num_indices, const int64_t depth,
-                                const float on_value, const float off_value, const T* indices,
-                                K* out) {
+                                const float on_value, const float off_value, const K* indices,
+                                T* out) {
   CUDA_1D_KERNEL_LOOP(i, num_indices) {
     const int64_t idx = indices[i];
     assert(idx >= 0 && idx < depth);
-    out[i * depth + idx] = static_cast<K>(on_value);
+    out[i * depth + idx] = static_cast<T>(on_value);
   }
 }
 
@@ -33,30 +33,30 @@ class GpuOneHotKernel final : public user_op::OpKernel {
     const float on_value = ctx->GetAttr<float>("on_value");
     const float off_value = ctx->GetAttr<float>("off_value");
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out->shape().elem_cnt(), off_value,
-                                          out->mut_dptr<K>());
+                                          out->mut_dptr<T>());
     RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices, num_indices, depth,
-                    on_value, off_value, indices->dptr<T>(), out->mut_dptr<K>());
+                    on_value, off_value, indices->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ONE_HOT_KERNEL(idtype, odtype)                                                \
-  REGISTER_USER_KERNEL("one_hot").SetCreateFn<GpuOneHotKernel<idtype, odtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                   \
-        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);    \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);            \
-        return ctx.device_type() == DeviceType::kGPU                                               \
-               && indices_desc->data_type() == GetDataType<idtype>::value                          \
-               && out_desc->data_type() == GetDataType<odtype>::value;                             \
+#define REGISTER_GPU_ONE_HOT_KERNEL(dtype, itype)                                                \
+  REGISTER_USER_KERNEL("one_hot").SetCreateFn<GpuOneHotKernel<dtype, itype>>().SetIsMatchedPred( \
+      [](const user_op::KernelRegContext& ctx) {                                                 \
+        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);  \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
+        return ctx.device_type() == DeviceType::kGPU                                             \
+               && out_desc->data_type() == GetDataType<dtype>::value                             \
+               && indices_desc->data_type() == GetDataType<itype>::value;                        \
       });
 
 REGISTER_GPU_ONE_HOT_KERNEL(int32_t, int32_t)
 REGISTER_GPU_ONE_HOT_KERNEL(int32_t, int64_t)
-REGISTER_GPU_ONE_HOT_KERNEL(int32_t, float)
-REGISTER_GPU_ONE_HOT_KERNEL(int32_t, double)
 REGISTER_GPU_ONE_HOT_KERNEL(int64_t, int32_t)
 REGISTER_GPU_ONE_HOT_KERNEL(int64_t, int64_t)
-REGISTER_GPU_ONE_HOT_KERNEL(int64_t, float)
-REGISTER_GPU_ONE_HOT_KERNEL(int64_t, double)
+REGISTER_GPU_ONE_HOT_KERNEL(float, int32_t)
+REGISTER_GPU_ONE_HOT_KERNEL(float, int64_t)
+REGISTER_GPU_ONE_HOT_KERNEL(double, int32_t)
+REGISTER_GPU_ONE_HOT_KERNEL(double, int64_t)
 
 }  // namespace oneflow

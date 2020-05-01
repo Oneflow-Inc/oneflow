@@ -17,38 +17,38 @@ class CpuOneHotKernel final : public user_op::OpKernel {
     const int64_t depth = ctx->GetAttr<int64_t>("depth");
     const float on_value = ctx->GetAttr<float>("on_value");
     const float off_value = ctx->GetAttr<float>("off_value");
-    const T* indices_dptr = indices->dptr<T>();
-    K* out_dptr = out->mut_dptr<K>();
+    const K* indices_dptr = indices->dptr<K>();
+    T* out_dptr = out->mut_dptr<T>();
 
     NewKernelUtil<DeviceType::kCPU>::Fill(ctx->device_ctx(), out->shape().elem_cnt(), off_value,
-                                          out->mut_dptr<K>());
+                                          out->mut_dptr<T>());
     FOR_RANGE(int64_t, i, 0, num_indices) {
       const int64_t idx = indices_dptr[i];
       CHECK_GE(idx, 0);
       CHECK_LT(idx, depth);
-      out_dptr[i * depth + idx] = static_cast<K>(on_value);
+      out_dptr[i * depth + idx] = static_cast<T>(on_value);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ONE_HOT_KERNEL(idtype, odtype)                                                \
-  REGISTER_USER_KERNEL("one_hot").SetCreateFn<CpuOneHotKernel<idtype, odtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                   \
-        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);    \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);            \
-        return ctx.device_type() == DeviceType::kCPU                                               \
-               && indices_desc->data_type() == GetDataType<idtype>::value                          \
-               && out_desc->data_type() == GetDataType<odtype>::value;                             \
+#define REGISTER_CPU_ONE_HOT_KERNEL(dtype, itype)                                                \
+  REGISTER_USER_KERNEL("one_hot").SetCreateFn<CpuOneHotKernel<dtype, itype>>().SetIsMatchedPred( \
+      [](const user_op::KernelRegContext& ctx) {                                                 \
+        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);  \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
+        return ctx.device_type() == DeviceType::kCPU                                             \
+               && out_desc->data_type() == GetDataType<dtype>::value                             \
+               && indices_desc->data_type() == GetDataType<itype>::value;                        \
       });
 
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int32_t)
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int64_t)
-REGISTER_CPU_ONE_HOT_KERNEL(int32_t, float)
-REGISTER_CPU_ONE_HOT_KERNEL(int32_t, double)
 REGISTER_CPU_ONE_HOT_KERNEL(int64_t, int32_t)
 REGISTER_CPU_ONE_HOT_KERNEL(int64_t, int64_t)
-REGISTER_CPU_ONE_HOT_KERNEL(int64_t, float)
-REGISTER_CPU_ONE_HOT_KERNEL(int64_t, double)
+REGISTER_CPU_ONE_HOT_KERNEL(float, int32_t)
+REGISTER_CPU_ONE_HOT_KERNEL(float, int64_t)
+REGISTER_CPU_ONE_HOT_KERNEL(double, int32_t)
+REGISTER_CPU_ONE_HOT_KERNEL(double, int64_t)
 
 }  // namespace oneflow
