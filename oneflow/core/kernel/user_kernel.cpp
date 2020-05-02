@@ -97,10 +97,9 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   UserKernelBaseContext base_ctx_;
 };
 
-class UserOpKernelInferContext : public user_op::InferContext {
+class UserKernelOpInferContext : public user_op::InferContext {
  public:
-  UserOpKernelInferContext(const OperatorConf& op_conf,
-                           const std::function<Blob*(const std::string&, int32_t)>& Arg2Blob)
+  UserKernelOpInferContext(const OperatorConf& op_conf)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
     auto* bn2sbp = sbp_signature_.mutable_bn_in_op2sbp_parallel();
     auto InitArgs7TensorDesc7Sbp = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
@@ -110,10 +109,7 @@ class UserOpKernelInferContext : public user_op::InferContext {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           std::pair<std::string, int32_t> arg_pair = std::make_pair(arg_name, i);
           arg_vec->emplace_back(arg_pair);
-          Blob* blob = Arg2Blob(arg_name, i);
-          user_op::TensorDesc tensor_desc;
-          FillTensorDescWithBlob(blob, &tensor_desc);
-          arg2tensor_desc_.emplace(arg_pair, std::move(tensor_desc));
+          arg2tensor_desc_.emplace(arg_pair, nullptr);
           const std::string& bn_in_op = GenRepeatedBn(arg_name, i);
           (*bn2sbp)[bn_in_op].mutable_split_parallel()->set_axis(0);
         }
@@ -124,23 +120,23 @@ class UserOpKernelInferContext : public user_op::InferContext {
     parallel_ctx_.set_parallel_id(0);
     parallel_ctx_.set_parallel_num(1);
   }
-  ~UserOpKernelInferContext() = default;
+  ~UserKernelOpInferContext() = default;
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
-    return &(arg2tensor_desc_.at(std::make_pair(arg_name, index)));
+    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).get();
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_shape();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_dynamic();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
   bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_tensor_list();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_tensor_list();
   }
 
   const ArgVec& inputs() const override { return inputs_; }
@@ -155,11 +151,18 @@ class UserOpKernelInferContext : public user_op::InferContext {
     return it->second;
   }
 
-  void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&, int32_t)>& Arg2Blob) {
+  void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_desc_) {
-      const auto arg_pair = pair.first;
-      Blob* blob = Arg2Blob(arg_pair.first, arg_pair.second);
-      blob->shape().ToShape(pair.second.mut_shape());
+      const auto& arg_pair = pair.first;
+      auto& arg_tensor_desc = pair.second;
+      Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
+      CHECK_NOTNULL(blob);
+      if (arg_tensor_desc) {
+        blob->shape().ToShape(arg_tensor_desc->mut_shape());
+      } else {
+        arg_tensor_desc.reset(new user_op::TensorDesc());
+        FillTensorDescWithBlob(blob, arg_tensor_desc.get());
+      }
     }
   }
 
@@ -168,7 +171,7 @@ class UserOpKernelInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   SbpSignature sbp_signature_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>> arg2tensor_desc_;
 };
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
@@ -178,12 +181,13 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         kernel_conf_(kernel_conf),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf)) {
+        base_ctx_(UserKernelBaseContext(kernel_conf)),
+        op_infer_ctx_(kernel_conf.op_attribute().op_conf()) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          arg2blob_.emplace(std::make_pair(arg_name, i), nullptr);
+          arg2tensor_.emplace(std::make_pair(arg_name, i), nullptr);
         }
       }
     };
@@ -194,11 +198,6 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
     tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
-    op_infer_ctx_.reset(new UserOpKernelInferContext(
-        kernel_conf.op_attribute().op_conf(),
-        [this](const std::string& arg_name, int32_t arg_index) -> Blob* {
-          return Blob4Arg(arg_name, arg_index);
-        }));
   }
   ~UserKernelInferContext() = default;
 
@@ -212,40 +211,40 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
-
-  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) {
-    auto it = arg2blob_.find(std::make_pair(arg_name, arg_index));
-    CHECK(it != arg2blob_.end()) << "arg (" << arg_name << "," << arg_index << ") not found";
-    return it->second->shape_view();
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
+    auto it = arg2tensor_.find(std::make_pair(arg_name, arg_index));
+    CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
+    return it->second.get();
+  }
+  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tenosr of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->shape();
+  }
+  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tenosr of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->mut_shape();
   }
 
-  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) {
-    auto it = arg2blob_.find(std::make_pair(arg_name, arg_index));
-    CHECK(it != arg2blob_.end()) << "arg (" << arg_name << "," << arg_index << ") not found";
-    return it->second->mut_shape_view();
-  }
+  user_op::InferContext* GetOpInferContext() override { return &op_infer_ctx_; }
+  user_op::TensorDescInferFn GetOpInferFn() override { return tensor_desc_infer_fn_; }
 
-  void NaiveInferShape() override {
-    op_infer_ctx_->UpdateArg2TensorDesc([this](const std::string& arg_name, int32_t arg_index) {
-      return Blob4Arg(arg_name, arg_index);
-    });
-    tensor_desc_infer_fn_(op_infer_ctx_.get());
-    for (auto& pair : arg2blob_) {
+  void UpdateArg2Tenosr(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
-      const Shape& shape = *op_infer_ctx_->Shape4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-      pair.second->mut_shape_view()->set_shape(shape);
+      auto& arg_tensor = pair.second;
+      const std::string& bn_in_op = GenRepeatedBn(arg_pair.first, arg_pair.second);
+      if (arg_tensor) {
+        *arg_tensor = std::move(user_op::Tensor(BnInOp2Blob(bn_in_op)));
+      } else {
+        arg_tensor.reset(new user_op::Tensor(BnInOp2Blob(bn_in_op)));
+      }
     }
-  }
-
-  void UpdateArg2Blob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    for (auto& pair : arg2blob_) {
-      const std::string& bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
-      pair.second = BnInOp2Blob(bn_in_op);
-    }
-  }
-
-  Blob* Blob4Arg(const std::string& arg_name, int32_t arg_index) {
-    return arg2blob_.at(std::make_pair(arg_name, arg_index));
   }
 
   const KernelConf& kernel_conf() const { return kernel_conf_; }
@@ -254,9 +253,9 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const KernelConf& kernel_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
-  std::unique_ptr<UserOpKernelInferContext> op_infer_ctx_;
+  UserKernelOpInferContext op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
-  HashMap<std::pair<std::string, int32_t>, Blob*> arg2blob_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>> arg2tensor_;
 };
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
@@ -374,9 +373,11 @@ class UserKernel final : public Kernel {
 
   void ForwardShape(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    infer_ctx_->UpdateArg2Blob(BnInOp2Blob);
+    infer_ctx_->UpdateArg2Tenosr(BnInOp2Blob);
     infer_cache_->UpdateCacheKey(infer_ctx_.get());
     if (!infer_cache_->IsCacheHit()) {
+      auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->GetOpInferContext());
+      if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
       kernel_->InferShape(infer_ctx_.get());
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {

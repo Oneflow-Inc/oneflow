@@ -6,6 +6,8 @@
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
 
@@ -50,6 +52,7 @@ class KernelInferContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
 
   virtual DeviceCtx* device_ctx() = 0;
+  virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
   virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
@@ -60,7 +63,15 @@ class KernelInferContext {
     return user_op_conf_.attr<T>(attr_name);
   }
 
-  virtual void NaiveInferShape() { UNIMPLEMENTED(); }
+  virtual InferContext* GetOpInferContext() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual TensorDescInferFn GetOpInferFn() {
+    return [](InferContext* ctx) -> Maybe<void> {
+      return oneflow::Error::CheckFailed() << "Invalid GetOpInferFn";
+    };
+  }
 
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
