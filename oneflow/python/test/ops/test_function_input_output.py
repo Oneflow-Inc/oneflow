@@ -10,6 +10,22 @@ def test_FixedTensorDef(test_case):
     test_case.assertEqual(of_ret.ndarray().min(), 1)
     test_case.assertTrue(np.allclose(of_ret.ndarray(), data))
 
+def test_FixedTensorDef_batch_axis(test_case):
+    @flow.function()
+    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=1)):
+      test_case.assertEqual(x.batch_axis, 1)
+      return x
+    data = np.ones((2, 5), dtype=np.float32)
+    Foo(np.ones((2, 5), dtype=np.float32)).get()
+
+def test_FixedTensorDef_no_batch_axis(test_case):
+    @flow.function()
+    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=None)):
+      test_case.assertTrue(x.batch_axis is None)
+      return x
+    data = np.ones((2, 5), dtype=np.float32)
+    Foo(np.ones((2, 5), dtype=np.float32)).get()
+
 def test_FixedTensorDef_2_device(test_case):
     flow.config.gpu_device_num(2)
     @flow.function()

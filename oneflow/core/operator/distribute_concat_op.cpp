@@ -90,7 +90,7 @@ Maybe<void> DistributeConcatOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-    OF_CHECK(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
   }
   *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp(input_bns().Get(0));
   return Maybe<void>::Ok();
@@ -101,7 +101,7 @@ Maybe<void> DistributeConcatOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  OF_CHECK_EQ(parallel_desc.parallel_num(), input_bns().size());
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), input_bns().size());
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
@@ -114,12 +114,13 @@ Maybe<void> DistributeConcatOp::InferSbpSignature(
     int64_t dim = 0;
     FOR_RANGE(int, i, 0, input_bns().size()) {
       const auto& in_parallel_desc = JUST(SbpInferHint4Ibn(input_bns().Get(i)))->parallel_desc();
-      OF_CHECK_EQ(1, in_parallel_desc.parallel_num());
+      CHECK_EQ_OR_RETURN(1, in_parallel_desc.parallel_num());
       dim += JUST(LogicalBlobDesc4Ibn(input_bns().Get(i)))->shape().At(axis);
     }
     BalancedSplitter bs(dim, parallel_desc.parallel_num());
     FOR_RANGE(int, i, 0, input_bns().size()) {
-      OF_CHECK_EQ(JUST(LogicalBlobDesc4Ibn(input_bns().Get(i)))->shape().At(axis), bs.At(i).size());
+      CHECK_EQ_OR_RETURN(JUST(LogicalBlobDesc4Ibn(input_bns().Get(i)))->shape().At(axis),
+                         bs.At(i).size());
     }
   }
   SbpSignatureList sbp_sig_list;

@@ -21,9 +21,9 @@ class ConvolutionOp : public TrtOpKernel {
     }
 
     CHECK_EQ(ctx->GetAttr<std::string>("data_format"), "channels_first");
-    std::vector<int32_t> kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
-    std::vector<int32_t> strides = ctx->GetAttr<std::vector<int32_t>>("strides");
-    std::vector<int32_t> dilation = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
+    const auto& kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+    const auto& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    const auto& dilation = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
 
     int filters = ctx->GetAttr<int32_t>("filters");
     auto *layer = ctx->builder()->addConvolution(

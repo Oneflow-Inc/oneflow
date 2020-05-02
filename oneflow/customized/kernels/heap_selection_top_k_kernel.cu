@@ -195,7 +195,8 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
                         ctx->device_ctx()->cuda_stream()>>>(
         in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
         GetMinVal<T>(), out->mut_dptr<int32_t>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                            \
