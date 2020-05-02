@@ -74,7 +74,8 @@ if __name__ == "__main__":
                         help="If specified, only print errors")
     arguments = parser.parse_args()
 
-    exclude_globs = []
+    # FIXME: files under xrt directory are formatted differently, skip for now
+    exclude_globs = ["*/oneflow/xrt/*"]
     if arguments.exclude_globs:
         for line in open(arguments.exclude_globs):
             exclude_globs.append(line.strip())
