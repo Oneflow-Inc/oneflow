@@ -1,12 +1,10 @@
-#include <oneflow/core/common/maybe.h>
-#include <oneflow/core/framework/op_registration.h>
-#include <oneflow/core/framework/tensor_desc.h>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reshape_op_util.h"
-#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
+
+namespace {
 
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
@@ -21,11 +19,11 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-  Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
   const Shape& shape = ctx->GetAttr<Shape>("shape");
   const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const Shape& in_shape = in_tensor_desc->shape();
+  Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc->is_dynamic() == false);
   *out_tensor_desc = *in_tensor_desc;
   CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
@@ -40,7 +38,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
     dim_vec.at(split_axis) = spliter.At(parallel_ctx.parallel_id()).size();
   }
   *out_shape = Shape(dim_vec);
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape->elem_cnt());
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }
 
@@ -66,4 +64,5 @@ REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOp
   }
 });
 
+}  // namespace
 }  // namespace oneflow
