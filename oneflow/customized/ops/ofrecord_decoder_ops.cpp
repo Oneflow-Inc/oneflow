@@ -45,6 +45,7 @@ REGISTER_USER_OP("OFRecordImageDecoderRandomCrop")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
     .Attr<int32_t>("num_attempts", UserOpAttrType::kAtInt32, 10)
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
+    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .Attr<std::vector<float>>("random_area", UserOpAttrType::kAtListFloat, {0.08, 1.0})
     .Attr<std::vector<float>>("random_aspect_ratio", UserOpAttrType::kAtListFloat, {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

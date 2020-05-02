@@ -10,6 +10,7 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 
+
 @oneflow_export("data.OFRecordRawDecoder")
 def OFRecordRawDecoder(
         input_blob,
@@ -38,7 +39,7 @@ def OFRecordImageDecoderRandomCrop(
         blob_name,
         color_space="BGR",
         num_attempts=10,
-        seed=-1,
+        seed=None,
         random_area=[0.08, 1.0],
         random_aspect_ratio=[0.75, 1.333333],
         name=None):
@@ -51,7 +52,7 @@ def OFRecordImageDecoderRandomCrop(
             .SetAttr("name", blob_name, "AttrTypeString")\
             .SetAttr("color_space", color_space, "AttrTypeString")\
             .SetAttr("num_attempts", num_attempts, "AttrTypeInt32")\
-            .SetAttr("seed", seed, "AttrTypeInt64")\
+            .SetRandomSeed(seed)\
             .SetAttr("random_area", random_area, "AttrTypeListFloat")\
             .SetAttr("random_aspect_ratio", random_aspect_ratio, "AttrTypeListFloat")\
             .Build().RemoteBlobList()[0]
@@ -104,7 +105,7 @@ def CropMirrorNormalize(
 @oneflow_export("random.CoinFlip")
 def CoinFlip(
         batch_size=1,
-        seed=-1,
+        seed=None,
         probability=0.5,
         name=None):
     if name is None:
@@ -114,7 +115,7 @@ def CoinFlip(
             .Output("out")\
             .SetAttr("batch_size", batch_size, "AttrTypeInt64")\
             .SetAttr("probability", probability, "AttrTypeFloat")\
-            .SetAttr("seed", seed, "AttrTypeInt64")\
+            .SetRandomSeed(seed)\
             .Build().RemoteBlobList()[0]
 
 

@@ -33,7 +33,6 @@ void InitNonPODTypeBlobIfNeed(Blob* blob_ptr) {
   }
 }
 
-
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {

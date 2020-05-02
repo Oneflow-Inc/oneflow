@@ -5,6 +5,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/image_util.h"
+#include "oneflow/customized/kernels/random_seed_util.h"
 
 namespace oneflow {
 
@@ -216,8 +217,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     float prob = ctx->GetAttr<float>("probability");
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    if (seed == -1) { seed = NewRandomSeed(); }
+    int64_t seed = GetOpKernelRandomSeed(ctx);
     std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
     return rand_bool_gen;
   }
