@@ -57,7 +57,6 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
-if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
@@ -83,6 +82,5 @@ add_custom_target(tensorflow_copy_libs_to_destination
       ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.1
       ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so
   DEPENDS tensorflow_create_library_dir)
-endif(THIRD_PARTY)
 
 endif(WITH_XLA)

@@ -38,7 +38,6 @@ foreach(LIBRARY_NAME ${GOOGLEMOCK_LIBRARY_NAMES})
     list(APPEND GOOGLEMOCK_BUILD_STATIC_LIBRARIES ${GOOGLEMOCK_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if(THIRD_PARTY)
 
 ExternalProject_Add(googletest
     PREFIX googletest
@@ -85,5 +84,3 @@ add_custom_target(googlemock_create_library_dir
 add_custom_target(googlemock_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLEMOCK_BUILD_STATIC_LIBRARIES} ${GOOGLEMOCK_LIBRARY_DIR}
   DEPENDS googlemock_create_library_dir)
-
-endif(THIRD_PARTY)

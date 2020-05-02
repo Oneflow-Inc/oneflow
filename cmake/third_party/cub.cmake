@@ -5,7 +5,6 @@ set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
 set(CUB_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/cub/src/cub)
 
-if(THIRD_PARTY)
 
 ExternalProject_Add(cub
     PREFIX cub
@@ -21,5 +20,3 @@ add_custom_target(cub_create_header_dir
 add_custom_target(cub_copy_headers_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub
     DEPENDS cub_create_header_dir)
-
-endif(THIRD_PARTY)

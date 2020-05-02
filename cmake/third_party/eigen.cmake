@@ -16,7 +16,6 @@ add_definitions(-DEIGEN_NO_MALLOC)
 endif()
 #add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 
-if (THIRD_PARTY)
   
 ExternalProject_Add(eigen
     PREFIX eigen
@@ -31,6 +30,3 @@ ExternalProject_Add(eigen
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
         -DBUILD_TESTING:BOOL=OFF
 )
-
-
-endif(THIRD_PARTY)

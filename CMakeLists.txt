@@ -1,8 +1,6 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.5)
 
-option(THIRD_PARTY "Build third party or oneflow" OFF)
-
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
@@ -18,11 +16,8 @@ else ()
 endif()
 
 # Project
-if(THIRD_PARTY)
-  project(third_party C CXX)
-else()
-  project(oneflow C CXX)
-endif()
+project(third_party C CXX)
+project(oneflow C CXX)
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
@@ -99,9 +94,5 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
 endif()
 
-if (THIRD_PARTY)
-  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  set(THIRD_PARTY OFF CACHE BOOL "" FORCE)
-else()
-  include(oneflow)
-endif()
+add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+include(oneflow)

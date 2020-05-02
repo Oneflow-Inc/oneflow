@@ -15,7 +15,6 @@ set(COCOAPI_HEADERS
     "${COCOAPI_BASE_DIR}/common/maskApi.h"
 )
 
-if(THIRD_PARTY)
 
 ExternalProject_Add(cocoapi
     PREFIX cocoapi
@@ -48,4 +47,3 @@ add_custom_target(cocoapi_create_library_dir
 add_custom_target(cocoapi_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${COCOAPI_BUILD_STATIC_LIBRARIES} ${COCOAPI_LIBRARY_DIR}
     DEPENDS cocoapi_create_library_dir)
-endif(THIRD_PARTY)

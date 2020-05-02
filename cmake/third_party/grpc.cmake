@@ -25,7 +25,6 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if(THIRD_PARTY)
 
 ExternalProject_Add(grpc
     PREFIX grpc
@@ -61,5 +60,3 @@ add_custom_target(grpc_create_library_dir
 add_custom_target(grpc_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_STATIC_LIBRARIES} ${GRPC_LIBRARY_DIR}
   DEPENDS grpc_create_library_dir)
-
-endif(THIRD_PARTY)

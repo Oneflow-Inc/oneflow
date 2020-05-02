@@ -25,7 +25,6 @@ SET(ABSL_LIBRARIES
     ${ABSL_LIBRARY_DIR}/libabsl_time.a
     ${ABSL_LIBRARY_DIR}/libabsl_bad_optional_access.a)
 
-if (THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
     PREFIX ${ABSL_SOURCE_DIR}
     GIT_REPOSITORY ${ABSL_GIT_URL}
@@ -43,4 +42,3 @@ if (THIRD_PARTY)
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
   )
-endif(THIRD_PARTY)

@@ -23,7 +23,6 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if (THIRD_PARTY)
 
 # TODO: investigate if these three lines are necessary
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fPIC")
@@ -60,5 +59,3 @@ add_custom_target(gflags_create_library_dir
 add_custom_target(gflags_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)
-
-endif(THIRD_PARTY)
