@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-int64_t GetOpKernelRandomSeedFromKernelInitContext(user_op::KernelInitContext* ctx);
+int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
 
 }  // namespace oneflow
 

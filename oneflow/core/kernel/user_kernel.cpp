@@ -76,8 +76,9 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
                                                  int32_t index) const override {
     const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
-    CHECK(bn2sbp.find(bn) != bn2sbp.end());
-    return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
+    auto it = bn2sbp.find(bn);
+    CHECK(it != bn2sbp.end());
+    return it->second;
   }
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }

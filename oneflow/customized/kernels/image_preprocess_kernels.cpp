@@ -217,7 +217,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     float prob = ctx->GetAttr<float>("probability");
-    int64_t seed = GetOpKernelRandomSeedFromKernelInitContext(ctx);
+    int64_t seed = GetOpKernelRandomSeed(ctx);
     std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
     return rand_bool_gen;
   }

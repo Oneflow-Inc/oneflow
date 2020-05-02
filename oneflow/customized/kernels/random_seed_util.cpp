@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-int64_t GetOpKernelRandomSeedFromKernelInitContext(user_op::KernelInitContext* ctx) {
+int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   int64_t seed = ctx->GetAttr<int64_t>("seed");
   if (!ctx->GetAttr<bool>("has_seed")) { seed = NewRandomSeed(); }
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
