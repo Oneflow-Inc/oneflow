@@ -3,7 +3,6 @@
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
