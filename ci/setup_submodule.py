@@ -15,7 +15,13 @@ config.read(".gitmodules")
 for s in config.sections():
     path = config[s]["path"]
     if args.oneflow_src_local_path:
-        src_path = os.path.join(args.oneflow_src_local_path, path)
+        src_path0 = os.path.join(args.oneflow_src_local_path, "build", path)
+        src_path1 = os.path.join(args.oneflow_src_local_path, path)
+        src_path = ""
+        if os.path.exists("{}/.git".format(src_path0)):
+            src_path = src_path0
+        else:
+            src_path = src_path1
         assert os.path.exists("{}/.git".format(src_path)), src_path
         config[s]["url"] = "file://{}".format(src_path)
     else:
