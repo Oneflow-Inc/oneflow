@@ -141,12 +141,14 @@ foreach(oneflow_single_file ${oneflow_all_src})
 endforeach()
 
 # clang format
-add_custom_target(of_format)
-
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
-    add_custom_command(TARGET of_format PRE_BUILD
-    COMMAND clang-format -i -style=file ${source_file})
-endforeach()
+add_custom_target(of_format
+            python3
+            ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py
+            --clang_format_binary
+            clang-format
+            --source_dir
+            ${CMAKE_CURRENT_SOURCE_DIR}/oneflow
+            --fix)
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
