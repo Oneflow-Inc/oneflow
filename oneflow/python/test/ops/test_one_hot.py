@@ -38,5 +38,4 @@ def test_one_hot(test_case):
     arg_dict["off_value"] = [2]
     arg_dict["axis"] = [-1, 0, 2]
     for arg in GenArgList(arg_dict):
-        #print(*arg)
         _run_test(*arg)
