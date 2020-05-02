@@ -12,7 +12,7 @@ namespace user_op {
 
 class UserOpConfWrapper;
 
-} // namespace user_op
+}  // namespace user_op
 
 class CudnnConvDesc final {
  public:
