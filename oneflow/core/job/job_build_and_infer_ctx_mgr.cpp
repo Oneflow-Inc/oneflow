@@ -41,7 +41,7 @@ Maybe<void> JobBuildAndInferCtxMgr::AddLbiAndDiffWatcherUuidPair(
   };
   auto found_iter = std::find_if(pairs->lbi_and_uuid_pair().begin(),
                                  pairs->lbi_and_uuid_pair().end(), PairFoundCond);
-  OF_CHECK(found_iter == pairs->lbi_and_uuid_pair().end())
+  CHECK_OR_RETURN(found_iter == pairs->lbi_and_uuid_pair().end())
       << "diff blob has been watched. (logical_blob_name: "
       << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << *job_name << ")";
   *pairs->mutable_lbi_and_uuid_pair()->Add() = lbi_uuid_pair;
