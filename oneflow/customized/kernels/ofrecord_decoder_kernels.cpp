@@ -52,6 +52,19 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
   }
 }
 
+template<typename T>
+struct OFRecordRawDecoderIsMatchedPred {
+  static bool Impl(const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+    if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord
+        && out_tensor->data_type() == GetDataType<T>::value) {
+      return true;
+    }
+    return false;
+  }
+};
+
 }  // namespace
 
 template<typename T>
@@ -87,18 +100,10 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RAW_DECODER_KERNEL(dtype)                                                         \
-  REGISTER_USER_KERNEL("OFRecordRawDecoder")                                                       \
-      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
-        const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
-        if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord \
-            && out_tensor->data_type() == GetDataType<dtype>::value) {                             \
-          return true;                                                                             \
-        }                                                                                          \
-        return false;                                                                              \
-      });
+#define REGISTER_RAW_DECODER_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("OFRecordRawDecoder")          \
+      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>() \
+      .SetIsMatchedPred(OFRecordRawDecoderIsMatchedPred<dtype>::Impl);
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)
