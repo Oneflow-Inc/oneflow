@@ -18,7 +18,7 @@ def one_hot(
     out_ndims = len(indices.shape) + 1
     if axis < 0: axis += out_ndims
     assert axis >= 0 and axis < out_ndims, ValueError(
-            "Expected axis to be -1 or between [%d, %d).  But received: %d " %(-out_ndims, out_ndims, axis)
+            "Expected axis to between [%d, %d).  But received: %d " %(-out_ndims, out_ndims, axis)
             )
     out = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
