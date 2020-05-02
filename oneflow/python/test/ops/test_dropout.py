@@ -75,9 +75,9 @@ def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
 def test_dropout(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(100, 100, 10, 20), (100, 100, 200), (1000, 2000)]
+    arg_dict["x_shape"] = [(100, 100, 10, 20), (100, 100, 200)]#, (1000, 2000)]
     arg_dict["data_type"] = ["float32", "double", "float16"]
-    arg_dict["rate"] = [0.1, 0.4]
+    arg_dict["rate"] = [0.1]#, 0.4]
     arg_dict['seed'] = [12345, None]
 
     def check_npy(name):
@@ -87,7 +87,6 @@ def test_dropout(test_case):
         
     for arg in GenArgList(arg_dict):
         if arg[0] == "cpu" and arg[2] == "float16": continue
-        print(arg)
         os.environ['ENABLE_USER_OP'] = "True"
         of_run_and_dump_to_numpy(*arg)
         os.environ['ENABLE_USER_OP'] = "false"
