@@ -11,7 +11,8 @@ namespace oneflow {
 namespace user_op {
 
 class UserOpConfWrapper;
-}
+
+} // namespace user_op
 
 class CudnnConvDesc final {
  public:
