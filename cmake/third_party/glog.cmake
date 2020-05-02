@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/include)
-set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
+set(GLOG_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/glog/include)
+set(GLOG_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/glog/lib)
 
 set(glog_URL ${PROJECT_SOURCE_DIR}/third_party/glog/src/glog)
 

@@ -1,8 +1,8 @@
 include (ExternalProject)
 
-set(PROTOBUF_INCLUDE_DIR ${THIRD_PARTY_DIR}/protobuf/include)
-set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
-set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
+set(PROTOBUF_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/protobuf/include)
+set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/protobuf/lib)
+set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_INSTALL_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)

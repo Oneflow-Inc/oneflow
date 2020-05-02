@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_DIR}/opencv/include)
-set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
+set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/opencv/include)
+set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)

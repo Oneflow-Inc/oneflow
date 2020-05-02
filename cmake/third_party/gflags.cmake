@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(GFLAGS_INCLUDE_DIR ${THIRD_PARTY_DIR}/gflags/include)
-set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
+set(GFLAGS_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/gflags/include)
+set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)

@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include/eigen3)
-set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
+set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/eigen/include/eigen3)
+set(EIGEN_INSTALL_DIR ${THIRD_PARTY_INSTALL_DIR}/eigen)
 
 if(WITH_XLA)
   #set(EIGEN_URL "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/8071cda5714d.tar.gz")

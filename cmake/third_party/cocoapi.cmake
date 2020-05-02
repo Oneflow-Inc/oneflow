@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(COCOAPI_INCLUDE_DIR ${THIRD_PARTY_DIR}/cocoapi/include)
-set(COCOAPI_LIBRARY_DIR ${THIRD_PARTY_DIR}/cocoapi/lib)
+set(COCOAPI_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/cocoapi/include)
+set(COCOAPI_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/cocoapi/lib)
 
 set(COCOAPI_URL https://github.com/cocodataset/cocoapi.git)
 set(COCOAPI_TAG ed842bffd41f6ff38707c4f0968d2cfd91088688)

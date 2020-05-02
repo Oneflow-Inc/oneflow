@@ -1,6 +1,6 @@
 include (ExternalProject)
 
-set(CUB_INCLUDE_DIR ${THIRD_PARTY_DIR}/cub/include)
+set(CUB_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/cub/include)
 set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
 set(CUB_URL ${PROJECT_SOURCE_DIR}/third_party/cub/src/cub)

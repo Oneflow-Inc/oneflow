@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
-set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
+set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/libjpeg-turbo/include)
+set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/libjpeg-turbo/lib)
 
 set(LIBJPEG_URL ${PROJECT_SOURCE_DIR}/third_party/libjpeg-turbo/src/libjpeg-turbo)
 

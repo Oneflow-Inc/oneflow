@@ -1,7 +1,7 @@
 include (ExternalProject)
 
-set(ZLIB_INCLUDE_DIR ${THIRD_PARTY_DIR}/zlib/include)
-set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_DIR}/zlib/lib)
+set(ZLIB_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/zlib/include)
+set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/zlib/lib)
 
 set(ZLIB_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/zlib/install)
 set(ZLIB_URL ${PROJECT_SOURCE_DIR}/third_party/zlib/src/zlib)

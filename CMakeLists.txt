@@ -32,7 +32,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
-set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
+set(THIRD_PARTY_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/third_party_install"
   CACHE PATH "Where the third party headers and libs are put")
 
 # Modules

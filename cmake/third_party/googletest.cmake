@@ -1,9 +1,9 @@
 include (ExternalProject)
 
-set(GOOGLETEST_INCLUDE_DIR ${THIRD_PARTY_DIR}/googletest/include)
-set(GOOGLETEST_LIBRARY_DIR ${THIRD_PARTY_DIR}/googletest/lib)
-set(GOOGLEMOCK_INCLUDE_DIR ${THIRD_PARTY_DIR}/googlemock/include)
-set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
+set(GOOGLETEST_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/googletest/include)
+set(GOOGLETEST_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/googletest/lib)
+set(GOOGLEMOCK_INCLUDE_DIR ${THIRD_PARTY_INSTALL_DIR}/googlemock/include)
+set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_INSTALL_DIR}/googlemock/lib)
 
 
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)

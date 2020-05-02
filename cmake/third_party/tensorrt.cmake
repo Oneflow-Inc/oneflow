@@ -5,12 +5,12 @@ if (WITH_TENSORRT)
 find_path(TENSORRT_INCLUDE_DIR NvInfer.h
           PATHS ${TENSORRT_ROOT} ${TENSORRT_ROOT}/include
           $ENV{TENSORRT_ROOT} $ENV{TENSORRT_ROOT}/include
-          ${THIRD_PARTY_DIR}/tensorrt/include)
+          ${THIRD_PARTY_INSTALL_DIR}/tensorrt/include)
 
 find_library(TENSORRT_LIBRARIES NAMES libnvinfer.so libnvinfer.a
              PATHS ${TENSORRT_ROOT} ${TENSORRT_ROOT}/lib
              $ENV{TENSORRT_ROOT} $ENV{TENSORRT_ROOT}/lib
-             ${THIRD_PARTY_DIR}/tensorrt/lib)
+             ${THIRD_PARTY_INSTALL_DIR}/tensorrt/lib)
 
 if (TENSORRT_INCLUDE_DIR AND TENSORRT_LIBRARIES)
 else()
