@@ -179,7 +179,6 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op::KernelInferContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        kernel_conf_(kernel_conf),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         op_infer_ctx_(kernel_conf.op_attribute().op_conf()) {
@@ -247,10 +246,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     }
   }
 
-  const KernelConf& kernel_conf() const { return kernel_conf_; }
-
  private:
-  const KernelConf& kernel_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
