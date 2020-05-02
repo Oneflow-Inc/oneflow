@@ -1,17 +1,18 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T, typename K>
-__global__ void OneHotEncodeGpu(const int64_t num_indices, const int64_t depth, const T on_value,
-                                const K* indices, T* out) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices) {
-    const int64_t idx = indices[i];
+__global__ void OneHotEncodeGpu(int64_t elem_cnt, const int64_t depth, const T on_value,
+                                const T off_value, const K* indices, T* out) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const int64_t row = i / depth;
+    const int64_t col = i - row * depth;
+    const int64_t idx = indices[row];
     assert(idx >= 0 && idx < depth);
-    out[i * depth + idx] = on_value;
+    out[i] = (idx == col) ? on_value : off_value;
   }
 }
 
@@ -36,10 +37,9 @@ class GpuOneHotKernel final : public user_op::OpKernel {
     const T off_value = IsFloatingDataType(dtype)
                             ? static_cast<T>(ctx->GetAttr<double>("floating_off_value"))
                             : static_cast<T>(ctx->GetAttr<int64_t>("integer_off_value"));
-    NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out->shape().elem_cnt(), off_value,
-                                          out->mut_dptr<T>());
-    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices, num_indices, depth,
-                    on_value, indices->dptr<K>(), out->mut_dptr<T>());
+    RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices * depth,
+                    num_indices * depth, depth, on_value, off_value, indices->dptr<K>(),
+                    out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -28,11 +28,12 @@ REGISTER_USER_OP("one_hot")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+      const user_op::TensorDesc& indices =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       SbpSignatureBuilder()
           .Split("indices", 0, 0)
           .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .MakeSplitSignatureListBuilder(indices.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
       return Maybe<void>::Ok();
     });
