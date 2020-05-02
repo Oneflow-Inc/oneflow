@@ -36,21 +36,22 @@ __global__ void GenMaskGpu(const int64_t n, float threshold, const float* random
 }
 
 template<typename T>
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x,
-                         const int8_t* mask, T* y) {
+void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+                  T* y) {
   MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, x, mask, y);
 }
 
-void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
-                                                                const int8_t* mask, float16* y) {
+template<>
+void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
+                           const int8_t* mask, float16* y) {
   MaskAndScaleGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
 }
 
 void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
-                                                         int8_t* mask) {
+             int8_t* mask) {
   GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, threshold, random_tmp, mask);
 }
@@ -69,20 +70,21 @@ class DropoutKernelGPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->GetAttr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(),
-                                                    scale, in->dptr<T>(), mask->dptr<int8_t>(),
-                                                    out->mut_dptr<T>());
+    MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+                    mask->dptr<int8_t>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                  \
+#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
-        return ctx.device_type() == DeviceType::kGPU && y_desc->data_type() == GetDataType<dtype>::value; \
+      [](const user_op::KernelRegContext& ctx) {                                           \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);      \
+        return ctx.device_type() == DeviceType::kGPU                                       \
+               && y_desc->data_type() == GetDataType<dtype>::value;                        \
       });
 
+REGISTER_DROPOUT_KERNEL_GPU(float16)
 REGISTER_DROPOUT_KERNEL_GPU(float)
 REGISTER_DROPOUT_KERNEL_GPU(double)
 
@@ -98,21 +100,22 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->GetAttr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(),
-                                                    scale, dy->dptr<T>(), mask->dptr<int8_t>(),
-                                                    dx->mut_dptr<T>());
+    MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
+                    mask->dptr<int8_t>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                              \
-  REGISTER_USER_KERNEL("dropout_grad")                                                           \
-      .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                           \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);            \
-        return ctx.device_type() == DeviceType::kGPU && dx_desc->data_type() == GetDataType<dtype>::value; \
+#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                       \
+  REGISTER_USER_KERNEL("dropout_grad")                                                \
+      .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                     \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                  \
+               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
       });
 
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
@@ -125,8 +128,8 @@ class RandomMaskLikeKernelGPU final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->GetAttr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(seed,
-                                                                                ctx->device_ctx());
+    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
+        seed, ctx->device_ctx());
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
@@ -146,16 +149,15 @@ class RandomMaskLikeKernelGPU final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("random_mask_like")                                                  
-    .SetCreateFn<RandomMaskLikeKernelGPU>()                                          
-    .SetIsMatchedPred(                                                                    
-        [](const user_op::KernelRegContext& ctx) { return ctx.device_type() == DeviceType::kGPU; }) 
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   
-      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);                    
-      const size_t tmp_buffer_bytes =                                                     
-          GetCudaAlignedSize(like_shape->elem_cnt() * sizeof(float));                     
-      return tmp_buffer_bytes;                                                            
+REGISTER_USER_KERNEL("random_mask_like")
+    .SetCreateFn<RandomMaskLikeKernelGPU>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      return ctx.device_type() == DeviceType::kGPU;
+    })
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+      const size_t tmp_buffer_bytes = GetCudaAlignedSize(like_shape->elem_cnt() * sizeof(float));
+      return tmp_buffer_bytes;
     });
-
 
 }  // namespace oneflow
