@@ -16,7 +16,7 @@ Tensor::Tensor(Blob* blob) {
   data_type_ = blob->data_type();
 }
 
-Tensor& Tensor::operator=(const Tensor& rhs) {
+void Tensor::CopyWithoutData(const Tensor& rhs) {
   dptr_ = rhs.dptr_;
   shape_ = rhs.shape_;
   if (rhs.mut_shape_) {
@@ -25,7 +25,6 @@ Tensor& Tensor::operator=(const Tensor& rhs) {
     mut_shape_.reset();
   }
   data_type_ = rhs.data_type_;
-  return *this;
 }
 
 Tensor& Tensor::operator=(Tensor&& rhs) {

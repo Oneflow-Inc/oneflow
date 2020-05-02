@@ -15,9 +15,9 @@ class Tensor final {
   Tensor(Blob*);
   ~Tensor() = default;
 
-  Tensor(const Tensor& rhs) { *this = rhs; }
+  Tensor(const Tensor& rhs) { this->CopyWithoutData(rhs); }
   Tensor(Tensor&& rhs) { *this = std::move(rhs); }
-  Tensor& operator=(const Tensor& rhs);
+  void CopyWithoutData(const Tensor& rhs);
   Tensor& operator=(Tensor&& rhs);
 
   const ShapeView& shape() const { return shape_; }

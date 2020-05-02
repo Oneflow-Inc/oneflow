@@ -69,11 +69,7 @@ class KernelInferContext {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual TensorDescInferFn GetOpInferFn() {
-    return [](InferContext* ctx) -> Maybe<void> {
-      return oneflow::Error::CheckFailed() << "Invalid GetOpInferFn";
-    };
-  }
+  virtual const TensorDescInferFn& GetOpInferFn() { UNIMPLEMENTED(); }
 
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}

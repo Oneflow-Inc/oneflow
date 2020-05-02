@@ -231,7 +231,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   }
 
   user_op::InferContext* GetOpInferContext() override { return &op_infer_ctx_; }
-  user_op::TensorDescInferFn GetOpInferFn() override { return tensor_desc_infer_fn_; }
+  const user_op::TensorDescInferFn& GetOpInferFn() override { return tensor_desc_infer_fn_; }
 
   void UpdateArg2Tenosr(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
