@@ -1,12 +1,6 @@
 name: Build and Test CI
 
 on:
-    push:
-      branches:
-        - develop
-      paths-ignore:
-        - '**.md'
-        - '.gitignore'
     pull_request:
       types: [synchronize, opened, reopened, ready_for_review]
       branches:
@@ -23,6 +17,9 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v2
+    - name: Check format
+      run: |
+        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
     - name: Setup environment
       run: |
         echo $HOSTNAME

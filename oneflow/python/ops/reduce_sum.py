@@ -17,13 +17,14 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if name is None:
         name = id_util.UniqueStr("ReduceSum_")
     enable_user_op = os.getenv("ENABLE_USER_OP") == "True"
-    # TODO: hard coded to pass CI, rm the line below to debug
-    enable_user_op = False
     if enable_user_op and flow.current_global_function_desc().IsTrainable() == False:
         if axis is None:
             axis = []
-        elif isinstance(axis, list) and len(axis) == 0:
-            return input_tensor
+        elif isinstance(axis, (list, tuple)):
+           if len(axis) == 0: return input_tensor
+        else:
+           assert type(axis) is int 
+           axis = [axis]
         return (
             flow.user_op_builder(name)
             .Op("reduce_sum")
