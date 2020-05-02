@@ -150,6 +150,21 @@ void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
 namespace {
 
 template<typename T>
+__global__ void AddByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y; }
+}
+
+template<typename T>
+__global__ void TensorDivByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y; }
+}
+
+template<typename T>
+__global__ void ScalarDivByTensorGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = y / x[i]; }
+}
+
+template<typename T>
 __global__ void MulByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
 }
@@ -194,6 +209,21 @@ __global__ void FillGpu(const int64_t n, const T value, T* y) {
 
 }  // namespace
 
+#define ADD_BY_SCALAR(T)                                                                              \
+  void ArithemeticIf<DeviceType::kGPU>::AddByScalar(DeviceCtx* ctx, const int64_t n,         \
+                                                          const T* x, const T y, T* z) {           \
+    AddByScalarGpu<T>                                                                        \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+ADD_BY_SCALAR(float)
+ADD_BY_SCALAR(double)
+ADD_BY_SCALAR(int8_t)
+ADD_BY_SCALAR(int32_t)
+ADD_BY_SCALAR(int64_t)
+
+#undef ADD_BY_SCALAR
+
 #define MUL_BY_SCALAR(T)                                                                           \
   void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x,   \
                                                     const T y, T* z) {                             \
@@ -213,6 +243,25 @@ void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t 
   MulByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
 }
+
+#define DIV_SCALAR(T)                                                                              \
+  void ArithemeticIf<DeviceType::kGPU>::TensorDivByScalar(DeviceCtx* ctx, const int64_t n,         \
+                                                          const T* x, const T y, T* z) {           \
+    TensorDivByScalarGpu<T>                                                                        \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }                                                                                                \
+  void ArithemeticIf<DeviceType::kGPU>::ScalarDivByTensor(DeviceCtx* ctx, const int64_t n,         \
+                                                          const T* x, const T y, T* z) {           \
+    ScalarDivByTensorGpu<T>                                                                        \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+DIV_SCALAR(float)
+DIV_SCALAR(double)
+DIV_SCALAR(int32_t)
+DIV_SCALAR(int64_t)
+
+#undef DIV_SCALAR
 
 #define MUL_BY_SCALAR_PTR(T)                                                                       \
   void ArithemeticIf<DeviceType::kGPU>::MulByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
