@@ -22,6 +22,7 @@ class TransposeKernel final : public OpKernel {
                                           StdVec2PbRf(perm), tensor_in->shape().elem_cnt(),
                                           tensor_in->dptr<T>(), tensor_out->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
