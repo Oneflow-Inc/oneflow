@@ -28,8 +28,8 @@ class XpuBroadcastNdarray final : public XpuNdarrayBase<XpuBroadcastNdarray<T>, 
   OF_DEVICE_FUNC const XpuVarNdarray<T>& var() const { return var_; }
 
  private:
-  const XpuShape& shape_;
-  const XpuVarNdarray<T>& var_;
+  const XpuShape shape_;
+  const XpuVarNdarray<T> var_;
 };
 
 #define IMPLACE_SET_SRC_COORD(i) coord[i] %= src_shape.At(i);
