@@ -7,11 +7,11 @@ REGISTER_USER_OP("prelu")
     .Input("alpha")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      CHECK_EQ_OR_RETURN(x_shape->NumAxes(), ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
-      *y_shape = *x_shape;
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(),
+                         ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
+      *y_desc = *x_desc;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -33,13 +33,14 @@ REGISTER_USER_OP("prelu_x_grad")
     .Input("alpha")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK_EQ_OR_RETURN(x_shape->NumAxes(), ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
-      CHECK_EQ_OR_RETURN(*dy_shape, *x_shape);
-      *dx_shape = *dy_shape;
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(),
+                         ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
+      CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
+      CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
+      *dx_desc = *x_desc;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -62,12 +63,13 @@ REGISTER_USER_OP("prelu_alpha_grad")
     .Input("alpha")
     .Output("alpha_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      CHECK_EQ_OR_RETURN(x_shape->NumAxes(), ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
-      CHECK_EQ_OR_RETURN(*dy_shape, *x_shape);
-      *ctx->Shape4ArgNameAndIndex("alpha_diff", 0) = *ctx->Shape4ArgNameAndIndex("alpha", 0);
-      *ctx->Dtype4ArgNameAndIndex("alpha_diff", 0) = *ctx->Dtype4ArgNameAndIndex("alpha", 0);
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
+      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_desc->shape().NumAxes() + 1);
+      CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
+      CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
+      *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

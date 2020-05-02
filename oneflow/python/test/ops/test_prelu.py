@@ -13,17 +13,13 @@ from test_util import Save
 def _check(test_case, x, y, shared_axes):
     alpha_of = np.load(os.path.join(GetSavePath(), "alpha.npy"))
     alpha = np.expand_dims(alpha_of, axis = 0)
-    print(alpha.shape)
     dy = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
-    print("x", x.flatten()[0:10], alpha_of.flatten()[0:10], alpha.flatten()[0:10])
     np_prelu_out = np.where(x>0, x, x*alpha)
     np_prelu_x_diff = np.where(x>0, dy, dy*alpha)
     np_prelu_alpha_diff =  np.where(x>0, 0, dy*x)
     np_prelu_alpha_diff = np.add.reduce(np_prelu_alpha_diff, axis=shared_axes, keepdims=True)
     np_prelu_alpha_diff = np.add.reduce(np_prelu_alpha_diff, axis=0)
-    print("y",np_prelu_out.flatten()[0:10], y.flatten()[0:10])
     test_case.assertTrue(np.allclose(np_prelu_out, y))
-    print("x_diff",np_prelu_x_diff.flatten()[0:10], np.load(os.path.join(GetSavePath(), "x_diff.npy")).flatten()[0:10])
     test_case.assertTrue(np.allclose(np_prelu_x_diff, np.load(os.path.join(GetSavePath(), "x_diff.npy"))))
     test_case.assertTrue(np.allclose(np_prelu_alpha_diff, np.load(os.path.join(GetSavePath(), "alpha_diff.npy"))))
 
@@ -37,6 +33,8 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     @flow.function(func_config)
     def PreluJob(x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])):
         with flow.fixed_placement(device_type, "0:0"):
+            x += flow.get_variable(name='v1', shape=(1,),
+                                   dtype=type_name_to_flow_type[dtype], initializer=flow.zeros_initializer())
             loss = flow.layers.PRelu(
                 x, alpha_initializer=flow.random_uniform_initializer(minval=0.1,maxval=0.9), shared_axes=shared_axes, name="prelu")
             alpha_shape = list(x.shape[1:])
@@ -61,7 +59,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
             return loss
     check_point = flow.train.CheckPoint()
     check_point.init()
-    x = (np.random.random(x_shape)).astype(type_name_to_np_type[dtype])
+    x = (np.random.random(x_shape)-1).astype(type_name_to_np_type[dtype])
     y = PreluJob(x).get()
     _check(test_case, x, y.ndarray(), shared_axes)
    
@@ -71,7 +69,7 @@ def test_prelu(test_case):
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["dtype"] = ["float32", "double"]
     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    arg_dict["shared_axes"] = [(2,3)] #[(1,), (1, 2), (1, 2, 3)]
+    arg_dict["shared_axes"] = [(2,3), (1,), (1, 2), (1, 2, 3)]
 
     for arg in GenArgList(arg_dict):
         _run_test(*arg)
