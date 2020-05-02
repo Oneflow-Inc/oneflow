@@ -16,10 +16,10 @@ def one_hot(
     indices, depth, on_value=1, off_value=0, axis=-1, dtype=None, name=None
 ):  
     out_ndims = len(indices.shape) + 1
-    assert axis >= 0 and axis < out_ndims, ValueError(
-            "Expected axis to be -1 or between [%d, %d).  But received: %d " %[-out_ndims, out_ndims, axis)
-            )
     if axis < 0: axis += out_ndims
+    assert axis >= 0 and axis < out_ndims, ValueError(
+            "Expected axis to be -1 or between [%d, %d).  But received: %d " %(-out_ndims, out_ndims, axis)
+            )
     out = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
         .Op("one_hot")

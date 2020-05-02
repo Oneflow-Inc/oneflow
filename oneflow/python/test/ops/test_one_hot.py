@@ -6,6 +6,9 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 def _check(test_case, x, y, depth, on_value, off_value, axis):
     out = tf.one_hot(x, depth=depth, axis=axis, on_value=on_value, off_value=off_value)
