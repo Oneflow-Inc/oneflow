@@ -114,8 +114,8 @@ REGISTER_USER_OP("CropMirrorNormalize")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     })
@@ -130,6 +130,7 @@ REGISTER_USER_OP("CoinFlip")
     .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
     .Attr("batch_size", UserOpAttrType::kAtInt64)
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
+    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");

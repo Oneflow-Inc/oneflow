@@ -96,7 +96,7 @@ class TensorBuffer {
       new_num_bytes =
           std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
       reserve(new_num_bytes);
-    } else if (!MemoryCaseUtil::IsPinnedMemoryCase(mem_case_)
+    } else if (MemoryCaseUtil::IsHostUnPinnedMemoryCase(mem_case_)
                && new_num_bytes < num_bytes_ * shrink_threshold_) {
       data_.reset();
       num_bytes_ = 0;

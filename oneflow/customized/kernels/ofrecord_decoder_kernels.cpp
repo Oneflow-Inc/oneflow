@@ -8,6 +8,7 @@
 #include "oneflow/customized/image/random_crop_generator.h"
 #include "oneflow/customized/image/image_util.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/customized/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
 
@@ -51,6 +52,19 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
   }
 }
 
+template<typename T>
+struct OFRecordRawDecoderIsMatchedPred {
+  static bool Impl(const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+    if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord
+        && out_tensor->data_type() == GetDataType<T>::value) {
+      return true;
+    }
+    return false;
+  }
+};
+
 }  // namespace
 
 template<typename T>
@@ -83,20 +97,13 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
       DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RAW_DECODER_KERNEL(dtype)                                                         \
-  REGISTER_USER_KERNEL("OFRecordRawDecoder")                                                       \
-      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
-        const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
-        if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord \
-            && out_tensor->data_type() == GetDataType<dtype>::value) {                             \
-          return true;                                                                             \
-        }                                                                                          \
-        return false;                                                                              \
-      });
+#define REGISTER_RAW_DECODER_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("OFRecordRawDecoder")          \
+      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>() \
+      .SetIsMatchedPred(OFRecordRawDecoderIsMatchedPred<dtype>::Impl);
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)
@@ -200,9 +207,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     CHECK(out_tensor_desc->shape().NumAxes() == 1);
     int64_t batch_size = out_tensor_desc->shape().At(0);
     CHECK(batch_size > 0);
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    if (seed == -1) { seed = NewRandomSeed(); }
-    CHECK(seed >= 0);
+    int64_t seed = GetOpKernelRandomSeed(ctx);
     std::seed_seq seq{seed};
     std::vector<int> seeds(batch_size);
     seq.generate(seeds.begin(), seeds.end());
@@ -236,6 +241,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")

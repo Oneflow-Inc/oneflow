@@ -30,7 +30,7 @@ struct MemoryCaseUtil {
 
   static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
 
-  static bool IsPinnedMemoryCase(const MemoryCase& mem_case);
+  static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
 };
 
 }  // namespace oneflow

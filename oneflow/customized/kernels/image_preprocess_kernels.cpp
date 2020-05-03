@@ -5,6 +5,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/image_util.h"
+#include "oneflow/customized/kernels/random_seed_util.h"
 
 namespace oneflow {
 
@@ -63,6 +64,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
       cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("ImageResize")
@@ -175,6 +177,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
                  mirror.at(i), mean_vec, inv_std_vec);
     });
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("CropMirrorNormalize")
@@ -214,8 +217,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     float prob = ctx->GetAttr<float>("probability");
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
-    if (seed == -1) { seed = NewRandomSeed(); }
+    int64_t seed = GetOpKernelRandomSeed(ctx);
     std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
     return rand_bool_gen;
   }
@@ -228,6 +230,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
       *(dptr + i) = rand_bool_gen->GetNextBool() ? 1 : 0;
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("CoinFlip")
