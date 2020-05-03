@@ -9,8 +9,12 @@ REGISTER_USER_OP("prelu")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(),
-                         ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
+      const Shape* alpha_shape = ctx->Shape4ArgNameAndIndex("alpha", 0);
+      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_shape->NumAxes() + 1);
+      FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
+        CHECK_OR_RETURN((alpha_shape->At(i - 1) == x_desc->shape().At(i))
+                        || (alpha_shape->At(i - 1) == 1));
+      }
       *y_desc = *x_desc;
       return Maybe<void>::Ok();
     })
@@ -19,11 +23,23 @@ REGISTER_USER_OP("prelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       SbpSignatureBuilder()
           .Split("x", 0, 0)
           .Broadcast("alpha", 0)
           .Split("y", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      for (int64_t i = 1; i < x_tensor.shape().NumAxes(); i++) {
+        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
+          SbpSignatureBuilder()
+              .Split("x", 0, i)
+              .Split("alpha", 0, i - 1)
+              .Split("y", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       return Maybe<void>::Ok();
     });
 
@@ -36,8 +52,12 @@ REGISTER_USER_OP("prelu_x_grad")
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(),
-                         ctx->Shape4ArgNameAndIndex("alpha", 0)->NumAxes() + 1);
+      const Shape* alpha_shape = ctx->Shape4ArgNameAndIndex("alpha", 0);
+      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_shape->NumAxes() + 1);
+      FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
+        CHECK_OR_RETURN((alpha_shape->At(i - 1) == x_desc->shape().At(i))
+                        || (alpha_shape->At(i - 1) == 1));
+      }
       CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
       *dx_desc = *x_desc;
@@ -48,12 +68,31 @@ REGISTER_USER_OP("prelu_x_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       SbpSignatureBuilder()
           .Split("dy", 0, 0)
           .Split("x", 0, 0)
           .Broadcast("alpha", 0)
           .Split("dx", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+          .PartialSum("dy", 0)
+          .Broadcast("x", 0)
+          .Broadcast("alpha", 0)
+          .PartialSum("dx", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      for (int64_t i = 1; i < x_tensor.shape().NumAxes(); i++) {
+        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
+          SbpSignatureBuilder()
+              .Split("dy", 0, i)
+              .Split("x", 0, i)
+              .Split("alpha", 0, i - 1)
+              .Split("dx", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       return Maybe<void>::Ok();
     });
 
@@ -65,8 +104,12 @@ REGISTER_USER_OP("prelu_alpha_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
+      const user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
       CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_desc->shape().NumAxes() + 1);
+      FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
+        CHECK_OR_RETURN((alpha_desc->shape().At(i - 1) == x_desc->shape().At(i))
+                        || (alpha_desc->shape().At(i - 1) == 1));
+      }
       CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
       *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
@@ -78,12 +121,25 @@ REGISTER_USER_OP("prelu_alpha_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
       SbpSignatureBuilder()
           .Split("dy", 0, 0)
           .Split("x", 0, 0)
           .Broadcast("alpha", 0)
           .PartialSum("alpha_diff", 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      for (int64_t i = 1; i < x_tensor.shape().NumAxes(); i++) {
+        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
+          SbpSignatureBuilder()
+              .Split("dy", 0, i)
+              .Split("x", 0, i)
+              .Split("alpha", 0, i - 1)
+              .Split("alpha_diff", 0, i - 1)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+      }
       return Maybe<void>::Ok();
     });
 

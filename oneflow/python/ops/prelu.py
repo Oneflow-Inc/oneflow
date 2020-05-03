@@ -10,10 +10,10 @@ import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 import os
 
-@oneflow_export("layers.PRelu")
+@oneflow_export("layers.prelu")
 def prelu(
     inputs,
-    alpha_initializer = None, #flow.zeros_initializer(),
+    alpha_initializer=None,
     alpha_regularizer=None,
     shared_axes=None,
     trainable=True,
@@ -23,13 +23,18 @@ def prelu(
     alpha_shape = list(inputs.shape[1:])
     if shared_axes is not None:
       for i in shared_axes:
+        assert i >= 1 and i < len(inputs.shape)
         alpha_shape[i - 1] = 1
 
     alpha = flow.get_variable(
         name + "-alpha",
         shape=alpha_shape,
         dtype=inputs.dtype,
-        initializer=alpha_initializer, 
+        initializer=(
+            alpha_initializer
+            if alpha_initializer is not None
+            else flow.constant_initializer(0)
+        ),
         regularizer=alpha_regularizer,
         trainable=trainable,
         distribute=model_distribute

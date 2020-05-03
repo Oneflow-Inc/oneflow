@@ -34,17 +34,17 @@ class GpuPReluKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* broadcasted_alpha = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), tmp_buffer->mut_dptr<T>()),
+        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
     RUN_CUDA_KERNEL((PReluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
-                    tmp_buffer->dptr<T>(), y->mut_dptr<T>());
+                    broadcasted_alpha->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -59,7 +59,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
       })                                                                            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                           \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                 \
-        return in_shape->elem_cnt() * sizeof(dtype);                                \
+        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));            \
       });
 
 REGISTER_GPU_PRELU_KERNEL(float)
@@ -76,17 +76,17 @@ class GpuPReluXGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* broadcasted_alpha = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), tmp_buffer->mut_dptr<T>()),
+        ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
     RUN_CUDA_KERNEL((PReluXBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
-                    tmp_buffer->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
+                    broadcasted_alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -101,7 +101,7 @@ class GpuPReluXGradKernel final : public user_op::OpKernel {
       })                                                                              \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                   \
-        return in_shape->elem_cnt() * sizeof(dtype);                                  \
+        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));              \
       });
 
 REGISTER_GPU_PRELU_X_GRAD_KERNEL(float)
@@ -121,16 +121,17 @@ class GpuPReluAlphaGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
-    T* alpha_diff_tmp_buf = tmp_buffer->mut_dptr<T>();
-    T* reduce_sum_tmp_buf = tmp_buffer->mut_dptr<T>() + elem_cnt;
+    T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
+    T* reduce_sum_tmp_buf =
+        tmp_buffer->mut_dptr<T>() + GetCudaAlignedSize(elem_cnt * sizeof(T)) / sizeof(T);
 
     RUN_CUDA_KERNEL((PReluAlphaBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
-                    dy->dptr<T>(), alpha_diff_tmp_buf);
+                    dy->dptr<T>(), broadcasted_alpha_diff);
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(
         ctx->device_ctx(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
-        XpuVarNdarray<const T>(x->shape(), tmp_buffer->dptr<T>()),
+        XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -147,7 +148,8 @@ class GpuPReluAlphaGradKernel final : public user_op::OpKernel {
       })                                                                     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                    \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);          \
-        return in_shape->elem_cnt() * sizeof(dtype) * 2;                     \
+        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype))      \
+               + GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));   \
       });
 
 REGISTER_GPU_PRELU_ALPHA_GRAD_KERNEL(float)

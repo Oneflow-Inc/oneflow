@@ -35,7 +35,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
         with flow.fixed_placement(device_type, "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=type_name_to_flow_type[dtype], initializer=flow.zeros_initializer())
-            loss = flow.layers.PRelu(
+            loss = flow.layers.prelu(
                 x, alpha_initializer=flow.random_uniform_initializer(minval=0.1,maxval=0.9), shared_axes=shared_axes, name="prelu")
             alpha_shape = list(x.shape[1:])
             if shared_axes is not None:
