@@ -31,7 +31,7 @@ OpKernelInferCache::ValueType OpKernelInferCache::GetCacheValue() const {
 void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
   auto GetSymbolOfShape = [&](const std::string& arg_name, int32_t arg_index) -> Symbol<Shape> {
     Shape shape;
-    shape.LeftOnesExtendedAssign(ctx->ShapeView4ArgNameAndIndex(arg_name, arg_index));
+    ctx->ShapeView4ArgNameAndIndex(arg_name, arg_index).ToShape(&shape);
     return SymbolOf(shape);
   };
   const auto& inputs = ctx->inputs();

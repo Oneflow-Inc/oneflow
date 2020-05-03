@@ -20,6 +20,7 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
   *tensor_desc = proto;
+  tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
 }
 
 }  // namespace
@@ -168,7 +169,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
       if (arg_tensor_desc) {
-        blob->shape().ToShape(arg_tensor_desc->mut_shape());
+        arg_tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
       } else {
         arg_tensor_desc.reset(new user_op::TensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc.get());
@@ -247,11 +248,12 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
       auto& arg_tensor = pair.second;
-      const std::string& bn_in_op = GenRepeatedBn(arg_pair.first, arg_pair.second);
+      Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
+      CHECK_NOTNULL(blob);
       if (arg_tensor) {
-        *arg_tensor = std::move(user_op::Tensor(BnInOp2Blob(bn_in_op)));
+        *arg_tensor = std::move(user_op::Tensor(blob));
       } else {
-        arg_tensor.reset(new user_op::Tensor(BnInOp2Blob(bn_in_op)));
+        arg_tensor.reset(new user_op::Tensor(blob));
       }
     }
   }
