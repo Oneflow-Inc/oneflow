@@ -122,3 +122,5 @@ add_custom_target(opencv_create_library_dir
 add_custom_target(opencv_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_BUILD_STATIC_LIBRARIES} ${OPENCV_LIBRARY_DIR}
   DEPENDS opencv_create_library_dir)
+
+link_directories(${OPENCV_LIBRARY_DIR})

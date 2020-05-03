@@ -70,3 +70,5 @@ add_custom_target(glog_create_library_dir
 add_custom_target(glog_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GLOG_BUILD_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
   DEPENDS glog_create_library_dir)
+
+link_directories(${GLOG_BUILD_LIBRARY_DIR})

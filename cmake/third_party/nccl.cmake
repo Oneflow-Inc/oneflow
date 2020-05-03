@@ -58,3 +58,5 @@ add_custom_target(nccl_create_library_dir
 add_custom_target(nccl_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NCCL_BUILD_STATIC_LIBRARIES} ${NCCL_LIBRARY_DIR}
     DEPENDS nccl_create_library_dir)
+
+link_directories(${NCCL_LIBRARY_DIR})

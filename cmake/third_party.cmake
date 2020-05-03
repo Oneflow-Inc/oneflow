@@ -77,19 +77,20 @@ message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
-    ${GLOG_STATIC_LIBRARIES}
-    ${GFLAGS_STATIC_LIBRARIES}
-    ${GOOGLETEST_STATIC_LIBRARIES}
-    ${GOOGLEMOCK_STATIC_LIBRARIES}
-    ${PROTOBUF_STATIC_LIBRARIES}
-    ${GRPC_STATIC_LIBRARIES}
-    ${ZLIB_STATIC_LIBRARIES}
+    ${GLOG_LIBRARY_NAMES}
+    ${GFLAGS_LIBRARY_NAMES}
+    ${GOOGLETEST_LIBRARY_NAMES}
+    ${GOOGLEMOCK_LIBRARY_NAMES}
+    ${PROTOBUF_LIBRARY_NAMES}
+    ${GRPC_LIBRARY_NAMES}
+    ${ZLIB_LIBRARY_NAMES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
-    ${LIBJPEG_STATIC_LIBRARIES}
-    ${OPENCV_STATIC_LIBRARIES}
-    ${COCOAPI_STATIC_LIBRARIES}
-    ${RE2_LIBRARIES}
+    ${LIBJPEG_LIBRARY_NAMES}
+    ${OPENCV_LIBRARY_NAMES}
+    ${OPENCV_3RDPARTY_LIBRARY_NAMES}
+    ${COCOAPI_LIBRARY_NAME}
+    libre2.a
 )
 
 if(WIN32)
@@ -151,7 +152,7 @@ if (BUILD_CUDA)
   endif()
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_LIBRARY_NAMES})
 
   list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)

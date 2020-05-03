@@ -83,3 +83,5 @@ add_custom_target(protobuf_create_binary_dir
 add_custom_target(protobuf_copy_binary_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)
+
+link_directories(${PROTOBUF_LIBRARY_DIR})

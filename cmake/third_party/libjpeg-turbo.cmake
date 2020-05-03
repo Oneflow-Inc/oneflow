@@ -79,3 +79,5 @@ add_custom_target(libjpeg_create_library_dir
 add_custom_target(libjpeg_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBJPEG_BUILD_STATIC_LIBRARIES} ${LIBJPEG_LIBRARY_DIR}
     DEPENDS libjpeg_create_library_dir)
+
+link_directories(${LIBJPEG_LIBRARY_DIR})

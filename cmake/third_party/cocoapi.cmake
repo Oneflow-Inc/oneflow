@@ -47,3 +47,5 @@ add_custom_target(cocoapi_create_library_dir
 add_custom_target(cocoapi_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${COCOAPI_BUILD_STATIC_LIBRARIES} ${COCOAPI_LIBRARY_DIR}
     DEPENDS cocoapi_create_library_dir)
+
+link_directories(${COCOAPI_LIBRARY_DIR})

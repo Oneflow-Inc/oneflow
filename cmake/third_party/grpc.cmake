@@ -60,3 +60,5 @@ add_custom_target(grpc_create_library_dir
 add_custom_target(grpc_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_STATIC_LIBRARIES} ${GRPC_LIBRARY_DIR}
   DEPENDS grpc_create_library_dir)
+
+link_directories(${GRPC_LIBRARY_DIR})
