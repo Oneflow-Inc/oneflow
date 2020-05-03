@@ -110,7 +110,8 @@ class CpuPReluAlphaGradKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     const T* dy_ptr = dy->dptr<T>();
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
-    T* reduce_sum_tmp_buf = tmp_buffer->mut_dptr<T>() + elem_cnt;
+    T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
+                                                 + GetCudaAlignedSize(elem_cnt * sizeof(T)));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       broadcasted_alpha_diff[i] = x_ptr[i] > 0 ? 0 : dy_ptr[i] * x_ptr[i];
     }

@@ -122,9 +122,8 @@ class GpuPReluAlphaGradKernel final : public user_op::OpKernel {
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
-    T* reduce_sum_tmp_buf =
-        tmp_buffer->mut_dptr<T>() + GetCudaAlignedSize(elem_cnt * sizeof(T)) / sizeof(T);
-
+    T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
+                                                 + GetCudaAlignedSize(elem_cnt * sizeof(T)));
     RUN_CUDA_KERNEL((PReluAlphaBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, x->dptr<T>(),
                     dy->dptr<T>(), broadcasted_alpha_diff);
     const Shape& left_extended_shape =
