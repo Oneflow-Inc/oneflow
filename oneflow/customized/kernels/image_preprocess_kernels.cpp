@@ -67,7 +67,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("ImageResize")
+REGISTER_USER_KERNEL("image_resize")
     .SetCreateFn<ResizeToStaticShapeKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
@@ -180,7 +180,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("CropMirrorNormalize")
+REGISTER_USER_KERNEL("crop_mirror_normalize")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
@@ -233,7 +233,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("CoinFlip")
+REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);

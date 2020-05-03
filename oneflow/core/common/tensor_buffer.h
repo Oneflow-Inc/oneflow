@@ -8,6 +8,11 @@
 
 namespace oneflow {
 
+inline void CheckTensorBufferDataType(DataType val) {
+  CHECK(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
+      << "TensorBuffer only support POD as internal data type.";
+}
+
 class TensorBuffer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
@@ -22,7 +27,7 @@ class TensorBuffer {
   DataType data_type() const { return data_type_; }
 
   void set_data_type(DataType val) {
-    CHECK(val != DataType::kTensorBuffer) << "TensorBuffer cannot store datatype as itself";
+    CheckTensorBufferDataType(val);
     if (data_type_ == val) { return; }
     if (val == DataType::kInvalidDataType) {
       data_type_ = val;
@@ -59,8 +64,8 @@ class TensorBuffer {
     if (new_num_bytes <= num_bytes_) { return; }
 
     data_.reset();
-    data_.reset(MemoryAllocatorImpl::New(mem_case_, new_num_bytes),
-                std::bind(MemoryAllocatorImpl::Delete, std::placeholders::_1, mem_case_));
+    data_.reset(MemoryAllocatorImpl::Allocate(mem_case_, new_num_bytes),
+                std::bind(MemoryAllocatorImpl::Deallocate, std::placeholders::_1, mem_case_));
     num_bytes_ = new_num_bytes;
   }
 
@@ -86,6 +91,7 @@ class TensorBuffer {
   void Resize(const Shape& new_shape, DataType new_type) {
     int64_t elem_cnt = new_shape.elem_cnt();
     if (new_type == DataType::kInvalidDataType || elem_cnt == 0) { return; }
+    CheckTensorBufferDataType(new_type);
 
     data_type_ = new_type;
     shape_ = new_shape;
