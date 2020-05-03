@@ -430,19 +430,28 @@ def relu(x, name=None):
 
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
-    )
-    setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
-    setattr(op_conf.sigmoid_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
+        )
+        setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
+        setattr(op_conf.sigmoid_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
-    
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sigmoid_"))
+        .Op("sigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
+
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:
