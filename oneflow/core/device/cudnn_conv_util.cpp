@@ -149,8 +149,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
   std::vector<int32_t> pad_large_side;
   GetConvOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
-  std::vector<int32_t> strides = conv_conf.attr<std::vector<int32_t>>("strides");
-  std::vector<int32_t> dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
   if (opkernel_dim == 2) {
     CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1],
                                               strides.at(0), strides.at(1), dilation_rate.at(0),

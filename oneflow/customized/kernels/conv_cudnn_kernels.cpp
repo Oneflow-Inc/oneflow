@@ -7,8 +7,10 @@ namespace oneflow {
 
 namespace {
 
-template<typename PerfT, typename AlgoT>
+template<typename PerfT>
 struct CudnnConvArgsAndAlgo final {
+  using AlgoT = decltype(std::declval<PerfT>().algo);
+
   CudnnConvArgs args;
   PerfT algo_perf;
 
@@ -43,12 +45,12 @@ struct CudnnConvArgsAndAlgo final {
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgsAndAlgo);
 };
 
-template<typename PerfT, typename AlgoT>
+template<typename PerfT>
 size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::TensorDesc* w,
                              const user_op::TensorDesc* y, const JobDesc& job_desc,
                              const user_op::UserOpConfWrapper& user_op_conf, bool has_forced_algo,
                              int32_t forced_algo) {
-  // TODO(niuchong): op_conf.cudnn_buf_limit_mbyte?
+  using AlgoT = decltype(std::declval<PerfT>().algo);
   size_t workspace_size = job_desc.cudnn_buf_limit_mbyte() * 1024 * 1024;
   if (!x->is_dynamic()) {
     CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
@@ -94,12 +96,13 @@ CudnnTensorDesc* GetBiasCudnnTensorDesc(const std::string& data_format, int32_t 
 template<>
 CudnnTensorDesc* GetBiasCudnnTensorDesc<3>(const std::string& data_format, int32_t filters,
                                            DataType data_type) {
+  constexpr int NDims = 3 + 2;
   CHECK_EQ("channels_first", data_format) << "CUDNN Nd API only support channels first";
-  std::vector<int32_t> bias_dim(3 + 2, 1);
-  std::vector<int32_t> stride_of_bias_tensor(3 + 2, 1);
+  std::vector<int32_t> bias_dim(NDims, 1);
+  std::vector<int32_t> stride_of_bias_tensor(NDims, 1);
   bias_dim[1] = filters;
   stride_of_bias_tensor[0] = filters;
-  return new CudnnTensorDesc(data_type, 3 + 2, bias_dim.data(), stride_of_bias_tensor.data());
+  return new CudnnTensorDesc(data_type, NDims, bias_dim.data(), stride_of_bias_tensor.data());
 }
 
 struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
@@ -139,12 +142,12 @@ class ConvGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t, cudnnConvolutionFwdAlgo_t> args_and_algo(
+    CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
         in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
         job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),
         job_desc.job_conf().cudnn_conv_force_fwd_algo());
-    CudnnConvArgs& args = args_and_algo.args;
-    cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    const CudnnConvArgs& args = args_and_algo.args;
+    const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
     CudaCheck(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
@@ -161,23 +164,23 @@ class ConvGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                             \
-  REGISTER_USER_KERNEL(#op_name)                                                                \
-      .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                               \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        return ctx.device_type() == DeviceType::kGPU                                            \
-               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()                          \
-                      == GetDataType<dtype>::value;                                             \
-      })                                                                                        \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
-        const JobDesc& job_desc = ctx->job_desc();                                              \
-        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                              \
-        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);                      \
-        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                            \
-        return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t, cudnnConvolutionFwdAlgo_t>( \
-            in, weight, out, job_desc, ctx->user_op_conf(),                                     \
-            job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),                                \
-            job_desc.job_conf().cudnn_conv_force_fwd_algo());                                   \
+#define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                        \
+  REGISTER_USER_KERNEL(#op_name)                                           \
+      .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                          \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
+        return ctx.device_type() == DeviceType::kGPU                       \
+               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
+                      == GetDataType<dtype>::value;                        \
+      })                                                                   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
+        const JobDesc& job_desc = ctx->job_desc();                         \
+        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);         \
+        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0); \
+        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
+        return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(       \
+            in, weight, out, job_desc, ctx->user_op_conf(),                \
+            job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),           \
+            job_desc.job_conf().cudnn_conv_force_fwd_algo());              \
       })
 
 REGISTER_CONV_KERNEL(conv1d, float, 1);
@@ -208,12 +211,12 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    CudnnConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t, cudnnConvolutionBwdDataAlgo_t>
-        args_and_algo(dx, filter, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-                      job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),
-                      job_desc.job_conf().cudnn_conv_force_bwd_data_algo());
-    CudnnConvArgs& args = args_and_algo.args;
-    cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    CudnnConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
+        dx, filter, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+        job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),
+        job_desc.job_conf().cudnn_conv_force_bwd_data_algo());
+    const CudnnConvArgs& args = args_and_algo.args;
+    const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
     CudaCheck(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), filter->dptr(),
@@ -235,8 +238,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);         \
         const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0); \
         const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);         \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t,    \
-                                     cudnnConvolutionBwdDataAlgo_t>(       \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(   \
             dx, filter, dy, job_desc, ctx->user_op_conf(),                 \
             job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),      \
             job_desc.job_conf().cudnn_conv_force_bwd_data_algo());         \
@@ -264,12 +266,12 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    CudnnConvArgsAndAlgo<cudnnConvolutionBwdFilterAlgoPerf_t, cudnnConvolutionBwdFilterAlgo_t>
-        args_and_algo(x, filter_diff, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-                      job_desc.job_conf().has_cudnn_conv_force_bwd_filter_algo(),
-                      job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());
-    CudnnConvArgs& args = args_and_algo.args;
-    cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    CudnnConvArgsAndAlgo<cudnnConvolutionBwdFilterAlgoPerf_t> args_and_algo(
+        x, filter_diff, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+        job_desc.job_conf().has_cudnn_conv_force_bwd_filter_algo(),
+        job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());
+    const CudnnConvArgs& args = args_and_algo.args;
+    const cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
     CudaCheck(cudnnConvolutionBackwardFilter(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
@@ -291,8 +293,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                   \
         const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);                     \
         const auto* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0); \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t,            \
-                                     cudnnConvolutionBwdFilterAlgo_t>(               \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(           \
             x, filter_diff, dy, job_desc, ctx->user_op_conf(),                       \
             job_desc.job_conf().has_cudnn_conv_force_bwd_filter_algo(),              \
             job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());                 \

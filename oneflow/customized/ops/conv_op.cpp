@@ -102,22 +102,43 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+template<size_t NDims>
 Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
                       const user_op::UserOpConfWrapper& conf) {
   bool is_checked = true;
   std::stringstream err;
   err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name() << ": ";
 
-  std::string data_format = conf.attr<std::string>("data_format");
+  const auto& data_format = conf.attr<std::string>("data_format");
   if (!(data_format == "channels_first" || data_format == "channels_last")) {
     err << " data_format:" << data_format;
     is_checked = false;
   }
 
-  std::string padding = conf.attr<std::string>("padding");
+  const auto& padding = conf.attr<std::string>("padding");
   if (!(padding == "valid" || padding == "same")) {
     err << " padding:" << padding;
     is_checked = false;
+  }
+
+  if (NDims != 0) {
+    const auto& kernel_size = conf.attr<std::vector<int32_t>>("kernel_size");
+    if (kernel_size.size() != NDims) {
+      err << " kernel_size: number of element is " << kernel_size.size();
+      is_checked = false;
+    }
+
+    const auto& strides = conf.attr<std::vector<int32_t>>("strides");
+    if (strides.size() != NDims) {
+      err << " strides: number of element is " << strides.size();
+      is_checked = false;
+    }
+
+    const auto& dilation_rate = conf.attr<std::vector<int32_t>>("dilation_rate");
+    if (dilation_rate.size() != NDims) {
+      err << " dilation_rate: number of element is " << dilation_rate.size();
+      is_checked = false;
+    }
   }
 
   if (is_checked) {
@@ -209,7 +230,7 @@ REGISTER_USER_OP("conv1d")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
-    .SetCheckAttrFn(CheckAttr)
+    .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
@@ -227,7 +248,7 @@ REGISTER_USER_OP("conv2d")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
-    .SetCheckAttrFn(CheckAttr)
+    .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
@@ -245,7 +266,7 @@ REGISTER_USER_OP("conv3d")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
-    .SetCheckAttrFn(CheckAttr)
+    .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
@@ -266,7 +287,7 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr("groups", UserOpAttrType::kAtInt32)
-    .SetCheckAttrFn(CheckAttr)
+    .SetCheckAttrFn(CheckAttr<0>)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
       CHECK_NOTNULL(x_like);
@@ -316,7 +337,7 @@ REGISTER_USER_OP("conv_filter_grad")
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr("groups", UserOpAttrType::kAtInt32)
-    .SetCheckAttrFn(CheckAttr)
+    .SetCheckAttrFn(CheckAttr<0>)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);

@@ -155,11 +155,11 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
   if (out) { out->assign(opkernel_dim, 0); }
   if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
   if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
-  auto data_format = conv_conf.attr<std::string>("data_format");
-  auto padding = conv_conf.attr<std::string>("padding");
-  auto strides = conv_conf.attr<std::vector<int32_t>>("strides");
-  auto dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
-  auto kernel_size = conv_conf.attr<std::vector<int32_t>>("kernel_size");
+  const auto& data_format = conv_conf.attr<std::string>("data_format");
+  const auto& padding = conv_conf.attr<std::string>("padding");
+  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& kernel_size = conv_conf.attr<std::vector<int32_t>>("kernel_size");
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
                           dilation_rate.at(i), strides.at(i), padding,
