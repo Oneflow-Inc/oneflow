@@ -34,6 +34,7 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
     auto* reader = dynamic_cast<OFRecordReaderWrapper*>(state);
     reader->Read(ctx);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("OFRecordReader")
