@@ -123,38 +123,6 @@ void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
   }
 }
 
-#define ADD_BY_SCALAR(T)                                                                         \
-  void ArithemeticIf<DeviceType::kCPU>::AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
-                                                    const T y, T* z) {                           \
-    AddByScalarPtr(ctx, n, x, &y, z);                                                            \
-  }
-
-ADD_BY_SCALAR(float);
-ADD_BY_SCALAR(double);
-ADD_BY_SCALAR(int8_t);
-ADD_BY_SCALAR(int32_t);
-ADD_BY_SCALAR(int64_t);
-
-#undef ADD_BY_SCALAR
-
-#define DIV_SCALAR(T)                                                                      \
-  void ArithemeticIf<DeviceType::kCPU>::TensorDivByScalar(DeviceCtx* ctx, const int64_t n, \
-                                                          const T* x, const T y, T* z) {   \
-    DivByScalarPtr(ctx, n, x, &y, z);                                                      \
-  }                                                                                        \
-                                                                                           \
-  void ArithemeticIf<DeviceType::kCPU>::ScalarDivByTensor(DeviceCtx* ctx, const int64_t n, \
-                                                          const T* x, const T y, T* z) {   \
-    for (int64_t i = 0; i < n; ++i) { z[i] = y / x[i]; }                                   \
-  }
-
-DIV_SCALAR(float);
-DIV_SCALAR(double);
-DIV_SCALAR(int32_t);
-DIV_SCALAR(int64_t);
-
-#undef ADD_BY_SCALAR
-
 #define MUL_BY_SCALAR(T)                                                                         \
   void ArithemeticIf<DeviceType::kCPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
                                                     const T y, T* z) {                           \
