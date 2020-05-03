@@ -30,8 +30,10 @@ REGISTER_USER_OP("pad")
       const auto& padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
       for (int64_t i = 0; i < x_tensor.shape().NumAxes(); i++) {
         if (padding_before[i] == 0 && padding_after[i] == 0) {
-          SbpSignatureBuilder().Split("x", 0, i).Split("y", 0, i).Build(
-              ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          SbpSignatureBuilder()
+              .Split("dx", 0, i)
+              .Split("dy", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
         }
       }
       return Maybe<void>::Ok();
