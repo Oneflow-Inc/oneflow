@@ -60,7 +60,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       : user_op::KernelInitContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf)) {}
+        base_ctx_(UserKernelBaseContext(kernel_conf)),
+        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {}
   ~UserKernelInitContext() = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
@@ -71,12 +72,21 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
   }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
+    const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    auto it = bn2sbp.find(bn);
+    CHECK(it != bn2sbp.end());
+    return it->second;
+  }
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
  private:
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
+  const SbpSignature* sbp_signature_;
 };
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
