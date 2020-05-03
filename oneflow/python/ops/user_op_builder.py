@@ -4,6 +4,8 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.g_func_ctx as g_func_ctx
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
@@ -12,6 +14,7 @@ import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.experimental.name_scope as name_scope
+import random
 
 class UserOpConfWrapper(object):
     def __init__(self, op_name):
@@ -125,3 +128,21 @@ class UserOpConfWrapperBuilder(object):
             assert False, "Unknow op attribute type: {}".format(attr_type)
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
+
+    def SetRandomSeed(self, seed):
+        has_seed = False
+        if distribute.ConsistentStrategyEnabled():
+            has_seed = True
+            if seed is None:
+                seed = random.randint(-2147483648, 2147483647)
+        elif distribute.MirroredStrategyEnabled():
+            if seed is None:
+                seed = -1
+            else:
+                has_seed = True
+        else:
+            assert False, "Unknow distirbute strategy when set random seed to user op"
+        self = self.SetAttr("has_seed", has_seed, "AttrTypeBool")\
+                .SetAttr("seed", seed, "AttrTypeInt64")
+        return self
+
