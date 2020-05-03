@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import numpy as np
