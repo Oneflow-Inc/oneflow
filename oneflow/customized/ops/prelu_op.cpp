@@ -130,6 +130,12 @@ REGISTER_USER_OP("prelu_alpha_grad")
           .Broadcast("alpha", 0)
           .PartialSum("alpha_diff", 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+          .PartialSum("dy", 0)
+          .Broadcast("x", 0)
+          .Broadcast("alpha", 0)
+          .PartialSum("alpha_diff", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       for (int64_t i = 1; i < x_tensor.shape().NumAxes(); i++) {
         if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
           SbpSignatureBuilder()
