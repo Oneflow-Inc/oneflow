@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-void* MemoryAllocatorImpl::New(MemoryCase mem_case, size_t size) {
+void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   void* ptr = nullptr;
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
@@ -27,7 +27,7 @@ void* MemoryAllocatorImpl::New(MemoryCase mem_case, size_t size) {
   return ptr;
 }
 
-void MemoryAllocatorImpl::Delete(void* ptr, MemoryCase mem_case) {
+void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
       CudaCheck(cudaFreeHost(ptr));
@@ -48,7 +48,7 @@ MemoryAllocator::~MemoryAllocator() {
 
 char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
-  char* dptr = static_cast<char*>(MemoryAllocatorImpl::New(mem_case, size));
+  char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
   if (mem_case.has_host_mem()) {
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
@@ -62,7 +62,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 }
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
-  MemoryAllocatorImpl::Delete(static_cast<void*>(dptr), mem_case);
+  MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
 }
 
 }  // namespace oneflow

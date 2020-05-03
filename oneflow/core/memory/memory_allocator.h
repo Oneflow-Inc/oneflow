@@ -37,8 +37,8 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 }
 
 struct MemoryAllocatorImpl final {
-  static void* New(MemoryCase mem_case, size_t size);
-  static void Delete(void* ptr, MemoryCase mem_case);
+  static void* Allocate(MemoryCase mem_case, size_t size);
+  static void Deallocate(void* ptr, MemoryCase mem_case);
 };
 
 }  // namespace oneflow

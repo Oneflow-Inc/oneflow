@@ -11,7 +11,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("data.OFRecordRawDecoder")
+@oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
 def OFRecordRawDecoder(
         input_blob,
         blob_name,
@@ -23,7 +23,7 @@ def OFRecordRawDecoder(
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("OFRecordRawDecoder")\
+            .Op("ofrecord_raw_decoder")\
             .Input("in",[input_blob])\
             .Output("out")\
             .SetAttr("name", blob_name, "AttrTypeString")\
@@ -33,7 +33,7 @@ def OFRecordRawDecoder(
             .SetAttr("auto_zero_padding", auto_zero_padding, "AttrTypeBool")\
             .Build().RemoteBlobList()[0]
 
-@oneflow_export("data.OFRecordImageDecoderRandomCrop")
+@oneflow_export("data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop")
 def OFRecordImageDecoderRandomCrop(
         input_blob,
         blob_name,
@@ -46,7 +46,7 @@ def OFRecordImageDecoderRandomCrop(
     if name is None:
         name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
     return user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("OFRecordImageDecoderRandomCrop")\
+            .Op("ofrecord_image_decoder_random_crop")\
             .Input("in",[input_blob])\
             .Output("out")\
             .SetAttr("name", blob_name, "AttrTypeString")\
@@ -57,7 +57,7 @@ def OFRecordImageDecoderRandomCrop(
             .SetAttr("random_aspect_ratio", random_aspect_ratio, "AttrTypeListFloat")\
             .Build().RemoteBlobList()[0]
 
-@oneflow_export("image.Resize")
+@oneflow_export("image.Resize", "image.resize")
 def Resize(
         input_blob,
         color_space="BGR",
@@ -68,7 +68,7 @@ def Resize(
     if name is None:
         name = id_util.UniqueStr("ImageResize_")
     return user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("ImageResize")\
+            .Op("image_resize")\
             .Input("in",[input_blob])\
             .Output("out")\
             .SetAttr("color_space", color_space, "AttrTypeString")\
@@ -77,7 +77,7 @@ def Resize(
             .SetAttr("resize_y", resize_y, "AttrTypeInt64")\
             .Build().RemoteBlobList()[0]
 
-@oneflow_export("image.CropMirrorNormalize")
+@oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
 def CropMirrorNormalize(
         input_blob,
         mirror_blob=None,
@@ -90,7 +90,7 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op = user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("CropMirrorNormalize")\
+            .Op("crop_mirror_normalize")\
             .Input("in",[input_blob])
     if mirror_blob is not None:
         op = op.Input("mirror", [mirror_blob])
@@ -102,7 +102,7 @@ def CropMirrorNormalize(
             .SetAttr("output_dtype", output_dtype, "AttrTypeInt32")\
             .Build().RemoteBlobList()[0]
 
-@oneflow_export("random.CoinFlip")
+@oneflow_export("random.CoinFlip", "random.coin_flip")
 def CoinFlip(
         batch_size=1,
         seed=None,
@@ -111,7 +111,7 @@ def CoinFlip(
     if name is None:
         name = id_util.UniqueStr("CoinFlip_")
     return user_op_builder.UserOpConfWrapperBuilder(name)\
-            .Op("CoinFlip")\
+            .Op("coin_flip")\
             .Output("out")\
             .SetAttr("batch_size", batch_size, "AttrTypeInt64")\
             .SetAttr("probability", probability, "AttrTypeFloat")\

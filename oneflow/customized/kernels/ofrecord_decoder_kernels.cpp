@@ -101,7 +101,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_RAW_DECODER_KERNEL(dtype)            \
-  REGISTER_USER_KERNEL("OFRecordRawDecoder")          \
+  REGISTER_USER_KERNEL("ofrecord_raw_decoder")        \
       .SetCreateFn<OFRecordRawDecoderKernel<dtype>>() \
       .SetIsMatchedPred(OFRecordRawDecoderIsMatchedPred<dtype>::Impl);
 
@@ -244,7 +244,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("OFRecordImageDecoderRandomCrop")
+REGISTER_USER_KERNEL("ofrecord_image_decoder_random_crop")
     .SetCreateFn<OFRecordImageDecoderRandomCropKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);

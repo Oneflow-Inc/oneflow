@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("OFRecordRawDecoder")
+REGISTER_USER_OP("ofrecord_raw_decoder")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
@@ -38,7 +38,7 @@ REGISTER_USER_OP("OFRecordRawDecoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("OFRecordImageDecoderRandomCrop")
+REGISTER_USER_OP("ofrecord_image_decoder_random_crop")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)

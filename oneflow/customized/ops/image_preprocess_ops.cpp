@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("ImageResize")
+REGISTER_USER_OP("image_resize")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
@@ -51,7 +51,7 @@ REGISTER_USER_OP("ImageResize")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("CropMirrorNormalize")
+REGISTER_USER_OP("crop_mirror_normalize")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -125,7 +125,7 @@ REGISTER_USER_OP("CropMirrorNormalize")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("CoinFlip")
+REGISTER_USER_OP("coin_flip")
     .Output("out")
     .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
     .Attr("batch_size", UserOpAttrType::kAtInt64)
