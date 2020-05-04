@@ -30,9 +30,10 @@ class UserOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx,
-                            KernelConf* kernel_conf) const override;
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const override;
 
   const user_op::OpRegistrationVal* val_;
 };

@@ -317,6 +317,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     return Maybe<void>::Ok();
   };
   JUST(kernel_reg_val->inplace_proposal_fn(infer_ctx, AddInplaceArgPairFn));
+  op_ctx->sbp_sig = *sbp_signature;
   EnrollOpCtx(op_ctx);
   return Maybe<void>::Ok();
 }
@@ -420,9 +421,12 @@ Maybe<void> UserOp::GetSbpSignatures(
 
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
+  const UserOpCtx* user_op_ctx = static_cast<const UserOpCtx*>(op_ctx);
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
+  *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
 #define BLOB_DESCS_TO_PROTO(prefix)                         \
   for (const auto& bn : prefix##_bns()) {                   \
     BlobDescProto proto;                                    \
