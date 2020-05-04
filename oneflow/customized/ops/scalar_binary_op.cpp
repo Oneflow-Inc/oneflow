@@ -48,7 +48,7 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
 
 // TODO: use JUST(GetSbp(ctx, EXTRA_GET_SBP_FN));
 #define REGISTER_SCALAR_BINARY_USER_OP(OP_NAME, EXTRA_SBP_SIG) \
-  REGISTER_USER_OP(OF_PP_STRINGIZE(OP_NAME))                                 \
+  REGISTER_USER_OP(OP_NAME)                                 \
       .Input("x")                                                           \
       .Output("y")                                                         \
       .Attr("has_int_operand", UserOpAttrType::kAtBool)                      \
@@ -62,13 +62,13 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
         return Maybe<void>::Ok();                                            \
       });
 
-REGISTER_SCALAR_BINARY_USER_OP(scalar_add, ExtraSbpSignature::NoExtra);
+REGISTER_SCALAR_BINARY_USER_OP("scalar_add", ExtraSbpSignature::NoExtra);
 // TODO: add sub op
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_left_scalar, NoExtraSbp);
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_right_scalar, NoExtraSbp);
-REGISTER_SCALAR_BINARY_USER_OP(scalar_mul, ExtraSbpSignature::Ps2Ps);
-REGISTER_SCALAR_BINARY_USER_OP(left_scalar_div, ExtraSbpSignature::NoExtra);
-REGISTER_SCALAR_BINARY_USER_OP(right_scalar_div, ExtraSbpSignature::Ps2Ps);
+REGISTER_SCALAR_BINARY_USER_OP("scalar_mul", ExtraSbpSignature::Ps2Ps);
+REGISTER_SCALAR_BINARY_USER_OP("left_scalar_div", ExtraSbpSignature::NoExtra);
+REGISTER_SCALAR_BINARY_USER_OP("right_scalar_div", ExtraSbpSignature::Ps2Ps);
 
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
