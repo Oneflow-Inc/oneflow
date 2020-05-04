@@ -94,6 +94,11 @@ using CommutativeScalarBinary = LeftScalarBinary<binary_func, device_type, T>;
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);               \
         return ctx.device_type() == DeviceType::k##kernel_device_type                             \
                && y_desc->data_type() == GetDataType<dtype>::value;                               \
+      })                                                                                          \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                      \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {   \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                            \
+        return Maybe<void>::Ok();                                                                 \
       });
 
 #define REGISTER_ALL_SCALAR_BINARY_KERNELS(device_type, dtype)                                \
