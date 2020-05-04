@@ -12,16 +12,16 @@ class BiasAddUserKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* a_blob = ctx->Tensor4ArgNameAndIndex("a", 0);
-    const auto* b_blob = ctx->Tensor4ArgNameAndIndex("b", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
+    auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->GetAttr<int32_t>("axis");
-    const int64_t outer_size = a_blob->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_blob->shape().At(bias_add_axis);
-    const int64_t inner_size = a_blob->shape().Count(bias_add_axis + 1);
+    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
     BiasAddUtil<device_type, T>::BiasAdd(ctx->device_ctx(), outer_size, bias_size, inner_size,
-                                         a_blob->dptr<T>(), b_blob->dptr<T>(),
-                                         out_blob->mut_dptr<T>());
+                                         a_tensor->dptr<T>(), b_tensor->dptr<T>(),
+                                         out_tensor->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
