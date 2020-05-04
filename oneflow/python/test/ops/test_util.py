@@ -26,6 +26,22 @@ def GenArgDict(arg_dict):
     return [dict(zip(arg_dict.keys(), x)) for x in GenArgList(arg_dict)]
 
 
+# 1.define global variable
+# save_to_dict = {}
+# 2. change func Save
+# def Save(name):
+#     global save_to_dict
+
+#     def _save(x):
+#         save_to_dict[name] = x
+#     return _save
+# 3. define func loadSaveData
+# def loadSaveData(name):
+#     return save_to_dict.get(name)
+# 4. Delete GetSavePath  and delete all from test_util import GetSavePath
+# 5. Add from test_util import loadSaveData to all files
+# 6. Test all.
+
 def GetSavePath():
     return "./log/op_unit_test/"
 
