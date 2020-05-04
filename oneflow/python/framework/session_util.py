@@ -31,6 +31,10 @@ class Session(object):
         self.job_name2var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
         self.UpdateFunctionFlagName2DefaultVal()
+        self.enable_eager_execution_ = False
+
+    @property
+    def enable_eager_execution(self): return self.enable_eager_execution_
 
     @property
     def status(self): return self.status_
@@ -61,6 +65,8 @@ class Session(object):
 
     @property
     def job_name2name_scope_stack(self): return self.job_name2name_scope_stack_
+
+    def set_enable_eager_execution(self, val): self.enable_eager_execution_ = val
 
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto

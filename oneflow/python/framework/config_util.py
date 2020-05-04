@@ -164,3 +164,8 @@ def collect_act_event(val = True):
         return
     assert type(val) is int
     sess.config_proto.profile_conf.collect_act_event = val
+
+
+@oneflow_export('config.enable_eager_execution, enable_eager_execution')
+def enable_eager_execution()
+    session_ctx.GetDefaultSession().set_enable_eager_execution(True)
