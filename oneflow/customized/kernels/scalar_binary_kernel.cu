@@ -1,9 +1,32 @@
 #include "oneflow/customized/kernels/scalar_binary_kernel.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
+namespace {
+
 template<template<typename> class binary_func, typename T>
-class LeftBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op::OpKernel {
+__global__ void ScalarBinaryRightGpu(const T* in_ptr, const T scalar_operand, T* out_ptr,
+                                     const int64_t n) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out_ptr[i] = binary_func<T>::Invoke(in_ptr[i], scalar_operand); }
+}
+template<template<typename> class binary_func, typename T>
+__global__ void ScalarBinaryRightGpuInplace(T* in_ptr, const T scalar_operand, const int64_t n) {
+  CUDA_1D_KERNEL_LOOP(i, n) { in_ptr[i] = binary_func<T>::Invoke(in_ptr[i], scalar_operand); }
+}
+template<template<typename> class binary_func, typename T>
+__global__ void ScalarBinaryLeftGpu(const T* in_ptr, const T scalar_operand, T* out_ptr,
+                                    const int64_t n) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out_ptr[i] = binary_func<T>::Invoke(scalar_operand, in_ptr[i]); }
+}
+template<template<typename> class binary_func, typename T>
+__global__ void ScalarBinaryLeftGpuInplace(T* in_ptr, const T scalar_operand, const int64_t n) {
+  CUDA_1D_KERNEL_LOOP(i, n) { in_ptr[i] = binary_func<T>::Invoke(scalar_operand, in_ptr[i]); }
+}
+}  // namespace
+
+template<template<typename> class binary_func, typename T>
+class LeftBinaryKernel<binary_func, DeviceType::kGPU, T> final : public user_op::OpKernel {
  public:
   LeftBinaryKernel() = default;
   ~LeftBinaryKernel() = default;
@@ -16,20 +39,18 @@ class LeftBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op:
     const auto n = GetElemCnt(ctx);
 
     if (out_ptr == in_ptr) {
-      for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(scalar_operand, out_ptr[i]);
-      }
+      RUN_CUDA_KERNEL((ScalarBinaryLeftGpuInplace<binary_func, T>), ctx->device_ctx(), n, out_ptr,
+                      scalar_operand, n);
     } else {
-      for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(scalar_operand, in_ptr[i]);
-      }
+      RUN_CUDA_KERNEL((ScalarBinaryLeftGpu<binary_func, T>), ctx->device_ctx(), n, in_ptr,
+                      scalar_operand, out_ptr, n);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<template<typename> class binary_func, typename T>
-class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op::OpKernel {
+class RightBinaryKernel<binary_func, DeviceType::kGPU, T> final : public user_op::OpKernel {
  public:
   RightBinaryKernel() = default;
   ~RightBinaryKernel() = default;
@@ -42,13 +63,11 @@ class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op
     const auto n = GetElemCnt(ctx);
 
     if (out_ptr == in_ptr) {
-      for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(out_ptr[i], scalar_operand);
-      }
+      RUN_CUDA_KERNEL((ScalarBinaryRightGpuInplace<binary_func, T>), ctx->device_ctx(), n, out_ptr,
+                      scalar_operand, n);
     } else {
-      for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(in_ptr[i], scalar_operand);
-      }
+      RUN_CUDA_KERNEL((ScalarBinaryRightGpu<binary_func, T>), ctx->device_ctx(), n, in_ptr,
+                      scalar_operand, out_ptr, n);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -65,7 +84,7 @@ class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op
       });
 
 #define REGISTER_ADD_KERNEL_WITH_TYPE(type, _) \
-  REGISTER_KERNEL("scalar_add", Commutative, BinaryFuncAdd, CPU, type)
+  REGISTER_KERNEL("scalar_add", Commutative, BinaryFuncAdd, GPU, type)
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_ADD_KERNEL_WITH_TYPE, ARITHMETIC_DATA_TYPE_SEQ)
 
@@ -77,9 +96,9 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_ADD_KERNEL_WITH_TYPE, ARITHMETIC_DATA_TYPE_SEQ)
   FLOATING_DATA_TYPE_SEQ
 
 #define REGISTER_MUL_DIV_KERNEL_WITH_TYPE(type, _)                     \
-  REGISTER_KERNEL("scalar_mul", Commutative, BinaryFuncMul, CPU, type) \
-  REGISTER_KERNEL("left_scalar_div", Left, BinaryFuncDiv, CPU, type)   \
-  REGISTER_KERNEL("right_scalar_div", Right, BinaryFuncDiv, CPU, type)
+  REGISTER_KERNEL("scalar_mul", Commutative, BinaryFuncMul, GPU, type) \
+  REGISTER_KERNEL("left_scalar_div", Left, BinaryFuncDiv, GPU, type)   \
+  REGISTER_KERNEL("right_scalar_div", Right, BinaryFuncDiv, GPU, type)
 
 // OF_PP_FOR_EACH_TUPLE(REGISTER_MUL_DIV_KERNEL_WITH_TYPE, ARITHMETIC_DATA_TYPE_SEQ_WITHOUT_INT8)
 

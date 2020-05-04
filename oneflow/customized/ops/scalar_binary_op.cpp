@@ -12,20 +12,21 @@ Maybe<void> BatchAxisInfer(user_op::BatchAxisContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbp(user_op::SbpContext *ctx, const user_op::GetSbpFn &extra_get_sbp_fn) {
-  const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  SbpSignatureBuilder()
-      .Split(ctx->inputs(), 0)
-      .Split(ctx->outputs(), 0)
-      .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-      .Build(ctx->sbp_sig_list());
-  JUST(extra_get_sbp_fn(ctx));
+enum ExtraSbpSignature {
+  NoExtra,
+  Ps2Ps,
+};
+
+template<ExtraSbpSignature>
+Maybe<void> GetExtraSbp(user_op::SbpContext *);
+
+template<>
+Maybe<void> GetExtraSbp<ExtraSbpSignature::NoExtra>(user_op::SbpContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NoExtraSbp(user_op::SbpContext *ctx) { return Maybe<void>::Ok(); }
-
-Maybe<void> AddPs2PsSbp(user_op::SbpContext *ctx) {
+template<>
+Maybe<void> GetExtraSbp<ExtraSbpSignature::Ps2Ps>(user_op::SbpContext *ctx) {
   SbpSignatureBuilder()
       .PartialSum(ctx->inputs())
       .PartialSum(ctx->outputs())
@@ -33,29 +34,41 @@ Maybe<void> AddPs2PsSbp(user_op::SbpContext *ctx) {
   return Maybe<void>::Ok();
 }
 
+template<ExtraSbpSignature extra_sbp_sig>
+Maybe<void> GetSbp(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  SbpSignatureBuilder()
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+      .Build(ctx->sbp_sig_list());
+  JUST(GetExtraSbp<extra_sbp_sig>(ctx));
+  return Maybe<void>::Ok();
+}
+
 // TODO: use JUST(GetSbp(ctx, EXTRA_GET_SBP_FN));
-#define REGISTER_SCALAR_BINARY_USER_OP(OP_NAME, EXTRA_GET_SBP_FN) \
-  REGISTER_USER_OP(OF_PP_STRINGIZE(OP_NAME))                                       \
-      .Input("in")                                                \
-      .Output("out")                                              \
-      .Attr("has_int_operand", UserOpAttrType::kAtBool)           \
-      .Attr("has_float_operand", UserOpAttrType::kAtBool)         \
-      .Attr("int_operand", UserOpAttrType::kAtInt64)              \
-      .Attr("float_operand", UserOpAttrType::kAtDouble)           \
-      .SetTensorDescInferFn(TensorDescInfer)                      \
-      .SetBatchAxisInferFn(BatchAxisInfer)                        \
-      .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {  \
-        GetSbp(ctx, EXTRA_GET_SBP_FN);                            \
-        return Maybe<void>::Ok();                                 \
+#define REGISTER_SCALAR_BINARY_USER_OP(OP_NAME, EXTRA_SBP_SIG) \
+  REGISTER_USER_OP(OF_PP_STRINGIZE(OP_NAME))                                 \
+      .Input("in")                                                           \
+      .Output("out")                                                         \
+      .Attr("has_int_operand", UserOpAttrType::kAtBool)                      \
+      .Attr("has_float_operand", UserOpAttrType::kAtBool)                    \
+      .Attr("int_operand", UserOpAttrType::kAtInt64)                         \
+      .Attr("float_operand", UserOpAttrType::kAtDouble)                      \
+      .SetTensorDescInferFn(TensorDescInfer)                                 \
+      .SetBatchAxisInferFn(BatchAxisInfer)                                   \
+      .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {             \
+        GetSbp<EXTRA_SBP_SIG>(ctx);                            \
+        return Maybe<void>::Ok();                                            \
       });
 
-REGISTER_SCALAR_BINARY_USER_OP(scalar_add, NoExtraSbp);
+REGISTER_SCALAR_BINARY_USER_OP(scalar_add, ExtraSbpSignature::NoExtra);
 // TODO: add sub op
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_left_scalar, NoExtraSbp);
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_right_scalar, NoExtraSbp);
-REGISTER_SCALAR_BINARY_USER_OP(scalar_mul, AddPs2PsSbp);
-REGISTER_SCALAR_BINARY_USER_OP(scalar_div_left_scalar, NoExtraSbp);
-REGISTER_SCALAR_BINARY_USER_OP(scalar_div_right_scalar, AddPs2PsSbp);
+REGISTER_SCALAR_BINARY_USER_OP(scalar_mul, ExtraSbpSignature::Ps2Ps);
+REGISTER_SCALAR_BINARY_USER_OP(left_scalar_div, ExtraSbpSignature::NoExtra);
+REGISTER_SCALAR_BINARY_USER_OP(right_scalar_div, ExtraSbpSignature::Ps2Ps);
 
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
@@ -65,7 +78,7 @@ REGISTER_USER_OP_GRAD("scalar_add")
     });
 
 REGISTER_USER_OP_GRAD("scalar_mul")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
