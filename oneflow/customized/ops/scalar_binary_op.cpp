@@ -12,21 +12,7 @@ Maybe<void> BatchAxisInfer(user_op::BatchAxisContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-enum ExtraSbpSignature {
-  Nothing,
-  Ps2Ps,
-};
-
-template<ExtraSbpSignature>
-Maybe<void> GetExtraSbp(user_op::SbpContext *);
-
-template<>
-Maybe<void> GetExtraSbp<ExtraSbpSignature::Nothing>(user_op::SbpContext *ctx) {
-  return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<void> GetExtraSbp<ExtraSbpSignature::Ps2Ps>(user_op::SbpContext *ctx) {
+Maybe<void> AddParallelSumSbpSignature(user_op::SbpContext *ctx) {
   SbpSignatureBuilder()
       .PartialSum(ctx->inputs())
       .PartialSum(ctx->outputs())
@@ -34,7 +20,9 @@ Maybe<void> GetExtraSbp<ExtraSbpSignature::Ps2Ps>(user_op::SbpContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-template<ExtraSbpSignature extra_sbp_sig>
+Maybe<void> NoExtraSbpSignature(user_op::SbpContext *ctx) { return Maybe<void>::Ok(); }
+
+template<Maybe<void> (*GetExtraSbpSignature)(user_op::SbpContext *)>
 Maybe<void> GetSbp(user_op::SbpContext *ctx) {
   const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   SbpSignatureBuilder()
@@ -42,7 +30,7 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
       .Split(ctx->outputs(), 0)
       .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
       .Build(ctx->sbp_sig_list());
-  JUST(GetExtraSbp<extra_sbp_sig>(ctx));
+  JUST(GetExtraSbpSignature(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -62,13 +50,13 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
         return Maybe<void>::Ok();                                \
       });
 
-REGISTER_SCALAR_BINARY_USER_OP("scalar_add", ExtraSbpSignature::Nothing);
+REGISTER_SCALAR_BINARY_USER_OP("scalar_add", NoExtraSbpSignature);
 // TODO: add sub op
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_left_scalar, NoExtraSbp);
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_right_scalar, NoExtraSbp);
-REGISTER_SCALAR_BINARY_USER_OP("scalar_mul", ExtraSbpSignature::Ps2Ps);
-REGISTER_SCALAR_BINARY_USER_OP("left_scalar_div", ExtraSbpSignature::Nothing);
-REGISTER_SCALAR_BINARY_USER_OP("right_scalar_div", ExtraSbpSignature::Ps2Ps);
+REGISTER_SCALAR_BINARY_USER_OP("scalar_mul", AddParallelSumSbpSignature);
+REGISTER_SCALAR_BINARY_USER_OP("left_scalar_div", NoExtraSbpSignature);
+REGISTER_SCALAR_BINARY_USER_OP("right_scalar_div", AddParallelSumSbpSignature);
 
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
