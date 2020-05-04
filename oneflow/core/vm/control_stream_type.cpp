@@ -61,24 +61,24 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   }
 };
 
-class NewConstHostSymbolInstructionType final : public InstructionType {
+class NewSymbolInstructionType final : public InstructionType {
  public:
-  NewConstHostSymbolInstructionType() = default;
-  ~NewConstHostSymbolInstructionType() override = default;
+  NewSymbolInstructionType() = default;
+  ~NewSymbolInstructionType() override = default;
 
   using stream_type = ControlStreamType;
 
   // clang-format off
-  FLAT_MSG_VIEW_BEGIN(NewConstHostInstruction);
+  FLAT_MSG_VIEW_BEGIN(NewSymbolInstruction);
     FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
-  FLAT_MSG_VIEW_END(NewConstHostInstruction);
+  FLAT_MSG_VIEW_END(NewSymbolInstruction);
   // clang-format on
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&GetTypeLogicalObjectId>(vm, instr_msg);
+    Run<&ObjectIdUtil::GetTypeId>(vm, instr_msg);
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(vm, instr_msg);
+    Run<&ObjectIdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
@@ -86,7 +86,7 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
-    FlatMsgView<NewConstHostInstruction> view;
+    FlatMsgView<NewSymbolInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
@@ -101,8 +101,8 @@ class NewConstHostSymbolInstructionType final : public InstructionType {
     }
   }
 };
-COMMAND(RegisterInstructionType<NewConstHostSymbolInstructionType>("NewConstHostSymbol"));
-COMMAND(RegisterLocalInstructionType<NewConstHostSymbolInstructionType>("LocalNewConstHostSymbol"));
+COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
+COMMAND(RegisterLocalInstructionType<NewSymbolInstructionType>("LocalNewSymbol"));
 
 void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
