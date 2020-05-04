@@ -93,7 +93,8 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
                        argsort_instance_size, buf_manager.TempStoragePtr(),
                        buf_manager.TempStorageBytes(), buf_manager.SortedValuePtr(),
                        y->mut_dptr<int32_t>(), ctx->device_ctx()->cuda_stream());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")

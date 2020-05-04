@@ -73,7 +73,7 @@ REGISTER_USER_OP("TestReshape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
       CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -86,7 +86,7 @@ REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
       CHECK_EQ(in_shape->elem_cnt(), conf_shape.elem_cnt());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -313,8 +313,8 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
     .Attr("out_shapes", UserOpAttrType::kAtListShape)
     .Attr("out_types", UserOpAttrType::kAtListDataType)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      auto out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
-      auto out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+      const auto& out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
+      const auto& out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
         *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);

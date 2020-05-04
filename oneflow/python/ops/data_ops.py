@@ -157,9 +157,11 @@ def decode_ofrecord(
     ofrecord_dir,
     blobs,
     batch_size=1,
-    data_part_num=-1,
+    data_part_num=1,
     part_name_prefix="part-",
     part_name_suffix_length=-1,
+    shuffle=False,
+    buffer_size=1024,
     name=None,
 ):
     if name is None:
@@ -177,6 +179,8 @@ def decode_ofrecord(
     op_conf.decode_ofrecord_conf.part_name_suffix_length = (
         part_name_suffix_length
     )
+    if shuffle == True:
+        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = buffer_size
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -186,6 +190,41 @@ def decode_ofrecord(
 
     compile_context.CurJobAddConsistentOp(op_conf)
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
+
+@oneflow_export("data.ofrecord_loader")
+def ofrecord_loader(
+    ofrecord_dir,
+    batch_size=1,
+    data_part_num=1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    shuffle=False,
+    shuffle_buffer_size=1024,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OFRecord_Loader_")
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+
+    op_conf.record_load_conf.out = "out"
+    op_conf.record_load_conf.data_dir = ofrecord_dir
+    op_conf.record_load_conf.data_part_num = data_part_num
+    op_conf.record_load_conf.batch_size = batch_size
+    op_conf.record_load_conf.part_name_prefix = part_name_prefix
+    if part_name_suffix_length is not -1:
+        op_conf.record_load_conf.part_name_suffix_length = (
+            part_name_suffix_length
+        )
+    if shuffle:
+        op_conf.record_load_conf.random_shuffle_conf.buffer_size = shuffle_buffer_size
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = name
+    lbi.blob_name = "out"
+
+    compile_context.CurJobAddConsistentOp(op_conf)
+    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("data.decode_random")

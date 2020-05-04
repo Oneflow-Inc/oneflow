@@ -30,6 +30,8 @@ class KernelRegContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
