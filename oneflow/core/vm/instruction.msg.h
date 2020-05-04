@@ -9,7 +9,7 @@
 #include "oneflow/core/vm/mirrored_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/logical_object_id.h"
+#include "oneflow/core/vm/object_id_util.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
@@ -34,17 +34,17 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(LogicalObjectId logical_object_id, const AllMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
   PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -145,7 +145,7 @@ OBJECT_MSG_BEGIN(Instruction);
 
   PUBLIC MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
                                                      int64_t default_global_device_id) {
-    return FindMirroredObjectByOperand<&GetSelfLogicalObjectId>(operand, default_global_device_id);
+    return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_global_device_id);
   }
 
   // links

@@ -21,12 +21,12 @@ using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 TEST(ControlStreamType, new_symbol_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewConstHostSymbol"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});
   CachedObjectMsgAllocator allocator(20, 100);
   auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_id = NewConstHostLogicalObjectId();
-  list.EmplaceBack(NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_id));
+  int64_t symbol_id = ObjectIdUtil::NewLogicalSymbolId();
+  list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   ASSERT_TRUE(vm->pending_msg_list().empty());
   vm->Receive(&list);
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);

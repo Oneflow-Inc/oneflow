@@ -1,5 +1,5 @@
 #define private public
-#include "oneflow/core/vm/logical_object_id.h"
+#include "oneflow/core/vm/object_id_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -23,13 +23,12 @@ using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 template<typename T, typename SerializedT>
 void TestConstObjectInstructionType(const std::string& instr_type_name) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
-  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
-                                          {"NewConstHostSymbol", instr_type_name});
+  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", instr_type_name});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_id = vm::NewConstHostLogicalObjectId();
+  int64_t symbol_id = vm::ObjectIdUtil::NewLogicalSymbolId();
   Global<vm::Storage<SerializedT>>::Get()->Add(symbol_id, std::make_shared<SerializedT>());
-  list.EmplaceBack(vm::NewInstruction("NewConstHostSymbol")->add_int64_operand(symbol_id));
+  list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -37,7 +36,7 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   auto* logical_object =
-      vm->mut_id2logical_object()->FindPtr(vm::GetTypeLogicalObjectId(symbol_id));
+      vm->mut_id2logical_object()->FindPtr(vm::ObjectIdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);

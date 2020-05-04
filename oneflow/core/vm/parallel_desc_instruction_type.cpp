@@ -26,10 +26,10 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   // clang-format on
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&GetTypeLogicalObjectId>(vm, instr_msg);
+    Run<&ObjectIdUtil::GetTypeId>(vm, instr_msg);
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&GetSelfLogicalObjectId>(vm, instr_msg);
+    Run<&ObjectIdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }

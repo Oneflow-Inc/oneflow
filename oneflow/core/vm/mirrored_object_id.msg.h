@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 
 #include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/vm/logical_object_id.h"
+#include "oneflow/core/vm/object_id_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
 namespace oneflow {
@@ -21,16 +21,16 @@ FLAT_MSG_END(AllMirroredObject);
 FLAT_MSG_BEGIN(Operand);
   // methods
   // init current_global_device_id
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id);
+  PUBLIC void __Init__(const ObjectId& logical_object_id);
   // init sole_mirrored_object
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const SoleMirroredObject&);
+  PUBLIC void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
   // init all_mirrored_object
-  PUBLIC void __Init__(const LogicalObjectId& logical_object_id, const AllMirroredObject&);
+  PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
   PUBLIC void __Init__(const OperandProto& proto);
   PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
 
   // fields
-  FLAT_MSG_DEFINE_OPTIONAL(LogicalObjectId, logical_object_id);
+  FLAT_MSG_DEFINE_OPTIONAL(ObjectId, logical_object_id);
   FLAT_MSG_DEFINE_ONEOF(operand_type,
     FLAT_MSG_ONEOF_FIELD(CurrentGlobalDeviceId, current_global_device_id)
     FLAT_MSG_ONEOF_FIELD(SoleMirroredObject, sole_mirrored_object)

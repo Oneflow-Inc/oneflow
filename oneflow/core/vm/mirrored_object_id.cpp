@@ -4,17 +4,17 @@
 namespace oneflow {
 namespace vm {
 
-void Operand::__Init__(const LogicalObjectId& logical_object_id) {
+void Operand::__Init__(const ObjectId& logical_object_id) {
   set_logical_object_id(logical_object_id);
   mutable_current_global_device_id();
 }
 
-void Operand::__Init__(const LogicalObjectId& logical_object_id, const SoleMirroredObject&) {
+void Operand::__Init__(const ObjectId& logical_object_id, const SoleMirroredObject&) {
   set_logical_object_id(logical_object_id);
   mutable_sole_mirrored_object();
 }
 
-void Operand::__Init__(const LogicalObjectId& logical_object_id, const AllMirroredObject&) {
+void Operand::__Init__(const ObjectId& logical_object_id, const AllMirroredObject&) {
   set_logical_object_id(logical_object_id);
   mutable_all_mirrored_object();
 }
