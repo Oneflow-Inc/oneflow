@@ -12,6 +12,7 @@ enum DataType {
   kUInt8 = 7;
   kOFRecord = 8;
   kFloat16 = 9;
+  kTensorBuffer = 10;
 }
 
 message OptInt64 {
