@@ -27,6 +27,8 @@ class GatherKernel final : public user_op::OpKernel {
     GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), indices->dptr<K>(),
        num_indices, in->dptr<T>(), getFlatShape(in->shape(), axis), out->mut_dptr<T>(), 0);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
 };
 
 #define REGISTER_GATHER_KERNEL(device, T_dtype, K_dtype)                                        \
