@@ -4,7 +4,7 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/grpc/src/grpc)
+set(GRPC_URL https://github.com/Oneflow-Inc/grpc/archive/d1.tar.gz)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
@@ -27,11 +27,33 @@ endforeach()
 
 if(THIRD_PARTY)
 
+# nanopb here is for source code only, won't be built
+# This is a workaround for nanopb as submodule of grpc
+# Once grpc is updated to a newer version, this could be removed
+ExternalProject_Add(
+  nanopb
+  PREFIX nanopb
+  URL https://github.com/Oneflow-Inc/nanopb/archive/d1.tar.gz
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  )
+
 ExternalProject_Add(grpc
     PREFIX grpc
     DEPENDS protobuf zlib
     URL ${GRPC_URL}
-    UPDATE_COMMAND ""
+    UPDATE_COMMAND 
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/third_party/nanopb
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_common.c 
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_decode.c
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_encode.c
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb.h
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_decode.h
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_encode.h
+        ${CMAKE_CURRENT_BINARY_DIR}/nanopb/src/nanopb/pb_common.h
+        ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/third_party/nanopb
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
@@ -45,6 +67,8 @@ ExternalProject_Add(grpc
         -DPROTOBUF_LIBRARIES:STRING=${protobuf_STATIC_LIBRARIES}
         -DZLIB_INCLUDE_DIRS:STRING=${ZLIB_INCLUDE_DIR}
 )
+
+add_dependencies(grpc nanopb)
 
 add_custom_target(grpc_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_INCLUDE_DIR}
