@@ -4,7 +4,7 @@ set(ZLIB_INCLUDE_DIR ${THIRD_PARTY_DIR}/zlib/include)
 set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_DIR}/zlib/lib)
 
 set(ZLIB_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/zlib/install)
-set(ZLIB_URL https://github.com/Oneflow-Inc/zlib/archive/d1.tar.gz)
+set(ZLIB_URL https://github.com/Oneflow-Inc/zlib/archive/v1.2.8.tar.gz)
 
 if(WIN32)
     set(ZLIB_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/zlib/install/lib)

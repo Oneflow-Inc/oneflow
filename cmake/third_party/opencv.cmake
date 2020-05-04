@@ -5,7 +5,7 @@ set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/d1.tar.gz)
+set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef26.tar.gz)
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))

@@ -3,7 +3,7 @@ include (ExternalProject)
 set(NCCL_INCLUDE_DIR ${THIRD_PARTY_DIR}/nccl/include)
 set(NCCL_LIBRARY_DIR ${THIRD_PARTY_DIR}/nccl/lib)
 
-set(NCCL_URL https://github.com/Oneflow-Inc/nccl/archive/d1.tar.gz)
+set(NCCL_URL https://github.com/Oneflow-Inc/nccl/archive/ccb1298.tar.gz)
 set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
 
 if(WIN32)

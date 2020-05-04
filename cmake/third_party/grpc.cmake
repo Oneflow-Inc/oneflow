@@ -4,7 +4,7 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL https://github.com/Oneflow-Inc/grpc/archive/d1.tar.gz)
+set(GRPC_URL https://github.com/Oneflow-Inc/grpc/archive/e0db46e.tar.gz)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
@@ -33,7 +33,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(
   nanopb
   PREFIX nanopb
-  URL https://github.com/Oneflow-Inc/nanopb/archive/d1.tar.gz
+  URL https://github.com/Oneflow-Inc/nanopb/archive/f8ac463.tar.gz
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""

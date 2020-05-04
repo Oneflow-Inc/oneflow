@@ -10,7 +10,7 @@ SET(RE2_LIBRARIES ${RE2_LIBRARY_DIR}/libre2.a)
 
 if (THIRD_PARTY)
     ExternalProject_Add(${RE2_PROJECT}
-        URL https://github.com/Oneflow-Inc/re2/archive/d1.tar.gz
+        URL https://github.com/Oneflow-Inc/re2/archive/e17af77.tar.gz
         PREFIX re2
         UPDATE_COMMAND ""
         CMAKE_ARGS

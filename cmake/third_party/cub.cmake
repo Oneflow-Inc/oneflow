@@ -3,7 +3,7 @@ include (ExternalProject)
 set(CUB_INCLUDE_DIR ${THIRD_PARTY_DIR}/cub/include)
 set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
-set(CUB_URL https://github.com/Oneflow-Inc/cub/archive/d1.tar.gz)
+set(CUB_URL https://github.com/Oneflow-Inc/cub/archive/v1.8.0.tar.gz)
 
 if(THIRD_PARTY)
 

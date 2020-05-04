@@ -3,7 +3,7 @@ include (ExternalProject)
 set(GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/include)
 set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
 
-set(glog_URL https://github.com/Oneflow-Inc/glog/archive/d1.tar.gz)
+set(glog_URL https://github.com/Oneflow-Inc/glog/archive/4f3e18b.tar.gz)
 
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
