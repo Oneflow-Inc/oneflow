@@ -6,21 +6,21 @@ namespace oneflow {
 namespace {
 
 template<template<typename> class binary_func, typename T>
-__global__ void ScalarBinaryRightGpu(const T* x_ptr, const T scalar_operand, T* y_ptr,
+__global__ void RightScalarBinaryGpu(const T* x_ptr, const T scalar_operand, T* y_ptr,
                                      const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
 }
 template<template<typename> class binary_func, typename T>
-__global__ void ScalarBinaryRightGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
+__global__ void RightScalarBinaryGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { x_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
 }
 template<template<typename> class binary_func, typename T>
-__global__ void ScalarBinaryLeftGpu(const T* x_ptr, const T scalar_operand, T* y_ptr,
+__global__ void LeftScalarBinaryGpu(const T* x_ptr, const T scalar_operand, T* y_ptr,
                                     const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
 }
 template<template<typename> class binary_func, typename T>
-__global__ void ScalarBinaryLeftGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
+__global__ void LeftScalarBinaryGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { x_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
 }
 }  // namespace
@@ -39,10 +39,10 @@ class LeftBinaryKernel<binary_func, DeviceType::kGPU, T> final : public user_op:
     const auto n = GetElemCnt(ctx);
 
     if (y_ptr == x_ptr) {
-      RUN_CUDA_KERNEL((ScalarBinaryLeftGpuInplace<binary_func, T>), ctx->device_ctx(), n, y_ptr,
+      RUN_CUDA_KERNEL((LeftScalarBinaryGpuInplace<binary_func, T>), ctx->device_ctx(), n, y_ptr,
                       scalar_operand, n);
     } else {
-      RUN_CUDA_KERNEL((ScalarBinaryLeftGpu<binary_func, T>), ctx->device_ctx(), n, x_ptr,
+      RUN_CUDA_KERNEL((LeftScalarBinaryGpu<binary_func, T>), ctx->device_ctx(), n, x_ptr,
                       scalar_operand, y_ptr, n);
     }
   }
@@ -63,10 +63,10 @@ class RightBinaryKernel<binary_func, DeviceType::kGPU, T> final : public user_op
     const auto n = GetElemCnt(ctx);
 
     if (y_ptr == x_ptr) {
-      RUN_CUDA_KERNEL((ScalarBinaryRightGpuInplace<binary_func, T>), ctx->device_ctx(), n, y_ptr,
+      RUN_CUDA_KERNEL((RightScalarBinaryGpuInplace<binary_func, T>), ctx->device_ctx(), n, y_ptr,
                       scalar_operand, n);
     } else {
-      RUN_CUDA_KERNEL((ScalarBinaryRightGpu<binary_func, T>), ctx->device_ctx(), n, x_ptr,
+      RUN_CUDA_KERNEL((RightScalarBinaryGpu<binary_func, T>), ctx->device_ctx(), n, x_ptr,
                       scalar_operand, y_ptr, n);
     }
   }
@@ -78,7 +78,7 @@ class RightBinaryKernel<binary_func, DeviceType::kGPU, T> final : public user_op
       .SetCreateFn<                                                                         \
           kernel_type##BinaryKernel<func_name, DeviceType::k##kernel_device_type, dtype>>() \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);       \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);         \
         return ctx.device_type() == DeviceType::k##kernel_device_type                       \
                && y_desc->data_type() == GetDataType<dtype>::value;                         \
       });

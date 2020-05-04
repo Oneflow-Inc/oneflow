@@ -59,7 +59,7 @@ class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op
       .SetCreateFn<                                                                         \
           kernel_type##BinaryKernel<func_name, DeviceType::k##kernel_device_type, dtype>>() \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);       \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);         \
         return ctx.device_type() == DeviceType::k##kernel_device_type                       \
                && y_desc->data_type() == GetDataType<dtype>::value;                         \
       });
