@@ -1,7 +1,31 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include <iostream>
 
 namespace oneflow {
+
+namespace {
+
+void PrintSbpLog(SbpSignatureList* sbp_list) {
+  for (const auto& sbp_sign : sbp_list->sbp_signature()) {
+    std::cout << "cclog: one sbp sign: ";
+    for (const auto& pair : sbp_sign.bn_in_op2sbp_parallel()) {
+      std::cout << " bn: " << pair.first;
+      if (pair.second.has_split_parallel()) {
+        std::cout << " Split axis = " << pair.second.split_parallel().axis();
+      } else if (pair.second.has_broadcast_parallel()) {
+        std::cout << " Broadcast ";
+      } else if (pair.second.has_partial_sum_parallel()) {
+        std::cout << " PartialSum ";
+      } else {
+        std::cout << " ERROR !";
+      }
+    }
+    std::cout << std::endl;
+  }
+}
+
+}  // namespace
 
 REGISTER_USER_OP("ccrelu")
     .Input("in")
@@ -16,11 +40,20 @@ REGISTER_USER_OP("ccrelu")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      std::cout << " before add" << std::endl;
+      ctx->Add().Split(user_op::OpArg("in", 0), 0).Split(user_op::OpArg("out", 0), 0).Build();
+      std::cout << " add s(0) " << std::endl;
+      PrintSbpLog(ctx->sbp_sig_list());
+      ctx->AddSplitSbpSignList(tensor.shape().NumAxes());
+      std::cout << " add s list " << std::endl;
+      PrintSbpLog(ctx->sbp_sig_list());
+      /*
       SbpSignatureBuilder()
           .Split(ctx->inputs(), 0)
           .Split(ctx->outputs(), 0)
           .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
           .Build(ctx->sbp_sig_list());
+      */
       // SbpSignatureBuilder()
       //     .Split("in", 0, 0)
       //     .Split("out", 0, 0)
