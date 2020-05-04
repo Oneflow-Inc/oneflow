@@ -39,9 +39,15 @@ class TransposeKernel final : public OpKernel {
         return false;                                                                    \
       });
 
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
 
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
+REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, double)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, float16)
