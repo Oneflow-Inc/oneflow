@@ -3,12 +3,12 @@
 namespace oneflow {
 
 Maybe<void> TensorDescInfer(user_op::InferContext *ctx) {
-  *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BatchAxisInfer(user_op::BatchAxisContext *ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -36,7 +36,7 @@ Maybe<void> GetExtraSbp<ExtraSbpSignature::Ps2Ps>(user_op::SbpContext *ctx) {
 
 template<ExtraSbpSignature extra_sbp_sig>
 Maybe<void> GetSbp(user_op::SbpContext *ctx) {
-  const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   SbpSignatureBuilder()
       .Split(ctx->inputs(), 0)
       .Split(ctx->outputs(), 0)
@@ -49,8 +49,8 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
 // TODO: use JUST(GetSbp(ctx, EXTRA_GET_SBP_FN));
 #define REGISTER_SCALAR_BINARY_USER_OP(OP_NAME, EXTRA_SBP_SIG) \
   REGISTER_USER_OP(OF_PP_STRINGIZE(OP_NAME))                                 \
-      .Input("in")                                                           \
-      .Output("out")                                                         \
+      .Input("x")                                                           \
+      .Output("y")                                                         \
       .Attr("has_int_operand", UserOpAttrType::kAtBool)                      \
       .Attr("has_float_operand", UserOpAttrType::kAtBool)                    \
       .Attr("int_operand", UserOpAttrType::kAtInt64)                         \
@@ -72,25 +72,25 @@ REGISTER_SCALAR_BINARY_USER_OP(right_scalar_div, ExtraSbpSignature::Ps2Ps);
 
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", 0);
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
       }
     });
 
 REGISTER_USER_OP_GRAD("scalar_mul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("scalar_mul")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
+                .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("y")
                 .Attr("has_int_operand", op.attr<bool>("has_int_operand"))
                 .Attr("int_operand", op.attr<int64_t>("int_operand"))
                 .Attr("has_float_operand", op.attr<bool>("has_float_operand"))
                 .Attr("float_operand", op.attr<double>("float_operand"))
                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
         AddOp(grad_op);
       }
     });

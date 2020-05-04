@@ -7,17 +7,17 @@
 namespace oneflow {
 
 template<typename T>
-const T* GetInPtr(user_op::KernelComputeContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-  const T* in_ptr = in->dptr<T>();
-  return in_ptr;
+const T* GetXPtr(user_op::KernelComputeContext* ctx) {
+  const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+  const T* x_ptr = x->dptr<T>();
+  return x_ptr;
 }
 
 template<typename T>
-T* GetOutPtr(user_op::KernelComputeContext* ctx) {
-  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  T* out_ptr = out->mut_dptr<T>();
-  return out_ptr;
+T* GetYPtr(user_op::KernelComputeContext* ctx) {
+  user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+  T* y_ptr = y->mut_dptr<T>();
+  return y_ptr;
 }
 
 template<typename T>
@@ -34,8 +34,8 @@ const T GetScalarOperand(user_op::KernelComputeContext* ctx) {
 }
 
 inline const int64_t GetElemCnt(user_op::KernelComputeContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-  return in->shape().elem_cnt();
+  const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+  return x->shape().elem_cnt();
 }
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>

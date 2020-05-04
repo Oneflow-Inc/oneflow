@@ -114,8 +114,8 @@ def scalar_add(x, operand, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         builder = (flow.user_op_builder(name)
             .Op("scalar_add")
-            .Input("in", [x])
-            .Output("out")
+            .Input("x", [x])
+            .Output("y")
             )
         if isinstance(operand, int):
             builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")

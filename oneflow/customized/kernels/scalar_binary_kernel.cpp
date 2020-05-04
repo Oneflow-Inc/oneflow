@@ -10,18 +10,18 @@ class LeftBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op:
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* in_ptr = GetInPtr<T>(ctx);
-    auto* out_ptr = GetOutPtr<T>(ctx);
+    const auto* x_ptr = GetXPtr<T>(ctx);
+    auto* y_ptr = GetYPtr<T>(ctx);
     const auto scalar_operand = GetScalarOperand<T>(ctx);
     const auto n = GetElemCnt(ctx);
 
-    if (out_ptr == in_ptr) {
+    if (y_ptr == x_ptr) {
       for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(scalar_operand, out_ptr[i]);
+        y_ptr[i] = binary_func<T>::Invoke(scalar_operand, y_ptr[i]);
       }
     } else {
       for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(scalar_operand, in_ptr[i]);
+        y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]);
       }
     }
   }
@@ -36,18 +36,18 @@ class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* in_ptr = GetInPtr<T>(ctx);
-    auto* out_ptr = GetOutPtr<T>(ctx);
+    const auto* x_ptr = GetXPtr<T>(ctx);
+    auto* y_ptr = GetYPtr<T>(ctx);
     const auto scalar_operand = GetScalarOperand<T>(ctx);
     const auto n = GetElemCnt(ctx);
 
-    if (out_ptr == in_ptr) {
+    if (y_ptr == x_ptr) {
       for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(out_ptr[i], scalar_operand);
+        y_ptr[i] = binary_func<T>::Invoke(y_ptr[i], scalar_operand);
       }
     } else {
       for (int64_t i = 0; i < n; ++i) {
-        out_ptr[i] = binary_func<T>::Invoke(in_ptr[i], scalar_operand);
+        y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand);
       }
     }
   }
@@ -59,7 +59,7 @@ class RightBinaryKernel<binary_func, DeviceType::kCPU, T> final : public user_op
       .SetCreateFn<                                                                         \
           kernel_type##BinaryKernel<func_name, DeviceType::k##kernel_device_type, dtype>>() \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);       \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);       \
         return ctx.device_type() == DeviceType::k##kernel_device_type                       \
                && y_desc->data_type() == GetDataType<dtype>::value;                         \
       });
