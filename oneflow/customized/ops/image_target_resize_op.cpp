@@ -2,25 +2,26 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("image_decode")
+REGISTER_USER_OP("image_target_resize")
     .Input("in")
     .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
+    .Output("size")
+    .Output("scale")
+    .Attr("target_size", UserOpAttrType::kAtInt32)
+    .Attr("max_size", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
       std::stringstream err;
       err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
-      const std::string& color_space = conf.attr<std::string>("color_space");
-      if (color_space != "BGR" && color_space != "RGB" && color_space != "GRAY") {
-        err << ", color_space: " << color_space
-            << " (color_space can only be one of BGR, RGB and GRAY)";
+      const int32_t target_size = conf.attr<int32_t>("target_size");
+      const int32_t max_size = conf.attr<int32_t>("max_size");
+      if (target_size <= 0) {
+        err << ", target_size: " << target_size << " (target_size must be greater than 0)";
         check_failed = true;
       }
-      DataType data_type = conf.attr<DataType>("data_type");
-      if (data_type != DataType::kUInt8 && data_type != DataType::kFloat) {
-        err << ", data_type: " << data_type << " (only support kUInt8 and kFloat for now)";
+      if (max_size < target_size) {
+        err << ", max_size: " << max_size << " (max_size must be greater than 0)";
         check_failed = true;
       }
       if (check_failed) { return oneflow::Error::CheckFailed() << err; }
@@ -33,18 +34,28 @@ REGISTER_USER_OP("image_decode")
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_shape() = in_desc->shape();
       *out_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
+      *size_desc->mut_shape() = Shape({in_desc->shape().elem_cnt(), 2});
+      *size_desc->mut_data_type() = DataType::kInt32;
+      user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      *scale_desc->mut_shape() = Shape({in_desc->shape().elem_cnt(), 2});
+      *scale_desc->mut_data_type() = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
           .Split("in", 0, 0)
           .Split("out", 0, 0)
+          .Split("size", 0, 0)
+          .Split("scale", 0, 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      ctx->BatchAxis4ArgNameAndIndex("size", 0)->set_value(0);
+      ctx->BatchAxis4ArgNameAndIndex("scale", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 
