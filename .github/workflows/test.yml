@@ -17,6 +17,9 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v2
+    - name: Check format
+      run: |
+        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
     - name: Setup environment
       run: |
         echo $HOSTNAME
@@ -64,15 +67,12 @@ jobs:
         docker rmi oneflow-build-base:${git_hash}
         docker rmi oneflow-build-third-party:${git_hash}
         docker rmi oneflow-build-make:${git_hash}
-    - name: Unit test with user op
+    - name: Unit test with/without user op
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_op_test_user_op.sh
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_op_test.sh
     - name: Integration test with user op
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_model_test_user_op.sh
-    - name: Unit test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_op_test.sh
     - name: Integration test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_model_test.sh
