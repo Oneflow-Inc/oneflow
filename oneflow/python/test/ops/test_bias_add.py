@@ -76,8 +76,7 @@ def CompareBiasAddWithTensorFlow(device_type, input_shapes,
 
 def test_bias_add_nchw(test_case):
     arg_dict = OrderedDict()
-    # TODO: enable cpu tests when the bug gets fixed
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,))]
     arg_dict['op_args'] = [Args(["NCHW"])] 
     for arg in GenArgDict(arg_dict):
@@ -86,8 +85,7 @@ def test_bias_add_nchw(test_case):
 
 def test_bias_add_nhwc(test_case):
     arg_dict = OrderedDict()
-    # TODO: enable cpu tests when the bug gets fixed
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 8), (8,))]
     arg_dict['op_args'] = [Args(["NHWC"])] 
     for arg in GenArgDict(arg_dict):
