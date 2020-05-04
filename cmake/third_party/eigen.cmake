@@ -7,7 +7,7 @@ if(WITH_XLA)
   #set(EIGEN_URL "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/8071cda5714d.tar.gz")
   set(EIGEN_URL "https://bitbucket.org/eigen/eigen/get/8071cda5714d.tar.gz")
 else()
-  set(EIGEN_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/eigen/src/eigen)
+  set(EIGEN_URL https://github.com/Oneflow-Inc/eigen-git-mirror/archive/d1.tar.gz)
 endif()
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_USE_GPU)
