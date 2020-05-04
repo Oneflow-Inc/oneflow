@@ -51,6 +51,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                              const user_op::UserOpConfWrapper& user_op_conf, bool has_forced_algo,
                              int32_t forced_algo) {
   using AlgoT = decltype(std::declval<PerfT>().algo);
+
   size_t workspace_size = job_desc.cudnn_buf_limit_mbyte() * 1024 * 1024;
   if (!x->is_dynamic()) {
     CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
@@ -120,7 +121,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const {
-    auto data_format = ctx->GetAttr<std::string>("data_format");
+    const auto& data_format = ctx->GetAttr<std::string>("data_format");
     int32_t filters = ctx->GetAttr<int32_t>("filters");
 
     std::shared_ptr<ConvCudnnOpKernelState> state;
@@ -157,6 +158,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
       ConvCudnnOpKernelState* conv_state = dynamic_cast<ConvCudnnOpKernelState*>(state);
+      CHECK_NOTNULL(conv_state);
       CudaCheck(cudnnAddTensor(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
                                conv_state->bias_desc->Get(), bias->dptr<T>(), CudnnSPOnePtr<T>(),
                                args.ydesc.Get(), out->mut_dptr<T>()));
@@ -303,6 +305,10 @@ REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float);
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(double);
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float16);
 
+struct ConvBiasGradState final : public user_op::OpKernelState {
+  std::unique_ptr<CudnnTensorDesc> bias_diff_desc;
+};
+
 template<typename T>
 class ConvBiasGradGpuKernel final : public user_op::OpKernel {
  public:
@@ -312,7 +318,28 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const {
+    const auto* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+    const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+    const auto& data_format = ctx->GetAttr<std::string>("data_format");
+
+    std::shared_ptr<ConvBiasGradState> state;
+    if (data_format == "channels_first") {
+      CHECK_EQ(dy->shape().At(1), bias_diff->shape().At(0));
+      state->bias_diff_desc.reset(
+          new CudnnTensorDesc(CUDNN_TENSOR_NCHW, bias_diff->data_type(), 1,
+                              static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
+    } else {
+      CHECK(data_format == "channels_last") << "Illegal data_format: " << data_format;
+      CHECK_EQ(dy->shape().At(dy->shape().NumAxes() - 1), bias_diff->shape().At(0));
+      state->bias_diff_desc.reset(
+          new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
+                              static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
+    }
+    return std::move(state);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     CHECK_EQ(bias_diff->shape().NumAxes(), 1);
@@ -323,23 +350,11 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
-    std::unique_ptr<CudnnTensorDesc> bias_diff_desc;
-    if (data_format == "channels_first") {
-      CHECK_EQ(dy->shape().At(1), bias_diff->shape().At(0));
-      bias_diff_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NCHW, bias_diff->data_type(), 1,
-                                               static_cast<int32_t>(bias_diff->shape().At(0)), 1,
-                                               1));
-    } else if (data_format == "channels_last") {
-      CHECK_EQ(dy->shape().At(dy->shape().NumAxes() - 1), bias_diff->shape().At(0));
-      bias_diff_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
-                                               static_cast<int32_t>(bias_diff->shape().At(0)), 1,
-                                               1));
-    } else {
-      UNIMPLEMENTED();
-    }
-    CudaCheck(cudnnConvolutionBackwardBias(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
-                                           dy_desc->Get(), dy->dptr<T>(), CudnnSPZeroPtr<T>(),
-                                           bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
+    auto* bias_grad_state = dynamic_cast<ConvBiasGradState*>(state);
+    CHECK_NOTNULL(bias_grad_state);
+    CudaCheck(cudnnConvolutionBackwardBias(
+        ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(), dy->dptr<T>(),
+        CudnnSPZeroPtr<T>(), bias_grad_state->bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
   }
 };
 
