@@ -1,5 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/image_util.h"
 #include <opencv2/opencv.hpp>
@@ -40,26 +39,6 @@ std::pair<T, T> GetTargetResizedSize4ImageBuffer(const TensorBuffer& image_buffe
   return height_and_width;
 }
 
-cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer) {
-  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
-  int h = image_buffer.shape().At(0);
-  int w = image_buffer.shape().At(1);
-  int channels = image_buffer.shape().At(2);
-  DataType data_type = image_buffer.data_type();
-  if (channels == 1 && data_type == DataType::kUInt8) {
-    return CreateMatWithPtr(h, w, CV_8UC1, image_buffer.data<uint8_t>());
-  } else if (channels == 1 && data_type == DataType::kFloat) {
-    return CreateMatWithPtr(h, w, CV_32FC1, image_buffer.data<float>());
-  } else if (channels == 3 && data_type == DataType::kUInt8) {
-    return CreateMatWithPtr(h, w, CV_8UC3, image_buffer.data<uint8_t>());
-  } else if (channels == 3 && data_type == DataType::kFloat) {
-    return CreateMatWithPtr(h, w, CV_32FC3, image_buffer.data<float>());
-  } else {
-    UNIMPLEMENTED();
-  }
-  return cv::Mat();
-}
-
 void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_image_buffer,
                        const int32_t target_size, const int32_t max_size) {
   CHECK_EQ(image_buffer.shape().NumAxes(), 3);
@@ -84,10 +63,10 @@ void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_i
 
 }  // namespace
 
-class ImageTargerResizeKernel final : public user_op::OpKernel {
+class ImageTargetResizeKernel final : public user_op::OpKernel {
  public:
-  ImageTargerResizeKernel() = default;
-  ~ImageTargerResizeKernel() = default;
+  ImageTargetResizeKernel() = default;
+  ~ImageTargetResizeKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -125,7 +104,7 @@ class ImageTargerResizeKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("image_target_resize")
-    .SetCreateFn<ImageTargerResizeKernel>()
+    .SetCreateFn<ImageTargetResizeKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const auto* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const auto* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);

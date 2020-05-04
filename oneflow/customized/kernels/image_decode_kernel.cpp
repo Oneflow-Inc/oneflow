@@ -1,5 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/customized/image/image_util.h"
 #include <opencv2/opencv.hpp>
