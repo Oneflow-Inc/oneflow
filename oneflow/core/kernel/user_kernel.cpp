@@ -431,9 +431,18 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   kernel_.reset(kernel_reg_val->create_fn());
 }
 
+void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (!kernel_conf().need_do_shape()) { return; }
+  UserKernelInferContext infer_ctx(nullptr, kernel_conf());
+  infer_ctx.UpdateArg2Tenosr(BnInOp2Blob);
+  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.GetOpInferContext());
+  if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
+  kernel_->InferShape(&infer_ctx);
+}
+
 std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerModelForward(
     const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
