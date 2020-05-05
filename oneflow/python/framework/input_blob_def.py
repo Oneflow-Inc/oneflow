@@ -7,7 +7,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
@@ -200,10 +200,10 @@ class MirroredTensorListDef(ArgBlobDef):
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    num_sub_lbi = g_func_ctx.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
     for i in range(num_sub_lbi):
-        sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
+        sub_lbi = g_func_ctx.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
         sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
 
 def _MakePushNdarrayCallback(ndarray):

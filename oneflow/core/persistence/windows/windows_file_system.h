@@ -20,11 +20,9 @@ class WindowsFileSystem final : public FileSystem {
   void NewRandomAccessFile(const std::string& fname,
                            std::unique_ptr<RandomAccessFile>* result) override;
 
-  void NewWritableFile(const std::string& fname,
-                       std::unique_ptr<WritableFile>* result) override;
+  void NewWritableFile(const std::string& fname, std::unique_ptr<WritableFile>* result) override;
 
-  void NewAppendableFile(const std::string& fname,
-                         std::unique_ptr<WritableFile>* result) override;
+  void NewAppendableFile(const std::string& fname, std::unique_ptr<WritableFile>* result) override;
 
   bool FileExists(const std::string& fname) override;
 
@@ -38,27 +36,26 @@ class WindowsFileSystem final : public FileSystem {
 
   uint64_t GetFileSize(const std::string& fname) override;
 
-  void RenameFile(const std::string& old_name,
-                  const std::string& new_name) override;
+  void RenameFile(const std::string& old_name, const std::string& new_name) override;
 
   bool IsDirectory(const std::string& fname) override;
 
   static std::wstring Utf8ToWideChar(const std::string& utf8str) {
-    int size_required = MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(),
-                                            (int)utf8str.size(), NULL, 0);
+    int size_required =
+        MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(), (int)utf8str.size(), NULL, 0);
     std::wstring ws_translated_str(size_required, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(), (int)utf8str.size(),
-                        &ws_translated_str[0], size_required);
+    MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(), (int)utf8str.size(), &ws_translated_str[0],
+                        size_required);
     return ws_translated_str;
   }
 
   static std::string WideCharToUtf8(const std::wstring& wstr) {
     if (wstr.empty()) return std::string();
-    int size_required = WideCharToMultiByte(
-        CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
+    int size_required =
+        WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
     std::string utf8_translated_str(size_required, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(),
-                        &utf8_translated_str[0], size_required, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), &utf8_translated_str[0],
+                        size_required, NULL, NULL);
     return utf8_translated_str;
   }
 
