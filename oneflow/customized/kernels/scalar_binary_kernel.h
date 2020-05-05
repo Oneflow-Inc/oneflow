@@ -54,10 +54,10 @@ struct RightScalarBinaryCalculation {
 };
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
-class LeftScalarBinary final : public user_op::OpKernel {
+class LeftScalarBinaryKernel final : public user_op::OpKernel {
  public:
-  LeftScalarBinary() = default;
-  ~LeftScalarBinary() = default;
+  LeftScalarBinaryKernel() = default;
+  ~LeftScalarBinaryKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -69,13 +69,13 @@ class LeftScalarBinary final : public user_op::OpKernel {
 };
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
-using CommutativeScalarBinary = LeftScalarBinary<binary_func, device_type, T>;
+using CommutativeScalarBinaryKernel = LeftScalarBinaryKernel<binary_func, device_type, T>;
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
-class RightScalarBinary final : public user_op::OpKernel {
+class RightScalarBinaryKernel final : public user_op::OpKernel {
  public:
-  RightScalarBinary() = default;
-  ~RightScalarBinary() = default;
+  RightScalarBinaryKernel() = default;
+  ~RightScalarBinaryKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -89,7 +89,7 @@ class RightScalarBinary final : public user_op::OpKernel {
 #define REGISTER_SCALAR_BINARY_KERNEL(op_name, kernel_type, func_name, kernel_device_type, dtype) \
   REGISTER_USER_KERNEL(op_name)                                                                   \
       .SetCreateFn<                                                                               \
-          kernel_type##ScalarBinary<func_name, DeviceType::k##kernel_device_type, dtype>>()       \
+          kernel_type##ScalarBinaryKernel<func_name, DeviceType::k##kernel_device_type, dtype>>() \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                \
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);               \
         return ctx.device_type() == DeviceType::k##kernel_device_type                             \
