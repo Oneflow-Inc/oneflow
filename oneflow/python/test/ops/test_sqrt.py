@@ -5,7 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgDict
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 from test_util import CompareOpWithTensorFlow
 

@@ -7,7 +7,7 @@ import tensorflow as tf
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -69,16 +69,16 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     of_out = ActivationJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
+        x = tf.Variable(LoadSaveData("x"))
         tf_out = tf_activation_map[activation_type](x)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = LoadSaveData("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     rtol = 1e-3 if activation_type is "gelu" else 1e-5
     atol = 1e-3 if activation_type is "gelu" else 1e-5
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol, atol)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol, atol
+        LoadSaveData("x_diff"), tf_x_diff.numpy(), rtol, atol
     )
 
 def test_activations(test_case):

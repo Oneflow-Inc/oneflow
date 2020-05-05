@@ -7,6 +7,7 @@ from collections.abc import Iterable
 import oneflow as flow
 import tensorflow as tf
 
+g_watch_to_dict = {}
 
 def GenCartesianProduct(sets):
     assert isinstance(sets, Iterable)
@@ -26,34 +27,16 @@ def GenArgDict(arg_dict):
     return [dict(zip(arg_dict.keys(), x)) for x in GenArgList(arg_dict)]
 
 
-# 1.define global variable
-# save_to_dict = {}
-# 2. change func Save
-# def Save(name):
-#     global save_to_dict
-
-#     def _save(x):
-#         save_to_dict[name] = x
-#     return _save
-# 3. define func loadSaveData
-# def loadSaveData(name):
-#     return save_to_dict.get(name)
-# 4. Delete GetSavePath  and delete all from test_util import GetSavePath
-# 5. Add from test_util import loadSaveData to all files
-# 6. Test all.
-
-def GetSavePath():
-    return "./log/op_unit_test/"
+def LoadSaveData(name):
+    return g_watch_to_dict.get(name).ndarray()
 
 
 # Save func for flow.watch
 def Save(name):
-    path = GetSavePath()
-    if not os.path.isdir(path):
-        os.makedirs(path)
+    global g_watch_to_dict
 
     def _save(x):
-        np.save(os.path.join(path, name), x.ndarray())
+        g_watch_to_dict[name] = x
 
     return _save
 
@@ -89,7 +72,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(x).get().ndarray()
-    x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+    x_diff = LoadSaveData("x_diff")
     return y, x_diff
 
 

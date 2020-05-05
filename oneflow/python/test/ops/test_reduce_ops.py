@@ -6,7 +6,7 @@ from collections import OrderedDict
 import oneflow.core.common.data_type_pb2 as data_type_util
 
 from test_util import GenArgList
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 
 

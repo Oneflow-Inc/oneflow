@@ -5,7 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -63,8 +63,8 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     of_out = ScalarAddByTensorJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        y = tf.Variable(np.load(os.path.join(GetSavePath(), "y.npy")))
+        x = tf.Variable(LoadSaveData("x"))
+        y = tf.Variable(LoadSaveData("y"))
         if case == "add":
             tf_out = x + y
         elif case == "sub":
@@ -73,16 +73,16 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
             tf_out = x * y
         elif case == "div":
             tf_out = x / y
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = LoadSaveData("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        LoadSaveData("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
+        LoadSaveData("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 def test_add(test_case):

@@ -4,7 +4,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 
 def TestMultiInput(x1, x2):
@@ -52,10 +52,10 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
     check_point = flow.train.CheckPoint()
     check_point.init()
     out = TestMultiInputJob().get()
-    x1_diff = np.load(os.path.join(GetSavePath(), "x1_diff.npy"))
-    x2_diff = np.load(os.path.join(GetSavePath(), "x2_diff.npy"))
+    x1_diff = LoadSaveData("x1_diff")
+    x2_diff = LoadSaveData("x2_diff")
 
-    expect_out = np.load(os.path.join(GetSavePath(), "x1.npy"))
+    expect_out = LoadSaveData("x1")
     expect_x1_diff = np.ones(shape, dtype=np.float32)
     expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
     #print(x1_diff, x2_diff)

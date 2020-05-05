@@ -5,7 +5,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
-from test_util import GetSavePath
+from test_util import LoadSaveData
 from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -53,14 +53,14 @@ def compare_with_tensorflow(device_type, input_shape, output_shape):
     of_out = ReshapeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
+        x = tf.Variable(LoadSaveData("x"))
         tf_out = tf.reshape(x, output_shape)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = LoadSaveData("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        LoadSaveData("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 
