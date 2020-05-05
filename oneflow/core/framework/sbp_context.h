@@ -42,7 +42,7 @@ class SbpContext {
 
   SbpSignatureList* sbp_sig_list() { return sbp_sig_list_; }
 
-  UserOpSbpSignatureBuilder Add() {
+  UserOpSbpSignatureBuilder NewBuilder() {
     return UserOpSbpSignatureBuilder(sbp_sig_list_->mutable_sbp_signature()->Add());
   }
 
