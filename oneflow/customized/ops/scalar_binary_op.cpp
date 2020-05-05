@@ -64,15 +64,14 @@ REGISTER_USER_OP_GRAD("left_scalar_sub")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("scalar_mul")
-                .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("y")
-                .Attr("has_int_operand", true)
-                .Attr<int64_t>("int_operand", -1)
-                .Attr("has_float_operand", false)
-                .Attr<double>("float_operand", 0.)
-                .Build();
+        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_mul")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Output("y")
+                                                 .Attr("has_int_operand", true)
+                                                 .Attr<int64_t>("int_operand", -1)
+                                                 .Attr("has_float_operand", false)
+                                                 .Attr<double>("float_operand", 0.)
+                                                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
         AddOp(grad_op);
       }
@@ -107,31 +106,28 @@ REGISTER_USER_OP_GRAD("left_scalar_div")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder pow_builder(op.op_name() + "_grad_sqaure");
-        user_op::UserOpConfWrapper square_op =
-            pow_builder.Op("multiply")
-                .Input("in_0", op.input("x", 0))
-                .Input("in_1", op.input("x", 0))
-                .Output("out")
-                .Build();
+        user_op::UserOpConfWrapper square_op = pow_builder.Op("multiply")
+                                                   .Input("in_0", op.input("x", 0))
+                                                   .Input("in_1", op.input("x", 0))
+                                                   .Output("out")
+                                                   .Build();
         AddOp(square_op);
         user_op::UserOpConfWrapperBuilder div_builder(op.op_name() + "_grad_div");
-        user_op::UserOpConfWrapper div_op =
-            div_builder.Op("left_scalar_div")
-                .Input("x", square_op.output("out", 0))
-                .Attr("has_int_operand", true)
-                .Attr<int64_t>("int_operand", -1)
-                .Attr("has_float_operand", false)
-                .Attr<double>("float_operand", 0.)
-                .Output("y")
-                .Build();
+        user_op::UserOpConfWrapper div_op = div_builder.Op("left_scalar_div")
+                                                .Input("x", square_op.output("out", 0))
+                                                .Attr("has_int_operand", true)
+                                                .Attr<int64_t>("int_operand", -1)
+                                                .Attr("has_float_operand", false)
+                                                .Attr<double>("float_operand", 0.)
+                                                .Output("y")
+                                                .Build();
         AddOp(div_op);
-        user_op::UserOpConfWrapperBuilder multiply_builder(op.op_name() + "_grad_mul");
-        user_op::UserOpConfWrapper mul_op =
-            multiply_builder.Op("multiply")
-                .Input("in_0", div_op.output("y", 0))
-                .Input("in_1", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("out")
-                .Build();
+        user_op::UserOpConfWrapperBuilder mul_builder(op.op_name() + "_grad_mul");
+        user_op::UserOpConfWrapper mul_op = mul_builder.Op("multiply")
+                                                .Input("in_0", div_op.output("y", 0))
+                                                .Input("in_1", op.GetGradTensorWithOpOutput("y", 0))
+                                                .Output("out")
+                                                .Build();
         AddOp(div_op);
         op.BindGradTensorWithOpInput(div_op.output("out", 0), "x", 0);
       }
