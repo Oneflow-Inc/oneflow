@@ -22,6 +22,7 @@ class BroadcastLogicalBinaryKernel final : public user_op::OpKernel {
 
     f(device_type, x, y);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define LOGICAL_MATH_TYPE_SEQ                   \
@@ -33,16 +34,17 @@ class BroadcastLogicalBinaryKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ("NotEqual", NE)      \
   OF_PP_MAKE_TUPLE_SEQ("LogicalAnd", AND)
 
+
 #define REGISTER_BROADCAST_BINARY_KERNEL(logical_math_type, device, T_dtype, K_dtype)                        \
   REGISTER_USER_KERNEL("broadcast_binary")                                                                   \
-  .SetCreateFn<BroadcastLogicalBinaryKernel<  device, OF_PP_PAIR_FIRST(T_dtype), OF_PP_PAIR_FIRST(K_dtype),                                                               \
-      &NdarrayUtil<device_type, T>::Broadcast##OF_PP_PAIR_SECOND(logical_math_type)                           \
+  .SetCreateFn<BroadcastLogicalBinaryKernel<device, OF_PP_PAIR_FIRST(T_dtype), OF_PP_PAIR_FIRST(K_dtype),                                                               \
+      &NdarrayUtil<device, OF_PP_PAIR_FIRST(T_dtype)>::BroadcastGT                           \
            >>()                                  \
   .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                               \
       const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);                            \
       const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);                            \
-      const std::string binary_math_type = ctx->GetAttr("binary_math_type");                                   \
-      user_op::TensorDesc* z_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);                                  \
+      const std::string binary_math_type = ctx.GetAttr("binary_math_type");                                   \
+      const user_op::TensorDesc* z_desc = ctx.TensorDesc4ArgNameAndIndex("z", 0);                                  \
       return ctx.device_type() == device                                                                     \
              && x_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype)                                            \
              && y_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype)                                            \
