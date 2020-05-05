@@ -15,7 +15,6 @@ __global__ void LeftScalarBinaryGpu(const T* x_ptr, const T scalar_operand, T* y
                                     const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
 }
-}  // namespace
 
 template<template<typename> class binary_func, typename T>
 struct LeftScalarBinaryCalculation<binary_func, DeviceType::kGPU, T> {
@@ -33,6 +32,7 @@ struct RightScalarBinaryCalculation<binary_func, DeviceType::kGPU, T> {
                     n);
   }
 };
+}  // namespace
 
 #define ARITHMETIC_DATA_TYPE_SEQ_WITHOUT_INT8     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \

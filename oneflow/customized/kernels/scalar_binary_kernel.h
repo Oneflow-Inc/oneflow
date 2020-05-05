@@ -6,6 +6,7 @@
 
 namespace oneflow {
 
+namespace {
 template<typename T>
 const T* GetXPtr(user_op::KernelComputeContext* ctx) {
   const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -52,6 +53,7 @@ struct RightScalarBinaryCalculation {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
                      const int64_t n);
 };
+}  // namespace
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
 class LeftScalarBinaryKernel final : public user_op::OpKernel {

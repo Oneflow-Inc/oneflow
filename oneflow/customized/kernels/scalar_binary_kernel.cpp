@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<template<typename> class binary_func, typename T>
 struct LeftScalarBinaryCalculation<binary_func, DeviceType::kCPU, T> {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
@@ -17,6 +19,7 @@ struct RightScalarBinaryCalculation<binary_func, DeviceType::kCPU, T> {
     for (int64_t i = 0; i < n; ++i) { y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
   }
 };
+}  // namespace
 
 #define ARITHMETIC_DATA_TYPE_SEQ_WITHOUT_INT8     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \

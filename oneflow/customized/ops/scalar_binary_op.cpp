@@ -34,21 +34,17 @@ Maybe<void> GetSbp(user_op::SbpContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-// TODO: use JUST(GetSbp(ctx, EXTRA_GET_SBP_FN));
-#define REGISTER_SCALAR_BINARY_USER_OP(OP_NAME, EXTRA_SBP_SIG)   \
-  REGISTER_USER_OP(OP_NAME)                                      \
-      .Input("x")                                                \
-      .Output("y")                                               \
-      .Attr("has_int_operand", UserOpAttrType::kAtBool)          \
-      .Attr("has_float_operand", UserOpAttrType::kAtBool)        \
-      .Attr("int_operand", UserOpAttrType::kAtInt64)             \
-      .Attr("float_operand", UserOpAttrType::kAtDouble)          \
-      .SetTensorDescInferFn(TensorDescInfer)                     \
-      .SetBatchAxisInferFn(BatchAxisInfer)                       \
-      .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> { \
-        GetSbp<EXTRA_SBP_SIG>(ctx);                              \
-        return Maybe<void>::Ok();                                \
-      });
+#define REGISTER_SCALAR_BINARY_USER_OP(op_name, extra_sbp_sig) \
+  REGISTER_USER_OP(op_name)                                    \
+      .Input("x")                                              \
+      .Output("y")                                             \
+      .Attr("has_int_operand", UserOpAttrType::kAtBool)        \
+      .Attr("has_float_operand", UserOpAttrType::kAtBool)      \
+      .Attr("int_operand", UserOpAttrType::kAtInt64)           \
+      .Attr("float_operand", UserOpAttrType::kAtDouble)        \
+      .SetTensorDescInferFn(TensorDescInfer)                   \
+      .SetBatchAxisInferFn(BatchAxisInfer)                     \
+      .SetGetSbpFn(GetSbp<extra_sbp_sig>);
 
 REGISTER_SCALAR_BINARY_USER_OP("scalar_add", NoExtraSbpSignature);
 // TODO: add sub op
