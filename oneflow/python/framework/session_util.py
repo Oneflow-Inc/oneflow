@@ -114,7 +114,7 @@ class Session(object):
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
-    def LazyRun(self, function_desc, job_func, *arg):
+    def LazyRun(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
