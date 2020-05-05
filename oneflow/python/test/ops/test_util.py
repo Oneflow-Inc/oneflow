@@ -27,7 +27,10 @@ def GenArgDict(arg_dict):
 
 
 def GetSavePath():
-    return "./log/op_unit_test/"
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return "./log/op_unit_test_user_op/"
+    else:
+        return "./log/op_unit_test/"
 
 
 # Save func for flow.watch
