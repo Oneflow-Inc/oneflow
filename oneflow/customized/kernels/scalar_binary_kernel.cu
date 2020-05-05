@@ -11,17 +11,9 @@ __global__ void RightScalarBinaryGpu(const T* x_ptr, const T scalar_operand, T* 
   CUDA_1D_KERNEL_LOOP(i, n) { y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
 }
 template<template<typename> class binary_func, typename T>
-__global__ void RightScalarBinaryGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
-}
-template<template<typename> class binary_func, typename T>
 __global__ void LeftScalarBinaryGpu(const T* x_ptr, const T scalar_operand, T* y_ptr,
                                     const int64_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) { y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
-}
-template<template<typename> class binary_func, typename T>
-__global__ void LeftScalarBinaryGpuInplace(T* x_ptr, const T scalar_operand, const int64_t n) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
 }
 }  // namespace
 
@@ -53,8 +45,8 @@ struct RightScalarBinaryCalculation<binary_func, DeviceType::kGPU, T> {
 OF_PP_FOR_EACH_TUPLE(REGISTER_ALL_GPU_SCALAR_BINARY_KERNELS, ARITHMETIC_DATA_TYPE_SEQ_WITHOUT_INT8)
 REGISTER_SCALAR_BINARY_KERNEL("scalar_add", Commutative, BinaryFuncAdd, GPU, int8_t)
 
-#define INSTANTIATE_ALL_GPU_SCALAR_BINARY_CAL(dtype, _) \
-  INSTANTIATE_ALL_SCALAR_BINARY_CAL(GPU, dtype)
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_ALL_GPU_SCALAR_BINARY_CAL, ARITHMETIC_DATA_TYPE_SEQ)
+#define INSTANTIATE_ALL_GPU_SCALAR_BINARY_CALS(dtype, _) \
+  INSTANTIATE_ALL_SCALAR_BINARY_CALS(GPU, dtype)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_ALL_GPU_SCALAR_BINARY_CALS, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
