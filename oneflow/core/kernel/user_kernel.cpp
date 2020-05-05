@@ -165,14 +165,14 @@ class UserKernelOpInferContext : public user_op::InferContext {
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_desc_) {
       const auto& arg_pair = pair.first;
-      std::unique_ptr<user_op::TensorDesc>& arg_tensor_desc = pair.second;
+      std::unique_ptr<user_op::TensorDesc>* arg_tensor_desc_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
-      if (arg_tensor_desc) {
-        arg_tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+      if (*arg_tensor_desc_ptr) {
+        (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
       } else {
-        arg_tensor_desc.reset(new user_op::TensorDesc());
-        FillTensorDescWithBlob(blob, arg_tensor_desc.get());
+        arg_tensor_desc_ptr->reset(new user_op::TensorDesc());
+        FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
       }
     }
   }
@@ -247,13 +247,13 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   void UpdateArg2Tensor(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
-      std::unique_ptr<user_op::Tensor>& arg_tensor = pair.second;
+      std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
-      if (arg_tensor) {
-        *arg_tensor = std::move(user_op::Tensor(blob));
+      if (*arg_tensor_ptr) {
+        *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
       } else {
-        arg_tensor.reset(new user_op::Tensor(blob));
+        arg_tensor_ptr->reset(new user_op::Tensor(blob));
       }
     }
   }
