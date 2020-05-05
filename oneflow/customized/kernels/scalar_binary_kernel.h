@@ -105,6 +105,8 @@ class RightScalarBinaryKernel final : public user_op::OpKernel {
 
 #define REGISTER_ALL_SCALAR_BINARY_KERNELS(device_type, dtype)                                \
   REGISTER_SCALAR_BINARY_KERNEL("scalar_add", Commutative, BinaryFuncAdd, device_type, dtype) \
+  REGISTER_SCALAR_BINARY_KERNEL("left_scalar_sub", Left, BinaryFuncSub, device_type, dtype)   \
+  REGISTER_SCALAR_BINARY_KERNEL("right_scalar_sub", Right, BinaryFuncSub, device_type, dtype)\
   REGISTER_SCALAR_BINARY_KERNEL("scalar_mul", Commutative, BinaryFuncMul, device_type, dtype) \
   REGISTER_SCALAR_BINARY_KERNEL("left_scalar_div", Left, BinaryFuncDiv, device_type, dtype)   \
   REGISTER_SCALAR_BINARY_KERNEL("right_scalar_div", Right, BinaryFuncDiv, device_type, dtype)

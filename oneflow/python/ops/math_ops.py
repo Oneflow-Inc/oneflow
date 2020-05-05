@@ -47,10 +47,8 @@ def add_n(inputs, name=None):
 
 @oneflow_export("math.subtract")
 def subtract(x, y, name=None):
-    if isinstance(x, (int, float)):
-        return scalar_add(-1 * y, x, name)
-    elif isinstance(y, (int, float)):
-        return scalar_add(x, -1 * y, name)
+    if isinstance(x, (int, float)) or isinstance(y, (int, float)):
+        return scalar_sub(x, y)
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
@@ -80,10 +78,8 @@ def multiply(x, y, name=None):
 
 @oneflow_export("math.divide")
 def divide(x, y, name=None):
-    if isinstance(x, (int, float)):
-        raise NotImplementedError
-    elif isinstance(y, (int, float)):
-        raise NotImplementedError
+    if isinstance(x, (int, float)) or isinstance(y, (int, float)):
+        return scalar_div(x, y)
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
@@ -93,6 +89,21 @@ def divide(x, y, name=None):
         return scalar_div_by_tensor(x, y, name)
     else:
         return broadcast_div(x, y, name)
+
+
+def set_scalar_binary_operand(builder, operand):
+    if isinstance(operand, int):
+        (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
+            .SetAttr("has_float_operand", False, "AttrTypeBool")
+            .SetAttr("int_operand", operand, "AttrTypeInt64")
+            .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+    elif isinstance(operand, float):
+        (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
+            .SetAttr("has_float_operand", True, "AttrTypeBool")
+            .SetAttr("int_operand", 0, "AttrTypeInt64")
+            .SetAttr("float_operand", operand, "AttrTypeDouble"))
+    else:
+        raise NotImplementedError
 
 
 @oneflow_export("math.mod")
@@ -117,16 +128,9 @@ def scalar_add(x, operand, name=None):
             .Input("x", [x])
             .Output("y")
             )
-        if isinstance(operand, int):
-            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
-                .SetAttr("has_float_operand", False, "AttrTypeBool")
-                .SetAttr("int_operand", operand, "AttrTypeInt64")
-                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
-        elif isinstance(operand, float):
-            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
-                .SetAttr("has_float_operand", True, "AttrTypeBool")
-                .SetAttr("int_operand", 0, "AttrTypeInt64")
-                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+
+        set_scalar_binary_operand(builder, operand)
+
         return (builder
             .Build()
             .RemoteBlobList()[0])
@@ -210,6 +214,38 @@ def broadcast_sub(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
+def scalar_sub(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        raise NotImplementedError
+    if isinstance(x, (int, float)):
+        assert not isinstance(y, (int, float))
+        tensor, scalar = y, x
+        if name is None:
+            name = id_util.UniqueStr("LeftScalarSub_")
+        op_name = "left_scalar_sub"
+    elif isinstance(y, (int, float)):
+        assert not isinstance(x, (int, float))
+        tensor, scalar = x, y
+        if name is None:
+            name = id_util.UniqueStr("RightScalarSub_")
+        op_name = "right_scalar_sub"
+    else:
+        raise RuntimeError("no scalar operand")
+
+    builder = (flow.user_op_builder(name)
+        .Op(op_name)
+        .Input("x", [tensor])
+        .Output("y"))
+
+    set_scalar_binary_operand(builder, scalar)
+
+    return (builder
+        .Build()
+        .RemoteBlobList()[0])
+
+
+
 def scalar_sub_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -264,19 +300,12 @@ def scalar_mul(x, operand, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         builder = (flow.user_op_builder(name)
             .Op("scalar_mul")
-            .Input("in", [x])
-            .Output("out")
+            .Input("x", [x])
+            .Output("y")
             )
-        if isinstance(operand, int):
-            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
-                .SetAttr("has_float_operand", False, "AttrTypeBool")
-                .SetAttr("int_operand", operand, "AttrTypeInt64")
-                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
-        elif isinstance(operand, float):
-            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
-                .SetAttr("has_float_operand", True, "AttrTypeBool")
-                .SetAttr("int_operand", 0, "AttrTypeInt64")
-                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+
+        set_scalar_binary_operand(builder, operand)
+
         return (builder
             .Build()
             .RemoteBlobList()[0])
@@ -326,6 +355,37 @@ def broadcast_div(x, y, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+def scalar_div(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        raise NotImplementedError
+    if isinstance(x, (int, float)):
+        assert not isinstance(y, (int, float))
+        tensor, scalar = y, x
+        if name is None:
+            name = id_util.UniqueStr("LeftScalarDiv_")
+        op_name = "left_scalar_div"
+    elif isinstance(y, (int, float)):
+        assert not isinstance(x, (int, float))
+        tensor, scalar = x, y
+        if name is None:
+            name = id_util.UniqueStr("RightScalarDiv_")
+        op_name = "right_scalar_div"
+    else:
+        raise RuntimeError("no scalar operand")
+
+    builder = (flow.user_op_builder(name)
+        .Op(op_name)
+        .Input("x", [tensor])
+        .Output("y"))
+
+    set_scalar_binary_operand(builder, scalar)
+
+    return (builder
+        .Build()
+        .RemoteBlobList()[0])
+
 
 def scalar_div_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
