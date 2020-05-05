@@ -73,6 +73,7 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 }
 
 void JobDesc::Init() {
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
 #ifndef WITH_RDMA
   CHECK_NOTNULL(Global<ResourceDesc>::Get());
   CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
@@ -80,20 +81,31 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
 #endif  // WITH_CUDA
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
   int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
   if (job_conf_.has_train_conf()) {
+    LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
+    LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
     piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
+    LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
     piece_exp = std::min(piece_exp, job_conf_.total_batch_num() * NumOfPiecesInBatch());
+    LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
   } else {
+    LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
     if (piece_exp == -1) { piece_exp = 19; }
   }
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
   job_conf_.mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
 #ifndef WITH_CUDA
   CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
 #endif
   CheckFunctionConfig(job_conf_);
+  LOG(ERROR) << __FUNCTION__ << ":" << __LINE__;
 }
 
 const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
