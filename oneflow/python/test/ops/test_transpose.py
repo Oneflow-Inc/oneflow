@@ -4,8 +4,7 @@ import numpy as np
 import tensorflow as tf
 from collections import OrderedDict
 from test_util import GenArgList
-from test_util import LoadSaveData
-from test_util import Save
+import test_global_storage
 
 def compare_with_tensorflow(device_type, input_shape, perm):
     assert device_type in ["gpu", "cpu"]
@@ -31,10 +30,10 @@ def compare_with_tensorflow(device_type, input_shape, perm):
             loss = flow.transpose(x, perm)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.set("x"))
+            flow.watch_diff(x, test_global_storage.set("x_diff"))
+            flow.watch(loss, test_global_storage.set("loss"))
+            flow.watch_diff(loss, test_global_storage.set("loss_diff"))
 
             return loss
 
@@ -44,13 +43,13 @@ def compare_with_tensorflow(device_type, input_shape, perm):
     of_out = TransposeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(LoadSaveData("x"))
+        x = tf.Variable(test_global_storage.getToNdarray("x"))
         tf_out = tf.transpose(x, perm)
-    loss_diff = LoadSaveData("loss_diff")
+    loss_diff = test_global_storage.getToNdarray("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(LoadSaveData("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(test_global_storage.getToNdarray("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
 
 
 def test_transpose(test_case):

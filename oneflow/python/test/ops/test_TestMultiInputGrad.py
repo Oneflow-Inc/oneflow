@@ -4,8 +4,8 @@ import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
-from test_util import LoadSaveData
-from test_util import Save
+
+import test_global_storage
 
 def TestMultiInput(x1, x2):
     return flow.user_op_builder("my_test_multi_input").Op("TestMultiInput")\
@@ -43,19 +43,19 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
             loss = TestMultiInput(x1, x2)
             flow.losses.add_loss(loss)
 
-            flow.watch(x1, Save("x1"))
-            flow.watch_diff(x1, Save("x1_diff"))
-            flow.watch(x2, Save("x2"))
-            flow.watch_diff(x2, Save("x2_diff"))
+            flow.watch(x1, test_global_storage.set("x1"))
+            flow.watch_diff(x1, test_global_storage.set("x1_diff"))
+            flow.watch(x2, test_global_storage.set("x2"))
+            flow.watch_diff(x2, test_global_storage.set("x2_diff"))
             return loss
 
     check_point = flow.train.CheckPoint()
     check_point.init()
     out = TestMultiInputJob().get()
-    x1_diff = LoadSaveData("x1_diff")
-    x2_diff = LoadSaveData("x2_diff")
+    x1_diff = test_global_storage.getToNdarray("x1_diff")
+    x2_diff = test_global_storage.getToNdarray("x2_diff")
 
-    expect_out = LoadSaveData("x1")
+    expect_out = test_global_storage.getToNdarray("x1")
     expect_x1_diff = np.ones(shape, dtype=np.float32)
     expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
     #print(x1_diff, x2_diff)

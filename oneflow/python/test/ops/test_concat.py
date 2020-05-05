@@ -5,8 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import LoadSaveData
-from test_util import Save
+import test_global_storage
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -41,12 +40,12 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
             loss = flow.concat([x, y], axis)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(y, Save("y"))
-            flow.watch_diff(y, Save("y_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.set("x"))
+            flow.watch_diff(x, test_global_storage.set("x_diff"))
+            flow.watch(y, test_global_storage.set("y"))
+            flow.watch_diff(y, test_global_storage.set("y_diff"))
+            flow.watch(loss, test_global_storage.set("loss"))
+            flow.watch_diff(loss, test_global_storage.set("loss_diff"))
 
             return loss
 
@@ -56,19 +55,19 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
     of_out = ConcatJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(LoadSaveData("x"))
-        y = tf.Variable(LoadSaveData("y"))
+        x = tf.Variable(test_global_storage.getToNdarray("x"))
+        y = tf.Variable(test_global_storage.getToNdarray("y"))
         tf_out = tf.concat([x, y], axis)
-    loss_diff = LoadSaveData("loss_diff")
+    loss_diff = test_global_storage.getToNdarray("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        LoadSaveData("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.getToNdarray("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
-        LoadSaveData("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.getToNdarray("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 

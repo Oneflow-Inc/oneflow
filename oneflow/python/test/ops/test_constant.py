@@ -5,8 +5,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from test_util import GenArgList
-from test_util import LoadSaveData
-from test_util import Save
+import test_global_storage
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

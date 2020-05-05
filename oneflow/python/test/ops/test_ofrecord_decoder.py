@@ -10,7 +10,6 @@ import tempfile
 import oneflow as flow
 import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
-from test_util import Save
 
 
 def get_temp_dir():
