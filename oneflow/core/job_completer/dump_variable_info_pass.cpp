@@ -17,9 +17,10 @@ void DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job_builde
   const std::string sep = "\t";
   auto log_stream =
       TeePersistentLogStream::Create("variable_table_" + std::to_string(GlobalJobDesc().job_id()));
-  (*log_stream) << "id" << sep << "name" << sep << "device_type" << sep << "parallel_num"
-                << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt"
-                << "size";
+  (*log_stream) << "id" << sep << "name" << sep << "device_type" << sep << "parallel_num" << sep
+                << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt" << sep
+                << "size"
+                << "\n";
   op_graph.TopoForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
