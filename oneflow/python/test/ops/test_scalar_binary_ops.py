@@ -14,12 +14,15 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type):
+def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type, test_sbp=False):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
+    if test_sbp:
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        flow.config.gpu_device_num(2)
     @flow.function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
@@ -31,7 +34,9 @@ def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type):
                 loss = flow_op(x, operand)
             flow.losses.add_loss(loss)
 
-            flow.watch_diff(x, Save("x_diff"))
+            if not test_sbp:
+                # watch_diff doesn't work on multiple gpus
+                flow.watch_diff(x, Save("x_diff"))
 
             return loss
 
@@ -39,7 +44,10 @@ def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(x).get().ndarray()
-    x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+    if test_sbp:
+        x_diff = None
+    else:
+        x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
     return y, x_diff
 
 
@@ -72,7 +80,7 @@ def CompareScalarBinaryOpWithTensorFlow(device_type, flow_op, tf_op, input_shape
     )
 
 
-def GenerateTest(flow_op, tf_op, op_types):
+def GenerateTfComparisonTest(flow_op, tf_op, op_types):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict['flow_op'] = [flow_op]
@@ -84,22 +92,56 @@ def GenerateTest(flow_op, tf_op, op_types):
         CompareScalarBinaryOpWithTensorFlow(**arg)
 
 
+def GenerateSbpTest(flow_op, op_types):
+    x = np.random.uniform(low=-10, high=10, size=(10, 10, 10)).astype(np.float32)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict['flow_op'] = [flow_op]
+    arg_dict['x'] = [x]
+    arg_dict['operand'] = [1, -1, 123.438512, -235328.8313, -0.2123, 0.423]
+    arg_dict['op_type'] = op_types
+    arg_dict['test_sbp'] = [True]
+    for arg in GenArgDict(arg_dict):
+        RunOneflowScalarBinaryOp(**arg)
+
+
 def test_scalar_add(test_case):
-    GenerateTest(flow.math.add, tf.math.add, ['commutative'])
+    GenerateTfComparisonTest(flow.math.add, tf.math.add, ['commutative'])
 
 
 def test_scalar_sub(test_case):
     if os.getenv("ENABLE_USER_OP") != 'True':
         return
-    GenerateTest(flow.math.subtract, tf.math.subtract, ['left', 'right'])
+    GenerateTfComparisonTest(flow.math.subtract, tf.math.subtract, ['left', 'right'])
 
 
 def test_scalar_mul(test_case):
-    GenerateTest(flow.math.multiply, tf.math.multiply, ['commutative'])
+    GenerateTfComparisonTest(flow.math.multiply, tf.math.multiply, ['commutative'])
 
 
 def test_scalar_div(test_case):
     if os.getenv("ENABLE_USER_OP") != 'True':
         return
     # the grad of left_scalar_div has not been implemented
-    GenerateTest(flow.math.divide, tf.math.divide, ['right'])
+    GenerateTfComparisonTest(flow.math.divide, tf.math.divide, ['right'])
+
+
+def test_scalar_add_sbp(test_case):
+    GenerateSbpTest(flow.math.add, ['commutative'])
+
+
+def test_scalar_sub_sbp(test_case):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        return
+    GenerateSbpTest(flow.math.subtract, ['left', 'right'])
+
+
+def test_scalar_mul_sbp(test_case):
+    GenerateSbpTest(flow.math.multiply, ['commutative'])
+
+
+def test_scalar_div_sbp(test_case):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        return
+    # the grad of left_scalar_div has not been implemented
+    GenerateSbpTest(flow.math.divide, ['right'])
