@@ -26,7 +26,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, 0, out->mut_dptr<T>());
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype, kernel_type)     \
