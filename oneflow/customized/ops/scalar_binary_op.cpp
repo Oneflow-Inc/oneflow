@@ -12,7 +12,7 @@ Maybe<void> BatchAxisInfer(user_op::BatchAxisContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddParallelSumSbpSignature(user_op::SbpContext *ctx) {
+Maybe<void> AddPartialSumSbpSignature(user_op::SbpContext *ctx) {
   SbpSignatureBuilder()
       .PartialSum(ctx->inputs())
       .PartialSum(ctx->outputs())
@@ -50,9 +50,9 @@ REGISTER_SCALAR_BINARY_USER_OP("scalar_add", NoExtraSbpSignature);
 // TODO: add sub op
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_left_scalar, NoExtraSbp);
 // REGISTER_SCALAR_BINARY_USER_OP(scalar_sub_right_scalar, NoExtraSbp);
-REGISTER_SCALAR_BINARY_USER_OP("scalar_mul", AddParallelSumSbpSignature);
+REGISTER_SCALAR_BINARY_USER_OP("scalar_mul", AddPartialSumSbpSignature);
 REGISTER_SCALAR_BINARY_USER_OP("left_scalar_div", NoExtraSbpSignature);
-REGISTER_SCALAR_BINARY_USER_OP("right_scalar_div", AddParallelSumSbpSignature);
+REGISTER_SCALAR_BINARY_USER_OP("right_scalar_div", AddPartialSumSbpSignature);
 
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
