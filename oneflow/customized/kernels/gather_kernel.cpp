@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+namespace user_op {
+
 Shape getFlatShape(const ShapeView& shape, int64_t axis) {
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
@@ -44,5 +46,7 @@ class GatherKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+
+}  // namespace user_op
 
 }  // namespace oneflow

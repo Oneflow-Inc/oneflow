@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+namespace user_op {
+
 template<DeviceType device_type, typename T, typename K>
 class UnsortedSegmentSumKernel final : public user_op::OpKernel {
  public:
@@ -21,7 +23,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
     UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, 0, out->mut_dptr<T>());
@@ -53,5 +55,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+}  // namespace user_op
 
 }  // namespace oneflow

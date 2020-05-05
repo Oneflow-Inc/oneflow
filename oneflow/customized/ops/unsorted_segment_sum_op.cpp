@@ -23,7 +23,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
                      data_shape->dim_vec().cbegin() + axis + segment_ids_shape->NumAxes(),
                      data_shape->dim_vec().end());
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("data", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -101,7 +101,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
         CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i + segment_ids_shape->NumAxes() - 1));
       }
 
-      //*out_shape = Shape(out_dim_vec);
+      *out_shape = *like_shape;
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
