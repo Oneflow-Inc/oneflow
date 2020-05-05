@@ -243,7 +243,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     return arg_tensor->mut_shape();
   }
 
-  user_op::InferContext* GetOpInferContext() override { return &op_infer_ctx_; }
+  user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
   const user_op::TensorDescInferFn& GetOpInferFn() override { return tensor_desc_infer_fn_; }
 
   void UpdateArg2Tensor(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
@@ -390,7 +390,7 @@ class UserKernel final : public Kernel {
     infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
     infer_cache_->UpdateCacheKey(infer_ctx_.get());
     if (!infer_cache_->IsCacheHit()) {
-      auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->GetOpInferContext());
+      auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->MutOpInferContext());
       if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
       kernel_->InferShape(infer_ctx_.get());
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
@@ -435,7 +435,7 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
   if (!kernel_conf().need_do_shape()) { return; }
   UserKernelInferContext infer_ctx(nullptr, kernel_conf());
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
-  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.GetOpInferContext());
+  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
   kernel_->InferShape(&infer_ctx);
 }
