@@ -229,14 +229,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
                                              int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
-    CHECK(arg_tensor != nullptr) << "Tenosr of arg (" << arg_name << "," << arg_index
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
     return arg_tensor->shape();
   }
   MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                              int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
-    CHECK(arg_tensor != nullptr) << "Tenosr of arg (" << arg_name << "," << arg_index
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
     return arg_tensor->mut_shape();
   }
@@ -244,7 +244,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   user_op::InferContext* GetOpInferContext() override { return &op_infer_ctx_; }
   const user_op::TensorDescInferFn& GetOpInferFn() override { return tensor_desc_infer_fn_; }
 
-  void UpdateArg2Tenosr(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  void UpdateArg2Tensor(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
       auto& arg_tensor = pair.second;
@@ -385,7 +385,7 @@ class UserKernel final : public Kernel {
 
   void ForwardShape(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    infer_ctx_->UpdateArg2Tenosr(BnInOp2Blob);
+    infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
     infer_cache_->UpdateCacheKey(infer_ctx_.get());
     if (!infer_cache_->IsCacheHit()) {
       auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->GetOpInferContext());
