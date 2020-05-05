@@ -74,6 +74,7 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 
 void JobDesc::Init() {
 #ifndef WITH_RDMA
+  CHECK_NOTNULL(Global<ResourceDesc>::Get());
   CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
 #ifndef WITH_CUDA

@@ -86,8 +86,14 @@ struct EmbeddedSkipListKey {
     KeyInitializer<std::is_scalar<T>::value>::Call(mut_key());
   }
 
-  const T& key() const { return *reinterpret_cast<const T*>(&key_buffer_[0]); }
-  T* mut_key() { return reinterpret_cast<T*>(&key_buffer_[0]); }
+  const T& key() const {
+    const T* __attribute__((__may_alias__)) ptr = reinterpret_cast<const T*>(&key_buffer_[0]);
+    return *ptr;
+  }
+  T* mut_key() {
+    T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(&key_buffer_[0]);
+    return ptr;
+  }
 
   void CheckEmpty() const { return link_.CheckNullptrEmpty(); }
 

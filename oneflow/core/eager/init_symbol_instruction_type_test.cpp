@@ -21,7 +21,7 @@ namespace test {
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 template<typename T, typename SerializedT>
-void TestConstObjectInstructionType(const std::string& instr_type_name) {
+void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", instr_type_name});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
@@ -43,12 +43,14 @@ void TestConstObjectInstructionType(const std::string& instr_type_name) {
   ASSERT_TRUE(mirrored_object->Has<vm::ObjectWrapper<T>>());
 }
 
-TEST(ConstObjectInstructionType, job_desc) {
-  TestConstObjectInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
+TEST(InitSymbolInstructionType, job_desc) {
+  vm::TestResourceDescScope resource_scope(1, 1);
+  TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
 }
 
-TEST(ConstObjectInstructionType, operator_conf) {
-  TestConstObjectInstructionType<OperatorConf, OperatorConf>("InitOperatorConfSymbol");
+TEST(InitSymbolInstructionType, operator_conf) {
+  vm::TestResourceDescScope resource_scope(1, 1);
+  TestInitSymbolInstructionType<OperatorConf, OperatorConf>("InitOperatorConfSymbol");
 }
 
 }  // namespace test
