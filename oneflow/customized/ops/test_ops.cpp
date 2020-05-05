@@ -39,7 +39,6 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       std::cout << " before add" << std::endl;
       // interface 1
       ctx->NewBuilder()
@@ -54,10 +53,6 @@ REGISTER_USER_OP("ccrelu")
       std::cout << " add s(0) using inputs/outputs vec" << std::endl;
       PrintSbpLog(ctx->sbp_sig_list());
 
-      // interface 3
-      ctx->AddSplitSbpSignList(tensor.shape().NumAxes());
-      std::cout << " add s list " << std::endl;
-      PrintSbpLog(ctx->sbp_sig_list());
       /*
       SbpSignatureBuilder()
           .Split(ctx->inputs(), 0)

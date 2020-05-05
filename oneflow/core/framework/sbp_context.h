@@ -46,8 +46,6 @@ class SbpContext {
     return UserOpSbpSignatureBuilder(sbp_sig_list_->mutable_sbp_signature()->Add());
   }
 
-  void AddSplitSbpSignList(int64_t num_axes);
-
   DeviceType device_type() const { return device_type_; }
   int64_t parallel_num() const { return parallel_num_; }
 

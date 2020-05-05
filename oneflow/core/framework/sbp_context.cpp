@@ -61,23 +61,6 @@ UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::PartialSum(
   return std::move(*this);
 }
 
-void SbpContext::AddSplitSbpSignList(int64_t num_axes) {
-  for (int64_t i = 0; i < num_axes; ++i) {
-    SbpSignature sbp_sign;
-    for (const auto pair : inputs()) {
-      (*sbp_sign.mutable_bn_in_op2sbp_parallel())[GenRepeatedBn(pair.first, pair.second)]
-          .mutable_split_parallel()
-          ->set_axis(i);
-    }
-    for (const auto pair : outputs()) {
-      (*sbp_sign.mutable_bn_in_op2sbp_parallel())[GenRepeatedBn(pair.first, pair.second)]
-          .mutable_split_parallel()
-          ->set_axis(i);
-    }
-    *(sbp_sig_list_->mutable_sbp_signature()->Add()) = sbp_sign;
-  }
-}
-
 Maybe<void> GetSbpFnUtil::MirrorSplitAtDim0(SbpContext* ctx) {
   SbpSignatureBuilder()
       .Split(ctx->inputs(), 0)
