@@ -27,8 +27,8 @@ class ArgWhereOp final : public Operator {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     const int64_t elem_cnt = in_desc->shape().elem_cnt();
     const DataType out_data_type = op_conf().arg_where_conf().data_type();
-    OF_CHECK_LE(in_desc->shape().NumAxes(), 8);
-    OF_CHECK(IsIntegralDataType(out_data_type));
+    CHECK_LE_OR_RETURN(in_desc->shape().NumAxes(), 8);
+    CHECK_OR_RETURN(IsIntegralDataType(out_data_type));
     BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     out_desc->mut_shape() = Shape({elem_cnt, in_desc->shape().NumAxes()});
     out_desc->set_data_type(out_data_type);
