@@ -5,7 +5,7 @@ namespace oneflow {
 REGISTER_USER_OP("sparse_softmax_cross_entropy")
     .Input("prediction")
     .Input("label")
-    .Output("prob")
+    .Output("prob")  //'prob' is just for compute prediction's grad, prob's grad will be ignored
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
