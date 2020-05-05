@@ -10,8 +10,11 @@ REGISTER_USER_OP("batch_gather")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-      const user_op::TensorDesc* in  = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* indices  = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
+      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      CHECK_GT_OR_RETURN(indices_shape->NumAxes(), 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       *out_shape = *in_shape;
       CHECK_LE_OR_RETURN(indices_shape->dim_vec().size(), in_shape->dim_vec().size());
       FOR_RANGE(int64_t, i, 0, indices_shape->dim_vec().size() - 1) {
@@ -41,42 +44,43 @@ REGISTER_USER_OP("batch_gather")
       const int64_t indices_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
       if (indices_num_axes > 1) {
-      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
-        SbpSignatureBuilder()
-            .Split("indices", i)
-            .Split("in", i)
-            .Split("out", i)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      }
-      SbpSignatureBuilder().Broadcast("indices").PartialSum("in").PartialSum("out").Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+          SbpSignatureBuilder()
+              .Split("indices", 0, i)
+              .Split("in", 0, i)
+              .Split("out", 0, i)
+              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        }
+        SbpSignatureBuilder().Broadcast("indices").PartialSum("in").PartialSum("out").Build(
+            ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       } else {
         std::shared_ptr<ErrorProto> err;
         err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
-                   + " (should be bigger than 1).");
+                     + " (should be bigger than 1).");
         err->mutable_check_failed();
         return err;
       }
 
       return Maybe<void>::Ok();
-});
+    });
 
-REGISTER_USER_OP_GRAD("batch_gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
-  bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
-  const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
-  const Shape indices_shape = op.TensorDesc4ArgNameAndIndex("indices", 0).shape();
-  if (need_grad_in) {
-      user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper in_grad_op = in_grad_builder.Op("unsorted_batch_segment_sum")
-                                                 .Input("data", op.GetGradTensorWithOpOutput("out", 0))
-                                                 .Input("segment_ids", op.input("indices", 0))
-                                                 .Output("out")
-                                                 .Attr("num_segments", in_shape.At(indices_shape.NumAxes() -1))
-                                                 .Build();
-      op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
-      AddOp(in_grad_op);
-    }
-});
+REGISTER_USER_OP_GRAD("batch_gather")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
+      const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+      const Shape indices_shape = op.TensorDesc4ArgNameAndIndex("indices", 0).shape();
+      if (need_grad_in) {
+        user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper in_grad_op =
+            in_grad_builder.Op("unsorted_batch_segment_sum")
+                .Input("data", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("segment_ids", op.input("indices", 0))
+                .Output("out")
+                .Attr("num_segments", in_shape.At(indices_shape.NumAxes() - 1))
+                .Build();
+        op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
+        AddOp(in_grad_op);
+      }
+    });
 
 }  // namespace oneflow

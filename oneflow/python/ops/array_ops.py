@@ -18,15 +18,13 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("gather")
 def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
+    if axis is None:
+        axis = 0
     if os.getenv("ENABLE_USER_OP") == 'True':
-        if name is None:
-            name = id_util.UniqueStr("Gather_")
-        if axis is None:
-            axis = 0
         if batch_dims > 0:
             if axis == batch_dims:
                 return flow.user_op_builder(name if name is not None else
-                        id_util_UniqueStr("BatchGather_"))\
+                        id_util.UniqueStr("BatchGather_"))\
                                 .Op("batch_gather")\
                                 .Input("in", [params])\
                                 .Input("indices", [indices])\
@@ -36,16 +34,16 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
                 raise NotImplementedError
             else:
                 raise AttributeError
-        else:
-            return flow.user_op_builder(name if name is
-                    not None else id_util.UniqueStr("Gather_"))\
-               .Op("gather")\
-               .Input("in", [params])\
-               .Input("indices", [indices])\
-               .Output("out")\
-               .SetAttr("axis", int(axis), "AttrTypeInt64")\
-               .SetAttr("batch_dims", int(batch_dims), "AttrTypeInt64")\
-               .Build().RemoteBlobList()[0]
+      #  else:
+      #      return flow.user_op_builder(name if name is
+      #              not None else id_util.UniqueStr("Gather_"))\
+      #         .Op("gather")\
+      #         .Input("in", [params])\
+      #         .Input("indices", [indices])\
+      #         .Output("out")\
+      #         .SetAttr("axis", int(axis), "AttrTypeInt64")\
+      #         .SetAttr("batch_dims", int(batch_dims), "AttrTypeInt64")\
+      #         .Build().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         if batch_dims > 0:
