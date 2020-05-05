@@ -44,7 +44,8 @@ struct LeftScalarBinaryCalculation {
                      const int64_t n);
 };
 
-#define CommutativeScalarBinaryCalculation LeftScalarBinaryCalculation
+template<template<typename> class binary_func, DeviceType device_type, typename T>
+using CommutativeScalarBinaryCalculation = LeftScalarBinaryCalculation<binary_func, device_type, T>;
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
 struct RightScalarBinaryCalculation {
@@ -67,7 +68,8 @@ class LeftScalarBinary final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define CommutativeScalarBinary LeftScalarBinary
+template<template<typename> class binary_func, DeviceType device_type, typename T>
+using CommutativeScalarBinary = LeftScalarBinary<binary_func, device_type, T>;
 
 template<template<typename> class binary_func, DeviceType device_type, typename T>
 class RightScalarBinary final : public user_op::OpKernel {
@@ -105,11 +107,6 @@ class RightScalarBinary final : public user_op::OpKernel {
   REGISTER_SCALAR_BINARY_KERNEL("left_scalar_div", Left, BinaryFuncDiv, device_type, dtype)   \
   REGISTER_SCALAR_BINARY_KERNEL("right_scalar_div", Right, BinaryFuncDiv, device_type, dtype)
 
-#define INSTANTIATE_ALL_SCALAR_BINARY_CALS(device_type, dtype)                                     \
-  template struct CommutativeScalarBinaryCalculation<BinaryFuncAdd, DeviceType::k##device_type, dtype>;  \
-  template struct CommutativeScalarBinaryCalculation<BinaryFuncMul, DeviceType::k##device_type, dtype>;  \
-  template struct LeftScalarBinaryCalculation<BinaryFuncDiv, DeviceType::k##device_type, dtype>;  \
-  template struct RightScalarBinaryCalculation<BinaryFuncDiv, DeviceType::k##device_type, dtype>;
 }  // namespace oneflow
 
 #endif /* ONEFLOW_CUSTOMIZED_KERNELS_SCALAR_BINARY_KERNEL_H */
