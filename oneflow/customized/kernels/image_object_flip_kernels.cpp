@@ -41,6 +41,27 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipBoxes, MAKE_FLIP_BOXES_SWITCH_ENTRY,
 
 #undef MAKE_FLIP_BOXES_SWITCH_ENTRY
 
+template<typename T>
+void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_height, int32_t image_width,
+                  int flip_code) {
+  int num_points = polygons_buffer->shape().At(0);
+  FOR_RANGE(int, i, 0, num_points) {
+    T* cur_poly_ptr = polygons_buffer->mut_data<T>() + i * 2;
+    if (flip_code & (int)FlipCode::kHorizontalFlip) {
+      cur_poly_ptr[0] = image_width - cur_poly_ptr[0];
+    }
+    if (flip_code & (int)FlipCode::kVerticalFlip) {
+      cur_poly_ptr[1] = image_height - cur_poly_ptr[1];
+    }
+  }
+}
+
+#define MAKE_FLIP_POLYGONS_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
+
+#undef MAKE_FLIP_POLYGONS_SWITCH_ENTRY
+
 }  // namespace
 
 class ObjectBboxFlipKernel final : public user_op::OpKernel {
@@ -85,6 +106,52 @@ REGISTER_USER_KERNEL("object_bbox_flip")
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       return ctx.device_type() == DeviceType::kCPU
              && bbox_tensor->data_type() == DataType::kTensorBuffer
+             && out_tensor->data_type() == DataType::kTensorBuffer;
+    });
+
+class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
+ public:
+  ObjectSegmentationPolygonFlipKernel() = default;
+  ~ObjectSegmentationPolygonFlipKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* polygon_tensor = ctx->Tensor4ArgNameAndIndex("polygon", 0);
+    const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
+    const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int num_images = polygon_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(image_size_tensor->shape().At(0), num_images);
+    CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& polygons_buffer = polygon_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
+      CHECK_EQ(polygons_buffer.shape().At(1), 2);
+      TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      out_polygons_buffer->Resize(polygons_buffer.shape(), polygons_buffer.data_type());
+      memcpy(out_polygons_buffer->mut_data(), polygons_buffer.data(),
+             out_polygons_buffer->nbytes());
+      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
+      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
+      int8_t flip_code = flip_code_tensor->dptr<int8_t>()[i];
+      SwitchFlipPolygons(SwitchCase(out_polygons_buffer->data_type()), out_polygons_buffer,
+                         image_height, image_width, flip_code);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
+    .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* polygon_tensor = ctx.TensorDesc4ArgNameAndIndex("polygon", 0);
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      return ctx.device_type() == DeviceType::kCPU
+             && polygon_tensor->data_type() == DataType::kTensorBuffer
              && out_tensor->data_type() == DataType::kTensorBuffer;
     });
 
