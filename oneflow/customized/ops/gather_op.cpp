@@ -10,9 +10,15 @@ REGISTER_USER_OP("gather")
     .Attr("batch_dims", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in_shape->NumAxes(), 0);
       const int64_t axis = ctx->GetAttr<int64_t>("axis");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
+      CHECK_GT_OR_RETURN(indices_shape->NumAxes(), 0);
+
       *out_shape = *in_shape;
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin(),
@@ -22,6 +28,7 @@ REGISTER_USER_OP("gather")
       dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin() + axis + 1,
                      in_shape->dim_vec().end());
       *out_shape = Shape(dim_vec);
+      out->set_is_dynamic(indices->is_dynamic());
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
@@ -35,19 +42,21 @@ REGISTER_USER_OP("gather")
       const int64_t indices_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
       const int64_t gather_axis = ctx->GetAttr<int64_t>("axis");
+      CHECK_GE_OR_RETURN(gather_axis, 0);
+      CHECK_LT_OR_RETURN(gather_axis, in_num_axes);
       FOR_RANGE(int64_t, i, 0, indices_num_axes) {
         SbpSignatureBuilder()
-            .Split("indices", i)
-            .Broadcast("in", i)
-            .Split("out", gather_axis + i)
+            .Split("indices", 0, i)
+            .Broadcast("in", 0)
+            .Split("out", 0, gather_axis + i)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
       FOR_RANGE(int64_t, i, 0, in_num_axes) {
         if (i == gather_axis) { continue; }
         SbpSignatureBuilder()
-            .Broadcast("indices")
-            .Split("in", i)
-            .Split("out", i < gather_axis ? i : i + indices_num_axes - 1)
+            .Broadcast("indices", 0)
+            .Split("in", 0, i)
+            .Split("out", 0, i < gather_axis ? i : i + indices_num_axes - 1)
             .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       }
       return Maybe<void>::Ok();
