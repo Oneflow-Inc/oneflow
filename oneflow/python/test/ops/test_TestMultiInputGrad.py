@@ -43,19 +43,19 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
             loss = TestMultiInput(x1, x2)
             flow.losses.add_loss(loss)
 
-            flow.watch(x1, test_global_storage.set("x1"))
-            flow.watch_diff(x1, test_global_storage.set("x1_diff"))
-            flow.watch(x2, test_global_storage.set("x2"))
-            flow.watch_diff(x2, test_global_storage.set("x2_diff"))
+            flow.watch(x1, test_global_storage.Setter("x1"))
+            flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+            flow.watch(x2, test_global_storage.Setter("x2"))
+            flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
             return loss
 
     check_point = flow.train.CheckPoint()
     check_point.init()
     out = TestMultiInputJob().get()
-    x1_diff = test_global_storage.getToNdarray("x1_diff")
-    x2_diff = test_global_storage.getToNdarray("x2_diff")
+    x1_diff = test_global_storage.Get("x1_diff")
+    x2_diff = test_global_storage.Get("x2_diff")
 
-    expect_out = test_global_storage.getToNdarray("x1")
+    expect_out = test_global_storage.Get("x1")
     expect_x1_diff = np.ones(shape, dtype=np.float32)
     expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
     #print(x1_diff, x2_diff)

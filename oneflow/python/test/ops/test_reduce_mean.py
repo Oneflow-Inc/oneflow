@@ -35,10 +35,10 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, test_global_storage.set("x"))
-            flow.watch_diff(x, test_global_storage.set("x_diff"))
-            flow.watch(loss, test_global_storage.set("loss"))
-            flow.watch_diff(loss, test_global_storage.set("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -48,14 +48,14 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
     of_out = ReduceMeanJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(test_global_storage.getToNdarray("x"))
+        x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.math.reduce_mean(x, axis=axis, keepdims=keepdims)
-    loss_diff = test_global_storage.getToNdarray("loss_diff")
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.getToNdarray("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 

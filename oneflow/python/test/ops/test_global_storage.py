@@ -1,10 +1,10 @@
 global_storage = {}
 
-def get(name):
-    return global_storage.get(name)
+def Get(name):
+    return global_storage.get(name).ndarray()
 
 
-def set(name):
+def Setter(name):
     global global_storage
 
     def _set(x):
@@ -12,6 +12,3 @@ def set(name):
 
     return _set
 
-
-def getToNdarray(name):
-  return get(name).ndarray()

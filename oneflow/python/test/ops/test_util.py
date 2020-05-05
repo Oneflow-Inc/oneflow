@@ -49,7 +49,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
-            flow.watch_diff(x, test_global_storage.set("x_diff"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
             return loss
 
@@ -57,7 +57,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(x).get().ndarray()
-    x_diff = test_global_storage.getToNdarray("x_diff")
+    x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
 
 
