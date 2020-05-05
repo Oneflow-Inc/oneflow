@@ -128,9 +128,7 @@ def scalar_add(x, operand, name=None):
             .Input("x", [x])
             .Output("y")
             )
-
         set_scalar_binary_operand(builder, operand)
-
         return (builder
             .Build()
             .RemoteBlobList()[0])
@@ -237,9 +235,7 @@ def scalar_sub(x, y, name=None):
         .Op(op_name)
         .Input("x", [tensor])
         .Output("y"))
-
     set_scalar_binary_operand(builder, scalar)
-
     return (builder
         .Build()
         .RemoteBlobList()[0])
@@ -303,9 +299,7 @@ def scalar_mul(x, operand, name=None):
             .Input("x", [x])
             .Output("y")
             )
-
         set_scalar_binary_operand(builder, operand)
-
         return (builder
             .Build()
             .RemoteBlobList()[0])
@@ -379,9 +373,7 @@ def scalar_div(x, y, name=None):
         .Op(op_name)
         .Input("x", [tensor])
         .Output("y"))
-
     set_scalar_binary_operand(builder, scalar)
-
     return (builder
         .Build()
         .RemoteBlobList()[0])

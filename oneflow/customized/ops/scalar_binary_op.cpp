@@ -102,6 +102,7 @@ REGISTER_USER_OP_GRAD("scalar_mul")
       }
     });
 
+// TODO: there is no multiply user op so the grad of left_scalar_div doesn't work
 REGISTER_USER_OP_GRAD("left_scalar_div")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -128,8 +129,8 @@ REGISTER_USER_OP_GRAD("left_scalar_div")
                                                 .Input("in_1", op.GetGradTensorWithOpOutput("y", 0))
                                                 .Output("out")
                                                 .Build();
-        AddOp(div_op);
-        op.BindGradTensorWithOpInput(div_op.output("out", 0), "x", 0);
+        AddOp(mul_op);
+        op.BindGradTensorWithOpInput(mul_op.output("out", 0), "x", 0);
       }
     });
 
