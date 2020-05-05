@@ -12,9 +12,11 @@ class EagerKernel final : public Kernel {
   EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf);
   ~EagerKernel() = default;
 
+  void Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   std::shared_ptr<user_op::OpKernelState> EagerModelForward(
       const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob);
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
  private:
   void InitOpKernel(const KernelConf& kernel_conf);

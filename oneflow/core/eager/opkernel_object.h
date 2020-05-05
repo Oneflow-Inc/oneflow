@@ -35,6 +35,7 @@ class OpKernelObject : public vm::Object {
 
   const std::shared_ptr<user_op::OpKernelState>& opkernel_state() const { return opkernel_state_; }
 
+  const EagerKernel& kernel() const { return *kernel_; }
   EagerKernel* mut_kernel() { return kernel_.get(); }
   void reset_opkernel_state(const std::shared_ptr<user_op::OpKernelState>& opkernel_state) {
     opkernel_state_ = opkernel_state;

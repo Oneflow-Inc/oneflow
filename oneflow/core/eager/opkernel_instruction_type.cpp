@@ -81,7 +81,7 @@ COMMAND(vm::RegisterLocalInstructionType<DeleteOpKernelObjectInstructionType>(
 namespace {
 
 std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
-  auto mem_case = std::make_shared<MemoryCase>();
+  const auto& mem_case = std::make_shared<MemoryCase>();
   if (device_type == DeviceType::kCPU) {
     mem_case->mutable_host_mem();
   } else if (device_type == DeviceType::kGPU) {
@@ -172,7 +172,7 @@ void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
 template<typename T>
 std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
     vm::Instruction* instruction, const T& args, OpKernelObject* opkernel_obj) {
-  auto obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
+  const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
     HashSet<const BlobDesc*> out_blob_descs;
     ForEachObnAndBlobObject(instruction, args,
@@ -182,7 +182,7 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
                               CHECK(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
                             });
   }
-  auto ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
+  const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
   ForEachIbnAndBlobObject(
       instruction, args, [&](const std::string& bn_in_op, const BlobObject& blob_object) {
         CHECK(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
@@ -190,9 +190,9 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   BlobDesc* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob_desc();
   return [obn2blob_desc, ibn2blob_desc, tmp_bn, tmp](const std::string& bn_in_op) -> BlobDesc* {
-    auto output_iter = obn2blob_desc->find(bn_in_op);
+    const auto& output_iter = obn2blob_desc->find(bn_in_op);
     if (output_iter != obn2blob_desc->end()) { return output_iter->second; }
-    auto input_iter = ibn2blob_desc->find(bn_in_op);
+    const auto& input_iter = ibn2blob_desc->find(bn_in_op);
     if (input_iter != ibn2blob_desc->end()) { return const_cast<BlobDesc*>(input_iter->second); }
     if (tmp_bn == bn_in_op) { return tmp; }
     return nullptr;
@@ -203,12 +203,12 @@ template<typename T>
 std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instruction* instruction,
                                                                   const T& args,
                                                                   OpKernelObject* opkernel_obj) {
-  auto obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
+  const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
   ForEachObnAndBlobObject(instruction, args,
                           [&](const std::string& bn_in_op, BlobObject* blob_object) {
                             CHECK(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
                           });
-  auto ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
+  const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
   ForEachIbnAndBlobObject(instruction, args,
                           [&](const std::string& bn_in_op, const BlobObject& blob_object) {
                             CHECK(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
@@ -216,9 +216,9 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   Blob* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob();
   return [obn2blob, ibn2blob, tmp_bn, tmp](const std::string& bn_in_op) -> Blob* {
-    auto output_iter = obn2blob->find(bn_in_op);
+    const auto& output_iter = obn2blob->find(bn_in_op);
     if (output_iter != obn2blob->end()) { return output_iter->second; }
-    auto input_iter = ibn2blob->find(bn_in_op);
+    const auto& input_iter = ibn2blob->find(bn_in_op);
     if (input_iter != ibn2blob->end()) { return const_cast<Blob*>(input_iter->second); }
     if (tmp_bn == bn_in_op) { return tmp; }
     return nullptr;
@@ -228,7 +228,7 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
 template<typename T>
 void InitOutputBlobObjects(vm::Instruction* instruction, const T& args, int64_t device_id,
                            DataType data_type) {
-  auto InitMirroredObject = [&](vm::MirroredObject* mirrored_object) {
+  const auto& InitMirroredObject = [&](vm::MirroredObject* mirrored_object) {
     DeviceType device_type = mirrored_object->logical_object().parallel_desc()->device_type();
     const auto& mem_case = MakeMemCase(device_type, device_id);
     mirrored_object->Init<BlobObject>(mem_case, data_type);
@@ -267,8 +267,8 @@ void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_ty
 }
 
 template<typename T>
-void CallOpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
-                       DeviceType device_type) {
+void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
+                   DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     int64_t device_id = instruction->stream().thread_ctx().device_id();
@@ -284,12 +284,12 @@ void CallOpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instructio
   if (opkernel_obj->tmp_buffer_blob_object().blob_desc().shape().elem_cnt() > 0) {
     opkernel_obj->mut_tmp_buffer_blob_object()->mutable_blob();
   }
+  opkernel_obj->kernel().Infer(MakeBlob4BnInOp(instruction, args, opkernel_obj));
 }
 
 template<typename T>
-void CallInstructionCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
-                            const T& args) {
-  auto Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
+void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args) {
+  const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   ForEachObnAndBlobObject(instruction, args, [&](const std::string&, BlobObject* blob_object) {
     blob_object->TryAllocateBlobBodyMemory(device_ctx);
@@ -312,13 +312,13 @@ void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
   DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
-  CallOpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
+  OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
 }
 
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
-  CallInstructionCompute(opkernel_obj, instruction, args.Get());
+  OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 
 void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
@@ -335,14 +335,14 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
   CHECK_EQ(device_type, mirrored_object->logical_object().parallel_desc()->device_type());
   mirrored_object->reset_object();
   auto* opkernel_obj = mirrored_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
-  CallOpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
+  OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
 }
 
 void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
       instruction->mut_operand_type(args->shared_opkernel())->Mut<OpKernelObject>();
-  CallInstructionCompute(opkernel_obj, instruction, args.Get());
+  OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 
 }  // namespace eager
