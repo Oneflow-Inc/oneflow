@@ -13,19 +13,17 @@ REGISTER_USER_OP("sparse_cross_entropy")
       CHECK_EQ_OR_RETURN(prediction_desc->is_dynamic(), label_desc->is_dynamic());
       CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2);
       const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
-      CHECK_GE_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes);
-      CHECK_EQ_OR_RETURN(label_desc->shape().Count(num_out_axes), 1);
+      CHECK_EQ_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes);
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
       }
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc = *prediction_desc;
-      *out_desc->mut_shape() = Shape(DimVector(prediction_desc->shape().dim_vec().cbegin(),
-                                               prediction_desc->shape().dim_vec().cend() - 1));
+      *out_desc->mut_shape() = label_desc->shape();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("label", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -43,8 +41,20 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
     .Input("dy")
     .Output("prediction_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
+      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
+      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
+      CHECK_EQ_OR_RETURN(prediction_desc->is_dynamic(), label_desc->is_dynamic());
+      CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2);
+      const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
+      CHECK_EQ_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes);
+      FOR_RANGE(int64_t, i, 0, num_out_axes) {
+        CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
+      }
+      CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
+      CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
+      *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

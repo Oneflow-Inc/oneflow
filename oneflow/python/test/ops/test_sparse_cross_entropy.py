@@ -38,7 +38,6 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
             )
             prediction = flow.nn.softmax(logits=x)
             loss = flow.nn.sparse_cross_entropy(labels=labels, prediction=prediction)
-            #loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
 

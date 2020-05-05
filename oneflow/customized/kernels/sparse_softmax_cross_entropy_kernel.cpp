@@ -89,6 +89,11 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
         return ctx.device_type() == device_type_v                                                \
                && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                       \
                && prediction_diff_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);            \
+      })                                                                                         \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \
+        return Maybe<void>::Ok();                                                                \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
