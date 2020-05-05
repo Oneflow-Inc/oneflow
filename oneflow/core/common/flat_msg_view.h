@@ -102,15 +102,26 @@ struct FlatMsgViewPatternVec {
   using value_type = T;
 
   void __Init__() { new (&vec_buffer_) Vec(); }
-  void __Delete__() { reinterpret_cast<Vec*>(&vec_buffer_)->~Vec(); }
+  void __Delete__() { mut_vec()->~Vec(); }
 
-  const T* at(int index) const { return reinterpret_cast<const Vec*>(&vec_buffer_)->at(index); }
-  size_t size() const { return reinterpret_cast<const Vec*>(&vec_buffer_)->size(); }
-  void clear() { reinterpret_cast<Vec*>(&vec_buffer_)->clear(); }
-  void push_back(const T* ptr) { reinterpret_cast<Vec*>(&vec_buffer_)->push_back(ptr); }
+  const T* at(int index) const { return vec().at(index); }
+  size_t size() const { return vec().size(); }
+  void clear() { mut_vec()->clear(); }
+  void push_back(const T* ptr) { mut_vec()->push_back(ptr); }
 
  private:
   using Vec = std::vector<const T*>;
+
+  Vec* mut_vec() {
+    Vec* __attribute__((__may_alias__)) ptr = reinterpret_cast<Vec*>(&vec_buffer_);
+    return ptr;
+  }
+
+  const Vec& vec() const {
+    const Vec* __attribute__((__may_alias__)) ptr = reinterpret_cast<const Vec*>(&vec_buffer_);
+    return *ptr;
+  }
+
   union {
     char vec_buffer_[sizeof(Vec)];
     int64_t align64_;
