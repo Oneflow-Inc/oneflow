@@ -6,7 +6,7 @@
 namespace oneflow {
 
 Shape getFlatShape(const ShapeView& shape, int64_t axis) {
-    return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
+  return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
 
 template<DeviceType device_type, typename T, typename K>
@@ -24,23 +24,22 @@ class GatherKernel final : public user_op::OpKernel {
     const int64_t num_indices = indices->shape().elem_cnt();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), indices->dptr<K>(),
-       num_indices, in->dptr<T>(), getFlatShape(in->shape(), axis), out->mut_dptr<T>(), 0);
+    GatherKernelUtilImpl<device_type, T, K>::Forward(
+        ctx->device_ctx(), indices->dptr<K>(), num_indices, in->dptr<T>(),
+        getFlatShape(in->shape(), axis), out->mut_dptr<T>(), 0);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
 };
 
-#define REGISTER_GATHER_KERNEL(device, T_dtype, K_dtype)                                        \
-  REGISTER_USER_KERNEL("gather")                                                                \
-  .SetCreateFn<GatherKernel<device, OF_PP_PAIR_FIRST(T_dtype),                                  \
-                            OF_PP_PAIR_FIRST(K_dtype)>>()                                       \
-  .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                  \
-      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
-      const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);   \
-      return ctx.device_type() == device                                                        \
-             && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)                         \
-             && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                            \
+#define REGISTER_GATHER_KERNEL(device, T_dtype, K_dtype)                                         \
+  REGISTER_USER_KERNEL("gather")                                                                 \
+      .SetCreateFn<GatherKernel<device, OF_PP_PAIR_FIRST(T_dtype), OF_PP_PAIR_FIRST(K_dtype)>>() \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
+        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);  \
+        return ctx.device_type() == device                                                       \
+               && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)                        \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                           \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,

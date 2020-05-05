@@ -22,29 +22,31 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
 
-    UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(ctx->device_ctx(), segment_ids->dptr<K>(),
-        data->dptr<T>(), num_segment_ids, num_segments, outer_dim_size, inner_dim_size, 0, out->mut_dptr<T>());
+    UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
+        ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
+        outer_dim_size, inner_dim_size, 0, out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype, kernel_type)                         \
-  REGISTER_USER_KERNEL(kernel_type)                                                 \
-  .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),                     \
-                            OF_PP_PAIR_FIRST(K_dtype)>>()                                      \
-  .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
-      const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);  \
-      return ctx.device_type() == device                                                       \
-             && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)                        \
-             && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                           \
-  });
+#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype, kernel_type)     \
+  REGISTER_USER_KERNEL(kernel_type)                                                     \
+      .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),          \
+                                            OF_PP_PAIR_FIRST(K_dtype)>>()               \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
+        const user_op::TensorDesc* indices_desc =                                       \
+            ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);                           \
+        return ctx.device_type() == device                                              \
+               && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)               \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                  \
+      });
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, T_type, K_type) \
- REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum"))
+  REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum"))
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE(device_type, T_type, K_type) \
- REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum_like"))
+  REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, T_type, K_type, ("unsorted_segment_sum_like"))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
