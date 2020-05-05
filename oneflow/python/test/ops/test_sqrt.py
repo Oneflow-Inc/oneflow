@@ -4,7 +4,6 @@ import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict 
 
-import test_global_storage
 from test_util import GenArgDict
 from test_util import CompareOpWithTensorFlow
 
