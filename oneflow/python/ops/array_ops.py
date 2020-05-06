@@ -94,7 +94,7 @@ def reshape(x, shape, name=None):
     assert shape.count(-1) <= 1
     if isinstance(x.shape, tuple) and len(x.shape) == 1:
         return x
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == 'True'):
         if name is None:
             name = id_util.UniqueStr("Reshape_")
         return flow.user_op_builder(name).Op("reshape")\
