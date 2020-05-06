@@ -21,10 +21,11 @@ def compare(prediction,target,k,y_groundtruth):
 
 
     @flow.function(func_config)
-    def IntopkJob(predictions=flow.FixedTensorDef((3,4),dtype=flow.float),targets=flow.FixedTensorDef((3,),dtype=flow.int32)):
-        return test_in_top_k(predictions, targets , k ,"xx_in_top_k")
+    def IntopkJob(prediction=flow.FixedTensorDef((3,4),dtype=flow.float),target=flow.FixedTensorDef((3,),dtype=flow.int32)):
+        return flow.math.in_top_k(prediction,target,k=k)
 
     y=IntopkJob(prediction,target).get().ndarray()
+    print(y,y_groundtruth)
     assert (np.allclose(y,y_groundtruth))
 
 def test(test_case):
