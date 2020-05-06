@@ -2,11 +2,10 @@ import oneflow as flow
 import numpy as np
 import tensorflow as tf
 from collections import OrderedDict
+import os
 
 from test_util import GenArgDict
-from test_util import Save
-from test_util import GetSavePath
-import os
+import test_global_storage
 
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -43,7 +42,7 @@ def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type, multiple
 
             if not only_forward:
                 flow.losses.add_loss(y)
-                flow.watch_diff(x, Save("x_diff"))
+                flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
             return y
 
@@ -54,7 +53,7 @@ def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type, multiple
     if only_forward:
         return y, None
     else:
-        x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+        x_diff = test_global_storage.Get("x_diff")
         return y, x_diff
 
 
