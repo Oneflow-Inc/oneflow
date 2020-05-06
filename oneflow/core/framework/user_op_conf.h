@@ -92,6 +92,18 @@ class UserOpConfWrapperBuilder final {
   HashMap<std::string, UserOpAttrVal> attr_;
 };
 
+class OpArg final {
+ public:
+  OpArg(std::string&& name, int32_t index) : name_(std::move(name)), index_(index) {}
+
+  const std::string& name() const { return name_; }
+  int32_t index() const { return index_; }
+
+ private:
+  std::string name_;
+  int32_t index_;
+};
+
 }  // namespace user_op
 
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
