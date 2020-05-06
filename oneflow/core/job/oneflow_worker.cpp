@@ -17,7 +17,7 @@ namespace {
 Maybe<void> Run(const std::string& env_proto_filepath) {
   EnvProto env_proto;
   ParseProtoFromTextFile(env_proto_filepath, &env_proto);
-  OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());

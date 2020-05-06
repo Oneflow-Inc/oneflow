@@ -7,6 +7,7 @@ import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
 message ConvKernelConf {
@@ -165,6 +166,7 @@ message NcclTupleBroadcastConf {
 message UserKernelConf {
   map<string, BlobDescProto> bn_in_op2blob_desc = 1;
   required ParallelContext parallel_ctx = 2;
+  required SbpSignature sbp_sig = 3;
 }
 
 message XrtLaunchKernelConf {
