@@ -5,8 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+import test_global_storage
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -64,12 +63,12 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
             )
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(weight, Save("weight"))
-            flow.watch_diff(weight, Save("weight_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(weight, test_global_storage.Setter("weight"))
+            flow.watch_diff(weight, test_global_storage.Setter("weight_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -79,27 +78,27 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     of_out = ConvJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")).transpose(0, 2, 3, 1))
+        x = tf.Variable(test_global_storage.Get("x").transpose(0, 2, 3, 1))
         assert groups > 0
         assert x_shape[1] % groups == 0
         assert filters % groups == 0
         if groups == 1:
-            weight = tf.Variable(np.load(os.path.join(GetSavePath(), "weight.npy")).transpose(2, 3, 1, 0))
+            weight = tf.Variable(test_global_storage.Get("weight").transpose(2, 3, 1, 0))
             tf_out = tf.nn.conv2d(x, weight, strides=[1,1,1,1], padding="VALID", data_format='NHWC')
         else:
-            weight = tf.Variable(np.load(os.path.join(GetSavePath(), "weight.npy")).transpose(2, 3, 1, 0))
+            weight = tf.Variable(test_global_storage.Get("weight").transpose(2, 3, 1, 0))
             tf_out = grouped_convolution2D(x, weight, padding="VALID", num_groups=groups)
 
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy")).transpose(0, 2, 3, 1)
+    loss_diff = test_global_storage.Get("loss_diff").transpose(0, 2, 3, 1)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")).transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff").transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "weight_diff.npy")).transpose(2, 3, 1, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("weight_diff").transpose(2, 3, 1, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 
