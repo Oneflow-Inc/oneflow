@@ -5,8 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+import test_global_storage
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -41,12 +40,12 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
             loss = flow.matmul(a, b, transpose_a, transpose_b)
             flow.losses.add_loss(loss)
 
-            flow.watch(a, Save("a"))
-            flow.watch_diff(a, Save("a_diff"))
-            flow.watch(b, Save("b"))
-            flow.watch_diff(b, Save("b_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(a, test_global_storage.Setter("a"))
+            flow.watch_diff(a, test_global_storage.Setter("a_diff"))
+            flow.watch(b, test_global_storage.Setter("b"))
+            flow.watch_diff(b, test_global_storage.Setter("b_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -56,16 +55,16 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     of_out = MatmulJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        a = tf.Variable(np.load(os.path.join(GetSavePath(), "a.npy")))
-        b = tf.Variable(np.load(os.path.join(GetSavePath(), "b.npy")))
+        a = tf.Variable(test_global_storage.Get("a"))
+        b = tf.Variable(test_global_storage.Get("b"))
         tf_out = tf.matmul(a, b, transpose_a, transpose_b)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.ndarray() - tf_out.numpy()))
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy(), atol=1e-03)
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy(), atol=1e-03)
+    assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03)
+    assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03)
 
 
 def filter_args(arg_list):
