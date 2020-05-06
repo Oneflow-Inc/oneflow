@@ -7,26 +7,48 @@ namespace oneflow {
 
 namespace {
 
-enum class FlipCode : int {
-  kNonFlip = 0,
-  kHorizontalFlip = 1,
-  kVerticalFlip = 2,
-  kBothDirectionFlip = 3,
+enum class FlipCode : int8_t {
+  kNonFlip = 0x00,
+  kHorizontalFlip = 0x01,
+  kVerticalFlip = 0x10,
+  kBothDirectionFlip = 0x11,
 };
+
+bool operator&(FlipCode lhs, FlipCode rhs) {
+  return static_cast<bool>(static_cast<std::underlying_type<FlipCode>::type>(lhs)
+                           & static_cast<std::underlying_type<FlipCode>::type>(rhs));
+}
+
+int CvFlipCode(FlipCode flip_code) {
+  if (flip_code == FlipCode::kHorizontalFlip) {
+    return 1;
+  } else if (flip_code == FlipCode::kVerticalFlip) {
+    return 0;
+  } else if (flip_code == FlipCode::kBothDirectionFlip) {
+    return -1;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void FlipImage(TensorBuffer* image_buffer, FlipCode flip_code) {
+  cv::Mat image_mat = GenCvMat4ImageBuffer(*image_buffer);
+  cv::flip(image_mat, image_mat, CvFlipCode(flip_code));
+}
 
 template<typename T>
 void FlipBoxes(TensorBuffer* boxes_buffer, int32_t image_height, int32_t image_width,
-               int flip_code) {
+               FlipCode flip_code) {
   int num_boxes = boxes_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_boxes) {
     T* cur_box_ptr = boxes_buffer->mut_data<T>() + i * 4;
-    if (flip_code & (int)FlipCode::kHorizontalFlip) {
+    if (flip_code & FlipCode::kHorizontalFlip) {
       T xmin = cur_box_ptr[0];
       T xmax = cur_box_ptr[2];
       cur_box_ptr[0] = image_width - xmax - static_cast<T>(1);
       cur_box_ptr[2] = image_width - xmin - static_cast<T>(1);
     }
-    if (flip_code & (int)FlipCode::kVerticalFlip) {
+    if (flip_code & FlipCode::kVerticalFlip) {
       T ymin = cur_box_ptr[1];
       T ymax = cur_box_ptr[3];
       cur_box_ptr[1] = image_height - ymax - static_cast<T>(1);
@@ -43,16 +65,12 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipBoxes, MAKE_FLIP_BOXES_SWITCH_ENTRY,
 
 template<typename T>
 void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_height, int32_t image_width,
-                  int flip_code) {
+                  FlipCode flip_code) {
   int num_points = polygons_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_points) {
     T* cur_poly_ptr = polygons_buffer->mut_data<T>() + i * 2;
-    if (flip_code & (int)FlipCode::kHorizontalFlip) {
-      cur_poly_ptr[0] = image_width - cur_poly_ptr[0];
-    }
-    if (flip_code & (int)FlipCode::kVerticalFlip) {
-      cur_poly_ptr[1] = image_height - cur_poly_ptr[1];
-    }
+    if (flip_code & FlipCode::kHorizontalFlip) { cur_poly_ptr[0] = image_width - cur_poly_ptr[0]; }
+    if (flip_code & FlipCode::kVerticalFlip) { cur_poly_ptr[1] = image_height - cur_poly_ptr[1]; }
   }
 }
 
@@ -62,7 +80,44 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
 
 #undef MAKE_FLIP_POLYGONS_SWITCH_ENTRY
 
+std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
+    const std::string& input_arg_name) {
+  return [&](const user_op::KernelRegContext& ctx) -> bool {
+    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex(input_arg_name, 0);
+    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+    return ctx.device_type() == DeviceType::kCPU
+           && in_tensor->data_type() == DataType::kTensorBuffer
+           && out_tensor->data_type() == DataType::kTensorBuffer;
+  };
+}
+
 }  // namespace
+
+class ImageFlipKernel final : public user_op::OpKernel {
+ public:
+  ImageFlipKernel() = default;
+  ~ImageFlipKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int num_images = in_tensor->shape().elem_cnt();
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      out_buffer->Resize(in_buffer.shape(), in_buffer.data_type());
+      memcpy(out_buffer->mut_data(), in_buffer.data(), out_buffer->nbytes());
+      FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
+      if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
 class ObjectBboxFlipKernel final : public user_op::OpKernel {
  public:
@@ -91,23 +146,13 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
       memcpy(out_bbox_buffer->mut_data(), bbox_buffer.data(), out_bbox_buffer->nbytes());
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
-      int8_t flip_code = flip_code_tensor->dptr<int8_t>()[i];
+      FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       SwitchFlipBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, image_height,
                       image_width, flip_code);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-REGISTER_USER_KERNEL("object_bbox_flip")
-    .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* bbox_tensor = ctx.TensorDesc4ArgNameAndIndex("bbox", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      return ctx.device_type() == DeviceType::kCPU
-             && bbox_tensor->data_type() == DataType::kTensorBuffer
-             && out_tensor->data_type() == DataType::kTensorBuffer;
-    });
 
 class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
  public:
@@ -137,7 +182,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
              out_polygons_buffer->nbytes());
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
-      int8_t flip_code = flip_code_tensor->dptr<int8_t>()[i];
+      FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       SwitchFlipPolygons(SwitchCase(out_polygons_buffer->data_type()), out_polygons_buffer,
                          image_height, image_width, flip_code);
     });
@@ -145,14 +190,16 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+REGISTER_USER_KERNEL("image_flip")
+    .SetCreateFn<ImageFlipKernel>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn("image"));
+
+REGISTER_USER_KERNEL("object_bbox_flip")
+    .SetCreateFn<ObjectBboxFlipKernel>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn("bbox"));
+
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* polygon_tensor = ctx.TensorDesc4ArgNameAndIndex("polygon", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      return ctx.device_type() == DeviceType::kCPU
-             && polygon_tensor->data_type() == DataType::kTensorBuffer
-             && out_tensor->data_type() == DataType::kTensorBuffer;
-    });
+    .SetIsMatchedPred(MakeKernelMatchPredFn("polygon"));
 
 }  // namespace oneflow
