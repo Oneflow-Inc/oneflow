@@ -20,7 +20,8 @@ template<template<typename> class binary_func, typename T, typename Index>
 struct LeftScalarBinaryCalculation<binary_func, DeviceType::kGPU, T, Index> {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
                      const int64_t n) {
-    RUN_CUDA_KERNEL((LeftScalarBinaryGpu<binary_func, T, Index>), ctx, n, x_ptr, scalar_operand, y_ptr, n);
+    RUN_CUDA_KERNEL((LeftScalarBinaryGpu<binary_func, T, Index>), ctx, n, x_ptr, scalar_operand,
+                    y_ptr, n);
   }
 };
 
@@ -28,8 +29,8 @@ template<template<typename> class binary_func, typename T, typename Index>
 struct RightScalarBinaryCalculation<binary_func, DeviceType::kGPU, T, Index> {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
                      const int64_t n) {
-    RUN_CUDA_KERNEL((RightScalarBinaryGpu<binary_func, T, Index>), ctx, n, x_ptr, scalar_operand, y_ptr,
-                    n);
+    RUN_CUDA_KERNEL((RightScalarBinaryGpu<binary_func, T, Index>), ctx, n, x_ptr, scalar_operand,
+                    y_ptr, n);
   }
 };
 }  // namespace
