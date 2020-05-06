@@ -23,12 +23,13 @@ def RunOneflowScalarBinaryOp(device_type, flow_op, x, operand, op_type, multiple
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
         flow.config.gpu_device_num(2)
         flow_env = lambda: flow.fixed_placement(device_type, "0:0-1")
+    else:
+        flow_env = lambda: flow.device_prior_placement(device_type, "0:0")
 
     if not only_forward:
         # enable training
         func_config.train.primary_lr(0)
         func_config.train.model_update_conf(dict(naive_conf={}))
-        flow_env = lambda: flow.device_prior_placement(device_type, "0:0")
 
     @flow.function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
@@ -102,7 +103,6 @@ def GenerateSingleGpuTest(flow_op, tf_op, op_types):
 
 
 def GenerateMultipleGpusForwardTest(flow_op, tf_op, op_types):
-    x = np.random.uniform(low=-10, high=10, size=(10, 10, 10)).astype(np.float32)
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict['flow_op'] = [flow_op]
