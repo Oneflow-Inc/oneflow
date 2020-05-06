@@ -5,10 +5,21 @@ import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
 from test_util import type_name_to_flow_type
+import tempfile
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+
+def get_temp_dir():
+    return tempfile.gettempdir()
+
+# Save func for flow.watch
+def Save(name):
+    path = get_temp_dir()
+
+    def _save(x):
+        np.save(os.path.join(path, name), x.ndarray())
+
+    return _save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -18,8 +29,8 @@ for gpu in gpus:
 def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
     if os.getenv("ENABLE_USER_OP") != 'True':
         def backup_npy(name):
-            src = os.path.join(GetSavePath(), "{}.npy".format(name))
-            dst = os.path.join(GetSavePath(), "{}_bak.npy".format(name))
+            src = os.path.join(get_temp_dir(), "{}.npy".format(name))
+            dst = os.path.join(get_temp_dir(), "{}_bak.npy".format(name))
             shutil.copyfile(src, dst)
         for name in ['x', 'x_diff', 'loss', 'loss_diff']:
             backup_npy(name)
@@ -60,7 +71,7 @@ def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
 
     # OneFlow
     check_point = flow.train.CheckPoint()
-    model_load_dir='./init_snapshot'
+    model_load_dir = os.path.join(get_temp_dir(), './init_snapshot')
     if os.getenv("ENABLE_USER_OP") != 'True':
         check_point.load(model_load_dir)
     else:
@@ -81,8 +92,8 @@ def test_dropout(test_case):
     arg_dict['seed'] = [12345, None]
 
     def check_npy(name):
-        ref = np.load(os.path.join(GetSavePath(), "{}.npy".format(name)))
-        user_op = np.load(os.path.join(GetSavePath(), "{}_bak.npy".format(name)))
+        ref = np.load(os.path.join(get_temp_dir(), "{}.npy".format(name)))
+        user_op = np.load(os.path.join(get_temp_dir(), "{}_bak.npy".format(name)))
         assert np.array_equal(ref, user_op)
         
     for arg in GenArgList(arg_dict):
