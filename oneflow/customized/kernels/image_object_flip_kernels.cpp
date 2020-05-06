@@ -91,6 +91,15 @@ std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
   };
 }
 
+std::function<Maybe<void>(const user_op::InferContext&, user_op::AddInplaceArgPair)>
+MakeInplaceProposalFn(const std::string& input_arg_name) {
+  return [&](const user_op::InferContext& ctx,
+             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+    OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, input_arg_name, 0, true));
+    return Maybe<void>::Ok();
+  };
+}
+
 }  // namespace
 
 class ImageFlipKernel final : public user_op::OpKernel {
@@ -107,11 +116,13 @@ class ImageFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      const TensorBuffer* in_buffer = in_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(in_buffer->shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      out_buffer->Resize(in_buffer.shape(), in_buffer.data_type());
-      memcpy(out_buffer->mut_data(), in_buffer.data(), out_buffer->nbytes());
+      if (out_buffer != in_buffer) {
+        out_buffer->Resize(in_buffer->shape(), in_buffer->data_type());
+        memcpy(out_buffer->mut_data(), in_buffer->data(), out_buffer->nbytes());
+      }
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
@@ -138,12 +149,14 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(bbox_buffer.shape().At(1), 4);
+      const TensorBuffer* bbox_buffer = bbox_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(bbox_buffer->shape().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer->shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      out_bbox_buffer->Resize(bbox_buffer.shape(), bbox_buffer.data_type());
-      memcpy(out_bbox_buffer->mut_data(), bbox_buffer.data(), out_bbox_buffer->nbytes());
+      if (out_bbox_buffer != bbox_buffer) {
+        out_bbox_buffer->Resize(bbox_buffer->shape(), bbox_buffer->data_type());
+        memcpy(out_bbox_buffer->mut_data(), bbox_buffer->data(), out_bbox_buffer->nbytes());
+      }
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -173,13 +186,15 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer& polygons_buffer = polygon_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(polygons_buffer.shape().At(1), 2);
+      const TensorBuffer* polygons_buffer = polygon_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(polygons_buffer->shape().NumAxes(), 2);
+      CHECK_EQ(polygons_buffer->shape().At(1), 2);
       TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      out_polygons_buffer->Resize(polygons_buffer.shape(), polygons_buffer.data_type());
-      memcpy(out_polygons_buffer->mut_data(), polygons_buffer.data(),
-             out_polygons_buffer->nbytes());
+      if (out_polygons_buffer != polygons_buffer) {
+        out_polygons_buffer->Resize(polygons_buffer->shape(), polygons_buffer->data_type());
+        memcpy(out_polygons_buffer->mut_data(), polygons_buffer->data(),
+               out_polygons_buffer->nbytes());
+      }
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -192,14 +207,17 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("image"));
+    .SetIsMatchedPred(MakeKernelMatchPredFn("image"))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("image"));
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("bbox"));
+    .SetIsMatchedPred(MakeKernelMatchPredFn("bbox"))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("polygon"));
+    .SetIsMatchedPred(MakeKernelMatchPredFn("polygon"))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("polygon"));
 
 }  // namespace oneflow
