@@ -94,8 +94,11 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    of_x_diff_arr = np.load(os.path.join(GetSavePath(), "x_diff.npy")).transpose(0, 2, 3, 1)
+    tf_x_diff_arr = tf_x_diff.numpy()
+    max_abs_diff = np.max(np.abs(of_x_diff_arr - tf_x_diff_arr))
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")).transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        of_x_diff_arr, tf_x_diff_arr, rtol=1e-5, atol=1e-4
     )
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "weight_diff.npy")).transpose(2, 3, 1, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
