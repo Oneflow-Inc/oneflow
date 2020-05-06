@@ -4,19 +4,19 @@ namespace oneflow {
 
 namespace {
 
-template<template<typename> class binary_func, typename T>
-struct LeftScalarBinaryCalculation<binary_func, DeviceType::kCPU, T> {
+template<template<typename> class binary_func, typename T, typename Index>
+struct LeftScalarBinaryCalculation<binary_func, DeviceType::kCPU, T, Index> {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
-                     const int64_t n) {
-    for (int64_t i = 0; i < n; ++i) { y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
+                     const Index n) {
+    for (Index i = 0; i < n; ++i) { y_ptr[i] = binary_func<T>::Invoke(scalar_operand, x_ptr[i]); }
   }
 };
 
-template<template<typename> class binary_func, typename T>
-struct RightScalarBinaryCalculation<binary_func, DeviceType::kCPU, T> {
+template<template<typename> class binary_func, typename T, typename Index>
+struct RightScalarBinaryCalculation<binary_func, DeviceType::kCPU, T, Index> {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
-                     const int64_t n) {
-    for (int64_t i = 0; i < n; ++i) { y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
+                     const Index n) {
+    for (Index i = 0; i < n; ++i) { y_ptr[i] = binary_func<T>::Invoke(x_ptr[i], scalar_operand); }
   }
 };
 }  // namespace

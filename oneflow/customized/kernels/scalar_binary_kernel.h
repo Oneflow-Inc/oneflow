@@ -39,19 +39,20 @@ inline const int64_t GetElemCnt(user_op::KernelComputeContext* ctx) {
   return x->shape().elem_cnt();
 }
 
-template<template<typename> class binary_func, DeviceType device_type, typename T>
+template<template<typename> class binary_func, DeviceType device_type, typename T, typename Index>
 struct LeftScalarBinaryCalculation {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
-                     const int64_t n);
+                     const Index n);
 };
 
-template<template<typename> class binary_func, DeviceType device_type, typename T>
-using CommutativeScalarBinaryCalculation = LeftScalarBinaryCalculation<binary_func, device_type, T>;
+template<template<typename> class binary_func, DeviceType device_type, typename T, typename Index>
+using CommutativeScalarBinaryCalculation =
+    LeftScalarBinaryCalculation<binary_func, device_type, T, Index>;
 
-template<template<typename> class binary_func, DeviceType device_type, typename T>
+template<template<typename> class binary_func, DeviceType device_type, typename T, typename Index>
 struct RightScalarBinaryCalculation {
   static void Invoke(DeviceCtx* ctx, const T* x_ptr, const T scalar_operand, T* y_ptr,
-                     const int64_t n);
+                     const Index n);
 };
 }  // namespace
 
@@ -63,9 +64,14 @@ class LeftScalarBinaryKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LeftScalarBinaryCalculation<binary_func, device_type, T>::Invoke(
-        ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx),
-        GetElemCnt(ctx));
+    const auto n = GetElemCnt(ctx);
+    if (IsKernelSafeInt32(n)) {
+      LeftScalarBinaryCalculation<binary_func, device_type, T, int32_t>::Invoke(
+          ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx), n);
+    } else {
+      LeftScalarBinaryCalculation<binary_func, device_type, T, int64_t>::Invoke(
+          ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx), n);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -81,9 +87,14 @@ class RightScalarBinaryKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    RightScalarBinaryCalculation<binary_func, device_type, T>::Invoke(
-        ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx),
-        GetElemCnt(ctx));
+    const auto n = GetElemCnt(ctx);
+    if (IsKernelSafeInt32(n)) {
+      RightScalarBinaryCalculation<binary_func, device_type, T, int32_t>::Invoke(
+          ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx), n);
+    } else {
+      RightScalarBinaryCalculation<binary_func, device_type, T, int64_t>::Invoke(
+          ctx->device_ctx(), GetXPtr<T>(ctx), GetScalarOperand<T>(ctx), GetYPtr<T>(ctx), n);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
