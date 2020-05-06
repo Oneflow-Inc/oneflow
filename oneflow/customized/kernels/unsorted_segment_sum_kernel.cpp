@@ -31,17 +31,17 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype, kernel_type)     \
-  REGISTER_USER_KERNEL(kernel_type)                                                     \
-      .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),          \
-                                            OF_PP_PAIR_FIRST(K_dtype)>>()               \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        const user_op::TensorDesc* indices_desc =                                       \
-            ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);                           \
-        return ctx.device_type() == device                                              \
-               && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)               \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                  \
+#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, in_type, indices_type, kernel_type) \
+  REGISTER_USER_KERNEL(kernel_type)                                                      \
+      .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(in_type),           \
+                                            OF_PP_PAIR_FIRST(indices_type)>>()           \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                       \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);  \
+        const user_op::TensorDesc* indices_desc =                                        \
+            ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);                            \
+        return ctx.device_type() == device                                               \
+               && indices_desc->data_type() == OF_PP_PAIR_SECOND(indices_type)           \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(in_type);                   \
       });
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, T_type, K_type) \
