@@ -8,7 +8,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.framework.remote_blob import MirroredBlob, ConsistentBlob
 import oneflow.python.framework.local_blob as local_blob_util
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -39,7 +39,7 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
         lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
         lbi_and_uuid.watcher_uuid = handler_uuid
-        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+        g_func_ctx.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif type(blob_watched) is MirroredBlob:
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
