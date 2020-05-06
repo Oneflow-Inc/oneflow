@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 import oneflow as flow
 import tensorflow as tf
-
+import test_global_storage
 
 def GenCartesianProduct(sets):
     assert isinstance(sets, Iterable)
@@ -24,25 +24,6 @@ def GenArgList(arg_dict):
 
 def GenArgDict(arg_dict):
     return [dict(zip(arg_dict.keys(), x)) for x in GenArgList(arg_dict)]
-
-
-def GetSavePath():
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return "./log/op_unit_test_user_op/"
-    else:
-        return "./log/op_unit_test/"
-
-
-# Save func for flow.watch
-def Save(name):
-    path = GetSavePath()
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
-    def _save(x):
-        np.save(os.path.join(path, name), x.ndarray())
-
-    return _save
 
 
 class Args:
@@ -68,7 +49,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
-            flow.watch_diff(x, Save("x_diff"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
             return loss
 
@@ -76,7 +57,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(x).get().ndarray()
-    x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+    x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
 
 
