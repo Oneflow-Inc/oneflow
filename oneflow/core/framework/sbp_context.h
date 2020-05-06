@@ -15,14 +15,17 @@ class UserOpSbpSignatureBuilder final {
   UserOpSbpSignatureBuilder(SbpSignature* sbp_sign) : sbp_sign_(sbp_sign) {}
 
   UserOpSbpSignatureBuilder&& Split(const OpArg& op_arg, int64_t axis);
+  UserOpSbpSignatureBuilder&& Split(const std::vector<OpArg>& op_args, int64_t axis);
   UserOpSbpSignatureBuilder&& Split(const std::vector<std::pair<std::string, int32_t>>& op_args,
                                     int64_t axis);
 
   UserOpSbpSignatureBuilder&& Broadcast(const OpArg& op_arg);
+  UserOpSbpSignatureBuilder&& Broadcast(const std::vector<OpArg>& op_args);
   UserOpSbpSignatureBuilder&& Broadcast(
       const std::vector<std::pair<std::string, int32_t>>& op_args);
 
   UserOpSbpSignatureBuilder&& PartialSum(const OpArg& op_arg);
+  UserOpSbpSignatureBuilder&& PartialSum(const std::vector<OpArg>& op_args);
   UserOpSbpSignatureBuilder&& PartialSum(
       const std::vector<std::pair<std::string, int32_t>>& op_args);
   void Build() {}
