@@ -80,6 +80,27 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
 
 #undef MAKE_FLIP_POLYGONS_SWITCH_ENTRY
 
+template<typename T>
+void ImageNormalizeByChannel(TensorBuffer* image_buffer, const std::vector<float>& std_vec,
+                             const std::vector<float>& mean_vec) {
+  CHECK_EQ(image_buffer->shape().NumAxes(), 3);
+  int h = image_buffer->shape().At(0);
+  int w = image_buffer->shape().At(1);
+  int c = image_buffer->shape().At(2);
+  CHECK_EQ(std_vec.size(), c);
+  CHECK_EQ(mean_vec.size(), c);
+  FOR_RANGE(int, i, 0, (h * w)) {
+    T* image_data = image_buffer->mut_data<T>() + i * c;
+    FOR_RANGE(int, j, 0, c) { image_data[j] = (image_data[j] - mean_vec.at(j)) / std_vec.at(j); }
+  }
+}
+
+#define MAKE_IMAGE_NORMALIZE_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(void, ImageNormalizeByChannel, MAKE_IMAGE_NORMALIZE_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
+
+#undef MAKE_IMAGE_NORMALIZE_SWITCH_ENTRY
+
 std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
     const std::string& input_arg_name) {
   return [&](const user_op::KernelRegContext& ctx) -> bool {
@@ -205,6 +226,35 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class ImageNormalize final : public user_op::OpKernel {
+ public:
+  ImageNormalize() = default;
+  ~ImageNormalize() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int num_images = in_tensor->shape().elem_cnt();
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    const auto& std_vec = ctx->GetAttr<std::vector<float>>("std");
+    const auto& mean_vec = ctx->GetAttr<std::vector<float>>("mean");
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer* in_buffer = in_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(in_buffer->shape().NumAxes(), 3);
+      TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      if (out_buffer != in_buffer) {
+        out_buffer->Resize(in_buffer->shape(), in_buffer->data_type());
+        memcpy(out_buffer->mut_data(), in_buffer->data(), out_buffer->nbytes());
+      }
+      SwitchImageNormalizeByChannel(SwitchCase(out_buffer->data_type()), out_buffer, std_vec,
+                                    mean_vec);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
     .SetIsMatchedPred(MakeKernelMatchPredFn("image"))
@@ -219,5 +269,10 @@ REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
     .SetIsMatchedPred(MakeKernelMatchPredFn("polygon"))
     .SetInplaceProposalFn(MakeInplaceProposalFn("polygon"));
+
+REGISTER_USER_KERNEL("image_normalize")
+    .SetCreateFn<ImageNormalize>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn("in"))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 }  // namespace oneflow

@@ -96,4 +96,20 @@ REGISTER_USER_OP("object_segmentation_polygon_flip")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("polygon"));
 
+REGISTER_USER_OP("image_normalize")
+    .Input("in")
+    .Attr("std", UserOpAttrType::kAtListFloat)
+    .Attr("mean", UserOpAttrType::kAtListFloat)
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
+      CHECK_EQ_OR_RETURN(image_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(image_desc->shape().NumAxes(), 1);
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *image_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(GetSbp)
+    .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
+
 }  // namespace oneflow
