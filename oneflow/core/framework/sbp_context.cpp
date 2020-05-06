@@ -22,70 +22,63 @@ inline void PartialSumImpl(SbpSignature* sbp_sign, const std::string& bn) {
 
 namespace user_op {
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Split(const OpArg& op_arg, int64_t axis) {
-  SplitImpl(sbp_sign_, GenRepeatedBn(op_arg.name(), op_arg.index()), axis);
-  return std::move(*this);
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Split(const OpArg& op_arg, int64_t axis) {
+  SplitImpl(&sbp_sig_tmp_, GenRepeatedBn(op_arg.name(), op_arg.index()), axis);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Split(const std::vector<OpArg>& op_args,
-                                                             int64_t axis) {
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Split(const std::vector<OpArg>& op_args,
+                                                            int64_t axis) {
   for (const auto& op_arg : op_args) { Split(op_arg, axis); }
-  return std::move(*this);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Split(
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Split(
     const std::vector<std::pair<std::string, int32_t>>& args, int64_t axis) {
   for (const auto& pair : args) {
-    SplitImpl(sbp_sign_, GenRepeatedBn(pair.first, pair.second), axis);
+    SplitImpl(&sbp_sig_tmp_, GenRepeatedBn(pair.first, pair.second), axis);
   }
-  return std::move(*this);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Broadcast(const OpArg& op_arg) {
-  BroadcastImpl(sbp_sign_, GenRepeatedBn(op_arg.name(), op_arg.index()));
-  return std::move(*this);
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Broadcast(const OpArg& op_arg) {
+  BroadcastImpl(&sbp_sig_tmp_, GenRepeatedBn(op_arg.name(), op_arg.index()));
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Broadcast(
-    const std::vector<OpArg>& op_args) {
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Broadcast(const std::vector<OpArg>& op_args) {
   for (const auto& op_arg : op_args) { Broadcast(op_arg); }
-  return std::move(*this);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::Broadcast(
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::Broadcast(
     const std::vector<std::pair<std::string, int32_t>>& op_args) {
   for (const auto& pair : op_args) {
-    BroadcastImpl(sbp_sign_, GenRepeatedBn(pair.first, pair.second));
+    BroadcastImpl(&sbp_sig_tmp_, GenRepeatedBn(pair.first, pair.second));
   }
-  return std::move(*this);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::PartialSum(const OpArg& op_arg) {
-  PartialSumImpl(sbp_sign_, GenRepeatedBn(op_arg.name(), op_arg.index()));
-  return std::move(*this);
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::PartialSum(const OpArg& op_arg) {
+  PartialSumImpl(&sbp_sig_tmp_, GenRepeatedBn(op_arg.name(), op_arg.index()));
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::PartialSum(
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::PartialSum(
     const std::vector<OpArg>& op_args) {
   for (const auto& op_arg : op_args) { PartialSum(op_arg); }
-  return std::move(*this);
+  return *this;
 }
 
-UserOpSbpSignatureBuilder&& UserOpSbpSignatureBuilder::PartialSum(
+UserOpSbpSignatureBuilder& UserOpSbpSignatureBuilder::PartialSum(
     const std::vector<std::pair<std::string, int32_t>>& op_args) {
   for (const auto& pair : op_args) {
-    PartialSumImpl(sbp_sign_, GenRepeatedBn(pair.first, pair.second));
+    PartialSumImpl(&sbp_sig_tmp_, GenRepeatedBn(pair.first, pair.second));
   }
-  return std::move(*this);
+  return *this;
 }
 
-Maybe<void> GetSbpFnUtil::MirrorSplitAtDim0(SbpContext* ctx) {
-  SbpSignatureBuilder()
-      .Split(ctx->inputs(), 0)
-      .Split(ctx->outputs(), 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-  return Maybe<void>::Ok();
-}
+Maybe<void> GetSbpFnUtil::DefaultBroadcastToBroadcast(SbpContext* ctx) { return Maybe<void>::Ok(); }
 
 }  // namespace user_op
 

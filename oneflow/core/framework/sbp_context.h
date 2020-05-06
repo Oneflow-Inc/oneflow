@@ -12,26 +12,26 @@ class TensorDesc;
 
 class UserOpSbpSignatureBuilder final {
  public:
-  UserOpSbpSignatureBuilder(SbpSignature* sbp_sign) : sbp_sign_(sbp_sign) {}
+  UserOpSbpSignatureBuilder(SbpSignature* sbp_sig) : sbp_sig_(sbp_sig) {}
 
-  UserOpSbpSignatureBuilder&& Split(const OpArg& op_arg, int64_t axis);
-  UserOpSbpSignatureBuilder&& Split(const std::vector<OpArg>& op_args, int64_t axis);
-  UserOpSbpSignatureBuilder&& Split(const std::vector<std::pair<std::string, int32_t>>& op_args,
-                                    int64_t axis);
+  UserOpSbpSignatureBuilder& Split(const OpArg& op_arg, int64_t axis);
+  UserOpSbpSignatureBuilder& Split(const std::vector<OpArg>& op_args, int64_t axis);
+  UserOpSbpSignatureBuilder& Split(const std::vector<std::pair<std::string, int32_t>>& op_args,
+                                   int64_t axis);
 
-  UserOpSbpSignatureBuilder&& Broadcast(const OpArg& op_arg);
-  UserOpSbpSignatureBuilder&& Broadcast(const std::vector<OpArg>& op_args);
-  UserOpSbpSignatureBuilder&& Broadcast(
+  UserOpSbpSignatureBuilder& Broadcast(const OpArg& op_arg);
+  UserOpSbpSignatureBuilder& Broadcast(const std::vector<OpArg>& op_args);
+  UserOpSbpSignatureBuilder& Broadcast(const std::vector<std::pair<std::string, int32_t>>& op_args);
+
+  UserOpSbpSignatureBuilder& PartialSum(const OpArg& op_arg);
+  UserOpSbpSignatureBuilder& PartialSum(const std::vector<OpArg>& op_args);
+  UserOpSbpSignatureBuilder& PartialSum(
       const std::vector<std::pair<std::string, int32_t>>& op_args);
-
-  UserOpSbpSignatureBuilder&& PartialSum(const OpArg& op_arg);
-  UserOpSbpSignatureBuilder&& PartialSum(const std::vector<OpArg>& op_args);
-  UserOpSbpSignatureBuilder&& PartialSum(
-      const std::vector<std::pair<std::string, int32_t>>& op_args);
-  void Build() {}
+  void Build() { *sbp_sig_ = sbp_sig_tmp_; }
 
  private:
-  SbpSignature* sbp_sign_;
+  SbpSignature* sbp_sig_;
+  SbpSignature sbp_sig_tmp_;
 };
 
 class SbpContext {
@@ -74,7 +74,7 @@ class SbpContext {
 };
 
 struct GetSbpFnUtil {
-  static Maybe<void> MirrorSplitAtDim0(SbpContext*);
+  static Maybe<void> DefaultBroadcastToBroadcast(SbpContext*);
 };
 
 }  // namespace user_op
