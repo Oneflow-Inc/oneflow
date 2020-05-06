@@ -12,7 +12,7 @@ class TensorDesc;
 
 class UserOpSbpSignatureBuilder final {
  public:
-  UserOpSbpSignatureBuilder(SbpSignature* sbp_sig) : sbp_sig_(sbp_sig) {}
+  UserOpSbpSignatureBuilder(SbpSignatureList* sbp_sig_list) : sbp_sig_list_(sbp_sig_list) {}
 
   UserOpSbpSignatureBuilder& Split(const OpArg& op_arg, int64_t axis);
   UserOpSbpSignatureBuilder& Split(const std::vector<OpArg>& op_args, int64_t axis);
@@ -27,10 +27,12 @@ class UserOpSbpSignatureBuilder final {
   UserOpSbpSignatureBuilder& PartialSum(const std::vector<OpArg>& op_args);
   UserOpSbpSignatureBuilder& PartialSum(
       const std::vector<std::pair<std::string, int32_t>>& op_args);
-  void Build() { *sbp_sig_ = sbp_sig_tmp_; }
+
+  void Build() { *(sbp_sig_list_->mutable_sbp_signature()->Add()) = sbp_sig_tmp_; }
+  void Clear() { sbp_sig_tmp_.Clear(); }
 
  private:
-  SbpSignature* sbp_sig_;
+  SbpSignatureList* sbp_sig_list_;
   SbpSignature sbp_sig_tmp_;
 };
 
@@ -45,9 +47,7 @@ class SbpContext {
 
   SbpSignatureList* sbp_sig_list() { return sbp_sig_list_; }
 
-  UserOpSbpSignatureBuilder NewBuilder() {
-    return UserOpSbpSignatureBuilder(sbp_sig_list_->mutable_sbp_signature()->Add());
-  }
+  UserOpSbpSignatureBuilder NewBuilder() { return UserOpSbpSignatureBuilder(sbp_sig_list_); }
 
   DeviceType device_type() const { return device_type_; }
   int64_t parallel_num() const { return parallel_num_; }
