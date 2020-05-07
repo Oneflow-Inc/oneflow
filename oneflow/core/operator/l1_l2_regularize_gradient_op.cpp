@@ -45,8 +45,8 @@ Maybe<void> L1L2RegularizeGradientOp::InferBlobDescs(
 
 Maybe<void> L1L2RegularizeGradientOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  OF_CHECK(!BatchAxis4BnInOp("model")->has_value());
-  OF_CHECK(!BatchAxis4BnInOp("model_diff")->has_value());
+  CHECK_OR_RETURN(!BatchAxis4BnInOp("model")->has_value());
+  CHECK_OR_RETURN(!BatchAxis4BnInOp("model_diff")->has_value());
   BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
