@@ -14,7 +14,7 @@ namespace mola {
 class ReduceOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    std::vector<int> axis = ctx->GetAttr<std::vector<int>>("axis");
+    const auto& axis = ctx->GetAttr<std::vector<int>>("axis");
     Shape in_shape = ctx->InputShape("in");
     for (int i = 0; i < axis.size(); ++i) {
       if (axis[i] < 0) { axis[i] += in_shape.NumAxes(); }

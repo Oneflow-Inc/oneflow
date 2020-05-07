@@ -2,15 +2,17 @@
 ARG CUDA=10.0
 
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
+RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
-    openblas-devel \
     nasm \
     cmake3 \
     make \
     git \
     centos-release-scl \
     swig \
+    intel-mkl-2020.0-088 \
     zlib-devel \
     curl-devel \
     which
@@ -56,9 +58,8 @@ RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. &&
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=OFF .. && make -j $(nproc) ; fi
-
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) ; fi
+RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH; \
+    cmake -DTHIRD_PARTY=OFF .. && make -j $(nproc) ;
 
 ## BUILD WHEEL
 WORKDIR /workspace

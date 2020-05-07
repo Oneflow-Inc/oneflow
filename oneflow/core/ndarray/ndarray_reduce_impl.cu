@@ -5,6 +5,27 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
 
+namespace cub {
+struct Prod {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a * b;
+  }
+};
+struct Any {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a || b;
+  }
+};
+struct All {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a && b;
+  }
+};
+}  // namespace cub
+
 namespace oneflow {
 
 namespace {
