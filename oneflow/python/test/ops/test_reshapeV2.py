@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 from collections import OrderedDict
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+
+import test_global_storage
 
 def compare_with_tensorflow(device_type, input_shape, shape):
     assert device_type in ["gpu", "cpu"]
@@ -31,10 +31,10 @@ def compare_with_tensorflow(device_type, input_shape, shape):
             loss = flow.reshape(x, shape)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -44,14 +44,13 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     of_out = ReshapeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
+        x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.reshape(x, shape)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(np.load(os.path.join(
-        GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
 
 
 def test_reshape(test_case):
