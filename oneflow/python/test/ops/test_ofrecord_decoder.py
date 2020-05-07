@@ -12,13 +12,9 @@ import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
 
 
+tmp = tempfile.mkdtemp()
 def get_temp_dir():
-    tmp = tempfile.gettempdir()
-    import os
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return os.path.join(tmp, "test_ofrecord_decoder_user_op")
-    else:
-        return os.path.join(tmp, "test_ofrecord_decoder")
+    return tmp
 
 
 def int32_feature(value):
