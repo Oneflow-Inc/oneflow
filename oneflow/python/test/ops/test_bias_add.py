@@ -1,7 +1,8 @@
 from collections import OrderedDict
 import os
 
-from test_util import Save, Args, GenArgDict, GetSavePath
+from test_util import Args, GenArgDict
+import test_global_storage
 
 import numpy as np
 import oneflow as flow
@@ -27,8 +28,8 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
             loss = flow.nn.bias_add(value, bias, *flow_args)
             flow.losses.add_loss(loss)
 
-            flow.watch_diff(value, Save("value_diff"))
-            flow.watch_diff(bias, Save("bias_diff"))
+            flow.watch_diff(value, test_global_storage.Setter("value_diff"))
+            flow.watch_diff(bias, test_global_storage.Setter("bias_diff"))
 
             return loss
 
@@ -36,8 +37,8 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(value, bias).get().ndarray()
-    value_diff = np.load(os.path.join(GetSavePath(), "value_diff.npy"))
-    bias_diff = np.load(os.path.join(GetSavePath(), "bias_diff.npy"))
+    value_diff = test_global_storage.Get("value_diff")
+    bias_diff = test_global_storage.Get("bias_diff")
     return y, value_diff, bias_diff
 
 
