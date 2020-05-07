@@ -75,6 +75,16 @@ def local_gather(params, indices, axis=0, name=None):
 
     return flow.advanced.distribute_map((params, indices), gather_lambda)
 
+def infer_shape(x, shape):
+    dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
+    in_elem_cnt = reduce(operator.mul, x.shape, 1)
+    out_elem_cnt = reduce(operator.mul, shape, 1)
+    if dim_index_need_infer is not None:
+        assert (in_elem_cnt % out_elem_cnt) == 0
+        shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
+    else:
+        assert in_elem_cnt == out_elem_cnt
+    return shape
 
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
@@ -82,30 +92,31 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    op_conf = op_conf_util.OperatorConf()
-    if x.is_dynamic:
-        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
-        setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
-        op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
-        setattr(op_conf.dynamic_reshape_conf, "out", "out")
+    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == 'True'):
+        if name is None:
+            name = id_util.UniqueStr("Reshape_")
+        return flow.user_op_builder(name).Op("reshape")\
+            .Input("in", [x])\
+            .Output("out")\
+            .SetAttr("shape", infer_shape(x, shape), "AttrTypeShape")\
+            .Build().RemoteBlobList()[0]
     else:
-        dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
-        in_elem_cnt = reduce(operator.mul, x.shape, 1)
-        out_elem_cnt = reduce(operator.mul, shape, 1)
-        if dim_index_need_infer is not None:
-            assert (in_elem_cnt % out_elem_cnt) == 0
-            shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
+        op_conf = op_conf_util.OperatorConf()
+        if x.is_dynamic:
+            setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
+            setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
+            op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
+            setattr(op_conf.dynamic_reshape_conf, "out", "out")
         else:
-            assert in_elem_cnt == out_elem_cnt
-        op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-        setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
-        op_conf.reshape_conf.shape.dim[:] = list(shape)
-        op_conf.reshape_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+            op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
+            setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
+            op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
+            op_conf.reshape_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("reshape_like")
