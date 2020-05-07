@@ -59,7 +59,7 @@ class MutTensorView : public TensorViewBase<ShapeViewType, char> {
   template<typename T = void>
   T* mut_dptr() const {
     CheckDataType<T>(this->data_type());
-    return static_cast<T*>(this->mem_dptr());
+    return reinterpret_cast<T*>(this->mem_dptr());
   }
 
  protected:
