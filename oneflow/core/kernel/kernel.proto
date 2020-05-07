@@ -32,26 +32,6 @@ message LossKernelConf {
   required ScalarReductionType reduction = 4;
 }
 
-message SparseSoftmaxCrossEntropyLossKernelConf {
-  required LossKernelConf loss_conf = 1;
-}
-
-message SparseCrossEntropyLossKernelConf {
-  required LossKernelConf loss_conf = 1;
-}
-
-message SigmoidCrossEntropyLossKernelConf {
-    required LossKernelConf loss_conf = 1;
-}
-
-message SigmoidCrossEntropyLossGradKernelConf {
-    required LossKernelConf loss_conf = 1;
-}
-
-message IdentityLossKernelConf {
-  required LossKernelConf loss_conf = 1;
-}
-
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -108,10 +88,6 @@ message ReduceGatherKernelConf {
 message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
-}
-
-message HingeLossKernelConf {
-  required LossKernelConf loss_conf = 1;
 }
 
 message SliceKernelConf {
@@ -227,11 +203,8 @@ message KernelConf {
 
   oneof kernel_type {
     UserKernelConf user_conf = 100;
-    SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
-    SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    HingeLossKernelConf hinge_loss_conf = 105;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
@@ -253,14 +226,11 @@ message KernelConf {
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
-    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
-    IdentityLossKernelConf identity_loss_conf = 405;
     GatherKernelConf gather_conf = 406;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 426;
