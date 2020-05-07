@@ -1,7 +1,9 @@
 import oneflow as flow
 import numpy as np
+import tensorflow as tf
+import random
 
-def compare(prediction,target,k,y_groundtruth):
+def compare(prediction,target,k):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -23,31 +25,21 @@ def compare(prediction,target,k,y_groundtruth):
     @flow.function(func_config)
     def IntopkJob(prediction=flow.FixedTensorDef((3,4),dtype=flow.float),target=flow.FixedTensorDef((3,),dtype=flow.int32)):
         return flow.math.in_top_k(prediction,target,k=k)
-
+    # OneFlow
     y=IntopkJob(prediction,target).get().ndarray()
-    print(y,y_groundtruth)
-    assert (np.allclose(y,y_groundtruth))
+    # TensorFlow
+    with tf.GradientTape(persistent=True) as tape:
+        prediction_v = tf.Variable(prediction)
+        target_v = tf.Variable(target)
+        tf_out = tf.math.in_top_k(target_v,prediction_v,k=k)
+
+    assert (np.allclose(y,tf_out))
 
 def test(test_case):
 
-    data = []
-
-    data.append(np.array([[ 0.46714601 ,0.92652822 ,0.16808732 , 0.44906664],
- [ 0.03874864 , 0.55331773 , 0.32944077 , 0.84536946],
- [ 0.80283058 , 0.63945484 , 0.07212774 , 0.27699497]],dtype=np.float32))
-    data.append(np.array([[ 0.46714601 ,0.92652822 ,0.16808732 , 0.44906664],
- [ 0.03874864 , 0.55331773 , 0.32944077 , 0.84536946],
- [ 0.80283058 , 0.63945484 , 0.07212774 , 0.27699497]],dtype=np.float32))
-
-    target=[]
-    target.append(np.array([3,3,3],dtype=np.int32))
-    target.append(np.array([3,3,3],dtype=np.int32))
-
-    k=[1,3]
-
-    y_groundtruth=[]
-    y_groundtruth.append(np.array([0,1,0]))
-    y_groundtruth.append(np.array([1,1,1]))
-
-    for i in range(len(data)): 
-        compare(data[i],target[i],k[i],y_groundtruth[i])
+    test_time=5
+    for i in range(test_time): 
+        prediction=np.random.rand(3,4).astype("float32")
+        target=np.random.randint(4,size=3).astype("int32")
+        k=random.choice([1,2,3,4])
+        compare(prediction,target,k)
