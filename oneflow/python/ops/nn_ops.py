@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import os
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -254,56 +255,109 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
+def _softmax_need_transpose(x, axis):
+    assert type(axis) is int
+    dim_num = len(x.shape)
+    assert dim_num >= 2
+    if axis < 0: axis += dim_num
+    assert axis >= 1
+    assert axis < dim_num
+
+    need_transpose = False
+    permute = [i for i in range(dim_num)]
+    if axis > 0 and axis != dim_num - 1:
+        need_transpose = True
+        permute[axis] = permute[-1]
+        permute[-1] = axis
+    return need_transpose, permute
+
+
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
-    assert type(axis) is int
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Softmax_"),
+
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        assert type(axis) is int
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("Softmax_"),
+        )
+        setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
+        op_conf.softmax_conf.axis = axis
+        op_conf.softmax_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+
+    need_transpose, permute = _softmax_need_transpose(logits, axis)
+    if need_transpose:
+        logits = oneflow.transpose(logits, perm=permute)
+
+    out = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        .Op("softmax")
+        .Input("in", [logits])
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
-    op_conf.softmax_conf.axis = axis
-    op_conf.softmax_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    if need_transpose:
+        out = oneflow.transpose(out, perm=permute)
+    return out
+
 
 @oneflow_export("nn.softmax_grad")
 def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
-    assert type(axis) is int
-    op_conf = op_conf_util.OperatorConf()
 
-    name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
-    setattr(op_conf, "name", name_prefix)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        assert type(axis) is int
+        op_conf = op_conf_util.OperatorConf()
 
-    need_transpose = False
-    permute = [i for i in range(len(y.shape))]
-    if axis > 0 and axis != len(y.shape) - 1:
-        need_transpose = True
-        permute[axis] = permute[-1]
-        permute[-1] = axis
+        name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
+        setattr(op_conf, "name", name_prefix)
 
+        need_transpose, permute = _softmax_need_transpose(y, axis)
+
+        if need_transpose:
+            y = oneflow.transpose(y, perm=permute)
+            dy = oneflow.transpose(dy, perm=permute)
+        setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
+        setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
+
+        op_conf.softmax_grad_conf.axis = -1
+        op_conf.softmax_grad_conf.dx = "dx"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "dx"
+        dx = remote_blob_util.RemoteBlob(lbi)
+
+        if need_transpose:
+            dx = oneflow.transpose(dx, perm=permute)
+        return dx
+
+    need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
         y = oneflow.transpose(y, perm=permute)
         dy = oneflow.transpose(dy, perm=permute)
-    setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
-    setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
 
-    op_conf.softmax_grad_conf.axis = -1
-    op_conf.softmax_grad_conf.dx = "dx"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "dx"
-    dx = remote_blob_util.RemoteBlob(lbi)
+    dx = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        .Op("softmax_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .RemoteBlobList()[0]
+    )
 
     if need_transpose:
         dx = oneflow.transpose(dx, perm=permute)
