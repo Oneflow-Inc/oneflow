@@ -9,8 +9,9 @@ import tempfile
 
 from test_util import GenArgList
 
+tmp = tempfile.mkdtemp()
 def get_temp_dir():
-    return tempfile.gettempdir()
+    return tmp
 
 # Save func for flow.watch
 def Save(name):
@@ -108,4 +109,3 @@ def test_dropout(test_case):
         model_load_dir = os.path.join(get_temp_dir(), 'init_snapshot')
         if os.path.isdir(model_load_dir):
             shutil.rmtree(model_load_dir)
-
