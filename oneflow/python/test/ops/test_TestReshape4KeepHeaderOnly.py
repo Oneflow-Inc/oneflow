@@ -16,7 +16,7 @@ def TestReshape(x, shape, name):
     return flow.user_op_builder(name).Op("TestReshape4KeepHeaderOnly") \
             .Input("in",[x]).Output("out") \
             .SetAttr("shape", shape, "AttrTypeShape") \
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def compare_with_tensorflow(device_type, input_shape, output_shape):
     assert device_type in ["gpu", "cpu"]
