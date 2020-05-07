@@ -105,3 +105,7 @@ def test_dropout(test_case):
         if arg[4] is None: continue
         for name in ['x', 'x_diff', 'loss', 'loss_diff']:
             check_npy(name)
+        model_load_dir = os.path.join(get_temp_dir(), 'init_snapshot')
+        if os.path.isdir(model_load_dir):
+            shutil.rmtree(model_load_dir)
+
