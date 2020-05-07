@@ -145,7 +145,7 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_KERNEL(op_device_type, dtype)                                          \
+#define REGISTER_BN_KERNEL(op_device_type, dtype)                                       \
   REGISTER_USER_KERNEL("normalization")                                                 \
       .SetCreateFn<NormalizationUserKernel<DeviceType::k##op_device_type, dtype>>()     \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
@@ -154,7 +154,7 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
                && out_desc->data_type() == GetDataType<dtype>::value;                   \
       });
 
-#define REGISTER_GRAD_KERNEL(op_device_type, dtype)                                     \
+#define REGISTER_BN_GRAD_KERNEL(op_device_type, dtype)                                  \
   REGISTER_USER_KERNEL("normalization_grad")                                            \
       .SetCreateFn<NormalizationGradUserKernel<DeviceType::k##op_device_type, dtype>>() \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
@@ -163,16 +163,16 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
                && dx_desc->data_type() == GetDataType<dtype>::value;                    \
       });
 
-REGISTER_KERNEL(CPU, float)
-REGISTER_KERNEL(CPU, double)
+REGISTER_BN_KERNEL(CPU, float)
+REGISTER_BN_KERNEL(CPU, double)
 
-REGISTER_KERNEL(GPU, float)
-REGISTER_KERNEL(GPU, double)
+REGISTER_BN_KERNEL(GPU, float)
+REGISTER_BN_KERNEL(GPU, double)
 
-REGISTER_GRAD_KERNEL(CPU, float)
-REGISTER_GRAD_KERNEL(CPU, double)
+REGISTER_BN_GRAD_KERNEL(CPU, float)
+REGISTER_BN_GRAD_KERNEL(CPU, double)
 
-REGISTER_GRAD_KERNEL(GPU, float)
-REGISTER_GRAD_KERNEL(GPU, double)
+REGISTER_BN_GRAD_KERNEL(GPU, float)
+REGISTER_BN_GRAD_KERNEL(GPU, double)
 
 }  // namespace oneflow
