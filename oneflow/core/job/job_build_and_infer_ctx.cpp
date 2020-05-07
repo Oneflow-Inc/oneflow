@@ -77,6 +77,7 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     DoPass("AddLbiDiffWatcherOpConfs");
     DoPass("SequentializeAllReduceGroupPass");
     DoPass("PruneParallelCastOpsPass");
+    DoPass("DumpVariableInfoPass");
   }
   DoPass("DumpTimeShapeAndBlobParallelConfPass");
   return Maybe<void>::Ok();
