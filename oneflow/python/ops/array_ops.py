@@ -99,7 +99,7 @@ def reshape(x, shape, name=None):
             .Input("in", [x])\
             .Output("out")\
             .SetAttr("shape", infer_shape(x, shape), "AttrTypeShape")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         if x.is_dynamic:

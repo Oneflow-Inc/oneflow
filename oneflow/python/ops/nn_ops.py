@@ -305,6 +305,7 @@ def softmax(logits, axis=None, name=None):
         .Input("in", [logits])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -357,6 +358,7 @@ def softmax_grad(y, dy, axis=None, name=None):
         .Input("dy", [dy])
         .Output("dx")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -460,6 +462,7 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     return (
         mask_op
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -511,6 +514,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .Output("out")
         .SetAttr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
