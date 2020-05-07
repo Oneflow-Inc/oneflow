@@ -1,6 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/batch_gather_kernel_util.h"
 
 namespace oneflow {
