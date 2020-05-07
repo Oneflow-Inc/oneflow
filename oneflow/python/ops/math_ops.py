@@ -488,13 +488,13 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
         name = id_util.UniqueStr("UnsortedSegmentSumLike_")
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name if name is
-               not None else id_util.UniqueStr("UnsortedSegmentSun_"))\
-          .Op("unsorted_segment_sum")\
+               not None else id_util.UniqueStr("UnsortedSegmentSumLike__"))\
+          .Op("unsorted_segment_sum_like")\
           .Input("data", [data])\
           .Input("segment_ids", [segment_ids])\
+          .Input("like", [like])\
           .Output("out")\
           .SetAttr("axis", int(axis), "AttrTypeInt64")\
-          .SetAttr("num_segments", int(num_segments), "AttrTypeInt64")\
           .Build().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()

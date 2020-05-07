@@ -7,7 +7,6 @@ REGISTER_USER_OP("gather")
     .Input("indices")
     .Output("out")
     .Attr("axis", UserOpAttrType::kAtInt64)
-    .Attr("batch_dims", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in_shape->NumAxes(), 0);

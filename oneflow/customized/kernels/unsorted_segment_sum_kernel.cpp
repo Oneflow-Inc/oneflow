@@ -1,6 +1,4 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 
 namespace oneflow {

@@ -18,54 +18,51 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("gather")
 def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
-    if axis is None:
-        if batch_dims > 0:
-            axis = batch_dims
-        else:
-            axis = 0
-            batch_dims = 0
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr("Gather_")
+    else:
+        op_conf.name = name
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        if name is None:
-            name = id_util.UniqueStr("Gather_")
-        return flow.user_op_builder(name if name is
+    if axis is None:
+        axis = batch_dims
+
+    if batch_dims > 0:
+        if axis == batch_dims:
+            setattr(op_conf.batch_gather_conf, "in", params.logical_blob_name)
+            op_conf.batch_gather_conf.indices = indices.logical_blob_name
+            op_conf.batch_gather_conf.out = "out"
+        elif axis > batch_dims:
+            raise NotImplementedError
+        else:
+            raise AttributeError
+    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
+        assert axis == 0
+        assert batch_dims == 0
+        setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
+        op_conf.gather_ms0_conf.indices = indices.logical_blob_name
+        op_conf.gather_ms0_conf.out = "out"
+    else:
+        if os.getenv("ENABLE_USER_OP") == 'True':
+            return flow.user_op_builder(name if name is
                 not None else id_util.UniqueStr("Gather_"))\
            .Op("gather")\
            .Input("in", [params])\
            .Input("indices", [indices])\
            .Output("out")\
            .SetAttr("axis", int(axis), "AttrTypeInt64")\
-           .SetAttr("batch_dims", int(batch_dims), "AttrTypeInt64")\
            .Build().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        if batch_dims > 0:
-            if axis == batch_dims:
-                setattr(op_conf.batch_gather_conf, "in", params.logical_blob_name)
-                op_conf.batch_gather_conf.indices = indices.logical_blob_name
-                op_conf.batch_gather_conf.out = "out"
-            elif axis > batch_dims:
-                raise NotImplementedError
-            else:
-                raise AttributeError
-        elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
-            assert axis == 0
-            assert batch_dims == 0
-            setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
-            op_conf.gather_ms0_conf.indices = indices.logical_blob_name
-            op_conf.gather_ms0_conf.out = "out"
         else:
             setattr(op_conf.gather_conf, "in", params.logical_blob_name)
             op_conf.gather_conf.indices = indices.logical_blob_name
             op_conf.gather_conf.out = "out"
             op_conf.gather_conf.axis = axis
 
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = (op_conf.name if op_conf.name is not None else
-                id_util.UniqueStr("Gather_"))
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("local_gather")

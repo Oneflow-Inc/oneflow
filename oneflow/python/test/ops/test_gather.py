@@ -26,7 +26,7 @@ def _random_inputs(params_shape, indices_shape):
     return params, indices
 
 
-def _make_gather_fn(params, indices, axis, device_type, mirrored, compare_fn):
+def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_fn):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -46,7 +46,7 @@ def _make_gather_fn(params, indices, axis, device_type, mirrored, compare_fn):
                 initializer=flow.constant_initializer(0),
             )
             x = x + x_blob
-            y = flow.gather(x, i_blob, axis=axis)
+            y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
             flow.losses.add_loss(y)
         flow.watch_diff(x, compare_fn)
         return y
@@ -72,7 +72,7 @@ def _make_gather_fn(params, indices, axis, device_type, mirrored, compare_fn):
     return gather_fn
 
 def _compare_gather_with_tf(test_case, device_type, params_shape,
-        indices_shape, axis, mirrored=False):
+        indices_shape, axis, batch_dims, mirrored=False):
     params, indices = _random_inputs(params_shape, indices_shape)
 
     i = tf.constant(indices)
@@ -107,7 +107,7 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
             #print("------------------------------------------------------")
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
-    gather_fn = _make_gather_fn(params, indices, axis, device_type, mirrored, compare_dy)
+    gather_fn = _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_dy)
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -125,6 +125,7 @@ def test_gather(test_case):
     arg_dict["params_shape"] = [(2, 8)]
     arg_dict["indices_shape"] = [(2, 1)]
     arg_dict["axis"] = [0]
+    arg_dict["batch_dims"] = [0]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
 
@@ -135,6 +136,7 @@ def test_gather_case_1(test_case):
     arg_dict["params_shape"] = [(2, 10, 2)]
     arg_dict["indices_shape"] = [(2, 1)]
     arg_dict["axis"] = [0]
+    arg_dict["batch_dims"] = [0]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
 
@@ -145,6 +147,7 @@ def test_gather_case_2(test_case):
     arg_dict["params_shape"] = [(2, 8)]
     arg_dict["indices_shape"] = [(2, 1)]
     arg_dict["axis"] = [0]
+    arg_dict["batch_dims"] = [0]
     arg_dict["mirrored"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
@@ -155,6 +158,7 @@ def test_gather_case_3(test_case):
     arg_dict["params_shape"] = [(2, 5, 2, 2)]
     arg_dict["indices_shape"] = [(2, 2, 2)]
     arg_dict["axis"] = [1]
+    arg_dict["batch_dims"] = [0]
     arg_dict["mirrored"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
