@@ -24,25 +24,25 @@ std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> MakeInferBatchAxisFn(
 }  // namespace
 
 REGISTER_USER_OP("image_flip")
-    .Input("image")
+    .Input("in")
     .Input("flip_code")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      CHECK_EQ_OR_RETURN(image_desc->data_type(), DataType::kTensorBuffer);
-      CHECK_EQ_OR_RETURN(image_desc->shape().NumAxes(), 1);
-      const int N = image_desc->shape().elem_cnt();
+      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), 1);
+      const int N = in_desc->shape().elem_cnt();
 
       const user_op::TensorDesc* flip_code_desc = ctx->TensorDesc4ArgNameAndIndex("flip_code", 0);
       CHECK_EQ_OR_RETURN(flip_code_desc->data_type(), DataType::kInt8);
       CHECK_EQ_OR_RETURN(flip_code_desc->shape().elem_cnt(), N);
 
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *image_desc;
+      *out_desc = *in_desc;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("image"));
+    .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
 
 REGISTER_USER_OP("object_bbox_flip")
     .Input("bbox")
@@ -71,15 +71,15 @@ REGISTER_USER_OP("object_bbox_flip")
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("bbox"));
 
 REGISTER_USER_OP("object_segmentation_polygon_flip")
-    .Input("polygon")
+    .Input("poly")
     .Input("image_size")
     .Input("flip_code")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* polygon_desc = ctx->TensorDesc4ArgNameAndIndex("polygon", 0);
-      CHECK_EQ_OR_RETURN(polygon_desc->data_type(), DataType::kTensorBuffer);
-      CHECK_EQ_OR_RETURN(polygon_desc->shape().NumAxes(), 1);
-      const int N = polygon_desc->shape().elem_cnt();
+      const user_op::TensorDesc* poly_desc = ctx->TensorDesc4ArgNameAndIndex("poly", 0);
+      CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(poly_desc->shape().NumAxes(), 1);
+      const int N = poly_desc->shape().elem_cnt();
 
       const user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
       CHECK_EQ_OR_RETURN(image_size_desc->data_type(), DataType::kInt32);
@@ -90,11 +90,11 @@ REGISTER_USER_OP("object_segmentation_polygon_flip")
       CHECK_EQ_OR_RETURN(flip_code_desc->shape().elem_cnt(), N);
 
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *polygon_desc;
+      *out_desc = *poly_desc;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("polygon"));
+    .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
 
 REGISTER_USER_OP("image_normalize")
     .Input("in")
@@ -102,14 +102,41 @@ REGISTER_USER_OP("image_normalize")
     .Attr("mean", UserOpAttrType::kAtListFloat)
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      CHECK_EQ_OR_RETURN(image_desc->data_type(), DataType::kTensorBuffer);
-      CHECK_EQ_OR_RETURN(image_desc->shape().NumAxes(), 1);
+      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), 1);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *image_desc;
+      *out_desc = *in_desc;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
+
+REGISTER_USER_OP("object_segmentation_polygon_to_mask")
+    .Input("poly")
+    .Input("poly_index")
+    .Input("image_size")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* poly_desc = ctx->TensorDesc4ArgNameAndIndex("poly", 0);
+      CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(poly_desc->shape().NumAxes(), 1);
+      const int N = poly_desc->shape().elem_cnt();
+
+      const user_op::TensorDesc* poly_index_desc = ctx->TensorDesc4ArgNameAndIndex("poly_index", 0);
+      CHECK_EQ_OR_RETURN(poly_index_desc->data_type(), DataType::kTensorBuffer);
+      CHECK_EQ_OR_RETURN(poly_index_desc->shape().NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(poly_index_desc->shape().elem_cnt(), N);
+
+      const user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
+      CHECK_EQ_OR_RETURN(image_size_desc->data_type(), DataType::kInt32);
+      CHECK_EQ_OR_RETURN(image_size_desc->shape().elem_cnt(), N * 2);
+
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *poly_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(GetSbp)
+    .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
 
 }  // namespace oneflow

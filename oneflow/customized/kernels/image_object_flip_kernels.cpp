@@ -101,25 +101,62 @@ DEFINE_STATIC_SWITCH_FUNC(void, ImageNormalizeByChannel, MAKE_IMAGE_NORMALIZE_SW
 
 #undef MAKE_IMAGE_NORMALIZE_SWITCH_ENTRY
 
-std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
-    const std::string& input_arg_name) {
-  return [&](const user_op::KernelRegContext& ctx) -> bool {
-    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex(input_arg_name, 0);
-    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-    return ctx.device_type() == DeviceType::kCPU
-           && in_tensor->data_type() == DataType::kTensorBuffer
-           && out_tensor->data_type() == DataType::kTensorBuffer;
+template<typename T, typename I>
+void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_index,
+                    TensorBuffer* masks, int32_t im_h, int32_t im_w) {
+  CHECK_EQ(polys.shape().NumAxes(), 2);
+  CHECK_EQ(polys.shape().At(1), 2);
+  CHECK_EQ(polys_nd_index.shape().NumAxes(), 2);
+  CHECK_EQ(polys_nd_index.shape().At(1), 3);
+  int num_points = polys.shape().At(0);
+  CHECK_EQ(polys_nd_index.shape().At(0), num_points);
+
+  std::vector<std::vector<cv::Point>> poly_point_vec;
+  std::vector<cv::Mat> mask_mat_vec;
+  auto PolyToMask = [&]() {
+    CHECK_GT(poly_point_vec.size(), 0);
+    CHECK_GT(poly_point_vec.front().size(), 0);
+    cv::Mat mask_mat = cv::Mat(im_h, im_w, CV_8SC1, cv::Scalar(0));
+    cv::fillPoly(mask_mat, poly_point_vec, cv::Scalar(1), cv::LINE_8);
+    mask_mat_vec.emplace_back(std::move(mask_mat));
+    poly_point_vec.clear();
   };
+  FOR_RANGE(int, i, 0, num_points) {
+    const I pt_idx = polys_nd_index.data<I>()[i * 3 + 0];
+    const I poly_idx = polys_nd_index.data<I>()[i * 3 + 1];
+    const I segm_idx = polys_nd_index.data<I>()[i * 3 + 2];
+    if (segm_idx != mask_mat_vec.size()) { PolyToMask(); }
+    if (poly_idx == poly_point_vec.size()) {
+      poly_point_vec.emplace_back(std::vector<cv::Point>());
+    }
+    CHECK_EQ(segm_idx, mask_mat_vec.size());
+    CHECK_EQ(poly_idx, poly_point_vec.size() - 1);
+    CHECK_EQ(pt_idx, poly_point_vec.back().size());
+    const T* pts_ptr = polys.data<T>() + i * 2;
+    cv::Point pt{static_cast<int>(pts_ptr[0]), static_cast<int>(pts_ptr[1])};
+    poly_point_vec.back().emplace_back(std::move(pt));
+  }
+  PolyToMask();
+
+  masks->Resize(Shape({static_cast<int64_t>(mask_mat_vec.size()), static_cast<int64_t>(im_h),
+                       static_cast<int64_t>(im_w)}),
+                DataType::kInt8);
+  int mask_idx = 0;
+  for (const auto& mask_mat : mask_mat_vec) {
+    CHECK(mask_mat.isContinuous());
+    CHECK_EQ(mask_mat.total(), im_h * im_w);
+    memcpy(masks->mut_data<int8_t>() + mask_idx * im_h * im_w, mask_mat.ptr<int8_t>(),
+           mask_mat.total() * sizeof(int8_t));
+    mask_idx += 1;
+  }
 }
 
-std::function<Maybe<void>(const user_op::InferContext&, user_op::AddInplaceArgPair)>
-MakeInplaceProposalFn(const std::string& input_arg_name) {
-  return [&](const user_op::InferContext& ctx,
-             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-    OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, input_arg_name, 0, true));
-    return Maybe<void>::Ok();
-  };
-}
+#define MAKE_POLYGONS_TO_MASK_SWITCH_ENTRY(func_name, T, I) func_name<T, I>
+DEFINE_STATIC_SWITCH_FUNC(void, PolygonsToMask, MAKE_POLYGONS_TO_MASK_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ),
+                          MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
+
+#undef MAKE_POLYGONS_TO_MASK_SWITCH_ENTRY
 
 }  // namespace
 
@@ -195,7 +232,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* polygon_tensor = ctx->Tensor4ArgNameAndIndex("polygon", 0);
+    const user_op::Tensor* polygon_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
     const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -255,24 +292,96 @@ class ImageNormalize final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
+ public:
+  ObjectSegmentationPolygonToMask() = default;
+  ~ObjectSegmentationPolygonToMask() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* poly_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
+    const user_op::Tensor* poly_index_tensor = ctx->Tensor4ArgNameAndIndex("poly_index", 0);
+    const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
+    user_op::Tensor* mask_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int num_images = poly_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(poly_index_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(image_size_tensor->shape().At(0), num_images);
+    CHECK_EQ(mask_tensor->shape().elem_cnt(), num_images);
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
+      const TensorBuffer& poly_index_buffer = poly_index_tensor->dptr<TensorBuffer>()[i];
+      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
+      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
+      TensorBuffer* mask_buffer = mask_tensor->mut_dptr<TensorBuffer>() + i;
+      SwitchPolygonsToMask(SwitchCase(poly_buffer.data_type(), poly_index_buffer.data_type()),
+                           poly_buffer, poly_index_buffer, mask_buffer, image_height, image_width);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+namespace {
+
+std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
+    std::map<std::string, DataType> arg_name2data_type) {
+  return [&](const user_op::KernelRegContext& ctx) -> bool {
+    bool match = (ctx.device_type() == DeviceType::kCPU);
+    for (const auto& pair : arg_name2data_type) {
+      const user_op::TensorDesc* arg_desc = ctx.TensorDesc4ArgNameAndIndex(pair.first, 0);
+      match = match && (arg_desc->data_type(), pair.second);
+    }
+    return match;
+  };
+}
+
+std::function<Maybe<void>(const user_op::InferContext&, user_op::AddInplaceArgPair)>
+MakeInplaceProposalFn(const std::string& input_arg_name) {
+  return [&](const user_op::InferContext& ctx,
+             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+    OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, input_arg_name, 0, true));
+    return Maybe<void>::Ok();
+  };
+}
+
+}  // namespace
+
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("image"))
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"image", DataType::kTensorBuffer},
+                                             {"flip_code", DataType::kInt8},
+                                             {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("image"));
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("bbox"))
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"bbox", DataType::kTensorBuffer},
+                                             {"image_size", DataType::kInt32},
+                                             {"flip_code", DataType::kInt8},
+                                             {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("polygon"))
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
+                                             {"image_size", DataType::kInt32},
+                                             {"flip_code", DataType::kInt8},
+                                             {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("polygon"));
 
 REGISTER_USER_KERNEL("image_normalize")
     .SetCreateFn<ImageNormalize>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn("in"))
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"in", DataType::kTensorBuffer},
+                                             {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
+
+REGISTER_USER_KERNEL("object_segmentation_polygon_to_mask")
+    .SetCreateFn<ObjectSegmentationPolygonToMask>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
+                                             {"poly_index", DataType::kTensorBuffer},
+                                             {"image_size", DataType::kInt32},
+                                             {"out", DataType::kTensorBuffer}}));
 
 }  // namespace oneflow
