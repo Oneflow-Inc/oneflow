@@ -34,9 +34,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
-
-  virtual bool IsLossOp() const { return false; }
-
+  
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   LogicalBlobId* MutBnInOp2Lbi(const std::string& bn_in_op);
