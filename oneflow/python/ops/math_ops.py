@@ -1816,3 +1816,16 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+@oneflow_export("math.polyval")
+def polyval(coeffs, x, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Polyval_")
+    if not isinstance(coeffs, list):
+        raise ValueError("Argument coeffs must be list type "
+                         "found {}".format(type(coeffs)))
+    if len(coeffs) < 1:
+        return flow.zeros_like(x, name = name)
+    p = flow.zeros_like(x, name = name)
+    for c in coeffs:
+        p = flow.math.add(c,flow.math.multiply(p,x))
+    return p
