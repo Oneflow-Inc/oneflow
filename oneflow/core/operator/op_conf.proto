@@ -11,6 +11,13 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
+enum ActivationType {
+  kNone = 0;
+  kTanH = 1;
+  kSigmoid = 2;
+  kRelu = 3;
+}
+
 message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
