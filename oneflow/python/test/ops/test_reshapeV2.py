@@ -62,32 +62,3 @@ def test_reshape(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-
-def compare_with_tensorflow_with_shape_empty(device_type):
-    assert device_type in ["gpu", "cpu"]
-    flow.clear_default_session()
-
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-
-    @flow.function(func_config)
-    def ReshapeJob(x=flow.FixedTensorDef((1,))):
-        loss = flow.reshape(x, ())
-        flow.watch(x, Save("x"))
-        return loss
-
-    # OneFlow
-    input = np.array([3], dtype=np.float32)
-    of_out = ReshapeJob(input).get()
-    # TensorFlow
-    with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        tf_out = tf.reshape(x, ())
-
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-
-def test_reshape_with_shape_empty(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_with_shape_empty(*arg)

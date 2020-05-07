@@ -92,8 +92,6 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if isinstance(x.shape, tuple) and len(x.shape) == 1:
-        return x
     if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == 'True'):
         if name is None:
             name = id_util.UniqueStr("Reshape_")
