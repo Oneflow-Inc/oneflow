@@ -10,6 +10,7 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/graph/boxing/collective_boxing.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1633,18 +1634,6 @@ message XrtLaunchOpConf {
   optional bool model_update = 9 [default = false];
 }
 
-message NcclBoxingReduceScatterOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllGatherOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllReduceOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
@@ -1795,6 +1784,11 @@ message BroadcastToCompatibleWithOpConf {
   required string y = 3;
 }
 
+message CollectiveBoxingGenericOpConf {
+  required LogicalBlobId lbi = 1;
+  required boxing.collective.RankDesc rank_desc = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1851,9 +1845,6 @@ message OperatorConf {
     PartialTickOpConf partial_tick_conf = 149;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
-    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
-    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
-    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
@@ -1867,6 +1858,7 @@ message OperatorConf {
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 168;
     UserOpConf user_conf = 199;
     
     // domain op

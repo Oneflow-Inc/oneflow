@@ -164,3 +164,33 @@ def collect_act_event(val = True):
         return
     assert type(val) is int
     sess.config_proto.profile_conf.collect_act_event = val
+
+
+@oneflow_export('config.collective_boxing.enable_fusion')
+def enable_fusion(val=True):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.enable_fusion = val
+
+
+@oneflow_export('config.collective_boxing.nccl_num_streams')
+def enable_fusion(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is int
+    sess.config_proto.resource.collective_boxing_conf.nccl_num_streams = val
+
+
+@oneflow_export('config.collective_boxing.nccl_fusion_threshold_mb')
+def enable_fusion(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is int
+    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_threshold_mb = val

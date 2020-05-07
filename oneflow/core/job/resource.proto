@@ -3,6 +3,15 @@ package oneflow;
 
 import public "oneflow/core/common/device_type.proto";
 
+message CollectiveBoxingConf {
+  // global
+  optional bool enable_fusion = 1 [default = true];
+
+  // nccl
+  optional int64 nccl_num_streams = 101 [default = 2];
+  optional int64 nccl_fusion_threshold_mb = 102 [default = 16];
+}
+
 message Resource {
   optional int32 machine_num = 1 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
@@ -20,4 +29,5 @@ message Resource {
   optional bool enable_thread_local_cache = 16 [default = true];
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
   optional bool enable_debug_mode = 18 [default = false];
+  optional CollectiveBoxingConf collective_boxing_conf = 19;
 }
