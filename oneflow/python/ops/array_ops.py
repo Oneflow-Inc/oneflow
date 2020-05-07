@@ -153,7 +153,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
             .Input("input", [a])\
             .Output("output")\
             .SetAttr("perm", perm, "AttrTypeListInt32")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name

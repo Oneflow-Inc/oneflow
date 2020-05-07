@@ -280,6 +280,7 @@ def scalar_mul(x, operand, name=None):
                 .SetAttr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -393,6 +394,7 @@ def gelu(x, name=None):
             .Input("in", [x])
             .Output("out")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -452,6 +454,7 @@ def sigmoid(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
