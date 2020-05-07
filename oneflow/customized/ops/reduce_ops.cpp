@@ -1,5 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
+#include "oneflow/core/ndarray/binary_func.h"
 
 namespace oneflow {
 
@@ -40,6 +41,20 @@ Maybe<void> InferBatchAxisFn(user_op::BatchAxisContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+template<template<typename> class binary_func>
+void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
+  // TODO(lixinqi)
+}
+
+template<>
+void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
+  SbpSignatureBuilder()
+      .Split(ctx->inputs(), axis)
+      .PartialSum(ctx->outputs())
+      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+}
+
+template<template<typename> class binary_func>
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
   bool keep_dims = false;
@@ -55,10 +70,7 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   int32_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), i)
-          .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      GeneratePartialSbp<binary_func>(ctx, i);
       num_reduced_axes += 1;
     } else {
       SbpSignatureBuilder()
@@ -70,20 +82,20 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_USER_OP(op_name)          \
-  REGISTER_USER_OP(op_name)                       \
-      .Input("input_tensor")                      \
-      .Output("output_tensor")                    \
-      .Attr("axis", UserOpAttrType::kAtListInt32) \
-      .Attr("keepdims", UserOpAttrType::kAtBool)  \
-      .SetTensorDescInferFn(InferTensorDescFn)    \
-      .SetBatchAxisInferFn(InferBatchAxisFn)      \
-      .SetGetSbpFn(GetSbpFn);
+#define REGISTER_REDUCE_USER_OP(op_name, binary_func) \
+  REGISTER_USER_OP(op_name)                           \
+      .Input("input_tensor")                          \
+      .Output("output_tensor")                        \
+      .Attr("axis", UserOpAttrType::kAtListInt32)     \
+      .Attr("keepdims", UserOpAttrType::kAtBool)      \
+      .SetTensorDescInferFn(InferTensorDescFn)        \
+      .SetBatchAxisInferFn(InferBatchAxisFn)          \
+      .SetGetSbpFn(GetSbpFn<binary_func>);
 
-REGISTER_REDUCE_USER_OP("reduce_any")
-REGISTER_REDUCE_USER_OP("reduce_min")
-REGISTER_REDUCE_USER_OP("reduce_prod")
-REGISTER_REDUCE_USER_OP("reduce_all")
-REGISTER_REDUCE_USER_OP("reduce_sum")
+REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
+REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
+REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
+REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
+REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
 
 }  // namespace oneflow
