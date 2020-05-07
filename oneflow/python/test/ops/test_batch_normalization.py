@@ -4,8 +4,7 @@ import numpy as np
 
 from test_util import GenArgDict
 from test_util import Args
-from test_util import GetSavePath
-from test_util import Save
+import test_global_storage
 
 from collections import OrderedDict
 import os
@@ -96,7 +95,7 @@ def RunOneflowBn(device_type, flow_op, x, flow_args, training=True):
             if training:
                 flow.losses.add_loss(loss)
 
-                flow.watch_diff(x, Save("x_diff"))
+                flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
             return loss
 
@@ -104,7 +103,7 @@ def RunOneflowBn(device_type, flow_op, x, flow_args, training=True):
     check_point.init()
     y = FlowJob(x).get().ndarray()
     if training:
-        x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+        x_diff = test_global_storage.Get("x_diff")
         return y, x_diff
     else:
         return y

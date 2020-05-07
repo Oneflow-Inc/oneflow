@@ -35,8 +35,8 @@ REGISTER_USER_OP("normalization")
       const DataType data_type = in->data_type();
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in;
       int32_t axis = ctx->GetAttr<int32_t>("axis");
-      OF_CHECK_GE(axis, 0);
-      OF_CHECK_LT(axis, in->shape().NumAxes());
+      CHECK_GE_OR_RETURN(axis, 0);
+      CHECK_LT_OR_RETURN(axis, in->shape().NumAxes());
       const Shape param_shape({in->shape().At(axis)});
       const std::function<void(const std::string&)> CheckParamTensorDesc =
           [&](const std::string& bn) -> Maybe<void> {
