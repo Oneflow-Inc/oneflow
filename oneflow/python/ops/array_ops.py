@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from functools import reduce
 import operator
 
+import os
 import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -147,17 +148,24 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
-    op_conf.transpose_conf.out = "out"
-    op_conf.transpose_conf.perm.extend(list(perm))
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name).Op("transpose")\
+            .Input("input", [a])\
+            .Output("output")\
+            .SetAttr("perm", perm, "AttrTypeListInt32")\
+            .Build().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name
+        setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
+        op_conf.transpose_conf.out = "out"
+        op_conf.transpose_conf.perm.extend(list(perm))
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("slice")
