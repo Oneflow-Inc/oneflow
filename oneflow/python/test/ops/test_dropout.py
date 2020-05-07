@@ -71,7 +71,7 @@ def of_run_and_dump_to_numpy(device_type, x_shape, data_type, rate, seed):
 
     # OneFlow
     check_point = flow.train.CheckPoint()
-    model_load_dir = os.path.join(get_temp_dir(), './init_snapshot')
+    model_load_dir = os.path.join(get_temp_dir(), 'init_snapshot')
     if os.getenv("ENABLE_USER_OP") != 'True':
         check_point.load(model_load_dir)
     else:
