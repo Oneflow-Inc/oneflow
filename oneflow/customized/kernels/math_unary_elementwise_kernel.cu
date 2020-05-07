@@ -1,15 +1,23 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include <math.h>
+#include "oneflow/customized/kernels/math_unary_elementwise_func.h"
 
 namespace oneflow {
 
-template<typename T, __device__ T (*unary_func)(T x)>
+namespace {
+
+template<typename T, OF_DEVICE_FUNC T (*unary_fw_func)(T x)>
 __global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = unary_func(x[i]); }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = unary_fw_func(x[i]); }
 }
 
-template<typename T, __device__ T (*unary_func)(T x)>
+template<typename T, OF_DEVICE_FUNC T (*unary_bw_func)(T x, T dy)>
+__global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = unary_bw_func(x[i], dy[i]); }
+}
+
+}  // namespace
+
+template<typename T, OF_DEVICE_FUNC T (*unary_fw_func)(T x)>
 class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
  public:
   MathUnaryElementwiseGpuKernel() = default;
@@ -23,151 +31,195 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathUnaryElementwiseForwardGpu<T, unary_func>
+    MathUnaryElementwiseForwardGpu<T, unary_fw_func>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("math_unary_elementwise")
-    .SetCreateFn<MathUnaryElementwiseGpuKernel<float, &acosf>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) -> bool {
-      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && y_tensor_desc->data_type() == DataType::kFloat
-             && ctx.GetAttr<std::string>("math_type") == "Acos";
-    });
+template<typename T, OF_DEVICE_FUNC T (*unary_bw_func)(T x, T dy)>
+class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
+ public:
+  MathUnaryElementwiseGradGpuKernel() = default;
+  ~MathUnaryElementwiseGradGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const T* x = tensor_x->dptr<T>();
+    const T* dy = tensor_dy->dptr<T>();
+    T* dx = tensor_dx->mut_dptr<T>();
+    int64_t n = tensor_x->shape().elem_cnt();
+    CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    MathUnaryElementwiseBackwardGpu<T, unary_bw_func>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, x, dy, dx);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_MATH_UNARY_ELEMETNWISE_KERNEL_ENTRY(math_type, fw_func, bw_func)          \
+  REGISTER_USER_KERNEL("math_unary_elementwise")                                           \
+      .SetCreateFn<MathUnaryElementwiseGpuKernel<float, &fw_func>>()                       \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
+        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
+        const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                       \
+               && x_tensor_desc->data_type() == DataType::kFloat                           \
+               && y_tensor_desc->data_type() == DataType::kFloat                           \
+               && ctx.GetAttr<std::string>("math_type") == math_type;                      \
+      });                                                                                  \
+  REGISTER_USER_KERNEL("math_unary_elementwise_grad")                                      \
+      .SetCreateFn<MathUnaryElementwiseGradGpuKernel<float, &bw_func>>()                   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
+        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
+        return ctx.device_type() == DeviceType::kGPU                                       \
+               && x_tensor_desc->data_type() == DataType::kFloat                           \
+               && ctx.GetAttr<std::string>("math_type") == math_type;                      \
+      });
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMETNWISE_KERNEL_ENTRY, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 /*
 
 #ifdef WITH_CUDA
 
 template<typename T>
-__device__ T AbsCalInDiff4Gpu(T x, T dy) {
+OF_DEVICE_FUNC T AbsCalInDiff4Gpu(T x, T dy) {
   return x < 0 ? -dy : dy;
 }
 
-__device__ float AcosCalInDiff4GpuFloat(float x, float dy) { return dy * (-rsqrtf(1.0 - x * x)); }
+OF_DEVICE_FUNC float AcosCalInDiff4GpuFloat(float x, float dy) { return dy * (-rsqrtf(1.0 - x * x));
+}
 
-__device__ float AcoshCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(x * x - 1.0)); }
+OF_DEVICE_FUNC float AcoshCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(x * x - 1.0));
+}
 
-__device__ float AsinCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 - x * x)); }
+OF_DEVICE_FUNC float AsinCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 - x * x));
+}
 
-__device__ float AsinhCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 + x * x)); }
+OF_DEVICE_FUNC float AsinhCalInDiff4GpuFloat(float x, float dy) { return dy * (rsqrtf(1.0 + x * x));
+}
 
-__device__ float AtanCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 + x * x)); }
+OF_DEVICE_FUNC float AtanCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 + x * x));
+}
 
-__device__ float AtanhCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 - x * x)); }
+OF_DEVICE_FUNC float AtanhCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (1.0 - x * x));
+}
 
-__device__ float CeilCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
+OF_DEVICE_FUNC float CeilCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ float CosCalInDiff4GpuFloat(float x, float dy) { return dy * (-sinf(x)); }
+OF_DEVICE_FUNC float CosCalInDiff4GpuFloat(float x, float dy) { return dy * (-sinf(x)); }
 
-__device__ float CoshCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float CoshCalInDiff4GpuFloat(float x, float dy) {
   return dy * (expf(x) + expf(-x)) / 2.0;
 }
 
-__device__ float ErfCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float ErfCalInDiff4GpuFloat(float x, float dy) {
   return dy * 2.0 * rsqrtf(M_PI) * expf(-x * x);
 }
 
-__device__ float ErfcCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float ErfcCalInDiff4GpuFloat(float x, float dy) {
   return dy * -2.0 * rsqrtf(M_PI) * expf(-x * x);
 }
 
-__device__ float ExpCalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
+OF_DEVICE_FUNC float ExpCalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
 
-__device__ float Expm1CalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
+OF_DEVICE_FUNC float Expm1CalInDiff4GpuFloat(float x, float dy) { return dy * expf(x); }
 
-__device__ float FloorCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
+OF_DEVICE_FUNC float FloorCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ int8_t IsFinite(float x) {
+OF_DEVICE_FUNC int8_t IsFinite(float x) {
   return isfinite(x) ? 1 : 0;
 }  // use int8 1 as true; int8 0 as false
 
-__device__ int8_t IsInf(float x) { return isinf(x) ? 1 : 0; }
+OF_DEVICE_FUNC int8_t IsInf(float x) { return isinf(x) ? 1 : 0; }
 
-__device__ int8_t IsNaN(float x) { return isnan(x) ? 1 : 0; }
+OF_DEVICE_FUNC int8_t IsNaN(float x) { return isnan(x) ? 1 : 0; }
 
-__device__ float LgammaCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float LgammaCalInDiff4GpuFloat(float x, float dy) {
   // TODO(chengcheng): return: dy * digamma(x)
   assert(false);
   return 0.0;
 }
 
-__device__ float LogCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / x); }
+OF_DEVICE_FUNC float LogCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / x); }
 
-__device__ float Log1pCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (x + 1.0)); }
+OF_DEVICE_FUNC float Log1pCalInDiff4GpuFloat(float x, float dy) { return dy * (1.0 / (x + 1.0)); }
 
-__device__ float LogSigmoid4GpuFloat(float x) { return logf(1.0 / (1.0 + expf(-x))); }
+OF_DEVICE_FUNC float LogSigmoid4GpuFloat(float x) { return logf(1.0 / (1.0 + expf(-x))); }
 
-__device__ float LogSigmoidCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float LogSigmoidCalInDiff4GpuFloat(float x, float dy) {
   return dy * (1.0 / (expf(x) + 1.0));
 }
 
-__device__ float Negative4GpuFloat(float x) { return -x; }
+OF_DEVICE_FUNC float Negative4GpuFloat(float x) { return -x; }
 
-__device__ float NegativeCalInDiff4GpuFloat(float x, float dy) { return -dy; }
+OF_DEVICE_FUNC float NegativeCalInDiff4GpuFloat(float x, float dy) { return -dy; }
 
-__device__ float Reciprocal4GpuFloat(float x) { return 1.0 / x; }
+OF_DEVICE_FUNC float Reciprocal4GpuFloat(float x) { return 1.0 / x; }
 
-__device__ float ReciprocalCalInDiff4GpuFloat(float x, float dy) { return dy * (-1.0 / (x * x)); }
+OF_DEVICE_FUNC float ReciprocalCalInDiff4GpuFloat(float x, float dy) { return dy * (-1.0 / (x * x));
+}
 
-__device__ float ReciprocalNoNan4GpuFloat(float x) {
+OF_DEVICE_FUNC float ReciprocalNoNan4GpuFloat(float x) {
   if (fabsf(x) <= 0.0) { return 0.0; }
   return 1.0 / x;
 }
 
-__device__ float ReciprocalNoNanCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float ReciprocalNoNanCalInDiff4GpuFloat(float x, float dy) {
   if (fabsf(x) <= 0.0) { return 0.0; }
   return dy * (-1.0 / (x * x));
 }
-__device__ float RintCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
+OF_DEVICE_FUNC float RintCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ float RoundCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
+OF_DEVICE_FUNC float RoundCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ float RsqrtCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float RsqrtCalInDiff4GpuFloat(float x, float dy) {
   return dy * (-1.0 / (2.0 * sqrtf(x * x * x)));
 }
 
-__device__ float Sigmoid4GpuFloat(float x) { return 1.0 / (1.0 + expf(-x)); }
+OF_DEVICE_FUNC float Sigmoid4GpuFloat(float x) { return 1.0 / (1.0 + expf(-x)); }
 
-__device__ float SigmoidCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float SigmoidCalInDiff4GpuFloat(float x, float dy) {
   float y = Sigmoid4GpuFloat(x);
   return dy * (y * (1 - y));
 }
 
-__device__ float Sign4GpuFloat(float x) {
+OF_DEVICE_FUNC float Sign4GpuFloat(float x) {
   if (x > 0) { return 1.0; }
   if (x < 0) { return -1.0; }
   return 0.0;
 }
 
-__device__ float SignCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
+OF_DEVICE_FUNC float SignCalInDiff4GpuFloat(float x, float dy) { return 0.0; }
 
-__device__ float SinCalInDiff4GpuFloat(float x, float dy) { return dy * cosf(x); }
+OF_DEVICE_FUNC float SinCalInDiff4GpuFloat(float x, float dy) { return dy * cosf(x); }
 
-__device__ float SinhCalInDiff4GpuFloat(float x, float dy) { return dy * expf(x) - expf(-x) * 0.5; }
+OF_DEVICE_FUNC float SinhCalInDiff4GpuFloat(float x, float dy) { return dy * expf(x) - expf(-x) *
+0.5; }
 
-__device__ float Softplus4GpuFloat(float x) { return logf(expf(x) + 1); }
+OF_DEVICE_FUNC float Softplus4GpuFloat(float x) { return logf(expf(x) + 1); }
 
-__device__ float SoftplusCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float SoftplusCalInDiff4GpuFloat(float x, float dy) {
   return dy * expf(x) / (expf(x) + 1);
 }
 
-__device__ float SqrtCalInDiff4GpuFloat(float x, float dy) { return dy * 0.5 * rsqrtf(x); }
+OF_DEVICE_FUNC float SqrtCalInDiff4GpuFloat(float x, float dy) { return dy * 0.5 * rsqrtf(x); }
 
-__device__ float Square4GpuFloat(float x) { return x * x; }
+OF_DEVICE_FUNC float Square4GpuFloat(float x) { return x * x; }
 
-__device__ float SquareCalInDiff4GpuFloat(float x, float dy) { return dy * 2.0 * x; }
+OF_DEVICE_FUNC float SquareCalInDiff4GpuFloat(float x, float dy) { return dy * 2.0 * x; }
 
-__device__ float TanCalInDiff4GpuFloat(float x, float dy) {
+OF_DEVICE_FUNC float TanCalInDiff4GpuFloat(float x, float dy) {
   return dy * (1.0 / (cosf(x) * cosf(x)));
 }
 
-__device__ float TanhCalInDiff4GpuFloat(float x, float dy) { return dy * sinhf(x) / coshf(x); }
+OF_DEVICE_FUNC float TanhCalInDiff4GpuFloat(float x, float dy) { return dy * sinhf(x) / coshf(x); }
 
 #define MATH_UNARY_GPU(func_name, fw_func, bw_func, dtype)                                  \
   __global__ void func_name##ForwardGpu(const int n, const dtype* x, dtype* y) {            \
