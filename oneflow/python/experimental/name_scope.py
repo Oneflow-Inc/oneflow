@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.session_context as session_context
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
 
@@ -18,7 +18,7 @@ def name_scope(name):
 
 
 def name_scope_stack_push(name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
     if job_name not in sess.job_name2name_scope_stack:
         sess.job_name2name_scope_stack[job_name] = []
@@ -26,7 +26,7 @@ def name_scope_stack_push(name):
 
 
 def name_scope_stack_pop():
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
     assert job_name in sess.job_name2name_scope_stack
     assert len(sess.job_name2name_scope_stack[job_name]) > 0
@@ -52,5 +52,5 @@ def PrependOpNamePrefixIfNeed(op_conf):
     if op_conf.HasField("user_conf"):
         return
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     op_conf.name = GetJobNameScopePrefix(job_name) + op_conf.name

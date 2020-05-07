@@ -5,12 +5,15 @@ import numpy as np
 import random
 import string
 from collections import OrderedDict
+import tempfile
 
 import oneflow as flow
 import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+
+
+def get_temp_dir():
+    return tempfile.gettempdir()
 
 
 def int32_feature(value):
@@ -80,7 +83,7 @@ def gen_example(length=32):
 
 
 def gen_ofrecord(num_examples, length, batch_size):
-    with open(os.path.join(GetSavePath(), "part-0"), 'wb') as f:
+    with open(os.path.join(get_temp_dir(), "part-0"), 'wb') as f:
         int32_data, int64_data, float_data, bytes_data = [], [], [], []
         for i in range(num_examples):
             example, int32_list, int64_list, float_list, bytes_list = gen_example(length)
@@ -132,7 +135,7 @@ def test_ofrecord_decoder(test_case):
 
     @flow.function(func_config)
     def OfrecordDecoderJob():
-        data = decoder(GetSavePath(), length, batch_size)
+        data = decoder(get_temp_dir(), length, batch_size)
         return data
 
     for i in range(num_examples//batch_size):
