@@ -75,12 +75,18 @@ class DropoutKernelGPU final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                 \
-  REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                           \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);      \
-        return ctx.device_type() == DeviceType::kGPU                                       \
-               && y_desc->data_type() == GetDataType<dtype>::value;                        \
+#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                      \
+  REGISTER_USER_KERNEL("dropout")                                                               \
+      .SetCreateFn<DropoutKernelGPU<dtype>>()                                                   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
+        return ctx.device_type() == DeviceType::kGPU                                            \
+               && y_desc->data_type() == GetDataType<dtype>::value;                             \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
+        return Maybe<void>::Ok();                                                               \
       });
 
 REGISTER_DROPOUT_KERNEL_GPU(float16)
@@ -105,13 +111,18 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                       \
-  REGISTER_USER_KERNEL("dropout_grad")                                                \
-      .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
+#define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
+  REGISTER_USER_KERNEL("dropout_grad")                                                          \
+      .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);           \
+        return ctx.device_type() == DeviceType::kGPU                                            \
+               && dx_desc->data_type() == GetDataType<dtype>::value;                            \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
+        return Maybe<void>::Ok();                                                               \
       });
 
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
