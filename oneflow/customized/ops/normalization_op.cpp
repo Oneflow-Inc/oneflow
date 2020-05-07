@@ -21,7 +21,7 @@ REGISTER_USER_OP("normalization")
       user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
       CHECK(moving_mean_modifier != nullptr);
       // TODO(daquexian): training attr cannot be got until the api is implemented
-      bool training = true;
+      const bool training = true;
       moving_mean_modifier->set_is_mutable(training);
       moving_mean_modifier->set_requires_grad(false);
       user_op::InputArgModifier* moving_variance_modifier =
@@ -170,7 +170,7 @@ REGISTER_USER_OP_GRAD("normalization")
                                    .Output("gamma_diff")
                                    .Output("beta_diff")
                                    .Output("dx");
-        bool training = op.attr<bool>("training");
+        const bool training = op.attr<bool>("training");
         if (training) {
           grad_op_builder = grad_op_builder.Input("mean", op.output("mean", 0))
                                 .Input("inv_variance", op.output("inv_variance", 0));
@@ -181,23 +181,23 @@ REGISTER_USER_OP_GRAD("normalization")
 
           // calculate inv_variance from moving_variance
           const auto scalar_add_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
-          auto scalar_add_op = user_op::UserOpConfWrapperBuilder(scalar_add_op_name)
-                                   .Op("scalar_add")
-                                   .Input("in", op.output("moving_variance", 0))
-                                   .Attr("has_float_operand", true)
-                                   .Attr("has_int_operand", false)
-                                   .Attr("int_operand", 0)
-                                   .Attr("float_operand", op.attr<float>("epsilon"))
-                                   .Output("out")
-                                   .Build();
+          const auto scalar_add_op = user_op::UserOpConfWrapperBuilder(scalar_add_op_name)
+                                         .Op("scalar_add")
+                                         .Input("in", op.output("moving_variance", 0))
+                                         .Attr("has_float_operand", true)
+                                         .Attr("has_int_operand", false)
+                                         .Attr("int_operand", 0)
+                                         .Attr("float_operand", op.attr<float>("epsilon"))
+                                         .Output("out")
+                                         .Build();
           AddOp(scalar_add_op);
 
           const auto rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt";
-          auto rsqrt_op = user_op::UserOpConfWrapperBuilder(rsqrt_op_name)
-                              .Op("rsqrt")
-                              .Input("in", scalar_add_op.output("out", 0))
-                              .Output("out")
-                              .Build();
+          const auto rsqrt_op = user_op::UserOpConfWrapperBuilder(rsqrt_op_name)
+                                    .Op("rsqrt")
+                                    .Input("in", scalar_add_op.output("out", 0))
+                                    .Output("out")
+                                    .Build();
           AddOp(rsqrt_op);
 
           grad_op_builder.Input("inv_variance", rsqrt_op.output("out", 0));
@@ -245,7 +245,7 @@ REGISTER_USER_OP_GRAD("normalization")
           }
         }
 
-        user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
+        const user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
         if (training && op.NeedGenGradTensor4OpInput("in", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
         }

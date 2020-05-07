@@ -32,7 +32,7 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    bool training = ctx->GetAttr<bool>("training");
+    const bool training = ctx->GetAttr<bool>("training");
     const auto* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
