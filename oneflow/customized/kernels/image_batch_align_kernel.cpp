@@ -8,17 +8,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct BatchImageAlignIsMatchedPred {
-  static bool Impl(const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-    return ctx.device_type() == DeviceType::kCPU
-           && in_tensor->data_type() == DataType::kTensorBuffer
-           && out_tensor->data_type() == GetDataType<T>::value;
-  }
-};
-
-template<typename T>
 void ConvertImageCvMat(const cv::Mat& input, cv::Mat* output);
 
 template<>
@@ -51,13 +40,24 @@ void CopyCvMatToImageTensor(const cv::Mat& image_mat, user_op::Tensor* image_ten
   }
 }
 
+template<typename T>
+struct ImageBatchAlignIsMatchedPred {
+  static bool Impl(const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+    return ctx.device_type() == DeviceType::kCPU
+           && in_tensor->data_type() == DataType::kTensorBuffer
+           && out_tensor->data_type() == GetDataType<T>::value;
+  }
+};
+
 }  // namespace
 
 template<typename T>
-class BatchImageAlignKernel final : public user_op::OpKernel {
+class ImageBatchAlignKernel final : public user_op::OpKernel {
  public:
-  BatchImageAlignKernel() = default;
-  ~BatchImageAlignKernel() = default;
+  ImageBatchAlignKernel() = default;
+  ~ImageBatchAlignKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -104,12 +104,12 @@ class BatchImageAlignKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BATCH_IMAGE_ALIGN_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("batch_image_align")        \
-      .SetCreateFn<BatchImageAlignKernel<dtype>>() \
-      .SetIsMatchedPred(BatchImageAlignIsMatchedPred<dtype>::Impl);
+#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)   \
+  REGISTER_USER_KERNEL("image_batch_align")        \
+      .SetCreateFn<ImageBatchAlignKernel<dtype>>() \
+      .SetIsMatchedPred(ImageBatchAlignIsMatchedPred<dtype>::Impl);
 
-REGISTER_BATCH_IMAGE_ALIGN_KERNEL(uint8_t)
-REGISTER_BATCH_IMAGE_ALIGN_KERNEL(float)
+REGISTER_IMAGE_BATCH_ALIGN_KERNEL(uint8_t)
+REGISTER_IMAGE_BATCH_ALIGN_KERNEL(float)
 
 }  // namespace oneflow

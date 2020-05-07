@@ -12,7 +12,7 @@ bool PowerOfTwo(T x) {
 
 }  // namespace
 
-REGISTER_USER_OP("batch_image_align")
+REGISTER_USER_OP("image_batch_align")
     .Input("in")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
