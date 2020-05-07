@@ -13,7 +13,12 @@ from test_util import GenArgList
 
 
 def get_temp_dir():
-    return tempfile.gettempdir()
+    tmp = tempfile.gettempdir()
+    import os
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return os.path.join(tmp, "test_ofrecord_decoder_user_op")
+    else:
+        return os.path.join(tmp, "test_ofrecord_decoder")
 
 
 def int32_feature(value):
@@ -148,4 +153,3 @@ def test_ofrecord_decoder(test_case):
         for j, int8_list in enumerate(d['bytes']):
             #print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert ''.join([chr(x) for x in int8_list[0]]) == bytes_data[i*batch_size + j]
-
