@@ -233,6 +233,7 @@ def layer_norm(
         return (
             op
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
