@@ -11,12 +11,12 @@ REGISTER_USER_OP("gather")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in_shape->NumAxes(), 0);
       const int64_t axis = ctx->GetAttr<int64_t>("axis");
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       CHECK_GT_OR_RETURN(indices_shape->NumAxes(), 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
 
       *out_shape = *in_shape;
       DimVector dim_vec;
@@ -32,7 +32,12 @@ REGISTER_USER_OP("gather")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("indices", 0);
+      if (ctx->BatchAxis4ArgNameAndIndex("indices", 0)->has_value()) {
+        ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(
+            ctx->GetAttr<int64_t>("axis") + ctx->BatchAxis4ArgNameAndIndex("indices", 0)->value());
+      } else {
+        ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
+      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

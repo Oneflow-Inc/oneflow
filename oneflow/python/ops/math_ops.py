@@ -453,7 +453,7 @@ def sigmoid(x, name=None):
     )
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
-def unsorted_segment_sum(data, segment_ids, num_segments=0, axis=0, name=None):
+def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSum_")
     if os.getenv("ENABLE_USER_OP") == 'True':

@@ -5,9 +5,13 @@ namespace oneflow {
 
 namespace user_op {
 
+namespace {
+
 Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
+
+}  // namespace
 
 template<DeviceType device_type, typename T, typename K>
 class GatherKernel final : public user_op::OpKernel {
@@ -35,11 +39,11 @@ class GatherKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                             \
           GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()    \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);           \
         const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \
         return ctx.device_type() == device                                                      \
                && indices_desc->data_type() == OF_PP_PAIR_SECOND(indices_type)                  \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(in_type);                          \
+               && in_desc->data_type() == OF_PP_PAIR_SECOND(in_type);                           \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,

@@ -536,6 +536,3 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Build()
         .RemoteBlobList()[0]
     )
-
-
-
