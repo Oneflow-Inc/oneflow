@@ -183,6 +183,7 @@ def test_pool(_):
             tensor_def = flow.MirroredTensorDef
         else:
             tensor_def = flow.FixedTensorDef
+
         @flow.function(func_config)
         def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
