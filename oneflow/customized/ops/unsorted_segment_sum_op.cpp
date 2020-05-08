@@ -70,11 +70,10 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper data_grad_op =
             data_grad_builder.Op("gather")
-                .Input("in", op.GetGradTensorWithOpOutput("data", 0))
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("indices", op.input("segment_ids", 0))
                 .Output("out")
                 .Attr("axis", op.attr<int64_t>("axis"))
-                .Attr("batch_dims", op.attr<int64_t>("num_segments"))
                 .Build();
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);

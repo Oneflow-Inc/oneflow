@@ -471,7 +471,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
            .Output("out")\
            .SetAttr("axis", int(axis), "AttrTypeInt64")\
            .SetAttr("num_segments", int(num_segments), "AttrTypeInt64")\
-           .Build().RemoteBlobList()[0]
+           .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
@@ -501,7 +501,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
           .Input("like", [like])\
           .Output("out")\
           .SetAttr("axis", int(axis), "AttrTypeInt64")\
-          .Build().RemoteBlobList()[0]
+          .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name

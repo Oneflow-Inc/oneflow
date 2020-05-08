@@ -51,7 +51,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
            .Input("indices", [indices])\
            .Output("out")\
            .SetAttr("axis", int(axis), "AttrTypeInt64")\
-           .Build().RemoteBlobList()[0]
+           .Build().InferAndTryRun().RemoteBlobList()[0]
         else:
             setattr(op_conf.gather_conf, "in", params.logical_blob_name)
             op_conf.gather_conf.indices = indices.logical_blob_name
