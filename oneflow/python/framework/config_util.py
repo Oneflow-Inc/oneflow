@@ -177,7 +177,7 @@ def enable_fusion(val=True):
 
 
 @oneflow_export('config.collective_boxing.nccl_num_streams')
-def enable_fusion(val):
+def nccl_num_streams(val):
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
@@ -187,7 +187,7 @@ def enable_fusion(val):
 
 
 @oneflow_export('config.collective_boxing.nccl_fusion_threshold_mb')
-def enable_fusion(val):
+def nccl_fusion_threshold_mb(val):
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
