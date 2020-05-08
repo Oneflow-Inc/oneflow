@@ -126,9 +126,8 @@ struct PoolGpuKernelUtil {
   static void FWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const GPUPoolOpKernelState* gpu_pool_op_kernel_state =
-        dynamic_cast<GPUPoolOpKernelState*>(state);
+    GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
+    gpu_pool_op_kernel_state->ResetIfDynamic(ctx);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     CudaCheck(cudnnPoolingForward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
@@ -141,9 +140,8 @@ struct PoolGpuKernelUtil {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const GPUPoolOpKernelState* gpu_pool_op_kernel_state =
-        dynamic_cast<GPUPoolOpKernelState*>(state);
+    GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
+    gpu_pool_op_kernel_state->ResetIfDynamic(ctx);
     CHECK(gpu_pool_op_kernel_state != nullptr);
     CudaCheck(cudnnPoolingBackward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
