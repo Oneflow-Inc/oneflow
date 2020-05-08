@@ -253,6 +253,7 @@ def ofrecord_reader(
         .SetAttr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
         .SetAttr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")\
         .Build()\
+        .InferAndTryRun()\
         .RemoteBlobList()[0]
 
 @oneflow_export("data.decode_random")
