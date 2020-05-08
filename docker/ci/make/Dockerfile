@@ -11,7 +11,6 @@ RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64
 
 ## BUILD WHEEL
 WORKDIR /workspace
-RUN pip3 install wheel
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 
