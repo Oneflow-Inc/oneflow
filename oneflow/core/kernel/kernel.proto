@@ -85,11 +85,6 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf {
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
-}
-
 message SliceKernelConf {
   required ShapeProto in_shape = 1;
 }
