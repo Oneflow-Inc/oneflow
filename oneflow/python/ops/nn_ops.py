@@ -161,6 +161,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         return (
             op
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -210,6 +211,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         return (
             op
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -263,6 +265,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         return (
             op
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -312,6 +315,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         return (
             op
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
