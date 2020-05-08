@@ -46,5 +46,6 @@ def prelu(
         .Input("alpha", [alpha])
         .Output("y")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
