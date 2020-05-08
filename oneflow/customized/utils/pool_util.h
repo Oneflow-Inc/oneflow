@@ -11,7 +11,7 @@ typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class Params3D {
  public:
-  Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
+  Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
            const std::string& padding, const std::vector<int32_t>& pool_size,
            const std::vector<int32_t>& strides);
   ~Params3D() = default;

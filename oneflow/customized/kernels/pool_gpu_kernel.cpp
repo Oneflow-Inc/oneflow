@@ -29,6 +29,31 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
                        const Shape& y_shape, const std::string& data_format, const DataType& dtype,
                        const Params3D& params_3d) {
+    this->is_dynamic_ = false;
+    Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+  }
+  GPUPoolOpKernelState() { this->is_dynamic_ = true; }
+  ~GPUPoolOpKernelState() = default;
+
+  void ResetIfDynamic(const int32_t& dim, const std::string& pooling_type,
+                      user_op::KernelComputeContext* ctx) {
+    if (this->is_dynamic_) {
+      if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
+      const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
+      const std::string data_format = ctx->GetAttr<std::string>("data_format");
+      const std::string padding = ctx->GetAttr<std::string>("padding");
+      const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
+      const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+      const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
+      const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
+      const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
+      Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
+    }
+  }
+
+  void Reset(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
+             const ShapeView& y_shape, const std::string& data_format, const DataType& dtype,
+             const Params3D& params_3d) {
     FixedVector pool_size(dim);
     FixedVector padding(dim);
     FixedVector strides(dim);
@@ -53,22 +78,25 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     pooling_desc_.reset(
         new CudnnPoolDesc(pooling_mode, dim, pool_size.data(), padding.data(), strides.data()));
   }
-  ~GPUPoolOpKernelState() = default;
 
   static std::shared_ptr<user_op::OpKernelState> FromKernelInitContext(
       const int32_t& dim, const std::string& pooling_type, user_op::KernelInitContext* ctx) {
     if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
-    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
-    const std::string padding = ctx->GetAttr<std::string>("padding");
-    const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-    const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
-    const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
-    const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-    const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
     std::shared_ptr<GPUPoolOpKernelState> state;
-    state.reset(new GPUPoolOpKernelState(dim, pooling_type, x_shape, y_shape, data_format, dtype,
-                                         params_3d));
+    if (ctx->TensorDesc4ArgNameAndIndex("x", 0)->is_dynamic()) {
+      state.reset(new GPUPoolOpKernelState());
+    } else {
+      const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+      const std::string data_format = ctx->GetAttr<std::string>("data_format");
+      const std::string padding = ctx->GetAttr<std::string>("padding");
+      const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
+      const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+      const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
+      const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+      const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
+      state.reset(new GPUPoolOpKernelState(dim, pooling_type, x_shape, y_shape, data_format, dtype,
+                                           params_3d));
+    }
     return std::move(state);
   }
 
@@ -80,6 +108,7 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> x_desc_;
   std::unique_ptr<CudnnTensorDesc> y_desc_;
   std::unique_ptr<CudnnPoolDesc> pooling_desc_;
+  bool is_dynamic_;
 };
 
 template<typename dtype>

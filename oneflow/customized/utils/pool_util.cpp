@@ -20,7 +20,7 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
 
 }  // namespace
 
-Params3D::Params3D(const int32_t dim, const Shape& x_shape, const std::string& data_format,
+Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
                    const std::string& padding, const std::vector<int32_t>& pool_size,
                    const std::vector<int32_t>& strides)
     : dim_(dim),
