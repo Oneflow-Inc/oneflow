@@ -33,6 +33,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
             .SetAttr("axis", axis, "AttrTypeListInt32")
             .SetAttr("keepdims", keepdims, "AttrTypeBool")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
