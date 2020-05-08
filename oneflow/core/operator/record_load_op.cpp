@@ -16,7 +16,7 @@ Maybe<void> RecordLoadOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   int64_t batch_size = op_conf().record_load_conf().batch_size();
-  OF_CHECK_GE(batch_size, parallel_ctx->parallel_num());
+  CHECK_GE_OR_RETURN(batch_size, parallel_ctx->parallel_num());
   CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
   out_blob_desc->mut_shape() = Shape({batch_size / parallel_ctx->parallel_num()});
   out_blob_desc->set_data_type(kOFRecord);

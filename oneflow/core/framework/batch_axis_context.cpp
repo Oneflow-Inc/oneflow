@@ -22,15 +22,15 @@ Maybe<void> BatchAxisInferFnUtil::DefaultAsFirstHasValueInput(BatchAxisContext* 
 
 Maybe<void> BatchAxisInferFnUtil::NaiveInferBatchAxis(BatchAxisContext* ctx) {
   if (ctx->outputs().empty()) { return Maybe<void>::Ok(); }
-  OF_CHECK_GT(ctx->inputs().size(), 0);
-  OF_CHECK_EQ(ctx->outputs().size(), 1);
+  CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1);
   const OptInt64* batch_axis = nullptr;
   for (const auto& in_arg_pair : ctx->inputs()) {
     const OptInt64* const cur_in_batch_axis =
         ctx->BatchAxis4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
     if (cur_in_batch_axis->has_value() == false) { continue; }
     if (batch_axis) {
-      OF_CHECK_EQ(batch_axis->value(), cur_in_batch_axis->value());
+      CHECK_EQ_OR_RETURN(batch_axis->value(), cur_in_batch_axis->value());
     } else {
       batch_axis = cur_in_batch_axis;
     }
