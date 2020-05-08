@@ -16,7 +16,7 @@ def build_unary_elemwise_math_op(math_op, x, name=None):
         .Input("x", [x])\
         .Output("y")\
         .SetAttr("math_type", math_op, "AttrTypeString")\
-        .Build().RemoteBlobList()[0]
+        .Build().InferAndTryRun().RemoteBlobList()[0]
 
 @oneflow_export("math.abs")
 def abs(x, name=None):
