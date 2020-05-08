@@ -16,23 +16,24 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    flow_data_type = type_name_to_flow_type[data_type]
     func_config.default_data_type(type_name_to_flow_type[data_type])
 
     @flow.function(func_config)
-    def PolyValJob0(x=flow.FixedTensorDef(in_shape)):
+    def PolyValJob0(x=flow.FixedTensorDef(in_shape,dtype=flow_data_type)):
         return flow.math.polyval([],x)
     
     @flow.function(func_config)
-    def PolyValJob1(x=flow.FixedTensorDef(in_shape), coeffs0=flow.FixedTensorDef((1,))):
+    def PolyValJob1(x=flow.FixedTensorDef(in_shape,dtype=flow_data_type), coeffs0=flow.FixedTensorDef((1,), dtype=flow_data_type)):
         return flow.math.polyval([coeffs0], x)
     
     @flow.function(func_config)
-    def PolyValJob2(x=flow.FixedTensorDef(in_shape), coeffs0=flow.FixedTensorDef((1,)),coeffs1=flow.FixedTensorDef((1,)), coeffs2=flow.FixedTensorDef((1,))):
+    def PolyValJob2(x=flow.FixedTensorDef(in_shape,dtype=flow_data_type), coeffs0=flow.FixedTensorDef((1,),dtype=flow_data_type),coeffs1=flow.FixedTensorDef((1,),dtype=flow_data_type), coeffs2=flow.FixedTensorDef((1,),dtype=flow_data_type)):
         return flow.math.polyval([coeffs0, coeffs1, coeffs2],x)
 
     @flow.function(func_config)
-    def PolyValJob3(x=flow.FixedTensorDef(in_shape), coeffs0=flow.FixedTensorDef((1,)),coeffs1=flow.FixedTensorDef((1,)), coeffs2=flow.FixedTensorDef((1,)),
-                    coeffs3=flow.FixedTensorDef((1,)), coeffs4=flow.FixedTensorDef((1,))):
+    def PolyValJob3(x=flow.FixedTensorDef(in_shape,dtype=flow_data_type), coeffs0=flow.FixedTensorDef((1,),dtype=flow_data_type),coeffs1=flow.FixedTensorDef((1,),dtype=flow_data_type), coeffs2=flow.FixedTensorDef((1,),dtype=flow_data_type),
+                    coeffs3=flow.FixedTensorDef((1,),dtype=flow_data_type), coeffs4=flow.FixedTensorDef((1,),dtype=flow_data_type)):
         return flow.math.polyval([coeffs0,coeffs1,coeffs2,coeffs3,coeffs4],x)
 
     x = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
@@ -61,7 +62,7 @@ def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(1,), (5,), (5, 5), (5, 5, 5)]
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["data_type"] = ["float32","double"]
     return GenArgList(arg_dict)
 
 
