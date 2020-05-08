@@ -165,14 +165,14 @@ class UserKernelOpInferContext : public user_op::InferContext {
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_desc_) {
       const auto& arg_pair = pair.first;
-      auto& arg_tensor_desc = pair.second;
+      std::unique_ptr<user_op::TensorDesc>* arg_tensor_desc_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
-      if (arg_tensor_desc) {
-        arg_tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+      if (*arg_tensor_desc_ptr) {
+        (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
       } else {
-        arg_tensor_desc.reset(new user_op::TensorDesc());
-        FillTensorDescWithBlob(blob, arg_tensor_desc.get());
+        arg_tensor_desc_ptr->reset(new user_op::TensorDesc());
+        FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
       }
     }
   }
@@ -241,19 +241,19 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     return arg_tensor->mut_shape();
   }
 
-  user_op::InferContext* GetOpInferContext() override { return &op_infer_ctx_; }
-  const user_op::TensorDescInferFn& GetOpInferFn() override { return tensor_desc_infer_fn_; }
+  user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
+  const user_op::TensorDescInferFn& GetOpInferFn() const override { return tensor_desc_infer_fn_; }
 
   void UpdateArg2Tensor(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
-      auto& arg_tensor = pair.second;
+      std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
-      if (arg_tensor) {
-        *arg_tensor = std::move(user_op::Tensor(blob));
+      if (*arg_tensor_ptr) {
+        *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
       } else {
-        arg_tensor.reset(new user_op::Tensor(blob));
+        arg_tensor_ptr->reset(new user_op::Tensor(blob));
       }
     }
   }
@@ -388,15 +388,17 @@ class UserKernel final : public Kernel {
     infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
     infer_cache_->UpdateCacheKey(infer_ctx_.get());
     if (!infer_cache_->IsCacheHit()) {
-      auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->GetOpInferContext());
-      if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
+      UserKernelOpInferContext* op_infer_ctx =
+          dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->MutOpInferContext());
+      CHECK_NOTNULL(op_infer_ctx);
+      op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
       kernel_->InferShape(infer_ctx_.get());
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {
-      auto cache_value_ptr = infer_cache_->GetCacheValue();
+      std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
       FOR_RANGE(int, i, 0, infer_ctx_->outputs().size()) {
         const auto& out_arg_pair = infer_ctx_->outputs().at(i);
-        auto* mut_shape_view =
+        MutShapeView* mut_shape_view =
             infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
         mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
       }

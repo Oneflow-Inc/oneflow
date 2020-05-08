@@ -32,6 +32,7 @@ def one_hot(
         .SetAttr("dtype", dtype, "AttrTypeDataType")
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
     if axis != (out_ndims - 1):
