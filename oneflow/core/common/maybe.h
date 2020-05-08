@@ -167,40 +167,38 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 
 }  // namespace oneflow
 
-#define OF_CHECK(expr) \
-  if (!(expr))         \
-  return __LOC__ <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
-
-#define OF_CHECK_NOTNULL(ptr) OF_CHECK(ptr != nullptr)
-#define OF_CHECK_ISNULL(ptr) OF_CHECK(ptr == nullptr)
-#define OF_CHECK_STREQ(lhs, rhs) OF_CHECK_EQ(std::string(lhs), std::string(rhs))
-#define OF_CHECK_STRNE(lhs, rhs) OF_CHECK_NE(std::string(lhs), std::string(rhs))
-
-#define OF_CHECK_EQ(lhs, rhs) OF_CHECK((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_NE(lhs, rhs) OF_CHECK((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_GT(lhs, rhs) OF_CHECK((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_GE(lhs, rhs) OF_CHECK((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_LT(lhs, rhs) OF_CHECK((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_LE(lhs, rhs) OF_CHECK((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-
 #define OF_TODO() return __LOC__ <= Error::Todo()
 #define OF_UNIMPLEMENTED() return __LOC__ <= Error::Unimplemented()
 
-#define CHECK_OR_RETURN(expr) OF_CHECK(expr)
+#define CHECK_OR_RETURN(expr) \
+  if (!(expr))                \
+  return __LOC__ <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
 
-#define CHECK_EQ_OR_RETURN(lhs, rhs) OF_CHECK_EQ(lhs, rhs)
+#define CHECK_EQ_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_GE_OR_RETURN(lhs, rhs) OF_CHECK_GE(lhs, rhs)
+#define CHECK_GE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_GT_OR_RETURN(lhs, rhs) OF_CHECK_GT(lhs, rhs)
+#define CHECK_GT_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_LE_OR_RETURN(lhs, rhs) OF_CHECK_LE(lhs, rhs)
+#define CHECK_LE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_LT_OR_RETURN(lhs, rhs) OF_CHECK_LT(lhs, rhs)
+#define CHECK_LT_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_NE_OR_RETURN(lhs, rhs) OF_CHECK_NE(lhs, rhs)
+#define CHECK_NE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_STREQ_OR_RETURN(lhs, rhs) OF_CHECK_STREQ(lhs, rhs)
+#define CHECK_STREQ_OR_RETURN(lhs, rhs) CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs))
+
+#define CHECK_STRNE_OR_RETURN(lhs, rhs) CHECK_NE_OR_RETURN(std::string(lhs), std::string(rhs))
+
+#define CHECK_NOTNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr != nullptr)
+
+#define CHECK_ISNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr == nullptr)
 
 #define TODO_THEN_RETURN() OF_TODO()
 
