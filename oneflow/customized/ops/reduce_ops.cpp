@@ -54,6 +54,14 @@ void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
       .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
 }
 
+template<>
+void GeneratePartialSbp<BinaryFuncMax>(user_op::SbpContext* ctx, int64_t axis) {
+  SbpSignatureBuilder()
+      .Split(ctx->inputs(), axis)
+      .Split(ctx->outputs(), axis)
+      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+}
+
 template<template<typename> class binary_func>
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
@@ -97,5 +105,6 @@ REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
 REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
+REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
 
 }  // namespace oneflow
