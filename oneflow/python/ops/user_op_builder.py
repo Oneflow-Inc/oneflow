@@ -16,15 +16,18 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.experimental.name_scope as name_scope
 import random
 
-class UserOpConfWrapper(object):
+class UserOp(object):
     def __init__(self, op_name):
         self.op_conf_ = op_conf_util.OperatorConf()
         self.op_conf_.name = op_name
         self.output_arg_key_list_ = []
 
+    def InferAndTryRun(self):
+        compile_context.CurJobAddOp(self.op_conf_)
+        return self
+
     def RemoteBlobList(self):
         remote_blob_list = []
-        compile_context.CurJobAddOp(self.op_conf_)
         for k in self.op_conf_.user_conf.output:
             if k not in self.output_arg_key_list_:
                 raise ValueError("Error: In op_name: \"" + self.op_conf_.name
@@ -38,12 +41,17 @@ class UserOpConfWrapper(object):
                 remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
         return tuple(remote_blob_list)
 
+    def SoleOutputBlob(self):
+        blobs = self.RemoteBlobList()
+        assert len(blobs) == 1
+        return blobs[0]
+
 @oneflow_export('user_op_builder')
-class UserOpConfWrapperBuilder(object):
+class UserOpConfBuilder(object):
     def __init__(self, op_name):
         job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
-        self.user_op_ = UserOpConfWrapper(name_scope_prefix + op_name)
+        self.user_op_ = UserOp(name_scope_prefix + op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
