@@ -24,8 +24,8 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 
     const Params3D params_3d(dim, *x_shape, data_format, padding, pool_size, strides);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
-    *y_desc->mut_data_type() = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
     return Maybe<void>::Ok();
   };
 }
