@@ -18,6 +18,7 @@ def TestListDataTypeAndListShapeAttr(input, out_shapes, out_types):
         .SetAttr("out_shapes", out_shapes, "AttrTypeListShape")
         .SetAttr("out_types", out_types, "AttrTypeListDataType")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()
     )
 

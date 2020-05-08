@@ -129,6 +129,7 @@ def scalar_add(x, operand, name=None):
                 .SetAttr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -259,21 +260,44 @@ def broadcast_mul(x, y, name=None):
 
 
 def scalar_mul(x, operand, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMul_")
-    )
-    setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
-    if isinstance(operand, int):
-        op_conf.scalar_mul_conf.int_operand = operand
-    elif isinstance(operand, float):
-        op_conf.scalar_mul_conf.float_operand = operand
-    op_conf.scalar_mul_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if name is None:
+        name = id_util.UniqueStr("ScalarMul_")
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        builder = (flow.user_op_builder(name)
+            .Op("scalar_mul")
+            .Input("in", [x])
+            .Output("out")
+            )
+        if isinstance(operand, int):
+            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
+                .SetAttr("has_float_operand", False, "AttrTypeBool")
+                .SetAttr("int_operand", operand, "AttrTypeInt64")
+                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+        elif isinstance(operand, float):
+            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
+                .SetAttr("has_float_operand", True, "AttrTypeBool")
+                .SetAttr("int_operand", 0, "AttrTypeInt64")
+                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+        return (builder
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0])
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf, "name", name
+        )
+        setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
+        if isinstance(operand, int):
+            op_conf.scalar_mul_conf.int_operand = operand
+        elif isinstance(operand, float):
+            op_conf.scalar_mul_conf.float_operand = operand
+        op_conf.scalar_mul_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_mul_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -356,21 +380,33 @@ def tanh(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
 
 @oneflow_export("math.gelu")
 def gelu(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_"))
-    setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
-    setattr(op_conf.gelu_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (
+            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
+            .Op("gelu")
+            .Input("in", [x])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_"))
+        setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
+        setattr(op_conf.gelu_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.relu", "nn.relu")
@@ -392,25 +428,36 @@ def relu(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
 
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
-    )
-    setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
-    setattr(op_conf.sigmoid_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
+        )
+        setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
+        setattr(op_conf.sigmoid_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
-    
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sigmoid_"))
+        .Op("sigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if name is None:
@@ -733,6 +780,7 @@ def top_k(input, k=1, sorted=True, name=None):
         .SetAttr("k", k, "AttrTypeInt32",)
         .SetAttr("sorted", sorted, "AttrTypeBool",)
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -744,6 +792,7 @@ def argmax(input, name=None):
         .Input("in", [input])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -799,7 +848,7 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
 
-    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
+    return op_builder.Input("x", [values]).Output("y").Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("math.l2_normalize")
@@ -815,6 +864,7 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .SetAttr("axis", int(axis), "AttrTypeInt32")
         .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()
     )
     return y
