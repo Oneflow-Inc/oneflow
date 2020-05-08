@@ -7,6 +7,7 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy")
     .Input("label")
     .Output("prob")  //'prob' is just for compute prediction's grad, prob's grad will be ignored
     .Output("out")
+    .Attr("depth", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
@@ -44,6 +45,7 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy_grad")
     .Input("label")
     .Input("prob")
     .Output("prediction_diff")
+    .Attr("depth", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* prob_desc = ctx->TensorDesc4ArgNameAndIndex("prob", 0);
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
@@ -86,6 +88,94 @@ REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy")
                 .Input("label", op.input("label", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("prediction_diff")
+                .Attr("depth", op.attr<int64_t>("depth"))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
+        AddOp(grad_op);
+      }
+    });
+
+REGISTER_USER_OP("sparse_softmax_cross_entropy_ms")
+    .Input("prediction")
+    .Input("label")
+    .Output("prob")
+    .Output("out")
+    .Attr("depth", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);
+      const Shape* label_shape = ctx->Shape4ArgNameAndIndex("label", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("label", 0)));
+      const int64_t num_out_axes = prediction_shape->NumAxes() - 1;
+      CHECK_GE_OR_RETURN(label_shape->NumAxes(), num_out_axes);
+      CHECK_EQ_OR_RETURN(label_shape->Count(num_out_axes), 1);
+      FOR_RANGE(int64_t, i, 0, num_out_axes) {
+        CHECK_EQ_OR_RETURN(prediction_shape->At(i), label_shape->At(i));
+      }
+      *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
+
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *out_shape = Shape(
+          DimVector(prediction_shape->dim_vec().cbegin(), prediction_shape->dim_vec().cend() - 1));
+
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("prob", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+      SbpSignatureBuilder()
+          .Split("prediction", 0, tensor.shape().NumAxes() - 1)
+          .Split("prob", 0, tensor.shape().NumAxes() - 1)
+          .Broadcast("label", 0)
+          .PartialSum("out", 0)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("sparse_softmax_cross_entropy_ms_grad")
+    .Input("dy")
+    .Input("label")
+    .Input("prob")
+    .Output("prediction_diff")
+    .Attr("depth", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
+      *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("prob", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("prob", 0);
+      SbpSignatureBuilder()
+          .Split("prob", 0, tensor.shape().NumAxes() - 1)
+          .Broadcast("label", 0)
+          .Broadcast("dy", 0)
+          .Split("prediction_diff", 0, tensor.shape().NumAxes() - 1)
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy_ms")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("sparse_softmax_cross_entropy_ms_grad")
+                .Input("prob", op.output("prob", 0))
+                .Input("label", op.input("label", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("prediction_diff")
+                .Attr("depth", op.attr<int64_t>("depth"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
         AddOp(grad_op);
