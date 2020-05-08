@@ -9,7 +9,6 @@ enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
   kDecode = 5;
-  kLoss = 6;
   kNormalMdUpdt = 9;
   kMdDiffAcc = 11;
   kCopyHd = 12;
