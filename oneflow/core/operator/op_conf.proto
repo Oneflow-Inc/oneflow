@@ -1803,6 +1803,11 @@ message TensorBufferToTensorListOpConf {
   required int64 batch_axis = 5;
 }
 
+message TensorListToTensorBufferOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1876,6 +1881,7 @@ message OperatorConf {
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
+    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     UserOpConf user_conf = 199;
     
     // domain op

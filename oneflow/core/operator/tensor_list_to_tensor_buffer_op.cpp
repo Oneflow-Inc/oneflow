@@ -3,35 +3,31 @@
 
 namespace oneflow {
 
-class TensorBufferToTensorListOp final : public Operator {
+class TensorListToTensorBufferOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TensorBufferToTensorListOp);
-  TensorBufferToTensorListOp() = default;
-  ~TensorBufferToTensorListOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TensorListToTensorBufferOp);
+  TensorListToTensorBufferOp() = default;
+  ~TensorListToTensorBufferOp() = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_tensor_buffer_to_tensor_list_conf());
+    CHECK(op_conf().has_tensor_list_to_tensor_buffer_conf());
     EnrollInputBn("in", false);
     EnrollOutputBn("out", false);
   }
 
   const PbMessage& GetCustomizedConf() const override {
-    return op_conf().tensor_buffer_to_tensor_list_conf();
+    return op_conf().tensor_list_to_tensor_buffer_conf();
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
-    CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
-    CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), 1);
-    DimVector dim_vec = in_desc->shape().dim_vec();
-    const ShapeProto& shape = op_conf().tensor_buffer_to_tensor_list_conf().shape();
-    dim_vec.insert(dim_vec.end(), shape.dim().begin(), shape.dim().end());
+    CHECK_OR_RETURN(in_desc->is_tensor_list());
+    const int64_t N = in_desc->shape().At(0);
     BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
-    out_desc->mut_shape() = Shape(dim_vec);
-    out_desc->set_data_type(op_conf().tensor_buffer_to_tensor_list_conf().data_type());
-    out_desc->set_is_tensor_list(true);
+    out_desc->mut_shape() = Shape({N});
+    out_desc->set_data_type(DataType::kTensorBuffer);
     out_desc->set_is_dynamic(in_desc->is_dynamic());
     return Maybe<void>::Ok();
   }
@@ -56,6 +52,6 @@ class TensorBufferToTensorListOp final : public Operator {
   }
 };
 
-REGISTER_OP(OperatorConf::kTensorBufferToTensorListConf, TensorBufferToTensorListOp);
+REGISTER_OP(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferOp);
 
 }  // namespace oneflow
