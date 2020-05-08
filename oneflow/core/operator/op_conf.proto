@@ -368,24 +368,6 @@ message SparseCrossEntropyGradOpConf {
   required string prediction_diff = 4;
 }
 
-message SparseSoftmaxCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
-message SparseCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -399,14 +381,6 @@ message SigmoidCrossEntropyGradOpConf {
   required string prediction_diff = 3;
   required string loss_diff = 4;
   required DataType label_type = 5;
-}
-
-message IdentityLossOpConf {
-  required string prediction = 1;
-  required string loss = 2;
-  optional ScalarReductionType reduction = 3 [default = kSumOverN];
-  optional float weight_scalar = 4 [default = 1.0];
-  optional string weight = 5;
 }
 
 message DistributeConcatOpConf {
@@ -1122,16 +1096,6 @@ message MultiplyOpConf {
 enum Norm {
   L1 = 1;
   L2 = 2;
-}
-
-message HingeLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-  optional Norm norm = 7[default = L1];
 }
 
 message PackOpConf {
@@ -1897,9 +1861,6 @@ message OperatorConf {
     TanHOpConf tanh_conf = 226;
     ReluOpConf relu_conf = 227;
     SoftmaxOpConf softmax_conf = 228;
-    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 229;
-    HingeLossOpConf hinge_loss_conf = 230;
-    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
     AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
@@ -1914,7 +1875,6 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     OneHotOpConf one_hot_conf = 258;
-    IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
