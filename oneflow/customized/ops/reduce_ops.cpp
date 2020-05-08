@@ -48,10 +48,10 @@ void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
 
 template<>
 void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
-  SbpSignatureBuilder()
+  ctx->NewBuilder()
       .Split(ctx->inputs(), axis)
       .PartialSum(ctx->outputs())
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      .Build();
 }
 
 template<template<typename> class binary_func>

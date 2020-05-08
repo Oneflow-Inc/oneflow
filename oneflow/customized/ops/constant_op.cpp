@@ -29,10 +29,10 @@ REGISTER_USER_OP("constant")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
+      ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Build();
       return Maybe<void>::Ok();
     });
 }  // namespace oneflow
