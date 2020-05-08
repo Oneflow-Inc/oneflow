@@ -36,7 +36,7 @@ REGISTER_USER_OP("binary_bool")
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* z_shape = ctx->Shape4ArgNameAndIndex("z", 0);
-      CHECK(*y_shape ==*x_shape);
+      CHECK(*y_shape == *x_shape);
       *z_shape = *x_shape;
       DataType* z_dtype = ctx->Dtype4ArgNameAndIndex("z", 0);
       *z_dtype = kInt8;
