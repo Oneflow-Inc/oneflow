@@ -15,6 +15,7 @@ def sort(input, direction="ASCENDING", name=None):
         .Output("out")
         .SetAttr("direction", direction, "AttrTypeString")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -28,5 +29,6 @@ def argsort(input, direction="ASCENDING", name=None):
         .Output("out")
         .SetAttr("direction", direction, "AttrTypeString")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
