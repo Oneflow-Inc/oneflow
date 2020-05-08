@@ -130,9 +130,10 @@ def test_pool(_):
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
+    arg_dict["is_dynamic"] = [True, False]
 
     for case in GenArgList(arg_dict):
-        (device_type, pool_conf, data_type, pooling_type,) = case
+        (device_type, pool_conf, data_type, pooling_type, is_dynamic) = case
         x_shape = pool_conf["x_shape"]
         ksize = pool_conf["ksize"]
         strides = pool_conf["strides"]
@@ -177,8 +178,13 @@ def test_pool(_):
         func_config.train.primary_lr(1e-4)
         func_config.train.model_update_conf(dict(naive_conf={}))
 
+        tensor_def = None
+        if is_dynamic:
+            tensor_def = flow.MirroredTensorDef
+        else:
+            tensor_def = flow.FixedTensorDef
         @flow.function(func_config)
-        def pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -206,12 +212,19 @@ def test_pool(_):
             flow.losses.add_loss(y)
             return y
 
+        if is_dynamic:
+            x = [x]
         y = pooling_job(x).get()
-        assert y.ndarray().shape == y_tf.numpy().shape, (
-            y.ndarray().shape,
+        y_ndarray = None
+        if hasattr(y, "ndarray"):
+            y_ndarray = y.ndarray()
+        else:
+            y_ndarray = y.ndarray_list()[0]
+        assert y_ndarray.shape == y_tf.numpy().shape, (
+            y_ndarray.shape,
             y_tf.numpy().shape,
         )
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-5), (
+        assert np.allclose(y_ndarray, y_tf.numpy(), rtol=1e-5, atol=1e-5), (
             case,
-            y.ndarray() - y_tf.numpy(),
+            y_ndarray - y_tf.numpy(),
         )
