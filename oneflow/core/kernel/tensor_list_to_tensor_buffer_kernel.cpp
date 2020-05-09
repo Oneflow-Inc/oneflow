@@ -10,14 +10,19 @@ class TensorListToTensorBufferKernel final : public KernelIf<DeviceType::kCPU> {
   ~TensorListToTensorBufferKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
+  void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardHeader(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 void TensorListToTensorBufferKernel::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string &)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
+  CHECK_EQ(in_blob->total_num_of_tensors(), out_blob->shape().elem_cnt())
+      << "out_blob shape: " << out_blob->shape().ToString();
+
   TensorView in_tensor_view = in_blob->BeginTensor();
   TensorBuffer* out_buffer = out_blob->mut_dptr<TensorBuffer>();
   while (!in_blob->IsEndTensor(in_tensor_view)) {
@@ -29,6 +34,12 @@ void TensorListToTensorBufferKernel::ForwardDataContent(
     out_buffer += 1;
     in_blob->MoveToNextTensor(&in_tensor_view);
   }
+}
+
+void TensorListToTensorBufferKernel::ForwardHeader(
+    const KernelCtx &ctx, std::function<Blob*(const std::string &)> BnInOp2Blob) const {
+  CHECK(!this->kernel_conf().need_do_opaque_header());
+  BnInOp2Blob("out")->mut_shape_view()->Set(0, BnInOp2Blob("in")->total_num_of_tensors());
 }
 
 NEW_REGISTER_KERNEL(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferKernel)

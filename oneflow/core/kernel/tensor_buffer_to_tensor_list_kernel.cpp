@@ -29,8 +29,14 @@ class TensorBufferToTensorListKernel final : public KernelIf<DeviceType::kCPU> {
   ~TensorBufferToTensorListKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
+  void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)>) const override;
+
+  void ForwardHeader(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    CHECK(!this->kernel_conf().need_do_opaque_header());
+    if (this->kernel_conf().need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
+  }
 };
 
 template<typename T>
@@ -42,6 +48,7 @@ void TensorBufferToTensorListKernel<T>::ForwardDataContent(
   int64_t batch_axis = op_conf().tensor_buffer_to_tensor_list_conf().batch_axis();
 
   TensorBackInserter back_inserter(out_blob);
+  back_inserter.ReserveOneEmptyTensorList();
   FOR_RANGE(int, i, 0, in_blob->shape().elem_cnt()) {
     const TensorBuffer& in_buffer = in_blob->dptr<TensorBuffer>()[i];
     DimVector dim_vec(1, 1);
@@ -53,8 +60,8 @@ void TensorBufferToTensorListKernel<T>::ForwardDataContent(
       }
     }
     Shape out_shape(dim_vec);
-    CHECK_EQ(shape.elem_cnt() % out_shape.elem_cnt(), 0);
-    int64_t varying_dim = shape.elem_cnt() / out_shape.elem_cnt();
+    CHECK_EQ(in_buffer.shape().elem_cnt() % out_shape.elem_cnt(), 0);
+    int64_t varying_dim = in_buffer.shape().elem_cnt() / out_shape.elem_cnt();
     out_shape.Set(batch_axis + 1, varying_dim);
     FullyMutTensorView* tensor_view = back_inserter.add_tensor();
     tensor_view->set_shape(out_shape);
@@ -62,6 +69,7 @@ void TensorBufferToTensorListKernel<T>::ForwardDataContent(
     SwitchUtil<T>::SwitchCopyTensorBufferTo(SwitchCase(in_buffer.data_type()), in_buffer,
                                             tensor_view->mut_dptr<T>());
   }
+  CHECK_EQ(out_blob->total_num_of_tensors(), in_blob->shape().elem_cnt());
 }
 
 #define REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(dtype)                      \
