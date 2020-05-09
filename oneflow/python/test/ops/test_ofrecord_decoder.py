@@ -10,11 +10,11 @@ import tempfile
 import oneflow as flow
 import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
-from test_util import Save
 
 
+tmp = tempfile.mkdtemp()
 def get_temp_dir():
-    return tempfile.gettempdir()
+    return tmp
 
 
 def int32_feature(value):
@@ -149,4 +149,3 @@ def test_ofrecord_decoder(test_case):
         for j, int8_list in enumerate(d['bytes']):
             #print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert ''.join([chr(x) for x in int8_list[0]]) == bytes_data[i*batch_size + j]
-
