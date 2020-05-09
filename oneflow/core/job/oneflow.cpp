@@ -174,11 +174,11 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     OpDesc op_desc;
     std::map<int64_t, const PlanTaskNode*> rank2node;
     int64_t order;
-    int64_t depth;
+    int64_t dependency_depth;
   };
 
   PlanTaskGraph plan_task_graph(*plan);
-  int64_t depth = 0;
+  int64_t dependency_depth = 0;
   int64_t order = 0;
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
                                    ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
@@ -236,7 +236,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
                 node,
             }},
             .order = order,
-            .depth = depth,
+            .dependency_depth = dependency_depth,
         };
         name2request_info.emplace(std::make_pair(name, std::move(request_info)));
         order += 1;
@@ -257,7 +257,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
                         request_desc->mutable_device_set()->mutable_device()->Add());
         }
         request_desc->set_order(info.order);
-        request_desc->set_depth(info.depth);
+        request_desc->set_dependency_depth(info.dependency_depth);
       } else {
         CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
         for (const auto& pair : info.rank2node) { visited.erase(pair.second); }
@@ -265,7 +265,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     }
     CHECK_GT(collected, 0);
     all_visited.insert(visited.begin(), visited.end());
-    ++depth;
+    ++dependency_depth;
   }
 }
 

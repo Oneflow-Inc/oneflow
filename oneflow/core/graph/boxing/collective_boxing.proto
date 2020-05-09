@@ -49,7 +49,7 @@ message RequestDesc {
     required OpDesc op_desc = 1;
     required DeviceSet device_set = 2;
     required int64 order = 3;
-    required int64 depth = 4;
+    required int64 dependency_depth = 4;
 }
 
 message RequestSet {

@@ -318,14 +318,15 @@ void CollectiveBoxingExecutor::Init() {
       if (HasDeviceOnThisMachine(request.device_set())) { requests.push_back(&request); }
     }
     SortRequestsByOrder(&requests);
-    CHECK(std::adjacent_find(
-              requests.begin(), requests.end(),
-              [](const RequestDesc* a, const RequestDesc* b) { return a->depth() > b->depth(); })
+    CHECK(std::adjacent_find(requests.begin(), requests.end(),
+                             [](const RequestDesc* a, const RequestDesc* b) {
+                               return a->dependency_depth() > b->dependency_depth();
+                             })
           == requests.end());
     std::vector<std::vector<const RequestDesc*>> rough_groups;
     for (const auto* request : requests) {
       if ((!collective_boxing_conf.enable_fusion()) || rough_groups.empty()
-          || request->depth() != rough_groups.back().front()->depth()
+          || request->dependency_depth() != rough_groups.back().front()->dependency_depth()
           || request->op_desc().backend() != rough_groups.back().front()->op_desc().backend()
           || request->device_set() != rough_groups.back().front()->device_set()) {
         rough_groups.emplace_back(std::vector<const RequestDesc*>({request}));
