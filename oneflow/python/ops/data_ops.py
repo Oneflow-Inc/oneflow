@@ -503,3 +503,41 @@ class DataLoader(object):
             self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
 
         compile_context.CurJobAddConsistentOp(op_conf)
+
+
+@oneflow_export("tensor_list_to_tensor_buffer")
+def tensor_list_to_tensor_buffer(input, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorListToBuffer_")
+    assert isinstance(name, str)
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("tensor_buffer_to_tensor_list")
+def tensor_buffer_to_tensor_list(input, shape, dtype, batch_axis=0, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorBufferToList_")
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
+    op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "batch_axis", batch_axis)
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
