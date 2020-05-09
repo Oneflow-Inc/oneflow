@@ -8,6 +8,12 @@ void IdentityKernel<device_type>::ForwardDataContent(
   BnInOp2Blob("out")->CopyValidDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
+template<DeviceType device_type>
+void IdentityKernel<device_type>::ForwardHeader(
+    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+}
+
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kParallelCastConf, IdentityKernel);
 
