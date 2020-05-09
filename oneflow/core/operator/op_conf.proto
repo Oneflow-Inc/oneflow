@@ -1062,14 +1062,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-message AccuracyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  optional int32 top_k = 3 [default = 1];
-  required string accuracy = 4;
-  optional string weight = 5;
-}
-
 message MatmulOpConf {
   // input lbn
   required string a = 1;
@@ -1861,7 +1853,6 @@ message OperatorConf {
     TanHOpConf tanh_conf = 226;
     ReluOpConf relu_conf = 227;
     SoftmaxOpConf softmax_conf = 228;
-    AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
