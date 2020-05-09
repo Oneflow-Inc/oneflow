@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CUSTOMIZED_OPS_RESHAPE_OP_UTIL_H_
-#define ONEFLOW_CUSTOMIZED_OPS_RESHAPE_OP_UTIL_H_
+#ifndef ONEFLOW_CUSTOMIZED_OPS_RESHAPE_USER_OP_UTIL
+#define ONEFLOW_CUSTOMIZED_OPS_RESHAPE_USER_OP_UTIL
 
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -19,4 +19,4 @@ struct ReshapeUserOpUtil {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_OPS_RESHAPE_OP_UTIL_H_
+#endif  // ONEFLOW_CUSTOMIZED_OPS_RESHAPE_USER_OP_UTIL

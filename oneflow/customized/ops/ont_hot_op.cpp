@@ -28,8 +28,6 @@ REGISTER_USER_OP("one_hot")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& indices =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       const user_op::TensorDesc& indices_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       FOR_RANGE(int64_t, i, 0, indices_tensor.shape().NumAxes()) {
         ctx->NewBuilder()

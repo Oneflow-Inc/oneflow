@@ -60,11 +60,11 @@ REGISTER_USER_OP("slice_v2")
       const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-        if (has_begin_vec[i] == 0 && has_end_vec[i] == 0 && stride_vec[i] == 1) {
+      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes()) {
+        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           ctx->NewBuilder()
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("y", 0), i)
+              .Split(user_op::OpArg("x", 0), axis)
+              .Split(user_op::OpArg("y", 0), axis)
               .Build();
         }
       }
@@ -119,12 +119,12 @@ REGISTER_USER_OP("slice_grad_v2")
       const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, i, 0, like_tensor.shape().NumAxes()) {
-        if (has_begin_vec[i] == 0 && has_end_vec[i] == 0 && stride_vec[i] == 1) {
+      FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
+        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
           ctx->NewBuilder()
-              .Split(user_op::OpArg("dy", 0), i)
-              .Split(user_op::OpArg("like", 0), i)
-              .Split(user_op::OpArg("dx", 0), i)
+              .Split(user_op::OpArg("dy", 0), axis)
+              .Split(user_op::OpArg("like", 0), axis)
+              .Split(user_op::OpArg("dx", 0), axis)
               .Build();
         }
       }

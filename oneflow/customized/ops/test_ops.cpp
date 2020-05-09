@@ -1,6 +1,5 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -39,29 +38,7 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      std::cout << " before add" << std::endl;
-      // interface 1
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), 0)
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
-      std::cout << " add s(0) " << std::endl;
-
-      // interface 2
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
-      std::cout << " add s(0) using inputs/outputs vec" << std::endl;
-
-      /*
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      */
-      // SbpSignatureBuilder()
-      //     .Split("in", 0, 0)
-      //     .Split("out", 0, 0)
-      //     .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -248,8 +225,8 @@ REGISTER_USER_OP("TestMultiInput")
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
-            .Split(ctx->inputs(), 0)
-            .Split(ctx->outputs(), 0)
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
             .Build();
       }
       return Maybe<void>::Ok();
@@ -274,8 +251,8 @@ REGISTER_USER_OP("TestMultiInputGrad")
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
-            .Split(ctx->inputs(), 0)
-            .Split(ctx->outputs(), 0)
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
             .Build();
       }
       return Maybe<void>::Ok();
