@@ -16,7 +16,6 @@ REGISTER_USER_OP("unsorted_segment_sum")
       Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
       CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
 
-      *out_shape = *data_shape;
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), data_shape->dim_vec().cbegin(),
                      data_shape->dim_vec().cbegin() + axis);
