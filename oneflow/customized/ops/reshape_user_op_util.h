@@ -6,6 +6,8 @@
 
 namespace oneflow {
 struct ReshapeUserOpUtil {
+    static Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape,
+                                             const ShapeProto& reshape_proto);
   static Maybe<void> Squeeze(const Shape& origin,
                              Shape* shape,
                              HashMap<int, int>* squeezed_axis2origin_axis);
