@@ -151,6 +151,14 @@ bool IsInplaceAllowed(
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
+  if (GlobalJobDesc().use_boxing_v2()) {
+    sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
+    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+    sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
+  }
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_out_box;
@@ -656,14 +664,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    SubTskGphBuilderCtx ctx(this);
-    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
-    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
-    Maybe<void> status = TRY(ChainSubTskGphBuilder(builders).Build(
-        &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
-        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
+    Maybe<void> status = TRY(
+        sub_tsk_gph_builder_->Build(sub_tsk_gph_builder_ctx_.get(), sorted_src_comp_tasks,
+                                    sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
+                                    lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
     if (!status.IsOk()) {
       if (SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
         Fallback();

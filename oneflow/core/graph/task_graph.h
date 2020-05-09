@@ -10,6 +10,9 @@
 
 namespace oneflow {
 
+class SubTskGphBuilder;
+class SubTskGphBuilderCtx;
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -99,6 +102,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
+  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
