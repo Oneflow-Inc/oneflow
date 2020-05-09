@@ -73,10 +73,10 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       GeneratePartialSbp<binary_func>(ctx, i);
       num_reduced_axes += 1;
     } else {
-      SbpSignatureBuilder()
+      ctx->NewBuilder()
           .Split(ctx->inputs(), i)
           .Split(ctx->outputs(), keep_dims ? i : i - num_reduced_axes)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Build();
     }
   }
   return Maybe<void>::Ok();

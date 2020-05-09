@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/operator/reshape_op_util.h"
+#include "oneflow/customized/ops/reshape_user_op_util.h"
 
 namespace oneflow {
 
@@ -37,10 +37,7 @@ REGISTER_USER_OP("reshape_like")
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
-      return ReshapeOpUtil::GetReshapeSbpSignatures(
-          in_shape, like_shape, StdVec2PbRpf<std::string>({GenRepeatedBn("in", 0)}),
-          StdVec2PbRpf<std::string>({GenRepeatedBn("like", 0), GenRepeatedBn("out", 0)}),
-          ctx->parallel_num(), ctx->sbp_sig_list());
+      return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, ctx);
     });
 
 }  // namespace oneflow

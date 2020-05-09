@@ -45,22 +45,6 @@ SbpSignatureBuilder&& SbpSignatureBuilder::PartialSum(const std::string& bn_in_o
   return std::move(*this);
 }
 
-SbpSignatureBuilder&& SbpSignatureBuilder::Split(const std::string& arg_name, int32_t index,
-                                                 int64_t axis) {
-  Split(GenRepeatedBn(arg_name, index), axis);
-  return std::move(*this);
-}
-
-SbpSignatureBuilder&& SbpSignatureBuilder::Broadcast(const std::string& arg_name, int32_t index) {
-  Broadcast(GenRepeatedBn(arg_name, index));
-  return std::move(*this);
-}
-
-SbpSignatureBuilder&& SbpSignatureBuilder::PartialSum(const std::string& arg_name, int32_t index) {
-  PartialSum(GenRepeatedBn(arg_name, index));
-  return std::move(*this);
-}
-
 SbpSignatureBuilder&& SbpSignatureBuilder::Split(
     const std::vector<std::pair<std::string, int32_t>>& args, int64_t axis) {
   for (const auto& pair : args) { Split(GenRepeatedBn(pair.first, pair.second), axis); }

@@ -46,12 +46,10 @@ REGISTER_USER_OP("ccrelu")
           .Split(user_op::OpArg("out", 0), 0)
           .Build();
       std::cout << " add s(0) " << std::endl;
-      PrintSbpLog(ctx->sbp_sig_list());
 
       // interface 2
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       std::cout << " add s(0) using inputs/outputs vec" << std::endl;
-      PrintSbpLog(ctx->sbp_sig_list());
 
       /*
       SbpSignatureBuilder()
