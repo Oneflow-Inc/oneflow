@@ -263,13 +263,12 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
           NcclCheck(ncclGetUniqueId(&nccl_unique_id));
           if (local_ranks.size() != device_set.device_size()) {
             const std::string rpc_key = GetNcclUniqueIdRpcKey(request->op_desc().name(), stream_id);
-            Global<CtrlClient>::Get()->PushKV(
-                rpc_key, std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
+            Global<CtrlClient>::Get()->PushKV(rpc_key, NcclUniqueIdToString(nccl_unique_id));
           }
         } else {
           const std::string rpc_key = GetNcclUniqueIdRpcKey(request->op_desc().name(), stream_id);
           Global<CtrlClient>::Get()->PullKV(rpc_key, [&nccl_unique_id](const std::string& val) {
-            memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
+            NcclUniqueIdFromString(val, &nccl_unique_id);
           });
         }
         NcclCheck(ncclGroupStart());

@@ -97,13 +97,13 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
         "nccl_unique_id_" + std::to_string(tasks.front().parallel_ctx().rank_ctx().rank_set_id());
     if (should_create_unique_id) {
       NcclCheck(ncclGetUniqueId(nccl_unique_id));
-      Global<CtrlClient>::Get()->PushKV(
-          nccl_unique_id_rpc_key, std::string(nccl_unique_id->internal, NCCL_UNIQUE_ID_BYTES));
+      Global<CtrlClient>::Get()->PushKV(nccl_unique_id_rpc_key,
+                                        NcclUniqueIdToString(*nccl_unique_id));
     } else {
-      Global<CtrlClient>::Get()->PullKV(
-          nccl_unique_id_rpc_key, [&nccl_unique_id](const std::string& val) {
-            memcpy(nccl_unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
-          });
+      Global<CtrlClient>::Get()->PullKV(nccl_unique_id_rpc_key,
+                                        [&nccl_unique_id](const std::string& val) {
+                                          NcclUniqueIdFromString(val, nccl_unique_id);
+                                        });
     }
   }
 }
