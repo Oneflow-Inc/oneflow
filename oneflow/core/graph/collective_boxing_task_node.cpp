@@ -37,7 +37,11 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
 }
 
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {
-  NaiveInferProducedDataRegstTimeShape();
+  auto out_regst = GetProducedRegst("out");
+  if (out_regst != nullptr) {
+    out_regst->mut_data_regst_time_shape()->reset(
+        new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
+  }
 }
 
 }  // namespace oneflow

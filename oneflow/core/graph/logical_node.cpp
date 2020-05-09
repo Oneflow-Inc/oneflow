@@ -290,7 +290,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
-  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
+  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node) && !GlobalJobDesc().use_boxing_v2()) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
     return &TaskGraph::BldSubTskGphByBoxing;

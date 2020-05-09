@@ -45,6 +45,12 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                                                  logical_blob_desc)) {
     return Error::BoxingNotSupported();
   }
+  if (!(SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel))) {
+    return Error::BoxingNotSupported();
+  }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
     if (work_type == CudaWorkType::kCopyH2D) {
       return Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_id);
