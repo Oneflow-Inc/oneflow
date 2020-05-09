@@ -137,38 +137,4 @@ def test_unsorted_segment_sum(test_case):
     for arg in GenArgList(arg_dict):
         _compare_unsorted_segment_sum_with_tf(test_case, *arg)
 
-
-#def test_unsorted_segment_sum_case_1(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["data_shape"] = [(2, 10, 2)]
-#    arg_dict["segment_ids_shape"] = [(10, 2)]
-#    arg_dict["axis"] = [1]
-#    arg_dict["num_segments"] = [3]
-#    for arg in GenArgList(arg_dict):
-#        _compare_unsorted_segment_sum_with_tf(test_case, *arg)
-#
-
-#def test_unsorted_segment_sum_case_2(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["cpu", "gpu"]
-#    arg_dict["data_shape"] = [(2, 8)]
-#    arg_dict["segment_ids_shape"] = [(2, 1)]
-#    arg_dict["axis"] = [0]
-#    arg_dict["num_segments"] = [0]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        _compare_unsorted_segment_sum_with_tf(test_case, *arg)
-#
-#def test_unsorted_segment_sum_case_3(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["data_shape"] = [(2, 5, 2, 2)]
-#    arg_dict["segment_ids_shape"] = [(2, 2, 2)]
-#    arg_dict["num_segments"] = [1]
-#    arg_dict["axis"] = [1]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        _compare_unsorted_segment_sum_with_tf(test_case, *arg)
-#
-
+# TODO: add test cases if axis!=0

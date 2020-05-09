@@ -8,27 +8,25 @@ REGISTER_USER_OP("gather")
     .Output("out")
     .Attr("axis", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      CHECK_GT_OR_RETURN(in_shape->NumAxes(), 0);
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const int64_t axis = ctx->GetAttr<int64_t>("axis");
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      const Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
-      CHECK_GT_OR_RETURN(indices_shape->NumAxes(), 0);
+      CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
 
-      *out_shape = *in_shape;
+      *out->mut_shape() = in->shape();
       DimVector dim_vec;
-      dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin(),
-                     in_shape->dim_vec().cbegin() + axis);
-      dim_vec.insert(dim_vec.end(), indices_shape->dim_vec().cbegin(),
-                     indices_shape->dim_vec().cend());
-      dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin() + axis + 1,
-                     in_shape->dim_vec().end());
-      *out_shape = Shape(dim_vec);
+      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
+                     in->shape().dim_vec().cbegin() + axis);
+      dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
+                     indices->shape().dim_vec().cend());
+      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
+                     in->shape().dim_vec().end());
+      *out->mut_shape() = Shape(dim_vec);
       out->set_is_dynamic(indices->is_dynamic());
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
