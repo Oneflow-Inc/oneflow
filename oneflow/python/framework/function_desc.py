@@ -26,13 +26,19 @@ class FunctionDesc(object):
         if self.job_config_proto.HasField('predict_conf'): return False
         raise NotImplementedError
 
+    def enable_eager_execution(self):
+        return (session_ctx.GetDefaultSession().enable_eager_execution
+                and self.GetAttr('enable_eager_execution'))
+
     def HasAttr(self, attr_name):
         if attr_name == 'flag_name2flag_value': return False
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name in self.job_config_proto.flag_name2flag_value: return True
         return self.job_config_proto.HasField(attr_name)
 
-    def __getattr__(self, attr_name):
+    def __getattr__(self, attr_name): return self.GetAttr(attr_name)
+
+    def GetAttr(self, attr_name):
         assert attr_name != 'flag_name2flag_value'
         flag_name2flag_value = self.job_config_proto.flag_name2flag_value
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
