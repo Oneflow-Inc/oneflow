@@ -16,7 +16,6 @@ REGISTER_USER_OP("gather")
       CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
-      *out->mut_shape() = in->shape();
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
                      in->shape().dim_vec().cbegin() + axis);
