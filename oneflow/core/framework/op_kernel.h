@@ -66,11 +66,11 @@ class KernelInferContext {
     return user_op_conf_.attr<T>(attr_name);
   }
 
-  virtual InferContext* GetOpInferContext() {
+  virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual const TensorDescInferFn& GetOpInferFn() { UNIMPLEMENTED(); }
+  virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
 
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}

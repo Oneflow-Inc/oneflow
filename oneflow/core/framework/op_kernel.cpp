@@ -5,7 +5,7 @@ namespace oneflow {
 namespace user_op {
 
 void OpKernel::InferShape(KernelInferContext* ctx) const {
-  auto* op_infer_ctx = ctx->GetOpInferContext();
+  InferContext* op_infer_ctx = ctx->MutOpInferContext();
   CHECK_NOTNULL(op_infer_ctx);
   ctx->GetOpInferFn()(op_infer_ctx);
   for (const auto& arg_pair : ctx->outputs()) {
