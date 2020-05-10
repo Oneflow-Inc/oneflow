@@ -1,6 +1,7 @@
 #include "oneflow/customized/ops/reshape_user_op_util.h"
 
 namespace oneflow {
+
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
                                                        const ShapeProto& reshape_proto) {
   size_t total_elem_dim_exclude_minus_1 = 1;
@@ -78,6 +79,7 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);
   return Maybe<void>::Ok();
 }
+
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_shape,
                                                              const Shape& out_shape,
                                                              user_op::SbpContext* ctx) {
@@ -104,4 +106,5 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
+
 }  // namespace oneflow

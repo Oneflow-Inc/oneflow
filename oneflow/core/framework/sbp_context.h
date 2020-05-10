@@ -29,7 +29,6 @@ class UserOpSbpSignatureBuilder final {
       const std::vector<std::pair<std::string, int32_t>>& op_args);
 
   void Build() { *(sbp_sig_list_->mutable_sbp_signature()->Add()) = sbp_sig_tmp_; }
-  void Clear() { sbp_sig_tmp_.Clear(); }
 
  private:
   SbpSignatureList* sbp_sig_list_;
