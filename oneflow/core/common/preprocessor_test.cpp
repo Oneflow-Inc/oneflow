@@ -95,6 +95,30 @@ TEST(PP_SEQ, for_each_tuple) {
   for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
 }
 
+TEST(PP_SEQ, outter_for_each_tuple) {
+#define SEQ ((1, 1))((2, 2))((3, 3))((4, 4))
+#define MAKE_ENTRY(x, y) {x, y},
+  std::unordered_map<int, int> identity = {OF_PP_OUTTER_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
+#undef MAKE_ENTRY
+#undef SEQ
+  for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
+}
+
+TEST(PP_SEQ, nested_for_each_tuple) {
+#define SEQ ((0))((1))((2))((3))
+#define MAKE_INNER(x) x,
+#define MAKE_OUTTER(x) {OF_PP_FOR_EACH_TUPLE(MAKE_INNER, SEQ)},
+  std::vector<std::vector<int>> table = {OF_PP_OUTTER_FOR_EACH_TUPLE(MAKE_OUTTER, SEQ)};
+#undef MAKE_OUTTER
+#undef MAKE_INNER
+#undef SEQ
+  ASSERT_EQ(table.size(), 4);
+  for (int i = 0; i < 4; ++i) {
+    ASSERT_EQ(table[i].size(), 4);
+    for (int j = 0; j < 4; ++j) { ASSERT_EQ(j, table[i][j]); }
+  }
+}
+
 TEST(PP_SEQ, seq_product_for_each) {
 #define SEQ (0)(1)
 #define MAKE_ENTRY(x, y) {OF_PP_STRINGIZE(OF_PP_CAT(x, y)), x || y},

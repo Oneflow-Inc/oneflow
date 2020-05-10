@@ -14,7 +14,15 @@ def GetCurJobConfigProto():
     assert function_desc is not None
     return function_desc.job_config_proto
 
+logged_op_confs = set({})
 def CurJobAddOp(op_conf, parallel_conf=None):
+    # TODO: tsai: remove this debug code when transition ends
+    import os
+    if os.getenv("ENABLE_USER_OP") == 'True' and op_conf.HasField("user_conf") == False:
+        op_type = op_conf.WhichOneof("op_type")
+        if op_type not in logged_op_confs and op_type != "return_conf":
+            print("non-user op added: {}".format(op_type))
+            logged_op_confs.add(op_type)
     if distribute_ctx.IsMirroredStrategyEnabled():
         return CurJobAddMirroredOp(op_conf, parallel_conf)
     return CurJobAddConsistentOp(op_conf, parallel_conf)
@@ -33,4 +41,3 @@ def GetOpConfAndParallelConf(op_conf, parallel_conf=None):
         op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
     return op_conf, parallel_conf
-
