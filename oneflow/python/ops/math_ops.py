@@ -361,7 +361,7 @@ def broadcast_floor_mod(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.tanh")
+@oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
@@ -385,7 +385,7 @@ def tanh(x, name=None):
     )
 
 
-@oneflow_export("math.gelu")
+@oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
