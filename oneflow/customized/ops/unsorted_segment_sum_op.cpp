@@ -39,7 +39,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
         } else if (data_batch_axis->value() >= axis
                    && data_batch_axis->value() < (axis + segment_ids_num_axes)) {
           out_batch_axis->clear_value();
-        } else if (data_batch_axis->value() > segment_ids_num_axes) {
+        } else if (data_batch_axis->value() >= segment_ids_num_axes) {
           out_batch_axis->set_value(data_batch_axis->value() - segment_ids_num_axes + 1);
         }
       } else {

@@ -23,13 +23,14 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.name = id_util.UniqueStr("Gather_")
     else:
         op_conf.name = name
-    out_ndims = len(params.shape)
+    in_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
     elif axis < 0:
-        axis+=out_ndims
-        assert axis >= 0 and axis < out_ndims, ValueError(
-            "Expected axis to between [%d, %d).  But received: %d " %(-out_ndims, out_ndims, axis)
+        axis+=in_ndims
+        assert axis >= 0 and axis < in_ndims, ValueError(
+            "Expected axis to between [%d, %d).  But received: %d " %(-in_ndims,
+                in_ndims, axis)
             )
 
     if batch_dims > 0:
