@@ -18,7 +18,7 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     which \
     rh-python36 python36-devel.x86_64 python36-devel && \
     python3 -m ensurepip && \
-    pip3 install numpy protobuf && \
+    pip3 install numpy protobuf wheel && \
     yum clean all
 
 RUN mkdir -p /tmp/download && \
