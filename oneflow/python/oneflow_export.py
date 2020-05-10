@@ -64,8 +64,7 @@ def _GetInvokerIfIsSpecializedFunctor(func_or_class):
 def _GetSpecializedFunctor(func, hob_expr, api_name):
     class Functor:
         def default(get_failed_info, *args, **kwargs):
-            error_prompt = "%s: \033[1;31mFAILED\033[0m" % api_name
-            raise NotImplementedError(get_failed_info(error_prompt))
+            raise NotImplementedError(get_failed_info(api_name))
 
         @enable_if(hob_expr, default)
         def invoke(*args, **kwargs):
