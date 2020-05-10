@@ -9,11 +9,8 @@ def enable_if(bool_functor, default_func):
     def get_failed_info(customized_prompt=None):
         failed_info = "no avaliable function found.\n" 
         for bf, func, location in invoke_patterns:
-            if customized_prompt is None:
-                prompt = "\n%s: \033[1;31mFAILED\033[0m" % location
-            else:
-                prompt = customized_prompt
-            failed_info += "\n%s \n\t%s\n" % (prompt, bf.debug_str())
+            prompt = location if customized_prompt is None else customized_prompt
+            failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (prompt, bf.debug_str())
         return failed_info
     def decorator(func):
         assert func.__name__ == 'invoke'
