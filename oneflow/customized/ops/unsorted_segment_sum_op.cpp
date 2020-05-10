@@ -31,15 +31,16 @@ REGISTER_USER_OP("unsorted_segment_sum")
       const auto axis = ctx->GetAttr<int64_t>("axis");
       const auto data_batch_axis = ctx->BatchAxis4ArgNameAndIndex("data", 0);
       const auto out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const auto segment_ids_batch_axis = ctx->BatchAxis4ArgNameAndIndex("segment_ids", 0);
+      const auto segment_ids_num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
       if (data_batch_axis->has_value()) {
-        if (data_batch_axis->value() < axis)
+        if (data_batch_axis->value() < axis) {
           out_batch_axis->set_value(data_batch_axis->value());
-        else if (data_batch_axis->value() >= axis
-                 && data_batch_axis->value() <= (axis + segment_ids_batch_axis->value())) {
+        } else if (data_batch_axis->value() >= axis
+                   && data_batch_axis->value() < (axis + segment_ids_num_axes)) {
           out_batch_axis->clear_value();
-        } else if (data_batch_axis->value() > segment_ids_batch_axis->value()) {
-          out_batch_axis->set_value(data_batch_axis->value() - segment_ids_batch_axis->value());
+        } else if (data_batch_axis->value() > segment_ids_num_axes) {
+          out_batch_axis->set_value(data_batch_axis->value() - segment_ids_num_axes + 1);
         }
       } else {
         ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
