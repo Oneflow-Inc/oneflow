@@ -4,8 +4,6 @@ import numpy as np
 from collections import OrderedDict
 from test_util import type_name_to_flow_type
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
 
 def test_naive(test_case):
     func_config = flow.FunctionConfig()

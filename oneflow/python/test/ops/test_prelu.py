@@ -6,22 +6,21 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+import test_global_storage
 
 
 def _check(test_case, x, y, shared_axes):
-    alpha_of = np.load(os.path.join(GetSavePath(), "alpha.npy"))
+    alpha_of = test_global_storage.Get("alpha")
     alpha = np.expand_dims(alpha_of, axis = 0)
-    dy = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    dy = test_global_storage.Get("loss_diff")
     np_prelu_out = np.where(x>0, x, x*alpha)
     np_prelu_x_diff = np.where(x>0, dy, dy*alpha)
     np_prelu_alpha_diff =  np.where(x>0, 0, dy*x)
     np_prelu_alpha_diff = np.add.reduce(np_prelu_alpha_diff, axis=shared_axes, keepdims=True)
     np_prelu_alpha_diff = np.add.reduce(np_prelu_alpha_diff, axis=0)
     test_case.assertTrue(np.allclose(np_prelu_out, y))
-    test_case.assertTrue(np.allclose(np_prelu_x_diff, np.load(os.path.join(GetSavePath(), "x_diff.npy"))))
-    test_case.assertTrue(np.allclose(np_prelu_alpha_diff, np.load(os.path.join(GetSavePath(), "alpha_diff.npy"))))
+    test_case.assertTrue(np.allclose(np_prelu_x_diff, test_global_storage.Get("x_diff")))
+    test_case.assertTrue(np.allclose(np_prelu_alpha_diff, test_global_storage.Get("alpha_diff")))
 
 def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     assert device_type in ["gpu", "cpu"]
@@ -49,12 +48,12 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
                 )
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(alpha, Save("alpha"))
-            flow.watch_diff(alpha, Save("alpha_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(alpha, test_global_storage.Setter("alpha"))
+            flow.watch_diff(alpha, test_global_storage.Setter("alpha_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
     check_point = flow.train.CheckPoint()
