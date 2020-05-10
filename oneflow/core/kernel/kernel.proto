@@ -85,11 +85,6 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf {
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
-}
-
 message SliceKernelConf {
   required ShapeProto in_shape = 1;
 }
@@ -223,7 +218,6 @@ message KernelConf {
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
     ArgWhereKernelConf arg_where_conf = 361;
 
-    AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
     GatherKernelConf gather_conf = 406;
