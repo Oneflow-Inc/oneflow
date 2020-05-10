@@ -1,22 +1,17 @@
-import oneflow.python.framework.runtime_mode as runtime_mode
+from oneflow.python.lib.core.enable_if import enable_if
 import inspect
 import re
 
 def oneflow_export(*api_names, **kwargs):
     if len(kwargs) == 1:
-        assert 'mode' in kwargs
-        modes = kwargs['mode']
-        if not isinstance(modes, (list, tuple)): modes = [modes]
-        modes = list(modes)
-        for mode in modes: assert runtime_mode.IsValidMode(mode)
+        assert 'enable_if' in kwargs
+        hob_expr = kwargs['enable_if']
     else:
         assert len(kwargs) == 0
-        modes = [runtime_mode.NORMAL_MODE, runtime_mode.GLOBAL_MODE, runtime_mode.DEVICE_MODE]
-    return _GetOneflowExportDecorator(api_names, modes)
+        hob_expr = None
+    return _GetOneflowExportDecorator(api_names, hob_expr)
 
-def _GetOneflowExportDecorator(api_names, oneflow_modes=[]):
-    assert type(oneflow_modes) is list
-    assert len(oneflow_modes) > 0
+def _GetOneflowExportDecorator(api_names, hob_expr = None):
     def Decorator(func_or_class):
         for api_name in api_names:
             fields = api_name.split(".")
@@ -24,39 +19,33 @@ def _GetOneflowExportDecorator(api_names, oneflow_modes=[]):
             global exported
             api = exported
             for field in fields: api = api._FindOrCreateSubApi(field)
-            for mode in oneflow_modes: api._SetApiFunction(mode, func_or_class)
+            api._SetApiFuncOrClass(func_or_class, hob_expr)
         return func_or_class
     return Decorator
-
 
 class OneflowApi(object):
     def __init__(self, api_name = ""):
         self.api_name_ = api_name
-        self.mode2api_function_ = {}
+        self.func_or_class_ = None
         self.sub_api_ = {}
 
     def __call__(self, *args, **kwargs):
-        mode = runtime_mode.CurrentMode()
-        supported = self.mode2api_function_
-        if mode in supported: return supported[mode](*args, **kwargs)
-        raise ApiNotImplementedError(self.api_name_, mode, supported.keys())
+        assert self.func_or_class_ is not None
+        return self.func_or_class_(*args, **kwargs)
 
     @property
     def _class(self):
-        assert len(self.mode2api_function_) > 0
-        ret_class = None
-        for _, value_class in self.mode2api_function_.items():
-            if ret_class is None:
-                ret_class = value_class
-            else:
-                assert ret_class is value_class
-        assert inspect.isclass(ret_class)
-        return ret_class
+        assert inspect.isclass(self.func_or_class_)
+        return self.func_or_class_
 
     def _SubApi(self): return self.sub_api_
 
-    def _SetApiFunction(self, mode, api_function):
-        self.mode2api_function_[mode] = api_function
+    def _SetApiFuncOrClass(self, func_or_class, hob_expr = None):
+        func_or_class = _GetInvokerIfIsSpecializedFunctor(func_or_class)
+        if hob_expr is not None:
+            func_or_class = _GetSpecializedFunctor(func_or_class, hob_expr, self.api_name_)
+            func_or_class = _GetInvokerIfIsSpecializedFunctor(func_or_class)
+        self.func_or_class_ = func_or_class
 
     def _FindOrCreateSubApi(self, field):
         assert re.match("^[\w]+[_\w\d]*$", field)
@@ -66,16 +55,21 @@ class OneflowApi(object):
         setattr(self, field, sub_api)
         return sub_api
 
+def _GetInvokerIfIsSpecializedFunctor(func_or_class):
+    if (inspect.isclass(func_or_class) and hasattr(func_or_class, 'invoke')
+            and hasattr(func_or_class.invoke, '__is_specialization_supported__')):
+        return func_or_class.invoke
+    return func_or_class
+
+def _GetSpecializedFunctor(func, hob_expr, api_name):
+    class Functor:
+        def default(get_failed_info, *args, **kwargs):
+            error_prompt = "%s: \033[1;31mFAILED\033[0m" % api_name
+            raise NotImplementedError(get_failed_info(error_prompt))
+
+        @enable_if(hob_expr, default)
+        def invoke(*args, **kwargs):
+            return func(*args, **kwargs)
+    return Functor
+
 exported = OneflowApi("oneflow")
-
-@oneflow_export('error.ApiNotImplementedError')
-class ApiNotImplementedError(Exception):
-    def __init__(self, api_name, current_mode, supported_modes):
-        self.api_name_ = api_name
-        self.current_mode_ = current_mode
-        self.supported_modes_ = supported_modes
-
-    def __str__(self):
-        return ("\n\napi name: %s\nsupported modes: [%s]\ncurrent mode: %s\n"
-                %(self.api_name_, ", ".join(self.supported_modes_), self.current_mode_))
-        return ret
