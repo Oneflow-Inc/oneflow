@@ -8,11 +8,12 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow as flow
 
 def build_unary_elemwise_math_op(math_op, x, name=None):
     if name is None:
         name = id_util.UniqueStr(math_op + "_")
-    return user_op_builder.UserOpConfWrapperBuilder(name).Op("math_unary_elementwise")\
+    return flow.user_op_builder(name).Op("math_unary_elementwise")\
         .Input("x", [x])\
         .Output("y")\
         .SetAttr("math_type", math_op, "AttrTypeString")\

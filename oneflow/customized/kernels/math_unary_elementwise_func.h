@@ -2,9 +2,45 @@
 #define ONEFLOW_CUSTOMIZED_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
+#if defined(__CUDACC__)
+#include <cuda_fp16.h>
+#else
+#include <cmath>
+#endif
 
 namespace oneflow {
 
+template<typename T>
+struct AbsFunctor {
+  static OF_DEVICE_FUNC const T Forward(const T x) { return x < 0 ? -x : x; }
+
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < 0 ? -dy : dy; }
+};
+
+template<typename T>
+struct AcosFunctor;
+
+template<>
+struct AcosFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+#if defined(__CUDACC__)
+    return acosf(x);
+#else
+    return std::acos(x);
+#endif
+  }
+
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+#if defined(__CUDACC__)
+    return dy * (-rsqrtf(1.0f - x * x));
+#else
+    return dy * (-1.0f / std::sqrt(1.0f - x * x));
+#endif
+  }
+};
+
+/*
 template<typename T>
 OF_DEVICE_FUNC T AbsBw(T x, T dy) {
   return x < 0 ? -dy : dy;
@@ -157,6 +193,7 @@ OF_DEVICE_FUNC float TanhBwFloat(float x, float dy) { return dy * sinhf(x) / cos
   OF_PP_MAKE_TUPLE_SEQ("Square", SquareFwFloat, SquareBwFloat)                            \
   OF_PP_MAKE_TUPLE_SEQ("Tan", tanf, TanBwFloat)                                           \
   OF_PP_MAKE_TUPLE_SEQ("Tanh", tanhf, TanhBwFloat)
+*/
 
 }  // namespace oneflow
 
