@@ -33,16 +33,15 @@ REGISTER_USER_OP("l2_normalize")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       const int32_t axis = ctx->GetAttr<int32_t>("axis");
-      for (int64_t i = 0; i < num_axes; ++i) {
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i != axis) {
-          SbpSignatureBuilder()
-              .Split("x", 0, i)
-              .Split("y", 0, i)
-              .Split("square_x_sum", 0, i)
-              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), i)
+              .Split(user_op::OpArg("y", 0), i)
+              .Split(user_op::OpArg("square_x_sum", 0), i)
+              .Build();
         }
       }
       return Maybe<void>::Ok();
@@ -81,17 +80,16 @@ REGISTER_USER_OP("l2_normalize_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes();
+      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       const int32_t axis = ctx->GetAttr<int32_t>("axis");
-      for (int64_t i = 0; i < num_axes; ++i) {
+      FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
         if (i != axis) {
-          SbpSignatureBuilder()
-              .Split("y", 0, i)
-              .Split("dy", 0, i)
-              .Split("square_x_sum", 0, i)
-              .Split("dx", 0, i)
-              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("y", 0), i)
+              .Split(user_op::OpArg("dy", 0), i)
+              .Split(user_op::OpArg("square_x_sum", 0), i)
+              .Split(user_op::OpArg("dx", 0), i)
+              .Build();
         }
       }
       return Maybe<void>::Ok();
