@@ -18,7 +18,8 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& condition_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0);
+  const user_op::TensorDesc& condition_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0);
   FOR_RANGE(int64_t, i, 0, condition_tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("condition", 0), i)

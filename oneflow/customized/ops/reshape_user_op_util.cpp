@@ -2,7 +2,7 @@
 
 namespace oneflow {
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
-                                                   const ShapeProto& reshape_proto) {
+                                                       const ShapeProto& reshape_proto) {
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
@@ -34,7 +34,7 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 }
 
 Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
-                                   HashMap<int, int>* squeezed_axis2origin_axis) {
+                                       HashMap<int, int>* squeezed_axis2origin_axis) {
   CHECK_GT_OR_RETURN(origin.NumAxes(), 0);
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
@@ -89,8 +89,9 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
     Shape squeezed_out_shape;
     ReshapeUserOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
     ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
-    ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape, ctx->parallel_num(),
-                                               &squeezed_group_start_in_axis2out_axis);
+    ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
+                                                   ctx->parallel_num(),
+                                                   &squeezed_group_start_in_axis2out_axis);
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
@@ -100,10 +101,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
         .Split(ctx->outputs(), start_out_axis)
         .Build();
   }
-  ctx->NewBuilder()
-      .PartialSum(ctx->inputs())
-      .PartialSum(ctx->outputs())
-      .Build();
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 }  // namespace oneflow

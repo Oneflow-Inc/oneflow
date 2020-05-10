@@ -47,8 +47,8 @@ REGISTER_USER_OP("expand_dims")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_tensor.shape().NumAxes());
+      const int32_t axis = TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"),
+                                                           in_tensor.shape().NumAxes());
 
       auto dim_vec = in_tensor.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
@@ -57,7 +57,10 @@ REGISTER_USER_OP("expand_dims")
             .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
             .Build();
       }
-      ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).PartialSum(user_op::OpArg("out", 0)).Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 

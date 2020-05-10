@@ -6,17 +6,14 @@
 
 namespace oneflow {
 struct ReshapeUserOpUtil {
-    static Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape,
+  static Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape,
                                              const ShapeProto& reshape_proto);
-  static Maybe<void> Squeeze(const Shape& origin,
-                             Shape* shape,
+  static Maybe<void> Squeeze(const Shape& origin, Shape* shape,
                              HashMap<int, int>* squeezed_axis2origin_axis);
-  static Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape,
-                                                 const Shape& out_shape,
+  static Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
                                                  const int64_t parallel_num,
                                                  HashMap<int, int>* group_start_in_axis2out_axis);
-  static Maybe<void> GetReshapeUserOpSbpSignatures(const Shape& in_shape,
-                                                   const Shape& out_shape,
+  static Maybe<void> GetReshapeUserOpSbpSignatures(const Shape& in_shape, const Shape& out_shape,
                                                    user_op::SbpContext* ctx);
 };
 }  // namespace oneflow

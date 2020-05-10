@@ -20,10 +20,7 @@ REGISTER_USER_OP("scalar_add")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });

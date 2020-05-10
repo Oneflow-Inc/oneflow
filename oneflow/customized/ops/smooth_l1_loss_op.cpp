@@ -22,12 +22,10 @@ REGISTER_USER_OP("smooth_l1_loss")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& prediction_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+      const user_op::TensorDesc& prediction_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
       FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -60,12 +58,10 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& prediction_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+      const user_op::TensorDesc& prediction_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
       FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });

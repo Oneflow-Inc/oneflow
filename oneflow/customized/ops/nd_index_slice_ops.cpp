@@ -52,7 +52,8 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& params_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
+  const user_op::TensorDesc& params_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
   const user_op::TensorDesc& indices_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
   int64_t indices_num_axes = indices_tensor.shape().NumAxes();

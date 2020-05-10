@@ -210,10 +210,7 @@ REGISTER_USER_OP("batch_matmul")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
       FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });

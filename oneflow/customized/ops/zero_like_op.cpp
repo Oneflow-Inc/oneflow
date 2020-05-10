@@ -16,7 +16,8 @@ REGISTER_USER_OP("zero_like")
       like_arg_modifier->set_use_header_only(true);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& like_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
+      const user_op::TensorDesc& like_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
       FOR_RANGE(int64_t, i, 0, like_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("like", 0), i)

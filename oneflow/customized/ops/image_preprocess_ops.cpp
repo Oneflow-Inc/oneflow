@@ -113,10 +113,7 @@ REGISTER_USER_OP("crop_mirror_normalize")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Build();
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -146,9 +143,7 @@ REGISTER_USER_OP("coin_flip")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
+      ctx->NewBuilder().Split(user_op::OpArg("out", 0), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

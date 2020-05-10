@@ -112,7 +112,8 @@ REGISTER_USER_OP("random_mask_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& like_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
+      const user_op::TensorDesc& like_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
       FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("like", 0), axis)

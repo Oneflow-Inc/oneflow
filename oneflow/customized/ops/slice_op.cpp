@@ -115,7 +115,8 @@ REGISTER_USER_OP("slice_grad_v2")
       like_arg_modifier->set_use_header_only(true);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& like_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
+      const user_op::TensorDesc& like_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
       const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
@@ -128,10 +129,7 @@ REGISTER_USER_OP("slice_grad_v2")
               .Build();
         }
       }
-      ctx->NewBuilder()
-          .PartialSum(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Build();
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("dy", 0))
           .Broadcast(user_op::OpArg("like", 0))

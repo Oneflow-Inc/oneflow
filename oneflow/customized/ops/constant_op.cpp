@@ -29,10 +29,7 @@ REGISTER_USER_OP("constant")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Broadcast(ctx->inputs())
-          .Broadcast(ctx->outputs())
-          .Build();
+      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 }  // namespace oneflow

@@ -152,9 +152,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build();
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -173,9 +171,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build();
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -202,9 +198,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       int64_t parallel_num = ctx->parallel_num();
       DeviceType device_type = ctx->device_type();
       if (device_type == DeviceType::kCPU && parallel_num > 1) {
-        ctx->NewBuilder()
-            .Split(ctx->outputs(), 0)
-            .Build();
+        ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -224,10 +218,7 @@ REGISTER_USER_OP("TestMultiInput")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -250,10 +241,7 @@ REGISTER_USER_OP("TestMultiInputGrad")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -295,9 +283,7 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build();
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 

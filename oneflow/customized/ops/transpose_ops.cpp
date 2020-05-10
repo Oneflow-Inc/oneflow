@@ -52,10 +52,7 @@ REGISTER_USER_OP("transpose")
         if (axis < 0) { axis += perm.size(); }
         CHECK_GE(axis, 0);
         CHECK_LT(axis, perm.size());
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), axis)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
       }
       return Maybe<void>::Ok();
     });

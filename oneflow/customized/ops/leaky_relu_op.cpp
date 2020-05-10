@@ -19,10 +19,7 @@ REGISTER_USER_OP("leaky_relu")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("x", 0), i)
-            .Split(user_op::OpArg("y", 0), i)
-            .Build();
+        ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
       return Maybe<void>::Ok();
     });

@@ -16,15 +16,9 @@ REGISTER_USER_OP("scalar_mul")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
-      ctx->NewBuilder()
-          .PartialSum(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Build();
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 
