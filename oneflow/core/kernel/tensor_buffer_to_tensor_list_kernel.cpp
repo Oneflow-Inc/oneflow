@@ -15,7 +15,7 @@ template<typename D>
 struct SwitchUtil final {
 #define MAKE_COPY_ELEM_SWITCH_ENTRY(func_name, S) func_name<S, D>
   DEFINE_STATIC_SWITCH_FUNC(void, CopyTensorBufferTo, MAKE_COPY_ELEM_SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+                            MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
 #undef MAKE_COPY_ELEM_SWITCH_ENTRY
 };
 
@@ -80,7 +80,9 @@ void TensorBufferToTensorListKernel<T>::ForwardDataContent(
                && (conf.data_type() == GetDataType<dtype>::value);               \
       });
 
+REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(char)
 REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(int8_t)
+REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(uint8_t)
 REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(int32_t)
 REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(int64_t)
 REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(float)

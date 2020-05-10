@@ -9,7 +9,9 @@ namespace {
 
 void DecodeImage(const TensorBuffer& raw_bytes, TensorBuffer* image_buffer,
                  const std::string& color_space, DataType data_type) {
-  CHECK_EQ(raw_bytes.data_type(), DataType::kChar);
+  // should only support kChar, but numpy ndarray maybe cannot convert to char*
+  CHECK(raw_bytes.data_type() == DataType::kChar || raw_bytes.data_type() == DataType::kInt8
+        || raw_bytes.data_type() == DataType::kUInt8);
   cv::_InputArray raw_bytes_arr(raw_bytes.data<char>(), raw_bytes.elem_cnt());
   cv::Mat image_mat = cv::imdecode(
       raw_bytes_arr, (ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE)

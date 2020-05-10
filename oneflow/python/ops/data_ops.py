@@ -541,3 +541,21 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, batch_axis=0, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("image_decode")
+def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
+    # TODO: check input attribute
+    if name is None:
+        name = id_util.UniqueStr("ImageDecode_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("image_decode")
+        .Input("in", [images_bytes_buffer])
+        .Output("out")
+        .SetAttr("color_space", color_space, "AttrTypeString")
+        .SetAttr("data_type", dtype, "AttrTypeDataType")
+        .Build()
+        .RemoteBlobList()[0]
+    )
