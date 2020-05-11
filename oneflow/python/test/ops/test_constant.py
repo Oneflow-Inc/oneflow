@@ -19,8 +19,7 @@ def compare_with_tensorflow(device_type, value, shape, rtol=1e-5, atol=1e-5):
     @flow.function(func_config)
     def ConstantJob():
         with flow.device_prior_placement(device_type, "0:0"):
-            loss = flow.constant(value, dtype=flow.float, shape=shape)
-            return loss
+            return flow.constant(value, dtype=flow.float, shape=shape)
     
     of_out = ConstantJob().get()
     tf_out = tf.constant(value, dtype=float, shape=shape)

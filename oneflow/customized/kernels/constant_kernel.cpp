@@ -6,7 +6,7 @@ namespace user_op {
 
 class ConstantState final : public OpKernelState {
  public:
-  ConstantState() = default;
+  ConstantState(bool is_init) : is_init_(is_init) {}
   ~ConstantState() = default;
   const bool& GetInit() const { return is_init_; }
   bool* MutableInit() { return &is_init_; }
@@ -22,6 +22,10 @@ class ConstantKernel final : public OpKernel {
   ~ConstantKernel() = default;
 
  private:
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<ConstantState>(false);
+  }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* constState = dynamic_cast<ConstantState*>(state);
     if (constState->GetInit()) { return; }
