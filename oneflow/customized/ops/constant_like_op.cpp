@@ -1,4 +1,3 @@
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 
@@ -12,27 +11,26 @@ REGISTER_USER_OP("constant_like")
     .Attr("dtype", UserOpAttrType::kAtDataType)
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
-      const auto& dtype = ctx->GetAttr<DataType>("dtype");
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->GetAttr<DataType>("dtype");
 
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       if (ctx->outputs().empty()) { return Maybe<void>::Ok(); }
-      OF_CHECK_GT(ctx->inputs().size(), 0);
-      OF_CHECK_EQ(ctx->outputs().size(), 1);
+      CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
+      CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1);
       const OptInt64* batch_axis = nullptr;
-      for (const auto& in_arg_pair : ctx->inputs()) {
-        const OptInt64* const cur_in_batch_axis =
-            ctx->BatchAxis4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-        if (cur_in_batch_axis->has_value() == false) { continue; }
+      for (const auto& ibn : ctx->inputs()) {
+        const OptInt64* const cur_ibn_batch_axis =
+            ctx->BatchAxis4ArgNameAndIndex(ibn.first, ibn.second);
+        if (cur_ibn_batch_axis->has_value() == false) { continue; }
         if (batch_axis) {
-          OF_CHECK_EQ(batch_axis->value(), cur_in_batch_axis->value());
+          CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
         } else {
-          batch_axis = cur_in_batch_axis;
+          batch_axis = cur_ibn_batch_axis;
         }
       }
       OptInt64 no_batch_axis;
@@ -40,7 +38,6 @@ REGISTER_USER_OP("constant_like")
       const auto& sole_out_arg_pair = ctx->outputs().at(0);
       *ctx->BatchAxis4ArgNameAndIndex(sole_out_arg_pair.first, sole_out_arg_pair.second) =
           *batch_axis;
-
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

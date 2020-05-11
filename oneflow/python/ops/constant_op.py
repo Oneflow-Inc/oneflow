@@ -39,7 +39,7 @@ def constant(value, dtype=None, shape=None, name=None):
             .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")\
             .SetAttr("dtype", dtype, "AttrTypeDataType")\
             .SetAttr("shape", shape, "AttrTypeShape")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
@@ -58,11 +58,9 @@ def constant(value, dtype=None, shape=None, name=None):
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
-
 @oneflow_export("constant_scalar")
 def constant_scalar(value, dtype=None, name=None):
     return flow.constant(value, dtype=dtype, shape=[1])
-
 
 @oneflow_export("constant_like")
 def constant_like(like, value, dtype=None, name=None):
@@ -81,7 +79,7 @@ def constant_like(like, value, dtype=None, name=None):
             .SetAttr("is_floating_value", type(value) is float, "AttrTypeBool")\
             .SetAttr("dtype", dtype, "AttrTypeDataType")\
             .Output("out")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
@@ -101,12 +99,9 @@ def constant_like(like, value, dtype=None, name=None):
         setattr(out_lbi, "blob_name", "out")
         return remote_blob_util.RemoteBlob(out_lbi)
 
-
-
 @oneflow_export("ones_like")
 def ones_like(like, dtype=None, name=None):
     return constant_like(like, 1, dtype=dtype, name=name)
-
 
 @oneflow_export("zeros_like")
 def zeros_like(like, dtype=None, name=None):

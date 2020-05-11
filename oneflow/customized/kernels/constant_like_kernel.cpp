@@ -25,7 +25,8 @@ class ConstantLikeKernel final : public user_op::OpKernel {
 
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), out->shape().elem_cnt(),
                                      static_cast<T>(value), out->mut_dptr<T>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CONSTANT_LIKE_KERNEL_WITH_DEVICE_AND_DTYPE(device, dtype)            \
