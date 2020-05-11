@@ -154,31 +154,31 @@ REGISTER_USER_OP("matmul")
         k_b_axis = 0;
         n_axis = 1;
       }
-      SbpSignatureBuilder()
-          .Split("a", 0, m_axis)
-          .Broadcast("b", 0)
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("a", 0), m_axis)
+          .Broadcast(user_op::OpArg("b", 0))
           .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .Broadcast("a", 0)
-          .Split("b", 0, n_axis)
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("a", 0))
+          .Split(user_op::OpArg("b", 0), n_axis)
           .Split(ctx->outputs(), 1)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .Split("a", 0, k_a_axis)
-          .Split("b", 0, k_b_axis)
+          .Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("a", 0), k_a_axis)
+          .Split(user_op::OpArg("b", 0), k_b_axis)
           .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .PartialSum("a", 0)
-          .Broadcast("b", 0)
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("a", 0))
+          .Broadcast(user_op::OpArg("b", 0))
           .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .Broadcast("a", 0)
-          .PartialSum("b", 0)
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("a", 0))
+          .PartialSum(user_op::OpArg("b", 0))
           .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -208,12 +208,9 @@ REGISTER_USER_OP("batch_matmul")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
-      FOR_RANGE(int32_t, i, 0, num_axes - 2) {
-        SbpSignatureBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), i)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
+      FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });
