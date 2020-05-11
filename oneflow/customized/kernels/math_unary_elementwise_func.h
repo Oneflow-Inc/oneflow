@@ -3,10 +3,19 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+
 #if defined(__CUDACC__)
+
 #include <cuda_fp16.h>
+#define MATH_UNARY_FUNC_FLOAT(name) name##f(x)
+#define MATH_UNARY_FUNC_DOUBLE(name) name(x)
+
 #else
+
 #include <cmath>
+#define MATH_UNARY_FUNC_FLOAT(name) std::name(x)
+#define MATH_UNARY_FUNC_DOUBLE(name) std::name(x)
+
 #endif
 
 namespace oneflow {
@@ -23,13 +32,7 @@ struct AcosFunctor;
 
 template<>
 struct AcosFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) {
-#if defined(__CUDACC__)
-    return acosf(x);
-#else
-    return std::acos(x);
-#endif
-  }
+  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_UNARY_FUNC_FLOAT(acos); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
 #if defined(__CUDACC__)
