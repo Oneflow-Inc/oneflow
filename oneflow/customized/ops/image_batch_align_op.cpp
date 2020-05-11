@@ -23,7 +23,7 @@ REGISTER_USER_OP("image_batch_align")
       bool check_failed = false;
       std::stringstream err;
       err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
-      const Shape& shape = conf.attr<Shape>("color_space");
+      const Shape& shape = conf.attr<Shape>("shape");
       if (shape.NumAxes() != 3) {
         err << ", shape: " << shape.ToString() << " (image shape must has 3 axes)";
         check_failed = true;
@@ -33,7 +33,7 @@ REGISTER_USER_OP("image_batch_align")
         err << ", data_type: " << data_type << " (only support kUInt8 and kFloat for now)";
         check_failed = true;
       }
-      int32_t alignment = conf.attr<DataType>("alignment");
+      int32_t alignment = conf.attr<int32_t>("alignment");
       if (alignment < 0) {
         err << ", alignment: " << alignment << " (alignment must be greater than or equal to 0)";
         check_failed = true;
@@ -42,7 +42,9 @@ REGISTER_USER_OP("image_batch_align")
             << " (alignment must be power of 2 when it's not equal to 0)";
         check_failed = true;
       }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err; }
+      if (check_failed) {
+        return oneflow::Error::CheckFailed() << err.str(); 
+      }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

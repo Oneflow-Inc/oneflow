@@ -24,7 +24,7 @@ REGISTER_USER_OP("image_target_resize")
         err << ", max_size: " << max_size << " (max_size must be greater than 0)";
         check_failed = true;
       }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err; }
+      if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
