@@ -23,9 +23,7 @@ parser.add_argument("--node_list", type=str, default=None)
 
 # train
 parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
-parser.add_argument(
-    "--weight_l2", type=float, default=0.01, help="weight l2 decay parameter"
-)
+parser.add_argument("--weight_decay_rate", type=float, default=0.01, help="weight decay rate")
 parser.add_argument("--batch_size_per_device", type=int, default=24)
 parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
 parser.add_argument(
@@ -206,6 +204,10 @@ _BERT_MODEL_UPDATE_CONF = dict(
     warmup_conf=dict(linear_conf=dict(warmup_batches=args.warmup_batches, start_multiplier=0,)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0,)),
     adam_conf=dict(epsilon=1e-6),
+    weight_decay_conf=dict(
+        weight_decay_rate=args.weight_decay_rate,
+        excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
+    )
 )
 
 func_config = flow.FunctionConfig()
@@ -216,12 +218,6 @@ func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 # func_config.disable_all_reduce_sequence(True)
 # func_config.all_reduce_group_min_mbyte(8)
 # func_config.all_reduce_group_num(128)
-
-if args.weight_l2:
-    func_config.train.weight_decay_conf=dict(
-        weight_decay_rate=args.weight_l2,
-        excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
-    )
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
 if args.enable_auto_mixed_precision:

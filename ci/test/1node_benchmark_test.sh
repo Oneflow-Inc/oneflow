@@ -2,6 +2,7 @@ set -xe
 
 pip3 install --user ci_tmp/*.whl
 
+rm -rf /benchmarks
 cp -r oneflow/python/benchmarks /benchmarks
 cd /benchmarks
 
@@ -20,7 +21,7 @@ python3 bert_benchmark/run_pretraining.py \
     --gpu_num_per_node=1 \
     --node_num=1 \
     --learning_rate=1e-4 \
-    --weight_l2=0.01 \
+    --weight_decay_rate=0.01 \
     --batch_size_per_device=24 \
     --iter_num=5 \
     --loss_print_every_n_iter=1 \
