@@ -15,6 +15,8 @@ __global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
 }
 
+}  // namespace
+
 template<template<typename> class UnaryFunctor, typename T>
 class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
  public:
@@ -64,7 +66,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
 /*
 TODO(chengcheng): support more data type
 #define MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ         \
+  FLOATING_DATA_TYPE_SEQ                     \
   HALF_DATA_TYPE_SEQ
 */
 
@@ -94,104 +96,5 @@ TODO(chengcheng): support more data type
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ,
                                  MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ)
-/*
-REGISTER_USER_KERNEL("abs")
-    .SetCreateFn<MathUnaryElementwiseGpuKernel<AbsFunctor, float>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-      return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && y_tensor_desc->data_type() == DataType::kFloat;
-    });
-REGISTER_USER_KERNEL((std::string("") + "abs" + "grad"))
-    .SetCreateFn<MathUnaryElementwiseGradGpuKernel<AbsFunctor, float>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      return ctx.device_type() == DeviceType::kGPU
-             && x_tensor_desc->data_type() == DataType::kFloat;
-    });
-*/
 
-}  // namespace
-
-/*
-template<typename T, OF_DEVICE_FUNC T (*unary_fw_func)(T x)>
-__global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = unary_fw_func(x[i]); }
-}
-
-template<typename T, OF_DEVICE_FUNC T (*unary_bw_func)(T x, T dy)>
-__global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = unary_bw_func(x[i], dy[i]); }
-}
-
-}  // namespace
-
-template<typename T, OF_DEVICE_FUNC T (*unary_fw_func)(T x)>
-class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
- public:
-  MathUnaryElementwiseGpuKernel() = default;
-  ~MathUnaryElementwiseGpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T* x = tensor_x->dptr<T>();
-    T* y = tensor_y->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathUnaryElementwiseForwardGpu<T, unary_fw_func>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<typename T, OF_DEVICE_FUNC T (*unary_bw_func)(T x, T dy)>
-class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
- public:
-  MathUnaryElementwiseGradGpuKernel() = default;
-  ~MathUnaryElementwiseGradGpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-
-    const T* x = tensor_x->dptr<T>();
-    const T* dy = tensor_dy->dptr<T>();
-    T* dx = tensor_dx->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathUnaryElementwiseBackwardGpu<T, unary_bw_func>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, dy, dx);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_MATH_UNARY_ELEMETNWISE_KERNEL_ENTRY(math_type, fw_func, bw_func)          \
-  REGISTER_USER_KERNEL("math_unary_elementwise")                                           \
-      .SetCreateFn<MathUnaryElementwiseGpuKernel<float, &fw_func>>()                       \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
-        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
-        const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                       \
-               && x_tensor_desc->data_type() == DataType::kFloat                           \
-               && y_tensor_desc->data_type() == DataType::kFloat                           \
-               && ctx.GetAttr<std::string>("math_type") == math_type;                      \
-      });                                                                                  \
-  REGISTER_USER_KERNEL("math_unary_elementwise_grad")                                      \
-      .SetCreateFn<MathUnaryElementwiseGradGpuKernel<float, &bw_func>>()                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
-        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                       \
-               && x_tensor_desc->data_type() == DataType::kFloat                           \
-               && ctx.GetAttr<std::string>("math_type") == math_type;                      \
-      });
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMETNWISE_KERNEL_ENTRY, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
-*/
 }  // namespace oneflow

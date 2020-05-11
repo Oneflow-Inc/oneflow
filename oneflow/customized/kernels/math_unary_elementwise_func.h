@@ -366,45 +366,6 @@ struct TanhFunctor<float> {
   }
 };
 
-/*
-
-#define MATH_UNARY_ELEMENTWISE_FUNC_SEQ                                                   \
-  OF_PP_MAKE_TUPLE_SEQ("Abs", fabsf, AbsBw<float>)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Acos", acosf, AcosBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Acosh", acoshf, AcoshBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Asin", asinf, AsinBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Asinh", asinhf, AsinhBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Atan", atanf, AtanBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Atanh", atanhf, AtanhBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Ceil", ceilf, CeilBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Cos", cosf, CosBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Cosh", coshf, CoshBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Erf", erff, ErfBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Erfc", erfcf, ErfcBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Exp", expf, ExpBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Expm1", expm1f, Expm1BwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Floor", floorf, FloorBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Lgamma", lgammaf, LgammaBwFloat)                                  \
-  OF_PP_MAKE_TUPLE_SEQ("Log", logf, LogBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Log1p", log1pf, Log1pBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("LogSigmoid", LogSigmoidFwFloat, LogSigmoidBwFloat)                \
-  OF_PP_MAKE_TUPLE_SEQ("Negative", NegativeFwFloat, NegativeBwFloat)                      \
-  OF_PP_MAKE_TUPLE_SEQ("Reciprocal", ReciprocalFwFloat, ReciprocalBwFloat)                \
-  OF_PP_MAKE_TUPLE_SEQ("ReciprocalNoNan", ReciprocalNoNanFwFloat, ReciprocalNoNanBwFloat) \
-  OF_PP_MAKE_TUPLE_SEQ("Rint", rintf, RintBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Round", nearbyintf, RoundBwFloat)                                 \
-  OF_PP_MAKE_TUPLE_SEQ("Rsqrt", rsqrtf, RsqrtBwFloat)                                     \
-  OF_PP_MAKE_TUPLE_SEQ("Sigmoid", SigmoidFwFloat, SigmoidBwFloat)                         \
-  OF_PP_MAKE_TUPLE_SEQ("Sign", SignFwFloat, SignBwFloat)                                  \
-  OF_PP_MAKE_TUPLE_SEQ("Sin", sinf, SinBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Sinh", sinhf, SinhBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Softplus", SoftplusFwFloat, SoftplusBwFloat)                      \
-  OF_PP_MAKE_TUPLE_SEQ("Sqrt", sqrtf, SqrtBwFloat)                                        \
-  OF_PP_MAKE_TUPLE_SEQ("Square", SquareFwFloat, SquareBwFloat)                            \
-  OF_PP_MAKE_TUPLE_SEQ("Tan", tanf, TanBwFloat)                                           \
-  OF_PP_MAKE_TUPLE_SEQ("Tanh", tanhf, TanhBwFloat)
-*/
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
