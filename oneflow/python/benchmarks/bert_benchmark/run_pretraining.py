@@ -218,7 +218,10 @@ func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 # func_config.all_reduce_group_num(128)
 
 if args.weight_l2:
-    func_config.train.weight_l2(args.weight_l2)
+    func_config.train.weight_decay_conf=dict(
+        weight_decay_rate=args.weight_l2,
+        excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
+    )
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
 if args.enable_auto_mixed_precision:
