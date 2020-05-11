@@ -30,3 +30,8 @@ def _IsCurrentFunctionTrainable():
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
+
+def _InPlacementScope():
+    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
+
+in_placement_scope = HighOrderBool("In a placement scope", _InPlacementScope)
