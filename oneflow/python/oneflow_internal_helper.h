@@ -163,6 +163,11 @@ Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
   return vm::Run(instruction_list_str);
 }
 
+Maybe<long long> CurrentMachineId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return Global<MachineCtx>::Get()->this_machine_id();
+}
+
 Maybe<long long> NewPhysicalObjectId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return vm::ObjectIdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
