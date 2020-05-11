@@ -170,7 +170,7 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
-    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
+    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
     wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};

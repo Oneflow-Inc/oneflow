@@ -16,7 +16,6 @@
 #include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 #include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -378,9 +377,6 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   return GetBldBoxingOpConfMethodByFwParallelPolicy(src, dst);
 }
 
-REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
-                                 "Print",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
@@ -405,8 +401,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)           \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
