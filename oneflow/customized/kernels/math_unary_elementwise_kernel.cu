@@ -60,38 +60,37 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("math_unary_elementwise")
+REGISTER_USER_KERNEL("acos")
     .SetCreateFn<MathUnaryElementwiseGpuKernel<AcosFunctor, float>>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && y_tensor_desc->data_type() == DataType::kFloat
-             && ctx.GetAttr<std::string>("math_type") == "Acos";
+             && y_tensor_desc->data_type() == DataType::kFloat;
     });
-REGISTER_USER_KERNEL("math_unary_elementwise_grad")
+
+REGISTER_USER_KERNEL((std::string("") + "acos" + "_grad"))
     .SetCreateFn<MathUnaryElementwiseGradGpuKernel<AcosFunctor, float>>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && ctx.GetAttr<std::string>("math_type") == "Acos";
+      return ctx.device_type() == DeviceType::kGPU
+             && x_tensor_desc->data_type() == DataType::kFloat;
     });
 
-REGISTER_USER_KERNEL("math_unary_elementwise")
+REGISTER_USER_KERNEL("abs")
     .SetCreateFn<MathUnaryElementwiseGpuKernel<AbsFunctor, float>>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
       return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && y_tensor_desc->data_type() == DataType::kFloat
-             && ctx.GetAttr<std::string>("math_type") == "Abs";
+             && y_tensor_desc->data_type() == DataType::kFloat;
     });
-REGISTER_USER_KERNEL("math_unary_elementwise_grad")
+REGISTER_USER_KERNEL((std::string("") + "abs" + "grad"))
     .SetCreateFn<MathUnaryElementwiseGradGpuKernel<AbsFunctor, float>>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-      return ctx.device_type() == DeviceType::kGPU && x_tensor_desc->data_type() == DataType::kFloat
-             && ctx.GetAttr<std::string>("math_type") == "Abs";
+      return ctx.device_type() == DeviceType::kGPU
+             && x_tensor_desc->data_type() == DataType::kFloat;
     });
 
 }  // namespace
