@@ -549,8 +549,8 @@ def cast(x, dtype, name=None):
         name = id_util.UniqueStr("Cast_")
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name).Op("cast")\
-            .Input("input_tensor", [x])\
-            .Output("output_tensor")\
+            .Input("in", [x])\
+            .Output("out")\
             .SetAttr("dtype", dtype, "AttrTypeDataType")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
     else:

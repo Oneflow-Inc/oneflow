@@ -4,35 +4,29 @@ import numpy as np
 import tensorflow as tf
 from collections import OrderedDict
 from test_util import GenArgList
+from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 
 import test_global_storage
 
-oneflow2np_dtype_dict = {
-    flow.int8: np.int8,
-    flow.uint8: np.uint8,
-    flow.int32: np.int32, 
-    flow.int64: np.int64,
-    flow.float: np.float32, 
-    flow.double: np.float64, 
-}
-
-def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype, switch_dtype):
+def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
     assert device_type in ["gpu", "cpu"]    
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float) 
     @flow.function(func_config)
-    def cast_forward(input_def=flow.FixedTensorDef(shape=input_shape, dtype=dtype)):
+    def cast_forward(input_def=flow.FixedTensorDef(shape=input_shape, dtype=type_name_to_flow_type[dtype])):
         with flow.fixed_placement(device_type, "0:0"):
-            return flow.cast(input_def, dtype=dtype)
-    input = np.random.rand(*input_shape).astype(oneflow2np_dtype_dict[dtype])
+            return flow.cast(input_def, dtype=type_name_to_flow_type[dtype])
+    input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])
     of_out = cast_forward(input).get()
-    tf_out = tf.cast(input, dtype=oneflow2np_dtype_dict[dtype])
+    tf_out = tf.cast(input, dtype=type_name_to_np_type[dtype])
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
 
 
-def compare_with_tensorflow(device_type, input_shape, input_dtype, dtype):
+def compare_with_tensorflow(device_type, input_shape, dtype):
     assert device_type in ["gpu", "cpu"]
+    assert dtype in ["float32", "double"]
     flow.clear_default_session()
 
     func_config = flow.FunctionConfig()
@@ -46,7 +40,7 @@ def compare_with_tensorflow(device_type, input_shape, input_dtype, dtype):
             x = flow.get_variable(
                 "in",
                 shape=input_shape,
-                dtype=input_dtype,
+                dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(),
                 trainable=True,
             )
@@ -66,7 +60,7 @@ def compare_with_tensorflow(device_type, input_shape, input_dtype, dtype):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
-        tf_out = tf.cast(x, dtype=oneflow2np_dtype_dict[dtype])
+        tf_out = tf.cast(x, dtype=type_name_to_np_type[dtype])
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
@@ -78,8 +72,7 @@ def test_cast(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["input_dtype"] = [flow.float, flow.double]
-    arg_dict["dtype"] = [flow.float, flow.double]
+    arg_dict["dtype"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
@@ -87,8 +80,6 @@ def test_cast_forward(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["dtype"] = [flow.float, flow.int8, flow.uint8, flow.double, flow.int32, flow.int64]
-    arg_dict["switch_dtype"] = [flow.float, flow.int8, flow.uint8, flow.double, flow.int32, flow.int64]
+    arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
     for arg in GenArgList(arg_dict):
         cast_forward_compare_with_tensorflow(test_case, *arg)
-

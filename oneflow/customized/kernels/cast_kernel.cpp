@@ -50,8 +50,8 @@ class CastKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
-    Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
+    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
     CastUtil<device_type>::SwitchCopyTensor(
         std::make_pair(input_tensor->data_type(), output_tenor->data_type()), ctx->device_ctx(),
         input_tensor, output_tenor);
@@ -59,29 +59,16 @@ class CastKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CAST_XPU_KERNEL(device, dtype)                                                    \
-  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedPred(                 \
-      [](const KernelRegContext& ctx) {                                                            \
-        const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0); \
-        if (ctx.device_type() == device                                                            \
-            && output_tensor_desc->data_type() == GetDataType<dtype>::value) {                     \
-          return true;                                                                             \
-        }                                                                                          \
-        return false;                                                                              \
+#define REGISTER_CAST_KERNEL(device)                                                     \
+  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedPred(       \
+      [](const KernelRegContext& ctx) {                                                  \
+        const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
+        if (ctx.device_type() == device) { return true; }                                \
+        return false;                                                                    \
       });
 
-#define REGISTER_CAST_KERNEL(dtype)                 \
-  REGISTER_CAST_XPU_KERNEL(DeviceType::kCPU, dtype) \
-  REGISTER_CAST_XPU_KERNEL(DeviceType::kGPU, dtype)
-
-REGISTER_CAST_KERNEL(float)
-REGISTER_CAST_KERNEL(double)
-REGISTER_CAST_KERNEL(int8_t)
-REGISTER_CAST_KERNEL(uint8_t)
-REGISTER_CAST_KERNEL(int32_t)
-REGISTER_CAST_KERNEL(int64_t)
-REGISTER_CAST_KERNEL(char)
-REGISTER_CAST_KERNEL(oneflow::float16)
+REGISTER_CAST_KERNEL(DeviceType::kCPU)
+REGISTER_CAST_KERNEL(DeviceType::kGPU)
 
 }  // namespace user_op
 }  // namespace oneflow
