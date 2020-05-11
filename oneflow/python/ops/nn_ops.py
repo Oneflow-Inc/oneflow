@@ -95,6 +95,7 @@ def conv2d(
                 .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
                 .SetAttr("groups", groups, "AttrTypeInt32")
                 .Build()
+                .InferAndTryRun()
                 .RemoteBlobList()[0]
         )
     else:
