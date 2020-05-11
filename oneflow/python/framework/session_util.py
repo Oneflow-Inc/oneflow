@@ -17,6 +17,8 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
 from contextlib import contextmanager
 
+import oneflow
+
 class Session(object):
     def __init__(self):
         self.job_name2function_desc_ = {}
@@ -81,7 +83,7 @@ class Session(object):
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        _TryInitEnv()
+        oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto_)
         g_func_ctx.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
@@ -210,12 +212,5 @@ def _GetDefaultConfigProto():
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
-
-def _TryInitEnv():
-    if g_func_ctx.IsEnvInited(): return
-    assert len(env_util.default_env_proto.machine) > 0
-    env_util.CompleteEnvProto(env_util.default_env_proto)
-    g_func_ctx.InitEnv(env_util.default_env_proto)
-    env_util.env_proto_mutable = False
 
 session_ctx.OpenDefaultSession(Session())
