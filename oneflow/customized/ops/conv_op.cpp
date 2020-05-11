@@ -86,18 +86,18 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   }
 
   if (has_bias) {
-    SbpSignatureBuilder()
-        .Split("in", 0, 0)
-        .Broadcast("weight", 0)
-        .Broadcast("bias", 0)
-        .Split("out", 0, 0)
-        .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), 0)
+        .Broadcast(user_op::OpArg("weight", 0))
+        .Broadcast(user_op::OpArg("bias", 0))
+        .Split(user_op::OpArg("out", 0), 0)
+        .Build();
   } else {
-    SbpSignatureBuilder()
-        .Split("in", 0, 0)
-        .Broadcast("weight", 0)
-        .Split("out", 0, 0)
-        .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), 0)
+        .Broadcast(user_op::OpArg("weight", 0))
+        .Split(user_op::OpArg("out", 0), 0)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -317,12 +317,12 @@ REGISTER_USER_OP("conv_data_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("dy", 0, 0)
-          .Broadcast("filter", 0)
-          .Split("x_like", 0, 0)
-          .Split("dx", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Broadcast(user_op::OpArg("filter", 0))
+          .Split(user_op::OpArg("x_like", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -388,11 +388,11 @@ REGISTER_USER_OP("conv_filter_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("dy", 0, 0)
-          .Split("x", 0, 0)
-          .PartialSum("filter_diff", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("x", 0), 0)
+          .PartialSum(user_op::OpArg("filter_diff", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -436,10 +436,10 @@ REGISTER_USER_OP("conv_bias_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("dy", 0, 0)
-          .PartialSum("bias_diff", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .PartialSum(user_op::OpArg("bias_diff", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
