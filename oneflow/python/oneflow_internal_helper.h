@@ -22,6 +22,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/object_id_util.h"
 
 namespace oneflow {
 
@@ -160,6 +161,16 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
 
 Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
   return vm::Run(instruction_list_str);
+}
+
+Maybe<long long> NewPhysicalObjectId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::ObjectIdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
+}
+
+Maybe<long long> NewPhysicalSymbolId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::ObjectIdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 }  // namespace oneflow
