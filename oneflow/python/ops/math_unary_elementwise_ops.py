@@ -131,7 +131,7 @@ def rsqrt(x, name=None):
 
 @oneflow_export("math.sigmoid_v2")
 def sigmoid_v2(x, name=None):
-    return build_unary_elemwise_math_op("sigmoid", x, name)
+    return build_unary_elemwise_math_op("sigmoid_v2", x, name)
 
 @oneflow_export("math.sign")
 def sign(x, name=None):
@@ -188,5 +188,5 @@ def tan(x, name=None):
 
 @oneflow_export("math.tanh_v2")
 def tanh_v2(x, name=None):
-    return build_unary_elemwise_math_op("tanh", x, name)
+    return build_unary_elemwise_math_op("tanh_v2", x, name)
 

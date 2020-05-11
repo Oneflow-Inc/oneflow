@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/customized/ops/math_unary_elementwise_seq.h"
 
 #if defined(__CUDACC__)
 
