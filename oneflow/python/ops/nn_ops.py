@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import os
+import random
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -254,56 +256,111 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
+def _softmax_need_transpose(x, axis):
+    assert type(axis) is int
+    dim_num = len(x.shape)
+    assert dim_num >= 2
+    if axis < 0: axis += dim_num
+    assert axis >= 1
+    assert axis < dim_num
+
+    need_transpose = False
+    permute = [i for i in range(dim_num)]
+    if axis > 0 and axis != dim_num - 1:
+        need_transpose = True
+        permute[axis] = permute[-1]
+        permute[-1] = axis
+    return need_transpose, permute
+
+
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
-    assert type(axis) is int
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Softmax_"),
+
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        assert type(axis) is int
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("Softmax_"),
+        )
+        setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
+        op_conf.softmax_conf.axis = axis
+        op_conf.softmax_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+
+    need_transpose, permute = _softmax_need_transpose(logits, axis)
+    if need_transpose:
+        logits = oneflow.transpose(logits, perm=permute)
+
+    out = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        .Op("softmax")
+        .Input("in", [logits])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
-    op_conf.softmax_conf.axis = axis
-    op_conf.softmax_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    if need_transpose:
+        out = oneflow.transpose(out, perm=permute)
+    return out
+
 
 @oneflow_export("nn.softmax_grad")
 def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
-    assert type(axis) is int
-    op_conf = op_conf_util.OperatorConf()
 
-    name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
-    setattr(op_conf, "name", name_prefix)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        assert type(axis) is int
+        op_conf = op_conf_util.OperatorConf()
 
-    need_transpose = False
-    permute = [i for i in range(len(y.shape))]
-    if axis > 0 and axis != len(y.shape) - 1:
-        need_transpose = True
-        permute[axis] = permute[-1]
-        permute[-1] = axis
+        name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
+        setattr(op_conf, "name", name_prefix)
 
+        need_transpose, permute = _softmax_need_transpose(y, axis)
+
+        if need_transpose:
+            y = oneflow.transpose(y, perm=permute)
+            dy = oneflow.transpose(dy, perm=permute)
+        setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
+        setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
+
+        op_conf.softmax_grad_conf.axis = -1
+        op_conf.softmax_grad_conf.dx = "dx"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "dx"
+        dx = remote_blob_util.RemoteBlob(lbi)
+
+        if need_transpose:
+            dx = oneflow.transpose(dx, perm=permute)
+        return dx
+
+    need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
         y = oneflow.transpose(y, perm=permute)
         dy = oneflow.transpose(dy, perm=permute)
-    setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
-    setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
 
-    op_conf.softmax_grad_conf.axis = -1
-    op_conf.softmax_grad_conf.dx = "dx"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "dx"
-    dx = remote_blob_util.RemoteBlob(lbi)
+    dx = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        .Op("softmax_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
     if need_transpose:
         dx = oneflow.transpose(dx, perm=permute)
@@ -385,44 +442,81 @@ def _GetSequence(value, n, name):
             )
         )
 
+def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
+    assert rate is not None and rate >= 0.0 and rate < 1.0
+    mask_op = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("RandomMaskLike_"))
+        .Op("random_mask_like")
+        .Input("like", [like])
+        .Output("out")
+        .SetAttr("rate", float(rate), "AttrTypeFloat")
+    )
+    if seed is not None:
+        mask_op.SetAttr("seed", seed, "AttrTypeInt64")
+    else:
+        mask_op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+        
+    if noise_shape is not None:
+        assert 0, "noise_shape will be supported later."
+        assert isinstance(noise_shape, (list, tuple))
+    return (
+        mask_op
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
-    # dropout op
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Dropout_")
-    else:
-        op_conf.name = name
-    setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
-    setattr(op_conf.dropout_conf, "out", "out")
-    # random mask like op
-    mask_op_conf = op_conf_util.OperatorConf()
-    mask_op_conf.name = "RandomMask4" + op_conf.name;
-    setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
-    setattr(mask_op_conf.random_mask_like_conf, "out", "out")
-    if noise_shape is not None:
-        assert isinstance(noise_shape, (list, tuple))
-        mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
-    if seed is not None:
-        setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        # dropout op
+        op_conf = op_conf_util.OperatorConf()
+        if name is None:
+            op_conf.name = id_util.UniqueStr("Dropout_")
+        else:
+            op_conf.name = name
+        setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
+        setattr(op_conf.dropout_conf, "out", "out")
+        # random mask like op
+        mask_op_conf = op_conf_util.OperatorConf()
+        mask_op_conf.name = "RandomMask4" + op_conf.name;
+        setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
+        setattr(mask_op_conf.random_mask_like_conf, "out", "out")
+        if noise_shape is not None:
+            assert isinstance(noise_shape, (list, tuple))
+            mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
+        if seed is not None:
+            setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
+        assert rate is not None and rate >= 0.0 and rate < 1.0
+        setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
+        compile_context.CurJobAddOp(mask_op_conf)
+        mask_lbi = logical_blob_id_util.LogicalBlobId()
+        mask_lbi.op_name = mask_op_conf.name
+        mask_lbi.blob_name = "out"
+        mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
+
+        setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
+        setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
+
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+    
     assert rate is not None and rate >= 0.0 and rate < 1.0
-    setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
-    compile_context.CurJobAddOp(mask_op_conf)
-    mask_lbi = logical_blob_id_util.LogicalBlobId()
-    mask_lbi.op_name = mask_op_conf.name
-    mask_lbi.blob_name = "out"
-    mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
-
-    setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
-    setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
+    mask = random_mask_like(x, rate, seed, noise_shape) 
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Dropout_"))
+        .Op("dropout")
+        .Input("in", [x])
+        .Input("mask", [mask])
+        .Output("out")
+        .SetAttr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
@@ -534,5 +628,6 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Output("y")
         .SetAttr("alpha", float(alpha), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
