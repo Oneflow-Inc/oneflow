@@ -353,6 +353,12 @@ def RunVmInstructionList(vm_instruction_list):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
+def CurrentMachineId():
+    machine_id, error_str = oneflow_internal.CurrentMachineId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return machine_id
+
 def NewPhysicalObjectId():
     object_id, error_str = oneflow_internal.NewPhysicalObjectId()
     error = text_format.Parse(error_str, error_util.ErrorProto())
