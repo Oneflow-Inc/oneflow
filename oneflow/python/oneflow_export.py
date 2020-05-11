@@ -69,14 +69,4 @@ def _GetInvokerIfIsSpecializedFunctor(func_or_class):
         return func_or_class.invoke
     return func_or_class
 
-def _GetSpecializedFunctor(func, hob_expr, api_name):
-    class Functor:
-        def default(get_failed_info, *args, **kwargs):
-            raise NotImplementedError(get_failed_info(api_name))
-
-        @enable_if(hob_expr, default)
-        def invoke(*args, **kwargs):
-            return func(*args, **kwargs)
-    return Functor
-
 exported = OneflowApi("oneflow")
