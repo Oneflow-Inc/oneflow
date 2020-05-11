@@ -4,6 +4,7 @@
 #include "oneflow/core/framework/user_op_attr.pb.h"
 
 namespace oneflow {
+
 REGISTER_USER_OP("constant")
     .Output("out")
     .Attr("floating_value", UserOpAttrType::kAtDouble)
@@ -29,10 +30,8 @@ REGISTER_USER_OP("constant")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Broadcast(ctx->inputs())
-          .Broadcast(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
+
 }  // namespace oneflow

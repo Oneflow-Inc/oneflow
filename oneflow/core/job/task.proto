@@ -9,7 +9,6 @@ enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
   kDecode = 5;
-  kLoss = 6;
   kNormalMdUpdt = 9;
   kMdDiffAcc = 11;
   kCopyHd = 12;
@@ -25,7 +24,6 @@ enum TaskType {
   kNcclAllReduce = 23;
   kNcclReduceScatter = 24;
   kNcclAllGather = 25;
-  kAccuracy = 26;
   kDeviceTick = 27;
   kDecodeRandom = 29;
   kPackForward = 30;

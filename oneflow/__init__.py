@@ -14,9 +14,9 @@ del dtype
 
 import oneflow.python.__export_symbols__
 import oneflow.python.oneflow_export as oneflow_export
-for object_name in oneflow_export.exported_object_names:
-    locals()[object_name] = getattr(oneflow_export.exported_objects, object_name)
-if 'object_name' in locals(): del object_name
+for field, api in oneflow_export.exported._SubApi().items(): locals()[field] = api
+if 'field' in locals(): del field
+if 'api' in locals(): del api
 del oneflow_export
 
 import atexit
