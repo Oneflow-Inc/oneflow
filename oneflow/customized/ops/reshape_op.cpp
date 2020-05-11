@@ -1,6 +1,6 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/operator/reshape_op_util.h"
+#include "oneflow/customized/ops/reshape_user_op_util.h"
 
 namespace oneflow {
 
@@ -11,11 +11,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const Shape& shape = ctx->GetAttr<Shape>("shape");
   ShapeProto shape_proto;
   shape.ToProto(&shape_proto);
-  const auto& outshape = JUST(ReshapeOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
-  return ReshapeOpUtil::GetReshapeSbpSignatures(
-      in_shape, *outshape, StdVec2PbRpf<std::string>({GenRepeatedBn("in", 0)}),
-      StdVec2PbRpf<std::string>({GenRepeatedBn("out", 0)}), ctx->parallel_num(),
-      ctx->sbp_sig_list());
+  const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
+  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, ctx);
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {

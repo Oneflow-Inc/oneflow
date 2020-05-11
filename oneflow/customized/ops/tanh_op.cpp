@@ -18,12 +18,13 @@ REGISTER_USER_OP("tanh")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -44,13 +45,14 @@ REGISTER_USER_OP("tanh_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      SbpSignatureBuilder()
-          .Split("y", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("dx", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+      FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("y", 0), i)
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     });
 
