@@ -3,7 +3,24 @@ from __future__ import absolute_import
 import socket
 from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
+
+@oneflow_export('env.init', enable_if=hob.in_normal_mode & hob.env_initialized)
+def env_init():
+    print("Nothing happened because environment has been initialized")
+    return False
+
+@oneflow_export('env.init', enable_if=hob.in_normal_mode & ~hob.env_initialized)
+def env_init():
+    global default_env_proto
+    len(default_env_proto.machine) > 0
+    CompleteEnvProto(default_env_proto)
+    c_api_util.InitEnv(default_env_proto)
+    global env_proto_mutable
+    env_proto_mutable = False
+    return True
 
 @oneflow_export('env.machine')
 def machine(*val):
@@ -12,6 +29,10 @@ def machine(*val):
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
     default_env_proto.ClearField('machine')
     default_env_proto.machine.extend(_MakeMachine(val))
+
+@oneflow_export('current_machine_id', enable_if=hob.env_initialized)
+def CurrentMachineId():
+  return c_api_util.CurrentMachineId()
 
 @oneflow_export('env.ctrl_port')
 def ctrl_port(val):

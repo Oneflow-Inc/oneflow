@@ -13,7 +13,6 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.lib.core.enable_if import enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import random
@@ -73,18 +72,13 @@ class EagerUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         TODO()
 
-@oneflow_export('user_op_builder')
-class GetUserOpConfBuilder:
-    def default(get_failed_info, *args, **kwargs):
-        raise NotImplementedError(get_failed_info('oneflow.user_op_builder'))
+@oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
+def user_op_builder(op_name):    
+    return UserOpConfBuilder(op_name, LazyUserOp)
 
-    @enable_if(hob.in_global_mode, default)
-    def invoke(op_name):
-        return UserOpConfBuilder(op_name, LazyUserOp)
-
-    @enable_if(hob.in_normal_mode & hob.env_initialized, default)
-    def invoke(op_name):
-        return UserOpConfBuilder(op_name, EagerUserOp)
+@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & hob.env_initialized)
+def user_op_builder(op_name):    
+    return UserOpConfBuilder(op_name, EagerUserOp)
 
 class UserOpConfBuilder(object):
     def __init__(self, op_name, user_op_class):
