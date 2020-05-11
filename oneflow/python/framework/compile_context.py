@@ -5,6 +5,7 @@ import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.g_func_ctx as g_func_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow
 
@@ -28,10 +29,12 @@ def CurJobAddOp(op_conf, parallel_conf=None):
     return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):
+    assert hob.in_global_mode()
     op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return g_func_ctx.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddMirroredOp(op_conf, parallel_conf=None):
+    assert hob.in_global_mode()
     op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return g_func_ctx.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 

@@ -13,6 +13,8 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.lib.core.enable_if import enable_if
+import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import random
 
@@ -23,8 +25,10 @@ class UserOp(object):
         self.output_arg_key_list_ = []
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddOp(self.op_conf_)
-        return self
+        raise NotImplementedError
+
+    def MakeRemoteBlob(self, lbi):
+        raise NotImplementedError
 
     def RemoteBlobList(self):
         remote_blob_list = []
@@ -38,7 +42,7 @@ class UserOp(object):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = output_arg_name + '_' + str(i)
-                remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
+                remote_blob_list.append(self.MakeRemoteBlob(lbi))
         return tuple(remote_blob_list)
 
     def SoleOutputBlob(self):
@@ -46,12 +50,47 @@ class UserOp(object):
         assert len(blobs) == 1
         return blobs[0]
 
-@oneflow_export('user_op_builder')
-class UserOpConfBuilder(object):
+class LazyUserOp(UserOp):
     def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        compile_context.CurJobAddOp(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.RemoteBlob(lbi)
+
+class EagerUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        compile_context.CurJobAddOp(self.op_conf_)
+        TODO()
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        TODO()
+
+@oneflow_export('user_op_builder')
+class GetUserOpConfBuilder:
+    def default(get_failed_info, *args, **kwargs):
+        raise NotImplementedError(get_failed_info('oneflow.user_op_builder'))
+
+    @enable_if(hob.in_global_mode, default)
+    def invoke(op_name):
+        return UserOpConfBuilder(op_name, LazyUserOp)
+
+    @enable_if(hob.in_normal_mode & hob.env_initialized, default)
+    def invoke(op_name):
+        return UserOpConfBuilder(op_name, EagerUserOp)
+
+class UserOpConfBuilder(object):
+    def __init__(self, op_name, user_op_class):
         job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
-        self.user_op_ = UserOp(name_scope_prefix + op_name)
+        self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""

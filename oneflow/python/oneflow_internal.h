@@ -74,6 +74,14 @@ void RunVmInstructionList(const std::string& vm_instruction_list, std::string* e
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+long NewPhysicalObjectId(std::string* error_str) {
+  return oneflow::NewPhysicalObjectId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewPhysicalSymbolId(std::string* error_str) {
+  return oneflow::NewPhysicalSymbolId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
