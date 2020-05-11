@@ -2,8 +2,6 @@ import oneflow as flow
 import numpy as np
 
 from PIL import Image
-from collections import OrderedDict
-from test_util import GenArgDict
 
 
 def _of_image_decode(images):
@@ -30,10 +28,6 @@ def _of_image_decode(images):
         )
 
     images_np_arr = [np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes]
-    # print(static_shape)
-    # print([ima.shape for ima in images_np_arr])
-    # print([type(ima) for ima in images_np_arr])
-    # print([ima.dtype for ima in images_np_arr])
     decoded_images = image_decode_job([images_np_arr]).get().ndarray_lists()
     return decoded_images[0]
 

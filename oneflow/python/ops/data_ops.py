@@ -548,7 +548,7 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")
 
-    return (
+    op = (
         flow.user_op_builder(name)
         .Op("image_decode")
         .Input("in", [images_bytes_buffer])
@@ -556,8 +556,8 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
         .SetAttr("color_space", color_space, "AttrTypeString")
         .SetAttr("data_type", dtype, "AttrTypeDataType")
         .Build()
-        .RemoteBlobList()[0]
     )
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("image_target_resize")
@@ -566,7 +566,7 @@ def image_target_resize(images, target_size, max_size, name=None):
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
 
-    return (
+    op = (
         flow.user_op_builder(name)
         .Op("image_target_resize")
         .Input("in", [images])
@@ -576,5 +576,5 @@ def image_target_resize(images, target_size, max_size, name=None):
         .SetAttr("target_size", target_size, "AttrTypeInt32")
         .SetAttr("max_size", max_size, "AttrTypeInt32")
         .Build()
-        .RemoteBlobList()
     )
+    return op.InferAndTryRun().RemoteBlobList()
