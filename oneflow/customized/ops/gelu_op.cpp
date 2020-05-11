@@ -16,12 +16,13 @@ REGISTER_USER_OP("gelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -42,15 +43,19 @@ REGISTER_USER_OP("gelu_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      SbpSignatureBuilder()
-          .Split("x", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("dx", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder().Broadcast("x", 0).PartialSum("dy", 0).PartialSum("dx", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Build();
+      }
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 

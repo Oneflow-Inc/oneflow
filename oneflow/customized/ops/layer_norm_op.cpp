@@ -85,12 +85,12 @@ REGISTER_USER_OP("layer_norm")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
+      ctx->NewBuilder()
           .Split(ctx->inputs(), 0)
           .Split(ctx->outputs(), 0)
-          .Broadcast("gamma", 0)
-          .Broadcast("beta", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Broadcast(user_op::OpArg("gamma", 0))
+          .Broadcast(user_op::OpArg("beta", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -129,10 +129,7 @@ REGISTER_USER_OP("layer_norm_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -227,13 +224,13 @@ REGISTER_USER_OP("layer_norm_param_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
+      ctx->NewBuilder()
           .Split(ctx->inputs(), 0)
           .Split(ctx->outputs(), 0)
-          .Broadcast("gamma", 0)
-          .PartialSum("gamma_diff", 0)
-          .PartialSum("beta_diff", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Broadcast(user_op::OpArg("gamma", 0))
+          .PartialSum(user_op::OpArg("gamma_diff", 0))
+          .PartialSum(user_op::OpArg("beta_diff", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
