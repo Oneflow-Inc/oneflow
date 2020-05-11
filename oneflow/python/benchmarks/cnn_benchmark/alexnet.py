@@ -1,12 +1,12 @@
 # ###################################################################
 # alexnet.py
-# 使用方法说明：
-#     单机运行： python alexnet.py -g 1
-#               -g 指定使用的GPU个数
-#     多机运行： python alexnet.py -g 8 -m -n "192.168.1.15,192.168.1.16"
-#               -g 指定使用的GPU个数
-#               -m 指定使用多机运行
-#               -n 指定各个机器ip地址，用逗号分格
+# Usage:
+#     Single Node: python alexnet.py -g 1
+#               -g gpu number
+#     Multi Nodes: python alexnet.py -g 8 -m -n "192.168.1.15,192.168.1.16"
+#               -g gpu number
+#               -m run on multi nodes
+#               -n IP addresses of nodes, seperated by comma
 # ###################################################################
 
 import oneflow as flow
@@ -30,7 +30,7 @@ args = parser.parse_args()
 
 
 def _data_load_layer(data_dir):
-    # 从数据集加载图像，并进行数据预处理
+    # load image from dataset and preprocess
     image_blob_conf = flow.data.BlobConf(
         "encoded",
         shape=(227, 227, 3),
@@ -39,12 +39,12 @@ def _data_load_layer(data_dir):
         preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
-    # 从数据集加载标签
+    # load label from dataset
     label_blob_conf = flow.data.BlobConf(
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
-    # 解码
+    # decode
     labels, images = flow.data.decode_ofrecord(
         data_dir,
         (label_blob_conf, image_blob_conf),
@@ -99,7 +99,7 @@ def _conv2d_layer(
 
 
 def alexnet(images, labels):
-    # 数据数据集格式转换， NHWC -> NCHW
+    # transpose, NHWC -> NCHW
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
 
     conv1 = _conv2d_layer(
@@ -160,7 +160,7 @@ def alexnet(images, labels):
         name="fc3",
     )
 
-    # 损失函数
+    # loss function
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc3, name="softmax_loss"
     )
@@ -168,44 +168,44 @@ def alexnet(images, labels):
     return loss
 
 
-# 训练任务
+# train job
 @flow.function
 def alexnet_train_job():
-    # 设置训练超参数
+    # set hyper parameter
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
-    # 加载数据
+    # load data
     (labels, images) = _data_load_layer(args.train_dir)
 
-    # 构建网络
+    # construct network
     loss = alexnet(images, labels)
 
-    # 指定训练网络的loss(优化目标)
+    # set loss
     flow.losses.add_loss(loss)
 
     return loss
 
 
-# 预测任务
+# inference job
 @flow.function
 def alexnet_eval_job():
-    # 加载数据
+    # load data
     (labels, images) = _data_load_layer(args.eval_dir)
 
-    # 构建预测网络
+    # construct inference network
     loss = alexnet(images, labels)
 
     return loss
 
 
 def main():
-    # 配置运行方式
+    # set running mode
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.ctrl_port(9788)
     flow.config.default_data_type(flow.float)
 
-    # 设置多机分布式端口
+    # set multi nodes mode port
     if args.multinode:
         flow.config.ctrl_port(12138)
         nodes = []
@@ -215,28 +215,28 @@ def main():
             nodes.append(addr_dict)
         flow.config.machine(nodes)
 
-    # 模型加载／初始化
+    # load/initialize model
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
         check_point.init()
     else:
         check_point.load(args.model_load_dir)
 
-    # 训练迭代过程
+    # training iter 
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(args.iter_num):
         fmt_str = "{:>12}  {:>12}  {:>12.10f}"
 
-        # 打印训练输出
+        # print training log
         train_loss = alexnet_train_job().get().mean()
         print(fmt_str.format(i, "train loss:", train_loss))
 
-        # 打印预测输出
+        # print inference log
         if (i + 1) % 10 == 0:
             eval_loss = alexnet_eval_job().get().mean()
             print(fmt_str.format(i, "eval loss:", eval_loss))
 
-        # 保存模型
+        # save model
         if (i + 1) % 100 == 0:
             check_point.save(args.model_save_dir + str(i))
 
