@@ -1800,7 +1800,6 @@ message TensorBufferToTensorListOpConf {
   required string out = 2;
   required ShapeProto shape = 3;
   required DataType data_type = 4;
-  required int64 batch_axis = 5;
 }
 
 message TensorListToTensorBufferOpConf {
