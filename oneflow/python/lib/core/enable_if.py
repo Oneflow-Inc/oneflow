@@ -1,34 +1,44 @@
-import traceback
+import oneflow.python.lib.core.traceinfo as traceinfo
 
-def enable_if(bool_functor, default_func):
-    assert default_func.__name__ == 'default'
+def enable_if(bool_functor, default):
+    assert default.__name__ == 'default'
     patterns_field = 'invoke_patterns__do_not_use_me_directly__'
-    if not hasattr(default_func, patterns_field): setattr(default_func, patterns_field, [])
-    invoke_patterns = getattr(default_func, patterns_field)
-    location = _GetFrameLocationStr(-2)
-    def get_failed_info(customized_prompt=None):
-        failed_info = "no avaliable function found.\n" 
-        for bf, func, location in invoke_patterns:
-            prompt = location if customized_prompt is None else customized_prompt
-            failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (prompt, bf.debug_str())
-        return failed_info
+    if not hasattr(default, patterns_field): setattr(default, patterns_field, [])
+    conditional_functions = getattr(default, patterns_field)
+    location = traceinfo.GetFrameLocationStr(-2)
+    default_func = MakeDefaultFunction(default, conditional_functions)
     def decorator(func):
         assert func.__name__ == 'invoke'
-        invoke_patterns.append((bool_functor, func, location))
+        conditional_functions.append((bool_functor, func, location))
         def wrapper(*args, **kwargs):
-            select_func = None
-            for bool_functor, func, _ in invoke_patterns:
-                if bool_functor():
-                    assert select_func is None 
-                    select_func = func
-            if select_func is not None: return select_func(*args, **kwargs)
-            return default_func(get_failed_info, *args, **kwargs)
+            matched_func = GetMatchedFunction(conditional_functions)
+            if matched_func is None: matched_func = default_func
+            return matched_func(*args, **kwargs)
         wrapper.__is_specialization_supported__ = True
         return wrapper
     return decorator
 
-def _GetFrameLocationStr(depth = -1):
-    assert depth < 0
-    frame = traceback.extract_stack()[depth -1]
-    return "%s:%d" % (frame[0], frame[1])
+def GetMatchedFunction(conditional_functions):
+    select_triple = (None, None, None)
+    for triple in conditional_functions:
+        if not triple[0](): continue
+        if select_triple[1] is not None: return _MultiMatchedErrorFunction([select_triple, triple])
+        select_triple = triple
+    return select_triple[1]
 
+def MakeDefaultFunction(default, conditional_functions):
+    def get_failed_info(customized_prompt=None):
+        failed_info = "no avaliable function found.\n" 
+        for bf, func, location in conditional_functions:
+            prompt = location if customized_prompt is None else customized_prompt
+            failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (prompt, bf.debug_str())
+        return failed_info
+    return lambda *args, **kwargs: default(get_failed_info, *args, **kwargs)
+
+def _MultiMatchedErrorFunction(matched_functions):
+    def raise_assert_error(*args, **kwargs):
+        failed_info = "at least two conditional functions matched.\n" 
+        for bf, func, location in matched_functions:
+            failed_info += "\n%s: \033[1;31mPASSED\033[0m\n\t%s\n" % (location, bf.debug_str())
+        raise AssertionError(failed_info)
+    return raise_assert_error
