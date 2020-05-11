@@ -50,6 +50,7 @@ enum TaskType {
   kDistributeSplit = 56;
   kSliceBoxing = 57;
   kCollectiveBoxingGeneric = 58;
+  kBoxingIdentity = 59;
 };
 
 enum AreaType {

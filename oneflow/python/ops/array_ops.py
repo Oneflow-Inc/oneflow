@@ -570,6 +570,32 @@ def identity(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("identity_n")
+def identity_n(inputs, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("IdentityN_"),
+    )
+    assert len(inputs) > 1
+    out_bns = []
+    for idx, blob in enumerate(inputs):
+        getattr(op_conf.tuple_identity_conf, "in").append(blob.logical_blob_name)
+        out_bn = "out_" + str(idx)
+        getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
+        out_bns.append(out_bn)
+    compile_context.CurJobAddOp(op_conf)
+
+    def bn_to_remote_blob(bn):
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = bn
+        return remote_blob_util.RemoteBlob(lbi)
+
+    return list(map(bn_to_remote_blob, out_bns))
+
+
 @oneflow_export("squeeze")
 def squeeze(input, axis=None, name=None):
     if axis is None:

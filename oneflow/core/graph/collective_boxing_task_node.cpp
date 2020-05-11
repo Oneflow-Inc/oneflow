@@ -12,8 +12,7 @@ void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, 
 
 void CollectiveBoxingGenericTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  this->ForEachOutDataEdge(
-      [&](TaskEdge* out_dege) { this->SoleOutDataEdge()->AddRegst("out", out_regst); });
+  this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
 }
 
 void CollectiveBoxingGenericTaskNode::ConsumeAllRegsts() {

@@ -1789,6 +1789,10 @@ message CollectiveBoxingGenericOpConf {
   required boxing.collective.RankDesc rank_desc = 2;
 }
 
+message BoxingIdentityOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1859,6 +1863,7 @@ message OperatorConf {
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 168;
+    BoxingIdentityOpConf boxing_identity_conf = 169;
     UserOpConf user_conf = 199;
     
     // domain op
