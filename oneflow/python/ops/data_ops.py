@@ -524,7 +524,7 @@ def tensor_list_to_tensor_buffer(input, name=None):
 
 
 @oneflow_export("tensor_buffer_to_tensor_list")
-def tensor_buffer_to_tensor_list(input, shape, dtype, batch_axis=0, name=None):
+def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
     if name is None:
         name = id_util.UniqueStr("TensorBufferToList_")
 
@@ -534,7 +534,6 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, batch_axis=0, name=None):
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "batch_axis", batch_axis)
     compile_context.CurJobAddOp(op_conf)
 
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -545,7 +544,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, batch_axis=0, name=None):
 
 @oneflow_export("image_decode")
 def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
-    # TODO: check input attribute
+    # TODO: check color_space valiad
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")
 
@@ -558,4 +557,24 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
         .SetAttr("data_type", dtype, "AttrTypeDataType")
         .Build()
         .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("image_target_resize")
+def image_target_resize(images, target_size, max_size, name=None):
+    # TODO: check target_size and max_size valid
+    if name is None:
+        name = id_util.UniqueStr("ImageTargetResize_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("image_target_resize")
+        .Input("in", [images])
+        .Output("out")
+        .Output("size")
+        .Output("scale")
+        .SetAttr("target_size", target_size, "AttrTypeInt32")
+        .SetAttr("max_size", max_size, "AttrTypeInt32")
+        .Build()
+        .RemoteBlobList()
     )
