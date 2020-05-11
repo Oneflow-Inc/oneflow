@@ -1,9 +1,19 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 namespace user_op {
+
+class ConstantState final : public OpKernelState {
+ public:
+  ConstantState() = default;
+  ~ConstantState() = default;
+  const bool& GetInit() const { return is_init_; }
+  bool* MutableInit() { return &is_init_; }
+
+ private:
+  bool is_init_;
+};
 
 template<DeviceType device_type, typename T>
 class ConstantKernel final : public OpKernel {
@@ -12,13 +22,9 @@ class ConstantKernel final : public OpKernel {
   ~ConstantKernel() = default;
 
  private:
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<OpKernelStateWrapper<bool>>(false);
-  }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* is_init_ = dynamic_cast<OpKernelStateWrapper<bool>*>(state);
-    if (is_init_->Get()) { return; }
+    auto* constState = dynamic_cast<ConstantState*>(state);
+    if (constState->GetInit()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
@@ -28,7 +34,7 @@ class ConstantKernel final : public OpKernel {
                                          ? static_cast<T>(ctx->GetAttr<double>("floating_value"))
                                          : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
-    *is_init_->Mutable() = true;
+    *constState->MutableInit() = true;
   }
 };
 
