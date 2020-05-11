@@ -258,7 +258,7 @@ struct RintFunctor<float> {
 
 template<>
 struct RoundFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(round, x); }
+  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(nearbyint, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
 };
