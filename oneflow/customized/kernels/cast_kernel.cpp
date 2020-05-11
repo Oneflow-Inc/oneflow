@@ -8,22 +8,28 @@ namespace user_op {
 namespace {
 
 template<DeviceType device_type, typename T, typename U>
-void CopyTensor(DeviceCtx* ctx, const Tensor* src, Tensor* dst) {
-  CHECK_EQ(src->shape(), dst->shape());
-  if (device_type == DeviceType::kCPU) {
+struct CopyTensor;
+
+template<typename T, typename U>
+struct CopyTensor<DeviceType::kCPU, T, U> {
+  static void Call(DeviceCtx* ctx, const Tensor* src, Tensor* dst) {
     CopyElem(src->dptr<T>(), dst->mut_dptr<U>(), src->shape().elem_cnt());
-  } else if (device_type == DeviceType::kGPU) {
-    CopyElemOnGpu(ctx, src->dptr<T>(), dst->mut_dptr<U>(), src->shape().elem_cnt());
-  } else {
-    UNIMPLEMENTED();
   }
-}
+};
+
+template<typename T, typename U>
+struct CopyTensor<DeviceType::kGPU, T, U> {
+  static void Call(DeviceCtx* ctx, const Tensor* src, Tensor* dst) {
+    CopyElemOnGpu(ctx, src->dptr<T>(), dst->mut_dptr<U>(), src->shape().elem_cnt());
+  }
+};
 
 }  // namespace
 
 #define MAKE_CASE_HANDLER_ENTRY(in_type_pair, out_type_pair)                          \
   {std::make_pair(OF_PP_PAIR_SECOND(in_type_pair), OF_PP_PAIR_SECOND(out_type_pair)), \
-   CopyTensor<device_type, OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(out_type_pair)>},
+   CopyTensor<device_type, OF_PP_PAIR_FIRST(in_type_pair),                            \
+              OF_PP_PAIR_FIRST(out_type_pair)>::Call},
 
 template<DeviceType device_type>
 struct CastUtil final {
@@ -59,12 +65,11 @@ class CastKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CAST_KERNEL(device)                                                     \
-  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedPred(       \
-      [](const KernelRegContext& ctx) {                                                  \
-        const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        if (ctx.device_type() == device) { return true; }                                \
-        return false;                                                                    \
+#define REGISTER_CAST_KERNEL(device)                                               \
+  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedPred( \
+      [](const KernelRegContext& ctx) {                                            \
+        if (ctx.device_type() == device) { return true; }                          \
+        return false;                                                              \
       });
 
 REGISTER_CAST_KERNEL(DeviceType::kCPU)
