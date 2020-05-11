@@ -2,7 +2,7 @@ import oneflow as flow
 import numpy as np
 
 def my_test_source(name):
-    return flow.user_op_builder(name).Op("TestSource").Output("out").Build().RemoteBlobList()[0]
+    return flow.user_op_builder(name).Op("TestSource").Output("out").Build().InferAndTryRun().RemoteBlobList()[0]
 
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()

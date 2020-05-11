@@ -17,6 +17,7 @@ def categorical_ordinal_encode(table, size, input_tensor, hash_precomputed=True,
             .Output("out")
             .SetAttr("hash_precomputed", hash_precomputed, "AttrTypeBool")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
     )
 
