@@ -71,7 +71,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     MultiThreadLoop(out_tensor->shape().At(0), [&](size_t i) {
       const TensorBuffer& origin_image_buffer = in_tensor->dptr<TensorBuffer>()[i];
       const cv::Mat origin_image_mat = GenCvMat4ImageBuffer(origin_image_buffer);
-      cv::Mat dst = cv::Mat::zeros(cv::Size(batch_height, batch_width), origin_image_mat.type());
+      cv::Mat dst = cv::Mat::zeros(cv::Size(batch_width, batch_height), origin_image_mat.type());
       origin_image_mat.copyTo(dst(cv::Rect(0, 0, origin_image_mat.cols, origin_image_mat.rows)));
       ConvertImageCvMat<T>(dst, &dst);
       CopyCvMatToImageTensor<T>(dst, out_tensor, i);
