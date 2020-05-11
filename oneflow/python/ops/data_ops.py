@@ -578,3 +578,21 @@ def image_target_resize(images, target_size, max_size, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()
+
+
+@oneflow_export("image_batch_align")
+def image_batch_align(images, shape, dtype, alignment, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ImageBatchAlign_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_batch_align")
+        .Input("in", [images])
+        .Output("out")
+        .SetAttr("shape", shape, "AttrTypeShape")
+        .SetAttr("data_type", dtype, "AttrTypeDataType")
+        .SetAttr("alignment", alignment, "AttrTypeInt32")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
