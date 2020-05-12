@@ -8,6 +8,7 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.push_util as push_util
@@ -78,7 +79,7 @@ class Session(object):
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        oneflow.env.init()
+        if not c_api_util.IsEnvInited(): oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto_)
         g_func_ctx.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
