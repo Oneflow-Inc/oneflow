@@ -56,20 +56,22 @@ REGISTER_USER_OP("slice_v2")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, axis, 0, num_axes) {
+      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes()) {
         if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
-          SbpSignatureBuilder()
-              .Split("x", 0, axis)
-              .Split("y", 0, axis)
-              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), axis)
+              .Split(user_op::OpArg("y", 0), axis)
+              .Build();
         }
       }
-      SbpSignatureBuilder().PartialSum("x", 0).PartialSum("y", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -113,27 +115,31 @@ REGISTER_USER_OP("slice_grad_v2")
       like_arg_modifier->set_use_header_only(true);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
+      const user_op::TensorDesc& like_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
       const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
       const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
       const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, axis, 0, num_axes) {
+      FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
         if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
-          SbpSignatureBuilder()
-              .Split("dy", 0, axis)
-              .Split("like", 0, axis)
-              .Split("dx", 0, axis)
-              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("dy", 0), axis)
+              .Split(user_op::OpArg("like", 0), axis)
+              .Split(user_op::OpArg("dx", 0), axis)
+              .Build();
         }
       }
-      SbpSignatureBuilder()
-          .PartialSum(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder().PartialSum("dy", 0).Broadcast("like", 0).PartialSum("dx", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder().Broadcast("dy", 0).PartialSum("like", 0).Broadcast("dx", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("dy", 0))
+          .Broadcast(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("dx", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
