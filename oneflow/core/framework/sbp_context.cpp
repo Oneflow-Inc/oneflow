@@ -85,7 +85,7 @@ Maybe<void> GetSbpFnUtil::SplitForEachAxis(SbpContext* ctx) {
   CHECK_GE_OR_RETURN(inputs.size(), 1)
       << "At least one input for op GetSbpFnUtil::SplitForEachAxis";
   int64_t num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex(inputs.at(0).first, inputs.at(1).second)
+      ctx->LogicalTensorDesc4InputArgNameAndIndex(inputs.at(0).first, inputs.at(0).second)
           .shape()
           .NumAxes();
   for (int64_t axis = 0; axis < num_axes; ++axis) {
