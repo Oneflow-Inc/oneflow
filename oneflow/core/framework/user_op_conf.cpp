@@ -25,16 +25,28 @@ const std::string& UserOpConfWrapper::op_type_name() const {
 
 const std::string& UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().input().find(arg_name);
-  CHECK(it != op_conf_.user_conf().input().end());
+  CHECK(it != op_conf_.user_conf().input().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
 
 const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().output().find(arg_name);
-  CHECK(it != op_conf_.user_conf().output().end());
+  CHECK(it != op_conf_.user_conf().output().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
+}
+
+bool UserOpConfWrapper::has_input(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  return (it != op_conf_.user_conf().input().end());
+}
+
+bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  return (it != op_conf_.user_conf().output().end());
 }
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
@@ -84,16 +96,20 @@ UserOpWrapper::UserOpWrapper(
 bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
                                               int32_t index) const {
   auto it = op_conf().user_conf().input().find(input_arg_name);
-  CHECK(it != op_conf().user_conf().input().end());
-  CHECK(index >= 0 && index < it->second.s_size());
+  CHECK(it != op_conf().user_conf().input().end())
+      << "arg_name: " << input_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << input_arg_name << ", index: " << index;
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
 std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
                                                      int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
-  CHECK(it != op_conf().user_conf().output().end());
-  CHECK(index >= 0 && index < it->second.s_size());
+  CHECK(it != op_conf().user_conf().output().end())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << output_arg_name << ", index: " << index;
   return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
 }
 
