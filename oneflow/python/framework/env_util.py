@@ -3,7 +3,24 @@ from __future__ import absolute_import
 import socket
 from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
+
+@oneflow_export('env.init', enable_if=hob.in_normal_mode & hob.env_initialized)
+def env_init():
+    print("Nothing happened because environment has been initialized")
+    return False
+
+@oneflow_export('env.init', enable_if=hob.in_normal_mode & ~hob.env_initialized)
+def env_init():
+    global default_env_proto
+    assert len(default_env_proto.machine) > 0
+    CompleteEnvProto(default_env_proto)
+    c_api_util.InitEnv(default_env_proto)
+    global env_proto_mutable
+    env_proto_mutable = False
+    return True
 
 @oneflow_export('env.machine')
 def machine(*val):
@@ -48,11 +65,6 @@ def logbuflevel(val):
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logbuflevel = val
-
-@oneflow_export('env.disable_setting')
-def disable_setting():
-    global env_proto_mutable
-    env_proto_mutable = False
 
 def _MakeMachine(machines):
     if isinstance(machines, str): machines = [machines]
