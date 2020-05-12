@@ -13,10 +13,7 @@ Maybe<void> BatchAxisInfer(user_op::BatchAxisContext *ctx) {
 }
 
 Maybe<void> AddPartialSumSbpSignature(user_op::SbpContext *ctx) {
-  SbpSignatureBuilder()
-      .PartialSum(ctx->inputs())
-      .PartialSum(ctx->outputs())
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
@@ -25,11 +22,9 @@ Maybe<void> NoExtraSbpSignature(user_op::SbpContext *ctx) { return Maybe<void>::
 template<Maybe<void> (*GetExtraSbpSignature)(user_op::SbpContext *)>
 Maybe<void> GetSbp(user_op::SbpContext *ctx) {
   const user_op::TensorDesc &tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  SbpSignatureBuilder()
-      .Split(ctx->inputs(), 0)
-      .Split(ctx->outputs(), 0)
-      .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-      .Build(ctx->sbp_sig_list());
+  for (int i = 0; i < tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
   JUST(GetExtraSbpSignature(ctx));
   return Maybe<void>::Ok();
 }
