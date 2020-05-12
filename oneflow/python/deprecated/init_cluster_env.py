@@ -9,10 +9,10 @@ from tempfile import NamedTemporaryFile
 from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.hob as hob
 
-@oneflow_export('deprecated.init_worker')
+@oneflow_export('deprecated.init_worker', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def init_worker(scp_binary = True, use_uuid = True):
-    assert type(env_util.default_env_proto) is EnvProto
     env_util.defautl_env_proto_mutable = False
     env_proto = env_util.default_env_proto
     assert len(env_proto.machine) > 0
@@ -45,11 +45,9 @@ def init_worker(scp_binary = True, use_uuid = True):
     os.remove(env_file.name)
 
 
-@oneflow_export('deprecated.delete_worker')
+@oneflow_export('deprecated.delete_worker', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def delete_worker():
-    # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
-    assert isinstance(env_proto, EnvProto)
     global _temp_run_dir
     assert _temp_run_dir != ""
     for machine in env_proto.machine:

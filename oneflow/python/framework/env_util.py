@@ -4,52 +4,46 @@ import socket
 from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.hob as hob
 
-@oneflow_export('env.machine')
+@oneflow_export('env.machine', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def machine(*val):
-    assert env_proto_mutable == True
     del default_env_proto.machine[:]
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
     default_env_proto.ClearField('machine')
     default_env_proto.machine.extend(_MakeMachine(val))
 
-@oneflow_export('env.ctrl_port')
+@oneflow_export('env.ctrl_port', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def ctrl_port(val):
-    assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.ctrl_port = val
 
-@oneflow_export('env.data_port')
+@oneflow_export('env.data_port', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def data_port(val):
-    assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.data_port = val
 
-@oneflow_export('env.grpc_use_no_signal')
+@oneflow_export('env.grpc_use_no_signal', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def grpc_use_no_signal(val = True):
-    assert env_proto_mutable == True
     assert type(val) is bool
     default_env_proto.grpc_use_no_signal = val
 
-@oneflow_export('env.log_dir')
+@oneflow_export('env.log_dir', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def log_dir(val):
-    assert env_proto_mutable == True
     assert type(val) is str
     default_env_proto.cpp_logging_conf.log_dir = val
 
-@oneflow_export('env.logtostderr')
+@oneflow_export('env.logtostderr', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def logtostderr(val):
-    assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logtostderr = val
 
-@oneflow_export('env.logbuflevel')
+@oneflow_export('env.logbuflevel', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def logbuflevel(val):
-    assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logbuflevel = val
 
-@oneflow_export('env.disable_setting')
+@oneflow_export('env.disable_setting', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
 def disable_setting():
     global env_proto_mutable
     env_proto_mutable = False
