@@ -30,7 +30,8 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 class UserKernelBaseContext {
  public:
-  UserKernelBaseContext(const KernelConf& kernel_conf) {
+  UserKernelBaseContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
+      : job_desc_(job_desc) {
     CHECK(kernel_conf.has_user_conf());
     CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
 
@@ -55,6 +56,7 @@ class UserKernelBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
+  const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -71,15 +73,17 @@ class UserKernelBaseContext {
   DeviceType device_type_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  const JobDesc& job_desc_;
 };
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
-  explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                 const JobDesc& job_desc)
       : user_op::KernelInitContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf)),
+        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {}
   ~UserKernelInitContext() = default;
 
@@ -110,8 +114,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
-  UserKernelOpInferContext(const OperatorConf& op_conf)
-      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
+  UserKernelOpInferContext(const OperatorConf& op_conf, const JobDesc& job_desc)
+      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)), job_desc_(job_desc) {
     auto* bn2sbp = sbp_signature_.mutable_bn_in_op2sbp_parallel();
     auto InitArgs7TensorDesc7Sbp = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                                        ArgVec* arg_vec) {
@@ -152,6 +156,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
+  const JobDesc& job_desc() const override { return job_desc_; }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
@@ -178,6 +183,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
 
  private:
+  const JobDesc& job_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
@@ -187,12 +193,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
-  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
+  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                  const JobDesc& job_desc)
       : user_op::KernelInferContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf)),
-        op_infer_ctx_(kernel_conf.op_attribute().op_conf()) {
+        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
+        op_infer_ctx_(kernel_conf.op_attribute().op_conf(), job_desc) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
@@ -273,8 +280,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
       : user_op::KernelComputeContext(
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
-        base_ctx_(std::move(UserKernelBaseContext(kernel_conf))),
-        job_desc_(job_desc) {
+        base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
@@ -295,7 +301,6 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return it->second.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
-  const JobDesc& job_desc() const override { return job_desc_; }
 
   void UpdateTensorWithCorrBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
@@ -311,6 +316,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+  const JobDesc& job_desc() const override { return base_ctx_.job_desc(); }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
@@ -319,14 +325,13 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   DeviceCtx* device_ctx_;
   Arg2Tensor arg2tensor_;
   UserKernelBaseContext base_ctx_;
-  const JobDesc& job_desc_;
 };
 
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit UserKernelRegContext(const KernelConf& kernel_conf)
+  explicit UserKernelRegContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
       : user_op::KernelRegContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        base_ctx_(UserKernelBaseContext(kernel_conf)) {}
+        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)) {}
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -350,19 +355,19 @@ class UserKernel final : public Kernel {
 
   void InitUserKernel(DeviceCtx* device_ctx) {
     ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
-    infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf()));
+    infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
     infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), job_desc()));
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const auto* kernel_reg_val =
-          user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf()));
+      const auto* kernel_reg_val = user_op::LookUpInKernelRegistry(
+          op_type_name, UserKernelRegContext(kernel_conf(), job_desc()));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
     }
   }
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
     return kernel_->CreateOpKernelState(&init_ctx);
   }
   void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
