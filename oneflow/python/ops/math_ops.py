@@ -361,7 +361,7 @@ def broadcast_floor_mod(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.tanh")
+@oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
@@ -385,7 +385,7 @@ def tanh(x, name=None):
     )
 
 
-@oneflow_export("math.gelu")
+@oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
@@ -888,3 +888,12 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .RemoteBlobList()
     )
     return y
+
+
+@oneflow_export("math.squared_difference")
+def squared_difference(x, y, name=None):
+    name_subtract, name_square = None, None
+    if name is not None:
+        name_subtract = name + "_subtract"
+        name_square = name + "_square"
+    return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)

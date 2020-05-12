@@ -43,19 +43,16 @@ REGISTER_USER_OP("transpose")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor_in =
+      const user_op::TensorDesc& input_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
       const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
-      CHECK_EQ(perm.size(), tensor_in.shape().NumAxes());
+      CHECK_EQ(perm.size(), input_tensor.shape().NumAxes());
       FOR_RANGE(int32_t, i, 0, perm.size()) {
         int32_t axis = perm.at(i);
         if (axis < 0) { axis += perm.size(); }
         CHECK_GE(axis, 0);
         CHECK_LT(axis, perm.size());
-        SbpSignatureBuilder()
-            .Split(ctx->inputs(), i)
-            .Split(ctx->outputs(), axis)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
       }
       return Maybe<void>::Ok();
     });
