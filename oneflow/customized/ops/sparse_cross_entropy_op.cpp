@@ -28,9 +28,9 @@ REGISTER_USER_OP("sparse_cross_entropy")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
-          .Split("prediction", 0, 0)
-          .Split("label", 0, 0)
-          .Split("out", 0, 0)
+          .Split(user_op::OpArg("prediction", 0), 0)
+          .Split(user_op::OpArg("label", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
@@ -64,10 +64,10 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
-          .Split("prediction", 0, 0)
-          .Split("label", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("prediction_diff", 0, 0)
+          .Split(user_op::OpArg("prediction", 0), 0)
+          .Split(user_op::OpArg("label", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("prediction_diff", 0), 0)
           .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
