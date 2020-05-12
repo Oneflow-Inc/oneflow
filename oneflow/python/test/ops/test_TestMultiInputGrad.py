@@ -12,7 +12,7 @@ def TestMultiInput(x1, x2):
             .Input("x1",[x1])\
             .Input("x2",[x2])\
             .Output("y")\
-            .Build().RemoteBlobList()[0]
+            .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
