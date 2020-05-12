@@ -40,6 +40,7 @@ class ConstantKernel final : public OpKernel {
                                      out_tensor->mut_dptr<T>());
     *constState->MutableInit() = true;
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)                                   \

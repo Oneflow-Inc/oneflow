@@ -6,26 +6,21 @@ import oneflow
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
 
-@oneflow_export('config.load_library')
+@oneflow_export('config.load_library', enable_if = hob.in_normal_mode & ~hob.session_initialized)
 def load_libray(val):
-    sess = session_ctx.GetDefaultSession()
-    if sess.is_running:
-        print("flow.config.* are disabled when session running", file=sys.stderr)
-        return
     assert type(val) is str
+    sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
 
-@oneflow_export('config.machine_num')
+@oneflow_export('config.machine_num', enable_if = hob.in_normal_mode & ~hob.session_initialized)
 def machine_num(val):
     sess = session_ctx.GetDefaultSession()
-    if sess.is_running:
-        print("flow.config.* are disabled when session running", file=sys.stderr)
-        return
     assert type(val) is int
     sess.config_proto.resource.machine_num = val
 

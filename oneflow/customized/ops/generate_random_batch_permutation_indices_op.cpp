@@ -22,13 +22,16 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder().PartialSum("x", 0).Broadcast("y", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
-      FOR_RANGE(int64_t, i, 1, num_axes) {
-        SbpSignatureBuilder().Split("x", 0, i).Broadcast("y", 0).Build(
-            ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .Broadcast(user_op::OpArg("y", 0))
+          .Build();
+      const auto& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Broadcast(user_op::OpArg("y", 0))
+            .Build();
       }
       return Maybe<void>::Ok();
     })
