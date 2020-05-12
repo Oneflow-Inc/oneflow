@@ -373,8 +373,14 @@ def sparse_cross_entropy(
 ):
     assert labels is not None
     assert prediction is not None
-    assert len(prediction.shape) == len(labels.shape) + 1
+
     if os.getenv("ENABLE_USER_OP") == 'True':
+        if len(labels.shape) == len(prediction.shape):
+            assert labels.shape[-1] == 1
+            labels = oneflow.squeeze(labels, axis = [-1])
+        else:
+            assert len(labels.shape) == len(prediction.shape) - 1
+
         return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
         .Op("sparse_cross_entropy")
@@ -413,8 +419,14 @@ def sparse_softmax_cross_entropy_with_logits(
 ):
     assert labels is not None
     assert logits is not None
-    assert len(logits.shape) == len(labels.shape) + 1
+
     if os.getenv("ENABLE_USER_OP") == 'True':
+        if len(labels.shape) == len(logits.shape):
+            assert labels.shape[-1] == 1
+            labels = oneflow.squeeze(labels, axis = [-1])
+        else:
+            assert len(labels.shape) == len(logits.shape) - 1
+
         prob, out = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseSoftmaxCrossEntropy_"))
             .Op("sparse_softmax_cross_entropy")
