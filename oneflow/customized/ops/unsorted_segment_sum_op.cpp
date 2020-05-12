@@ -54,27 +54,27 @@ REGISTER_USER_OP("unsorted_segment_sum")
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
       const int64_t axis = ctx->GetAttr<int64_t>("axis");
       FOR_RANGE(int64_t, i, 0, segment_ids_num_axes) {
-        SbpSignatureBuilder()
-            .Split("segment_ids", 0, i)
-            .Split("data", 0, i + axis)
-            .PartialSum("out", 0)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("segment_ids", 0), i)
+            .Split(user_op::OpArg("data", 0), i + axis)
+            .PartialSum(user_op::OpArg("out", 0))
+            .Build();
       }
       FOR_RANGE(int64_t, i, 0, data_num_axes) {
         if (i >= axis && i < axis + segment_ids_num_axes) { continue; }
         const int64_t out_split_axis = (i < axis) ? i : i - segment_ids_num_axes + 1;
         if (out_split_axis == axis) { continue; }
-        SbpSignatureBuilder()
-            .Broadcast("segment_ids", 0)
-            .Split("data", 0, i)
-            .Split("out", 0, out_split_axis)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("segment_ids", 0))
+            .Split(user_op::OpArg("data", 0), i)
+            .Split(user_op::OpArg("out", 0), out_split_axis)
+            .Build();
       }
-      SbpSignatureBuilder()
-          .Broadcast("segment_ids", 0)
-          .PartialSum("data", 0)
-          .PartialSum("out", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("segment_ids", 0))
+          .PartialSum(user_op::OpArg("data", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -140,42 +140,42 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
       const int64_t axis = ctx->GetAttr<int64_t>("axis");
       FOR_RANGE(int64_t, i, 0, segment_ids_num_axes) {
-        SbpSignatureBuilder()
-            .Split("segment_ids", 0, i)
-            .Split("data", 0, i + axis)
-            .Broadcast("like", 0)
-            .PartialSum("out", 0)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-        SbpSignatureBuilder()
-            .Split("segment_ids", 0, i)
-            .Split("data", 0, i + axis)
-            .PartialSum("like", 0)
-            .PartialSum("out", 0)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("segment_ids", 0), i)
+            .Split(user_op::OpArg("data", 0), i + axis)
+            .Broadcast(user_op::OpArg("like", 0))
+            .PartialSum(user_op::OpArg("out", 0))
+            .Build();
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("segment_ids", 0), i)
+            .Split(user_op::OpArg("data", 0), i + axis)
+            .PartialSum(user_op::OpArg("like", 0))
+            .PartialSum(user_op::OpArg("out", 0))
+            .Build();
       }
       FOR_RANGE(int64_t, i, 0, data_num_axes) {
         if (i >= axis && i < axis + segment_ids_num_axes) { continue; }
         const int64_t out_split_axis = (i < axis) ? i : i - segment_ids_num_axes + 1;
         if (out_split_axis == axis) { continue; }
-        SbpSignatureBuilder()
-            .Broadcast("segment_ids", 0)
-            .Split("data", 0, i)
-            .Split("like", 0, out_split_axis)
-            .Split("out", 0, out_split_axis)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("segment_ids", 0))
+            .Split(user_op::OpArg("data", 0), i)
+            .Split(user_op::OpArg("like", 0), out_split_axis)
+            .Split(user_op::OpArg("out", 0), out_split_axis)
+            .Build();
       }
-      SbpSignatureBuilder()
-          .Broadcast("segment_ids", 0)
-          .PartialSum("data", 0)
-          .Broadcast("like", 0)
-          .PartialSum("out", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-          .Broadcast("segment_ids", 0)
-          .PartialSum("data", 0)
-          .PartialSum("like", 0)
-          .PartialSum("out", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("segment_ids", 0))
+          .PartialSum(user_op::OpArg("data", 0))
+          .Broadcast(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("segment_ids", 0))
+          .PartialSum(user_op::OpArg("data", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 

@@ -46,19 +46,19 @@ REGISTER_USER_OP("gather")
       CHECK_GE_OR_RETURN(gather_axis, 0);
       CHECK_LT_OR_RETURN(gather_axis, in_num_axes);
       FOR_RANGE(int64_t, i, 0, indices_num_axes) {
-        SbpSignatureBuilder()
-            .Split("indices", 0, i)
-            .Broadcast("in", 0)
-            .Split("out", 0, gather_axis + i)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("indices", 0), i)
+            .Broadcast(user_op::OpArg("in", 0))
+            .Split(user_op::OpArg("out", 0), gather_axis + i)
+            .Build();
       }
       FOR_RANGE(int64_t, i, 0, in_num_axes) {
         if (i == gather_axis) { continue; }
-        SbpSignatureBuilder()
-            .Broadcast("indices", 0)
-            .Split("in", 0, i)
-            .Split("out", 0, i < gather_axis ? i : i + indices_num_axes - 1)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("indices", 0))
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
+            .Build();
       }
       return Maybe<void>::Ok();
     });
