@@ -8,6 +8,12 @@
 
 namespace oneflow {
 
+namespace user_op {
+
+class UserOpConfWrapper;
+
+}  // namespace user_op
+
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
@@ -16,6 +22,8 @@ class CudnnConvDesc final {
 
   CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
                 const PbMessage& conv_conf);
+  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
+                const user_op::UserOpConfWrapper& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -61,6 +69,12 @@ struct CudnnConvArgs final {
                 DataType w_data_type, const ShapeView& w_shape, DataType y_data_type,
                 const ShapeView& y_shape, const std::string& data_format, size_t max_workspace_size,
                 bool heuristic_search, bool use_deterministic_algo_only, bool enable_pseudo_half);
+
+  CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataType x_data_type,
+                const ShapeView& x_shape, DataType w_data_type, const ShapeView& w_shape,
+                DataType y_data_type, const ShapeView& y_shape, const std::string& data_format,
+                size_t max_workspace_size, bool heuristic_search, bool use_deterministic_algo_only,
+                bool enable_pseudo_half);
 };
 
 class CudnnConvResource {
