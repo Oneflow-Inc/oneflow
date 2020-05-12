@@ -460,11 +460,9 @@ def sigmoid(x, name=None):
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
-    if name is None:
-        name = id_util.UniqueStr("UnsortedSegmentSum_")
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name if name is
-                not None else id_util.UniqueStr("UnsortedSegmentSun_"))\
+                not None else id_util.UniqueStr("UnsortedSegmentSum_"))\
            .Op("unsorted_segment_sum")\
            .Input("data", [data])\
            .Input("segment_ids", [segment_ids])\
@@ -474,7 +472,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
+        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
         op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
         op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
         op_conf.unsorted_segment_sum_conf.num_segments = num_segments

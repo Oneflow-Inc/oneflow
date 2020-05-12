@@ -9,20 +9,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def _random_inputs(params_shape, indices_shape):
+def _random_inputs(params_shape, indices_shape, axis):
     params = np.random.rand(*params_shape).astype(np.float32)
-    indices = []
-    indices_rows = np.prod(indices_shape[:-1])
-    indices_cols = indices_shape[-1]
-    for col in range(indices_cols):
-        indices_col = np.random.randint(
-            low=0, high=params_shape[col], size=(indices_rows,), dtype=np.int32
-        ).reshape(indices_shape[:-1])
-        indices.append(indices_col)
-    indices = np.stack(indices, axis=len(indices_shape) - 1)
-    #print("=============================================")
-    #print("indices: ", indices)
-    #print("=============================================")
+    indices = np.random.randint(low=0, high=params_shape[axis], size=indices_shape, dtype=np.int32)
     return params, indices
 
 
@@ -73,7 +62,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
 def _compare_gather_with_tf(test_case, device_type, params_shape,
         indices_shape, axis, batch_dims, mirrored=False):
-    params, indices = _random_inputs(params_shape, indices_shape)
+    params, indices = _random_inputs(params_shape, indices_shape, axis)
 
     i = tf.constant(indices)
     with tf.GradientTape() as t:
@@ -81,7 +70,6 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         y = tf.gather(x, i, axis=axis)
 
     dy = t.gradient(y, x)
-    #print(type(dy))
     if isinstance(dy, tf.IndexedSlices):
         test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
         zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
@@ -90,21 +78,12 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
     if mirrored:
 
         def compare_dy(params_grad):
-            #print("----------------------------------------------------")
-            #print("dy.numpy: ", dy.numpy)
-            #print("param_grad.ndarray: ", params_grad.ndarray_list()[0])
-            #print("------------------------------------------------------")
-
             test_case.assertTrue(np.array_equal(dy.numpy(),
                 params_grad.ndarray_list()[0]))
 
     else:
 
         def compare_dy(params_grad):
-            #print("----------------------------------------------------")
-            #print("dy.numpy: ", dy.numpy)
-            #print("param_grad.ndarray: ", params_grad.ndarray())
-            #print("------------------------------------------------------")
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
     gather_fn = _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_dy)
@@ -144,8 +123,8 @@ def test_gather_case_1(test_case):
 def test_gather_case_2(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(2, 8)]
-    arg_dict["indices_shape"] = [(2, 1)]
+    arg_dict["params_shape"] = [(200, 80)]
+    arg_dict["indices_shape"] = [(150, 1)]
     arg_dict["axis"] = [0]
     arg_dict["batch_dims"] = [0]
     arg_dict["mirrored"] = [True]
@@ -155,8 +134,8 @@ def test_gather_case_2(test_case):
 def test_gather_case_3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(2, 5, 2, 2)]
-    arg_dict["indices_shape"] = [(2, 2, 2)]
+    arg_dict["params_shape"] = [(30, 150, 50, 2)]
+    arg_dict["indices_shape"] = [(20, 15, 45)]
     arg_dict["axis"] = [1]
     arg_dict["batch_dims"] = [0]
     arg_dict["mirrored"] = [True]
