@@ -11,7 +11,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.hob as hob
 
-@oneflow_export('deprecated.init_worker', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
+@oneflow_export('deprecated.init_worker', enable_if = hob.in_normal_mode & ~hob.env_initialized)
 def init_worker(scp_binary = True, use_uuid = True):
     env_util.defautl_env_proto_mutable = False
     env_proto = env_util.default_env_proto
@@ -45,7 +45,7 @@ def init_worker(scp_binary = True, use_uuid = True):
     os.remove(env_file.name)
 
 
-@oneflow_export('deprecated.delete_worker', enable_if = hob.in_normal_mode & ~hob._IsEnvInitialized)
+@oneflow_export('deprecated.delete_worker', enable_if = hob.in_normal_mode & ~hob.env_initialized)
 def delete_worker():
     env_proto = env_util.default_env_proto
     global _temp_run_dir
