@@ -45,10 +45,8 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
 
-int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
-  CHECK_EQ(sole_device.parallel_num(), 1);
-  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
-  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
+int64_t FindRootParallelId(const ParallelDesc& multi_device, const int64_t root_machine_id,
+                           const int64_t root_device_id) {
   int64_t root_parallel_id = -1;
   FOR_RANGE(int64_t, i, 0, multi_device.parallel_num()) {
     if (multi_device.MachineIdForParallelId(i) == root_machine_id
@@ -58,6 +56,13 @@ int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc&
     }
   }
   return root_parallel_id;
+}
+
+int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
+  CHECK_EQ(sole_device.parallel_num(), 1);
+  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
+  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
+  return FindRootParallelId(multi_device, root_machine_id, root_device_id);
 }
 
 bool IsSourceTimeShape(const Shape& shape) {
@@ -227,11 +232,26 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
                     const SbpParallel& src_sbp_parallel,
                     const SbpParallel& dst_sbp_parallel) const override {
     if (src_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() > 1
-        && src_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && dst_sbp_parallel.has_broadcast_parallel()) {
-      const int64_t root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
+      TaskNode* gpu_src_node;
+      int64_t root_parallel_id;
+      if (src_parallel_desc.device_type() == DeviceType::kCPU) {
+        auto* cpu_src_node = sorted_src_comp_tasks.front();
+        const int64_t gpu_id_copied_to = sorted_dst_comp_tasks.front()->GpuPhyId();
+        CopyHdTaskNode* copy_task = ctx->task_graph()->NewNode<CopyHdTaskNode>();
+        copy_task->Init(CopyHdOpConf::H2D, cpu_src_node->machine_id(), gpu_id_copied_to);
+        Connect<TaskNode>(cpu_src_node, ctx->task_graph()->NewEdge(), copy_task);
+        gpu_src_node = copy_task;
+        root_parallel_id =
+            FindRootParallelId(dst_parallel_desc, cpu_src_node->machine_id(), gpu_id_copied_to);
+      } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
+        root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
+        gpu_src_node = sorted_src_comp_tasks.front();
+      } else {
+        return Error::BoxingNotSupported();
+      }
       if (root_parallel_id == -1) { return Error::BoxingNotSupported(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingBroadcast-" + NewUniqueId();
@@ -241,10 +261,9 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeBroadcast, root_parallel_id);
         if (i == root_parallel_id) {
-          CompTaskNode* src_node = sorted_src_comp_tasks.front();
-          Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+          Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
         } else {
-          sorted_src_comp_tasks.front()->BuildCtrlRegstDesc(collective_node);
+          gpu_src_node->BuildCtrlRegstDesc(collective_node);
         }
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
