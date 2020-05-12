@@ -23,6 +23,7 @@
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/eager/eager_util.h"
 
 namespace oneflow {
 
@@ -161,6 +162,11 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
 
 Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
   return vm::Run(instruction_list_str);
+}
+
+Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
+                                   const std::string& eager_symbol_list_str) {
+  return eager::RunPhysicalInstruction(instruction_list_str, eager_symbol_list_str);
 }
 
 Maybe<long long> CurrentMachineId() {

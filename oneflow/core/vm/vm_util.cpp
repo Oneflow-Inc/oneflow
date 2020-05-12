@@ -18,10 +18,14 @@ ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) 
 }
 
 Maybe<void> Run(const std::string& instruction_list_str) {
-  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) { TODO(); }
   InstructionListProto instruction_list_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(instruction_list_str, &instruction_list_proto))
       << "InstructionListProto parse failed";
+  return Run(instruction_list_proto);
+}
+
+Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
+  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) { TODO(); }
   InstructionMsgList local_instr_msg_list;
   InstructionMsgList remote_instr_msg_list;
   for (const auto& instr_proto : instruction_list_proto.instruction()) {
