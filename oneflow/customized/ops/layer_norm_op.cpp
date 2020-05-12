@@ -174,7 +174,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
         user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
-        *beta_diff = *dy;
+        *beta_diff->mut_data_type() = dy->data_type();
         *beta_diff->mut_shape() = param_shape;
       }
       if (has_gamma_diff) {
@@ -182,7 +182,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
         const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
         CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
-        *gamma_diff = *dy;
+        *gamma_diff->mut_data_type() = dy->data_type();
         *gamma_diff->mut_shape() = param_shape;
       }
       if (has_normalized_diff) {
