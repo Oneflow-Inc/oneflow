@@ -24,13 +24,9 @@ REGISTER_USER_OP("argmax")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-      if (in_shape.NumAxes() > 1) {
-        SbpSignatureBuilder()
-            .Split(ctx->inputs(), 0)
-            .Split(ctx->outputs(), 0)
-            .MakeSplitSignatureListBuilder(in_shape.NumAxes() - 1)
-            .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     });

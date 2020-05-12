@@ -54,7 +54,8 @@ def bytes_feature(value):
 
 
 def random_int(N, b=32):
-    return [random.randint(0, 2**(b-1)) for _ in range(N)]
+    b-=1
+    return [random.randint(-2**b + 1, 2**b - 1) for _ in range(N)]
 
 
 def random_float(N):
