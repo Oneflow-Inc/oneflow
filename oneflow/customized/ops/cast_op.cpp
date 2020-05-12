@@ -13,14 +13,11 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
-  SbpSignatureBuilder()
-      .Split("in", 0, 0)
-      .Split("out", 0, 0)
-      .MakeSplitSignatureListBuilder(
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes())
-      .Build(ctx->sbp_sig_list());
-  SbpSignatureBuilder().PartialSum("in", 0).PartialSum("out", 0).Build(
-      ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
