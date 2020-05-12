@@ -47,23 +47,22 @@ Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  SbpSignatureBuilder()
-      .Split("x", 0, 0)
-      .Split("y", 0, 0)
-      .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-      .Build(ctx->sbp_sig_list());
+  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  SbpSignatureBuilder()
-      .Split("x", 0, 0)
-      .Split("y", 0, 0)
-      .Split("dy", 0, 0)
-      .Split("dx", 0, 0)
-      .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-      .Build(ctx->sbp_sig_list());
+  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Build();
+  }
   return Maybe<void>::Ok();
 }
 
