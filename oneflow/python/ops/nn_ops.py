@@ -382,6 +382,7 @@ def sparse_cross_entropy(
         .Input("label", [labels])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
         )
     else:
@@ -422,6 +423,7 @@ def sparse_softmax_cross_entropy_with_logits(
             .Output("prob")
             .Output("out")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()
             )
         return out
