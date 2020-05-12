@@ -83,7 +83,7 @@ REGISTER_USER_OP("normalization")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-        ctx->NewBuilder()
+      ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
           .Split(user_op::OpArg("in", 0), 0)
@@ -146,7 +146,7 @@ REGISTER_USER_OP("normalization_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-            ctx->NewBuilder()
+      ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .PartialSum(ctx->outputs())
           .Split(user_op::OpArg("x", 0), 0)
