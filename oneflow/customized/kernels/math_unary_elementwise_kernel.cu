@@ -62,7 +62,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define MATH_UNARY_ELEMENTWISE_GPU_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
+#define MATH_UNARY_ELEMENTWISE_GPU_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ
 /*
 TODO(chengcheng): support more data type
 #define MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ \

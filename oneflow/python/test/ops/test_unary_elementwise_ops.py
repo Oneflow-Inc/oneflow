@@ -59,6 +59,18 @@ def test_acos_cpu(test_case):
     y = AcosJob(x).get().ndarray()
     test_case.assertTrue(np.allclose(y, np.arccos(x)))
 
+def test_acos_double(test_case):
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+
+    @flow.function(func_config)
+    def AcosJob(a=flow.FixedTensorDef((5, 2), dtype = flow.double)):
+        return flow.math.acos(a)
+
+    x = np.random.rand(5, 2).astype(np.double)
+    y = AcosJob(x).get().ndarray()
+    test_case.assertTrue(np.allclose(y, np.arccos(x)))
 
 def test_1n2c_mirror_dynamic_acos(test_case):
     flow.config.gpu_device_num(2)

@@ -44,8 +44,6 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define MATH_UNARY_ELEMENTWISE_CPU_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
-
 #define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
@@ -70,7 +68,6 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ,
-                                 MATH_UNARY_ELEMENTWISE_CPU_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

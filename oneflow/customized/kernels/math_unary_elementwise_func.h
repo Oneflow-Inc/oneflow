@@ -34,6 +34,8 @@ struct AbsFunctor {
   static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < 0 ? -dy : dy; }
 };
 
+// float version
+
 template<>
 struct AcosFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(acos, x); }
@@ -363,6 +365,340 @@ struct TanhFunctor<float> {
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f - MATH_FUNC_F(tanh, x) * MATH_FUNC_F(tanh, x));
+  }
+};
+
+// double version
+
+template<>
+struct AcosFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acos, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * (-rsqrt(1.0 - x * x));
+#else
+    return dy * (-1.0 / std::sqrt(1.0 - x * x));
+#endif
+  }
+};
+
+template<>
+struct AcoshFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acosh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * (rsqrt(x * x - 1.0));
+#else
+    return dy * (1.0 / std::sqrt(x * x - 1.0));
+#endif
+  }
+};
+
+template<>
+struct AsinFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asin, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * (rsqrt(1.0 - x * x));
+#else
+    return dy * (1.0 / std::sqrt(1.0 - x * x));
+#endif
+  }
+};
+
+template<>
+struct AsinhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asinh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * (rsqrt(1.0 + x * x));
+#else
+    return dy * (1.0 / std::sqrt(1.0 + x * x));
+#endif
+  }
+};
+
+template<>
+struct AtanFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(atan, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / (1.0 + x * x));
+  }
+};
+
+template<>
+struct AtanhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(atanh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / (1.0 - x * x));
+  }
+};
+
+template<>
+struct CeilFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(ceil, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+};
+
+template<>
+struct CosFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(cos, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (-MATH_FUNC_D(sin, x));
+  }
+};
+
+template<>
+struct CoshFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(cosh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (MATH_FUNC_D(exp, x) + MATH_FUNC_D(exp, -x)) / 2.0;
+  }
+};
+
+template<>
+struct ErfFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erf, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * 2.0 * rsqrt(M_PI) * exp(-x * x);
+#else
+    return dy * 2.0 * (1.0 / std::sqrt(M_PI)) * std::exp(-x * x);
+#endif
+  }
+};
+
+template<>
+struct ErfcFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erfc, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+#if defined(__CUDACC__)
+    return dy * -2.0 * rsqrt(M_PI) * exp(-x * x);
+#else
+    return dy * -2.0 * (1.0 / std::sqrt(M_PI)) * std::exp(-x * x);
+#endif
+  }
+};
+
+template<>
+struct ExpFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(exp, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(exp, x);
+  }
+};
+
+template<>
+struct Expm1Functor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(expm1, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(exp, x);
+  }
+};
+
+template<>
+struct FloorFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(floor, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+};
+
+template<>
+struct LgammaFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(lgamma, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    // TODO(chengcheng): return: dy * digamma(x)
+    assert(false);
+    return 0.0;
+  }
+};
+
+template<>
+struct LogFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(log, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / x);
+  }
+};
+
+template<>
+struct Log1pFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(log1p, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / (x + 1.0));
+  }
+};
+
+template<>
+struct LogSigmoidFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(log, (1.0 / (1.0 + MATH_FUNC_D(exp, -x))));
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / (MATH_FUNC_D(exp, x) + 1.0));
+  }
+};
+
+template<>
+struct NegativeFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return -x; }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return -dy; }
+};
+
+template<>
+struct ReciprocalFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return 1.0 / x; }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (-1.0 / (x * x));
+  }
+};
+
+template<>
+struct ReciprocalNoNanFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    if (fabs(x) <= 0.0) { return 0.0; }
+    return 1.0 / x;
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    if (fabs(x) <= 0.0) { return 0.0; }
+    return dy * (-1.0 / (x * x));
+  }
+};
+
+template<>
+struct RintFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(rint, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+};
+
+template<>
+struct RoundFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(nearbyint, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+};
+
+template<>
+struct RsqrtFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+#if defined(__CUDACC__)
+    return rsqrt(x);
+#else
+    return 1.0 / std::sqrt(x);
+#endif
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (-1.0 / (2.0 * MATH_FUNC_D(sqrt, x * x * x)));
+  }
+};
+
+template<>
+struct SigmoidFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return 1.0 / (1.0 + MATH_FUNC_D(exp, -x));
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    double y = 1.0 / (1.0 + MATH_FUNC_D(exp, -x));
+    return dy * (y * (1.0 - y));
+  }
+};
+
+template<>
+struct SignFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    if (x > 0.0) { return 1.0; }
+    if (x < 0.0) { return -1.0; }
+    return 0.0;
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+};
+
+template<>
+struct SinFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sin, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(cos, x);
+  }
+};
+
+template<>
+struct SinhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sinh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(cosh, x);
+  }
+};
+
+template<>
+struct SoftplusFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(log, (1.0 + MATH_FUNC_D(exp, x)));
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * MATH_FUNC_D(exp, x) / (MATH_FUNC_D(exp, x) + 1.0);
+  }
+};
+
+template<>
+struct SqrtFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sqrt, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * 0.5 / MATH_FUNC_D(sqrt, x);
+  }
+};
+
+template<>
+struct SquareFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return x * x; }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * 2.0 * x;
+  }
+};
+
+template<>
+struct TanFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(tan, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 / (MATH_FUNC_D(cos, x) * MATH_FUNC_D(cos, x)));
+  }
+};
+
+template<>
+struct TanhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(tanh, x); }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (1.0 - MATH_FUNC_D(tanh, x) * MATH_FUNC_D(tanh, x));
   }
 };
 
