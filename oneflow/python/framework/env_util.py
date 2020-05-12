@@ -15,7 +15,7 @@ def env_init():
 @oneflow_export('env.init', enable_if=hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
-    len(default_env_proto.machine) > 0
+    assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
     global env_proto_mutable
@@ -69,11 +69,6 @@ def logbuflevel(val):
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logbuflevel = val
-
-@oneflow_export('env.disable_setting')
-def disable_setting():
-    global env_proto_mutable
-    env_proto_mutable = False
 
 def _MakeMachine(machines):
     if isinstance(machines, str): machines = [machines]
