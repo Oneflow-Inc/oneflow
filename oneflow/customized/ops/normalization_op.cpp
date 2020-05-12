@@ -83,12 +83,12 @@ REGISTER_USER_OP("normalization")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
+        ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Split(user_op::OpArg("in", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -146,13 +146,13 @@ REGISTER_USER_OP("normalization_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
+            ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .PartialSum(ctx->outputs())
-          .Split("x", 0, 0)
-          .Split("dx", 0, 0)
-          .Split("dy", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Split(user_op::OpArg("x", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
