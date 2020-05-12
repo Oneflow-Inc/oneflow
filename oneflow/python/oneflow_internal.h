@@ -74,6 +74,12 @@ void RunVmInstructionList(const std::string& vm_instruction_list, std::string* e
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void RunPhysicalInstruction(const std::string& vm_instruction_list,
+                            const std::string& eager_symbol_list_str, std::string* error_str) {
+  return oneflow::RunPhysicalInstruction(vm_instruction_list, eager_symbol_list_str)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
 long CurrentMachineId(std::string* error_str) {
   return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }

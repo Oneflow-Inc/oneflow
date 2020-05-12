@@ -8,10 +8,12 @@ namespace oneflow {
 namespace vm {
 
 class InstructionMsg;
+class InstructionListProto;
 
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 
 Maybe<void> Run(const std::string& instruction_list_proto_str);
+Maybe<void> Run(const InstructionListProto& instruction_list_proto);
 
 }  // namespace vm
 }  // namespace oneflow
