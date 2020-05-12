@@ -34,6 +34,43 @@ struct AbsFunctor {
   static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < 0 ? -dy : dy; }
 };
 
+template<typename T>
+struct SignFunctor {
+  static OF_DEVICE_FUNC const T Forward(const T x) { return (T(0) < x) - (x < T(0)); }
+
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return T(0); }
+};
+
+template<>
+struct RsqrtFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+#if defined(__CUDACC__)
+    return rsqrtf(x);
+#else
+    return 1.0f / std::sqrt(x);
+#endif
+  }
+
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return dy * (-1.0f / (2.0f * MATH_FUNC_F(sqrt, x * x * x)));
+  }
+};
+
+template<>
+struct RsqrtFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+#if defined(__CUDACC__)
+    return rsqrt(x);
+#else
+    return 1.0 / std::sqrt(x);
+#endif
+  }
+
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return dy * (-1.0 / (2.0 * MATH_FUNC_D(sqrt, x * x * x)));
+  }
+};
+
 // float version
 
 template<>
@@ -41,11 +78,7 @@ struct AcosFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(acos, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * (-rsqrtf(1.0f - x * x));
-#else
-    return dy * (-1.0f / std::sqrt(1.0f - x * x));
-#endif
+    return dy * -RsqrtFunctor<float>::Forward(1.0f - x * x);
   }
 };
 
@@ -54,11 +87,7 @@ struct AcoshFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(acosh, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrtf(x * x - 1.0f));
-#else
-    return dy * (1.0f / std::sqrt(x * x - 1.0f));
-#endif
+    return dy * RsqrtFunctor<float>::Forward(x * x - 1.0f);
   }
 };
 
@@ -67,11 +96,7 @@ struct AsinFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(asin, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrtf(1.0f - x * x));
-#else
-    return dy * (1.0f / std::sqrt(1.0f - x * x));
-#endif
+    return dy * RsqrtFunctor<float>::Forward(1.0f - x * x);
   }
 };
 
@@ -80,11 +105,7 @@ struct AsinhFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(asinh, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrtf(1.0f + x * x));
-#else
-    return dy * (1.0f / std::sqrt(1.0f + x * x));
-#endif
+    return dy * RsqrtFunctor<float>::Forward(1.0f + x * x);
   }
 };
 
@@ -136,11 +157,7 @@ struct ErfFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(erf, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * 2.0f * rsqrtf(M_PI) * expf(-x * x);
-#else
-    return dy * 2.0f * (1.0f / std::sqrt(M_PI)) * std::exp(-x * x);
-#endif
+    return dy * 2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
   }
 };
 
@@ -149,11 +166,7 @@ struct ErfcFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(erfc, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-#if defined(__CUDACC__)
-    return dy * -2.0f * rsqrtf(M_PI) * expf(-x * x);
-#else
-    return dy * -2.0f * (1.0f / std::sqrt(M_PI)) * std::exp(-x * x);
-#endif
+    return dy * -2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
   }
 };
 
@@ -266,21 +279,6 @@ struct RoundFunctor<float> {
 };
 
 template<>
-struct RsqrtFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) {
-#if defined(__CUDACC__)
-    return rsqrtf(x);
-#else
-    return 1.0f / std::sqrt(x);
-#endif
-  }
-
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-    return dy * (-1.0f / (2.0f * MATH_FUNC_F(sqrt, x * x * x)));
-  }
-};
-
-template<>
 struct SigmoidFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
     return 1.0f / (1.0f + MATH_FUNC_F(exp, -x));
@@ -290,17 +288,6 @@ struct SigmoidFunctor<float> {
     float y = 1.0f / (1.0f + MATH_FUNC_F(exp, -x));
     return dy * (y * (1.0f - y));
   }
-};
-
-template<>
-struct SignFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) {
-    if (x > 0.0f) { return 1.0f; }
-    if (x < 0.0f) { return -1.0f; }
-    return 0.0f;
-  }
-
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
 };
 
 template<>
@@ -375,11 +362,7 @@ struct AcosFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acos, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * (-rsqrt(1.0 - x * x));
-#else
-    return dy * (-1.0 / std::sqrt(1.0 - x * x));
-#endif
+    return dy * -RsqrtFunctor<double>::Forward(1.0 - x * x);
   }
 };
 
@@ -388,11 +371,7 @@ struct AcoshFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acosh, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrt(x * x - 1.0));
-#else
-    return dy * (1.0 / std::sqrt(x * x - 1.0));
-#endif
+    return dy * -RsqrtFunctor<double>::Forward(x * x - 1.0);
   }
 };
 
@@ -401,11 +380,7 @@ struct AsinFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asin, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrt(1.0 - x * x));
-#else
-    return dy * (1.0 / std::sqrt(1.0 - x * x));
-#endif
+    return dy * RsqrtFunctor<double>::Forward(1.0 - x * x);
   }
 };
 
@@ -414,11 +389,7 @@ struct AsinhFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asinh, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * (rsqrt(1.0 + x * x));
-#else
-    return dy * (1.0 / std::sqrt(1.0 + x * x));
-#endif
+    return dy * RsqrtFunctor<double>::Forward(1.0 + x * x);
   }
 };
 
@@ -470,11 +441,7 @@ struct ErfFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erf, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * 2.0 * rsqrt(M_PI) * exp(-x * x);
-#else
-    return dy * 2.0 * (1.0 / std::sqrt(M_PI)) * std::exp(-x * x);
-#endif
+    return dy * 2.0 * RsqrtFunctor<double>::Forward(M_PI) * expf(-x * x);
   }
 };
 
@@ -483,11 +450,7 @@ struct ErfcFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erfc, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-#if defined(__CUDACC__)
-    return dy * -2.0 * rsqrt(M_PI) * exp(-x * x);
-#else
-    return dy * -2.0 * (1.0 / std::sqrt(M_PI)) * std::exp(-x * x);
-#endif
+    return dy * -2.0 * RsqrtFunctor<double>::Forward(M_PI) * expf(-x * x);
   }
 };
 
@@ -600,21 +563,6 @@ struct RoundFunctor<double> {
 };
 
 template<>
-struct RsqrtFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) {
-#if defined(__CUDACC__)
-    return rsqrt(x);
-#else
-    return 1.0 / std::sqrt(x);
-#endif
-  }
-
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-    return dy * (-1.0 / (2.0 * MATH_FUNC_D(sqrt, x * x * x)));
-  }
-};
-
-template<>
 struct SigmoidFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
     return 1.0 / (1.0 + MATH_FUNC_D(exp, -x));
@@ -624,17 +572,6 @@ struct SigmoidFunctor<double> {
     double y = 1.0 / (1.0 + MATH_FUNC_D(exp, -x));
     return dy * (y * (1.0 - y));
   }
-};
-
-template<>
-struct SignFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) {
-    if (x > 0.0) { return 1.0; }
-    if (x < 0.0) { return -1.0; }
-    return 0.0;
-  }
-
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
 };
 
 template<>

@@ -507,6 +507,33 @@ def test_sign(test_case):
     y = SignJob(x).get().ndarray()
     test_case.assertTrue(np.allclose(y, np.sign(x), equal_nan=True))
 
+def test_sign_double(test_case):
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+
+    @flow.function(func_config)
+    def SignJob(a=flow.FixedTensorDef((8,), dtype=flow.double)):
+        return flow.math.sign(a)
+
+    x = np.random.uniform(low=-100.0, high=100.0, size=(8,)).astype(np.double)
+    y = SignJob(x).get().ndarray()
+    test_case.assertTrue(np.allclose(y, np.sign(x), equal_nan=True))
+
+def test_sign_double_consistent_1n2c(test_case):
+    flow.config.gpu_device_num(2)
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+
+    @flow.function(func_config)
+    def SignJob(a=flow.FixedTensorDef((8,), dtype=flow.double)):
+        return flow.math.sign(a)
+
+    x = np.random.uniform(low=-100.0, high=100.0, size=(8,)).astype(np.double)
+    y = SignJob(x).get().ndarray()
+    test_case.assertTrue(np.allclose(y, np.sign(x), equal_nan=True))
+
 def test_sin(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)

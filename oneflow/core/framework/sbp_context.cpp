@@ -88,6 +88,11 @@ Maybe<void> GetSbpFnUtil::SplitForEachAxis(SbpContext* ctx) {
       ctx->LogicalTensorDesc4InputArgNameAndIndex(inputs.at(0).first, inputs.at(0).second)
           .shape()
           .NumAxes();
+  for (const auto& pair : inputs) {
+    CHECK_EQ(
+        num_axes,
+        ctx->LogicalTensorDesc4InputArgNameAndIndex(pair.first, pair.second).shape().NumAxes());
+  }
   for (int64_t axis = 0; axis < num_axes; ++axis) {
     ctx->NewBuilder().Split(inputs, axis).Split(ctx->outputs(), axis).Build();
   }
