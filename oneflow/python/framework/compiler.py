@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.lib.core.pb_util as pb_util
@@ -38,7 +39,8 @@ def _CompileJob(function_desc):
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
     kwarg = dict(allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op)
-    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func(*inputs), kwarg)
+    with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE): ret = func(*inputs)
+    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
 @contextmanager
 def _JobBuildAndInferCtx(job_name):
