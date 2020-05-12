@@ -4,10 +4,10 @@
 namespace oneflow {
 namespace user_op {
 
-class ConstantState final : public OpKernelState {
+class ConstState final : public OpKernelState {
  public:
-  ConstantState(bool is_init) : is_init_(is_init) {}
-  ~ConstantState() = default;
+  ConstState(bool is_init) : is_init_(is_init) {}
+  ~ConstState() = default;
   bool is_inited() const { return is_init_; }
   void set_is_inited(bool val) { is_init_ = val; }
 
@@ -21,14 +21,16 @@ class ConstantKernel final : public OpKernel {
   ConstantKernel() = default;
   ~ConstantKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<ConstantState>(false);
+    return std::make_shared<ConstState>(false);
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* constState = dynamic_cast<ConstantState*>(state);
-    if (ctx->all_outputs_constant() && constState->is_inited()) { return; }
+    auto* const_state = dynamic_cast<ConstState*>(state);
+    CHECK(ctx->all_outputs_constant());
+    if (const_state->is_inited()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
@@ -38,7 +40,7 @@ class ConstantKernel final : public OpKernel {
                                          ? static_cast<T>(ctx->GetAttr<double>("floating_value"))
                                          : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
-    constState->set_is_inited(true);
+    const_state->set_is_inited(true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
