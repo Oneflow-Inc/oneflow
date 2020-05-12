@@ -8,8 +8,8 @@ class ConstantState final : public OpKernelState {
  public:
   ConstantState(bool is_init) : is_init_(is_init) {}
   ~ConstantState() = default;
-  const bool& GetInit() const { return is_init_; }
-  bool* MutableInit() { return &is_init_; }
+  bool is_inited() const { return is_init_; }
+  void set_is_inited(bool val) { is_init_ = val; }
 
  private:
   bool is_init_;
@@ -28,7 +28,7 @@ class ConstantKernel final : public OpKernel {
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* constState = dynamic_cast<ConstantState*>(state);
-    if (constState->GetInit()) { return; }
+    if (ctx->all_outputs_constant() && constState->is_inited()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
@@ -38,7 +38,7 @@ class ConstantKernel final : public OpKernel {
                                          ? static_cast<T>(ctx->GetAttr<double>("floating_value"))
                                          : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
-    *constState->MutableInit() = true;
+    constState->set_is_inited(true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -93,6 +93,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
+  wrapper_.reg_val.op_def.set_all_outputs_constant(true);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));

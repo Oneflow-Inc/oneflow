@@ -66,6 +66,8 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& OptionalOutput(const std::string& name, int32_t num);
   OpRegistryWrapperBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
+  OpRegistryWrapperBuilder& AllOutputsConstant();
+
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
