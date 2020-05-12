@@ -12,8 +12,9 @@ import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
 
 
+tmp = tempfile.mkdtemp()
 def get_temp_dir():
-    return tempfile.gettempdir()
+    return tmp
 
 
 def int32_feature(value):
@@ -53,7 +54,8 @@ def bytes_feature(value):
 
 
 def random_int(N, b=32):
-    return [random.randint(0, 2**(b-1)) for _ in range(N)]
+    b-=1
+    return [random.randint(-2**b + 1, 2**b - 1) for _ in range(N)]
 
 
 def random_float(N):
@@ -148,4 +150,3 @@ def test_ofrecord_decoder(test_case):
         for j, int8_list in enumerate(d['bytes']):
             #print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert ''.join([chr(x) for x in int8_list[0]]) == bytes_data[i*batch_size + j]
-

@@ -14,16 +14,11 @@ REGISTER_USER_OP("scalar_mul")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder()
-          .PartialSum(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 
