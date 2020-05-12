@@ -1,6 +1,10 @@
 import traceback
 import os
 
+def GetFrameLocationStr(depth = -1):
+    assert depth < 0
+    frame = traceback.extract_stack()[depth -1]
+    return "%s:%d" % (frame[0], frame[1])
 
 def GetStackInfoExcludeOneflowPythonFile():
     import oneflow
