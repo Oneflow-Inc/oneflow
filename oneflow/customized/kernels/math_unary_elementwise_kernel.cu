@@ -62,7 +62,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
+#define MATH_UNARY_ELEMENTWISE_GPU_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
 /*
 TODO(chengcheng): support more data type
 #define MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ \
@@ -70,7 +70,7 @@ TODO(chengcheng): support more data type
   HALF_DATA_TYPE_SEQ
 */
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_KERNEL_AND_GRAD(math_type_pair, data_type_pair)            \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
@@ -93,8 +93,8 @@ TODO(chengcheng): support more data type
                && x_tensor_desc->data_type() == OF_PP_PAIR_SECOND(data_type_pair);                 \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_KERNEL_AND_GRAD,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ,
-                                 MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_GPU_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
