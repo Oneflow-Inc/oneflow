@@ -29,7 +29,7 @@ class DevicePriorPlacementScope(placement_ctx.PlacementScope):
 class PhysicalPlacementScope(FixedPlacementScope):
     def __init__(self, device_tag, machine_device_ids):
         FixedPlacementScope.__init__(self, device_tag, machine_device_ids)
-        self.physical_symbol_id_ = flow.vm.new_physical_symbol_id()
+        self.physical_symbol_id_ = oneflow.vm.new_physical_symbol_id()
 
     @property
     def physical_symbol_id(self): return self.physical_symbol_id_
