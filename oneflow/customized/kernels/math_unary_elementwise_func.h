@@ -856,7 +856,7 @@ struct LgammaFunctor<half> {
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     // TODO(chengcheng): return: dy * digamma(x)
     assert(false);
-    return 0.0;
+    return GetZeroVal<half>();
   }
 };
 

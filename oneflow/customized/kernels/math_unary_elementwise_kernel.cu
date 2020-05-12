@@ -62,8 +62,6 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ
-
 #define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
@@ -88,8 +86,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ,
-                                 MATH_UNARY_ELEMENTWISE_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 template<template<typename> class UnaryFunctor>
 class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
