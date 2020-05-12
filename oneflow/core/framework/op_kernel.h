@@ -35,6 +35,7 @@ class KernelInitContext {
   T GetAttr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
  protected:
   KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
@@ -100,6 +101,7 @@ class KernelComputeContext {
   T GetAttr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
  protected:
   KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
