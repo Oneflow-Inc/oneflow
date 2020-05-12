@@ -702,6 +702,342 @@ struct TanhFunctor<double> {
   }
 };
 
+#if defined(__CUDACC__)
+// half version
+
+#define OF_HALF_FUNC __device__ __forceinline__
+
+#define MATH_FUNC_H(name, x) __float2half(name##f(__half2float(x)))
+#define HALF_VAL_HALF __float2half(0.5f)
+#define HALF_VAL_TWO __float2half(2.0f)
+#define HALF_VAL_2RSQRT_PI __float2half(1.1283791671f)
+
+template<>
+struct AbsFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hlt(x, GetZeroVal<half>()) ? __hneg(dy) : dy;
+  }
+};
+
+template<>
+struct AcosFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(acos, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hneg(hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x)))));
+  }
+};
+
+template<>
+struct AcoshFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(acosh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrsqrt(__hsub(__hmul(x, x), GetOneVal<half>())));
+  }
+};
+
+template<>
+struct AsinFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(asin, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x))));
+  }
+};
+
+template<>
+struct AsinhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(asinh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrsqrt(__hadd(GetOneVal<half>(), __hmul(x, x))));
+  }
+};
+
+template<>
+struct AtanFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(atan, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hdiv(GetOneVal<half>(), __hadd(GetOneVal<half>(), __hmul(x, x))));
+  }
+};
+
+template<>
+struct AtanhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(atanh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hdiv(GetOneVal<half>(), __hsub(GetOneVal<half>(), __hmul(x, x))));
+  }
+};
+
+template<>
+struct CeilFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hceil(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct CosFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hcos(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hneg(hsin(x)));
+  }
+};
+
+template<>
+struct CoshFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(cosh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hdiv(__hadd(hexp(x), hexp(__hneg(x))), HALF_VAL_TWO));
+  }
+};
+
+template<>
+struct ErfFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(erf, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x))));
+  }
+};
+
+template<>
+struct ErfcFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(erfc, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
+  }
+};
+
+template<>
+struct ExpFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hexp(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hexp(x));
+  }
+};
+
+template<>
+struct Expm1Functor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(expm1, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hexp(x));
+  }
+};
+
+template<>
+struct FloorFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hfloor(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct LgammaFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(lgamma, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    // TODO(chengcheng): return: dy * digamma(x)
+    assert(false);
+    return 0.0;
+  }
+};
+
+template<>
+struct LogFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hlog(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrcp(x));
+  }
+};
+
+template<>
+struct Log1pFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(log1p, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrcp(__hadd(x, GetOneVal<half>())));
+  }
+};
+
+template<>
+struct LogSigmoidFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return hlog(hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x)))));
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrcp(__hadd(hexp(x), GetOneVal<half>())));
+  }
+};
+
+template<>
+struct NegativeFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return __hneg(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) { return __hneg(dy); }
+};
+
+template<>
+struct ReciprocalFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hrcp(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
+  }
+};
+
+template<>
+struct ReciprocalNoNanFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    return hrcp(x);
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
+  }
+};
+
+template<>
+struct RintFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hrint(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct RoundFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(nearbyint, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct RsqrtFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hrsqrt(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hneg(hrcp(__hmul(HALF_VAL_TWO, hsqrt(__hmul(x, __hmul(x, x)))))));
+  }
+};
+
+template<>
+struct SigmoidFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x))));
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    half y = hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x))));
+    return __hmul(dy, __hmul(y, __hsub(GetOneVal<half>(), y)));
+  }
+};
+
+template<>
+struct SignFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    if (__hgt(x, GetZeroVal<half>())) { return GetOneVal<half>(); }
+    if (__hlt(x, GetZeroVal<half>())) { return __hneg(GetOneVal<half>()); }
+    return GetZeroVal<half>();
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct SinFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hsin(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hcos(x));
+  }
+};
+
+template<>
+struct SinhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(sinh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, MATH_FUNC_H(cosh, x));
+  }
+};
+
+template<>
+struct SoftplusFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return hlog(__hadd(GetOneVal<half>(), hexp(x)));
+  }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hdiv(hexp(x), __hadd(hexp(x), GetOneVal<half>())));
+  }
+};
+
+template<>
+struct SqrtFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return hsqrt(x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hdiv(HALF_VAL_HALF, hsqrt(x)));
+  }
+};
+
+template<>
+struct SquareFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return __hmul(x, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, __hmul(HALF_VAL_TWO, x));
+  }
+};
+
+template<>
+struct TanFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return __hdiv(hsin(x), hcos(x)); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hmul(dy, hrcp(__hmul(hcos(x), hcos(x))));
+  }
+};
+
+template<>
+struct TanhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(tanh, x); }
+
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    float x_float = __half2float(x);
+    return __hmul(dy, __float2half(1.0 - tanhf(x_float) * tanhf(x_float)));
+  }
+};
+
+#endif
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
