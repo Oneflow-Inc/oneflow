@@ -11,7 +11,7 @@ Maybe<void> GetSbp(user_op::SbpContext* ctx) {
 
 std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> MakeInferBatchAxisFn(
     const std::string& input_arg_name) {
-  return [&](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+  return [input_arg_name](user_op::BatchAxisContext* ctx) -> Maybe<void> {
     CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex(input_arg_name, 0)->value(), 0);
     ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
     return Maybe<void>::Ok();

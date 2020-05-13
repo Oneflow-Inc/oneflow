@@ -327,7 +327,7 @@ namespace {
 
 std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
     std::map<std::string, DataType> arg_name2data_type) {
-  return [&](const user_op::KernelRegContext& ctx) -> bool {
+  return [arg_name2data_type](const user_op::KernelRegContext& ctx) -> bool {
     bool match = (ctx.device_type() == DeviceType::kCPU);
     for (const auto& pair : arg_name2data_type) {
       const user_op::TensorDesc* arg_desc = ctx.TensorDesc4ArgNameAndIndex(pair.first, 0);
@@ -339,8 +339,8 @@ std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
 
 std::function<Maybe<void>(const user_op::InferContext&, user_op::AddInplaceArgPair)>
 MakeInplaceProposalFn(const std::string& input_arg_name) {
-  return [&](const user_op::InferContext& ctx,
-             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+  return [input_arg_name](const user_op::InferContext& ctx,
+                          user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
     OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, input_arg_name, 0, true));
     return Maybe<void>::Ok();
   };

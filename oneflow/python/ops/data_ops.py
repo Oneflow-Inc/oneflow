@@ -596,3 +596,23 @@ def image_batch_align(images, shape, dtype, alignment, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("image_normalize")
+def image_normalize(image, std, mean, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ImageNormalize_")
+
+    assert isinstance(std, (list, tuple))
+    assert isinstance(mean, (list, tuple))
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_normalize")
+        .Input("in", [image])
+        .Output("out")
+        .SetAttr("std", std, "AttrTypeListFloat")
+        .SetAttr("mean", mean, "AttrTypeListFloat")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
