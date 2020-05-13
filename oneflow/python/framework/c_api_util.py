@@ -4,6 +4,7 @@ import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.core.framework.config_def_pb2 import ConfigDef
+import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
@@ -24,6 +25,12 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
+
+def CurrentResource():
+    resource, error_str = oneflow_internal.CurrentResource()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(resource, resource_util.Resource())
 
 def IsEnvInited():
     return oneflow_internal.IsEnvInited()
@@ -102,10 +109,9 @@ def CurJobBuildAndInferCtx_Complete():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
+def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf
-    new_op_conf, error_str = AddDefaultVal(serialized_op_conf)
+    new_op_conf, error_str = oneflow_internal.CheckAndCompleteUserOpConf(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())

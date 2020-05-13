@@ -51,17 +51,17 @@ class InferStreamType final : public StreamType {
   void Infer(Instruction* instruction) const override { InferStreamTypeUtil::Infer(instruction); }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override {
-    auto stream_desc = T().MakeRemoteStreamDesc(resource, this_machine_id);
+    auto stream_desc = T().MakeWorkerStreamDesc(resource, this_machine_id);
     if (stream_desc) {
       stream_desc->mut_stream_type_id()->CopyFrom(
           LookupInferStreamTypeId(stream_desc->stream_type_id()));
     }
     return stream_desc;
   }
-  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override {
-    auto stream_desc = T().MakeLocalStreamDesc(resource);
+  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override {
+    auto stream_desc = T().MakeMasterStreamDesc(resource);
     if (stream_desc) {
       stream_desc->mut_stream_type_id()->CopyFrom(
           LookupInferStreamTypeId(stream_desc->stream_type_id()));

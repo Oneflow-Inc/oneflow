@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include "oneflow/python/oneflow_internal_helper.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
@@ -8,6 +10,10 @@ void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* erro
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case)
       .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+std::string CurrentResource(std::string* error_str) {
+  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
 }
 
 bool IsEnvInited() {
@@ -66,6 +72,12 @@ long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str)
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                                              std::string* error_str) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 

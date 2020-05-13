@@ -46,15 +46,15 @@ class InferStreamType<ControlStreamType> final : public StreamType {
 
   bool SharingVirtualMachineThread() const override { return true; }
 
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override {
-    auto stream_desc = ControlStreamType().MakeRemoteStreamDesc(resource, this_machine_id);
+    auto stream_desc = ControlStreamType().MakeWorkerStreamDesc(resource, this_machine_id);
     stream_desc->mut_stream_type_id()->CopyFrom(
         LookupInferStreamTypeId(stream_desc->stream_type_id()));
     return stream_desc;
   }
-  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override {
-    auto stream_desc = ControlStreamType().MakeLocalStreamDesc(resource);
+  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override {
+    auto stream_desc = ControlStreamType().MakeMasterStreamDesc(resource);
     stream_desc->mut_stream_type_id()->CopyFrom(
         LookupInferStreamTypeId(stream_desc->stream_type_id()));
     return stream_desc;
@@ -70,7 +70,7 @@ class NewSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewSymbolInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, symbol_id);
   FLAT_MSG_VIEW_END(NewSymbolInstruction);
   // clang-format on
 
@@ -88,10 +88,10 @@ class NewSymbolInstructionType final : public InstructionType {
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewSymbolInstruction> view;
     CHECK(view.Match(instr_msg->operand()));
-    FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
-      int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
+    FOR_RANGE(int, i, 0, view->symbol_id_size()) {
+      int64_t symbol_id = GetLogicalObjectId(view->symbol_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                                 logical_object_id);
+                                                                 symbol_id);
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -146,7 +146,7 @@ bool ControlStreamType::QueryInstructionStatusDone(
 
 void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource& resource,
+ObjectMsgPtr<StreamDesc> ControlStreamType::MakeWorkerStreamDesc(const Resource& resource,
                                                                  int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
@@ -157,7 +157,7 @@ ObjectMsgPtr<StreamDesc> ControlStreamType::MakeRemoteStreamDesc(const Resource&
   return ret;
 }
 
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+ObjectMsgPtr<StreamDesc> ControlStreamType::MakeMasterStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);

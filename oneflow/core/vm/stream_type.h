@@ -45,9 +45,9 @@ class StreamType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  virtual ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  virtual ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                         int64_t this_machine_id) const = 0;
-  virtual ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const {
+  virtual ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const {
     return ObjectMsgPtr<StreamDesc>();
   }
 
@@ -69,17 +69,17 @@ class StreamType {
   struct MakeStreamDescUtil {};
 
   template<typename Enabled>
-  struct MakeStreamDescUtil<VmType::kRemote, Enabled> {
+  struct MakeStreamDescUtil<VmType::kWorker, Enabled> {
     static ObjectMsgPtr<StreamDesc> Call(const StreamType& self, const Resource& resource,
                                          int64_t this_machine_id) {
-      return self.MakeRemoteStreamDesc(resource, this_machine_id);
+      return self.MakeWorkerStreamDesc(resource, this_machine_id);
     }
   };
   template<typename Enabled>
-  struct MakeStreamDescUtil<VmType::kLocal, Enabled> {
+  struct MakeStreamDescUtil<VmType::kMaster, Enabled> {
     static ObjectMsgPtr<StreamDesc> Call(const StreamType& self, const Resource& resource,
                                          int64_t this_machine_id) {
-      return self.MakeLocalStreamDesc(resource);
+      return self.MakeMasterStreamDesc(resource);
     }
   };
 

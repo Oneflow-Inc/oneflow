@@ -15,6 +15,11 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
+import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
+import oneflow.python.vm.id_util as id_util
+from oneflow.python.eager.instructions_builder import InstructionsBuilder
+import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import random
 
 class UserOp(object):
@@ -65,31 +70,40 @@ class EagerUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddOp(self.op_conf_)
-        TODO()
+        instruction_list = instr_util.InstructionListProto()
+        eager_symbol_list = eager_symbol_util.EagerSymbolList()
+        id_generator = id_util.PhysicalIdGenerator()
+        builder = InstructionsBuilder(id_generator, instruction_list, eager_symbol_list)
+        builder.StatelessCall(self.op_conf_)
+        print('============')
+        print(instruction_list)
+        print('============')
+        print(eager_symbol_list)
+        c_api_util.RunPhysicalInstruction(instruction_list, eager_symbol_list)
+        raise NotImplementedError
         return self
 
     def MakeRemoteBlob(self, lbi):
-        TODO()
+        return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
 def user_op_builder(op_name):    
-    return UserOpConfBuilder(op_name, LazyUserOp)
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
 
 @oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & hob.env_initialized)
 def user_op_builder(op_name):    
-    return UserOpConfBuilder(op_name, EagerUserOp)
+    job_name = job_conf_ctx.CurrentJobConf().job_name
+    return UserOpConfBuilder(job_name, op_name, EagerUserOp)
 
 class UserOpConfBuilder(object):
-    def __init__(self, op_name, user_op_class):
-        job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    def __init__(self, job_name, op_name, user_op_class):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
-        self.user_op_.op_conf_ = \
-            g_func_ctx.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
         return self.user_op_
 
     def Op(self, op_type_name):

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_STORAGE_H_
 
 #include <mutex>
-#include <glog/logging.h>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {

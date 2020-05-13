@@ -1,6 +1,7 @@
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
@@ -87,8 +88,10 @@ void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
     return;
   }
   CHECK_NOTNULL(logical_object);
-  auto* ret = map->FindPtr(operand.GetGlobalDeviceId(global_device_id));
-  CHECK_NOTNULL(ret);
+  int64_t device_id = operand.GetGlobalDeviceId(global_device_id);
+  auto* ret = map->FindPtr(device_id);
+  CHECK(ret != nullptr) << "device_id: " << device_id
+                        << ", default_device_id: " << global_device_id;
   DoEach(ret);
 }
 

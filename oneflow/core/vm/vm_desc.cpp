@@ -13,12 +13,12 @@ template<VmType vm_type>
 void SetMachineIdRange(Range* range, int64_t machine_num, int64_t this_machine_id);
 
 template<>
-void SetMachineIdRange<kRemote>(Range* range, int64_t machine_num, int64_t this_machine_id) {
+void SetMachineIdRange<kWorker>(Range* range, int64_t machine_num, int64_t this_machine_id) {
   *range = Range(this_machine_id, this_machine_id + 1);
 }
 
 template<>
-void SetMachineIdRange<kLocal>(Range* range, int64_t machine_num, int64_t this_machine_id) {
+void SetMachineIdRange<kMaster>(Range* range, int64_t machine_num, int64_t this_machine_id) {
   *range = Range(0, machine_num);
 }
 
@@ -47,9 +47,9 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
   return vm_desc;
 }
 
-template ObjectMsgPtr<VmDesc> MakeVmDesc<kRemote>(const Resource& resource,
+template ObjectMsgPtr<VmDesc> MakeVmDesc<kWorker>(const Resource& resource,
                                                   int64_t this_machine_id);
-template ObjectMsgPtr<VmDesc> MakeVmDesc<kLocal>(const Resource& resource, int64_t this_machine_id);
+template ObjectMsgPtr<VmDesc> MakeVmDesc<kMaster>(const Resource& resource, int64_t this_machine_id);
 
 }  // namespace vm
 }  // namespace oneflow

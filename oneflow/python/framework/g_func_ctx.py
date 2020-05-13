@@ -52,9 +52,6 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
 def CurJobBuildAndInferCtx_Complete():
     return c_api_util.CurJobBuildAndInferCtx_Complete()
 
-def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
-    return c_api_util.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto)
-
 def CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto)
 

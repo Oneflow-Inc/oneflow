@@ -45,7 +45,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-ObjectMsgPtr<StreamDesc> CudaStreamType::MakeRemoteStreamDesc(const Resource& resource,
+ObjectMsgPtr<StreamDesc> CudaStreamType::MakeWorkerStreamDesc(const Resource& resource,
                                                               int64_t this_machine_id) const {
   if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();

@@ -7,6 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/vm/virtual_machine_scope.h"
 
 namespace oneflow {
 
@@ -55,10 +56,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
       Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
   Global<ResourceDesc>::New(GetDefaultResource(env_proto));
+  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc>::Get()->resource());
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  Global<vm::VirtualMachineScope>::Delete();
   if (Global<ResourceDesc>::Get() != nullptr) { Global<ResourceDesc>::Delete(); }
   CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
