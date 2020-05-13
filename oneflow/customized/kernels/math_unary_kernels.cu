@@ -270,7 +270,6 @@ class MathUnaryGpuFloatKernel final : public OpKernel {
 
     OF_PP_FOR_EACH_TUPLE(MATH_UNARY_FORWARD, MATH_UNARY_GPU_FLOAT_SEQ);
 #undef MATH_UNARY_FORWARD
-
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

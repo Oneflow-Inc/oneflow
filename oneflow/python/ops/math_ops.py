@@ -574,89 +574,123 @@ def naive_logical_and(lhs, rhs, name=None):
 
 
 @oneflow_export("math.equal")
-def equal(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
-    )
-    op_conf.broadcast_equal_conf.a = x.logical_blob_name
-    op_conf.broadcast_equal_conf.b = y.logical_blob_name
-    op_conf.broadcast_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def equal(x, y, is_const=False, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+            return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("BroadcastEqual_"))\
+           .Op("broadcast_equal")\
+           .Input("x", [x])\
+           .Input("y", [y])\
+           .Output("z")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
+        )
+        op_conf.broadcast_equal_conf.a = x.logical_blob_name
+        op_conf.broadcast_equal_conf.b = y.logical_blob_name
+        op_conf.broadcast_equal_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.not_equal")
 def not_equal(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
-    )
-    op_conf.broadcast_not_equal_conf.a = x.logical_blob_name
-    op_conf.broadcast_not_equal_conf.b = y.logical_blob_name
-    op_conf.broadcast_not_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("BroadcastNotEqual_"))\
+           .Op("broadcast_not_equal")\
+           .Input("x", [x])\
+           .Input("y", [y])\
+           .Output("z")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
+        )
+        op_conf.broadcast_not_equal_conf.a = x.logical_blob_name
+        op_conf.broadcast_not_equal_conf.b = y.logical_blob_name
+        op_conf.broadcast_not_equal_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.less")
 def less(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
-    )
-    op_conf.broadcast_less_than_conf.a = x.logical_blob_name
-    op_conf.broadcast_less_than_conf.b = y.logical_blob_name
-    op_conf.broadcast_less_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("BroadcastLessThan_"))\
+           .Op("broadcast_less")\
+           .Input("x", [x])\
+           .Input("y", [y])\
+           .Output("z")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
+        )
+        op_conf.broadcast_less_than_conf.a = x.logical_blob_name
+        op_conf.broadcast_less_than_conf.b = y.logical_blob_name
+        op_conf.broadcast_less_than_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.less_equal")
 def less_equal(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
-    )
-    op_conf.broadcast_less_equal_conf.a = x.logical_blob_name
-    op_conf.broadcast_less_equal_conf.b = y.logical_blob_name
-    op_conf.broadcast_less_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+               not None else id_util.UniqueStr("BroadcastLessEqual_"))\
+          .Op("broadcast_less_equal")\
+          .Input("x", [x])\
+          .Input("y", [y])\
+          .Output("z")\
+          .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
+        )
+        op_conf.broadcast_less_equal_conf.a = x.logical_blob_name
+        op_conf.broadcast_less_equal_conf.b = y.logical_blob_name
+        op_conf.broadcast_less_equal_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name if name is not None
-                else id_util.UniqueStr("Greater_"))\
-            .Op("binary_bool")\
-            .Input("x", [x])\
-            .Input("y", [y])\
-            .Output("z")\
-            .SetAttr("binary_math_type", "Greater", "AttrTypeString")\
-            .Build().RemoteBlobList()[0]
-
+                else id_util.UniqueStr("BroadcastGreaterThan_"))\
+            .Op("broadcast_greater")\
+            .Input("a", [x])\
+            .Input("b", [y])\
+            .Output("out")\
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -676,38 +710,56 @@ def greater(x, y, name=None):
 
 @oneflow_export("math.greater_equal")
 def greater_equal(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
-    )
-    op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
-    op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
-    op_conf.broadcast_greater_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+       return flow.user_op_builder(name if name is not None
+               else id_util.UniqueStr("BroadcastGreaterEqual_"))\
+           .Op("broadcast_greater_equal")\
+           .Input("x", [x])\
+           .Input("y", [y])\
+           .Output("z")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
+        )
+        op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
+        op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
+        op_conf.broadcast_greater_equal_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.logical_and")
 def logical_and(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLogicalAnd_"),
-    )
-    op_conf.broadcast_logical_and_conf.a = x.logical_blob_name
-    op_conf.broadcast_logical_and_conf.b = y.logical_blob_name
-    op_conf.broadcast_logical_and_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+      return flow.user_op_builder(name if name is not None
+              else id_util.UniqueStr("BroadcastLogicalAnd_"))\
+          .Op("broadcast_logical_and")\
+          .Input("x", [x])\
+          .Input("y", [y])\
+          .Output("z")\
+          .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("BroadcastLogicalAnd_"),
+        )
+        op_conf.broadcast_logical_and_conf.a = x.logical_blob_name
+        op_conf.broadcast_logical_and_conf.b = y.logical_blob_name
+        op_conf.broadcast_logical_and_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.minimum")
