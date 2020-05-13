@@ -76,7 +76,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 
   HashMap<DeviceSet, std::vector<std::map<int64_t, ncclComm_t>>>
       device_set2stream_id2device_id2comm_;
-  std::map<int64_t, std::vector<cudaStream_t>> device_id2stream_id2stream_;
+  std::vector<std::map<int64_t, cudaStream_t>> stream_id2device_id2stream_;
   std::list<Event> event_list_;
   std::thread event_list_poll_thread_;
   std::mutex event_list_mutex_;
@@ -118,11 +118,11 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend() : shu
 NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
   shutdown_ = true;
   event_list_poll_thread_.join();
-  for (auto& device_id7stream_id2stream : device_id2stream_id2stream_) {
-    CudaCurrentDeviceGuard guard(device_id7stream_id2stream.first);
-    for (auto& stream : device_id7stream_id2stream.second) {
-      CudaCheck(cudaStreamSynchronize(stream));
-      CudaCheck(cudaStreamDestroy(stream));
+  for (auto& device_id2stream : stream_id2device_id2stream_) {
+    for (auto& device_id7stream : device_id2stream) {
+      CudaCurrentDeviceGuard guard(device_id7stream.first);
+      CudaCheck(cudaStreamSynchronize(device_id7stream.second));
+      CudaCheck(cudaStreamDestroy(device_id7stream.second));
     }
   }
   for (auto& device_set7stream_id2device_id2comm : device_set2stream_id2device_id2comm_) {
@@ -212,6 +212,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   CudaCurrentDeviceGuard device_guard;
   auto& device_id2comm =
       device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
+  auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
   NcclCheck(ncclGroupStart());
   for (int64_t i = 0; i < group.size(); ++i) {
     const RequestDesc* request_desc = group.at(i);
@@ -224,7 +225,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       const int64_t device_id = device_desc.device_id();
       CudaCheck(cudaSetDevice(device_id));
       ncclComm_t comm = device_id2comm.at(device_id);
-      cudaStream_t stream = device_id2stream_id2stream_.at(device_id).at(stream_id);
+      cudaStream_t stream = device_id2stream.at(device_id);
       ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
       const OpType op_type = op_desc.op_type();
       const int64_t num_ranks = op_desc.num_ranks();
@@ -262,7 +263,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
     CudaCheck(cudaSetDevice(device_id));
     cudaEvent_t event;
     CudaCheck(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    CudaCheck(cudaEventRecord(event, device_id2stream_id2stream_.at(device_id).at(stream_id)));
+    CudaCheck(cudaEventRecord(event, device_id2stream.at(device_id)));
     {
       std::unique_lock<std::mutex> event_list_lock(event_list_mutex_);
       event_list_.emplace_back(Event{device_id, event, [=](const Maybe<void>& status) {
@@ -329,12 +330,15 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   }
   int cuda_stream_greatest_priority;
   CudaCheck(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
-  for (const int64_t device_id : local_device_ids) {
-    CudaCheck(cudaSetDevice(device_id));
-    auto& stream_id2stream = device_id2stream_id2stream_[device_id];
-    stream_id2stream.resize(num_streams_);
-    for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
-      CudaCheck(cudaStreamCreateWithPriority(&stream_id2stream.at(stream_id), cudaStreamNonBlocking,
+  stream_id2device_id2stream_.resize(num_streams_);
+  for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
+    auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
+    for (const int64_t device_id : local_device_ids) {
+      device_id2stream.emplace(device_id, cudaStream_t{});
+    }
+    for (const int64_t device_id : local_device_ids) {
+      CudaCheck(cudaSetDevice(device_id));
+      CudaCheck(cudaStreamCreateWithPriority(&device_id2stream.at(device_id), cudaStreamNonBlocking,
                                              cuda_stream_greatest_priority));
     }
   }
