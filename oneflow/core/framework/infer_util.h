@@ -50,12 +50,7 @@ class InferContext {
   UserOpConfWrapper conf_;
 };
 
-struct ShapeInferFnUtil {
-  static Maybe<void> Unchanged(InferContext*);
-  static Maybe<void> InOutCorrespond(InferContext*);
-};
-
-struct DtypeInferFnUtil {
+struct TensorDescInferFnUtil {
   static Maybe<void> Unchanged(InferContext*);
   static Maybe<void> InOutCorrespond(InferContext*);
 };
