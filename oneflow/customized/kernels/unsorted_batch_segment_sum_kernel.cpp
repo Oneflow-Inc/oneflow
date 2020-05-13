@@ -5,12 +5,15 @@ namespace oneflow {
 
 namespace user_op {
 
+namespace {
 Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
+
+}  // namespace
 
 template<DeviceType device_type, typename T, typename K>
 class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
@@ -25,6 +28,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t axis = segment_ids->shape().NumAxes() - 1;
     const Shape& flat_data_shape = GetFlatShape(data->shape(), axis);
+    
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
         ctx->device_ctx(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
@@ -33,17 +37,17 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, T_dtype, K_dtype)            \
+#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, out_dtype, indices_dtype)            \
   REGISTER_USER_KERNEL("unsorted_batch_segment_sum")                                    \
-      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(T_dtype),     \
-                                                 OF_PP_PAIR_FIRST(K_dtype)>>()          \
+      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),     \
+                                                 OF_PP_PAIR_FIRST(indices_dtype)>>()          \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
         const user_op::TensorDesc* indices_desc =                                       \
             ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);                           \
         return ctx.device_type() == device                                              \
-               && indices_desc->data_type() == OF_PP_PAIR_SECOND(K_dtype)               \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(T_dtype);                  \
+               && indices_desc->data_type() == OF_PP_PAIR_SECOND(indices_dtype)               \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(out_dtype);                  \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL, DEVICE_TYPE_SEQ,
