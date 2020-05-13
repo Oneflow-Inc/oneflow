@@ -103,6 +103,8 @@ class KernelComputeContext {
   }
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
+  bool all_outputs_constant() const { return user_op_conf_.user_op_conf().all_outputs_constant(); }
+
  protected:
   KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
   KernelComputeContext(const KernelComputeContext&) = delete;
