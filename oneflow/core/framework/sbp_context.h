@@ -72,6 +72,7 @@ class SbpContext {
 
 struct GetSbpFnUtil {
   static Maybe<void> DefaultBroadcastToBroadcast(SbpContext*);
+  static Maybe<void> SplitForEachAxis(SbpContext*);
 };
 
 }  // namespace user_op
