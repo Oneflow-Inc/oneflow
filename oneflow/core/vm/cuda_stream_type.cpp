@@ -12,14 +12,14 @@ namespace vm {
 
 void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
   device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->thread_ctx().device_id()));
+      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
 }
 
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                       stream.thread_ctx().device_id());
+                                       stream.device_id());
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -34,7 +34,7 @@ bool CudaStreamType::QueryInstructionStatusDone(
 
 void CudaStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
-  cudaSetDevice(stream->thread_ctx().device_id());
+  cudaSetDevice(stream->device_id());
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);

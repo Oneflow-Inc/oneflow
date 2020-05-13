@@ -271,7 +271,7 @@ void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, c
                    DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
-    int64_t device_id = instruction->stream().thread_ctx().device_id();
+    int64_t device_id = instruction->stream().device_id();
     InitOutputBlobObjects(instruction, args, device_id, default_data_type);
     ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
@@ -328,7 +328,6 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
   const auto& op_conf =
       instruction->mut_operand_type(args->op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
   CHECK(op_conf.has_user_conf());
-  CHECK(user_op::IsStateless4OpTypeName(op_conf.user_conf().op_type_name()));
   DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   vm::MirroredObject* mirrored_object = instruction->mut_operand_type(args->shared_opkernel());
   if (mirrored_object->has_object()) { CHECK(mirrored_object->Has<OpKernelObject>()); }

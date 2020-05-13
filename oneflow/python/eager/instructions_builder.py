@@ -28,7 +28,8 @@ class InstructionsBuilder(object):
         input_triples = self._GetInputTriples(op_conf)
         output_triples = self._GetOutputTriples(op_conf, parallel_conf_sym)
         mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_conf_sym)
-        return self._StatelessCall(device_tag, job_conf_sym, op_conf_sym, opkernel_obj,
+        return self._StatelessCall(device_tag, parallel_conf_sym,
+                                   job_conf_sym, op_conf_sym, opkernel_obj,
                                    input_triples, output_triples, mut2_output_triples)
 
     def GetSymbolId4String(self, string):
@@ -122,10 +123,12 @@ class InstructionsBuilder(object):
     def _NewBlobObjectId(self, parallel_conf_sym):
         return self._NewObjectId(parallel_conf_sym)
 
-    def _StatelessCall(self, device_tag, job_conf_sym, op_conf_sym, shared_opkernel_obj,
+    def _StatelessCall(self, device_tag, parallel_conf_sym,
+                       job_conf_sym, op_conf_sym, shared_opkernel_obj,
                        input_triples, output_triples, mut2_output_triples):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "%s_StatelessCallOpKernel" % device_tag
+        instruction.parallel_desc_symbol_id = parallel_conf_sym
         instruction.operand.append(_SymbolOperand(job_conf_sym))
         instruction.operand.append(_SymbolOperand(op_conf_sym))
         instruction.operand.append(_MutOperand(shared_opkernel_obj))

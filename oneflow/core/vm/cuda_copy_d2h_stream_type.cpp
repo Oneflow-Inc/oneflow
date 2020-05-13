@@ -70,7 +70,7 @@ class CudaCopyD2HInstructionType final : public InstructionType {
       CHECK_LE(size, src_buffer_type.size());
       CHECK(src_buffer_type.mem_case().has_device_cuda_mem());
       CHECK_EQ(src_buffer_type.mem_case().device_cuda_mem().device_id(),
-               stream.thread_ctx().device_id());
+               stream.device_id());
       const auto& src_buffer_value =
           instruction->operand_value(view->src()).Get<MemBufferObjectValue>();
       src = src_buffer_value.data();
@@ -87,14 +87,14 @@ COMMAND(RegisterInstructionType<CudaCopyD2HInstructionType>("CudaCopyD2H"));
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
   device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->thread_ctx().device_id()));
+      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
 }
 
 void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                       stream.thread_ctx().device_id());
+                                       stream.device_id());
 }
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -109,7 +109,7 @@ bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
 
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
-  cudaSetDevice(stream->thread_ctx().device_id());
+  cudaSetDevice(stream->device_id());
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
