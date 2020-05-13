@@ -34,7 +34,8 @@ message InstructionOperandProto {
 
 message InstructionProto {
   required string instr_type_name = 1;
-  repeated InstructionOperandProto operand = 2;
+  optional int64 parallel_desc_symbol_id = 2 [default = 0];
+  repeated InstructionOperandProto operand = 3;
 };
 
 message InstructionListProto {

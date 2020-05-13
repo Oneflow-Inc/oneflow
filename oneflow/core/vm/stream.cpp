@@ -15,6 +15,10 @@ int64_t Stream::machine_id() const {
   return global_device_id() / thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
 }
 
+int64_t Stream::device_id() const {
+  return global_device_id() % thread_ctx().stream_rt_desc().stream_desc().num_streams_per_machine();
+}
+
 const StreamType& Stream::stream_type() const {
   return thread_ctx().stream_rt_desc().stream_type();
 }

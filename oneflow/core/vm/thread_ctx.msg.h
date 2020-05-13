@@ -10,14 +10,12 @@ namespace vm {
 // clang-format off
 OBJECT_MSG_BEGIN(ThreadCtx);
   // methods
-  PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc, int64_t device_id) {
+  PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
     set_stream_rt_desc(&stream_rt_desc);
-    set_device_id(device_id);
   }
   PUBLIC void LoopRun();
   // fields
   OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, stream_rt_desc); 
-  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, device_id);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_link);

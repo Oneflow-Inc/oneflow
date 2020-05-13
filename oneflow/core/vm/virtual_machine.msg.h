@@ -13,10 +13,12 @@
 #include "oneflow/core/common/range.h"
 
 namespace oneflow {
+
+class ParallelDesc;
+
 namespace vm {
 
 class VmDesc;
-
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
@@ -102,10 +104,12 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   void TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
                              const IsEdgeReadyT& IsEdgeReady);
 
+  const ParallelDesc* GetInstructionDefaultParallelDesc(const InstructionMsg& instr_msg);
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on
 
 }  // namespace vm
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_SCHEDULER_MSG_H_

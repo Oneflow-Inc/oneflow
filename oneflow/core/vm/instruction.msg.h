@@ -58,6 +58,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, parallel_desc_symbol_id);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
 
   // links

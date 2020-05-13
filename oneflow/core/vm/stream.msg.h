@@ -18,6 +18,7 @@ OBJECT_MSG_BEGIN(Stream);
   PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
   PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   PUBLIC int64_t machine_id() const;
+  PUBLIC int64_t device_id() const;
   PUBLIC const StreamType& stream_type() const;
   PUBLIC const StreamTypeId& stream_type_id() const;
 
