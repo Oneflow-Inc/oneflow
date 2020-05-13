@@ -73,6 +73,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 
   int64_t num_streams_;
   int64_t fusion_threshold_;
+  const CollectiveBoxingConf collective_boxing_conf_;
 
   HashMap<DeviceSet, std::vector<std::map<int64_t, ncclComm_t>>>
       device_set2stream_id2device_id2comm_;
@@ -87,13 +88,13 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   int64_t current_stream_id_ = 0;
 };
 
-NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend() : shutdown_(false) {
-  const CollectiveBoxingConf collective_boxing_conf =
-      Global<ResourceDesc>::Get()->collective_boxing_conf();
-  CHECK_GT(collective_boxing_conf.nccl_num_streams(), 0);
-  num_streams_ = collective_boxing_conf.nccl_num_streams();
-  CHECK_GE(collective_boxing_conf.nccl_fusion_threshold_mb(), 0);
-  fusion_threshold_ = collective_boxing_conf.nccl_fusion_threshold_mb() * 1024 * 1024;
+NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
+    : collective_boxing_conf_(Global<ResourceDesc>::Get()->collective_boxing_conf()),
+      shutdown_(false) {
+  CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
+  num_streams_ = collective_boxing_conf_.nccl_num_streams();
+  CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
+  fusion_threshold_ = collective_boxing_conf_.nccl_fusion_threshold_mb() * 1024 * 1024;
   event_list_poll_thread_ = std::thread([this]() {
     while (true) {
       std::unique_lock<std::mutex> lock(event_list_mutex_);
@@ -148,19 +149,18 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     std::vector<std::vector<const RequestDesc*>>* groups) {
   std::vector<const RequestDesc*> group;
   int64_t group_size = 0;
-  const CollectiveBoxingConf conf = Global<ResourceDesc>::Get()->collective_boxing_conf();
   auto IsOpFusionEnabled = [&](const RequestDesc* request) -> bool {
     const OpType op_type = request->op_desc().op_type();
     if (op_type == OpType::kOpTypeAllReduce) {
-      return conf.nccl_fusion_all_reduce();
+      return collective_boxing_conf_.nccl_fusion_all_reduce();
     } else if (op_type == OpType::kOpTypeAllGather) {
-      return conf.nccl_fusion_all_gather();
+      return collective_boxing_conf_.nccl_fusion_all_gather();
     } else if (op_type == OpType::kOpTypeReduceScatter) {
-      return conf.nccl_fusion_reduce_scatter();
+      return collective_boxing_conf_.nccl_fusion_reduce_scatter();
     } else if (op_type == OpType::kOpTypeReduce) {
-      return conf.nccl_fusion_reduce();
+      return collective_boxing_conf_.nccl_fusion_reduce();
     } else if (op_type == OpType::kOpTypeBroadcast) {
-      return conf.nccl_fusion_broadcast();
+      return collective_boxing_conf_.nccl_fusion_broadcast();
     } else {
       UNIMPLEMENTED();
       return false;
@@ -172,7 +172,7 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     if (lhs->op_desc().op_type() != rhs->op_desc().op_type()) { return false; }
     const OpType op_type = lhs->op_desc().op_type();
     if (op_type == OpType::kOpTypeAllReduce) {
-      if (conf.nccl_fusion_all_reduce_use_buffer()) {
+      if (collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
         CHECK(lhs->op_desc().has_reduce_method());
         CHECK(rhs->op_desc().has_reduce_method());
         return lhs->op_desc().reduce_method() == rhs->op_desc().reduce_method()
@@ -221,51 +221,56 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   auto& device_id2comm =
       device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
-  NcclCheck(ncclGroupStart());
-  for (int64_t i = 0; i < group.size(); ++i) {
-    const RequestDesc* request_desc = group.at(i);
-    const OpDesc& op_desc = request_desc->op_desc();
-    const std::map<int64_t, RuntimeRequestInfo>& rank2request_info = ranks.at(i);
-    for (const auto& rank7request_info : rank2request_info) {
-      const int64_t rank = rank7request_info.first;
-      const RuntimeRequestInfo& request_info = rank7request_info.second;
-      const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
-      const int64_t device_id = device_desc.device_id();
-      CudaCheck(cudaSetDevice(device_id));
-      ncclComm_t comm = device_id2comm.at(device_id);
-      cudaStream_t stream = device_id2stream.at(device_id);
-      ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
-      const OpType op_type = op_desc.op_type();
-      const int64_t num_ranks = op_desc.num_ranks();
-      const int64_t elem_cnt = Shape(op_desc.shape()).elem_cnt();
-      const void* send_buff = request_info.send_buff;
-      void* recv_buff = request_info.recv_buff;
-      device_id2callbacks[device_id].push_back(request_info.callback);
-      if (op_type == OpType::kOpTypeAllReduce) {
-        NcclCheck(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
-                                GetNcclReduceOp(op_desc.reduce_method()), comm, stream));
-      } else if (op_type == OpType::kOpTypeAllGather) {
-        CHECK_EQ(elem_cnt % num_ranks, 0);
-        NcclCheck(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type, comm,
-                                stream));
-      } else if (op_type == OpType::kOpTypeReduceScatter) {
-        CHECK_EQ(elem_cnt % num_ranks, 0);
-        NcclCheck(ncclReduceScatter(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
-                                    GetNcclReduceOp(op_desc.reduce_method()), comm, stream));
-      } else if (op_type == OpType::kOpTypeReduce) {
-        NcclCheck(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
-                             GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
-                             stream));
-      } else if (op_type == OpType::kOpTypeBroadcast) {
-        NcclCheck(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type, op_desc.root(),
-                                comm, stream));
-      } else {
-        UNIMPLEMENTED();
+
+  if (group.front()->op_desc().op_type() == OpType::kOpTypeAllReduce
+      && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
+    UNIMPLEMENTED();
+  } else {
+    NcclCheck(ncclGroupStart());
+    for (int64_t i = 0; i < group.size(); ++i) {
+      const RequestDesc* request_desc = group.at(i);
+      const OpDesc& op_desc = request_desc->op_desc();
+      const std::map<int64_t, RuntimeRequestInfo>& rank2request_info = ranks.at(i);
+      for (const auto& rank7request_info : rank2request_info) {
+        const int64_t rank = rank7request_info.first;
+        const RuntimeRequestInfo& request_info = rank7request_info.second;
+        const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
+        const int64_t device_id = device_desc.device_id();
+        CudaCheck(cudaSetDevice(device_id));
+        ncclComm_t comm = device_id2comm.at(device_id);
+        cudaStream_t stream = device_id2stream.at(device_id);
+        ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
+        const OpType op_type = op_desc.op_type();
+        const int64_t num_ranks = op_desc.num_ranks();
+        const int64_t elem_cnt = Shape(op_desc.shape()).elem_cnt();
+        const void* send_buff = request_info.send_buff;
+        void* recv_buff = request_info.recv_buff;
+        device_id2callbacks[device_id].push_back(request_info.callback);
+        if (op_type == OpType::kOpTypeAllReduce) {
+          NcclCheck(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
+                                  GetNcclReduceOp(op_desc.reduce_method()), comm, stream));
+        } else if (op_type == OpType::kOpTypeAllGather) {
+          CHECK_EQ(elem_cnt % num_ranks, 0);
+          NcclCheck(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type, comm,
+                                  stream));
+        } else if (op_type == OpType::kOpTypeReduceScatter) {
+          CHECK_EQ(elem_cnt % num_ranks, 0);
+          NcclCheck(ncclReduceScatter(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
+                                      GetNcclReduceOp(op_desc.reduce_method()), comm, stream));
+        } else if (op_type == OpType::kOpTypeReduce) {
+          NcclCheck(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
+                               GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
+                               stream));
+        } else if (op_type == OpType::kOpTypeBroadcast) {
+          NcclCheck(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type, op_desc.root(),
+                                  comm, stream));
+        } else {
+          UNIMPLEMENTED();
+        }
       }
     }
+    NcclCheck(ncclGroupEnd());
   }
-  NcclCheck(ncclGroupEnd());
-
   for (auto& device_id7callbacks : device_id2callbacks) {
     const int64_t device_id = device_id7callbacks.first;
     CudaCheck(cudaSetDevice(device_id));
