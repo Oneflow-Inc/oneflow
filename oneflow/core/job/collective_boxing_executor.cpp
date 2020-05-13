@@ -5,6 +5,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 
 namespace oneflow {
 
@@ -41,6 +42,15 @@ std::string GetNcclUniqueIdRpcKey(const std::string& name, int64_t stream_id) {
   return "CollectiveBoxingExecutorNcclUniqueIdRpcKey-" + name + "-" + std::to_string(stream_id);
 }
 
+int64_t GetRequestSize(const RequestDesc* request) {
+  return Shape(request->op_desc().shape()).elem_cnt()
+         * GetSizeOfDataType(request->op_desc().data_type());
+}
+
+int64_t GetAlignedRequestSize(const RequestDesc* request) {
+  return GetCudaAlignedSize(GetRequestSize(request));
+}
+
 }  // namespace
 
 void CollectiveBoxingExecutorBackend::GroupRequests(
@@ -50,6 +60,19 @@ void CollectiveBoxingExecutorBackend::GroupRequests(
     groups->emplace_back(std::vector<const RequestDesc*>({request}));
   }
 }
+
+class NcclCollectiveBoxingDeviceCtx : public DeviceCtx {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingDeviceCtx);
+  NcclCollectiveBoxingDeviceCtx(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {}
+  ~NcclCollectiveBoxingDeviceCtx() override = default;
+
+ private:
+  const cudaStream_t& cuda_stream() const override { UNIMPLEMENTED(); }
+  void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
+
+  cudaStream_t cuda_stream_;
+};
 
 class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBackend {
  public:
@@ -78,6 +101,8 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   HashMap<DeviceSet, std::vector<std::map<int64_t, ncclComm_t>>>
       device_set2stream_id2device_id2comm_;
   std::vector<std::map<int64_t, cudaStream_t>> stream_id2device_id2stream_;
+  std::vector<std::map<int64_t, std::unique_ptr<NcclCollectiveBoxingDeviceCtx>>>
+      stream_id2device_id2ctx_;
   std::vector<std::map<int64_t, char*>> stream_id2device_id2fusion_buffer_;
   std::list<Event> event_list_;
   std::thread event_list_poll_thread_;
@@ -190,8 +215,7 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
   };
 
   for (const RequestDesc* request : requests) {
-    const int64_t size = GetCudaAlignedSize(Shape(request->op_desc().shape()).elem_cnt()
-                                            * GetSizeOfDataType(request->op_desc().data_type()));
+    const int64_t size = GetAlignedRequestSize(request);
     if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_) {
       if (!group.empty()) {
         groups->emplace_back();
@@ -213,7 +237,6 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
     const std::vector<std::map<int64_t, RuntimeRequestInfo>>& ranks) {
   CHECK_EQ(group.size(), ranks.size());
   if (group.empty()) { return; }
-
   std::map<int64_t, std::vector<std::function<void(Maybe<void>)>>> device_id2callbacks;
   const int64_t stream_id = current_stream_id_;
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
@@ -222,8 +245,65 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
   if (group.front()->op_desc().op_type() == OpType::kOpTypeAllReduce
-      && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
-    UNIMPLEMENTED();
+      && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer() && group.size() > 1) {
+    auto& device_id2fusion_buffer = stream_id2device_id2fusion_buffer_.at(stream_id);
+    auto& device_id2ctx_ = stream_id2device_id2ctx_.at(stream_id);
+    int64_t offset = 0;
+    std::map<int64_t, std::vector<MemcpyParam>> device_id2copy_in_params;
+    std::map<int64_t, std::vector<MemcpyParam>> device_id2copy_out_params;
+    for (int64_t i = 0; i < group.size(); ++i) {
+      const RequestDesc* request_desc = group.at(i);
+      if (i != 0) {
+        CHECK_EQ(request_desc->op_desc().reduce_method(), group.front()->op_desc().reduce_method());
+        CHECK_EQ(request_desc->op_desc().data_type(), group.front()->op_desc().data_type());
+      }
+      const std::map<int64_t, RuntimeRequestInfo>& rank2request_info = ranks.at(i);
+      const int64_t size = GetRequestSize(request_desc);
+      CHECK_LE(offset + size, fusion_threshold_);
+      const int64_t aligned_size = GetCudaAlignedSize(size);
+      for (const auto& rank7request_info : rank2request_info) {
+        const int64_t rank = rank7request_info.first;
+        const RuntimeRequestInfo& request_info = rank7request_info.second;
+        const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
+        const int64_t device_id = device_desc.device_id();
+        device_id2copy_in_params[device_id].push_back(MemcpyParam{
+            .dst = device_id2fusion_buffer.at(device_id) + offset,
+            .src = request_info.send_buff,
+            .count = static_cast<size_t>(size),
+        });
+        device_id2copy_out_params[device_id].push_back(MemcpyParam{
+            .dst = request_info.recv_buff,
+            .src = device_id2fusion_buffer.at(device_id) + offset,
+            .count = static_cast<size_t>(size),
+        });
+        device_id2callbacks[device_id].push_back(request_info.callback);
+        offset += aligned_size;
+      }
+    }
+    for (auto& device_id7copy_in_params : device_id2copy_in_params) {
+      CudaCheck(cudaSetDevice(device_id7copy_in_params.first));
+      BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(
+          device_id2ctx_.at(device_id7copy_in_params.first).get(), device_id7copy_in_params.second);
+    }
+    NcclCheck(ncclGroupStart());
+    const int64_t size_of_data_type = GetSizeOfDataType(group.front()->op_desc().data_type());
+    CHECK_EQ(offset % size_of_data_type, 0);
+    const int64_t elem_cnt = offset / size_of_data_type;
+    for (auto& device_id7comm : device_id2comm) {
+      CudaCheck(cudaSetDevice(device_id7comm.first));
+      void* buffer = device_id2fusion_buffer.at(device_id7comm.first);
+      NcclCheck(ncclAllReduce(buffer, buffer, elem_cnt,
+                              GetNcclDataType(group.front()->op_desc().data_type()),
+                              GetNcclReduceOp(group.front()->op_desc().reduce_method()),
+                              device_id7comm.second, device_id2stream.at(device_id7comm.first)));
+    }
+    NcclCheck(ncclGroupEnd());
+    for (auto& device_id7copy_out_params : device_id2copy_out_params) {
+      CudaCheck(cudaSetDevice(device_id7copy_out_params.first));
+      BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(
+          device_id2ctx_.at(device_id7copy_out_params.first).get(),
+          device_id7copy_out_params.second);
+    }
   } else {
     NcclCheck(ncclGroupStart());
     for (int64_t i = 0; i < group.size(); ++i) {
@@ -344,18 +424,23 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   CudaCheck(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
   stream_id2device_id2stream_.resize(num_streams_);
   stream_id2device_id2fusion_buffer_.resize(num_streams_);
+  stream_id2device_id2ctx_.resize(num_streams_);
   for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
     auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
     auto& device_id2fusion_buffer_ = stream_id2device_id2fusion_buffer_.at(stream_id);
+    auto& device_id2ctx_ = stream_id2device_id2ctx_.at(stream_id);
     for (const int64_t device_id : local_device_ids) {
       device_id2stream.emplace(device_id, cudaStream_t{});
       device_id2fusion_buffer_.emplace(device_id, nullptr);
+      device_id2ctx_.emplace(device_id, nullptr);
     }
     for (const int64_t device_id : local_device_ids) {
       CudaCheck(cudaSetDevice(device_id));
       CudaCheck(cudaStreamCreateWithPriority(&device_id2stream.at(device_id), cudaStreamNonBlocking,
                                              cuda_stream_greatest_priority));
       CudaCheck(cudaMalloc(&device_id2fusion_buffer_.at(device_id), fusion_threshold_));
+      device_id2ctx_.at(device_id).reset(
+          new NcclCollectiveBoxingDeviceCtx(device_id2stream.at(device_id)));
     }
   }
 }
