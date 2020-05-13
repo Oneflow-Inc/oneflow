@@ -1,4 +1,4 @@
-  syntax = "proto2";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
