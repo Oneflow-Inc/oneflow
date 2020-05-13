@@ -93,6 +93,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
+  wrapper_.reg_val.op_def.set_all_outputs_constant(true);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
@@ -170,7 +175,7 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
-    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
+    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
     wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};

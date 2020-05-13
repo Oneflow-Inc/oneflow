@@ -129,6 +129,7 @@ def scalar_add(x, operand, name=None):
                 .SetAttr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -279,6 +280,7 @@ def scalar_mul(x, operand, name=None):
                 .SetAttr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -359,7 +361,7 @@ def broadcast_floor_mod(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.tanh")
+@oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
@@ -378,11 +380,12 @@ def tanh(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
 
-@oneflow_export("math.gelu")
+@oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
@@ -391,6 +394,7 @@ def gelu(x, name=None):
             .Input("in", [x])
             .Output("out")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
@@ -424,6 +428,7 @@ def relu(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -449,6 +454,7 @@ def sigmoid(x, name=None):
         .Input("in", [x])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -507,33 +513,6 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("math.sqrt")
-def sqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
-    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.sqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("math.rsqrt")
-def rsqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
-    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.rsqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
 
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
@@ -748,22 +727,6 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     out_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(out_lbi)
 
-@oneflow_export('math.square')
-def square(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Square_"),
-    )
-    setattr(op_conf.square_conf, "in", x.logical_blob_name)
-    setattr(op_conf.square_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
     return (
@@ -774,6 +737,7 @@ def top_k(input, k=1, sorted=True, name=None):
         .SetAttr("k", k, "AttrTypeInt32",)
         .SetAttr("sorted", sorted, "AttrTypeBool",)
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -785,6 +749,7 @@ def argmax(input, name=None):
         .Input("in", [input])
         .Output("out")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -840,7 +805,7 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
 
-    return op_builder.Input("x", [values]).Output("y").Build().RemoteBlobList()[0]
+    return op_builder.Input("x", [values]).Output("y").Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("math.l2_normalize")
@@ -856,6 +821,16 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .SetAttr("axis", int(axis), "AttrTypeInt32")
         .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()
     )
     return y
+
+
+@oneflow_export("math.squared_difference")
+def squared_difference(x, y, name=None):
+    name_subtract, name_square = None, None
+    if name is not None:
+        name_subtract = name + "_subtract"
+        name_square = name + "_square"
+    return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
