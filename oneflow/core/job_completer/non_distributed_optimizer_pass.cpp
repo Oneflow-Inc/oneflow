@@ -39,9 +39,9 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
     if (GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer()) {
       if (GlobalJobDesc().use_boxing_v2()) {
         LOG(WARNING) << "NonDistributedOptimizerPass will be disabled when use_boxing_v2 is true";
-        return false;
-      } else {
         return true;
+      } else {
+        return false;
       }
     } else {
       return false;
@@ -126,13 +126,10 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
         const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
         builder->MutParallelConfOnlyOnce(node->op().op_name(), parallel_conf);
       }
-      pd2last_nodes[pd].push_back(last_node);
+      ParallelDesc new_pd(last_node->parallel_desc().parallel_conf());
+      pd2last_nodes[new_pd].push_back(last_node);
     }
   }
-  const int64_t group_size =
-      GlobalJobDesc().non_distributed_optimizer_group_size_mbyte() * 1024 * 1024;
-  CHECK_GE(group_size, 0);
-  const int64_t half_group_size = group_size / 2;
   for (auto& pair : pd2last_nodes) {
     const ParallelDesc& pd = pair.first;
     std::vector<const OpNode*>* last_nodes = &pair.second;
@@ -140,58 +137,14 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     std::sort(last_nodes->begin(), last_nodes->end(), [&](const OpNode* lhs, const OpNode* rhs) {
       return last_node2order.at(lhs) < last_node2order.at(rhs);
     });
-    std::vector<std::vector<const OpNode*>> groups;
-    int64_t cur_group_size = 0;
-    for (const OpNode* node : *last_nodes) {
-      const int64_t node_size = last_node2model_size.at(node);
-      if (groups.empty() || cur_group_size > group_size
-          || (cur_group_size >= half_group_size && node_size > group_size)) {
-        groups.push_back({node});
-        cur_group_size = node_size;
-      } else {
-        groups.back().push_back(node);
-        cur_group_size += node_size;
-      }
+    FOR_RANGE(int64_t, i, 1, last_nodes->size()) {
+      std::vector<const OpNode*> cur_node_seq = pd2last_node2node_seqs[pd][last_nodes->at(i)];
+      OperatorConf cur_var_conf(cur_node_seq[0]->op().op_conf());
+      std::vector<const OpNode*> before_node_seq =
+          pd2last_node2node_seqs[pd][last_nodes->at(i - 1)];
+      cur_var_conf.add_ctrl_in_op_name(before_node_seq[0]->op().op_name());
+      builder->MutOpsOnlyOnce({cur_var_conf});
     }
-    for (std::vector<const OpNode*>& group : groups) {
-      std::sort(group.begin(), group.end(), [&](const OpNode* lhs, const OpNode* rhs) {
-        return last_node2parallel_id.at(lhs) < last_node2parallel_id.at(rhs);
-      });
-      OperatorConf nccl_broadcast_op_conf{};
-      nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
-      NcclTupleBroadcastOpConf* tuple_broadcast_conf =
-          nccl_broadcast_op_conf.mutable_nccl_tuple_broadcast_conf();
-      tuple_broadcast_conf->set_nccl_order_hint(op_node2topo_order.at(group.back()));
-      FOR_RANGE(int64_t, i, 0, group.size()) {
-        const OpNode* node = group.at(i);
-        std::ostringstream ss;
-        ss << "out_" << std::setw(6) << std::setfill('0') << i;
-        const std::string obn = ss.str();
-        const int64_t& parallel_id = last_node2parallel_id.at(node);
-        const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
-        const BlobDesc& blob_desc = node->LogicalBlobDesc4Lbi(lbi);
-        *tuple_broadcast_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
-        *tuple_broadcast_conf->mutable_out()->Add() = obn;
-        *tuple_broadcast_conf->mutable_root()->Add() = parallel_id;
-        *tuple_broadcast_conf->mutable_data_type()->Add() = blob_desc.data_type();
-        blob_desc.shape().ToProto(tuple_broadcast_conf->mutable_shape()->Add());
-        const std::string new_lbn = nccl_broadcast_op_conf.name() + "/" + obn;
-        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
-          for (const std::string& ibn : dst->op().input_bns()) {
-            if (dst->op().BnInOp2Lbi(ibn) == lbi) {
-              PbMessage* dst_op_type_conf = MutableMessageInPbMessage(
-                  &op_node2op_conf.at(dst), op_node2op_conf.at(dst).op_type_case());
-              ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi),
-                                                new_lbn);
-            }
-          }
-        });
-      }
-      builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
-    }
-  }
-  for (const auto& op_node7op_conf : op_node2op_conf) {
-    builder->MutOpsOnlyOnce({op_node7op_conf.second});
   }
 }
 
