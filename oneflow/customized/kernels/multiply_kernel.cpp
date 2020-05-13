@@ -28,12 +28,12 @@ class MultiplyKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_MULTIPLY_KERNEL(device_type_v, dtype_pair)                                     \
+#define REGISTER_MULTIPLY_KERNEL(device, dtype_pair)                                            \
   REGISTER_USER_KERNEL("multiply")                                                              \
-      .SetCreateFn<MultiplyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()               \
+      .SetCreateFn<MultiplyKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()                      \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device_type_v                                               \
+        return ctx.device_type() == device                                                      \
                && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
