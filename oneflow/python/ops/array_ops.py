@@ -205,7 +205,34 @@ def slice(input_, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        slice_tup_list = []
+        for b, s, d in list(zip(begin, size, input_.static_shape)):
+            begin, end, stride = None, None, 1
+            if b is not None:
+                if b < -d or b > d - 1:
+                    raise ValueError(
+                        "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                        "and less than input_'s 'i'th dimension."
+                    )
+                b = b + d if b < 0 else b
+                begin = b
+            if s is not None:
+                if s > 0:
+                    if b + s > d:
+                        raise ValueError(
+                            "the sum of 'i'th element of begin and 'i'th element of size must be "
+                            "less than or equal to input_'s 'i'th dimension."
+                        )
+                    end = b + s
+                elif s == -1:
+                    end = d
+                else:
+                    raise ValueError(
+                        "elements of size must be an int that greater then 0 or equal to -1"
+                    )
+            slice_tup_list.append((begin, end, stride))
+        return slice_v2(input_, slice_tup_list, name=name)
     slice_conf_list = []
     for b, s, d in list(zip(begin, size, input_.static_shape)):
         slice_conf = op_conf_util.DimSliceConf()
