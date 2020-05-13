@@ -74,8 +74,8 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   int64_t num_streams_;
   int64_t fusion_threshold_;
 
-  HashMap<DeviceSet, std::map<int64_t, std::vector<ncclComm_t>>>
-      device_set2device_id2stream_id2comm_;
+  HashMap<DeviceSet, std::vector<std::map<int64_t, ncclComm_t>>>
+      device_set2stream_id2device_id2comm_;
   std::map<int64_t, std::vector<cudaStream_t>> device_id2stream_id2stream_;
   std::list<Event> event_list_;
   std::thread event_list_poll_thread_;
@@ -125,10 +125,12 @@ NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
       CudaCheck(cudaStreamDestroy(stream));
     }
   }
-  for (auto& device_set7device_id2stream_id2comm : device_set2device_id2stream_id2comm_) {
-    for (auto& device_id7stream_id2comm : device_set7device_id2stream_id2comm.second) {
-      CudaCurrentDeviceGuard guard(device_id7stream_id2comm.first);
-      for (auto& comm : device_id7stream_id2comm.second) { NcclCheck(ncclCommDestroy(comm)); }
+  for (auto& device_set7stream_id2device_id2comm : device_set2stream_id2device_id2comm_) {
+    for (auto& device_id2comm : device_set7stream_id2device_id2comm.second) {
+      for (auto& device_id7comm : device_id2comm) {
+        CudaCurrentDeviceGuard guard(device_id7comm.first);
+        NcclCheck(ncclCommDestroy(device_id7comm.second));
+      }
     }
   }
 }
@@ -208,8 +210,8 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   const int64_t stream_id = current_stream_id_;
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
   CudaCurrentDeviceGuard device_guard;
-  auto& device_id2stream_id2comm =
-      device_set2device_id2stream_id2comm_.at(group.front()->device_set());
+  auto& device_id2comm =
+      device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   NcclCheck(ncclGroupStart());
   for (int64_t i = 0; i < group.size(); ++i) {
     const RequestDesc* request_desc = group.at(i);
@@ -221,7 +223,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
       const int64_t device_id = device_desc.device_id();
       CudaCheck(cudaSetDevice(device_id));
-      ncclComm_t comm = device_id2stream_id2comm.at(device_id).at(stream_id);
+      ncclComm_t comm = device_id2comm.at(device_id);
       cudaStream_t stream = device_id2stream_id2stream_.at(device_id).at(stream_id);
       ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
       const OpType op_type = op_desc.op_type();
@@ -292,12 +294,15 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
         }
       }
       if (local_ranks.empty()) { continue; }
-      if (device_set2device_id2stream_id2comm_.count(device_set) > 0) { continue; }
-      auto& device_id2stream_id2comm = device_set2device_id2stream_id2comm_[device_set];
-      for (const int64_t rank : local_ranks) {
-        device_id2stream_id2comm[device_set.device(rank).device_id()].resize(num_streams_);
-      }
+      if (device_set2stream_id2device_id2comm_.count(device_set) > 0) { continue; }
+      auto& stream_id2device_id2comm = device_set2stream_id2device_id2comm_[device_set];
+      stream_id2device_id2comm.resize(num_streams_);
       for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
+        auto& device_id2comm = stream_id2device_id2comm.at(stream_id);
+        for (const int64_t rank : local_ranks) {
+          const int64_t device_id = device_set.device(rank).device_id();
+          device_id2comm.emplace(device_id, ncclComm_t{});
+        }
         ncclUniqueId nccl_unique_id{};
         if (local_ranks.count(0) > 0) {
           NcclCheck(ncclGetUniqueId(&nccl_unique_id));
@@ -315,8 +320,8 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
         for (const int64_t rank : local_ranks) {
           const int64_t device_id = device_set.device(rank).device_id();
           CudaCheck(cudaSetDevice(device_id));
-          ncclComm_t& comm = device_id2stream_id2comm.at(device_id).at(stream_id);
-          NcclCheck(ncclCommInitRank(&comm, device_set.device_size(), nccl_unique_id, rank));
+          NcclCheck(ncclCommInitRank(&device_id2comm.at(device_id), device_set.device_size(),
+                                     nccl_unique_id, rank));
         }
         NcclCheck(ncclGroupEnd());
       }
