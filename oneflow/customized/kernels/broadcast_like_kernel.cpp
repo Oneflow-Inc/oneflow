@@ -14,16 +14,15 @@ class BroadcastLikeKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in_tenor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int64_t num_axes = out_tensor->shape().NumAxes();
     const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
         CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx->device_ctx(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
-        XpuVarNdarray<const T>(reduced_shape, in_tenor->dptr<T>()));
+        XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

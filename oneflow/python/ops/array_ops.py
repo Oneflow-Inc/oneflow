@@ -618,3 +618,21 @@ def expand_dims(input, axis, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("broadcast_like")
+def broadcast_like(x, like, axis=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("BroadcastLike_")
+    if axis is None:
+        axis = []
+    return (
+        flow.user_op_builder(name)
+        .Op("broadcast_like")
+        .Input("x", [x])
+        .Input("like", [like])
+        .SetAttr("axis", axis, "AttrTypeListInt32")
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
