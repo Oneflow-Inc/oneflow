@@ -29,9 +29,8 @@ class BatchGatherKernel final : public user_op::OpKernel {
 
 #define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)                          \
   REGISTER_USER_KERNEL("batch_gather")                                                          \
-      .SetCreateFn<                                                                             \
-          BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),                                \
-                            OF_PP_PAIR_FIRST(indices_dtype)>>()                                 \
+      .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),                       \
+                                     OF_PP_PAIR_FIRST(indices_dtype)>>()                        \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
         const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \

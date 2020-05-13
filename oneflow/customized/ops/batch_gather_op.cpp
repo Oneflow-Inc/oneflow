@@ -7,7 +7,7 @@ REGISTER_USER_OP("batch_gather")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
+
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
@@ -24,7 +24,7 @@ REGISTER_USER_OP("batch_gather")
           CHECK_EQ_OR_RETURN(indices->shape().dim_vec().at(i), in->shape().dim_vec().at(i));
         }
       }
-      
+
       DimVector dim_vec(in->shape().dim_vec());
       dim_vec.at(indices_shape()->NumAxes() - 1) = indices->shape().dim_vec().back();
       *out->mut_shape() = Shape(dim_vec);

@@ -20,7 +20,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       FOR_RANGE(int64_t, i, 0, segment_ids->shape.NumAxes() - 1) {
         CHECK_EQ_OR_RETURN(segment_ids->shape.At(i), data->shape().At(i));
       }
-      
+
       DimVector dim_vec(data->shape.dim_vec());
       dim_vec.at(segment_ids->shape.NumAxes() - 1) = num_segments;
       *out->mut_shape() = Shape(dim_vec);
