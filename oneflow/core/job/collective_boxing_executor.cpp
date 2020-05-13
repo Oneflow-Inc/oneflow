@@ -277,8 +277,8 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
             .count = static_cast<size_t>(size),
         });
         device_id2callbacks[device_id].push_back(request_info.callback);
-        offset += aligned_size;
       }
+      offset += aligned_size;
     }
     for (auto& device_id7copy_in_params : device_id2copy_in_params) {
       CudaCheck(cudaSetDevice(device_id7copy_in_params.first));
