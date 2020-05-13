@@ -19,30 +19,30 @@ def test_3_inputs(test_case):
     GenerateTest(test_case, (64, 64), 3)
 def test_4_inputs(test_case):
     GenerateTest(test_case, (64, 64), 4)
-def test_5_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 5)
-def test_6_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 6)
-def test_7_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 7)
-def test_8_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 8)
-def test_9_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 9)
-def test_10_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 10)
-def test_11_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 11)
-def test_12_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 12)
-def test_13_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 13)
-def test_14_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 14)
-def test_15_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 15)
-def test_16_inputs(test_case):
-    GenerateTest(test_case, (64, 64), 16)
+#  def test_5_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 5)
+#  def test_6_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 6)
+#  def test_7_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 7)
+#  def test_8_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 8)
+#  def test_9_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 9)
+#  def test_10_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 10)
+#  def test_11_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 11)
+#  def test_12_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 12)
+#  def test_13_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 13)
+#  def test_14_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 14)
+#  def test_15_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 15)
+#  def test_16_inputs(test_case):
+#      GenerateTest(test_case, (64, 64), 16)
 
 def GenerateTest(test_case, shape, num_inputs):
     @flow.function(func_config)
