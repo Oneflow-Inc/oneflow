@@ -127,11 +127,12 @@ class UserOpInferContext : public user_op::InferContext {
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
   UserOpInferContext(const OperatorConf& op_conf, const ParallelContext* parallel_ctx,
-                     const SbpSignature* sbp_signature,
+                     const SbpSignature* sbp_signature, const JobDesc& job_desc,
                      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
       : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)),
         parallel_ctx_(parallel_ctx),
-        sbp_signature_(sbp_signature) {
+        sbp_signature_(sbp_signature),
+        job_desc_(job_desc) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -151,24 +152,35 @@ class UserOpInferContext : public user_op::InferContext {
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
-    return &(arg2tensor_desc_.at(std::make_pair(arg_name, index)));
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return &(it->second);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_shape();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_data_type();
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_dynamic();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_dynamic();
   }
   bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_is_tensor_list();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_tensor_list();
   }
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
+  const JobDesc& job_desc() const override { return job_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
     const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
@@ -182,6 +194,7 @@ class UserOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   const ParallelContext* parallel_ctx_;
   const SbpSignature* sbp_signature_;
+  const JobDesc& job_desc_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
@@ -303,7 +316,8 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
 
   // tmp buffer size must be inferred after out shape/dtype
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, GetBlobDesc4BnInOp);
+  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
+                               GetBlobDesc4BnInOp);
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
@@ -370,7 +384,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
     }
   }
 
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, GetBlobDesc4BnInOp);
+  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
+                               GetBlobDesc4BnInOp);
 
   JUST(val_->tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {

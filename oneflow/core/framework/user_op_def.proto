@@ -21,4 +21,5 @@ message UserOpDef {
     optional UserOpAttrVal default_val = 3;
   }
   repeated AttrDef attr = 4;
+  optional bool all_outputs_constant = 5 [default = false];
 }

@@ -11,7 +11,7 @@ flow.unittest.register_test_cases(
     base_class=absltest.TestCase)
 
 def main(argv):
-    flow.env.disable_setting()
+    flow.env.init()
     absltest.main()
 
 if __name__ == '__main__': app.run(main)
