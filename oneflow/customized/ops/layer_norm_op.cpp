@@ -161,9 +161,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
       const bool has_gamma = has_tensor("gamma");
       const bool has_normalized_diff = has_tensor("normalized_diff");
       if (has_beta_diff || has_gamma_diff) {
-        const user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
-        CHECK_EQ_OR_RETURN(reduce_buf->data_type(), dy->data_type());
-        CHECK_EQ_OR_RETURN(reduce_buf->shape(), dy->shape());
+        user_op::TensorDesc* reduce_buf = ctx->TensorDesc4ArgNameAndIndex("reduce_buf", 0);
+        *reduce_buf = *dy;
       }
       CHECK_GE_OR_RETURN(begin_params_axis, 1);
       CHECK_LT_OR_RETURN(begin_params_axis, dy->shape().NumAxes());
@@ -175,16 +174,16 @@ REGISTER_USER_OP("layer_norm_param_grad")
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
         user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
-        CHECK_EQ_OR_RETURN(beta_diff->data_type(), beta_diff->data_type());
-        CHECK_EQ_OR_RETURN(beta_diff->shape(), beta_diff->shape());
+        *beta_diff->mut_data_type() = dy->data_type();
+        *beta_diff->mut_shape() = param_shape;
       }
       if (has_gamma_diff) {
         user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
         const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
         CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
-        CHECK_EQ_OR_RETURN(gamma_diff->data_type(), gamma_diff->data_type());
-        CHECK_EQ_OR_RETURN(gamma_diff->shape(), gamma_diff->shape());
+        *gamma_diff->mut_data_type() = dy->data_type();
+        *gamma_diff->mut_shape() = param_shape;
       }
       if (has_normalized_diff) {
         user_op::TensorDesc* normalized_diff =
