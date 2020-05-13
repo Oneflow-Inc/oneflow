@@ -24,7 +24,6 @@ class MultiplyKernel final : public user_op::OpKernel {
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  
 };
 
 }  // namespace
