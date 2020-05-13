@@ -24,6 +24,9 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
   size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());
+  bool all_outputs_constant =
+      (op.op_conf().has_user_conf() && op.op_conf().user_conf().all_outputs_constant());
+  if (all_outputs_constant) { mem_block_num = 1; }
   if (mem_block_num != -1) {
     ProduceRegst("out", false, mem_block_num, mem_block_num);
   } else {
