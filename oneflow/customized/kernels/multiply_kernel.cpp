@@ -22,7 +22,9 @@ class MultiplyKernel final : public user_op::OpKernel {
     KernelUtil<device_type, T>::Mul(ctx->device_ctx(), elem_cnt, x->dptr<T>(), y->dptr<T>(),
                                     out->mut_dptr<T>());
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  
 };
 
 }  // namespace
