@@ -7,7 +7,7 @@ REGISTER_USER_OP("batch_gather")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
+
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
@@ -15,7 +15,7 @@ REGISTER_USER_OP("batch_gather")
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_LE_OR_RETURN(indices->shape().dim_vec().size(), in->shape().dim_vec().size());
-      FOR_RANGE(int64_t, i, 0, indices->shape.dim_vec().size() - 1) {
+      FOR_RANGE(int64_t, i, 0, indices->shape().dim_vec().size() - 1) {
         if (in->is_dynamic() && indices->is_dynamic() == false) {
           CHECK_GE_OR_RETURN(indices->shape().dim_vec().at(i), in->shape().dim_vec().at(i));
         } else if (in->is_dynamic() == false && indices->is_dynamic()) {
@@ -24,9 +24,9 @@ REGISTER_USER_OP("batch_gather")
           CHECK_EQ_OR_RETURN(indices->shape().dim_vec().at(i), in->shape().dim_vec().at(i));
         }
       }
-      
+
       DimVector dim_vec(in->shape().dim_vec());
-      dim_vec.at(indices_shape()->NumAxes() - 1) = indices->shape().dim_vec().back();
+      dim_vec.at(indices->shape().NumAxes() - 1) = indices->shape().dim_vec().back();
       *out->mut_shape() = Shape(dim_vec);
       *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
@@ -52,7 +52,7 @@ REGISTER_USER_OP("batch_gather")
         ctx->NewBuilder()
             .Broadcast(user_op::OpArg("indices", 0))
             .PartialSum(user_op::OpArg("in", 0))
-            .PartialSum(user_op::OpArg("out"))
+            .PartialSum(user_op::OpArg("out", 0))
             .Build();
       } else {
         std::shared_ptr<ErrorProto> err;

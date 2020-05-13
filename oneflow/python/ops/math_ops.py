@@ -509,8 +509,7 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
           .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name if name is
-               not None else id_util.UniqueStr("UnsortedBatchSegmentSumLike_")
+        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSumLike_")
         op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
         op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
         op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
