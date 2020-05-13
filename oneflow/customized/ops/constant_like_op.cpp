@@ -1,5 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -41,14 +42,18 @@ REGISTER_USER_OP("constant_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("like", 0, 0)
-          .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(
-              ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      SbpSignatureBuilder().PartialSum("like", 0).Broadcast("out", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      FOR_RANGE(int64_t, i, 0,
+                ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("like", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+
       return Maybe<void>::Ok();
     });
 
