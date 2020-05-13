@@ -36,9 +36,6 @@ REGISTER_USER_OP("batch_gather")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int64_t in_num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       const int64_t indices_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
       if (indices_num_axes > 1) {

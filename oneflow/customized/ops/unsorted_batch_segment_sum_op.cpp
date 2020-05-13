@@ -32,8 +32,6 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int64_t data_num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("data", 0).shape().NumAxes();
       const int64_t indices_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
       CHECK_GT_OR_RETURN(indices_num_axes, 1)
