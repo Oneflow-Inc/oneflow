@@ -361,7 +361,7 @@ def broadcast_floor_mod(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.tanh")
+@oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
@@ -385,7 +385,7 @@ def tanh(x, name=None):
     )
 
 
-@oneflow_export("math.gelu")
+@oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
@@ -522,33 +522,6 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("math.sqrt")
-def sqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
-    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.sqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("math.rsqrt")
-def rsqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
-    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.rsqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
 
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
@@ -762,22 +735,6 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(out_lbi)
-
-@oneflow_export('math.square')
-def square(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Square_"),
-    )
-    setattr(op_conf.square_conf, "in", x.logical_blob_name)
-    setattr(op_conf.square_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):

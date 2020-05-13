@@ -19,6 +19,8 @@ class TensorDesc final {
   TensorDesc& operator=(const TensorDesc&);
   TensorDesc& operator=(const BlobDescProto&);
 
+  bool operator==(const TensorDesc&) const;
+
   const Shape& shape() const { return shape_; }
   Shape* mut_shape() { return &shape_; }
   DataType data_type() const { return data_type_; }
