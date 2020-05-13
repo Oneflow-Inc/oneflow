@@ -138,11 +138,51 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     std::vector<std::vector<const RequestDesc*>>* groups) {
   std::vector<const RequestDesc*> group;
   int64_t group_size = 0;
+  const CollectiveBoxingConf conf = Global<ResourceDesc>::Get()->collective_boxing_conf();
+  auto IsOpFusionEnabled = [&](const RequestDesc* request) -> bool {
+    const OpType op_type = request->op_desc().op_type();
+    if (op_type == OpType::kOpTypeAllReduce) {
+      return conf.nccl_fusion_all_reduce();
+    } else if (op_type == OpType::kOpTypeAllGather) {
+      return conf.nccl_fusion_all_gather();
+    } else if (op_type == OpType::kOpTypeReduceScatter) {
+      return conf.nccl_fusion_reduce_scatter();
+    } else if (op_type == OpType::kOpTypeReduce) {
+      return conf.nccl_fusion_reduce();
+    } else if (op_type == OpType::kOpTypeBroadcast) {
+      return conf.nccl_fusion_broadcast();
+    } else {
+      UNIMPLEMENTED();
+      return false;
+    }
+  };
+  auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
+    if (lhs->device_set() != rhs->device_set()) { return false; }
+    if (!IsOpFusionEnabled(lhs) || !IsOpFusionEnabled(rhs)) { return false; }
+    if (lhs->op_desc().op_type() != rhs->op_desc().op_type()) { return false; }
+    const OpType op_type = lhs->op_desc().op_type();
+    if (op_type == OpType::kOpTypeAllReduce) {
+      if (conf.nccl_fusion_all_reduce_use_buffer()) {
+        CHECK(lhs->op_desc().has_reduce_method());
+        CHECK(rhs->op_desc().has_reduce_method());
+        return lhs->op_desc().reduce_method() == rhs->op_desc().reduce_method()
+               && lhs->op_desc().data_type() == rhs->op_desc().data_type();
+      } else {
+        return true;
+      }
+    } else if (op_type == OpType::kOpTypeReduce || op_type == OpType::kOpTypeBroadcast
+               || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeAllGather) {
+      return true;
+    } else {
+      UNIMPLEMENTED();
+      return false;
+    }
+  };
+
   for (const RequestDesc* request : requests) {
-    int64_t size = Shape(request->op_desc().shape()).elem_cnt()
-                   * GetSizeOfDataType(request->op_desc().data_type());
-    if (group.empty() || request->device_set() != group.front()->device_set()
-        || group_size + size > fusion_threshold_) {
+    const int64_t size = GetCudaAlignedSize(Shape(request->op_desc().shape()).elem_cnt()
+                                            * GetSizeOfDataType(request->op_desc().data_type()));
+    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_) {
       if (!group.empty()) {
         groups->emplace_back();
         groups->back().swap(group);
