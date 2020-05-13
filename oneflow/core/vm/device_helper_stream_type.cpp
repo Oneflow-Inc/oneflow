@@ -116,7 +116,7 @@ void DeviceHelperStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeRemoteStreamDesc(
+ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeWorkerStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {

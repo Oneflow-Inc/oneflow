@@ -28,11 +28,11 @@ template<VmType vm_type>
 std::string MallocInstruction();
 
 template<>
-std::string MallocInstruction<VmType::kRemote>() {
+std::string MallocInstruction<VmType::kWorker>() {
   return "Malloc";
 }
 template<>
-std::string MallocInstruction<VmType::kLocal>() {
+std::string MallocInstruction<VmType::kMaster>() {
   return "LocalMalloc";
 }
 
@@ -57,8 +57,8 @@ TEST(VmDesc, basic) {
   int64_t src_object_id = 9527;
   int64_t dst_object_id = 9528;
   size_t size = 1024;
-  auto vm0 = NewTestVirtualMachine<VmType::kLocal>(&src_object_id, size);
-  auto vm1 = NewTestVirtualMachine<VmType::kRemote>(&dst_object_id, size);
+  auto vm0 = NewTestVirtualMachine<VmType::kMaster>(&src_object_id, size);
+  auto vm1 = NewTestVirtualMachine<VmType::kWorker>(&dst_object_id, size);
   vm0->Receive(NewInstruction("L2RLocalSend")
                    ->add_const_operand(src_object_id)
                    ->add_int64_operand(logical_token)

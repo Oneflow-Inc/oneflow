@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace eager {

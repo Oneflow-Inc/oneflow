@@ -191,7 +191,7 @@ void HostStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& resource,
+ObjectMsgPtr<StreamDesc> HostStreamType::MakeWorkerStreamDesc(const Resource& resource,
                                                               int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
@@ -202,7 +202,7 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeRemoteStreamDesc(const Resource& re
   return ret;
 }
 
-ObjectMsgPtr<StreamDesc> HostStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+ObjectMsgPtr<StreamDesc> HostStreamType::MakeMasterStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
   ret->set_num_machines(1);

@@ -28,9 +28,9 @@ class NopStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
-  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
+  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override;
 };
 
 class NopInstructionType final : public InstructionType {
@@ -68,7 +68,7 @@ void NopStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& resource,
+ObjectMsgPtr<StreamDesc> NopStreamType::MakeWorkerStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
@@ -79,7 +79,7 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeRemoteStreamDesc(const Resource& res
   return ret;
 }
 
-ObjectMsgPtr<StreamDesc> NopStreamType::MakeLocalStreamDesc(const Resource& resource) const {
+ObjectMsgPtr<StreamDesc> NopStreamType::MakeMasterStreamDesc(const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
   ret->set_num_machines(1);

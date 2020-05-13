@@ -27,9 +27,9 @@ class L2RReceiverStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
-  ObjectMsgPtr<StreamDesc> MakeLocalStreamDesc(const Resource& resource) const override;
+  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override;
 };
 
 namespace {
@@ -128,7 +128,7 @@ void L2RReceiverStreamType::Compute(Instruction* instruction) const {
   GetTransporter(instruction)->Transport(&transport_key2receive_request);
 }
 
-ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
+ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeWorkerStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RReceiverStreamType>());
@@ -139,7 +139,7 @@ ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeRemoteStreamDesc(
   return ret;
 }
 
-ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeLocalStreamDesc(
+ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeMasterStreamDesc(
     const Resource& resource) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RReceiverStreamType>());

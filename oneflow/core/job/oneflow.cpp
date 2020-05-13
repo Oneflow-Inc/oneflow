@@ -758,11 +758,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
-  Global<OneflowVM<vm::kRemote>>::New(Global<ResourceDesc>::Get()->resource(),
-                                      Global<MachineCtx>::Get()->this_machine_id());
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<OneflowVM<vm::kLocal>>::New(Global<ResourceDesc>::Get()->resource(),
-                                       Global<MachineCtx>::Get()->this_machine_id());
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
@@ -771,10 +767,8 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
 Oneflow::~Oneflow() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset();
-    Global<OneflowVM<vm::kLocal>>::Delete();
   }
   runtime_.reset();
-  Global<OneflowVM<vm::kRemote>>::Delete();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));

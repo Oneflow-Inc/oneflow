@@ -22,6 +22,10 @@ def env_init():
     env_proto_mutable = False
     return True
 
+@oneflow_export('env.current_resource', enable_if=hob.in_normal_mode & hob.env_initialized)
+def get_env_resource():
+    return c_api_util.CurrentResource()
+
 @oneflow_export('env.machine')
 def machine(*val):
     assert env_proto_mutable == True

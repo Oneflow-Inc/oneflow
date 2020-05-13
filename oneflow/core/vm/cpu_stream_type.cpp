@@ -43,7 +43,7 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> CpuStreamType::MakeRemoteStreamDesc(const Resource& resource,
+ObjectMsgPtr<StreamDesc> CpuStreamType::MakeWorkerStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
   if (!resource.has_cpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();

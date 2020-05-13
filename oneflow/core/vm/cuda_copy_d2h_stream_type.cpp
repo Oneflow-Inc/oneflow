@@ -32,7 +32,7 @@ class CudaCopyD2HStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeRemoteStreamDesc(const Resource& resource,
+  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
                                                 int64_t this_machine_id) const override;
 };
 
@@ -120,7 +120,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeRemoteStreamDesc(
+ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeWorkerStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
