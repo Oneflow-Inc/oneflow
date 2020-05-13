@@ -221,7 +221,6 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   auto& device_id2comm =
       device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
-
   if (group.front()->op_desc().op_type() == OpType::kOpTypeAllReduce
       && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
     UNIMPLEMENTED();
@@ -344,6 +343,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   int cuda_stream_greatest_priority;
   CudaCheck(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
   stream_id2device_id2stream_.resize(num_streams_);
+  stream_id2device_id2fusion_buffer_.resize(num_streams_);
   for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
     auto& device_id2stream = stream_id2device_id2stream_.at(stream_id);
     auto& device_id2fusion_buffer_ = stream_id2device_id2fusion_buffer_.at(stream_id);
