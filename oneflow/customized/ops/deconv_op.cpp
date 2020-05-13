@@ -93,20 +93,14 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
     err << " data_format:" << data_format;
     is_checked = false;
   }
+  
+  const auto& padding = conf.attr<std::string>("padding");
+  if (!(padding == "valid" || padding == "same")) {
+    err << " padding:" << padding;
+    is_checked = false;
+  }
 
   if (NDims != 0) {
-    const auto& padding_needed = conf.attr<std::vector<int32_t>>("padding_needed");
-    if (!(padding_needed.size() != NDims)) {
-      err << " padding_needed: number of element is " << padding_needed.size();
-      is_checked = false;
-    }
-
-    const auto& output_padding = conf.attr<std::vector<int32_t>>("output_padding");
-    if (!(output_padding.size() != NDims)) {
-      err << " output_padding: number of element is " << output_padding.size();
-      is_checked = false;
-    }
-
     const auto& kernel_size = conf.attr<std::vector<int32_t>>("kernel_size");
     if (kernel_size.size() != NDims) {
       err << " kernel_size: number of element is " << kernel_size.size();
@@ -153,7 +147,7 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
             .Input("x", op.GetGradTensorWithOpOutput("out", 0))
             .Output("filter_diff")
             .Attr<int32_t>("num_spatial_dims", ndims)
-            .Attr<std::string>("padding", "valid") // not used?
+            .Attr<std::string>("padding", padding)
             .Attr<std::string>("data_format", data_format)
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
@@ -174,7 +168,7 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
             .Output("dx")
             .Attr<int32_t>("num_spatial_dims", ndims)
             .Attr<std::string>("data_format", data_format)
-            .Attr<std::string>("padding", "valid")
+            .Attr<std::string>("padding", padding)
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
             .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
@@ -192,8 +186,7 @@ REGISTER_USER_OP("deconv1d")
     .Input("weight")
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("padding_needed", UserOpAttrType::kAtListInt32)
+    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -208,8 +201,7 @@ REGISTER_USER_OP("deconv2d")
     .Input("weight")
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("padding_needed", UserOpAttrType::kAtListInt32)
+    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -224,8 +216,7 @@ REGISTER_USER_OP("deconv3d")
     .Input("weight")
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("padding_needed", UserOpAttrType::kAtListInt32)
+    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
