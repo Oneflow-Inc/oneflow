@@ -3,6 +3,29 @@
 
 namespace oneflow {
 
+namespace {
+
+void PrintSbpLog(SbpSignatureList* sbp_list) {
+  for (const auto& sbp_sign : sbp_list->sbp_signature()) {
+    std::cout << "cclog: one sbp sign: ";
+    for (const auto& pair : sbp_sign.bn_in_op2sbp_parallel()) {
+      std::cout << " bn: " << pair.first;
+      if (pair.second.has_split_parallel()) {
+        std::cout << " Split axis = " << pair.second.split_parallel().axis();
+      } else if (pair.second.has_broadcast_parallel()) {
+        std::cout << " Broadcast ";
+      } else if (pair.second.has_partial_sum_parallel()) {
+        std::cout << " PartialSum ";
+      } else {
+        std::cout << " ERROR !";
+      }
+    }
+    std::cout << std::endl;
+  }
+}
+
+}  // namespace
+
 REGISTER_USER_OP("ccrelu")
     .Input("in")
     .Output("out")
@@ -15,16 +38,7 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      // SbpSignatureBuilder()
-      //     .Split("in", 0, 0)
-      //     .Split("out", 0, 0)
-      //     .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -43,11 +57,11 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("y", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("dx", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("y", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -138,9 +152,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -159,9 +171,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -188,9 +198,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       int64_t parallel_num = ctx->parallel_num();
       DeviceType device_type = ctx->device_type();
       if (device_type == DeviceType::kCPU && parallel_num > 1) {
-        SbpSignatureBuilder()
-            .Split(ctx->outputs(), 0)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -208,12 +216,10 @@ REGISTER_USER_OP("TestMultiInput")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -233,12 +239,10 @@ REGISTER_USER_OP("TestMultiInputGrad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -279,9 +283,7 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 

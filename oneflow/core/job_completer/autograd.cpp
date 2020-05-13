@@ -468,7 +468,9 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
-  for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
+  for (OpNode* loss_node : loss_nodes) {
+    CHECK(NeedBackwardOp(loss_node)) << loss_node->op().op_name();
+  }
 
   // generate ones lbi as loss's diff
   HashMap<OpBlobArg, LogicalBlobId> out_oba2out_diff_lbi;
