@@ -7,9 +7,10 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-#import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.remote_blob import BlobDef
+
 
 @oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
@@ -613,6 +614,28 @@ def image_normalize(image, std, mean, name=None):
         .Output("out")
         .SetAttr("std", std, "AttrTypeListFloat")
         .SetAttr("mean", mean, "AttrTypeListFloat")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("image_flip")
+def image_flip(image, flip_code, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ImageFlip_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(image.shape[0],), dtype=flow.int8, name="{}_FlipCode_".format(name)
+        )
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_flip")
+        .Input("in", [image])
+        .Input("flip_code", [flip_code])
+        .Output("out")
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]

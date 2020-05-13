@@ -350,10 +350,10 @@ MakeInplaceProposalFn(const std::string& input_arg_name) {
 
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"image", DataType::kTensorBuffer},
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"in", DataType::kTensorBuffer},
                                              {"flip_code", DataType::kInt8},
                                              {"out", DataType::kTensorBuffer}}))
-    .SetInplaceProposalFn(MakeInplaceProposalFn("image"));
+    .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
