@@ -164,6 +164,7 @@ def bias_add(value, bias, data_format=None, name=None):
             .Output("out")
             .SetAttr("axis", bias_add_axis, "AttrTypeInt32")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
             )
     else:
