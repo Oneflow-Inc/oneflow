@@ -10,10 +10,8 @@ import collections
 import os
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
-assert len(gpus) > 0, "No GPU found"
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-tf.debugging.set_log_device_placement(True)
 
 def test_layer_norm(_):
     confs = [

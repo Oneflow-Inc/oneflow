@@ -25,6 +25,11 @@ TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
   return *this;
 }
 
+bool TensorDesc::operator==(const TensorDesc& rhs) const {
+  return (shape_ == rhs.shape_) && (data_type_ == rhs.data_type_)
+         && (is_dynamic_ == rhs.is_dynamic_) && (is_tensor_list_ == rhs.is_tensor_list_);
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -30,6 +30,8 @@ class HighOrderBool(BoolFunctor):
     def __call__(self):
         return self.function_()
 
+always_true = HighOrderBool("Always true", lambda: True)
+always_false = HighOrderBool("Always false", lambda: False)
 
 class _AndBoolFunctor(BoolFunctor):
 
