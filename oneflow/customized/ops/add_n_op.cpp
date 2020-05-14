@@ -9,7 +9,8 @@ REGISTER_USER_OP("add_n")
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       for (const auto& pair : ctx->inputs()) {
         const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ(in_0->shape(), cur_in->shape());
+        CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
+        CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
       }
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in_0;
       return Maybe<void>::Ok();

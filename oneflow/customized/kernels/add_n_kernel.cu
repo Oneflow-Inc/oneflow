@@ -179,7 +179,10 @@ struct GpuAddCaller<float16, N, false> {
 template<>
 const AddNKernelRegistry& SingletonRegistry<float16>() {
   static AddNKernelRegistry s_registry = {
-#define REG_ENTRY(n) {std::make_pair(n, false), &GpuAddCaller<float16, n, false>::call},
+#define REG_ENTRY(n)                                                  \
+  {std::make_pair(n, false), &GpuAddCaller<float16, n, false>::call}, \
+      {std::make_pair(n, true),                                       \
+       &GpuAddCaller<float16, n, false>::call},  // use non-assign add deliberately
       OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ)
 #undef REG_ENTRY
   };
