@@ -26,11 +26,17 @@ class InstructionsBuilder(object):
         op_conf_sym = self._GetOpConfSymbolId(op_conf)
         opkernel_obj = self.GetSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym)
         input_triples = self._GetInputTriples(op_conf)
-        output_triples = self._GetOutputTriples(op_conf, parallel_conf_sym)
+        output_triples = self._GetOutputTriples(op_conf, parallel_conf, parallel_conf_sym)
         mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_conf_sym)
         return self._StatelessCall(device_tag, parallel_conf_sym,
                                    job_conf_sym, op_conf_sym, opkernel_obj,
                                    input_triples, output_triples, mut2_output_triples)
+
+    def WatchBlobHeader(self, blob_object_id):
+        return self._WatchBlob("WatchBlobHeader", blob_object_id)
+
+    def WatchBlobBody(self, blob_object_id):
+        return self._WatchBlob("WatchBlobBody", blob_object_id)
 
     def GetSymbolId4String(self, string):
         if id_cache.HasSymbolId4String(string): return id_cache.GetSymbolId4String(string)
@@ -82,12 +88,13 @@ class InstructionsBuilder(object):
                 input_triples.append((ibn_sym, i, in_object_id))
         return input_triples
 
-    def _GetOutputTriples(self, op_conf, parallel_conf_sym):
+    def _GetOutputTriples(self, op_conf, parallel_conf, parallel_conf_sym):
         output_triples = []
         for obn, lbns in op_conf.user_conf.output.items():
             obn_sym = self.GetSymbolId4String(obn)
             for i in range(len(lbns.s)):
                 out_object_id = self._NewBlobObjectId(parallel_conf_sym)
+                # TODO(lixinqi) set parallel_conf and parallel_conf_sym for out_object_id
                 id_cache.SetObjectId4Lbn(lbns.s[i], out_object_id)
                 output_triples.append((obn_sym, i, out_object_id))
         return output_triples
@@ -205,6 +212,9 @@ class InstructionsBuilder(object):
         eager_symbol.symbol_id = symbol_id
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
+
+    def _WatchBlob(self, instruction_name, blob_object_id):
+        TODO()
 
 def _SymbolOperand(val):
     operand = instr_util.InstructionOperandProto()

@@ -38,5 +38,31 @@ class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKer
 COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
     "gpu.StatelessCallOpKernel"));
 
+class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+ public:
+  GpuWatchBlobHeaderInstructionType() = default;
+  ~GpuWatchBlobHeaderInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<GpuWatchBlobHeaderInstructionType>(
+    "gpu.WatchBlobHeader"));
+
+class GpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+ public:
+  GpuWatchBlobBodyInstructionType() = default;
+  ~GpuWatchBlobBodyInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<GpuWatchBlobBodyInstructionType>(
+    "gpu.WatchBlobBody"));
+
 }  // namespace eager
 }  // namespace oneflow

@@ -4,7 +4,7 @@ from google.protobuf import text_format
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.oneflow_internal as oneflow_internal
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.session_context as session_ctx
@@ -33,5 +33,6 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     ndarray_lists = ofblob.OfBlob(of_blob_ptr).CopyToNdarrayLists()
     handler(local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched))
 
+# static lifetime
 _global_watcher = _Watcher()
-g_func_ctx.RegisterWatcherOnlyOnce(_global_watcher)
+c_api_util.RegisterWatcherOnlyOnce(_global_watcher)
