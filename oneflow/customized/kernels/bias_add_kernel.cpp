@@ -57,7 +57,6 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BIAS_ADD_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_KERNEL(CPU, float16)
 REGISTER_KERNEL(CPU, float)
 REGISTER_KERNEL(CPU, double)
 REGISTER_KERNEL(CPU, int8_t)
