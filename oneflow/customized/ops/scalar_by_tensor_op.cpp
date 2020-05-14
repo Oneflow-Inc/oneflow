@@ -68,6 +68,8 @@ REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
             builder.Op("reduce_sum")
                 .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
                 .Output("output_tensor")
+                .Attr("axis", std::vector<int32_t>())
+                .Attr("keepdims", false)
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "scalar", 0);
         AddOp(grad_op);
@@ -100,6 +102,8 @@ REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
             builder0.Op("reduce_sum")
                 .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
                 .Output("output_tensor")
+                .Attr("axis", std::vector<int32_t>())
+                .Attr("keepdims", false)
                 .Build();
         user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_scalar_mul");
         user_op::UserOpConfWrapper scalar_grad_scalar_mul_op =
@@ -160,6 +164,8 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
             builder1.Op("reduce_sum")
                 .Input("input_tensor", scalar_grad_multiply_op.output("out", 0))
                 .Output("output_tensor")
+                .Attr("axis", std::vector<int32_t>())
+                .Attr("keepdims", false)
                 .Build();
         op.BindGradTensorWithOpInput(scalar_grad_reduce_sum_op.output("output_tensor", 0), "scalar",
                                      0);
