@@ -11,6 +11,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import os
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -22,9 +23,16 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.name = id_util.UniqueStr("Gather_")
     else:
         op_conf.name = name
-
+    params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
+    elif axis < 0:
+        origin_axis = axis
+        axis += params_ndims
+        assert axis >= 0 and axis < params_ndims, ValueError(
+            "Expected axis to between [%d, %d).  But received: %d " %(-params_ndims,
+                params_ndims, origin_axis)
+            )
 
     if batch_dims > 0:
         if axis == batch_dims:
@@ -42,10 +50,20 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.gather_ms0_conf.indices = indices.logical_blob_name
         op_conf.gather_ms0_conf.out = "out"
     else:
-        setattr(op_conf.gather_conf, "in", params.logical_blob_name)
-        op_conf.gather_conf.indices = indices.logical_blob_name
-        op_conf.gather_conf.out = "out"
-        op_conf.gather_conf.axis = axis
+        if os.getenv("ENABLE_USER_OP") == 'True':
+            return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("Gather_"))\
+           .Op("gather")\
+           .Input("in", [params])\
+           .Input("indices", [indices])\
+           .Output("out")\
+           .SetAttr("axis", int(axis), "AttrTypeInt64")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+        else:
+            setattr(op_conf.gather_conf, "in", params.logical_blob_name)
+            op_conf.gather_conf.indices = indices.logical_blob_name
+            op_conf.gather_conf.out = "out"
+            op_conf.gather_conf.axis = axis
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -205,7 +223,34 @@ def slice(input_, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        slice_tup_list = []
+        for b, s, d in list(zip(begin, size, input_.static_shape)):
+            begin, end, stride = None, None, 1
+            if b is not None:
+                if b < -d or b > d - 1:
+                    raise ValueError(
+                        "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                        "and less than input_'s 'i'th dimension."
+                    )
+                b = b + d if b < 0 else b
+                begin = b
+            if s is not None:
+                if s > 0:
+                    if b + s > d:
+                        raise ValueError(
+                            "the sum of 'i'th element of begin and 'i'th element of size must be "
+                            "less than or equal to input_'s 'i'th dimension."
+                        )
+                    end = b + s
+                elif s == -1:
+                    end = d
+                else:
+                    raise ValueError(
+                        "elements of size must be an int that greater then 0 or equal to -1"
+                    )
+            slice_tup_list.append((begin, end, stride))
+        return slice_v2(input_, slice_tup_list, name=name)
     slice_conf_list = []
     for b, s, d in list(zip(begin, size, input_.static_shape)):
         slice_conf = op_conf_util.DimSliceConf()
