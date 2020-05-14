@@ -476,18 +476,18 @@ void UserOp::VirtualGenKernelConf(
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
-#define BLOB_DESCS_TO_PROTO(prefix)                         \
-  for (const auto& bn : prefix##_bns()) {                   \
-    BlobDescProto proto;                                    \
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);     \
-    if (!blob_desc) { continue; }                           \
-    blob_desc->ToProto(&proto);                             \
-    (*user_conf->mutable_bn_in_op2blob_desc())[bn] = proto; \
+#define BLOB_DESCS_TO_PROTO(prefix, is_arg)                                                        \
+  for (const auto& bn : prefix##_bns()) {                                                          \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                            \
+    if (blob_desc) { blob_desc->ToProto(&(*user_conf->mutable_bn_in_op2blob_desc())[bn]); }        \
+    if (is_arg) {                                                                                  \
+      LogicalBlobDesc4BnInOp(bn).ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[bn]); \
+    }                                                                                              \
   }
 
-  BLOB_DESCS_TO_PROTO(input)
-  BLOB_DESCS_TO_PROTO(output)
-  BLOB_DESCS_TO_PROTO(tmp)
+  BLOB_DESCS_TO_PROTO(input, true)
+  BLOB_DESCS_TO_PROTO(output, true)
+  BLOB_DESCS_TO_PROTO(tmp, false)
 
 #undef BLOB_DESCS_TO_PROTO
 }
