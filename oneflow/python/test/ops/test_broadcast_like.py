@@ -20,16 +20,13 @@ def test_broadcast_like_forward(test_case, device_type, input_shape, like_shape,
 
     x = np.random.rand(*input_shape).astype(np.float32)
     like = np.random.rand(*like_shape).astype(np.float32)
-    print(like)
     of_out = broadcast_like_forward(x, like).get()
-    print(of_out.ndarray())
-
 
 def test_broadcast_like(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(2,4)]
     arg_dict["like_shape"] = [(2,3,4)]
-    arg_dict["axis"] = [[1]]
+    arg_dict["axis"] = [[]]
     for arg in GenArgList(arg_dict):
         test_broadcast_like_forward(test_case, *arg)

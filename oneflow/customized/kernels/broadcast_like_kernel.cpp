@@ -29,7 +29,7 @@ class BroadcastLikeKernel final : public OpKernel {
 
 template<DeviceType device, typename T>
 bool IsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("out_tensor", 0);
+  const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
   if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
     return true;
   }

@@ -95,4 +95,19 @@ REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
 
+REGISTER_USER_OP_GRAD("reduce_sum")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper reduce_sum_grad_op =
+            builder.Op("broadcast_like")
+                .Input("x", op.GetGradTensorWithOpOutput("output_tensor", 0))
+                .Input("like", op.input("input_tensor", 0))
+                .Output("y")
+                .Build();
+        op.BindGradTensorWithOpInput(reduce_sum_grad_op.output("y", 0), "input_tensor", 0);
+        AddOp(reduce_sum_grad_op);
+      }
+    });
+
 }  // namespace oneflow
