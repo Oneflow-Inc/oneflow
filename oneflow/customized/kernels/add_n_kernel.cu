@@ -13,17 +13,20 @@ struct Param {
 template<typename T, int32_t N>
 __global__ void gpu_add(const int64_t n, Param<T, N> para) {
   CUDA_1D_KERNEL_LOOP(i, n) {
+    T tmp = para.in[0][i];
 #pragma unroll
-    para.out[i] = para.in[0][i];
-    for (int j = 1; j < N; ++j) { para.out[i] += para.in[j][i]; }
+    for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
+    para.out[i] = tmp;
   }
 }
 
 template<typename T, int32_t N>
 __global__ void gpu_assign_add(const int64_t n, Param<T, N> para) {
   CUDA_1D_KERNEL_LOOP(i, n) {
+    T tmp = 0;
 #pragma unroll
-    for (int j = 1; j < N; ++j) { para.out[i] += para.in[j][i]; }
+    for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
+    para.out[i] += tmp;
   }
 }
 

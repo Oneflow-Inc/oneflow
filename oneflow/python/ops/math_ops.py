@@ -43,9 +43,8 @@ def _recursive_build_add_n(inputs, name=None):
                 )
     else:
         assert len(inputs) > kernel_max_inputs
-        cutted_inputs = [inputs[x: x + kernel_max_inputs]\
-                for x in range(0, len(inputs), kernel_max_inputs)]
-        new_inputs = [_recursive_build_add_n(x) for x in cutted_inputs]
+        new_inputs = inputs[kernel_max_inputs:]
+        new_inputs.append(_recursive_build_add_n(inputs[:kernel_max_inputs]))
         return _recursive_build_add_n(new_inputs)
 
 @oneflow_export("math.add_n")
