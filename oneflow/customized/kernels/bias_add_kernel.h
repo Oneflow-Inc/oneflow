@@ -5,10 +5,10 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct BiasAddUtil {
-  static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
-                      const T* x, const T* bias, T* y);
+template<DeviceType device_type, typename T, typename Index>
+struct BiasAddCalculation {
+  static void Invoke(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size,
+                     const T* x, const T* bias, T* y);
 };
 
 template<DeviceType device_type, typename T>
@@ -26,9 +26,16 @@ class BiasAddUserKernel final : public user_op::OpKernel {
     const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
     const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    BiasAddUtil<device_type, T>::BiasAdd(ctx->device_ctx(), outer_size, bias_size, inner_size,
-                                         a_tensor->dptr<T>(), b_tensor->dptr<T>(),
-                                         out_tensor->mut_dptr<T>());
+    const auto n = a_tensor->shape().elem_cnt();
+    if (IsKernelSafeInt32(n)) {
+      BiasAddCalculation<device_type, T, int32_t>::Invoke(
+          ctx->device_ctx(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
+          b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
+    } else {
+      BiasAddCalculation<device_type, T, int64_t>::Invoke(
+          ctx->device_ctx(), outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
+          b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
