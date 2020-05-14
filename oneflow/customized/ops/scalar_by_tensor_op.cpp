@@ -35,6 +35,11 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
   };
 }
 
+Maybe<void> BatchAxisInferFn(user_op::BatchAxisContext* ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP("scalar_add_by_tensor")
@@ -43,10 +48,7 @@ REGISTER_USER_OP("scalar_add_by_tensor")
     .Output("y")
 
     .SetTensorDescInferFn(InferBroadcastTensorDescFn)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
+    .SetBatchAxisInferFn(BatchAxisInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
