@@ -27,23 +27,45 @@ def add(x, y, name=None):
     else:
         return broadcast_add(x, y, name)
 
+def _recursive_build_add_n(inputs, name=None):
+    kernel_max_inputs = 8
+    if (len(inputs) == 1):
+        return inputs[0]
+    elif (len(inputs) <= kernel_max_inputs):
+        return (
+                flow.user_op_builder(name if name is not None else id_util.UniqueStr("AddN_"))
+                .Op("add_n")
+                .Input("in", inputs)
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
+    else:
+        assert len(inputs) > kernel_max_inputs
+        new_inputs = inputs[kernel_max_inputs:]
+        new_inputs.append(_recursive_build_add_n(inputs[:kernel_max_inputs]))
+        return _recursive_build_add_n(new_inputs)
+
 @oneflow_export("math.add_n")
 def add_n(inputs, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("AddN_"),
-    )
-    assert len(inputs) > 1
-    for blob in inputs:
-        getattr(op_conf.add_conf, "in").append(blob.logical_blob_name)
-    op_conf.add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("AddN_"),
+        )
+        assert len(inputs) > 1
+        for blob in inputs:
+            getattr(op_conf.add_conf, "in").append(blob.logical_blob_name)
+        op_conf.add_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+    return _recursive_build_add_n(inputs, name)
 
 @oneflow_export("math.subtract")
 def subtract(x, y, name=None):
