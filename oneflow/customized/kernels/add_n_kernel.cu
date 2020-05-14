@@ -4,36 +4,102 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-__global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1) {
+template<typename T, int32_t N>
+struct Param {
+  const T* in[N];
+  T* out;
+};
+
+template<typename T, int32_t N>
+__global__ void gpu_add(const int64_t n, Param<T, N> para) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (in_1[i]) { out[i] += in_1[i]; }
+#pragma unroll
+    para.out[i] = para.in[0][i];
+    for (int j = 1; j < N; ++j) { para.out[i] += para.in[j][i]; }
   }
 }
 
+template<typename T, int32_t N>
+__global__ void gpu_assign_add(const int64_t n, Param<T, N> para) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+#pragma unroll
+    for (int j = 1; j < N; ++j) { para.out[i] += para.in[j][i]; }
+  }
+}
+
+template<typename T, int32_t N, bool is_assign_add>
+struct GpuAddCaller;
+
+template<typename T, int32_t N>
+struct GpuAddCaller<T, N, false> {
+  static void call(user_op::KernelComputeContext* ctx) {
+    CHECK_EQ(N, ctx->inputs().size());
+
+    Param<T, N> para;
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t n = out->shape().elem_cnt();
+    para.out = out->mut_dptr<T>();
+    for (int32_t i = 0; i < N; ++i) {
+      para.in[i] = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
+    }
+
+    gpu_add<T, N>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, para);
+  }
+};
+
+template<typename T, int32_t N>
+struct GpuAddCaller<T, N, true> {
+  static void call(user_op::KernelComputeContext* ctx) {
+    CHECK_EQ(N, ctx->inputs().size());
+
+    Param<T, N> para;
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t n = out->shape().elem_cnt();
+    para.out = out->mut_dptr<T>();
+    for (int32_t i = 0; i < N; ++i) {
+      para.in[i] = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
+    }
+
+    gpu_assign_add<T, N>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, para);
+  }
+};
+
+using CallFn = std::function<void(user_op::KernelComputeContext*)>;
+using AddNKernelRegistry = std::map<std::pair<int32_t, bool>, CallFn>;
+
+#define ADD_DIM_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(2) \
+  OF_PP_MAKE_TUPLE_SEQ(3) \
+  OF_PP_MAKE_TUPLE_SEQ(4) \
+  OF_PP_MAKE_TUPLE_SEQ(5) \
+  OF_PP_MAKE_TUPLE_SEQ(6) \
+  OF_PP_MAKE_TUPLE_SEQ(7) \
+  OF_PP_MAKE_TUPLE_SEQ(8)
+
+#define IS_ASSIGN_ADD_SEQ    \
+  OF_PP_MAKE_TUPLE_SEQ(true) \
+  OF_PP_MAKE_TUPLE_SEQ(false)
+
 template<typename T>
-__global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1, const T* in_2) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_1[i] + in_2[i]; }
+const AddNKernelRegistry& SingletonRegistry() {
+  static AddNKernelRegistry s_registry = {
+#define REG_ENTRY(n, is_assign_add) \
+  {std::make_pair(n, is_assign_add), &GpuAddCaller<T, n, is_assign_add>::call},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REG_ENTRY, ADD_DIM_SEQ, IS_ASSIGN_ADD_SEQ)
+#undef REG_ENTRY
+  };
+  return s_registry;
 }
 
 template<typename T>
-__global__ void gpu_add(const int64_t n, T* out, const T* in_0) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i]; }
-}
-template<typename T>
-__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i]; }
-}
-
-template<typename T>
-__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
-}
-
-template<typename T>
-__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                        const T* in_3) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
+const CallFn* LookUpInRegistry(int32_t in_num, int32_t is_assign_add) {
+  auto it = SingletonRegistry<T>().find(std::make_pair(in_num, is_assign_add));
+  if (it == SingletonRegistry<T>().end()) { return nullptr; }
+  return &(it->second);
 }
 
 }  // namespace
@@ -48,46 +114,15 @@ class GpuAddNKernel : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    size_t in_num = ctx->inputs().size();
-    CHECK_GE(in_num, 2);
-    CHECK_LE(in_num, 4)
-        << "GpuAddNKernel of add_n op doesn't support number of operands which is bigger than 4.";
+    int32_t in_num = ctx->inputs().size();
+    bool is_assign_add = (ctx->Tensor4ArgNameAndIndex("out", 0)->dptr<T>()
+                          == ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<T>());
 
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = out->shape().elem_cnt();
-    T* out_dptr = out->mut_dptr<T>();
-
-    std::vector<const T*> in_dptrs(in_num);
-    for (int32_t i = 0; i < in_num; ++i) {
-      in_dptrs.at(i) = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
-    }
-
-    if (in_num == 2) {
-      if (out_dptr == in_dptrs.at(0)) {
-        gpu_assign_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                            ctx->device_ctx()->cuda_stream()>>>(n, out_dptr, in_dptrs.at(1));
-      } else {
-        gpu_add<T>
-            <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-               ctx->device_ctx()->cuda_stream()>>>(n, out_dptr, in_dptrs.at(0), in_dptrs.at(1));
-      }
-    } else if (in_num == 3) {
-      if (out_dptr == in_dptrs.at(0)) {
-        gpu_assign_add<T>
-            <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-               ctx->device_ctx()->cuda_stream()>>>(n, out_dptr, in_dptrs.at(1), in_dptrs.at(2));
-      } else {
-        gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                     ctx->device_ctx()->cuda_stream()>>>(n, out_dptr, in_dptrs.at(0),
-                                                         in_dptrs.at(1), in_dptrs.at(2));
-      }
-    } else if (in_num == 4) {
-      gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                   ctx->device_ctx()->cuda_stream()>>>(n, out_dptr, in_dptrs.at(0), in_dptrs.at(1),
-                                                       in_dptrs.at(2), in_dptrs.at(3));
-    } else {
-      LOG(FATAL) << "Not supported input size for GpuAddNKernel: " << in_num;
-    }
+    const auto* caller = LookUpInRegistry<T>(in_num, is_assign_add);
+    CHECK(caller != nullptr) << "GpuAddNKernel: Cannot find registered funtion for in_num: "
+                             << in_num << " is_assign_add: " << is_assign_add
+                             << " of data_type: " << DataType_Name(GetDataType<T>::value);
+    (*caller)(ctx);
   }
 };
 
@@ -102,18 +137,43 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_GPU_ADDN_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
 namespace {
 
-__global__ void half_gpu_add(const int64_t n, half* out, const half* in_0, const half* in_1) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = __hadd(in_0[i], in_1[i]); }
+template<int32_t N>
+__global__ void gpu_half_add(const int64_t n, Param<half, N> para) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+#pragma unroll
+    para.out[i] = para.in[0][i];
+    for (int j = 1; j < N; ++j) { para.out[i] = __hadd(para.out[i], para.in[j][i]); }
+  }
 }
 
-__global__ void half_gpu_add(const int64_t n, half* out, const half* in_0, const half* in_1,
-                             const half* in_2) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = __hadd(in_0[i], __hadd(in_1[i], in_2[i])); }
-}
+template<int32_t N>
+struct GpuAddCaller<float16, N, false> {
+  static void call(user_op::KernelComputeContext* ctx) {
+    CHECK_EQ(N, ctx->inputs().size());
 
-__global__ void half_gpu_add(const int64_t n, half* out, const half* in_0, const half* in_1,
-                             const half* in_2, const half* in_3) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = __hadd(in_0[i], __hadd(in_1[i], __hadd(in_2[i], in_3[i]))); }
+    Param<half, N> para;
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t n = out->shape().elem_cnt();
+    para.out = reinterpret_cast<half*>(out->mut_dptr<float16>());
+    for (int32_t i = 0; i < N; ++i) {
+      para.in[i] =
+          reinterpret_cast<const half*>(ctx->Tensor4ArgNameAndIndex("in", i)->dptr<float16>());
+    }
+
+    gpu_half_add<N>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, para);
+  }
+};
+
+template<>
+const AddNKernelRegistry& SingletonRegistry<float16>() {
+  static AddNKernelRegistry s_registry = {
+#define REG_ENTRY(n) {std::make_pair(n, false), &GpuAddCaller<float16, n, false>::call},
+      OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_DIM_SEQ)
+#undef REG_ENTRY
+  };
+  return s_registry;
 }
 
 }  // namespace
@@ -127,39 +187,15 @@ class GpuAddNHalfKernel : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    size_t in_num = ctx->inputs().size();
-    CHECK_GE(in_num, 2);
-    CHECK_LE(in_num, 4) << "GpuAddNHalfKernel of add_n op doesn't support number of operands which "
-                           "is bigger than 4.";
+    int32_t in_num = ctx->inputs().size();
+    bool is_assign_add = (ctx->Tensor4ArgNameAndIndex("out", 0)->dptr<float16>()
+                          == ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<float16>());
 
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = out->shape().elem_cnt();
-
-    half* half_out_dptr = reinterpret_cast<half*>(out->mut_dptr<float16>());
-    std::vector<const half*> half_in_dptrs(in_num);
-    for (int32_t i = 0; i < in_num; ++i) {
-      half_in_dptrs.at(i) =
-          reinterpret_cast<const half*>(ctx->Tensor4ArgNameAndIndex("in", i)->dptr<float16>());
-    }
-    switch (half_in_dptrs.size()) {
-      case 2:
-        half_gpu_add<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                       ctx->device_ctx()->cuda_stream()>>>(n, half_out_dptr, half_in_dptrs.at(0),
-                                                           half_in_dptrs.at(1));
-        break;
-      case 3:
-        half_gpu_add<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                       ctx->device_ctx()->cuda_stream()>>>(
-            n, half_out_dptr, half_in_dptrs.at(0), half_in_dptrs.at(1), half_in_dptrs.at(2));
-        break;
-      case 4:
-        half_gpu_add<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                       ctx->device_ctx()->cuda_stream()>>>(n, half_out_dptr, half_in_dptrs.at(0),
-                                                           half_in_dptrs.at(1), half_in_dptrs.at(2),
-                                                           half_in_dptrs.at(3));
-        break;
-      default: LOG(FATAL) << "Not supported input size for GpuAddNHalfKernel: " << in_num; break;
-    }
+    const auto* caller = LookUpInRegistry<float16>(in_num, is_assign_add);
+    CHECK(caller != nullptr) << "GpuAddNHalfKernel: Cannot find registered funtion for in_num: "
+                             << in_num << " is_assign_add: " << is_assign_add
+                             << " of data_type: " << DataType_Name(DataType::kFloat16);
+    (*caller)(ctx);
   }
 };
 
