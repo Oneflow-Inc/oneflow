@@ -7,7 +7,6 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 
 from test_util import GenArgList
 
-
 def test_broadcast_like_forward(test_case, device_type, input_shape, like_shape, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -25,8 +24,8 @@ def test_broadcast_like_forward(test_case, device_type, input_shape, like_shape,
 def test_broadcast_like(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2,4)]
-    arg_dict["like_shape"] = [(2,3,4)]
-    arg_dict["axis"] = [[]]
+    arg_dict["input_shape"] = [(64,64)]
+    arg_dict["like_shape"] = [(64,64,64)]
+    arg_dict["axis"] = [[1]]
     for arg in GenArgList(arg_dict):
         test_broadcast_like_forward(test_case, *arg)

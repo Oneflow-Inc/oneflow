@@ -57,7 +57,7 @@ def test_reduce_sum_func(test_case):
     for arg in GenArgList(arg_dict):
         compare_reduce_sum_with_tensorflow(*arg)
 
-
+        
 def test_reduce_sum_col_reduce(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -95,3 +95,4 @@ def test_reduce_sum_batch_axis_reduced(test_case):
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
     Foo(np.ndarray((10,), dtype=np.float32))
+
