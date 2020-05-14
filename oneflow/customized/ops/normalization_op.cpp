@@ -17,11 +17,11 @@ REGISTER_USER_OP("normalization")
     .Attr("momentum", UserOpAttrType::kAtFloat)
     .Attr("center", UserOpAttrType::kAtBool)
     .Attr("scale", UserOpAttrType::kAtBool)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) {
       user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
       CHECK(moving_mean_modifier != nullptr);
-      // TODO(daquexian): training attr cannot be got until the api is implemented
-      const bool training = true;
+      const bool training = conf.attr<bool>("training");
       moving_mean_modifier->set_is_mutable(training);
       moving_mean_modifier->set_requires_grad(false);
       user_op::InputArgModifier* moving_variance_modifier =

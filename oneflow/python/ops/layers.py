@@ -437,6 +437,7 @@ def batch_normalization(
                         .Output("inv_variance"))
         return (builder
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0])
 
     op_conf = op_conf_util.OperatorConf()
