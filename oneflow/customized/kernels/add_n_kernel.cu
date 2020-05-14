@@ -74,7 +74,7 @@ struct GpuAddCaller<T, N, true> {
 using CallFn = std::function<void(user_op::KernelComputeContext*)>;
 using AddNKernelRegistry = std::map<std::pair<int32_t, bool>, CallFn>;
 
-#define ADD_DIM_SEQ       \
+#define ADD_NUM_PARAM_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(2) \
   OF_PP_MAKE_TUPLE_SEQ(3) \
   OF_PP_MAKE_TUPLE_SEQ(4) \
@@ -92,7 +92,7 @@ const AddNKernelRegistry& SingletonRegistry() {
   static AddNKernelRegistry s_registry = {
 #define REG_ENTRY(n, is_assign_add) \
   {std::make_pair(n, is_assign_add), &GpuAddCaller<T, n, is_assign_add>::call},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REG_ENTRY, ADD_DIM_SEQ, IS_ASSIGN_ADD_SEQ)
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ, IS_ASSIGN_ADD_SEQ)
 #undef REG_ENTRY
   };
   return s_registry;
@@ -149,9 +149,10 @@ namespace {
 template<int32_t N>
 __global__ void gpu_half_add(const int64_t n, Param<half, N> para) {
   CUDA_1D_KERNEL_LOOP(i, n) {
+    half tmp = para.in[0][i];
 #pragma unroll
-    para.out[i] = para.in[0][i];
-    for (int j = 1; j < N; ++j) { para.out[i] = __hadd(para.out[i], para.in[j][i]); }
+    for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
+    para.out[i] = tmp;
   }
 }
 
@@ -179,7 +180,7 @@ template<>
 const AddNKernelRegistry& SingletonRegistry<float16>() {
   static AddNKernelRegistry s_registry = {
 #define REG_ENTRY(n) {std::make_pair(n, false), &GpuAddCaller<float16, n, false>::call},
-      OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_DIM_SEQ)
+      OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ)
 #undef REG_ENTRY
   };
   return s_registry;
