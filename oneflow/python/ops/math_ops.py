@@ -460,40 +460,60 @@ def sigmoid(x, name=None):
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
-    if name is None:
-        name = id_util.UniqueStr("UnsortedSegmentSum_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
-    op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
-    op_conf.unsorted_segment_sum_conf.num_segments = num_segments
-    op_conf.unsorted_segment_sum_conf.axis = axis
-    op_conf.unsorted_segment_sum_conf.out = "out"
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("UnsortedSegmentSum_"))\
+           .Op("unsorted_segment_sum")\
+           .Input("data", [data])\
+           .Input("segment_ids", [segment_ids])\
+           .Output("out")\
+           .SetAttr("axis", int(axis), "AttrTypeInt64")\
+           .SetAttr("num_segments", int(num_segments), "AttrTypeInt64")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
+        op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
+        op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
+        op_conf.unsorted_segment_sum_conf.num_segments = num_segments
+        op_conf.unsorted_segment_sum_conf.axis = axis
+        op_conf.unsorted_segment_sum_conf.out = "out"
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
 def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSumLike_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    op_conf.unsorted_segment_sum_like_conf.data = data.logical_blob_name
-    op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.logical_blob_name
-    op_conf.unsorted_segment_sum_like_conf.like = like.logical_blob_name
-    op_conf.unsorted_segment_sum_like_conf.axis = axis
-    op_conf.unsorted_segment_sum_like_conf.out = "out"
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+               not None else id_util.UniqueStr("UnsortedSegmentSumLike__"))\
+          .Op("unsorted_segment_sum_like")\
+          .Input("data", [data])\
+          .Input("segment_ids", [segment_ids])\
+          .Input("like", [like])\
+          .Output("out")\
+          .SetAttr("axis", int(axis), "AttrTypeInt64")\
+          .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name
+        op_conf.unsorted_segment_sum_like_conf.data = data.logical_blob_name
+        op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.logical_blob_name
+        op_conf.unsorted_segment_sum_like_conf.like = like.logical_blob_name
+        op_conf.unsorted_segment_sum_like_conf.axis = axis
+        op_conf.unsorted_segment_sum_like_conf.out = "out"
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
@@ -514,47 +534,29 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
-@oneflow_export("math.sqrt")
-def sqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
-    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.sqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("math.rsqrt")
-def rsqrt(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
-    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
-    setattr(op_conf.rsqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
     if x.dtype == dtype:
         return x
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Cast_"))
-    setattr(op_conf.cast_conf, "in", x.logical_blob_name)
-    setattr(op_conf.cast_conf, "data_type", dtype)
-    setattr(op_conf.cast_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if name is None:
+        name = id_util.UniqueStr("Cast_")
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name).Op("cast")\
+            .Input("in", [x])\
+            .Output("out")\
+            .SetAttr("dtype", dtype, "AttrTypeDataType")\
+            .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.cast_conf, "in", x.logical_blob_name)
+        setattr(op_conf.cast_conf, "data_type", dtype)
+        setattr(op_conf.cast_conf, "out", "out")
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.naive_logical_and")
@@ -753,22 +755,6 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(out_lbi)
-
-@oneflow_export('math.square')
-def square(x, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Square_"),
-    )
-    setattr(op_conf.square_conf, "in", x.logical_blob_name)
-    setattr(op_conf.square_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
