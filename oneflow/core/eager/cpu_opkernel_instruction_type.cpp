@@ -38,5 +38,31 @@ class CpuStatelessCallOpKernelInstructionType final : public StatelessCallOpKern
 COMMAND(vm::RegisterInstructionType<CpuStatelessCallOpKernelInstructionType>(
     "cpu.StatelessCallOpKernel"));
 
+class CpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+ public:
+  CpuWatchBlobHeaderInstructionType() = default;
+  ~CpuWatchBlobHeaderInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuWatchBlobHeaderInstructionType>(
+    "cpu.WatchBlobHeader"));
+
+class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+ public:
+  CpuWatchBlobBodyInstructionType() = default;
+  ~CpuWatchBlobBodyInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>(
+    "cpu.WatchBlobBody"));
+
 }  // namespace eager
 }  // namespace oneflow

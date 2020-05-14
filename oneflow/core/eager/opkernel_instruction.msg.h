@@ -60,6 +60,11 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
 // clang-format on
 
+FLAT_MSG_VIEW_BEGIN(WatchBlobInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(WatchBlobInstrOperand);
+
 }  // namespace eager
 }  // namespace oneflow
 

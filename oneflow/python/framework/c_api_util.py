@@ -20,6 +20,11 @@ def RegisterWatcherOnlyOnce(watcher):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
+def RegisterWorkerWatcherOnlyOnce(watcher):
+    error_str = oneflow_internal.RegisterWorkerWatcherOnlyOnce(watcher)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     ret, error_str = oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
     error = text_format.Parse(error_str, error_util.ErrorProto())

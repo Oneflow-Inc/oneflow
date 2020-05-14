@@ -28,6 +28,13 @@
 
 namespace oneflow {
 
+Maybe<void> RegisterWorkerWatcherOnlyOnce(ForeignWorkerWatcher* watcher) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignWorkerWatcher>::Get()) << "foreign woker watcher registered";
+  // no delete
+  Global<ForeignWorkerWatcher>::SetAllocated(watcher);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   // no delete
