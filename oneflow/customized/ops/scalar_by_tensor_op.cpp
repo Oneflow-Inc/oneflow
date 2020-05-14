@@ -59,15 +59,7 @@ REGISTER_USER_OP("scalar_add_by_tensor")
 REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_add_by_tensor_grad")
-                                                 .Input("x", op.input("x", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("alpha", op.attr<float>("alpha"))
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
       }
     });
 
