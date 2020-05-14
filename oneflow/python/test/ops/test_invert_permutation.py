@@ -17,6 +17,7 @@ def test_invert_permutation(test_case):
     data.append(np.array([0,1,2,3,4],dtype=np.int32))
     data.append(np.array([3,4,0,2,1],dtype=np.int32))
 
+
     y_groundtruth=[]
     y_groundtruth.append(np.array([4,3,2,1,0],dtype=np.int32))
     y_groundtruth.append(np.array([0,1,2,3,4],dtype=np.int32))
@@ -24,4 +25,3 @@ def test_invert_permutation(test_case):
     for i in range(len(data)): 
         y=InvertJob(data[i]).get().ndarray()
         test_case.assertTrue(np.allclose(y,y_groundtruth[i]))
-        
