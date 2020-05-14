@@ -54,13 +54,3 @@ def GenerateTest(test_case, a_shape, b_shape):
     y = AddJob(a, b).get().ndarray()
     test_case.assertTrue(np.array_equal(y, a + b))
 
-
-def test_scalar_add(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict['flow_op'] = [flow.math.add]
-    arg_dict['tf_op'] = [tf.math.add]
-    arg_dict["input_shape"] = [(10, 10, 10)]
-    arg_dict['op_args'] = [Args([1]), Args([-1]), Args([84223.19348]), Args([-3284.139])] 
-    for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
