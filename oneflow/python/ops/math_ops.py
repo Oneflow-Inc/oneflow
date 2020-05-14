@@ -863,3 +863,15 @@ def squared_difference(x, y, name=None):
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+@oneflow_export("math.invert_permutation")
+def invert_permutation(x, name=None):
+    if name is None:
+            name = id_util.UniqueStr("invert_permutation")
+    return flow.user_op_builder(name).Op("invert_permutation")\
+               .Input("in",[x])\
+               .Output("out") \
+               .Build()\
+               .InferAndTryRun()\
+               .RemoteBlobList()[0]
+               

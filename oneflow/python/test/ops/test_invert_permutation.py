@@ -24,3 +24,4 @@ def test_invert_permutation(test_case):
     for i in range(len(data)): 
         y=InvertJob(data[i]).get().ndarray()
         test_case.assertTrue(np.allclose(y,y_groundtruth[i]))
+        
