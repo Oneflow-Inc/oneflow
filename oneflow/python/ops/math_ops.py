@@ -27,6 +27,27 @@ def add(x, y, name=None):
     else:
         return broadcast_add(x, y, name)
 
+def _recursive_build_add_n(inputs, name=None):
+    kernel_max_inputs = 8
+    if (len(inputs) == 1):
+        return inputs[0]
+    elif (len(inputs) <= kernel_max_inputs):
+        return (
+                flow.user_op_builder(name if name is not None else id_util.UniqueStr("AddN_"))
+                .Op("add_n")
+                .Input("in", inputs)
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
+    else:
+        assert len(inputs) > kernel_max_inputs
+        cutted_inputs = [inputs[x: x + kernel_max_inputs]\
+                for x in range(0, len(inputs), kernel_max_inputs)]
+        new_inputs = [_recursive_build_add_n(x) for x in cutted_inputs]
+        return _recursive_build_add_n(new_inputs)
+
 @oneflow_export("math.add_n")
 def add_n(inputs, name=None):
     if os.getenv("ENABLE_USER_OP") != 'True':
@@ -45,16 +66,7 @@ def add_n(inputs, name=None):
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
-    assert len(inputs) > 1
-    return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("AddN_"))
-            .Op("add_n")
-            .Input("in", inputs)
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-            )
+    return _recursive_build_add_n(inputs, name)
 
 @oneflow_export("math.subtract")
 def subtract(x, y, name=None):
