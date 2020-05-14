@@ -148,6 +148,16 @@ def scalar_add(x, operand, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_add_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
+                .Op("scalar_add_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarAddByTensor_")
@@ -212,6 +222,16 @@ def broadcast_sub(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_sub_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
+                .Op("scalar_sub_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarSubByTensor_")
@@ -300,6 +320,16 @@ def scalar_mul(x, operand, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_mul_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
+                .Op("scalar_mul_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMulByTensor_")
@@ -330,6 +360,16 @@ def broadcast_div(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_div_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
+                .Op("scalar_div_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarDivByTensor_")
