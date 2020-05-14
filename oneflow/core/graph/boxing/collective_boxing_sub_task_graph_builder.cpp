@@ -155,7 +155,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
                     const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
                     const SbpParallel& src_sbp_parallel,
                     const SbpParallel& dst_sbp_parallel) const override {
-    if (dst_parallel_desc.Equals(src_parallel_desc)
+    if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.parallel_num() > 1
@@ -163,8 +163,10 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && src_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+        auto* src_comp_task = sorted_src_comp_tasks.at(i);
+        auto* src_node = ctx->GetProxyNode(src_comp_task, src_comp_task->MemZoneId121(),
+                                           dst_node->machine_id(), dst_node->MemZoneId121());
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
