@@ -34,7 +34,7 @@ class BiasAddUserKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BIAS_ADD_USER_KERNEL(op_device_type, dtype)                                                  \
+#define REGISTER_BIAS_ADD_USER_KERNEL(op_device_type, dtype)                                    \
   REGISTER_USER_KERNEL("bias_add")                                                              \
       .SetCreateFn<BiasAddUserKernel<DeviceType::k##op_device_type, dtype>>()                   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
