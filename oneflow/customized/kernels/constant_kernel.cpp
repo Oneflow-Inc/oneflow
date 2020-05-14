@@ -33,15 +33,11 @@ class ConstantKernel final : public OpKernel {
         return ctx.device_type() == device && data_type == GetDataType<dtype>::value; \
       });
 
-REGISTER_CONSTANT_KERNEL(DeviceType::kCPU, float)
-REGISTER_CONSTANT_KERNEL(DeviceType::kCPU, double)
-REGISTER_CONSTANT_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_CONSTANT_KERNEL(DeviceType::kCPU, int64_t)
+#define REGISTER_CONSTANT_KERNEL_WITH_DTYPE_PAIR(device, dtype_pair) \
+  REGISTER_CONSTANT_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-REGISTER_CONSTANT_KERNEL(DeviceType::kGPU, float)
-REGISTER_CONSTANT_KERNEL(DeviceType::kGPU, double)
-REGISTER_CONSTANT_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_CONSTANT_KERNEL(DeviceType::kGPU, int64_t)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow

@@ -621,6 +621,8 @@ def image_normalize(image, std, mean, name=None):
 
 @oneflow_export("image_flip")
 def image_flip(image, flip_code, name=None):
+    assert isinstance(image, BlobDef)
+
     if name is None:
         name = id_util.UniqueStr("ImageFlip_")
 
@@ -629,11 +631,42 @@ def image_flip(image, flip_code, name=None):
         flip_code = flow.constant(
             flip_code, shape=(image.shape[0],), dtype=flow.int8, name="{}_FlipCode_".format(name)
         )
+    else:
+        assert image.shape[0] == flip_code.shape[0]
 
     op = (
         flow.user_op_builder(name)
         .Op("image_flip")
         .Input("in", [image])
+        .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_bbox_flip")
+def object_bbox_flip(bbox, image_size, flip_code, name=None):
+    assert isinstance(bbox, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert bbox.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectBboxFlip_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(bbox.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+        )
+    else:
+        assert bbox.shape[0] == flip_code.shape[0]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_bbox_flip")
+        .Input("bbox", [bbox])
+        .Input("image_size", [image_size])
         .Input("flip_code", [flip_code])
         .Output("out")
         .Build()
