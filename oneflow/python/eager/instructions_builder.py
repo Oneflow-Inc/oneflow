@@ -127,7 +127,7 @@ class InstructionsBuilder(object):
                        job_conf_sym, op_conf_sym, shared_opkernel_obj,
                        input_triples, output_triples, mut2_output_triples):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "%s_StatelessCallOpKernel" % device_tag
+        instruction.instr_type_name = "%s.StatelessCallOpKernel" % device_tag
         instruction.parallel_desc_symbol_id = parallel_conf_sym
         instruction.operand.append(_SymbolOperand(job_conf_sym))
         instruction.operand.append(_SymbolOperand(op_conf_sym))
