@@ -95,7 +95,7 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         of_y = gather_fn(params, indices).get().ndarray()
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
 
-def test_batch_gather(test_case):
+def test_unsorted_batch_segment_sum(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["params_shape"] = [(2, 8, 4)]
@@ -106,7 +106,7 @@ def test_batch_gather(test_case):
         _compare_gather_with_tf(test_case, *arg)
 
 
-def test_batch_gather_case_1(test_case):
+def test_unsorted_batch_segment_sum_case_1(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["params_shape"] = [(20, 10, 200)]
@@ -117,7 +117,7 @@ def test_batch_gather_case_1(test_case):
         _compare_gather_with_tf(test_case, *arg)
 
 
-def test_batch_gather_case_2(test_case):
+def test_unsorted_batch_segment_sum_case_2(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["params_shape"] = [(20, 80, 30, 5)]
@@ -129,7 +129,7 @@ def test_batch_gather_case_2(test_case):
         _compare_gather_with_tf(test_case, *arg)
 
 
-def test_batch_gather_case_2(test_case):
+def test_unsorted_batch_segment_sum_case_2(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["params_shape"] = [(20, 80, 30, 5)]
