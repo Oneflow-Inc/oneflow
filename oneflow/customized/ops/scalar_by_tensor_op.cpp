@@ -89,4 +89,28 @@ REGISTER_USER_OP("scalar_sub_by_tensor")
       return Maybe<void>::Ok();
     }));
 
+REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
+      }
+      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
+        user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_reduce_sum");
+        user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
+            builder0.Op("reduce_sum")
+                .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("output_tensor")
+                .Build();
+        user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_scalar_mul");
+        user_op::UserOpConfWrapper scalar_grad_scalar_mul_op =
+            builder1.Op("scalar_mul")
+                .Input("x", scalar_grad_reduce_sum_op.output("output_tensor", 0))
+                .Output("y")
+                .Attr("float_operand", static_cast<double>(-1))
+                .Build();
+        op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("y", 0), "scalar", 0);
+        AddOp(scalar_grad_reduce_sum_op);
+      }
+    });
+
 }  // namespace oneflow
