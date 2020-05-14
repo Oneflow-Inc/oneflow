@@ -7,7 +7,6 @@ REGISTER_USER_OP("batch_gather")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
@@ -65,9 +64,10 @@ REGISTER_USER_OP("batch_gather")
 REGISTER_USER_OP_GRAD("batch_gather")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
-      const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
-      const Shape indices_shape = op.TensorDesc4ArgNameAndIndex("indices", 0).shape();
       if (need_grad_in) {
+        const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+        const Shape indices_shape = op.TensorDesc4ArgNameAndIndex("indices", 0).shape();
+
         user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper in_grad_op =
             in_grad_builder.Op("unsorted_batch_segment_sum")

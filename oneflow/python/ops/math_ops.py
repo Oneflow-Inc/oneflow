@@ -500,7 +500,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
 def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         return flow.user_op_builder(name if name is
-               not None else id_util.UniqueStr("UnsortedBatchSegmentSumLike_"))\
+               not None else id_util.UniqueStr("UnsortedBatchSegmentSum_"))\
           .Op("unsorted_batch_segment_sum")\
           .Input("data", [data])\
           .Input("segment_ids", [segment_ids])\
@@ -509,7 +509,7 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
           .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSumLike_")
+        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
         op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
         op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
         op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments

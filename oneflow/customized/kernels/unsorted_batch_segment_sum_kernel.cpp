@@ -7,6 +7,7 @@ namespace oneflow {
 namespace user_op {
 
 namespace {
+
 Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
