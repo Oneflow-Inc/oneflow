@@ -12,29 +12,25 @@ struct Param {
 
 template<typename T, int32_t N>
 __global__ void gpu_add(const int64_t n, Param<T, N> para) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    T tmp = para.in[0][i];
+  if (para.out == para.in[0]) {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      T tmp = 0;
 #pragma unroll
-    for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
-    para.out[i] = tmp;
+      for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
+      para.out[i] += tmp;
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      T tmp = para.in[0][i];
+#pragma unroll
+      for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
+      para.out[i] = tmp;
+    }
   }
 }
 
 template<typename T, int32_t N>
-__global__ void gpu_assign_add(const int64_t n, Param<T, N> para) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    T tmp = 0;
-#pragma unroll
-    for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
-    para.out[i] += tmp;
-  }
-}
-
-template<typename T, int32_t N, bool is_assign_add>
-struct GpuAddCaller;
-
-template<typename T, int32_t N>
-struct GpuAddCaller<T, N, false> {
+struct GpuAddCaller {
   static void call(user_op::KernelComputeContext* ctx) {
     CHECK_EQ(N, ctx->inputs().size());
 
@@ -52,27 +48,8 @@ struct GpuAddCaller<T, N, false> {
   }
 };
 
-template<typename T, int32_t N>
-struct GpuAddCaller<T, N, true> {
-  static void call(user_op::KernelComputeContext* ctx) {
-    CHECK_EQ(N, ctx->inputs().size());
-
-    Param<T, N> para;
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = out->shape().elem_cnt();
-    para.out = out->mut_dptr<T>();
-    for (int32_t i = 0; i < N; ++i) {
-      para.in[i] = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
-    }
-
-    gpu_assign_add<T, N>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, para);
-  }
-};
-
 using CallFn = std::function<void(user_op::KernelComputeContext*)>;
-using AddNKernelRegistry = std::map<std::pair<int32_t, bool>, CallFn>;
+using AddNKernelRegistry = std::map<int32_t, CallFn>;
 
 #define ADD_NUM_PARAM_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(2) \
@@ -83,24 +60,19 @@ using AddNKernelRegistry = std::map<std::pair<int32_t, bool>, CallFn>;
   OF_PP_MAKE_TUPLE_SEQ(7) \
   OF_PP_MAKE_TUPLE_SEQ(8)
 
-#define IS_ASSIGN_ADD_SEQ    \
-  OF_PP_MAKE_TUPLE_SEQ(true) \
-  OF_PP_MAKE_TUPLE_SEQ(false)
-
 template<typename T>
 const AddNKernelRegistry& SingletonRegistry() {
   static AddNKernelRegistry s_registry = {
-#define REG_ENTRY(n, is_assign_add) \
-  {std::make_pair(n, is_assign_add), &GpuAddCaller<T, n, is_assign_add>::call},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ, IS_ASSIGN_ADD_SEQ)
+#define REG_ENTRY(n) {n, &GpuAddCaller<T, n>::call},
+      OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ)
 #undef REG_ENTRY
   };
   return s_registry;
 }
 
 template<typename T>
-const CallFn* LookUpInRegistry(int32_t in_num, int32_t is_assign_add) {
-  auto it = SingletonRegistry<T>().find(std::make_pair(in_num, is_assign_add));
+const CallFn* LookUpInRegistry(int32_t in_num) {
+  auto it = SingletonRegistry<T>().find(in_num);
   if (it == SingletonRegistry<T>().end()) { return nullptr; }
   return &(it->second);
 }
@@ -118,13 +90,10 @@ class GpuAddNKernel : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
-    bool is_assign_add = (ctx->Tensor4ArgNameAndIndex("out", 0)->dptr<T>()
-                          == ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<T>());
 
-    const auto* caller = LookUpInRegistry<T>(in_num, is_assign_add);
+    const auto* caller = LookUpInRegistry<T>(in_num);
     CHECK(caller != nullptr) << "GpuAddNKernel: Cannot find registered funtion for in_num: "
-                             << in_num << " is_assign_add: " << is_assign_add
-                             << " of data_type: " << DataType_Name(GetDataType<T>::value);
+                             << in_num << " of data_type: " << DataType_Name(GetDataType<T>::value);
     (*caller)(ctx);
   }
 };
@@ -148,16 +117,25 @@ namespace {
 
 template<int32_t N>
 __global__ void gpu_half_add(const int64_t n, Param<half, N> para) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half tmp = para.in[0][i];
+  if (para.out == para.in[0]) {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      half tmp = 0;
 #pragma unroll
-    for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
-    para.out[i] = tmp;
+      for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
+      para.out[i] = __hadd(para.out[i], tmp);
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      half tmp = para.in[0][i];
+#pragma unroll
+      for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
+      para.out[i] = tmp;
+    }
   }
 }
 
 template<int32_t N>
-struct GpuAddCaller<float16, N, false> {
+struct GpuAddCaller<float16, N> {
   static void call(user_op::KernelComputeContext* ctx) {
     CHECK_EQ(N, ctx->inputs().size());
 
@@ -176,19 +154,6 @@ struct GpuAddCaller<float16, N, false> {
   }
 };
 
-template<>
-const AddNKernelRegistry& SingletonRegistry<float16>() {
-  static AddNKernelRegistry s_registry = {
-#define REG_ENTRY(n)                                                  \
-  {std::make_pair(n, false), &GpuAddCaller<float16, n, false>::call}, \
-      {std::make_pair(n, true),                                       \
-       &GpuAddCaller<float16, n, false>::call},  // use non-assign add deliberately
-      OF_PP_FOR_EACH_TUPLE(REG_ENTRY, ADD_NUM_PARAM_SEQ)
-#undef REG_ENTRY
-  };
-  return s_registry;
-}
-
 }  // namespace
 
 class GpuAddNHalfKernel : public user_op::OpKernel {
@@ -201,13 +166,10 @@ class GpuAddNHalfKernel : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
-    bool is_assign_add = (ctx->Tensor4ArgNameAndIndex("out", 0)->dptr<float16>()
-                          == ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<float16>());
 
-    const auto* caller = LookUpInRegistry<float16>(in_num, is_assign_add);
+    const auto* caller = LookUpInRegistry<float16>(in_num);
     CHECK(caller != nullptr) << "GpuAddNHalfKernel: Cannot find registered funtion for in_num: "
-                             << in_num << " is_assign_add: " << is_assign_add
-                             << " of data_type: " << DataType_Name(DataType::kFloat16);
+                             << in_num << " of data_type: " << DataType_Name(DataType::kFloat16);
     (*caller)(ctx);
   }
 };
