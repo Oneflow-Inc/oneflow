@@ -89,7 +89,7 @@ REGISTER_USER_OP("scalar_sub_by_tensor")
       return Maybe<void>::Ok();
     }));
 
-REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
+REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
@@ -110,6 +110,101 @@ REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
                 .Build();
         op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("y", 0), "scalar", 0);
         AddOp(scalar_grad_reduce_sum_op);
+        AddOp(scalar_grad_scalar_mul_op);
+      }
+    });
+
+REGISTER_USER_OP("scalar_mul_by_tensor")
+    .Input("x")
+    .Input("scalar")
+    .Output("y")
+    .SetTensorDescInferFn(TensorDescInferFn)
+    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .Broadcast(user_op::OpArg("scalar", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("scalar", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    }));
+
+REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_mul_by_tensor")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("scalar", op.input("scalar", 0))
+                                                 .Output("y")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
+        user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_multiply");
+        user_op::UserOpConfWrapper scalar_grad_multiply_op =
+            builder0.Op("multiply")
+                .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("y", op.input("x", 0))
+                .Output("out")
+                .Attr("float_operand", static_cast<double>(-1))
+                .Build();
+        user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_reduce_sum");
+        user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
+            builder1.Op("reduce_sum")
+                .Input("input_tensor", scalar_grad_multiply_op.output("out", 0))
+                .Output("output_tensor")
+                .Build();
+        op.BindGradTensorWithOpInput(scalar_grad_reduce_sum_op.output("output_tensor", 0), "scalar",
+                                     0);
+        AddOp(scalar_grad_reduce_sum_op);
+        AddOp(scalar_grad_reduce_sum_op);
+      }
+    });
+
+REGISTER_USER_OP("scalar_div_by_tensor")
+    .Input("x")
+    .Input("scalar")
+    .Output("y")
+    .SetTensorDescInferFn(TensorDescInferFn)
+    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .Broadcast(user_op::OpArg("scalar", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    }));
+
+REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_div_by_tensor")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("scalar", op.input("scalar", 0))
+                                                 .Output("y")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("broadcast_div_grad")
+                .Input("dz", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("y", op.GetGradTensorWithOpOutput("scalar", 0))
+                .Output("dx")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "scalar", 0);
+        AddOp(grad_op);
       }
     });
 
