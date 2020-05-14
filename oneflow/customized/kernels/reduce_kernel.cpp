@@ -29,6 +29,7 @@ class ReduceKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+namespace {
 template<DeviceType device, typename T>
 bool IsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0);
@@ -37,6 +38,7 @@ bool IsMatchedPred(const KernelRegContext& ctx) {
   }
   return false;
 }
+}  // namespace
 
 #define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)        \
   REGISTER_USER_KERNEL(op_name)                                                \

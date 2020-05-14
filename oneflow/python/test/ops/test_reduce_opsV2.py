@@ -57,7 +57,7 @@ def test_reduce_sum_func(test_case):
     for arg in GenArgList(arg_dict):
         compare_reduce_sum_with_tensorflow(*arg)
 
-        
+
 def test_reduce_sum_col_reduce(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]

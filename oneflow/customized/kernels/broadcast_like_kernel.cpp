@@ -27,6 +27,7 @@ class BroadcastLikeKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+namespace {
 template<DeviceType device, typename T>
 bool IsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
@@ -35,6 +36,8 @@ bool IsMatchedPred(const KernelRegContext& ctx) {
   }
   return false;
 }
+
+}  // namespace
 
 #define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("broadcast_like")                  \
