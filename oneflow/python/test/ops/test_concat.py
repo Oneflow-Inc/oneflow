@@ -78,6 +78,6 @@ def test_concat(test_case):
     arg_dict["x_shape"] = [(10, 20, 30)]
     arg_dict["y_shape"] = [(10, 20, 30)]
     arg_dict["dtype"] = ["float32", "double"]
-    arg_dict["axis"] = [0, 1, -1]
+    arg_dict["axis"] = [0, 1, 2]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

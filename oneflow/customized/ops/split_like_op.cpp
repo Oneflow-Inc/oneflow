@@ -16,16 +16,25 @@ REGISTER_USER_OP("split_like")
       for (size_t i = 0; i < ctx->outputs().size(); ++i) {
         const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
         for (int64_t j = 0; j < like_i_desc->shape().NumAxes(); ++j) {
-          if (j != axis) {
-            CHECK_EQ_OR_RETURN(like_0_desc->shape().At(j), like_i_desc->shape().At(j));
-          }
+          if (j != axis) { CHECK_EQ_OR_RETURN(in_desc->shape().At(j), like_i_desc->shape().At(j)); }
         }
+        CHECK_EQ_OR_RETURN(in_desc->data_type(), like_i_desc->data_type());
+      }
+      for (size_t i = 0; i < ctx->outputs().size(); ++i) {
+        const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
         dim_sum += like_i_desc->shape().At(axis);
-        user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
-        *out_i_desc = *like_i_desc;
+        *ctx->TensorDesc4ArgNameAndIndex("out", i) = *like_i_desc;
       }
       CHECK_EQ_OR_RETURN(dim_sum, in_dim_vec.at(axis));
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& user_op_conf) {
+      for (size_t i = 0; i < user_op_conf.input_size("like"); ++i) {
+        user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", i);
+        CHECK(like_arg_modifier != nullptr);
+        like_arg_modifier->set_use_header_only(true);
+      }
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       for (size_t i = 0; i < ctx->outputs().size(); ++i) {
@@ -40,6 +49,19 @@ REGISTER_USER_OP("split_like")
         if (i == axis) { continue; }
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
+      std::vector<user_op::OpArg> like_arg_vec;
+      int32_t like_size = ctx->outputs().size();
+      FOR_RANGE(int32_t, i, 0, like_size) { like_arg_vec.push_back(user_op::OpArg("like", i)); }
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .PartialSum(like_arg_vec)
+          .PartialSum(ctx->outputs())
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .Broadcast(like_arg_vec)
+          .PartialSum(ctx->outputs())
+          .Build();
       return Maybe<void>::Ok();
     });
 

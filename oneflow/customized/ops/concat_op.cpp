@@ -38,6 +38,7 @@ REGISTER_USER_OP("concat")
         if (i == axis) { continue; }
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 
