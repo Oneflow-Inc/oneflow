@@ -17,7 +17,7 @@ __global__ void gpu_add(const int64_t n, Param<T, N> para) {
       T tmp = 0;
 #pragma unroll
       for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
-      para.out[i] += tmp;
+      if (tmp != 0) { para.out[i] += tmp; }
     }
   } else {
     CUDA_1D_KERNEL_LOOP(i, n) {
