@@ -696,7 +696,7 @@ def deconv2d(
     filter=None,
     output_shape=None,
     strides=None,
-    padding='SAME',
+    padding='VALID',
     data_format='NHWC',
     name=None,
     input=None,
@@ -726,49 +726,14 @@ def deconv2d(
         filters is not None), "only one of `filter` and `filters` could be not None"
     filters = filters or filter
     input = input or value
-    assert output_shape is None, "output_shape not supported yet"
-    assert dilations is None, "dilations not supported yet"
-    assert len(input.static_shape) == 4
-    assert len(filters.static_shape) == 4
 
-    if isinstance(strides, (list, tuple)):
-        assert len(strides) == 2, ValueError(
-            "strides length must be 2 when passed as a list."
-        )
-    elif isinstance(strides, int):
-        strides = [strides, strides]
-    else:
-        raise ValueError("strides must be an int or a list.")
+    NDims = 2
+    assert len(input.static_shape) == 2 + NDims
+    assert len(filters.static_shape) == 2 + NDims
+    assert len(output_shape) == 2 + NDims
+    assert output_shape[0] == input.static_shape[0]
 
-    if padding.upper() != "SAME" and padding.upper() != "VALID":
-        raise ValueError('padding must be "SAME" or "VALID".')
-
-    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
-        raise ValueError('data_format must be "NHWC" or "NCHW".')
-
-    channel_pos = (
-        "channels_first" if data_format.startswith("NC") else "channels_last"
-    )
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name",
-            name if name is not None else id_util.UniqueStr("Deconv2d_"))
-    op_conf.deconv_conf.x = input.logical_blob_name
-    op_conf.deconv_conf.y = "out"
-    op_conf.deconv_conf.filter = filters.logical_blob_name
-    op_conf.deconv_conf.conv_conf.padding = padding.lower()
-    op_conf.deconv_conf.conv_conf.data_format = channel_pos
-    if channel_pos == "channels_first":
-        op_conf.deconv_conf.filters = filters.static_shape[1]
-        op_conf.deconv_conf.conv_conf.kernel_size.extend(
-            filters.static_shape[2:4])
-    elif channel_pos == "channels_last":
-        op_conf.deconv_conf.filters = filters.static_shape[3]
-        op_conf.deconv_conf.conv_conf.kernel_size.extend(
-            filters.static_shape[-3:-1])
-    else:
-        raise ValueError("invalid data_format")
-
+    # dilations
     if dilations is None:
         dilations = [1, 1]
     else:
@@ -781,15 +746,65 @@ def deconv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    op_conf.deconv_conf.conv_conf.strides.extend(strides)
-    op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
-    op_conf.deconv_conf.use_bias = False
-    op_conf.deconv_conf.conv_conf.num_spatial_dims = 2
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    # data format
+    if data_format.upper() == "NCHW":
+        input_shape = input.static_shape[2:]
+        kernel_size = filters.static_shape[2:4]
+        output_shape = output_shape[2:4]
+        channels = filters.static_shape[1]
+    elif data_format.upper() == "NHWC":
+        input_shape = input.static_shape[1:3]
+        kernel_size = filters.static_shape[-3:-1]
+        output_shape = output_shape[1:3]
+        channels = filters.static_shape[3]
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
+    else:
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = (
+        "channels_first" if data_format.startswith("NC") else "channels_last"
+    )
+
+    # strides
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == NDims, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if padding.upper() != "VALID":
+        raise ValueError('padding must be "VALID".')
+
+    # output padding
+    output_padding = [0, 0]
+    for i in range(NDims):
+        effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+        assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
+        tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size
+        output_padding[i] = output_shape[i] - tmp_output_size
+    
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("deconv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .SetAttr("filters", channels, "AttrTypeInt32")
+        .SetAttr("padding", padding.lower(), "AttrTypeString")
+        .SetAttr("data_format", channel_pos, "AttrTypeString")
+        .SetAttr("kernel_size", kernel_size, "AttrTypeListInt32")
+        .SetAttr("strides", strides, "AttrTypeListInt32")
+        .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
+        .SetAttr("output_padding", output_padding, "AttrTypeListInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(x, alpha=0.2, name=None):

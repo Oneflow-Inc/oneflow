@@ -98,7 +98,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
+        out, weight, in, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
         job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),
         job_desc.job_conf().cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
