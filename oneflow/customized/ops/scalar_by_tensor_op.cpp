@@ -203,12 +203,11 @@ REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
       }
       if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("broadcast_div_grad")
-                .Input("dz", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("y", op.GetGradTensorWithOpOutput("scalar", 0))
-                .Output("dx")
-                .Build();
+        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_div_grad")
+                                                 .Input("dz", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("y", op.input("scalar", 0))
+                                                 .Output("dx")
+                                                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "scalar", 0);
         AddOp(grad_op);
       }
