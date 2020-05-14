@@ -84,7 +84,12 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {}
+        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {
+    for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
+      arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
+                                       user_op::TensorDesc(pair.second));
+    }
+  }
   ~UserKernelInitContext() = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
@@ -94,6 +99,15 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                               int32_t index) const override {
+    auto it = arg2logical_tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2logical_tensor_desc_.end()) {
+      return nullptr;
+    } else {
+      return &(it->second);
+    }
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
@@ -110,6 +124,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {

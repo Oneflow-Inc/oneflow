@@ -35,7 +35,8 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       GetInputArgModifierFn("x", 0)->set_use_header_only(true);
     });
 
