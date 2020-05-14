@@ -12,14 +12,9 @@ import oneflow.core.record.record_pb2 as ofrecord
 from test_util import GenArgList
 
 
-<<<<<<< HEAD
-def get_temp_dir():
-    return tempfile.gettempdir()
-=======
 tmp = tempfile.mkdtemp()
 def get_temp_dir():
     return tmp
->>>>>>> 1c8cbdb831dbae685e9fdc9a85ffa771fcaea859
 
 
 def int32_feature(value):
