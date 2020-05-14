@@ -476,11 +476,11 @@ void UserOp::VirtualGenKernelConf(
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
-#define BLOB_DESCS_TO_PROTO(prefix, input_or_output)                                               \
+#define BLOB_DESCS_TO_PROTO(prefix, is_arg)                                                        \
   for (const auto& bn : prefix##_bns()) {                                                          \
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                            \
     if (blob_desc) { blob_desc->ToProto(&(*user_conf->mutable_bn_in_op2blob_desc())[bn]); }        \
-    if (input_or_output) {                                                                         \
+    if (is_arg) {                                                                                  \
       LogicalBlobDesc4BnInOp(bn).ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[bn]); \
     }                                                                                              \
   }
