@@ -37,7 +37,7 @@ class BlobDesc final {
   DataType data_type() const { return body_.data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
-  int64_t is_tensor_list() const { return is_tensor_list_; }
+  bool is_tensor_list() const { return is_tensor_list_; }
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
   bool header_is_opaque() const { return opaque_header_ != nullptr; }

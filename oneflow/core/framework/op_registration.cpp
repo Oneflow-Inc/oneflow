@@ -93,6 +93,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
+  wrapper_.reg_val.op_def.set_all_outputs_constant(true);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
@@ -132,14 +137,9 @@ OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn shape_infer_fn) {
-  wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);
-  return *this;
-}
-
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
-    DtypeInferFn dtype_infer_fn) {
-  wrapper_.reg_val.dtype_infer_fn = std::move(dtype_infer_fn);
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetTensorDescInferFn(
+    TensorDescInferFn tensor_desc_infer_fn) {
+  wrapper_.reg_val.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -166,19 +166,16 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
 }
 
 OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
-  CHECK(wrapper_.reg_val.shape_infer_fn != nullptr)
-      << "No ShapeInfer function for " << wrapper_.op_type_name;
+  CHECK(wrapper_.reg_val.tensor_desc_infer_fn != nullptr)
+      << "No TensorDescInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
     wrapper_.reg_val.check_fn = CheckAttrFnUtil::NoCheck;
-  }
-  if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
-    wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
   }
   if (wrapper_.reg_val.batch_axis_infer_fn == nullptr) {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
-    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
+    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
     wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};

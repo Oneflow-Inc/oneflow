@@ -13,6 +13,8 @@ int32 = data_type_pb2.kInt32
 int64 = data_type_pb2.kInt64
 uint8 = data_type_pb2.kUInt8
 
+dtypes = [char, float, float32, double, float64, float16, int8, int32, int64, uint8]
+
 _OF_BLOB_DTYPE2NUMPY_DTYPE = {
         data_type_pb2.kInt8: np.int8,
         data_type_pb2.kInt32: np.int32,

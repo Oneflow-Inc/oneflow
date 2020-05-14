@@ -23,6 +23,7 @@ ConvConf ConvConfFromConvOpConf(const OperatorConf& op_conf) {
   conv_conf.set_num_spatial_dims(n_spatial_dims);
   conv_conf.set_data_format(GetValFromPbMessage<std::string>(*msg, "data_format"));
   conv_conf.set_padding(GetValFromPbMessage<std::string>(*msg, "padding"));
+  conv_conf.set_groups(GetValFromPbMessage<int32_t>(*msg, "groups"));
   *conv_conf.mutable_kernel_size() = GetPbRfFromPbMessage<int32_t>(*msg, "kernel_size");
   *conv_conf.mutable_strides() = GetPbRfFromPbMessage<int32_t>(*msg, "strides");
   *conv_conf.mutable_dilation_rate() = GetPbRfFromPbMessage<int32_t>(*msg, "dilation_rate");

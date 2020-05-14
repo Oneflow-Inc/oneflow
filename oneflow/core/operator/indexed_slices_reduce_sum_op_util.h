@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
 #define ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 

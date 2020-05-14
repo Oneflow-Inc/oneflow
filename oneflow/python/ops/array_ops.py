@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from functools import reduce
 import operator
 
+import os
 import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -10,6 +11,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import os
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -21,9 +23,16 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.name = id_util.UniqueStr("Gather_")
     else:
         op_conf.name = name
-
+    params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
+    elif axis < 0:
+        origin_axis = axis
+        axis += params_ndims
+        assert axis >= 0 and axis < params_ndims, ValueError(
+            "Expected axis to between [%d, %d).  But received: %d " %(-params_ndims,
+                params_ndims, origin_axis)
+            )
 
     if batch_dims > 0:
         if axis == batch_dims:
@@ -41,10 +50,20 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.gather_ms0_conf.indices = indices.logical_blob_name
         op_conf.gather_ms0_conf.out = "out"
     else:
-        setattr(op_conf.gather_conf, "in", params.logical_blob_name)
-        op_conf.gather_conf.indices = indices.logical_blob_name
-        op_conf.gather_conf.out = "out"
-        op_conf.gather_conf.axis = axis
+        if os.getenv("ENABLE_USER_OP") == 'True':
+            return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("Gather_"))\
+           .Op("gather")\
+           .Input("in", [params])\
+           .Input("indices", [indices])\
+           .Output("out")\
+           .SetAttr("axis", int(axis), "AttrTypeInt64")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+        else:
+            setattr(op_conf.gather_conf, "in", params.logical_blob_name)
+            op_conf.gather_conf.indices = indices.logical_blob_name
+            op_conf.gather_conf.out = "out"
+            op_conf.gather_conf.axis = axis
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -74,6 +93,16 @@ def local_gather(params, indices, axis=0, name=None):
 
     return flow.advanced.distribute_map((params, indices), gather_lambda)
 
+def infer_shape(x, shape):
+    dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
+    in_elem_cnt = reduce(operator.mul, x.shape, 1)
+    out_elem_cnt = reduce(operator.mul, shape, 1)
+    if dim_index_need_infer is not None:
+        assert (in_elem_cnt % out_elem_cnt) == 0
+        shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
+    else:
+        assert in_elem_cnt == out_elem_cnt
+    return shape
 
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
@@ -81,30 +110,32 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    op_conf = op_conf_util.OperatorConf()
-    if x.is_dynamic:
-        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
-        setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
-        op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
-        setattr(op_conf.dynamic_reshape_conf, "out", "out")
+    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == 'True'):
+        if name is None:
+            name = id_util.UniqueStr("Reshape_")
+        return flow.user_op_builder(name).Op("reshape")\
+            .Input("in", [x])\
+            .Output("out")\
+            .SetAttr("shape", infer_shape(x, shape), "AttrTypeShape")\
+            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
-        dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
-        in_elem_cnt = reduce(operator.mul, x.shape, 1)
-        out_elem_cnt = reduce(operator.mul, shape, 1)
-        if dim_index_need_infer is not None:
-            assert (in_elem_cnt % out_elem_cnt) == 0
-            shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
+        op_conf = op_conf_util.OperatorConf()
+        if x.is_dynamic:
+            setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
+            setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
+            op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
+            setattr(op_conf.dynamic_reshape_conf, "out", "out")
         else:
-            assert in_elem_cnt == out_elem_cnt
-        op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-        setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
-        op_conf.reshape_conf.shape.dim[:] = list(shape)
-        op_conf.reshape_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+            op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
+            setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
+            op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
+            op_conf.reshape_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("reshape_like")
 def reshape_like(x, like, name=None):
@@ -118,6 +149,7 @@ def reshape_like(x, like, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
@@ -145,17 +177,24 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
-    op_conf.transpose_conf.out = "out"
-    op_conf.transpose_conf.perm.extend(list(perm))
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name).Op("transpose")\
+            .Input("input", [a])\
+            .Output("output")\
+            .SetAttr("perm", perm, "AttrTypeListInt32")\
+            .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name
+        setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
+        op_conf.transpose_conf.out = "out"
+        op_conf.transpose_conf.perm.extend(list(perm))
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("slice")
@@ -184,7 +223,34 @@ def slice(input_, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        slice_tup_list = []
+        for b, s, d in list(zip(begin, size, input_.static_shape)):
+            begin, end, stride = None, None, 1
+            if b is not None:
+                if b < -d or b > d - 1:
+                    raise ValueError(
+                        "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                        "and less than input_'s 'i'th dimension."
+                    )
+                b = b + d if b < 0 else b
+                begin = b
+            if s is not None:
+                if s > 0:
+                    if b + s > d:
+                        raise ValueError(
+                            "the sum of 'i'th element of begin and 'i'th element of size must be "
+                            "less than or equal to input_'s 'i'th dimension."
+                        )
+                    end = b + s
+                elif s == -1:
+                    end = d
+                else:
+                    raise ValueError(
+                        "elements of size must be an int that greater then 0 or equal to -1"
+                    )
+            slice_tup_list.append((begin, end, stride))
+        return slice_v2(input_, slice_tup_list, name=name)
     slice_conf_list = []
     for b, s, d in list(zip(begin, size, input_.static_shape)):
         slice_conf = op_conf_util.DimSliceConf()
@@ -207,7 +273,9 @@ def slice(input_, begin, size, name=None):
             elif s == -1:
                 slice_conf.end = d
             else:
-                raise ValueError("elements of size must be an int that greater then 0 or equal to -1")
+                raise ValueError(
+                    "elements of size must be an int that greater then 0 or equal to -1"
+                )
             slice_conf.stride = 1
         slice_conf_list.append(slice_conf)
 
@@ -222,6 +290,7 @@ def slice(input_, begin, size, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("slice_v2")
 def slice_v2(input, slice_tup_list, name=None):
@@ -241,7 +310,7 @@ def slice_v2(input, slice_tup_list, name=None):
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
         raise ValueError(
             'param "slice_tup_list" must be a list or tuple whose length should be '
-            'less than or equal to number of dimensions of input'
+            "less than or equal to number of dimensions of input"
         )
 
     # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
@@ -287,7 +356,8 @@ def slice_v2(input, slice_tup_list, name=None):
         .SetAttr("has_end", has_end_list, "AttrTypeListInt64")
         .Build()
     )
-    return op.RemoteBlobList()[0]
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
 
 @oneflow_export("concat")
 def concat(values, axis, name=None):
@@ -304,88 +374,133 @@ def concat(values, axis, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("local_scatter_nd_update")
-def local_scatter_nd_update(inputs, indices, updates, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LocalScatterNdUpdate_")
+
+@oneflow_export("gather_nd")
+def gather_nd(params, indices, name=None):
+    if name is None:
+        name = id_util.UniqueStr("GatherNd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("gather_nd")
+        .Input("params", [params])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
     )
-    setattr(op_conf.local_scatter_nd_update_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "indices", indices.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "updates", updates.logical_blob_name)
-    setattr(op_conf.local_scatter_nd_update_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("local_nonzero")
-def local_nonzero(input, name=None):
+@oneflow_export("scatter_nd")
+def scatter_nd(indices, updates, shape, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ScatterNd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("scatter_nd")
+        .Input("indices", [indices])
+        .Input("updates", [updates])
+        .SetAttr("shape", shape, "AttrTypeShape")
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("tensor_scatter_nd_update")
+def tensor_scatter_nd_update(params, indices, updates, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorScatterNdUpdate_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("tensor_scatter_nd_update")
+        .Input("params", [params])
+        .Input("updates", [updates])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("tensor_scatter_nd_add")
+def tensor_scatter_nd_add(params, indices, updates, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorScatterNdAdd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("tensor_scatter_nd_add")
+        .Input("params", [params])
+        .Input("updates", [updates])
+        .Input("indices", [indices])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("argwhere")
+def argwhere(condition, dtype=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ArgWhere_")
+
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("LocalNonzero_"))
-    setattr(op_conf.local_nonzero_conf, "in", input.logical_blob_name)
-    setattr(op_conf.local_nonzero_conf, "out", "out")
-    setattr(op_conf.local_nonzero_conf, "num_nonzero", "num_nonzero")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.arg_where_conf, "in", condition.logical_blob_name)
+    setattr(op_conf.arg_where_conf, "out", "out")
+    setattr(op_conf.arg_where_conf, "out_size", "out_size")
+    if dtype is not None:
+        setattr(op_conf.arg_where_conf, "data_type", dtype)
     compile_context.CurJobAddOp(op_conf)
-    ret = []
-    for obn in ["out", "num_nonzero"]:
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", obn)
-        ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return sync_dynamic_resize(ret[0], ret[1])
+
+    arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_lbi, "blob_name", "out")
+
+    arg_where_out_size_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(arg_where_out_size_lbi, "op_name", op_conf.name)
+    setattr(arg_where_out_size_lbi, "blob_name", "out_size")
+
+    arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
+    arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
+    return sync_dynamic_resize(arg_where_out, arg_where_out_size)
+
+
+@oneflow_export("nonzero")
+def nonzero(a, name=None):
+    if name is None:
+        argwhere_name = id_util.UniqueStr("Nonzero_ArgWhere_")
+        tranpose_name = id_util.UniqueStr("Nonzero_Transpose_")
+    else:
+        argwhere_name = name + "_ArgWhere"
+        tranpose_name = name + "_Transpose"
+    indices = argwhere(a, name=argwhere_name)
+    return transpose(indices, perm=(1, 0), name=tranpose_name)
 
 
 @oneflow_export("where")
-def where(condition, x, y, name=None):
-    assert condition.shape == x.shape and x.shape == y.shape
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Where_"))
-    setattr(op_conf.where_conf, "condition", condition.logical_blob_name)
-    setattr(op_conf.where_conf, "lhs", x.logical_blob_name)
-    setattr(op_conf.where_conf, "rhs", y.logical_blob_name)
-    setattr(op_conf.where_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+def where(condition, x=None, y=None, name=None): 
+    if x is None and y is None:
+        return argwhere(condition, name=name)
+    elif x is not None and y is not None:
+        if name is None:
+            name = id_util.UniqueStr("Where_")
 
-
-@oneflow_export("squeeze")
-def squeeze(inputs, axis, name=None):
-    assert isinstance(axis, list)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Squeeze_"))
-    assert all(axis_i == -1 or axis_i >= 0 for axis_i in axis)
-    setattr(op_conf.squeeze_conf, "in", inputs.logical_blob_name)
-    op_conf.squeeze_conf.out = "out"
-    op_conf.squeeze_conf.axis.extend(axis)
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("expand_dims")
-def expand_dims(inputs, axis, name=None):
-    assert isinstance(axis, int)
-    if axis < 0:
-        axis = len(inputs.shape) + axis
-    assert axis <= len(inputs.shape)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Expandims_"))
-    setattr(op_conf.expand_dims_conf, "in", inputs.logical_blob_name)
-    op_conf.expand_dims_conf.out = "out"
-    op_conf.expand_dims_conf.axis = axis
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+        broadcast_cond = flow.broadcast_to_compatible_with(condition, [x, y])
+        broadcast_x = flow.broadcast_to_compatible_with(x, [condition, y])
+        broadcast_y = flow.broadcast_to_compatible_with(y, [condition, x])
+        return (
+            flow.user_op_builder(name)
+            .Op("where")
+            .Input("condition", [broadcast_cond])
+            .Input("x", [broadcast_x])
+            .Input("y", [broadcast_y])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
 @oneflow_export("piece_slice")
@@ -471,24 +586,37 @@ def assign(ref, value, dtype=None, name=None):
     setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
 
-
-@oneflow_export("random_like")
-def random_like(like, seed=None, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.random_like_conf.like = like.logical_blob_name
+@oneflow_export("random.generate_random_batch_permutation_indices")
+def generate_random_batch_permutation_indices(value, seed=None, name=None):
+    import random
+    op = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
+        .Op("generate_random_batch_permutation_indices")
+        .Input("x", [value])
+        .Output("y")
+    )
     if seed is not None:
-        op_conf.random_like_conf.random_seed = seed
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("RandomLike_"))
-    op_conf.random_like_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+        op.SetAttr("seed", seed, "AttrTypeInt64")
+    else:
+        op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+    return (
+        op
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+@oneflow_export("random.shuffle")
+def shuffle(value, seed=None, name=None):
+    return flow.gather(
+        value, generate_random_batch_permutation_indices(value, seed)
+    )
+
 
 @oneflow_export("identity")
 def identity(x, name=None):
-    if name is None: name = id_util.UniqueStr("Identity_")
+    if name is None:
+        name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.logical_blob_name)
@@ -498,3 +626,40 @@ def identity(x, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("squeeze")
+def squeeze(input, axis=None, name=None):
+    if axis is None:
+        axis = [idx for idx, dim in enumerate(input.shape) if dim is 1]
+    else:
+        assert isinstance(axis, list) or isinstance(axis, tuple)
+        in_num_axes = len(input.shape)
+        for x in axis:
+            assert x >= -in_num_axes and x < in_num_axes
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Squeeze_"))
+        .Op("squeeze")
+        .Input("in", [input])
+        .Output("out")
+        .SetAttr("axes", list(axis), "AttrTypeListInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("expand_dims")
+def expand_dims(input, axis, name=None):
+    in_num_axes = len(input.shape)
+    assert axis >= -(in_num_axes + 1) and axis <= in_num_axes
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ExpandDims_"))
+        .Op("expand_dims")
+        .Input("in", [input])
+        .Output("out")
+        .SetAttr("axis", axis, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

@@ -170,12 +170,11 @@ __global__ void HeapTopKKernel(const T* in_ptr, const int32_t instance_num,
 template<typename T>
 class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
  public:
-  GpuHeapSelectionTopKKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
   GpuHeapSelectionTopKKernel() = default;
   ~GpuHeapSelectionTopKKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -196,18 +195,16 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
                         ctx->device_ctx()->cuda_stream()>>>(
         in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(),
         GetMinVal<T>(), out->mut_dptr<int32_t>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("top_k")                                                          \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                  \
-        return new GpuHeapSelectionTopKKernel<dtype>(ctx);                               \
-      })                                                                                 \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {              \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);    \
-        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") <= 128 \
-               && in_desc->data_type() == GetDataType<dtype>::value;                     \
+#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedPred( \
+      [](const user_op::KernelRegContext& ctx) {                                                   \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
+        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") <= 128           \
+               && in_desc->data_type() == GetDataType<dtype>::value;                               \
       });
 
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)

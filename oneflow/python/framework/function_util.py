@@ -15,14 +15,15 @@ import oneflow.python.lib.core.pb_util as pb_util
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()
-        
+
     def __getattr__(self, attr_name):
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
         flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
-        def FunctionConfigSetter(attr_value):
+        def FunctionConfigSetter(attr_value = None):
             if default_val.HasField('at_bool'):
+                if attr_value is None: attr_value = True
                 assert type(attr_value) is bool
                 flag_name2flag_value[attr_name].at_bool = attr_value
             elif default_val.HasField('at_int64'):
@@ -249,6 +250,10 @@ def set_enable_float_compute_for_half_gemm(func_desc, value = True):
 @oneflow_function_config('enable_auto_mixed_precision')
 def set_enable_auto_mixed_precision(func_desc, value = True):
     func_desc.job_config_proto.enable_auto_mixed_precision = value
+
+@oneflow_function_config('enable_keep_header_only')
+def set_enable_keep_header_only(func_desc, value = True):
+    func_desc.job_config_proto.enable_keep_header_only = value
 
 @oneflow_function_config('concurrency_width')
 def set_concurrency_width(func_desc, value):

@@ -104,10 +104,10 @@ bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::s
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-long long JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn,
-                                           std::string* error_str) {
+bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn,
+                                      std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, 0LL);
+      .GetDataAndSerializedErrorProto(error_str, false);
 }
 
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,

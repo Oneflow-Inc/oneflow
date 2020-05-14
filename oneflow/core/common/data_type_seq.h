@@ -32,4 +32,10 @@
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
+#define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+
+#if defined(WITH_CUDA)
+#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+#endif
+
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_SEQ_H_

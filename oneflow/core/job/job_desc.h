@@ -64,6 +64,8 @@ class JobDesc final {
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
+  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
+
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 

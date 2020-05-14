@@ -7,12 +7,11 @@ namespace oneflow {
 template<typename T>
 class GpuSortKernel final : public user_op::OpKernel {
  public:
-  GpuSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
   GpuSortKernel() = default;
   ~GpuSortKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -33,20 +32,19 @@ class GpuSortKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("sort")                                                              \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                     \
-        return new GpuSortKernel<dtype>(ctx);                                               \
-      })                                                                                    \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                 \
+      .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
         const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
         return ctx.device_type() == DeviceType::kGPU                                        \
                && out_desc->data_type() == GetDataType<dtype>::value;                       \
       })                                                                                    \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
         const int32_t instance_size = in_shape->dim_vec().back();                           \
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \

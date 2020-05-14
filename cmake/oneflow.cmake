@@ -94,6 +94,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.hpp$")
+    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
     if(BUILD_CUDA) 
       list(APPEND of_all_obj_cc ${oneflow_single_file})
@@ -136,12 +141,14 @@ foreach(oneflow_single_file ${oneflow_all_src})
 endforeach()
 
 # clang format
-add_custom_target(of_format)
-
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
-    add_custom_command(TARGET of_format PRE_BUILD
-    COMMAND clang-format -i -style=file ${source_file})
-endforeach()
+add_custom_target(of_format
+            python3
+            ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py
+            --clang_format_binary
+            clang-format
+            --source_dir
+            ${CMAKE_CURRENT_SOURCE_DIR}/oneflow
+            --fix)
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
@@ -236,7 +243,7 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${oneflow_python_file}"
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
-
+add_dependencies(of_pyscript_copy of_protoobj)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
@@ -274,6 +281,7 @@ endif()
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
 add_custom_target(of_include_copy ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+add_dependencies(of_include_copy of_ccobj)
 file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)

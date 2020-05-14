@@ -6,11 +6,8 @@ REGISTER_USER_OP("arg_sort")
     .Input("in")
     .Output("out")
     .Attr("direction", UserOpAttrType::kAtString)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
@@ -21,14 +18,9 @@ REGISTER_USER_OP("arg_sort")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // The current implementation can only do arg_sort in the last dimension and should use
       // Broadcast (by default) instead of Split for that dimension
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
-      if (num_axes > 1) {
-        SbpSignatureBuilder()
-            .Split(ctx->inputs(), 0)
-            .Split(ctx->outputs(), 0)
-            .MakeSplitSignatureListBuilder(num_axes - 1)
-            .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
     })

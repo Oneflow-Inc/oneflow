@@ -89,6 +89,7 @@ class JobBuildAndInferCtx {
   Maybe<void> AddLossMirroredBlobName(const std::string& lbn);
   Maybe<const LogicalBlobId*> GetSubLbi(const LogicalBlobId& lbi, int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
+  bool IsVariableLbi(const LogicalBlobId& lbi) const;
 
   Job* job_;
   int64_t job_id_;

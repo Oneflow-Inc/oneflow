@@ -7,6 +7,10 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, in_shape, direction, data_type):
     assert device_type in ["gpu", "cpu"]
@@ -36,7 +40,7 @@ def compare_with_tensorflow(device_type, in_shape, direction, data_type):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["in_shape"] = [(100,), (100, 100), (1000, 1000), (10, 10, 2000), (10, 10000)]
+    arg_dict["in_shape"] = [(100,), (100, 100), (10, 10, 200)]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
 
