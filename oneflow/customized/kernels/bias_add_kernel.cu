@@ -71,11 +71,12 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL(type_cpp, type_proto) \
-  template struct BiasAddUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ);
-#undef INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, float16)
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, float)
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, double)
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, int8_t)
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, int32_t)
+REGISTER_BIAS_ADD_USER_KERNEL(GPU, int64_t)
 
-template struct BiasAddUtil<DeviceType::kGPU, float16>;
 
 }  // namespace oneflow
