@@ -3,6 +3,7 @@
 
 namespace oneflow {
 
+namespace {
 template<DeviceType device, typename T>
 class ScalarAddByTensorKernel final : public user_op::OpKernel {
  public:
@@ -19,23 +20,6 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-#define REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL(device, dtype_pair)                                \
-  REGISTER_USER_KERNEL("scalar_add_by_tensor")                                                  \
-      .SetCreateFn<ScalarAddByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device                                                      \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
-      })                                                                                        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 template<DeviceType device, typename T>
 class ScalarSubByTensorKernel final : public user_op::OpKernel {
@@ -54,23 +38,6 @@ class ScalarSubByTensorKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALAR_SUB_BY_TENSOR_KERNEL(device, dtype_pair)                                \
-  REGISTER_USER_KERNEL("scalar_sub_by_tensor")                                                  \
-      .SetCreateFn<ScalarSubByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device                                                      \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
-      })                                                                                        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_SUB_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
-
 template<DeviceType device, typename T>
 class ScalarMulByTensorKernel final : public user_op::OpKernel {
  public:
@@ -88,23 +55,6 @@ class ScalarMulByTensorKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALAR_MUL_BY_TENSOR_KERNEL(device, dtype_pair)                                \
-  REGISTER_USER_KERNEL("scalar_mul_by_tensor")                                                  \
-      .SetCreateFn<ScalarMulByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device                                                      \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
-      })                                                                                        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MUL_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
-
 template<DeviceType device, typename T>
 class ScalarDivByTensorKernel final : public user_op::OpKernel {
  public:
@@ -121,6 +71,59 @@ class ScalarDivByTensorKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+}  // namespace
+
+#define REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL(device, dtype_pair)                                \
+  REGISTER_USER_KERNEL("scalar_add_by_tensor")                                                  \
+      .SetCreateFn<ScalarAddByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
+        return ctx.device_type() == device                                                      \
+               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+
+#define REGISTER_SCALAR_SUB_BY_TENSOR_KERNEL(device, dtype_pair)                                \
+  REGISTER_USER_KERNEL("scalar_sub_by_tensor")                                                  \
+      .SetCreateFn<ScalarSubByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
+        return ctx.device_type() == device                                                      \
+               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_SUB_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+
+#define REGISTER_SCALAR_MUL_BY_TENSOR_KERNEL(device, dtype_pair)                                \
+  REGISTER_USER_KERNEL("scalar_mul_by_tensor")                                                  \
+      .SetCreateFn<ScalarMulByTensorKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()             \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
+        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
+        return ctx.device_type() == device                                                      \
+               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MUL_BY_TENSOR_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 #define REGISTER_SCALAR_DIV_BY_TENSOR_KERNEL(device, dtype_pair)                                \
   REGISTER_USER_KERNEL("scalar_div_by_tensor")                                                  \
