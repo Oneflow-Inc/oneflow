@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferBroadcastTensorDescFn(user_op::InferContext* ctx) {
+Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
   CHECK_EQ_OR_RETURN(x->data_type(), scalar->data_type());
@@ -46,8 +46,7 @@ REGISTER_USER_OP("scalar_add_by_tensor")
     .Input("x")
     .Input("scalar")
     .Output("y")
-
-    .SetTensorDescInferFn(InferBroadcastTensorDescFn)
+    .SetTensorDescInferFn(TensorDescInferFn)
     .SetBatchAxisInferFn(BatchAxisInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
@@ -63,6 +62,31 @@ REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
       }
+      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("reduce_sum")
+                .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
+                .Output("output_tensor")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "scalar", 0);
+        AddOp(grad_op);
+      }
     });
+
+REGISTER_USER_OP("scalar_sub_by_tensor")
+    .Input("x")
+    .Input("scalar")
+    .Output("y")
+    .SetTensorDescInferFn(TensorDescInferFn)
+    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("scalar", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    }));
 
 }  // namespace oneflow
