@@ -19,19 +19,23 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dz_tensor = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    XpuVarNdarray<const T> dz(dz_tensor->shape(), dz_tensor->dptr<T>());
-    XpuVarNdarray<const T> const_tmp(dz_tensor->shape(), tmp_buffer->dptr<T>());
+
+    const int64_t num_axes = dz_tensor->shape().NumAxes();
+    XpuVarNdarray<const T> dz(dz_tensor->shape(), dz_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> const_tmp(dz.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
 
     NdarrayUtil<device, T>::BroadcastDiv(
-        ctx->device_ctx(), tmp, XpuVarNdarray<const T>(z_tensor->shape(), z_tensor->dptr<T>()),
-        XpuVarNdarray<const T>(y_tensor->shape(), y_tensor->dptr<T>()));
+        ctx->device_ctx(), tmp,
+        XpuVarNdarray<const T>(z_tensor->shape(), z_tensor->dptr<T>(), num_axes),
+        XpuVarNdarray<const T>(y_tensor->shape(), y_tensor->dptr<T>(), num_axes));
     NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
     NdarrayUtil<device, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>()),
+        ctx->device_ctx(), XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes),
         const_tmp, tmp);
     NdarrayUtil<device, T>::InplaceNegative(
-        ctx->device_ctx(), XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>()));
+        ctx->device_ctx(),
+        XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
