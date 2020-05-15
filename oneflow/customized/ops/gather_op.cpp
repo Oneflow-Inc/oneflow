@@ -53,12 +53,19 @@ REGISTER_USER_OP("gather")
             .Build();
       }
       FOR_RANGE(int64_t, i, 0, in_num_axes) {
-        if (i == gather_axis) { continue; }
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
-            .Build();
+        if (i == gather_axis) {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("indices", 0))
+              .Split(user_op::OpArg("in", 0), i)
+              .PartialSum(user_op::OpArg("out", 0))
+              .Build();
+        } else {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("indices", 0))
+              .Split(user_op::OpArg("in", 0), i)
+              .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
+              .Build();
+        }
       }
       return Maybe<void>::Ok();
     });

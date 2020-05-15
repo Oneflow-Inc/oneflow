@@ -43,7 +43,8 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             raise NotImplementedError
         else:
             raise AttributeError
-    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
+    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0) and os.getenv(
+            "ENABLE_USER_OP") != 'True':
         assert axis == 0
         assert batch_dims == 0
         setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
