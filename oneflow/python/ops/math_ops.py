@@ -768,7 +768,7 @@ def logical_and(x, y, name=None):
 @oneflow_export("math.minimum")
 def broadcast_min(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        return build_broadcast_binary_op("broadcast_min", x, y, name)
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -788,7 +788,7 @@ def broadcast_min(x, y, name=None):
 @oneflow_export("math.maximum")
 def broadcast_max(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        return build_broadcast_binary_op("broadcast_max", x, y, name)
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
