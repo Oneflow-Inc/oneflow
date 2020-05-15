@@ -64,6 +64,24 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipBoxes, MAKE_FLIP_BOXES_SWITCH_ENTRY,
 #undef MAKE_FLIP_BOXES_SWITCH_ENTRY
 
 template<typename T>
+void ScaleBoxes(TensorBuffer* boxes_buffer, T scale_h, T scale_w) {
+  int num_boxes = boxes_buffer->shape().At(0);
+  FOR_RANGE(int, i, 0, num_boxes) {
+    T* cur_box_ptr = boxes_buffer->mut_data<T>() + i * 4;
+    cur_box_ptr[0] *= scale_w;
+    cur_box_ptr[1] *= scale_h;
+    cur_box_ptr[2] *= scale_w;
+    cur_box_ptr[3] *= scale_h;
+  }
+}
+
+#define MAKE_SCALE_BOXES_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(void, ScaleBoxes, MAKE_SCALE_BOXES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
+
+#undef MAKE_SCALE_BOXES_SWITCH_ENTRY
+
+template<typename T>
 void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_height, int32_t image_width,
                   FlipCode flip_code) {
   int num_points = polygons_buffer->shape().At(0);
@@ -79,6 +97,22 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
 
 #undef MAKE_FLIP_POLYGONS_SWITCH_ENTRY
+
+template<typename T>
+void ScalePolygons(TensorBuffer* poly_buffer, T scale_h, T scale_w) {
+  int num_pts = poly_buffer->shape().At(0);
+  FOR_RANGE(int, i, 0, num_pts) {
+    T* cur_pt = poly_buffer->mut_data<T>() + i * 2;
+    cur_pt[0] *= scale_w;
+    cur_pt[1] *= scale_h;
+  }
+}
+
+#define MAKE_SCALE_POLYGONS_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(void, ScalePolygons, MAKE_SCALE_POLYGONS_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
+
+#undef MAKE_SCALE_POLYGONS_SWITCH_ENTRY
 
 template<typename T>
 void ImageNormalizeByChannel(TensorBuffer* image_buffer, const std::vector<float>& std_vec,
@@ -225,6 +259,39 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class ObjectBboxScaleKernel final : public user_op::OpKernel {
+ public:
+  ObjectBboxScaleKernel() = default;
+  ~ObjectBboxScaleKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* bbox_tensor = ctx->Tensor4ArgNameAndIndex("bbox", 0);
+    const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int num_images = bbox_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(scale_tensor->shape().At(0), num_images);
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer* bbox_buffer = bbox_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(bbox_buffer->shape().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer->shape().At(1), 4);
+      TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      if (out_bbox_buffer != bbox_buffer) {
+        out_bbox_buffer->Resize(bbox_buffer->shape(), bbox_buffer->data_type());
+        memcpy(out_bbox_buffer->mut_data(), bbox_buffer->data(), out_bbox_buffer->nbytes());
+      }
+      float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
+      float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
+      SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_h, scale_w);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
  public:
   ObjectSegmentationPolygonFlipKernel() = default;
@@ -258,6 +325,40 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       SwitchFlipPolygons(SwitchCase(out_polygons_buffer->data_type()), out_polygons_buffer,
                          image_height, image_width, flip_code);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
+ public:
+  ObjectSegmentationPolygonScaleKernel() = default;
+  ~ObjectSegmentationPolygonScaleKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* poly_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
+    const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int num_images = poly_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(scale_tensor->shape().At(0), num_images);
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer* poly_buffer = poly_tensor->dptr<TensorBuffer>() + i;
+      CHECK_EQ(poly_buffer->shape().NumAxes(), 2);
+      CHECK_EQ(poly_buffer->shape().At(1), 2);
+      TensorBuffer* out_poly_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      if (out_poly_buffer != poly_buffer) {
+        out_poly_buffer->Resize(poly_buffer->shape(), poly_buffer->data_type());
+        memcpy(out_poly_buffer->mut_data(), poly_buffer->data(), out_poly_buffer->nbytes());
+      }
+      float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
+      float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
+      SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_h,
+                          scale_w);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -363,11 +464,25 @@ REGISTER_USER_KERNEL("object_bbox_flip")
                                              {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
+REGISTER_USER_KERNEL("object_bbox_scale")
+    .SetCreateFn<ObjectBboxScaleKernel>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"bbox", DataType::kTensorBuffer},
+                                             {"scale", DataType::kFloat},
+                                             {"out", DataType::kTensorBuffer}}))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
+
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
     .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
                                              {"image_size", DataType::kInt32},
                                              {"flip_code", DataType::kInt8},
+                                             {"out", DataType::kTensorBuffer}}))
+    .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
+
+REGISTER_USER_KERNEL("object_segmentation_polygon_scale")
+    .SetCreateFn<ObjectSegmentationPolygonScaleKernel>()
+    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
+                                             {"scale", DataType::kFloat},
                                              {"out", DataType::kTensorBuffer}}))
     .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
