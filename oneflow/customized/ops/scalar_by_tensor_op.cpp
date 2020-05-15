@@ -160,7 +160,6 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("y", op.input("x", 0))
                 .Output("out")
-                .Attr("float_operand", static_cast<double>(-1))
                 .Build();
         user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_reduce_sum");
         user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
