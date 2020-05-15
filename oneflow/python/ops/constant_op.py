@@ -10,6 +10,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 
+
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
     is_user_op = False
@@ -22,7 +23,7 @@ def constant(value, dtype=None, shape=None, name=None):
 
     if not isinstance(value, (int, float)):
         raise NotImplementedError
-    
+
     if is_user_op:
         if isinstance(value, float):
             is_floating_value = True
@@ -58,9 +59,11 @@ def constant(value, dtype=None, shape=None, name=None):
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("constant_scalar")
 def constant_scalar(value, dtype=None, name=None):
     return flow.constant(value, dtype=dtype, shape=[1])
+
 
 @oneflow_export("constant_like")
 def constant_like(like, value, dtype=None, name=None):
@@ -72,14 +75,15 @@ def constant_like(like, value, dtype=None, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
         if dtype is None:
             dtype = like.dtype
-        return flow.user_op_builder(name).Op("constant_like")\
-            .Input("like", [like])\
-            .SetAttr("integer_value", int(value), "AttrTypeInt64")\
-            .SetAttr("floating_value", float(value), "AttrTypeDouble")\
-            .SetAttr("is_floating_value", type(value) is float, "AttrTypeBool")\
-            .SetAttr("dtype", dtype, "AttrTypeDataType")\
-            .Output("out")\
-            .Build().InferAndTryRun().RemoteBlobList()[0]
+        is_floating_value = isinstance(value, float)
+        return (flow.user_op_builder(name).Op("constant_like")
+                .Input("like", [like])
+                .SetAttr("integer_value", int(value), "AttrTypeInt64")
+                .SetAttr("floating_value", float(value), "AttrTypeDouble")
+                .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")
+                .SetAttr("dtype", dtype, "AttrTypeDataType")
+                .Output("out")
+                .Build().InferAndTryRun().RemoteBlobList()[0])
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
@@ -99,9 +103,11 @@ def constant_like(like, value, dtype=None, name=None):
         setattr(out_lbi, "blob_name", "out")
         return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("ones_like")
 def ones_like(like, dtype=None, name=None):
     return constant_like(like, 1, dtype=dtype, name=name)
+
 
 @oneflow_export("zeros_like")
 def zeros_like(like, dtype=None, name=None):
