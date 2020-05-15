@@ -103,7 +103,7 @@ REGISTER_USER_OP_GRAD("reduce_sum")
             builder.Op("broadcast_like")
                 .Input("x", op.GetGradTensorWithOpOutput("output_tensor", 0))
                 .Input("like", op.input("input_tensor", 0))
-                .Attr("axis", op.attr<std::vector<int32_t>>("axis"))
+                .Attr("broadcast_axes", op.attr<std::vector<int32_t>>("axis"))
                 .Output("y")
                 .Build();
         op.BindGradTensorWithOpInput(reduce_sum_grad_op.output("y", 0), "input_tensor", 0);

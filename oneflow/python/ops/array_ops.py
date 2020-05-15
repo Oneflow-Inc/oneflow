@@ -630,7 +630,7 @@ def broadcast_like(x, like, axis=None, name=None):
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .SetAttr("axis", axis, "AttrTypeListInt32")
+        .SetAttr("broadcast_axes", axis, "AttrTypeListInt32")
         .Output("y")
         .Build()
         .InferAndTryRun()

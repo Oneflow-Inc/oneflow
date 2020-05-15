@@ -7,9 +7,10 @@ namespace {
 
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("broadcast_axes");
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
+  int32_t num_reduced_axis = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
       ctx->NewBuilder()
@@ -17,23 +18,57 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
           .Split(user_op::OpArg("like", 0), i)
           .Split(user_op::OpArg("y", 0), i)
           .Build();
+      num_reduced_axis += 1;
     } else {
-      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), i - num_reduced_axis)
+          .Split(user_op::OpArg("like", 0), i)
+          .Split(ctx->outputs(), i)
+          .Build();
     }
   }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("like", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
+
+bool IsAxesLegal(const AxisVector& axis_vec, const class Shape& like_shape,
+                 const class Shape& in_shape) {
+  Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
+  if (like_shape.NumAxes() > in_shape.NumAxes()) {
+    reduced_shape = reduced_shape.RemoveOnes(axis_vec);
+  }
+  return reduced_shape.dim_vec() == in_shape.dim_vec();
+}
+
+Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+  const auto& broadcast_axes = ctx->GetAttr<std::vector<int32_t>>("broadcast_axes");
+  const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+  Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+  if (!broadcast_axes.empty()) {
+    const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
+    CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
+  } else {
+    CHECK_OR_RETURN(like_shape->dim_vec() == in_shape->dim_vec());
+  }
+  *out_shape = *like_shape;
+  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 REGISTER_USER_OP("broadcast_like")
     .Input("x")
     .Input("like")
-    .Attr("axis", UserOpAttrType::kAtListInt32)
+    .Attr("broadcast_axes", UserOpAttrType::kAtListInt32)
     .Output("y")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK_OR_RETURN(like_arg_modifier != nullptr);
@@ -44,5 +79,5 @@ REGISTER_USER_OP("broadcast_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures);
-}  // namespace
+
 }  // namespace oneflow
