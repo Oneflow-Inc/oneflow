@@ -10,7 +10,6 @@ REGISTER_USER_OP("split_like")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int32_t axis = ctx->GetAttr<int32_t>("axis");
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* like_0_desc = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const DimVector& in_dim_vec = in_desc->shape().dim_vec();
       int64_t dim_sum = 0;
       for (size_t i = 0; i < ctx->outputs().size(); ++i) {
