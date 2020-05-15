@@ -674,6 +674,26 @@ def object_bbox_flip(bbox, image_size, flip_code, name=None):
     return op.InferAndTryRun().RemoteBlobList()[0]
 
 
+@oneflow_export("object_bbox_scale")
+def object_bbox_scale(bbox, scale, name=None):
+    assert isinstance(bbox, BlobDef)
+    assert isinstance(scale, BlobDef)
+    assert bbox.shape[0] == scale.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectBboxScale_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_bbox_scale")
+        .Input("bbox", [bbox])
+        .Input("scale", [scale])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
 @oneflow_export("object_segmentation_polygon_flip")
 def object_segm_poly_flip(poly, image_size, flip_code, name=None):
     assert isinstance(poly, BlobDef)
@@ -697,6 +717,26 @@ def object_segm_poly_flip(poly, image_size, flip_code, name=None):
         .Input("poly", [poly])
         .Input("image_size", [image_size])
         .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_scale")
+def object_segm_poly_scale(poly, scale, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(scale, BlobDef)
+    assert poly.shape[0] == scale.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyFilp_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_scale")
+        .Input("poly", [poly])
+        .Input("scale", [scale])
         .Output("out")
         .Build()
     )
