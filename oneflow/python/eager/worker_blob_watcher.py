@@ -9,7 +9,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.local_blob as local_blob_util
 import traceback
 
-class GetIdForRegisteredCallback(cb):
+def GetIdForRegisteredCallback(cb):
     assert callable(cb)
     global unique_id2handler
     unique_id2handler[id(cb)] = cb
