@@ -58,6 +58,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
   HashMap<ParallelDesc, std::vector<const OpNode*>> pd2last_nodes;
   HashMap<const OpNode*, int64_t> last_node2parallel_id;
   HashMap<const OpNode*, int64_t> last_node2order;
+  HashMap<const OpNode*, const OpNode*> last_node2var_node;
   int64_t node_cnt = 0;
   op_graph.TopoForEachNode([&](const OpNode* node) {
     op_node2topo_order[node] = node_cnt;
@@ -90,6 +91,9 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     const OpNode* last_node = op_seq_without_batch_dim.back();
     const ParallelDesc& pd = last_node->parallel_desc();
     pd2last_node2node_seqs[pd][last_node] = op_seq_without_batch_dim;
+    const OpNode* var_node = op_seq_without_batch_dim.front();
+    CHECK(var_node->op().op_conf().has_variable_conf());
+    last_node2var_node[last_node] = var_node;
     int64_t min_consumer_topo_order = node_cnt;
     last_node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
       op_node2op_conf.emplace(dst, dst->op().op_conf());
@@ -126,23 +130,20 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
         const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
         builder->MutParallelConfOnlyOnce(node->op().op_name(), parallel_conf);
       }
-      ParallelDesc new_pd(last_node->parallel_desc().parallel_conf());
+      ParallelDesc new_pd(NonDistributedParallelConf4ParallelId(pd, parallel_id));
       pd2last_nodes[new_pd].push_back(last_node);
     }
   }
   for (auto& pair : pd2last_nodes) {
-    const ParallelDesc& pd = pair.first;
     std::vector<const OpNode*>* last_nodes = &pair.second;
-    if (pd.parallel_num() <= 1) { continue; }
     std::sort(last_nodes->begin(), last_nodes->end(), [&](const OpNode* lhs, const OpNode* rhs) {
       return last_node2order.at(lhs) < last_node2order.at(rhs);
     });
     FOR_RANGE(int64_t, i, 1, last_nodes->size()) {
-      std::vector<const OpNode*> cur_node_seq = pd2last_node2node_seqs[pd][last_nodes->at(i)];
-      OperatorConf cur_var_conf(cur_node_seq[0]->op().op_conf());
-      std::vector<const OpNode*> before_node_seq =
-          pd2last_node2node_seqs[pd][last_nodes->at(i - 1)];
-      cur_var_conf.add_ctrl_in_op_name(before_node_seq[0]->op().op_name());
+      const OpNode* cur_var_node = last_node2var_node[last_nodes->at(i)];
+      OperatorConf cur_var_conf(cur_var_node->op().op_conf());
+      const OpNode* before_var_node = last_node2var_node[last_nodes->at(i - 1)];
+      cur_var_conf.add_ctrl_in_op_name(before_var_node->op().op_name());
       builder->MutOpsOnlyOnce({cur_var_conf});
     }
   }
