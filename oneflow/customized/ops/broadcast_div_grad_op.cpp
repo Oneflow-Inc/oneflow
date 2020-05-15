@@ -18,7 +18,18 @@ REGISTER_USER_OP("broadcast_div_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      TODO();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("y", 0))
+          .Broadcast(user_op::OpArg("z", 0))
+          .Broadcast(user_op::OpArg("dz", 0))
+          .Broadcast(user_op::OpArg("dy", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("y", 0))
+          .PartialSum(user_op::OpArg("z", 0))
+          .PartialSum(user_op::OpArg("dz", 0))
+          .Broadcast(user_op::OpArg("dy", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
