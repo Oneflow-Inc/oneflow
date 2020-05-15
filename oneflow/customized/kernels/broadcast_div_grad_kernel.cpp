@@ -12,25 +12,25 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* b_blob = ctx->Tensor4ArgNameAndIndex("b", 0);
-    const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
+    const user_op::Tensor* z_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* dz_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    user_op::Tensor* db_blob = ctx->Tensor4ArgNameAndIndex("db", 0);
+    user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("db", 0);
 
-    XpuVarNdarray<const T> dy(dy_blob->shape(), dy_blob->dptr<T>());
+    XpuVarNdarray<const T> dy(dz_tensor->shape(), dz_tensor->dptr<T>());
     XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dy.shape(), tmp_buffer->mut_dptr<T>());
 
     NdarrayUtil<device, T>::BroadcastDiv(
-        ctx->device_ctx(), tmp, XpuVarNdarray<const T>(y_blob->shape(), y_blob->dptr<T>()),
-        XpuVarNdarray<const T>(b_blob->shape(), b_blob->dptr<T>()));
+        ctx->device_ctx(), tmp, XpuVarNdarray<const T>(z_tensor->shape(), z_tensor->dptr<T>()),
+        XpuVarNdarray<const T>(y_tensor->shape(), y_tensor->dptr<T>()));
     NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dy, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(),
-                                      XpuVarNdarray<T>(db_blob->shape(), db_blob->mut_dptr<T>()),
-                                      const_tmp, tmp);
+    NdarrayUtil<device, T>::ReduceSum(
+        ctx->device_ctx(), XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>()),
+        const_tmp, tmp);
     NdarrayUtil<device, T>::InplaceNegative(
-        ctx->device_ctx(), XpuVarNdarray<T>(db_blob->shape(), db_blob->mut_dptr<T>()));
+        ctx->device_ctx(), XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
