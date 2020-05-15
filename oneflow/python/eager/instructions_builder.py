@@ -6,7 +6,11 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
-import oneflow.python.eager.id_cache as id_cache
+import oneflow.python.eager.symbol as symbol_util
+import oneflow.python.eager.symbol_dict as symbol_dict
+import oneflow.python.eager.object as object_util
+import oneflow.python.eager.object_dict as object_dict
+import oneflow.python.eager.worker_blob_watcher as physical_blob_watcher
 
 class InstructionsBuilder(object):
     def __init__(self, id_generator, instruction_list, eager_symbol_list):
@@ -21,51 +25,54 @@ class InstructionsBuilder(object):
         placement_scope = placement_ctx.PlacementScopeStackTop()
         parallel_conf = placement_scope.default_parallel_conf
         device_tag = placement_scope.default_device_tag
-        parallel_conf_sym = self.GetSymbolId4ParallelConf(parallel_conf)
-        job_conf_sym = self.GetSymbolId4JobConf(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._GetOpConfSymbolId(op_conf)
-        opkernel_obj = self.GetSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym)
+        parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
+        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
+        op_conf_sym = self._GetOpConfSymbol(op_conf)
+        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
         input_triples = self._GetInputTriples(op_conf)
-        output_triples = self._GetOutputTriples(op_conf, parallel_conf, parallel_conf_sym)
-        mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_conf_sym)
-        return self._StatelessCall(device_tag, parallel_conf_sym,
-                                   job_conf_sym, op_conf_sym, opkernel_obj,
+        output_triples = self._GetOutputTriples(op_conf, parallel_desc_sym)
+        mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_desc_sym)
+        return self._StatelessCall(parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                                    input_triples, output_triples, mut2_output_triples)
 
-    def WatchBlobHeader(self, blob_object_id):
-        return self._WatchBlob("WatchBlobHeader", blob_object_id)
+    def WatchBlobHeader(self, blob_object, callback):
+        return self._WatchBlob("WatchBlobHeader", blob_object, callback)
 
-    def WatchBlobBody(self, blob_object_id):
-        return self._WatchBlob("WatchBlobBody", blob_object_id)
+    def WatchBlobBody(self, blob_object, callback):
+        return self._WatchBlob("WatchBlobBody", blob_object, callback)
 
-    def GetSymbolId4String(self, string):
-        if id_cache.HasSymbolId4String(string): return id_cache.GetSymbolId4String(string)
+    def GetSymbol4String(self, string):
+        if symbol_dict.HasSymbol4String(string): return symbol_dict.GetSymbol4String(string)
         symbol_id = self._NewSymbolId4String(string)
-        id_cache.SetSymbolId4String(string, symbol_id)
-        return symbol_id
+        symbol = symbol_util.Symbol(symbol_id, string)
+        symbol_dict.SetSymbol4String(string, symbol)
+        return symbol
 
-    def GetSymbolId4JobConf(self, job_conf):
-        if id_cache.HasSymbolId4JobConf(job_conf):
-            return id_cache.GetSymbolId4JobConf(job_conf)
+    def GetJobConfSymbol(self, job_conf):
+        if symbol_dict.HasSymbol4JobConf(job_conf):
+            return symbol_dict.GetSymbol4JobConf(job_conf)
         symbol_id = self._NewSymbolId4JobConf(job_conf)
-        id_cache.SetSymbolId4JobConf(job_conf, symbol_id)
-        return symbol_id
+        symbol = symbol_util.Symbol(symbol_id, job_conf)
+        symbol_dict.SetSymbol4JobConf(job_conf, symbol)
+        return symbol
 
-    def GetSymbolId4ParallelConf(self, parallel_conf):
-        if id_cache.HasSymbolId4ParallelConf(parallel_conf):
-            return id_cache.GetSymbolId4ParallelConf(parallel_conf)
+    def GetParallelDescSymbol(self, parallel_conf, device_tag):
+        if symbol_dict.HasSymbol4ParallelConf(parallel_conf):
+            return symbol_dict.GetSymbol4ParallelConf(parallel_conf)
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        id_cache.SetSymbolId4ParallelConf(parallel_conf, symbol_id)
-        return symbol_id
+        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
+        symbol_dict.SetSymbol4ParallelConf(parallel_conf, symbol)
+        return symbol
 
-    def GetSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_conf_sym):
-        if id_cache.HasSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym):
-            return id_cache.GetSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym)
+    def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_conf_sym):
+        if object_dict.HasSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym):
+            return object_dict.GetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym)
         object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym)
-        id_cache.SetSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym, object_id)
-        return object_id
+        obj = object_util.Object(object_id, parallel_conf_sym)
+        object_dict.SetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym, obj)
+        return obj
 
-    def _GetOpConfSymbolId(self, op_conf):
+    def _GetOpConfSymbol(self, op_conf):
         new_op_conf = op_conf_util.OperatorConf()
         new_op_conf.CopyFrom(op_conf)
         # drop unique name to achieve a higher cache hit rate
@@ -73,36 +80,40 @@ class InstructionsBuilder(object):
         new_op_conf.user_conf.ClearField("input")
         new_op_conf.user_conf.ClearField("output")
         serialized_op_conf = new_op_conf.SerializeToString()
-        if id_cache.HasSymbolId4SerializedOpConf(serialized_op_conf):
-            return id_cache.GetSymbolId4SerializedOpConf(serialized_op_conf)
+        if symbol_dict.HasSymbol4SerializedOpConf(serialized_op_conf):
+            return symbol_dict.GetSymbol4SerializedOpConf(serialized_op_conf)
         symbol_id = self._NewSymbolId4OpConf(new_op_conf)
-        id_cache.SetSymbolId4SerializedOpConf(serialized_op_conf, symbol_id)
-        return symbol_id
+        symbol = symbol_util.Symbol(symbol_id, new_op_conf)
+        symbol_dict.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        return symbol
 
     def _GetInputTriples(self, op_conf):
         input_triples = []
         for ibn, lbns in op_conf.user_conf.input.items():
-            ibn_sym = self.GetSymbolId4String(ibn)
+            ibn_sym = self.GetSymbol4String(ibn)
             for i in range(len(lbns.s)):
-                in_object_id = id_cache.GetObjectId4Lbn(lbns.s[i])
-                input_triples.append((ibn_sym, i, in_object_id))
+                in_object = object_dict.GetObject4BlobName(lbns.s[i])
+                input_triples.append((ibn_sym, i, in_object))
         return input_triples
 
-    def _GetOutputTriples(self, op_conf, parallel_conf, parallel_conf_sym):
+    def _GetOutputTriples(self, op_conf, parallel_desc_sym):
         output_triples = []
         for obn, lbns in op_conf.user_conf.output.items():
-            obn_sym = self.GetSymbolId4String(obn)
+            obn_sym = self.GetSymbol4String(obn)
             for i in range(len(lbns.s)):
-                out_object_id = self._NewBlobObjectId(parallel_conf_sym)
-                # TODO(lixinqi) set parallel_conf and parallel_conf_sym for out_object_id
-                id_cache.SetObjectId4Lbn(lbns.s[i], out_object_id)
-                output_triples.append((obn_sym, i, out_object_id))
+                out_object = self._NewBlobObject(parallel_desc_sym)
+                object_dict.SetObject4BlobName(lbns.s[i], out_object)
+                output_triples.append((obn_sym, i, out_object))
         return output_triples
 
-    def _GetMut2OutputTriples(self, op_conf, parallel_conf_sym):
+    def _GetMut2OutputTriples(self, op_conf, parallel_desc_sym):
         mut2_output_triples = []
         # TODO(lixinqi)
         return mut2_output_triples
+
+    def _NewBlobObject(self, parallel_conf_sym):
+        object_id = self._NewObjectId(parallel_conf_sym)
+        return object_util.Object(object_id, parallel_conf_sym)
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -127,33 +138,29 @@ class InstructionsBuilder(object):
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_conf_sym):
         return self._NewObjectId(parallel_conf_sym)
 
-    def _NewBlobObjectId(self, parallel_conf_sym):
-        return self._NewObjectId(parallel_conf_sym)
-
-    def _StatelessCall(self, device_tag, parallel_conf_sym,
-                       job_conf_sym, op_conf_sym, shared_opkernel_obj,
+    def _StatelessCall(self, parallel_conf_sym, job_conf_sym, op_conf_sym, shared_opkernel_obj,
                        input_triples, output_triples, mut2_output_triples):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "%s.StatelessCallOpKernel" % device_tag
-        instruction.parallel_desc_symbol_id = parallel_conf_sym
-        instruction.operand.append(_SymbolOperand(job_conf_sym))
-        instruction.operand.append(_SymbolOperand(op_conf_sym))
-        instruction.operand.append(_MutOperand(shared_opkernel_obj))
+        instruction.instr_type_name = "%s.StatelessCallOpKernel" % parallel_conf_sym.device_tag
+        instruction.parallel_desc_symbol_id = parallel_conf_sym.symbol_id
+        instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
+        instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
-        for ibn_sym, index, lbn_object_id in input_triples:
-            instruction.operand.append(_SymbolOperand(ibn_sym))
+        for ibn_sym, index, blob_object in input_triples:
+            instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
             instruction.operand.append(_Int64Operand(index))
-            instruction.operand.append(_ConstOperand(lbn_object_id))
+            instruction.operand.append(_ConstOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, index, lbn_object_id in output_triples:
-            instruction.operand.append(_SymbolOperand(obn_sym))
+        for obn_sym, index, blob_object in output_triples:
+            instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
             instruction.operand.append(_Int64Operand(index))
-            instruction.operand.append(_MutOperand(lbn_object_id))
+            instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, index, lbn_object_id in mut2_output_triples:
-            instruction.operand.append(_SymbolOperand(obn_sym))
+        for obn_sym, index, blob_object in mut2_output_triples:
+            instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
             instruction.operand.append(_Int64Operand(index))
-            instruction.operand.append(_Mut2Operand(lbn_object_id))
+            instruction.operand.append(_Mut2Operand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
     def _NewSymbolId(self):
@@ -168,7 +175,7 @@ class InstructionsBuilder(object):
         object_id = self.id_generator_.NewObjectId()
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "NewObject"
-        instruction.operand.append(_Int64Operand(parallel_conf_sym))
+        instruction.operand.append(_Int64Operand(parallel_conf_sym.symbol_id))
         instruction.operand.append(_Int64Operand(object_id))
         self.instruction_list_.instruction.append(instruction)
         return object_id
@@ -213,8 +220,15 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _WatchBlob(self, instruction_name, blob_object_id):
-        TODO()
+    def _WatchBlob(self, instruction_name, blob_object, callback):
+        instruction = instr_util.InstructionProto()
+        device_tag = blob_object.parallel_desc_sym.device_tag
+        instruction.instr_type_name = "%s.%s"%(device_tag, instruction_name)
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_sym.symbol_id
+        instruction.operand.append(_ConstOperand(blob_object.object_id))
+        instruction.operand.append(_Int64Operand(unique_callback_id))
+        self.instruction_list_.instruction.append(instruction)
+
 
 def _SymbolOperand(val):
     operand = instr_util.InstructionOperandProto()

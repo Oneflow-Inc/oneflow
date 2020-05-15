@@ -20,6 +20,7 @@ import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.python.vm.id_util as id_util
 from oneflow.python.eager.instructions_builder import InstructionsBuilder
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
+import oneflow.python.eager.eager_blob_util as eager_blob_util
 import random
 
 class UserOp(object):
@@ -84,7 +85,7 @@ class EagerUserOp(UserOp):
         return self
 
     def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.RemoteBlob(lbi)
+        return eager_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
 
 @oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
 def user_op_builder(op_name):    
