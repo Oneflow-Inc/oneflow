@@ -44,9 +44,9 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
                && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);             \
       })                                                                            \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                  \
-        user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);           \
-        const DataType& data_type = y->data_type();                                 \
-        const int64_t elem_cnt = y->shape().elem_cnt();                             \
+        user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);           \
+        const DataType& data_type = z->data_type();                                 \
+        const int64_t elem_cnt = z->shape().elem_cnt();                             \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));         \
       });
 
