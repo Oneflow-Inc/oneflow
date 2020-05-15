@@ -207,10 +207,11 @@ REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_div_grad")
                                                  .Input("dz", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Input("z", op.output("y", 0))
                                                  .Input("y", op.input("scalar", 0))
-                                                 .Output("dx")
+                                                 .Output("dy")
                                                  .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "scalar", 0);
+        op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "scalar", 0);
         AddOp(grad_op);
       }
     });
