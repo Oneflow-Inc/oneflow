@@ -39,9 +39,9 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("broadcast_div_grad")                                        \
       .SetCreateFn<BroadcastDivGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()  \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
+        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
         return ctx.device_type() == device                                          \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);             \
+               && y_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);             \
       })                                                                            \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                  \
         user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);           \
