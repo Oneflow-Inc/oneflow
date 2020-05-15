@@ -10,7 +10,7 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
   return tensor->shape().NumAxes() == 1 && tensor->shape().At(0) == 1;
 }
 
-Maybe<void> InferBinaryBroadcastTensorDescFn(user_op::InferContext* ctx) {
+Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
@@ -35,8 +35,8 @@ Maybe<void> InferBinaryBroadcastTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBinaryBroadcastLogicalTensorDescFn(user_op::InferContext* ctx) {
-  JUST(InferBinaryBroadcastTensorDescFn(ctx));
+Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
+  JUST(InferTensorDescBinaryBroadcastNormal(ctx));
   *ctx->Dtype4ArgNameAndIndex("z", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }
@@ -147,25 +147,22 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix)                     \
+#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix)  \
   REGISTER_USER_OP(op_name)                                                    \
       .Input("x")                                                              \
       .Input("y")                                                              \
       .Output("z")                                                             \
-      .SetTensorDescInferFn(InferBinaryBroadcastTensorDescFn)                  \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)     \
       .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis) \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>);
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
 
-#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)             \
-  REGISTER_USER_OP(op_name)                                                    \
-      .Input("x")                                                              \
-      .Input("y")                                                              \
-      .Output("z")                                                             \
-      .SetTensorDescInferFn(InferBinaryBroadcastLogicalTensorDescFn)           \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis) \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>);
+#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
+  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
+#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix) \
+  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Logical)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,
                      MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ)
 
