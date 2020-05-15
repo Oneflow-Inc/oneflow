@@ -18,18 +18,19 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* db_blob = ctx->Tensor4ArgNameAndIndex("db", 0);
 
-    const int64_t num_axes = dy_blob->shape().NumAxes();
-    XpuVarNdarray<const T> dy(dy_blob, num_axes);
+    XpuVarNdarray<const T> dy(dy_blob->shape(), dy_blob->dptr<T>());
     XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dy.shape(), tmp_buffer->mut_dptr<T>());
 
-    NdarrayUtil<device, T>::BroadcastDiv(ctx->device_ctx(), tmp,
-                                         XpuVarNdarray<const T>(y_blob, num_axes),
-                                         XpuVarNdarray<const T>(b_blob, num_axes));
+    NdarrayUtil<device, T>::BroadcastDiv(
+        ctx->device_ctx(), tmp, XpuVarNdarray<const T>(y_blob->shape(), y_blob->dptr<T>()),
+        XpuVarNdarray<const T>(b_blob->shape(), b_blob->dptr<T>()));
     NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dy, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), XpuVarNdarray<T>(db_blob, num_axes),
+    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(),
+                                      XpuVarNdarray<T>(db_blob->shape(), db_blob->mut_dptr<T>()),
                                       const_tmp, tmp);
-    NdarrayUtil<device, T>::InplaceNegative(ctx->device_ctx(), XpuVarNdarray<T>(db_blob, num_axes));
+    NdarrayUtil<device, T>::InplaceNegative(
+        ctx->device_ctx(), XpuVarNdarray<T>(db_blob->shape(), db_blob->mut_dptr<T>()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
