@@ -247,21 +247,33 @@ def scalar_sub_by_tensor(x, scalar, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 def element_wise_mul(x, y, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ElementWiseMul_"),
-    )
-    setattr(op_conf.multiply_conf, "in_0", x.logical_blob_name)
-    setattr(op_conf.multiply_conf, "in_1", y.logical_blob_name)
-    op_conf.multiply_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
+                .Op("multiply")
+                .Input("x", [x])
+                .Input("y", [y])
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("ElementWiseMul_"),
+        )
+        setattr(op_conf.multiply_conf, "in_0", x.logical_blob_name)
+        setattr(op_conf.multiply_conf, "in_1", y.logical_blob_name)
+        op_conf.multiply_conf.out = "out"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 def broadcast_mul(x, y, name=None):
