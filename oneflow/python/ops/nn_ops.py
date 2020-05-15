@@ -156,17 +156,29 @@ def bias_add(value, bias, data_format=None, name=None):
                 "data_format must be of the form `N...C` or `NC...`"
             )
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
-    setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
-    setattr(op_conf.bias_add_conf, "out", "out")
-    setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (oneflow.user_op_builder(name)
+            .Op("bias_add")
+            .Input("a", [value])
+            .Input("b", [bias])
+            .Output("out")
+            .SetAttr("axis", bias_add_axis, "AttrTypeInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+            )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "out", "out")
+        setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
