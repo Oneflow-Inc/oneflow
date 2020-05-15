@@ -171,7 +171,7 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
                 .Build();
         op.BindGradTensorWithOpInput(scalar_grad_reduce_sum_op.output("output_tensor", 0), "scalar",
                                      0);
-        AddOp(scalar_grad_reduce_sum_op);
+        AddOp(scalar_grad_multiply_op);
         AddOp(scalar_grad_reduce_sum_op);
       }
     });
