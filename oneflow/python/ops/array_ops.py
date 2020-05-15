@@ -23,9 +23,16 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.name = id_util.UniqueStr("Gather_")
     else:
         op_conf.name = name
-
+    params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
+    elif axis < 0:
+        origin_axis = axis
+        axis += params_ndims
+        assert axis >= 0 and axis < params_ndims, ValueError(
+            "Expected axis to between [%d, %d).  But received: %d " %(-params_ndims,
+                params_ndims, origin_axis)
+            )
 
     if batch_dims > 0:
         if axis == batch_dims:
@@ -52,10 +59,20 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.gather_ms0_conf.indices = indices.logical_blob_name
         op_conf.gather_ms0_conf.out = "out"
     else:
-        setattr(op_conf.gather_conf, "in", params.logical_blob_name)
-        op_conf.gather_conf.indices = indices.logical_blob_name
-        op_conf.gather_conf.out = "out"
-        op_conf.gather_conf.axis = axis
+        if os.getenv("ENABLE_USER_OP") == 'True':
+            return flow.user_op_builder(name if name is
+                not None else id_util.UniqueStr("Gather_"))\
+           .Op("gather")\
+           .Input("in", [params])\
+           .Input("indices", [indices])\
+           .Output("out")\
+           .SetAttr("axis", int(axis), "AttrTypeInt64")\
+           .Build().InferAndTryRun().RemoteBlobList()[0]
+        else:
+            setattr(op_conf.gather_conf, "in", params.logical_blob_name)
+            op_conf.gather_conf.indices = indices.logical_blob_name
+            op_conf.gather_conf.out = "out"
+            op_conf.gather_conf.axis = axis
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -349,21 +366,37 @@ def slice_v2(input, slice_tup_list, name=None):
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
 
-
 @oneflow_export("concat")
 def concat(values, axis, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_"))
-    op_conf.concat_conf.out = "out"
-    if not isinstance(values, (list, tuple)):
-        values = [values]
-    getattr(op_conf.concat_conf, "in").extend([v.logical_blob_name for v in values])
-    op_conf.concat_conf.axis = axis
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        assert isinstance(values, (list, tuple))
+        assert len(values) >= 2
+        if axis < 0: axis += len(values[0].shape)
+        assert axis >= 0 and axis < len(values[0].shape)
+        out = (
+            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Concat_"))
+            .Op("concat")
+            .Input("in", values)
+            .Output("out")
+            .SetAttr("axis", int(axis), "AttrTypeInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+        return out
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_"))
+        op_conf.concat_conf.out = "out"
+        if not isinstance(values, (list, tuple)):
+            values = [values]
+        getattr(op_conf.concat_conf, "in").extend([v.logical_blob_name for v in values])
+        op_conf.concat_conf.axis = axis
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("gather_nd")
