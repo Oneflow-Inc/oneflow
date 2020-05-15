@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.g_func_ctx as g_func_ctx
@@ -18,9 +17,9 @@ import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.python.vm.id_util as id_util
-from oneflow.python.eager.instructions_builder import InstructionsBuilder
+import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
-import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.eager.eager_physical_blob as eager_physical_blob_util
 import random
 
 class UserOp(object):
@@ -71,21 +70,12 @@ class EagerUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        instruction_list = instr_util.InstructionListProto()
-        eager_symbol_list = eager_symbol_util.EagerSymbolList()
-        id_generator = id_util.PhysicalIdGenerator()
-        builder = InstructionsBuilder(id_generator, instruction_list, eager_symbol_list)
-        builder.StatelessCall(self.op_conf_)
-        print('============')
-        print(instruction_list)
-        print('============')
-        print(eager_symbol_list)
-        c_api_util.RunPhysicalInstruction(instruction_list, eager_symbol_list)
+        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
         raise NotImplementedError
         return self
 
     def MakeRemoteBlob(self, lbi):
-        return eager_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
+        return eager_physical_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
 
 @oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
 def user_op_builder(op_name):    

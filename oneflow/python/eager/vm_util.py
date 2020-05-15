@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow.python.vm.id_util as id_util
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -10,7 +11,18 @@ import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_dict as symbol_dict
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_dict as object_dict
-import oneflow.python.eager.worker_blob_watcher as physical_blob_watcher
+import oneflow.python.eager.physical_blob_watcher as physical_blob_watcher
+
+def PhysicalRun(build):
+    id_generator = id_util.PhysicalIdGenerator()
+    instruction_list = instr_util.InstructionListProto()
+    eager_symbol_list = eager_symbol_util.EagerSymbolList()
+    build(InstructionsBuilder(id_generator, instruction_list, eager_symbol_list))
+    print('============')
+    print(instruction_list)
+    print('============')
+    print(eager_symbol_list)
+    c_api_util.RunPhysicalInstruction(instruction_list, eager_symbol_list)
 
 class InstructionsBuilder(object):
     def __init__(self, id_generator, instruction_list, eager_symbol_list):
@@ -220,7 +232,8 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _WatchBlob(self, instruction_name, blob_object, callback):
+    def _WatchBlob(self, instruction_name, blob_object, fetcher):
+        unique_callback_id = physical_blob_watcher.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
         device_tag = blob_object.parallel_desc_sym.device_tag
         instruction.instr_type_name = "%s.%s"%(device_tag, instruction_name)
