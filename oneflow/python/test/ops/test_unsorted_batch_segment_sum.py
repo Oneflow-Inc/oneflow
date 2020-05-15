@@ -18,7 +18,7 @@ def _check(test_case, data, segment_ids, out_shape, out):
         out_idx[-1] = i
         out_idx=tuple(out_idx)
         ref[out_idx] += data[idx]
-    test_case.assertTrue(np.array_equal(ref, out))
+    test_case.assertTrue(np.allclose(ref, out, atol=1e-5, rtol=1e-5))
 
 def _check_bw(test_case, params, indices, out_shape, out):
     ref = np.zeros_like(out)
