@@ -5,7 +5,9 @@
 
 namespace oneflow {
 
-#define DEFINE_BROADCAST_KERNEL_CLASS(type, abbr)                                                  \
+namespace {
+
+  #define DEFINE_BROADCAST_KERNEL_CLASS(type, abbr)                                                  \
   template<DeviceType device_type, typename T>                                                     \
   class Broadcast##type##Kernel final : public KernelIf<device_type> {                             \
    public:                                                                                         \
@@ -61,4 +63,7 @@ DEFINE_BROADCAST_KERNEL_CLASS(GreaterEqual, GE);
 DEFINE_BROADCAST_KERNEL_CLASS(LessThan, LT);
 DEFINE_BROADCAST_KERNEL_CLASS(LessEqual, LE);
 DEFINE_BROADCAST_KERNEL_CLASS(LogicalAnd, AND);
+
+}
+
 }  // namespace oneflow
