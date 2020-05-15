@@ -3,142 +3,70 @@
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/customized/kernels/broadcast_grad_util.h"
+#include "oneflow/customized/ops/math_binary_broadcast_seq.h"
 
 namespace oneflow {
 
-namespace user_op {
+template<DeviceType device_type, typename T, typename K,
+         void (*binary_func)(DeviceCtx* ctx, const XpuVarNdarray<K>& z,
+                             const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
+class MathBinaryBroadcastKernel final : public user_op::OpKernel {
+ public:
+  MathBinaryBroadcastKernel() = default;
+  ~MathBinaryBroadcastKernel() = default;
 
-template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class MathBinaryBroadcastKernel final : public OpKernel {
-    public:
-        MathBinaryBroadcastKernel() = default;
-        ~MathBinaryBroadcastKernel() = default;
-
-    private:
-        void Compute(KernelComputeContext* ctx) const override {
-            const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-            const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-            Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-            // int64_t n = tensor_z->shape().elem_cnt();
-            size_t num_axes = tensor_z->shape().NumAxes();
-            NdarrayApplyBroadcastBinary<device_type, T, BinaryFunc>::Apply(
-                ctx->device_ctx(), XpuVarNdarray<T>(tensor_z->shape(), tensor_z->mut_dptr<T>(), num_axes),
-                XpuVarNdarray<const T>(tensor_x->shape(), tensor_x->dptr<T>(), num_axes), 
-                XpuVarNdarray<const T>(tensor_y->shape(), tensor_y->dptr<T>(), num_axes));
-        }
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<DeviceType device, typename T>
-bool IsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* tensor_z = ctx.TensorDesc4ArgNameAndIndex("z", 0);
-  if (ctx.device_type() == device && tensor_z->data_type() == GetDataType<T>::value) {
-    return true;
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    T* dptr_x = tensor_x->mut_dptr<T>();
+    T* dptr_y = tensor_y->mut_dptr<T>();
+    K* dptr_z = tensor_z->mut_dptr<K>();
+    size_t num_axes = tensor_z->shape().NumAxes();
+    binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
+                XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
+                XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
   }
-  return false;
-}
-
-#define REGISTER_BINARYBROADCAST_XPU_KERNEL(op_name, binary_func, device, dtype) \
-    REGISTER_USER_KERNEL(op_name)                                                \
-        .SetCreateFn<MathBinaryBroadcastKernel<binary_func, device, dtype>>()    \
-        .SetIsMatchedPred(IsMatchedPred<device, dtype>);
-
-#define REGISTER_BINARYBROADCAST_BY_DEVICETYPE(device, dtype)                              \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_add", BinaryFuncAdd, device, dtype)     \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_sub", BinaryFuncSub, device, dtype)     \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_mul", BinaryFuncMul, device, dtype)     \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_div", BinaryFuncDiv, device, dtype)     \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_minimum", BinaryFuncMin, device, dtype) \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_maximum", BinaryFuncMax, device, dtype) \
-    REGISTER_BINARYBROADCAST_XPU_KERNEL("broadcast_floor_mod", BinaryFuncFloorMod, device, dtype)
-
-#define REGISTER_BINARYBROADCAST_KERNEL(dtype)                      \
-    REGISTER_BINARYBROADCAST_BY_DEVICETYPE(DeviceType::kCPU, dtype) \
-    REGISTER_BINARYBROADCAST_BY_DEVICETYPE(DeviceType::kGPU, dtype)
-
-REGISTER_BINARYBROADCAST_KERNEL(float)
-REGISTER_BINARYBROADCAST_KERNEL(double)
-REGISTER_BINARYBROADCAST_KERNEL(int32_t)
-REGISTER_BINARYBROADCAST_KERNEL(int64_t)
-
-template<template<typename, DeviceType> class BinaryGradFunc, DeviceType device_type, typename T>
-class MathBinaryBroadcastXGradKernel final : public OpKernel {
-    public:
-        MathBinaryBroadcastXGradKernel() = default;
-        ~MathBinaryBroadcastXGradKernel() = default;
-
-    private:
-        void Compute(KernelComputeContext* ctx) const override {
-            const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-            const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-            const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
-            Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-            Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-            BinaryGradFunc<T, device_type>::XGrad(ctx->device_ctx(), tensor_dz, tensor_dx, tmp_buffer,
-                                                  tensor_x, tensor_y);
-        }
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<template<typename, DeviceType> class BinaryGradFunc, DeviceType device_type, typename T>
-class MathBinaryBroadcastYGradKernel final : public OpKernel {
-    public:
-        MathBinaryBroadcastYGradKernel() = default;
-        ~MathBinaryBroadcastYGradKernel() = default;
+#define REGISTER_MATH_BINARY_BROADCAST_KERNEL(math_type_pair, device, data_type_pair)      \
+  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                   \
+      .SetCreateFn<MathBinaryBroadcastKernel<                                              \
+          device, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair),      \
+          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(               \
+              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                            \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
+        const user_op::TensorDesc* tensor_desc_z = ctx.TensorDesc4ArgNameAndIndex("z", 0); \
+        return ctx.device_type() == device                                                 \
+               && tensor_desc_z->data_type() == OF_PP_PAIR_SECOND(data_type_pair);         \
+      });
 
-    private:
-        void Compute(KernelComputeContext* ctx) const override {
-            const Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-            const Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-            const Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
-            Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-            Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-            BinaryGradFunc<T, device_type>::YGrad(ctx->device_ctx(), tensor_dz, tensor_dy, tmp_buffer,
-                                                  tensor_x, tensor_y);
-        }
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
+                                 MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+// gpu half
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
+                                 MATH_BINARY_BROADCAST_FUNC_SEQ, (DeviceType::kGPU),
+                                 FLOAT16_DATA_TYPE_SEQ)
 
-#define REGISTER_BINARYBROADCAST_XGRAD_XPU_KERNEL(op_name, binary_grad_func, device, dtype) \
-    REGISTER_USER_KERNEL(op_name)                                                           \
-        .SetCreateFn<MathBinaryBroadcastXGradKernel<binary_grad_func, device, dtype>>()     \
-        .SetIsMatchedPred(IsMatchedPred<device, dtype>);
+#define REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL(math_type_pair, device, data_type_pair) \
+  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                      \
+      .SetCreateFn<MathBinaryBroadcastKernel<                                                 \
+          device, OF_PP_PAIR_FIRST(data_type_pair), int8_t,                                   \
+          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
+              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
+        const user_op::TensorDesc* tensor_desc_x = ctx.TensorDesc4ArgNameAndIndex("x", 0);    \
+        const user_op::TensorDesc* tensor_desc_z = ctx.TensorDesc4ArgNameAndIndex("z", 0);    \
+        return ctx.device_type() == device                                                    \
+               && tensor_desc_x->data_type() == OF_PP_PAIR_SECOND(data_type_pair)             \
+               && tensor_desc_z->data_type() == DataType::kInt8;                              \
+      });
 
-#define REGISTER_BINARYBROADCAST_XGRAD_BY_DEVICETYPE(device, dtype)                                    \
-    REGISTER_BINARYBROADCAST_XGRAD_XPU_KERNEL("broadcast_add_x_grad", BroadcastAddGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_XGRAD_XPU_KERNEL("broadcast_sub_x_grad", BroadcastSubGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_XGRAD_XPU_KERNEL("broadcast_mul_x_grad", BroadcastMulGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_XGRAD_XPU_KERNEL("broadcast_div_x_grad", BroadcastDivGrad, device, dtype)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
+                                 MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
-#define REGISTER_BINARYBROADCAST_XGRAD_KERNEL(dtype)                      \
-    REGISTER_BINARYBROADCAST_XGRAD_BY_DEVICETYPE(DeviceType::kCPU, dtype) \
-    REGISTER_BINARYBROADCAST_XGRAD_BY_DEVICETYPE(DeviceType::kGPU, dtype)
-
-REGISTER_BINARYBROADCAST_XGRAD_KERNEL(float)
-REGISTER_BINARYBROADCAST_XGRAD_KERNEL(double)
-REGISTER_BINARYBROADCAST_XGRAD_KERNEL(int32_t)
-REGISTER_BINARYBROADCAST_XGRAD_KERNEL(int64_t)
-
-#define REGISTER_BINARYBROADCAST_YGRAD_XPU_KERNEL(op_name, binary_grad_func, device, dtype) \
-    REGISTER_USER_KERNEL(op_name)                                                           \
-        .SetCreateFn<MathBinaryBroadcastYGradKernel<binary_grad_func, device, dtype>>()     \
-        .SetIsMatchedPred(IsMatchedPred<device, dtype>);
-
-#define REGISTER_BINARYBROADCAST_YGRAD_BY_DEVICETYPE(device, dtype)                                    \
-    REGISTER_BINARYBROADCAST_YGRAD_XPU_KERNEL("broadcast_add_y_grad", BroadcastAddGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_YGRAD_XPU_KERNEL("broadcast_sub_y_grad", BroadcastSubGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_YGRAD_XPU_KERNEL("broadcast_mul_y_grad", BroadcastMulGrad, device, dtype) \
-    REGISTER_BINARYBROADCAST_YGRAD_XPU_KERNEL("broadcast_div_y_grad", BroadcastDivGrad, device, dtype)
-
-#define REGISTER_BINARYBROADCAST_YGRAD_KERNEL(dtype)                      \
-    REGISTER_BINARYBROADCAST_YGRAD_BY_DEVICETYPE(DeviceType::kCPU, dtype) \
-    REGISTER_BINARYBROADCAST_YGRAD_BY_DEVICETYPE(DeviceType::kGPU, dtype)
-
-REGISTER_BINARYBROADCAST_YGRAD_KERNEL(float)
-REGISTER_BINARYBROADCAST_YGRAD_KERNEL(double)
-REGISTER_BINARYBROADCAST_YGRAD_KERNEL(int32_t)
-REGISTER_BINARYBROADCAST_YGRAD_KERNEL(int64_t)
-
-}  // namespace user_op
 }  // namespace oneflow
