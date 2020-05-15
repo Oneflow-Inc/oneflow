@@ -7,7 +7,7 @@ namespace oneflow {
 
 namespace {
 
-  #define DEFINE_BROADCAST_KERNEL_CLASS(type, abbr)                                                  \
+#define DEFINE_BROADCAST_KERNEL_CLASS(type, abbr)                                                  \
   template<DeviceType device_type, typename T>                                                     \
   class Broadcast##type##Kernel final : public KernelIf<device_type> {                             \
    public:                                                                                         \
