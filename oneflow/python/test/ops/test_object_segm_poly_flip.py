@@ -38,8 +38,6 @@ def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_d
     coco = COCO(anno_file)
     img_ids = coco.getImgIds()
     rand_img_ids = random.sample(img_ids, batch_size)
-    rand_anno_ids = coco.getAnnIds(imgIds=rand_img_ids)
-    anno_ids = list(filter(lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, rand_anno_ids))
 
     semg_poly_list = []
     image_size_list = []

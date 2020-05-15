@@ -701,3 +701,26 @@ def object_segm_poly_flip(poly, image_size, flip_code, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_to_mask")
+def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(poly_index, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert poly.shape[0] == poly_index.shape[0]
+    assert poly.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyToMask_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_to_mask")
+        .Input("poly", [poly])
+        .Input("poly_index", [poly_index])
+        .Input("image_size", [image_size])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
