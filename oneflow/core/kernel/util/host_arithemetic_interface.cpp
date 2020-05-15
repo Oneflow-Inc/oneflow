@@ -206,4 +206,24 @@ FILL(int64_t);
 
 #undef FILL
 
+#define COPY_COLS_REGION(T)                                                              \
+  void ArithemeticIf<DeviceType::kCPU>::CopyColsRegion(                                  \
+      DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,          \
+      const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset, \
+      const int64_t y_lda) {                                                             \
+    for (int64_t i = 0; i < row_num; ++i) {                                              \
+      for (int64_t j = 0; j < col_num; ++j) {                                            \
+        y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];               \
+      }                                                                                  \
+    }                                                                                    \
+  }
+
+COPY_COLS_REGION(float)
+COPY_COLS_REGION(double)
+COPY_COLS_REGION(int8_t)
+COPY_COLS_REGION(int32_t)
+COPY_COLS_REGION(int64_t)
+
+#undef COPY_COLS_REGION
+
 }  // namespace oneflow
