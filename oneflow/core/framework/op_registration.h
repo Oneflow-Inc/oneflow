@@ -29,7 +29,7 @@ using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<void(GetInputArgModifier)>;
+using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
