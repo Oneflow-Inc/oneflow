@@ -18,17 +18,16 @@ def _check(test_case, data, segment_ids, out_shape, out):
         out_idx[-1] = i
         out_idx=tuple(out_idx)
         ref[out_idx] += data[idx]
-    test_case.assertTrue(np.allclose(ref, out, rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(np.array_equal(ref, out))
 
 def _check_bw(test_case, params, indices, out_shape, out):
-   # test_case.assertEqual(out.shape, out_shape)
     ref = np.zeros_like(out)
     for idx, i in np.ndenumerate(indices):
         in_idx = list(idx)
         in_idx[-1] = i
         in_idx=tuple(in_idx)
         ref[idx] += params[in_idx]
-    test_case.assertTrue(np.allclose(ref, out, rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(np.array_equal(ref, out))
 
 
 def _gen_segment_ids(out_shape, num_segments, segment_ids_shape):
@@ -82,7 +81,7 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     check_point.init()
 
     _check(test_case, data, segment_ids, out_shape, out_ndarray)
-    _check_bw(test_case, grad_out_ndarray, segment_ids, data.shape, grad_in_ndarray)
+    _check_bw(test_case, grad_out_ndarray, segment_ids, grad_in_ndarray.shape, grad_in_ndarray)
 
 def test_unsorted_batch_segment_sum(test_case):
     arg_dict = OrderedDict()

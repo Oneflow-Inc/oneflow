@@ -12,7 +12,7 @@ for gpu in gpus:
 
 def _random_inputs(params_shape, indices_shape):
     params = np.random.rand(*params_shape).astype(np.float32)
-    indices = np.random.randint(low=0, high=params[indices.shape.ndims -1],
+    indices = np.random.randint(low=0, high=params_shape[len(indices_shape) -1],
             size=indices_shape, dtype=np.int32)
     return params, indices
 
@@ -94,7 +94,7 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         of_y = gather_fn([params], [indices]).get().ndarray_list()[0]
     else:
         of_y = gather_fn(params, indices).get().ndarray()
-    test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 def test_batch_gather(test_case):
     arg_dict = OrderedDict()
