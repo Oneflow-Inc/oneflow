@@ -4,31 +4,6 @@ namespace oneflow {
 
 namespace {
 
-std::string AddReshapeLikeOp(const std::string& op_name, const std::string& in_lbn,
-                             const std::string& like_lbn, user_op::AddOpFn AddOp) {
-  user_op::UserOpConfWrapperBuilder builder(op_name);
-  user_op::UserOpConfWrapper grad_op =
-      builder.Op("reshape_like").Input("in", in_lbn).Input("like", like_lbn).Output("out").Build();
-  AddOp(grad_op);
-  return grad_op.output("out", 0);
-}
-
-std::string AddReduceSumLikeOp(const std::string& op_name, const std::string& in_lbn,
-                               const std::string& like_lbn, const AxisVector& broadcast_axis_vec,
-                               user_op::AddOpFn AddOp) {
-  user_op::UserOpConfWrapperBuilder builder(op_name);
-  user_op::UserOpConfWrapper grad_op =
-      builder.Op("reduce_sum_like")
-          .Input("x", in_lbn)
-          .Input("like", like_lbn)
-          .Attr<std::vector<int32_t>>("axis",
-                                      {broadcast_axis_vec.begin(), broadcast_axis_vec.end()})
-          .Output("y")
-          .Build();
-  AddOp(grad_op);
-  return grad_op.output("y", 0);
-}
-
 std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_shape,
                                     const std::string& like_lbn, const Shape& like_shape,
                                     const std::string& op_name, user_op::AddOpFn AddOp) {
@@ -37,14 +12,26 @@ std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_s
   if (in_shape == like_shape) {
     return in_lbn;
   } else if (in_shape == left_extended_shape) {
-    const std::string& reshape_like_out_lbn =
-        AddReshapeLikeOp(op_name + "_grad_reshape_like", in_lbn, like_lbn, AddOp);
-    return reshape_like_out_lbn;
+    user_op::UserOpConfWrapperBuilder builder(op_name + "_grad_reshape_like");
+    user_op::UserOpConfWrapper grad_op = builder.Op("reshape_like")
+                                             .Input("in", in_lbn)
+                                             .Input("like", like_lbn)
+                                             .Output("out")
+                                             .Build();
+    AddOp(grad_op);
+    return grad_op.output("out", 0);
   } else {
-    const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
-    const std::string& reduce_sum_like_out_lbn = AddReduceSumLikeOp(
-        op_name + "_grad_reduce_sum_like", in_lbn, like_lbn, broadcast_axis_vec, AddOp);
-    return reduce_sum_like_out_lbn;
+    user_op::UserOpConfWrapperBuilder builder(op_name + "_grad_reduce_sum_like");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("reduce_sum_like")
+            .Input("x", in_lbn)
+            .Input("like", like_lbn)
+            .Attr<std::vector<int32_t>>("axis",
+                                        {broadcast_axis_vec.begin(), broadcast_axis_vec.end()})
+            .Output("y")
+            .Build();
+    AddOp(grad_op);
+    return grad_op.output("y", 0);
   }
 }
 
@@ -137,9 +124,9 @@ REGISTER_USER_OP_GRAD("broadcast_mul")
 
 REGISTER_USER_OP_GRAD("broadcast_div")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
-        const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
         user_op::UserOpConfWrapperBuilder broadcast_div_builder(op.op_name() + "_grad_x_div");
         user_op::UserOpConfWrapper broadcast_div_op = broadcast_div_builder.Op("broadcast_div")
                                                           .Input("x", dz_lbn)
@@ -158,7 +145,7 @@ REGISTER_USER_OP_GRAD("broadcast_div")
         user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_div_grad")
                                                  .Input("y", op.input("y", 0))
                                                  .Input("z", op.output("z", 0))
-                                                 .Input("dz", op.GetGradTensorWithOpOutput("z", 0))
+                                                 .Input("dz", dz_lbn)
                                                  .Output("dy")
                                                  .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0);
