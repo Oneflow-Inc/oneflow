@@ -15,15 +15,17 @@ const std::string& AddReshapeLikeOp(const std::string& op_name, const std::strin
 
 const std::string& AddReduceSumLikeOp(const std::string& op_name, const std::string& in_lbn,
                                       const std::string& like_lbn,
-                                      const std::vector<int32_t>& broadcast_axis_vec,
+                                      const AxisVector& broadcast_axis_vec,
                                       user_op::AddOpFn AddOp) {
   user_op::UserOpConfWrapperBuilder builder(op_name);
-  user_op::UserOpConfWrapper grad_op = builder.Op("reduce_sum_like")
-                                           .Input("x", in_lbn)
-                                           .Input("like", like_lbn)
-                                           .Attr("axis", broadcast_axis_vec)
-                                           .Output("y")
-                                           .Build();
+  user_op::UserOpConfWrapper grad_op =
+      builder.Op("reduce_sum_like")
+          .Input("x", in_lbn)
+          .Input("like", like_lbn)
+          .Attr<std::vector<int32_t>>("axis",
+                                      {broadcast_axis_vec.begin(), broadcast_axis_vec.end()})
+          .Output("y")
+          .Build();
   AddOp(grad_op);
   return grad_op.output("y", 0);
 }
@@ -43,11 +45,10 @@ void GenBackwardOpConf4BroadcastAdd(const std::string& input_arg_name,
     op.BindGradTensorWithOpInput(reshape_like_out_lbn, input_arg_name, 0);
   } else {
     const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(z_desc.shape());
-    std::vector<int32_t> axis_vec;
-    axis_vec.assign(broadcast_axis_vec.begin(), broadcast_axis_vec.end());
-    const std::string& reduce_sum_like_out_lbn = AddReduceSumLikeOp(
-        op.op_name() + "_grad_" + input_arg_name + "_reduce_sum_like",
-        op.GetGradTensorWithOpOutput("z", 0), op.input(input_arg_name, 0), axis_vec, AddOp);
+    const std::string& reduce_sum_like_out_lbn =
+        AddReduceSumLikeOp(op.op_name() + "_grad_" + input_arg_name + "_reduce_sum_like",
+                           op.GetGradTensorWithOpOutput("z", 0), op.input(input_arg_name, 0),
+                           broadcast_axis_vec, AddOp);
     op.BindGradTensorWithOpInput(reduce_sum_like_out_lbn, input_arg_name, 0);
   }
 }
@@ -80,11 +81,9 @@ void GenBackwardOpConf4BroadcastMul(const std::string& input_x_arg_name,
 
   } else {
     const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(z_desc.shape());
-    std::vector<int32_t> axis_vec;
-    axis_vec.assign(broadcast_axis_vec.begin(), broadcast_axis_vec.end());
     const std::string& reduce_sum_like_out_lbn = AddReduceSumLikeOp(
         op.op_name() + "_grad_" + input_x_arg_name + "_reduce_sum_like",
-        broadcast_mul_op.output("z", 0), op.input(input_x_arg_name, 0), axis_vec, AddOp);
+        broadcast_mul_op.output("z", 0), op.input(input_x_arg_name, 0), broadcast_axis_vec, AddOp);
     op.BindGradTensorWithOpInput(reduce_sum_like_out_lbn, input_x_arg_name, 0);
   }
 }
@@ -127,11 +126,9 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
         } else {
           const AxisVector& broadcast_axis_vec =
               left_extended_shape.Axes4BroadcastTo(z_desc.shape());
-          std::vector<int32_t> axis_vec;
-          axis_vec.assign(broadcast_axis_vec.begin(), broadcast_axis_vec.end());
-          const std::string& reduce_sum_like_out_lbn =
-              AddReduceSumLikeOp(op.op_name() + "_grad_y_reduce_sum_like",
-                                 scalar_mul_op.output("out", 0), op.input("y", 0), axis_vec, AddOp);
+          const std::string& reduce_sum_like_out_lbn = AddReduceSumLikeOp(
+              op.op_name() + "_grad_y_reduce_sum_like", scalar_mul_op.output("out", 0),
+              op.input("y", 0), broadcast_axis_vec, AddOp);
           op.BindGradTensorWithOpInput(reduce_sum_like_out_lbn, "y", 0);
         }
       }
@@ -175,11 +172,9 @@ REGISTER_USER_OP_GRAD("broadcast_div")
         } else {
           const AxisVector& broadcast_axis_vec =
               left_extended_shape.Axes4BroadcastTo(z_desc.shape());
-          std::vector<int32_t> axis_vec;
-          axis_vec.assign(broadcast_axis_vec.begin(), broadcast_axis_vec.end());
           const std::string& reduce_sum_like_out_lbn = AddReduceSumLikeOp(
               op.op_name() + "_grad_x_reduce_sum_like", broadcast_div_op.output("z", 0),
-              op.input("x", 0), axis_vec, AddOp);
+              op.input("x", 0), broadcast_axis_vec, AddOp);
           op.BindGradTensorWithOpInput(reduce_sum_like_out_lbn, "x", 0);
         }
       }
