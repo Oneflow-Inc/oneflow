@@ -12,7 +12,8 @@ for gpu in gpus:
 
 def _random_inputs(params_shape, indices_shape):
     params = np.random.rand(*params_shape).astype(np.float32)
-    indices = np.random.rand(*indices_shape).astype(np.int32)
+    indices = np.random.randint(low=0, high=params[indices.shape.ndims -1],
+            size=indices_shape, dtype=np.int32)
     return params, indices
 
 

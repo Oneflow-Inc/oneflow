@@ -1,6 +1,5 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/batch_gather_kernel_util.h"
-#include "oneflow/core/kernel/gather_kernel_util.h"
 
 namespace oneflow {
 
@@ -20,7 +19,6 @@ class BatchGatherKernel final : public user_op::OpKernel {
     const int64_t axis = indices->shape().NumAxes() - 1;
     const Shape flat_out_shape =
         Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), in->dptr<T>(),
                                                           indices->dptr<K>(), flat_out_shape,
                                                           in->shape().At(axis), out->mut_dptr<T>());

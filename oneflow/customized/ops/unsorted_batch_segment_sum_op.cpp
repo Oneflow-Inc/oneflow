@@ -15,6 +15,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       CHECK_GE_OR_RETURN(data->shape().NumAxes(), segment_ids->shape().NumAxes());
       CHECK_EQ_OR_RETURN(segment_ids->is_dynamic(), data->is_dynamic());
       const int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
+      CHECK_GE_OR_RETURN(num_segments, 1);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
       FOR_RANGE(int64_t, i, 0, segment_ids->shape().NumAxes() - 1) {
@@ -32,13 +33,13 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int64_t indices_num_axes =
+      const int64_t segment_ids_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
-      CHECK_GT_OR_RETURN(indices_num_axes, 1)
-          << "UnsortedBatchSegmentSumOp: indices_num_axes equals " << indices_num_axes
+      CHECK_GT_OR_RETURN(segment_ids_num_axes, 1)
+          << "UnsortedBatchSegmentSumOp: segment_ids_num_axes equals " << segment_ids_num_axes
           << " (should be bigger than 1).";
 
-      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+      FOR_RANGE(int64_t, i, 0, segment_ids_num_axes - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("segment_ids", 0), i)
             .Split(user_op::OpArg("data", 0), i)
