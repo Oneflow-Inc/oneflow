@@ -113,6 +113,7 @@ REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
                 .Attr("has_float_operand", true)
                 .Attr("has_int_operand", false)
                 .Attr("float_operand", static_cast<double>(-1))
+                .Attr("int_operand", static_cast<int64_t>(-1))
                 .Build();
         op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("y", 0), "scalar", 0);
         AddOp(scalar_grad_reduce_sum_op);
