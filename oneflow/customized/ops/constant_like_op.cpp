@@ -11,6 +11,7 @@ REGISTER_USER_OP("constant_like")
     .Attr("is_floating_value", UserOpAttrType::kAtBool)
     .Attr("dtype", UserOpAttrType::kAtDataType)
     .Output("out")
+    .AllOutputsConstant()
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);

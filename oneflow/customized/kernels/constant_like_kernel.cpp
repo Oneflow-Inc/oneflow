@@ -6,7 +6,18 @@
 
 namespace oneflow {
 
-namespace {
+namespace user_op {
+
+class ConstState final : public OpKernelState {
+ public:
+  ConstState(bool is_init) : is_init_(is_init) {}
+  ~ConstState() = default;
+  bool is_inited() const { return is_init_; }
+  void set_is_inited(bool val) { is_init_ = val; }
+
+ private:
+  bool is_init_;
+};
 
 template<DeviceType device_type, typename T>
 

@@ -4,7 +4,7 @@ import os
 
 def _check(test_case, x, y, value, dtype=None):
     np_constant_like = np.full(x.shape, value)
-    assert np.array_equal(np_constant_like,y)
+    test_case.assertTrue(np.array_equal(np_constant_like, y))
 
 def _run_test(test_case, x, value, dtype=None, device='gpu'):
     func_config = flow.FunctionConfig()
