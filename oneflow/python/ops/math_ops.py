@@ -668,7 +668,7 @@ def not_equal(x, y, name=None):
 @oneflow_export("math.less")
 def less(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        return build_broadcast_binary_op("broadcast_less_than", x, y, name)
+        return build_broadcast_binary_op("broadcast_less", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
