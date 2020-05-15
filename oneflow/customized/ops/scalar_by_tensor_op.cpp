@@ -108,14 +108,14 @@ REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
         user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_scalar_mul");
         user_op::UserOpConfWrapper scalar_grad_scalar_mul_op =
             builder1.Op("scalar_mul")
-                .Input("x", scalar_grad_reduce_sum_op.output("output_tensor", 0))
-                .Output("y")
+                .Input("in", scalar_grad_reduce_sum_op.output("output_tensor", 0))
+                .Output("out")
                 .Attr("has_float_operand", true)
                 .Attr("has_int_operand", false)
                 .Attr("float_operand", static_cast<double>(-1))
                 .Attr("int_operand", static_cast<int64_t>(-1))
                 .Build();
-        op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("y", 0), "scalar", 0);
+        op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("out", 0), "scalar", 0);
         AddOp(scalar_grad_reduce_sum_op);
         AddOp(scalar_grad_scalar_mul_op);
       }
