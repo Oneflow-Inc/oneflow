@@ -49,6 +49,18 @@ bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) c
   return (it != op_conf_.user_conf().output().end());
 }
 
+int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  if (it == op_conf_.user_conf().input().end()) { return 0; }
+  return it->second.s_size();
+}
+
+int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  if (it == op_conf_.user_conf().output().end()) { return 0; }
+  return it->second.s_size();
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
