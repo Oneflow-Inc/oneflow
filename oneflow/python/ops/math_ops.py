@@ -627,6 +627,8 @@ def naive_logical_and(lhs, rhs, name=None):
 
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
