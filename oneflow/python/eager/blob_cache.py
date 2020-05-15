@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-import oneflow.python.eager.object_parallel as object_parallel_util
-
 def FindOrCreateBlobCache(object_id):
     global object_id2blob_cache
     if object_id not in object_id2blob_cache:
