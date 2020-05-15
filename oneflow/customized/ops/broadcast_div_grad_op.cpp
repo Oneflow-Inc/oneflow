@@ -8,9 +8,7 @@ REGISTER_USER_OP("broadcast_div_grad")
     .Input("dz")
     .Output("dy")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* db = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      *db = *b;
+      *ctx->TensorDesc4ArgNameAndIndex("dy", 0) = *ctx->TensorDesc4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
