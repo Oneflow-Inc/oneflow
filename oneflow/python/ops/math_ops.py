@@ -706,7 +706,7 @@ def less_equal(x, y, name=None):
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        return build_broadcast_binary_op("broadcast_greater_than", x, y, name)
+        return build_broadcast_binary_op("broadcast_greater", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
