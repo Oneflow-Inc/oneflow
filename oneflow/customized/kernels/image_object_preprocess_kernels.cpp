@@ -369,7 +369,7 @@ REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
                                              {"image_size", DataType::kInt32},
                                              {"flip_code", DataType::kInt8},
                                              {"out", DataType::kTensorBuffer}}))
-    .SetInplaceProposalFn(MakeInplaceProposalFn("polygon"));
+    .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
 REGISTER_USER_KERNEL("image_normalize")
     .SetCreateFn<ImageNormalize>()

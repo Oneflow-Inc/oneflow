@@ -672,3 +672,32 @@ def object_bbox_flip(bbox, image_size, flip_code, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_flip")
+def object_segm_poly_flip(poly, image_size, flip_code, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert poly.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyFilp_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(poly.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+        )
+    else:
+        assert poly.shape[0] == flip_code.shape[0]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_flip")
+        .Input("poly", [poly])
+        .Input("image_size", [image_size])
+        .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
