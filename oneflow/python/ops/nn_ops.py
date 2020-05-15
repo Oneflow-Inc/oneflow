@@ -781,7 +781,7 @@ def deconv2d(
         raise ValueError('padding must be "VALID".')
 
     # output padding
-    output_padding = [0, 0]
+    output_padding = [0] * NDims
     for i in range(NDims):
         effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
         assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]

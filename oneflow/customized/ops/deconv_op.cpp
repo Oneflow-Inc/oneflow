@@ -10,10 +10,10 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   CHECK_EQ(NDims + 2, in->shape().NumAxes());
 
-  auto data_format = ctx->GetAttr<std::string>("data_format");
-  auto kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+  const auto data_format = ctx->GetAttr<std::string>("data_format");
+  const auto kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
-  int32_t filters = ctx->GetAttr<int32_t>("filters");
+  const int32_t filters = ctx->GetAttr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
 
   // only support data parallel
@@ -21,10 +21,10 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
                   || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
-    auto padding = ctx->GetAttr<std::string>("padding");
-    auto dilation_rate = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
-    auto output_padding = ctx->GetAttr<std::vector<int32_t>>("output_padding");
-    auto strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    const auto padding = ctx->GetAttr<std::string>("padding");
+    const auto dilation_rate = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
+    const auto output_padding = ctx->GetAttr<std::vector<int32_t>>("output_padding");
+    const auto strides = ctx->GetAttr<std::vector<int32_t>>("strides");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
@@ -107,7 +107,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 
     const auto& output_padding = conf.attr<std::vector<int32_t>>("output_padding");
     if (output_padding.size() != NDims) {
-      err << " kernel_size: number of element is " << output_padding.size();
+      err << " output_padding: number of element is " << output_padding.size();
       is_checked = false;
     }
 
@@ -127,7 +127,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   if (is_checked) {
     return Maybe<void>::Ok();
   } else {
-    return oneflow::Error::CheckFailed() << err;
+    return oneflow::Error::CheckFailed() << err.str();
   }
 }
 

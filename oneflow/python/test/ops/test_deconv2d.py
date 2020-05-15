@@ -51,8 +51,9 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
             flow.losses.add_loss(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
-            flow.watch(weight, test_global_storage.Setter("weight"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(weight, test_global_storage.Setter("weight"))
+            flow.watch_diff(weight, test_global_storage.Setter("weight_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
@@ -74,10 +75,14 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
 
         loss_diff = test_global_storage.Get("loss_diff").transpose(0, 2, 3, 1)
         tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        tf_weight_diff = tape.gradient(tf_out, w, loss_diff)
     
         assert np.allclose(of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-4, atol=1e-4)
         assert np.allclose(
             test_global_storage.Get("x_diff").transpose(0, 2, 3, 1), tf_x_diff.numpy(), rtol=1e-4, atol=1e-4
+        )
+        assert np.allclose(
+            test_global_storage.Get("weight_diff").transpose(2, 3, 1, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
         )
     else:
         with tf.GradientTape(persistent=True) as tape:
@@ -88,10 +93,14 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
                                             padding=padding, data_format='NHWC')
         loss_diff = test_global_storage.Get("loss_diff")
         tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        tf_weight_diff = tape.gradient(tf_out, w, loss_diff)
     
         assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-4, atol=1e-4)
         assert np.allclose(
             test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-4, atol=1e-4
+        )
+        assert np.allclose(
+            test_global_storage.Get("weight_diff").transpose(1, 2, 3, 0), tf_weight_diff.numpy(), rtol=1e-5, atol=1e-5
         )
         
 

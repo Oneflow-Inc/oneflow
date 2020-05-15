@@ -89,7 +89,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const JobDesc& job_desc = ctx->job_desc();
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
