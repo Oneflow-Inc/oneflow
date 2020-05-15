@@ -12,11 +12,11 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
-    const user_op::Tensor* z_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::Tensor* dz_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* z_tensor = ctx->Tensor4ArgNameAndIndex("z", 0);
+    const user_op::Tensor* dz_tensor = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("db", 0);
+    user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
 
     XpuVarNdarray<const T> dy(dz_tensor->shape(), dz_tensor->dptr<T>());
     XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_buffer->dptr<T>());
