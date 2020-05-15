@@ -199,63 +199,50 @@ def element_wise_add(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def build_broadcast_binary_op(math_op, x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr(math_op + "_")
+    return flow.user_op_builder(name).Op(math_op)
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("z")
+        .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def broadcast_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != 'True':
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("BroadcastAdd_"),
-        )
-        op_conf.broadcast_add_conf.a = x.logical_blob_name
-        op_conf.broadcast_add_conf.b = y.logical_blob_name
-        op_conf.broadcast_add_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-    
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("BroadcastAdd_"))
-        .Op("broadcast_add")
-        .Input("x", [x])
-        .Input("y", [y])
-        .Output("z")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_add", x, y, name)
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastAdd_"),
     )
-
+    op_conf.broadcast_add_conf.a = x.logical_blob_name
+    op_conf.broadcast_add_conf.b = y.logical_blob_name
+    op_conf.broadcast_add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def broadcast_sub(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != 'True':
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("BroadcastSub_"),
-        )
-        op_conf.broadcast_sub_conf.a = x.logical_blob_name
-        op_conf.broadcast_sub_conf.b = y.logical_blob_name
-        op_conf.broadcast_sub_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("BroadcastSub_"))
-        .Op("broadcast_sub")
-        .Input("x", [x])
-        .Input("y", [y])
-        .Output("z")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_sub", x, y, name)
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastSub_"),
     )
+    op_conf.broadcast_sub_conf.a = x.logical_blob_name
+    op_conf.broadcast_sub_conf.b = y.logical_blob_name
+    op_conf.broadcast_sub_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_sub_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -301,33 +288,22 @@ def element_wise_mul(x, y, name=None):
 
 
 def broadcast_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != 'True':
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("BroadcastMul_"),
-        )
-        op_conf.broadcast_mul_conf.a = x.logical_blob_name
-        op_conf.broadcast_mul_conf.b = y.logical_blob_name
-        op_conf.broadcast_mul_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("BroadcastMul_"))
-        .Op("broadcast_mul")
-        .Input("x", [x])
-        .Input("y", [y])
-        .Output("z")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_mul", x, y, name)
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastMul_"),
     )
-
+    op_conf.broadcast_mul_conf.a = x.logical_blob_name
+    op_conf.broadcast_mul_conf.b = y.logical_blob_name
+    op_conf.broadcast_mul_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_mul(x, operand, name=None):
     if name is None:
@@ -385,31 +361,21 @@ def scalar_mul_by_tensor(x, scalar, name=None):
 
 def broadcast_div(x, y, name=None):
     if os.getenv("ENABLE_USER_OP") == 'True':
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("BroadcastDiv_"),
-        )
-        op_conf.broadcast_div_conf.a = x.logical_blob_name
-        op_conf.broadcast_div_conf.b = y.logical_blob_name
-        op_conf.broadcast_div_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("BroadcastDiv_"))
-        .Op("broadcast_div")
-        .Input("x", [x])
-        .Input("y", [y])
-        .Output("z")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+        return build_broadcast_binary_op("broadcast_div", x, y, name)
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastDiv_"),
     )
+    op_conf.broadcast_div_conf.a = x.logical_blob_name
+    op_conf.broadcast_div_conf.b = y.logical_blob_name
+    op_conf.broadcast_div_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_div_by_tensor(x, scalar, name=None):
     op_conf = op_conf_util.OperatorConf()
