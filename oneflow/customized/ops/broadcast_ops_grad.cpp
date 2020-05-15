@@ -106,6 +106,7 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
                 .Input("in", op.GetGradTensorWithOpOutput("z", 0))
                 .Attr("has_int_operand", false)
                 .Attr("has_float_operand", true)
+                .Attr("int_operand", -1)
                 .Attr("float_operand", -1)
                 .Output("out")
                 .Build();
