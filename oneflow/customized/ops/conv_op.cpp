@@ -288,7 +288,8 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr("groups", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
       CHECK_NOTNULL(x_like);
       x_like->set_use_header_only(true);
