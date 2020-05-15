@@ -4,8 +4,8 @@ namespace oneflow {
 
 namespace {
 
-const std::string& AddReshapeLikeOp(const std::string& op_name, const std::string& in_lbn,
-                                    const std::string& like_lbn, user_op::AddOpFn AddOp) {
+std::string AddReshapeLikeOp(const std::string& op_name, const std::string& in_lbn,
+                             const std::string& like_lbn, user_op::AddOpFn AddOp) {
   user_op::UserOpConfWrapperBuilder builder(op_name);
   user_op::UserOpConfWrapper grad_op =
       builder.Op("reshape_like").Input("in", in_lbn).Input("like", like_lbn).Output("out").Build();
@@ -13,10 +13,9 @@ const std::string& AddReshapeLikeOp(const std::string& op_name, const std::strin
   return grad_op.output("out", 0);
 }
 
-const std::string& AddReduceSumLikeOp(const std::string& op_name, const std::string& in_lbn,
-                                      const std::string& like_lbn,
-                                      const AxisVector& broadcast_axis_vec,
-                                      user_op::AddOpFn AddOp) {
+std::string AddReduceSumLikeOp(const std::string& op_name, const std::string& in_lbn,
+                               const std::string& like_lbn, const AxisVector& broadcast_axis_vec,
+                               user_op::AddOpFn AddOp) {
   user_op::UserOpConfWrapperBuilder builder(op_name);
   user_op::UserOpConfWrapper grad_op =
       builder.Op("reduce_sum_like")
