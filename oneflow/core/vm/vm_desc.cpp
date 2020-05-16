@@ -49,7 +49,8 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
 
 template ObjectMsgPtr<VmDesc> MakeVmDesc<kWorker>(const Resource& resource,
                                                   int64_t this_machine_id);
-template ObjectMsgPtr<VmDesc> MakeVmDesc<kMaster>(const Resource& resource, int64_t this_machine_id);
+template ObjectMsgPtr<VmDesc> MakeVmDesc<kMaster>(const Resource& resource,
+                                                  int64_t this_machine_id);
 
 }  // namespace vm
 }  // namespace oneflow

@@ -9,5 +9,5 @@ class VirtualMachineScope {
   ~VirtualMachineScope();
 };
 
-}
-}
+}  // namespace vm
+}  // namespace oneflow
