@@ -71,7 +71,6 @@ class EagerUserOp(UserOp):
 
     def InferAndTryRun(self):
         vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
-        raise NotImplementedError
         return self
 
     def MakeRemoteBlob(self, lbi):

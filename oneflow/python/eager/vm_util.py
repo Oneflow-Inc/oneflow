@@ -18,10 +18,6 @@ def PhysicalRun(build):
     instruction_list = instr_util.InstructionListProto()
     eager_symbol_list = eager_symbol_util.EagerSymbolList()
     build(InstructionsBuilder(id_generator, instruction_list, eager_symbol_list))
-    print('============')
-    print(instruction_list)
-    print('============')
-    print(eager_symbol_list)
     c_api_util.RunPhysicalInstruction(instruction_list, eager_symbol_list)
 
 class InstructionsBuilder(object):
@@ -235,9 +231,9 @@ class InstructionsBuilder(object):
     def _WatchBlob(self, instruction_name, blob_object, fetcher):
         unique_callback_id = physical_blob_watcher.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
-        device_tag = blob_object.parallel_desc_sym.device_tag
+        device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s"%(device_tag, instruction_name)
-        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_sym.symbol_id
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_ConstOperand(blob_object.object_id))
         instruction.operand.append(_Int64Operand(unique_callback_id))
         self.instruction_list_.instruction.append(instruction)

@@ -63,10 +63,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     *mut_header_field<FieldKey::kTensorListSlices>() = 0;
     *mut_header_field<FieldKey::kTensorListSlicesLength>() = 1;
     *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
-    begin_tensor_.reset(
-        new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
-    begin_mut_tensor_.reset(new DataOnlyMutTensorView(
-        this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+    ResetTensorView();
     int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
     shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
@@ -77,6 +74,18 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     const DimVector& dim_vec = static_shape().dim_vec();
     shape_view_.reset(new ShapeView(dim_vec.data(), dim_vec.size()));
   }
+}
+
+void Blob::ResetTensorView() {
+    begin_tensor_.reset(
+        new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
+    begin_mut_tensor_.reset(new DataOnlyMutTensorView(
+        this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+}
+
+void Blob::reset_dptr(char* dptr) {
+  dptr_ = dptr;
+  ResetTensorView();
 }
 
 size_t Blob::total_num_of_tensors() const {

@@ -34,12 +34,13 @@ class ConstantKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    CHECK(elem_cnt);
+    CHECK_GT(elem_cnt, 0);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), elem_cnt,
                                      is_floating_value
                                          ? static_cast<T>(ctx->GetAttr<double>("floating_value"))
                                          : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
+
     const_state->set_is_inited(true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
