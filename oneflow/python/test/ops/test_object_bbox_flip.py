@@ -14,7 +14,7 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
 
     @flow.function(func_config)
     def object_bbox_flip_job(
-        bbox_def=flow.MirroredTensorListDef(shape=bbox_shape, dtype=flow.float),
+        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
         image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),
     ):
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
@@ -29,12 +29,10 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
 def _get_bbox_static_shape(bbox_list):
     bbox_shapes = [bbox.shape for bbox in bbox_list]
     bbox_static_shape = np.amax(bbox_shapes, axis=0)
-    return tuple([len(bbox_list)] + bbox_static_shape.tolist())
+    return [len(bbox_list)] + bbox_static_shape.tolist()
 
 
-def _compare_bbox_flip(
-    test_case, anno_file, batch_size, flip_code, print_debug_info=False
-):
+def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_info=False):
     from pycocotools.coco import COCO
 
     coco = COCO(anno_file)
@@ -74,6 +72,4 @@ def _compare_bbox_flip(
 
 
 def test_object_bbox_flip(test_case):
-    _compare_bbox_flip(
-        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
-    )
+    _compare_bbox_flip(test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1)
