@@ -202,10 +202,10 @@ def element_wise_add(x, y, name=None):
 def build_broadcast_binary_op(math_op, x, y, name=None):
     if name is None:
         name = id_util.UniqueStr(math_op + "_")
-    return flow.user_op_builder(name).Op(math_op)
-        .Input("x", [x])
-        .Input("y", [y])
-        .Output("z")
+    return flow.user_op_builder(name).Op(math_op)\
+        .Input("x", [x])\
+        .Input("y", [y])\
+        .Output("z")\
         .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def broadcast_add(x, y, name=None):
