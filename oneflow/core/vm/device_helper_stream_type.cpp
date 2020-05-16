@@ -120,12 +120,12 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeWorkerStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
   if (resource.has_cpu_device_num()) {
-    device_num = resource.cpu_device_num();
-  } else if (resource.has_gpu_device_num()) {
-    device_num = resource.gpu_device_num();
-  } else {
-    UNIMPLEMENTED();
+    device_num = std::max<std::size_t>(device_num, resource.cpu_device_num());
   }
+  if (resource.has_gpu_device_num()) {
+    device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
+  }
+  CHECK_GT(device_num, 0);
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
   ret->set_num_machines(1);

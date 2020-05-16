@@ -27,3 +27,12 @@ def test_gpu_constant(test_case):
 
 def test_default_placement_constant(test_case):
     WithDefaultPlacementScope(MakeTestConstant(test_case))
+
+def MakeTestConstantTmpPythonVariable(test_case):
+    def TestConstantTmpPythonVariable():
+        for i in range(10): x = flow.constant(0, shape=(10,), dtype=flow.float)
+        test_case.assertTrue(np.array_equal(x.numpy(), np.zeros((10,), dtype=np.float32)))
+    return TestConstantTmpPythonVariable
+
+def test_blob_delete(test_case):
+    WithDefaultPlacementScope(MakeTestConstantTmpPythonVariable(test_case))

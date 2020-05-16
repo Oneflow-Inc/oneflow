@@ -41,6 +41,10 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
         return ("EagerPhysicalBlob(shape=%s, dtype=%s, is_tensor_list=%s)"
                 %(self.shape, self.dtype, self.is_tensor_list))
 
+    def __del__(self):
+        blob_cache_util.TryDisableBlobCache(self.blob_object)
+        vm_util.PhysicalRun(lambda builder: builder.DeleteBlob(self.blob_object))
+
 def _GetBlobHeaderCache(blob_object):
     blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetHeaderCache(_FetchBlobHeader)
