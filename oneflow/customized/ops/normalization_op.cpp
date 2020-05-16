@@ -180,8 +180,8 @@ REGISTER_USER_OP_GRAD("normalization")
           grad_op_builder.Input("mean", op.output("moving_mean", 0));
 
           // calculate inv_variance from moving_variance
-          const auto scalar_add_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
-          const auto scalar_add_op = user_op::UserOpConfWrapperBuilder(scalar_add_op_name)
+          const auto var_add_eps_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
+          const auto var_add_eps_op = user_op::UserOpConfWrapperBuilder(var_add_eps_op_name)
                                          .Op("scalar_add")
                                          .Input("in", op.output("moving_variance", 0))
                                          .Attr("has_float_operand", true)
@@ -190,17 +190,17 @@ REGISTER_USER_OP_GRAD("normalization")
                                          .Attr("float_operand", op.attr<float>("epsilon"))
                                          .Output("out")
                                          .Build();
-          AddOp(scalar_add_op);
+          AddOp(var_add_eps_op);
 
-          const auto rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt";
-          const auto rsqrt_op = user_op::UserOpConfWrapperBuilder(rsqrt_op_name)
+          const auto variance_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
+          const auto variance_rsqrt_op = user_op::UserOpConfWrapperBuilder(variance_rsqrt_op_name)
                                     .Op("rsqrt")
-                                    .Input("in", scalar_add_op.output("out", 0))
+                                    .Input("in", var_add_eps_op.output("out", 0))
                                     .Output("out")
                                     .Build();
-          AddOp(rsqrt_op);
+          AddOp(variance_rsqrt_op);
 
-          grad_op_builder.Input("inv_variance", rsqrt_op.output("out", 0));
+          grad_op_builder.Input("inv_variance", variance_rsqrt_op.output("out", 0));
 
           if (op.NeedGenGradTensor4OpInput("in", 0)) {
             // calculate dx manually as cudnn cannot be used in evaluation mode
@@ -237,11 +237,11 @@ REGISTER_USER_OP_GRAD("normalization")
               AddOp(mul_op);
               return mul_op;
             };
-            const auto mul_gamma_op = BroadcastMulAtAxis(
-                op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "mul_gamma");
-            const auto mul_inv_var_op = BroadcastMulAtAxis(
-                rsqrt_op.output("out", 0), mul_gamma_op.output("out", 0), "mul_inv_var");
-            op.BindGradTensorWithOpInput(mul_inv_var_op.output("out", 0), "in", 0);
+            const auto out_grad_mul_gamma_op = BroadcastMulAtAxis(
+                op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "out_grad_mul_gamma");
+            const auto out_grad_mul_inv_var_op = BroadcastMulAtAxis(
+                variance_rsqrt_op.output("out", 0), out_grad_mul_gamma_op.output("out", 0), "out_grad_mul_inv_var");
+            op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("out", 0), "in", 0);
           }
         }
 
