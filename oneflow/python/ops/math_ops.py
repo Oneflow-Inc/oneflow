@@ -775,9 +775,9 @@ def broadcast_min(x, y, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMin_"),
     )
-    op_conf.broadcast_min_conf.a = x.logical_blob_name
-    op_conf.broadcast_min_conf.b = y.logical_blob_name
-    op_conf.broadcast_min_conf.out = "out"
+    op_conf.broadcast_minimum_conf.a = x.logical_blob_name
+    op_conf.broadcast_minimum_conf.b = y.logical_blob_name
+    op_conf.broadcast_minimum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -795,9 +795,9 @@ def broadcast_max(x, y, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMax_"),
     )
-    op_conf.broadcast_max_conf.a = x.logical_blob_name
-    op_conf.broadcast_max_conf.b = y.logical_blob_name
-    op_conf.broadcast_max_conf.out = "out"
+    op_conf.broadcast_maximum_conf.a = x.logical_blob_name
+    op_conf.broadcast_maximum_conf.b = y.logical_blob_name
+    op_conf.broadcast_maximum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
