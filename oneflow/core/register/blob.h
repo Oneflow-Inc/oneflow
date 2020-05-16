@@ -80,7 +80,7 @@ class Blob final {
   const ShapeView& shape() const { return *shape_view_; }
   MutShapeView* mut_shape_view() { return mut_shape_view_.get(); }
 
-  void reset_dptr(char* dptr) { dptr_ = dptr; }
+  void reset_dptr(char* dptr);
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -119,6 +119,7 @@ class Blob final {
   bool IsEndFullyMutTensor(const FullyMutTensorView& tensor) const;
   void clear_tensor_lists();
   void add_tensor_list_slice();
+  void ResetTensorView();
 
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
