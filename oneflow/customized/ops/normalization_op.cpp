@@ -172,8 +172,8 @@ REGISTER_USER_OP_GRAD("normalization")
                                    .Output("dx");
         const bool training = op.attr<bool>("training");
         if (training) {
-          grad_op_builder = grad_op_builder.Input("mean", op.output("mean", 0))
-                                .Input("inv_variance", op.output("inv_variance", 0));
+          grad_op_builder.Input("mean", op.output("mean", 0))
+              .Input("inv_variance", op.output("inv_variance", 0));
         } else {
           // this part has not been tested, blocked by reshape, broadcast_mul user op
           // and the disability of getting attr in input arg modifier
