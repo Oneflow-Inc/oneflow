@@ -14,7 +14,7 @@ class DataReader {
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   DataReader(user_op::KernelInitContext* ctx) : is_closed_(false), batch_buffer_(4) {}
-  ~DataReader() {
+  virtual ~DataReader() {
     Close();
     if (load_thrd_.joinable()) { load_thrd_.join(); }
   }

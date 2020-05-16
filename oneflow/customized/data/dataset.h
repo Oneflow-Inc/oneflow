@@ -12,7 +12,7 @@ class Dataset {
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   Dataset() = default;
-  ~Dataset() = default;
+  virtual ~Dataset() = default;
 
   virtual LoadTargetPtrList Next() = 0;
   virtual LoadTargetPtr At(int64_t idx) {
@@ -34,7 +34,7 @@ template<typename LoadTarget>
 void PrepareEmptyTensor(LoadTarget& tensor, int32_t tensor_init_bytes);
 
 template<typename LoadTarget>
-class EmptyTensorManager {
+class EmptyTensorManager final {
  public:
   using LoadTargetUniquePtr = std::unique_ptr<LoadTarget>;
   using LoadTargetSharedPtr = std::shared_ptr<LoadTarget>;
@@ -47,6 +47,7 @@ class EmptyTensorManager {
     }
     total_tensor_count_ += total_empty_size;
   }
+  ~EmptyTensorManager() = default;
 
   void Recycle(LoadTarget* tensor_ptr) {
     LoadTargetUniquePtr recycle_ptr(tensor_ptr);
