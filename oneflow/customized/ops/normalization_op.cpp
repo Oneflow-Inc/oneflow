@@ -180,24 +180,25 @@ REGISTER_USER_OP_GRAD("normalization")
           grad_op_builder.Input("mean", op.output("moving_mean", 0));
 
           // calculate inv_variance from moving_variance
-          const auto var_add_eps_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
+          const auto var_add_eps_op_name =
+              "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
           const auto var_add_eps_op = user_op::UserOpConfWrapperBuilder(var_add_eps_op_name)
-                                         .Op("scalar_add")
-                                         .Input("in", op.output("moving_variance", 0))
-                                         .Attr("has_float_operand", true)
-                                         .Attr("has_int_operand", false)
-                                         .Attr("int_operand", 0)
-                                         .Attr("float_operand", op.attr<float>("epsilon"))
-                                         .Output("out")
-                                         .Build();
+                                          .Op("scalar_add")
+                                          .Input("in", op.output("moving_variance", 0))
+                                          .Attr("has_float_operand", true)
+                                          .Attr("has_int_operand", false)
+                                          .Attr("int_operand", 0)
+                                          .Attr("float_operand", op.attr<float>("epsilon"))
+                                          .Output("out")
+                                          .Build();
           AddOp(var_add_eps_op);
 
           const auto variance_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
           const auto variance_rsqrt_op = user_op::UserOpConfWrapperBuilder(variance_rsqrt_op_name)
-                                    .Op("rsqrt")
-                                    .Input("in", var_add_eps_op.output("out", 0))
-                                    .Output("out")
-                                    .Build();
+                                             .Op("rsqrt")
+                                             .Input("in", var_add_eps_op.output("out", 0))
+                                             .Output("out")
+                                             .Build();
           AddOp(variance_rsqrt_op);
 
           grad_op_builder.Input("inv_variance", variance_rsqrt_op.output("out", 0));
@@ -239,8 +240,9 @@ REGISTER_USER_OP_GRAD("normalization")
             };
             const auto out_grad_mul_gamma_op = BroadcastMulAtAxis(
                 op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "out_grad_mul_gamma");
-            const auto out_grad_mul_inv_var_op = BroadcastMulAtAxis(
-                variance_rsqrt_op.output("out", 0), out_grad_mul_gamma_op.output("out", 0), "out_grad_mul_inv_var");
+            const auto out_grad_mul_inv_var_op =
+                BroadcastMulAtAxis(variance_rsqrt_op.output("out", 0),
+                                   out_grad_mul_gamma_op.output("out", 0), "out_grad_mul_inv_var");
             op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("out", 0), "in", 0);
           }
         }
