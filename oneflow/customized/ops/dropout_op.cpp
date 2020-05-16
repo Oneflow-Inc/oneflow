@@ -16,7 +16,8 @@ REGISTER_USER_OP("dropout")
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
       mask->set_requires_grad(false);
     })
@@ -25,13 +26,14 @@ REGISTER_USER_OP("dropout")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("mask", 0, 0)
-          .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), axis)
+            .Split(user_op::OpArg("mask", 0), axis)
+            .Split(user_op::OpArg("out", 0), axis)
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
@@ -58,13 +60,14 @@ REGISTER_USER_OP("dropout_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      SbpSignatureBuilder()
-          .Split("dy", 0, 0)
-          .Split("mask", 0, 0)
-          .Split("dx", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("dy", 0), axis)
+            .Split(user_op::OpArg("mask", 0), axis)
+            .Split(user_op::OpArg("dx", 0), axis)
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
@@ -100,7 +103,8 @@ REGISTER_USER_OP("random_mask_like")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
@@ -110,12 +114,14 @@ REGISTER_USER_OP("random_mask_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
-      SbpSignatureBuilder()
-          .Split("like", 0, 0)
-          .Split("out", 0, 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& like_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
+      FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("like", 0), axis)
+            .Split(user_op::OpArg("out", 0), axis)
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,

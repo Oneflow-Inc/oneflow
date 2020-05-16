@@ -6,13 +6,15 @@ from collections import OrderedDict
 
 from test_util import GenArgList
 import test_global_storage
+from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, num_classes, batch_size):
+def compare_with_tensorflow(device_type, data_type, label_type, num_classes, batch_size):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -23,19 +25,17 @@ def compare_with_tensorflow(device_type, num_classes, batch_size):
 
     @flow.function(func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
-            labels=flow.FixedTensorDef((batch_size, ), dtype=flow.int32)
+            labels=flow.FixedTensorDef((batch_size, ), dtype=type_name_to_flow_type[label_type])
         ):
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=(batch_size, num_classes),
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            prediction = flow.nn.softmax(logits=x)
-            loss = flow.nn.sparse_cross_entropy(labels=labels, prediction=prediction)
-            #loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
 
@@ -46,7 +46,7 @@ def compare_with_tensorflow(device_type, num_classes, batch_size):
         return loss
 
     # fake labels
-    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(np.int32)
+    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(type_name_to_np_type[label_type])
 
     # OneFlow
     check_point = flow.train.CheckPoint()
@@ -69,7 +69,9 @@ def compare_with_tensorflow(device_type, num_classes, batch_size):
 
 def test_sparse_softmax_cross_entropy_with_logits(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["label_type"] = ["int32", "int64"]
     arg_dict["num_classes"] = [1000]
     arg_dict["batch_size"] = [64]
     for arg in GenArgList(arg_dict):
