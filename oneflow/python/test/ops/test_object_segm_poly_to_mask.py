@@ -35,6 +35,10 @@ def _random_sample_image_ids(coco, batch_size):
         if group_id != batch_group_id:
             continue
 
+        anno_ids = coco.getAnnIds(imgIds=[rand_img_id])
+        if len(anno_ids) == 0:
+            continue
+
         batch_img_ids.append(rand_img_id)
 
     return batch_img_ids
@@ -49,11 +53,17 @@ def _get_images_segm_poly(coco, image_ids):
     img_segm_poly_list = []
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
-        anno_ids = list(filter(lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, anno_ids))
+        assert len(anno_ids) > 0, "img {} has no anno".format(img_id)
+
         segm_poly_list = []
         for anno_id in anno_ids:
-            segm = coco.anns[anno_id]["segmentation"]
+            anno = coco.anns[anno_id]
+            if anno["iscrowd"] != 0:
+                continue
+            segm = anno["segmentation"]
             assert isinstance(segm, list)
+            assert len(segm) > 0, str(len(segm))
+            assert all([len(poly) > 0 for poly in segm]), str([len(poly) for poly in segm])
             segm_poly_list.append(segm)
 
         img_segm_poly_list.append(segm_poly_list)
@@ -79,15 +89,20 @@ def _segm_poly_to_tensor(img_segm_poly_list):
     for img_idx, segm_poly_list in enumerate(img_segm_poly_list):
         img_poly_elem_list = []
         img_poly_index_list = []
+
         for obj_idx, poly_list in enumerate(segm_poly_list):
             for poly_idx, poly in enumerate(poly_list):
                 img_poly_elem_list.extend(poly)
                 for pt_idx, pt in enumerate(poly):
                     if pt_idx % 2 == 0:
                         img_poly_index_list.append([pt_idx / 2, poly_idx, obj_idx])
+
         img_poly_array = np.array(img_poly_elem_list, dtype=np.single).reshape(-1, 2)
+        assert img_poly_array.size > 0, segm_poly_list
         poly_array_list.append(img_poly_array)
+
         img_poly_index_array = np.array(img_poly_index_list, dtype=np.int32)
+        assert img_poly_index_array.size > 0, segm_poly_list
         poly_index_array_list.append(img_poly_index_array)
 
     return poly_array_list, poly_index_array_list
@@ -105,7 +120,7 @@ def _get_segm_poly_static_shape(poly_list, poly_index_list):
     max_poly_elems = 0
     for poly, poly_index in zip(poly_list, poly_index_list):
         assert len(poly.shape) == 2
-        assert len(poly_index.shape) == 2
+        assert len(poly_index.shape) == 2, str(poly_index.shape)
         assert poly.shape[0] == poly_index.shape[0]
         assert poly.shape[1] == 2
         assert poly_index.shape[1] == 3
@@ -217,10 +232,21 @@ def _poly_to_mask_with_cv(img_segm_poly_list, image_size_list):
 
 
 def _poly_to_mask_with_of_and_cv(
-    test_case, anno_file, image_dir, batch_size, target_size, max_size, print_debug_info=False
+    test_case,
+    anno_file,
+    image_dir,
+    batch_size,
+    target_size,
+    max_size,
+    img_ids=None,
+    print_debug_info=False,
 ):
     coco = _coco(anno_file)
-    rand_img_ids = _random_sample_image_ids(coco, batch_size)
+    if img_ids is not None:
+        assert len(img_ids) == batch_size
+        rand_img_ids = img_ids
+    else:
+        rand_img_ids = _random_sample_image_ids(coco, batch_size)
     images = _read_images_with_cv(coco, image_dir, rand_img_ids)
     image_size_list = _get_check_image_size(coco, rand_img_ids, images)
     img_segm_poly_list = _get_images_segm_poly(coco, rand_img_ids)
@@ -228,15 +254,20 @@ def _poly_to_mask_with_of_and_cv(
 
     poly_list, poly_index_list = _segm_poly_to_tensor(img_segm_poly_list)
     num_segms_list = [len(segm_poly_list) for segm_poly_list in img_segm_poly_list]
-    of_mask_list, of_scaled_poly_list = _of_poly_to_mask_pipline(
-        images, poly_list, poly_index_list, num_segms_list, target_size, max_size
-    )
-
     if print_debug_info:
         print("poly_shapes:", [poly.shape for poly in poly_list])
         print("poly_index_shapes", [poly_index.shape for poly_index in poly_index_list])
-        print("image_size_list:\n", image_size_list)
-        print("num_segms_list:\n", num_segms_list)
+        print("image_size_list:", image_size_list)
+        print("num_segms_list:", num_segms_list)
+
+    of_mask_list, of_scaled_poly_list = _of_poly_to_mask_pipline(
+        images, poly_list, poly_index_list, num_segms_list, target_size, max_size
+    )
+    of_mask_list = [
+        mask_array.reshape(-1, mask_array.shape[-2], mask_array.shape[-1])
+        for mask_array in of_mask_list
+    ]
+    if print_debug_info:
         print("of_mask_list shapes:", [of_mask.shape for of_mask in of_mask_list])
 
     # manual test
@@ -248,36 +279,87 @@ def _poly_to_mask_with_of_and_cv(
         scale_list.append(scale)
     scaled_img_segm_poly_list = _scale_poly_list(img_segm_poly_list, scale_list)
     scaled_poly_list, scaled_poly_index_list = _segm_poly_to_tensor(scaled_img_segm_poly_list)
-
-    for of_scaled_poly, scaled_poly, poly_index, scaled_poly_index in zip(
-        of_scaled_poly_list, scaled_poly_list, poly_index_list, scaled_poly_index_list
-    ):
-        test_case.assertTrue(np.allclose(of_scaled_poly, scaled_poly))
-        test_case.assertTrue(np.array_equal(poly_index, scaled_poly_index))
-
     img_segm_mask_list = _poly_to_mask_with_cv(scaled_img_segm_poly_list, new_image_size_list)
     assert len(img_segm_mask_list) == len(of_mask_list)
-    for of_mask, gt_mask in zip(of_mask_list, img_segm_mask_list):
-        test_case.assertTrue(np.array_equal(of_mask.squeeze().shape, gt_mask.shape))
+
+    if test_case is not None:
+        for of_scaled_poly, scaled_poly, poly_index, scaled_poly_index in zip(
+            of_scaled_poly_list, scaled_poly_list, poly_index_list, scaled_poly_index_list
+        ):
+            test_case.assertTrue(np.allclose(of_scaled_poly, scaled_poly))
+            test_case.assertTrue(np.array_equal(poly_index, scaled_poly_index))
+
+        for of_mask, gt_mask in zip(of_mask_list, img_segm_mask_list):
+            test_case.assertTrue(np.array_equal(of_mask.shape, gt_mask.shape))
 
     return of_mask_list, img_segm_mask_list
 
 
-def _vis_img_segm_mask_cmp(mask_list, of_mask_list):
+def _vis_img_segm_mask_cmp(mask_list, cmp_mask_list):
+    assert len(mask_list) == len(cmp_mask_list)
+
     import matplotlib.pyplot as plt
+    import ipywidgets as ipw
 
-    assert len(mask_list) == len(of_mask_list)
-    frame = plt.gcf()
-    rows = len(mask_list)
-    cols = 2
+    from IPython.display import display, clear_output
 
-    for img_idx, (mask, of_mask) in enumerate(zip(mask_list, of_mask_list)):
-        frame.add_subplot(rows, cols, img_idx * 2 + 1)
-        plt.imshow(mask)
-        frame.add_subplot(rows, cols, img_idx * 2 + 2)
-        plt.imshow(of_mask)
+    plt.close("all")
+    plt.ioff()
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.set_dpi(150)
 
-    plt.show()
+    out_widget = ipw.Output()
+    next_btn = ipw.Button(description="Next")
+    vbox = ipw.VBox(children=(out_widget, next_btn))
+    display(vbox)
+
+    cur_img_idx = 0
+    cur_mask_idx = 0
+
+    def display_fig():
+        nonlocal cur_img_idx, cur_mask_idx
+        mask_array = mask_list[cur_img_idx]
+        cmp_mask_array = cmp_mask_list[cur_img_idx]
+        assert mask_array.shape == cmp_mask_array.shape, "{} vs {}".format(
+            str(mask_array.shape), str(cmp_mask_array.shape)
+        )
+        mask = mask_array[cur_mask_idx]
+        cmp_mask = cmp_mask_array[cur_mask_idx]
+
+        ax1.clear()
+        ax2.clear()
+        fig.suptitle("img_idx:{}, mask_idx:{}".format(cur_img_idx, cur_mask_idx), fontsize=10)
+        ax1.imshow(mask)
+        ax2.imshow(cmp_mask)
+
+        nonlocal out_widget
+        with out_widget:
+            clear_output(wait=True)
+            display(fig)
+
+    def on_next_clicked(b):
+        nonlocal cur_img_idx, cur_mask_idx
+        eof = False
+        cur_mask_array_len = len(mask_list[cur_img_idx])
+        if cur_mask_idx < cur_mask_array_len - 1:
+            cur_mask_idx += 1
+        else:
+            cur_mask_list_len = len(mask_list)
+            if cur_img_idx < cur_mask_list_len - 1:
+                cur_img_idx += 1
+                cur_mask_idx = 0
+            else:
+                eof = True
+
+        if eof:
+            nonlocal next_btn
+            next_btn.close()
+            del next_btn
+        else:
+            display_fig()
+
+    next_btn.on_click(on_next_clicked)
+    display_fig()
 
 
 def test_poly_to_mask(test_case):
@@ -288,5 +370,30 @@ def test_poly_to_mask(test_case):
         4,
         800,
         1333,
-        # True,
     )
+
+
+def _check_empty_anno_img_ids(anno_file):
+    coco = _coco(anno_file)
+    img_ids = coco.getImgIds()
+    empty_anno_img_ids = []
+    for img_id in img_ids:
+        anno_ids = coco.getAnnIds(imgIds=[img_id])
+        if len(anno_ids) == 0:
+            empty_anno_img_ids.append(img_id)
+    print("empty_anno_img_ids:", empty_anno_img_ids)
+
+
+if __name__ == "__main__":
+    # _check_empty_anno_img_ids("/dataset/mscoco_2017/annotations/instances_val2017.json")
+    of_mask_list, mask_list = _poly_to_mask_with_of_and_cv(
+        None,
+        "/dataset/mscoco_2017/annotations/instances_val2017.json",
+        "/dataset/mscoco_2017/val2017",
+        4,
+        800,
+        1333,
+        # img_ids=[226111, 58636, 458790, 461275],
+        print_debug_info=True,
+    )
+    _vis_img_segm_mask_cmp(of_mask_list, mask_list)
