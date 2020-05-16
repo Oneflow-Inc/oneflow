@@ -155,6 +155,9 @@ void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_inde
     mask_mat_vec.emplace_back(std::move(mask_mat));
     poly_point_vec.clear();
   };
+
+  int origin_round_way = std::fegetround();
+  CHECK_EQ(std::fesetround(FE_TONEAREST), 0);
   FOR_RANGE(int, i, 0, num_points) {
     const I pt_idx = polys_nd_index.data<I>()[i * 3 + 0];
     const I poly_idx = polys_nd_index.data<I>()[i * 3 + 1];
@@ -167,10 +170,12 @@ void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_inde
     CHECK_EQ(poly_idx, poly_point_vec.size() - 1);
     CHECK_EQ(pt_idx, poly_point_vec.back().size());
     const T* pts_ptr = polys.data<T>() + i * 2;
-    cv::Point pt{static_cast<int>(pts_ptr[0]), static_cast<int>(pts_ptr[1])};
+    cv::Point pt{static_cast<int>(std::nearbyint(pts_ptr[0])),
+                 static_cast<int>(std::nearbyint(pts_ptr[1]))};
     poly_point_vec.back().emplace_back(std::move(pt));
   }
   PolyToMask();
+  CHECK_EQ(std::fesetround(origin_round_way), 0);
 
   masks->Resize(Shape({static_cast<int64_t>(mask_mat_vec.size()), static_cast<int64_t>(im_h),
                        static_cast<int64_t>(im_w)}),
