@@ -54,7 +54,7 @@ REGISTER_USER_OP_GRAD("broadcast_add")
         const std::string& y_lbn = op.input("y", 0);
         const std::string& out_lbn =
             CreateReduceSumLikeBlob(dz_lbn, z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
-        op.BindGradTensorWithOpInput(out_lbn, "x", 0);
+        op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
     });
 
