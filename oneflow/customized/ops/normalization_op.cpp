@@ -2,6 +2,49 @@
 
 namespace oneflow {
 
+Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
+  const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const auto data_type = in->data_type();
+  *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in;
+  const auto axis = ctx->GetAttr<int32_t>("axis");
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LT_OR_RETURN(axis, in->shape().NumAxes());
+  const Shape param_shape({in->shape().At(axis)});
+  const auto CheckParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
+    const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
+    if (tensor_desc != nullptr) {
+      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(tensor_desc->shape(), param_shape);
+    }
+    return Maybe<void>::Ok();
+  };
+  const auto SetParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
+    auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
+    if (tensor_desc != nullptr) {
+      *tensor_desc->mut_data_type() = data_type;
+      *tensor_desc->mut_shape() = param_shape;
+    }
+    return Maybe<void>::Ok();
+  };
+  JUST(CheckParamTensorDesc("moving_mean"));
+  JUST(CheckParamTensorDesc("moving_variance"));
+  if (ctx->GetAttr<bool>("center")) {
+    JUST(CheckParamTensorDesc("beta"));
+  } else {
+    JUST(SetParamTensorDesc("beta"));
+  }
+  if (ctx->GetAttr<bool>("scale")) {
+    JUST(CheckParamTensorDesc("gamma"));
+  } else {
+    JUST(SetParamTensorDesc("gamma"));
+  }
+  if (ctx->GetAttr<bool>("training")) {
+    JUST(SetParamTensorDesc("mean"));
+    JUST(SetParamTensorDesc("inv_variance"));
+  }
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("normalization")
     .Input("in")
     .Input("moving_mean")
@@ -30,50 +73,7 @@ REGISTER_USER_OP("normalization")
       moving_variance_modifier->set_is_mutable(training);
       moving_variance_modifier->set_requires_grad(false);
     })
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const DataType data_type = in->data_type();
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in;
-      int32_t axis = ctx->GetAttr<int32_t>("axis");
-      CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, in->shape().NumAxes());
-      const Shape param_shape({in->shape().At(axis)});
-      const std::function<void(const std::string&)> CheckParamTensorDesc =
-          [&](const std::string& bn) -> Maybe<void> {
-        const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-        if (tensor_desc != nullptr) {
-          CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
-          CHECK_EQ_OR_RETURN(tensor_desc->shape(), param_shape);
-        }
-        return Maybe<void>::Ok();
-      };
-      const std::function<void(const std::string&)> SetParamTensorDesc =
-          [&](const std::string& bn) -> Maybe<void> {
-        auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-        if (tensor_desc != nullptr) {
-          *tensor_desc->mut_data_type() = data_type;
-          *tensor_desc->mut_shape() = param_shape;
-        }
-        return Maybe<void>::Ok();
-      };
-      CheckParamTensorDesc("moving_mean");
-      CheckParamTensorDesc("moving_variance");
-      if (ctx->GetAttr<bool>("center")) {
-        CheckParamTensorDesc("beta");
-      } else {
-        SetParamTensorDesc("beta");
-      }
-      if (ctx->GetAttr<bool>("scale")) {
-        CheckParamTensorDesc("gamma");
-      } else {
-        SetParamTensorDesc("gamma");
-      }
-      if (ctx->GetAttr<bool>("training")) {
-        SetParamTensorDesc("mean");
-        SetParamTensorDesc("inv_variance");
-      }
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(NormalizationTensorDescInfer)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       if (ctx->GetAttr<bool>("training")) {
@@ -92,6 +92,41 @@ REGISTER_USER_OP("normalization")
       return Maybe<void>::Ok();
     });
 
+Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
+  const auto x_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  const auto dy_type = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  CHECK_EQ_OR_RETURN(x_type, dy_type);
+  const auto x_shape = *ctx->Shape4ArgNameAndIndex("x", 0);
+  const auto dy_shape = *ctx->Shape4ArgNameAndIndex("dy", 0);
+  CHECK_EQ_OR_RETURN(dy_shape, x_shape);
+  *ctx->Shape4ArgNameAndIndex("dx", 0) = dy_shape;
+  auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  if (dx) { *dx = *x; }
+  const Shape param_shape({x_shape.At(ctx->GetAttr<int32_t>("axis"))});
+  const auto CheckParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
+    CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), dy_type);
+    const auto* blob_shape = ctx->Shape4ArgNameAndIndex(bn, 0);
+    if (blob_shape) { CHECK_EQ_OR_RETURN(*blob_shape, param_shape); }
+    return Maybe<void>::Ok();
+  };
+  const auto SetParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
+    auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
+    if (tensor_desc) {
+      *tensor_desc->mut_data_type() = dy_type;
+      *tensor_desc->mut_shape() = param_shape;
+    }
+    return Maybe<void>::Ok();
+  };
+
+  JUST(CheckParamBlobDesc("mean"));
+  JUST(CheckParamBlobDesc("inv_variance"));
+  JUST(CheckParamBlobDesc("gamma"));
+  JUST(SetParamBlobDesc("gamma_diff"));
+  JUST(SetParamBlobDesc("beta_diff"));
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("normalization_grad")
     .Input("x")
     .Input("dy")
@@ -103,42 +138,7 @@ REGISTER_USER_OP("normalization_grad")
     .Output("dx")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto x_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      const auto dy_type = *ctx->Dtype4ArgNameAndIndex("dy", 0);
-      CHECK_EQ_OR_RETURN(x_type, dy_type);
-      const Shape x_shape = *ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape dy_shape = *ctx->Shape4ArgNameAndIndex("dy", 0);
-      CHECK_EQ_OR_RETURN(dy_shape, x_shape);
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = dy_shape;
-      auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      if (dx) { *dx = *x; }
-      const Shape param_shape({x_shape.At(ctx->GetAttr<int32_t>("axis"))});
-      const std::function<void(const std::string&)> CheckParamBlobDesc =
-          [&](const std::string& bn) -> Maybe<void> {
-        CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), dy_type);
-        const auto* blob_shape = ctx->Shape4ArgNameAndIndex(bn, 0);
-        if (blob_shape) { CHECK_EQ_OR_RETURN(*blob_shape, param_shape); }
-        return Maybe<void>::Ok();
-      };
-      const std::function<void(const std::string&)> SetParamBlobDesc =
-          [&](const std::string& bn) -> Maybe<void> {
-        auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-        if (tensor_desc) {
-          *tensor_desc->mut_data_type() = dy_type;
-          *tensor_desc->mut_shape() = param_shape;
-        }
-        return Maybe<void>::Ok();
-      };
-
-      CheckParamBlobDesc("mean");
-      CheckParamBlobDesc("inv_variance");
-      CheckParamBlobDesc("gamma");
-      SetParamBlobDesc("gamma_diff");
-      SetParamBlobDesc("beta_diff");
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(NormalizationGradTensorDescInfer)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
