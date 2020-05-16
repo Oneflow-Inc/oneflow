@@ -34,6 +34,6 @@ void ScalarDivByTensorKernel<device_type, T>::ForwardDataContent(
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarDivByTensorConf, ScalarDivByTensorKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
-}
+}  // namespace
 
 }  // namespace oneflow

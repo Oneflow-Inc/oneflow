@@ -25,6 +25,6 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kReduceSumConf, ReduceSumKernel,
                                          ARITHMETIC_DATA_TYPE_SEQ);
 
-}
+}  // namespace
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ class BroadcastMulKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
 };
 
-}
+}  // namespace
 
 }  // namespace oneflow
 

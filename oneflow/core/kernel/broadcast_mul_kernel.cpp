@@ -32,6 +32,6 @@ void BroadcastMulKernel<device_type, T>::ForwardDataContent(
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastMulConf, BroadcastMulKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
-}
+}  // namespace
 
 }  // namespace oneflow

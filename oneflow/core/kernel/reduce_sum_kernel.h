@@ -19,7 +19,7 @@ class ReduceSumKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-}
+}  // namespace
 
 }  // namespace oneflow
 

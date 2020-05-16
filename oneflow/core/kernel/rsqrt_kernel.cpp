@@ -15,6 +15,6 @@ void RsqrtKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRsqrtConf, RsqrtKernel, FLOATING_DATA_TYPE_SEQ);
 
-}
+}  // namespace
 
 }  // namespace oneflow
