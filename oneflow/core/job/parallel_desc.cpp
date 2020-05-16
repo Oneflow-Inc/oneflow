@@ -99,7 +99,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   ClearUp();
   SanityCheck();
   for (const auto& pair : machine_id2sorted_dev_phy_ids_) {
-    machine_id2dev_phy_ids_[pair.first] = { pair.second.begin(), pair.second.end() };
+    machine_id2dev_phy_ids_[pair.first] = {pair.second.begin(), pair.second.end()};
   }
   return Maybe<void>::Ok();
 }

@@ -29,9 +29,7 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
 
-int32_t GetDefaultCpuDeviceNum() {
-  return std::thread::hardware_concurrency();
-}
+int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 int32_t GetDefaultGpuDeviceNum() {
 #ifndef WITH_CUDA

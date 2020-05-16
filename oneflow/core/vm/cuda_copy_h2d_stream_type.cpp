@@ -59,8 +59,7 @@ class CudaCopyH2DInstructionType final : public InstructionType {
           instruction->operand_type(view->dst()).Get<MemBufferObjectType>();
       CHECK_LE(size, dst_buffer_type.size());
       CHECK(dst_buffer_type.mem_case().has_device_cuda_mem());
-      CHECK_EQ(dst_buffer_type.mem_case().device_cuda_mem().device_id(),
-               stream.device_id());
+      CHECK_EQ(dst_buffer_type.mem_case().device_cuda_mem().device_id(), stream.device_id());
       auto* dst_buffer_value =
           instruction->mut_operand_value(view->dst())->Mut<MemBufferObjectValue>();
       dst = dst_buffer_value->mut_data();
@@ -92,8 +91,7 @@ void CudaCopyH2DStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx
 void CudaCopyH2DStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
-                                       stream.device_id());
+  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
 }
 
 void CudaCopyH2DStreamType::DeleteInstructionStatus(const Stream& stream,

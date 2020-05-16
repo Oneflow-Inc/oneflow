@@ -19,5 +19,5 @@ VirtualMachineScope::~VirtualMachineScope() {
   if (Global<OneflowVM<vm::kMaster>>::Get()) { Global<OneflowVM<vm::kMaster>>::Delete(); }
 }
 
-}
-}
+}  // namespace vm
+}  // namespace oneflow

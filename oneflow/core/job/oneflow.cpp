@@ -765,9 +765,7 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
 }
 
 Oneflow::~Oneflow() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    runtime_buffers_scope_.reset();
-  }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(

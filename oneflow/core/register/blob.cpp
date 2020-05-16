@@ -77,10 +77,10 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
 }
 
 void Blob::ResetTensorView() {
-    begin_tensor_.reset(
-        new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
-    begin_mut_tensor_.reset(new DataOnlyMutTensorView(
-        this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+  begin_tensor_.reset(
+      new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
+  begin_mut_tensor_.reset(new DataOnlyMutTensorView(
+      this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
 }
 
 void Blob::reset_dptr(char* dptr) {

@@ -80,7 +80,7 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
 }
 
 std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
-                                                              std::string* error_str) {
+                                       std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
 }

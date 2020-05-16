@@ -48,8 +48,7 @@ class CpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructio
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobHeaderInstructionType>(
-    "cpu.WatchBlobHeader"));
+COMMAND(vm::RegisterInstructionType<CpuWatchBlobHeaderInstructionType>("cpu.WatchBlobHeader"));
 
 class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
  public:
@@ -61,8 +60,7 @@ class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionTyp
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>(
-    "cpu.WatchBlobBody"));
+COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>("cpu.WatchBlobBody"));
 
 }  // namespace eager
 }  // namespace oneflow
