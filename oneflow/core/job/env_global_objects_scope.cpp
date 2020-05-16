@@ -1,4 +1,5 @@
 #include <cuda.h>
+#include <thread>
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -28,6 +29,10 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
 
+int32_t GetDefaultCpuDeviceNum() {
+  return std::thread::hardware_concurrency();
+}
+
 int32_t GetDefaultGpuDeviceNum() {
 #ifndef WITH_CUDA
   return 0;
@@ -41,6 +46,7 @@ int32_t GetDefaultGpuDeviceNum() {
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   resource.set_machine_num(env_proto.machine_size());
+  resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
   resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
 }
