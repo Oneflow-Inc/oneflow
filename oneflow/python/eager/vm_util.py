@@ -43,6 +43,10 @@ class InstructionsBuilder(object):
         return self._StatelessCall(parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                                    input_triples, output_triples, mut2_output_triples)
 
+    def DeleteBlob(self, blob_object):
+        self._DeleteBlob(blob_object)
+        self._DeleteObject(blob_object)
+
     def WatchBlobHeader(self, blob_object, callback):
         return self._WatchBlob("WatchBlobHeader", blob_object, callback)
 
@@ -238,6 +242,18 @@ class InstructionsBuilder(object):
         instruction.operand.append(_Int64Operand(unique_callback_id))
         self.instruction_list_.instruction.append(instruction)
 
+    def _DeleteBlob(self, blob_object):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "DeleteBlobObject"
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
+        instruction.operand.append(_MutOperand(blob_object.object_id))
+        self.instruction_list_.instruction.append(instruction)
+
+    def _DeleteObject(self, blob_object):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "DeleteObject"
+        instruction.operand.append(_DelObjectOperand(blob_object.object_id))
+        self.instruction_list_.instruction.append(instruction)
 
 def _SymbolOperand(val):
     operand = instr_util.InstructionOperandProto()
@@ -264,6 +280,11 @@ def _Mut2Operand(val):
     _SetMirroredOperand(operand.mut2_operand, val)
     return operand
 
+def _DelObjectOperand(val):
+    operand = instr_util.InstructionOperandProto()
+    _SetAllMirroredOperand(operand.mut_operand, val)
+    return operand
+
 def _Int64Operand(val):
     operand = instr_util.InstructionOperandProto()
     operand.int64_operand = val
@@ -281,3 +302,7 @@ def _SetMirroredOperand(operand, val):
 def _SetSoleMirroredOperand(operand, val):
     operand.logical_object_id = val
     operand.sole_mirrored_object.SetInParent()
+
+def _SetAllMirroredOperand(operand, val):
+    operand.logical_object_id = val
+    operand.all_mirrored_object.SetInParent()
