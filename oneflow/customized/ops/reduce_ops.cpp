@@ -94,5 +94,6 @@ REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
 REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
+REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
 
 }  // namespace oneflow

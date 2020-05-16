@@ -24,6 +24,15 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
         return x
     return _get_remote_blob(x, name, "reduce_min", keepdims, axis)
 
+@oneflow_export("math.reduce_max")
+def reduce_max(x, axis=None, keepdims=False, name=None):
+    name = _check_name(name, "ReduceMax_")
+    if axis is None:
+        axis = []
+    elif isinstance(axis, list) and len(axis) == 0:
+        return x
+    return _get_remote_blob(x, name, "reduce_max", keepdims, axis)
+
 @oneflow_export("math.reduce_prod")
 def reduce_prod(x, axis=None, keepdims=False, name=None):
     name = _check_name(name, "ReduceProd_")
