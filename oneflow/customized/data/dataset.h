@@ -15,17 +15,6 @@ class Dataset {
   virtual ~Dataset() = default;
 
   virtual LoadTargetPtrList Next() = 0;
-  virtual LoadTargetPtr At(int64_t idx) {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual int64_t Size() {
-    UNIMPLEMENTED();
-    return -1;
-  }
-
-  virtual bool EnableRandomAccess() { return false; }
-  virtual bool EnableGetSize() { return false; }
 };
 
 static constexpr int kOneflowDatasetSeed = 524287;
