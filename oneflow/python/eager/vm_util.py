@@ -4,7 +4,6 @@ import oneflow.python.vm.id_util as id_util
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.symbol as symbol_util
@@ -12,6 +11,7 @@ import oneflow.python.eager.symbol_dict as symbol_dict
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_dict as object_dict
 import oneflow.python.eager.physical_blob_watcher as physical_blob_watcher
+import oneflow
 
 def PhysicalRun(build):
     id_generator = id_util.PhysicalIdGenerator()
@@ -30,7 +30,7 @@ class InstructionsBuilder(object):
 
     def StatelessCall(self, op_conf):
         assert op_conf.HasField('user_conf')
-        placement_scope = placement_ctx.PlacementScopeStackTop()
+        placement_scope = oneflow.placement.current_scope()
         parallel_conf = placement_scope.default_parallel_conf
         device_tag = placement_scope.default_device_tag
         parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
