@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import oneflow.core.job.job_pb2 as job_util
 
 from contextlib import contextmanager
