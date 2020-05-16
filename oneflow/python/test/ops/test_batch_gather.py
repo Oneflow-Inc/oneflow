@@ -67,8 +67,8 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
     params, indices = _random_inputs(params_shape, indices_shape)
     i = tf.constant(indices.astype(np.int32))
     with tf.GradientTape() as t:
-        x = tf.Variable(params.astype(np.float))
-        y = tf.gather(x, i, axis=axis, batch_dims=-1)
+        x = tf.Variable(params.astype(np.float32))
+        y = tf.gather(x, i, axis=axis, batch_dims=axis)
     dy = t.gradient(y, x)
     if mirrored:
         def compare_dy(params_grad):
