@@ -21,6 +21,7 @@ std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_s
     AddOp(grad_op);
     return grad_op.output("out", 0);
   } else {
+    const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
     user_op::UserOpConfWrapperBuilder builder(op_name + "_grad_reduce_sum_like");
     user_op::UserOpConfWrapper grad_op =
         builder.Op("reduce_sum_like")
@@ -74,8 +75,8 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
                                                        .Input("in", dz_lbn)
                                                        .Attr("has_int_operand", false)
                                                        .Attr("has_float_operand", true)
-                                                       .Attr("int_operand", -1.0)
-                                                       .Attr("float_operand", -1.0)
+                                                       .Attr<int64_t>("int_operand", -1)
+                                                       .Attr<double>("float_operand", -1.0)
                                                        .Output("out")
                                                        .Build();
         AddOp(scalar_mul_op);
