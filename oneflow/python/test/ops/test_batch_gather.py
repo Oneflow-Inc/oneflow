@@ -70,11 +70,6 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         x = tf.Variable(params.astype(np.float))
         y = tf.gather(x, i, axis=axis, batch_dims=-1)
     dy = t.gradient(y, x)
-    if isinstance(dy, tf.IndexedSlices):
-        test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
-        zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
-        dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
-
     if mirrored:
         def compare_dy(params_grad):
             test_case.assertTrue(np.allclose(dy,
@@ -131,7 +126,7 @@ def test_batch_gather_case_2(test_case):
         _compare_gather_with_tf(test_case, *arg)
 
 
-def test_batch_gather_case_2(test_case):
+def test_batch_gather_case_3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["params_shape"] = [(20, 80, 30, 5)]
