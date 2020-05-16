@@ -53,10 +53,10 @@ class ConstantKernel final : public OpKernel {
         return ctx.device_type() == device && data_type == GetDataType<dtype>::value; \
       });
 
-#define REGISTER_CONSTANT_KERNEL_WITH_DTYPE_PAIR(device, dtype_pair) \
-  REGISTER_CONSTANT_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
+#define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
+  REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace user_op
