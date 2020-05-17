@@ -432,8 +432,6 @@ def batch_normalization(
             .SetAttr("epsilon", epsilon, "AttrTypeFloat")
             .SetAttr("training", training, "AttrTypeBool")
             .SetAttr("momentum", momentum, "AttrTypeFloat")
-            .SetAttr("center", center, "AttrTypeBool")
-            .SetAttr("scale", scale, "AttrTypeBool")
             )
         if trainable and training:
             builder = (builder

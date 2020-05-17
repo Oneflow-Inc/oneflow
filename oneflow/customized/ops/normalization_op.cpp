@@ -32,16 +32,8 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   };
   JUST(CheckParamTensorDesc("moving_mean"));
   JUST(CheckParamTensorDesc("moving_variance"));
-  if (ctx->GetAttr<bool>("center")) {
-    JUST(CheckParamTensorDesc("beta"));
-  } else {
-    JUST(SetParamTensorDesc("beta"));
-  }
-  if (ctx->GetAttr<bool>("scale")) {
-    JUST(CheckParamTensorDesc("gamma"));
-  } else {
-    JUST(SetParamTensorDesc("gamma"));
-  }
+  JUST(CheckParamTensorDesc("beta"));
+  JUST(CheckParamTensorDesc("gamma"));
   if (ctx->GetAttr<bool>("training")) {
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
@@ -62,8 +54,6 @@ REGISTER_USER_OP("normalization")
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .Attr("training", UserOpAttrType::kAtBool)
     .Attr("momentum", UserOpAttrType::kAtFloat)
-    .Attr("center", UserOpAttrType::kAtBool)
-    .Attr("scale", UserOpAttrType::kAtBool)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) {
       user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
