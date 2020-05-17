@@ -233,12 +233,11 @@ REGISTER_USER_OP_GRAD("normalization")
               AddOp(mul_op);
               return mul_op;
             };
-            const auto out_grad_mul_gamma_op = BroadcastMulAtAxis(
+            const auto dy_mul_gamma_op = BroadcastMulAtAxis(
                 op.input("gamma", 0), op.GetGradTensorWithOpOutput("y", 0), "out_grad_mul_gamma");
-            const auto out_grad_mul_inv_var_op =
-                BroadcastMulAtAxis(var_sqrt_op.output("y", 0), out_grad_mul_gamma_op.output("z", 0),
-                                   "out_grad_mul_inv_var");
-            op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("z", 0), "x", 0);
+            const auto dy_mul_inv_var_op = BroadcastMulAtAxis(
+                var_sqrt_op.output("y", 0), dy_mul_gamma_op.output("z", 0), "out_grad_mul_inv_var");
+            op.BindGradTensorWithOpInput(dy_mul_inv_var_op.output("z", 0), "x", 0);
           }
         }
 
