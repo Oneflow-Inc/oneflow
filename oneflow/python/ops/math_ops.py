@@ -211,8 +211,18 @@ def element_wise_add(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def build_broadcast_binary_op(math_op, x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr(math_op + "_")
+    return flow.user_op_builder(name).Op(math_op)\
+        .Input("x", [x])\
+        .Input("y", [y])\
+        .Output("z")\
+        .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def broadcast_add(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_add", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -228,8 +238,9 @@ def broadcast_add(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 def broadcast_sub(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_sub", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -299,6 +310,8 @@ def element_wise_mul(x, y, name=None):
 
 
 def broadcast_mul(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_mul", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -313,7 +326,6 @@ def broadcast_mul(x, y, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
 
 def scalar_mul(x, operand, name=None):
     if name is None:
@@ -380,6 +392,8 @@ def scalar_mul_by_tensor(x, scalar, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def broadcast_div(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_div", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -421,6 +435,8 @@ def scalar_div_by_tensor(x, scalar, name=None):
 
 
 def broadcast_floor_mod(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -653,6 +669,8 @@ def naive_logical_and(lhs, rhs, name=None):
 
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -671,6 +689,8 @@ def equal(x, y, name=None):
 
 @oneflow_export("math.not_equal")
 def not_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -689,6 +709,8 @@ def not_equal(x, y, name=None):
 
 @oneflow_export("math.less")
 def less(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_less", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -707,6 +729,8 @@ def less(x, y, name=None):
 
 @oneflow_export("math.less_equal")
 def less_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -725,6 +749,8 @@ def less_equal(x, y, name=None):
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_greater", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -743,6 +769,8 @@ def greater(x, y, name=None):
 
 @oneflow_export("math.greater_equal")
 def greater_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -761,6 +789,8 @@ def greater_equal(x, y, name=None):
 
 @oneflow_export("math.logical_and")
 def logical_and(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -779,15 +809,17 @@ def logical_and(x, y, name=None):
 
 @oneflow_export("math.minimum")
 def broadcast_min(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMin_"),
     )
-    op_conf.broadcast_min_conf.a = x.logical_blob_name
-    op_conf.broadcast_min_conf.b = y.logical_blob_name
-    op_conf.broadcast_min_conf.out = "out"
+    op_conf.broadcast_minimum_conf.a = x.logical_blob_name
+    op_conf.broadcast_minimum_conf.b = y.logical_blob_name
+    op_conf.broadcast_minimum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -797,15 +829,17 @@ def broadcast_min(x, y, name=None):
 
 @oneflow_export("math.maximum")
 def broadcast_max(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMax_"),
     )
-    op_conf.broadcast_max_conf.a = x.logical_blob_name
-    op_conf.broadcast_max_conf.b = y.logical_blob_name
-    op_conf.broadcast_max_conf.out = "out"
+    op_conf.broadcast_maximum_conf.a = x.logical_blob_name
+    op_conf.broadcast_maximum_conf.b = y.logical_blob_name
+    op_conf.broadcast_maximum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
