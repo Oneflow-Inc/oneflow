@@ -31,12 +31,12 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("prediction", 0, 0)
-          .Split("label", 0, 0)
-          .Split("prob", 0, 0)
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("prediction", 0), 0)
+          .Split(user_op::OpArg("label", 0), 0)
+          .Split(user_op::OpArg("prob", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -69,12 +69,12 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("dy", 0, 0)
-          .Split("label", 0, 0)
-          .Split("prob", 0, 0)
-          .Split("prediction_diff", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("label", 0), 0)
+          .Split(user_op::OpArg("prob", 0), 0)
+          .Split(user_op::OpArg("prediction_diff", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -129,12 +129,12 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy_ms")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
-      SbpSignatureBuilder()
-          .Split("prediction", 0, tensor.shape().NumAxes() - 1)
-          .Split("prob", 0, tensor.shape().NumAxes() - 1)
-          .Broadcast("label", 0)
-          .PartialSum("out", 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("prediction", 0), tensor.shape().NumAxes() - 1)
+          .Split(user_op::OpArg("prob", 0), tensor.shape().NumAxes() - 1)
+          .Broadcast(user_op::OpArg("label", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -156,12 +156,12 @@ REGISTER_USER_OP("sparse_softmax_cross_entropy_ms_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("prob", 0);
-      SbpSignatureBuilder()
-          .Split("prob", 0, tensor.shape().NumAxes() - 1)
-          .Broadcast("label", 0)
-          .Broadcast("dy", 0)
-          .Split("prediction_diff", 0, tensor.shape().NumAxes() - 1)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("prob", 0), tensor.shape().NumAxes() - 1)
+          .Broadcast(user_op::OpArg("label", 0))
+          .Broadcast(user_op::OpArg("dy", 0))
+          .Split(user_op::OpArg("prediction_diff", 0), tensor.shape().NumAxes() - 1)
+          .Build();
       return Maybe<void>::Ok();
     });
 

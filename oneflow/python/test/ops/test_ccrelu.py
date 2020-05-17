@@ -2,7 +2,7 @@ import oneflow as flow
 import numpy as np
 
 def ccrelu(x, name):
-    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().RemoteBlobList()[0]
+    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().InferAndTryRun().RemoteBlobList()[0]
 
 def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)

@@ -24,7 +24,8 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* table = GetInputArgModifierFn("table", 0);
       table->set_is_mutable(true);
       table->set_requires_grad(false);

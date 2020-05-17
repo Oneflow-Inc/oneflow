@@ -3,7 +3,6 @@
 #include "oneflow/customized/kernels/sparse_cross_entropy_kernel_util.h"
 
 namespace oneflow {
-
 template<DeviceType device_type, typename T, typename K>
 class SparseCrossEntropyKernel final : public user_op::OpKernel {
  public:
@@ -27,22 +26,60 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SPARSE_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)         \
-  REGISTER_USER_KERNEL("sparse_cross_entropy")                                              \
-      .SetCreateFn<SparseCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
-                                            OF_PP_PAIR_FIRST(ltype_pair)>>()                \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0); \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device_type() == device_type_v                                           \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                  \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                   \
+template<DeviceType device_type, typename T, typename K>
+class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
+ public:
+  SparseCrossEntropyMsKernel() = default;
+  ~SparseCrossEntropyMsKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
+    const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t num_instances = label->shape().elem_cnt();
+    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    int64_t lower_bound = 0;
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
+      lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
+    }
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+                        out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
+        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        label->dptr<K>(), out->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_SPARSE_CROSS_ENTROPY_KERNEL(kernel_class, kernel_name, device_type_v, dtype_pair, \
+                                             ltype_pair)                                           \
+  REGISTER_USER_KERNEL(kernel_name)                                                                \
+      .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                       \
+                                OF_PP_PAIR_FIRST(ltype_pair)>>()                                   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
+        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);        \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);            \
+        return ctx.device_type() == device_type_v                                                  \
+               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                         \
+               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                          \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
+                                 ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
+                                 ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
+                                 ("sparse_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
+                                 ("sparse_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
@@ -74,74 +111,6 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL(device_type_v, dtype_pair, ltype_pair)     \
-  REGISTER_USER_KERNEL("sparse_cross_entropy_grad")                                          \
-      .SetCreateFn<SparseCrossEntropyGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                                OF_PP_PAIR_FIRST(ltype_pair)>>()             \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                           \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);  \
-        const user_op::TensorDesc* prediction_diff_desc =                                    \
-            ctx.TensorDesc4ArgNameAndIndex("prediction_diff", 0);                            \
-        return ctx.device_type() == device_type_v                                            \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                   \
-               && prediction_diff_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);        \
-      });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
-template<DeviceType device_type, typename T, typename K>
-class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
- public:
-  SparseCrossEntropyMsKernel() = default;
-  ~SparseCrossEntropyMsKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
-    const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
-    int64_t lower_bound = 0;
-    if (ctx->parallel_ctx().parallel_num() > 1) {
-      BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-      lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
-    }
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
-                        out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
-    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
-        label->dptr<K>(), out->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_SPARSE_CROSS_ENTROPY_MS_KERNEL(device_type_v, dtype_pair, ltype_pair)      \
-  REGISTER_USER_KERNEL("sparse_cross_entropy_ms")                                           \
-      .SetCreateFn<SparseCrossEntropyMsKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),  \
-                                              OF_PP_PAIR_FIRST(ltype_pair)>>()              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0); \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device_type() == device_type_v                                           \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                  \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                   \
-      });
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_MS_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_MS_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
 template<DeviceType device_type, typename T, typename K>
 class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
  public:
@@ -172,22 +141,33 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SPARSE_CROSS_ENTROPY_MS_GRAD_KERNEL(device_type_v, dtype_pair, ltype_pair)    \
-  REGISTER_USER_KERNEL("sparse_cross_entropy_ms_grad")                                         \
-      .SetCreateFn<SparseCrossEntropyMsGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                                  OF_PP_PAIR_FIRST(ltype_pair)>>()             \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                             \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);          \
-        return ctx.device_type() == device_type_v                                              \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                     \
-               && dx_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                       \
+#define REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL(kernel_class, kernel_name, device_type_v, \
+                                                  dtype_pair, ltype_pair)                   \
+  REGISTER_USER_KERNEL(kernel_name)                                                         \
+      .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                \
+                                OF_PP_PAIR_FIRST(ltype_pair)>>()                            \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
+        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0); \
+        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);       \
+        return ctx.device_type() == device_type_v                                           \
+               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                  \
+               && dx_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                    \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_MS_GRAD_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
+                                 (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_MS_GRAD_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
+                                 (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
+                                 (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
+                                 (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 

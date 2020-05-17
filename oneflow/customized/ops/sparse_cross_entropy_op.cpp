@@ -3,6 +3,7 @@
 namespace oneflow {
 
 namespace {
+
 Maybe<void> CheckPredictionLabelDesc(const user_op::TensorDesc* prediction_desc,
                                      const user_op::TensorDesc* label_desc) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
@@ -50,42 +51,42 @@ Maybe<void> InferGradBatchAxisFn(user_op::BatchAxisContext* ctx) {
 Maybe<void> AddMsSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& prediction =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
-  SbpSignatureBuilder()
-      .Split("prediction", 0, prediction.shape().NumAxes() - 1)
-      .Broadcast("label", 0)
-      .PartialSum("out", 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
+      .Broadcast(user_op::OpArg("label", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddDsSignature(user_op::SbpContext* ctx) {
-  SbpSignatureBuilder()
-      .Split("prediction", 0, 0)
-      .Split("label", 0, 0)
-      .Split("out", 0, 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+Maybe<void> AddSignature(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> AddGradMsSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& prediction =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
-  SbpSignatureBuilder()
-      .Split("prediction", 0, prediction.shape().NumAxes() - 1)
-      .Broadcast("label", 0)
-      .Broadcast("dy", 0)
-      .Split("prediction_diff", 0, prediction.shape().NumAxes() - 1)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
+      .Broadcast(user_op::OpArg("label", 0))
+      .Broadcast(user_op::OpArg("dy", 0))
+      .Split(user_op::OpArg("prediction_diff", 0), prediction.shape().NumAxes() - 1)
+      .Build();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddGradDsSignature(user_op::SbpContext* ctx) {
-  SbpSignatureBuilder()
-      .Split("prediction", 0, 0)
-      .Split("label", 0, 0)
-      .Split("dy", 0, 0)
-      .Split("prediction_diff", 0, 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+Maybe<void> AddGradSignature(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("prediction_diff", 0), 0)
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -135,9 +136,9 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .SetBatchAxisInferFn(InferGradBatchAxisFn)                     \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);
 
-REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddDsSignature);
+REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddSignature);
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy_ms", AddMsSignature);
-REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP("sparse_cross_entropy_grad", AddGradDsSignature);
+REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP("sparse_cross_entropy_grad", AddGradSignature);
 REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP("sparse_cross_entropy_ms_grad", AddGradMsSignature);
 
 REGISTER_USER_OP_GRAD("sparse_cross_entropy")

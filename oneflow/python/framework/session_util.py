@@ -8,6 +8,7 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.push_util as push_util
@@ -15,6 +16,7 @@ import oneflow.python.framework.job_instance as job_instance_util
 from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow
 
 class Session(object):
     def __init__(self):
@@ -77,7 +79,7 @@ class Session(object):
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        _TryInitEnv()
+        if not c_api_util.IsEnvInited(): oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto_)
         g_func_ctx.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
@@ -190,12 +192,5 @@ def _GetDefaultConfigProto():
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
-
-def _TryInitEnv():
-    if g_func_ctx.IsEnvInited(): return
-    assert len(env_util.default_env_proto.machine) > 0
-    env_util.CompleteEnvProto(env_util.default_env_proto)
-    g_func_ctx.InitEnv(env_util.default_env_proto)
-    env_util.env_proto_mutable = False
 
 session_ctx.OpenDefaultSession(Session())

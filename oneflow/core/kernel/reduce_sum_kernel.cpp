@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 void ReduceSumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -22,5 +24,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kReduceSumConf, ReduceSumKernel,
                                          ARITHMETIC_DATA_TYPE_SEQ);
+
+}  // namespace
 
 }  // namespace oneflow
