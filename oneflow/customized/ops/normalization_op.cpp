@@ -24,10 +24,11 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   };
   const auto SetParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
     auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-    if (tensor_desc != nullptr) {
-      *tensor_desc->mut_data_type() = data_type;
-      *tensor_desc->mut_shape() = param_shape;
-    }
+    // `CHECK_NE_OR_RETURN(tensor_desc, nullptr)` fails to compile with the error
+    // "ambiguous overload for operator<<(ostream, nullptr_t)"
+    CHECK_OR_RETURN(tensor_desc != nullptr);
+    *tensor_desc->mut_data_type() = data_type;
+    *tensor_desc->mut_shape() = param_shape;
     return Maybe<void>::Ok();
   };
   JUST(CheckParamTensorDesc("moving_mean"));
