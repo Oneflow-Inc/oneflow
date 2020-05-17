@@ -36,8 +36,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-bool IsAxesLegal(const AxisVector& axis_vec, const class Shape& like_shape,
-                 const class Shape& in_shape) {
+bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shape& in_shape) {
   Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
     reduced_shape = reduced_shape.RemoveOnes(axis_vec);
@@ -68,7 +67,7 @@ REGISTER_USER_OP("broadcast_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_OR_RETURN(like_arg_modifier != nullptr);
+      CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
