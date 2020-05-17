@@ -36,9 +36,18 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
 
     if batch_dims > 0:
         if axis == batch_dims:
-            setattr(op_conf.batch_gather_conf, "in", params.logical_blob_name)
-            op_conf.batch_gather_conf.indices = indices.logical_blob_name
-            op_conf.batch_gather_conf.out = "out"
+            if os.getenv("ENABLE_USER_OP") == 'True':
+                return flow.user_op_builder(name if name is
+                    not None else id_util.UniqueStr("BatchGather_"))\
+               .Op("batch_gather")\
+               .Input("in", [params])\
+               .Input("indices", [indices])\
+               .Output("out")\
+               .Build().InferAndTryRun().RemoteBlobList()[0]
+            else:
+                setattr(op_conf.batch_gather_conf, "in", params.logical_blob_name)
+                op_conf.batch_gather_conf.indices = indices.logical_blob_name
+                op_conf.batch_gather_conf.out = "out"
         elif axis > batch_dims:
             raise NotImplementedError
         else:
@@ -70,7 +79,6 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
