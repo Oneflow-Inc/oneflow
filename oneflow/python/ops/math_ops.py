@@ -194,8 +194,6 @@ def scalar_add_by_tensor(x, scalar, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def element_wise_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return add_n([x, y])
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
