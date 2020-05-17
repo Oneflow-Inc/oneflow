@@ -217,17 +217,19 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(params_3d->Get(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
-                    [](const int64_t size, T& out) { out /= size; });
+      CFirstForward(
+          params_3d->Get(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
+          [](const int64_t size, T& out) { out /= size; });
     } else if (data_format == "channels_last") {
-      CLastForward(params_3d->Get(), x, y, GetZeroVal<T>,
-                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-                      EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
-                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
-                     out_mat.col(col) /= size;
-                   });
+      CLastForward(
+          params_3d->Get(), x, y, GetZeroVal<T>,
+          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+             EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
+          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
+            out_mat.col(col) /= size;
+          });
     } else {
       UNIMPLEMENTED();
     }
@@ -242,7 +244,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(params_3d->Get(), dy, y, x, dx,
                      [](const T& in, const T& out, const T& out_diff, const int64_t size,
@@ -266,20 +268,22 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(params_3d->Get(), x, y, GetMinVal<T>,
-                    [](const T& lhs, T& rhs) {
-                      if (lhs > rhs) { rhs = lhs; }
-                    },
-                    [](const int64_t size, T& out) {});
+      CFirstForward(
+          params_3d->Get(), x, y, GetMinVal<T>,
+          [](const T& lhs, T& rhs) {
+            if (lhs > rhs) { rhs = lhs; }
+          },
+          [](const int64_t size, T& out) {});
     } else if (data_format == "channels_last") {
-      CLastForward(params_3d->Get(), x, y, GetMinVal<T>,
-                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-                      EigenMatrixMap<T>& out_mat) {
-                     out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
-                   },
-                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
+      CLastForward(
+          params_3d->Get(), x, y, GetMinVal<T>,
+          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+             EigenMatrixMap<T>& out_mat) {
+            out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
+          },
+          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
     } else {
       UNIMPLEMENTED();
     }
@@ -294,7 +298,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(
           params_3d->Get(), dy, y, x, dx,
@@ -320,10 +324,10 @@ struct PoolCpuKernelUtil {
 std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelInitContext* ctx,
                                                               const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-  const std::string data_format = ctx->GetAttr<std::string>("data_format");
-  const std::string padding = ctx->GetAttr<std::string>("padding");
-  const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-  const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+  const std::string data_format = ctx->Attr<std::string>("data_format");
+  const std::string padding = ctx->Attr<std::string>("padding");
+  const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
   return std::make_shared<OpKernelStateWrapper<Params3D>>(dim, x_shape, data_format, padding,
                                                           pool_size, strides);
 }

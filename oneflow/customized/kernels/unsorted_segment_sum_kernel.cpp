@@ -15,7 +15,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
-    int64_t axis = ctx->GetAttr<int64_t>("axis");
+    int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t outer_dim_size = out->shape().Count(0, axis);
     int64_t num_segments = out->shape().At(axis);

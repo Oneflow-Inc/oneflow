@@ -81,7 +81,7 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
     XrtNode *launch_node = launch_nodes[cluster_id];
     XrtGraph *sub_graph = graph->AddSubgraph(launch_node->unique_id());
     // Set subgraph execution engine.
-    sub_graph->SetAttr("engine", NodeEngine(*(kv.second.begin())));
+    sub_graph->Attr("engine", NodeEngine(*(kv.second.begin())));
 
     util::Map<int64_t, XrtNode *> sub_graph_nodes;
     for (XrtNode *n : kv.second) {
@@ -119,7 +119,7 @@ void BuildSubGraphPass::CreateLaunchNodes(XrtGraph *graph,
   for (const auto &pair : cluster_ids) {
     int64_t cluster_id = pair.first;
     XrtNode *launch_node = graph->AddNode();
-    launch_node->SetAttr("cluster_id", cluster_id);
+    launch_node->Attr("cluster_id", cluster_id);
     launch_node->set_device(pair.second);
     launch_node->set_type(_XrtLaunchOpType);
 

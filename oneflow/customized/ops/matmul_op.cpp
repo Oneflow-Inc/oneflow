@@ -5,8 +5,8 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
-  bool transpose_a = ctx->GetAttr<bool>("transpose_a");
-  bool transpose_b = ctx->GetAttr<bool>("transpose_b");
+  bool transpose_a = ctx->Attr<bool>("transpose_a");
+  bool transpose_b = ctx->Attr<bool>("transpose_b");
 
   user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
   user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
@@ -118,11 +118,11 @@ REGISTER_USER_OP("matmul")
         return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
       };
       OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
-      if (a_batch_axis.has_value() && ctx->GetAttr<bool>("transpose_a")) {
+      if (a_batch_axis.has_value() && ctx->Attr<bool>("transpose_a")) {
         a_batch_axis.set_value(1 - a_batch_axis.value());
       }
       OptInt64 b_batch_axis(*BatchAxis4BnInOp("b"));
-      if (b_batch_axis.has_value() && ctx->GetAttr<bool>("transpose_b")) {
+      if (b_batch_axis.has_value() && ctx->Attr<bool>("transpose_b")) {
         b_batch_axis.set_value(1 - b_batch_axis.value());
       }
       if (a_batch_axis.has_value() && a_batch_axis.value() == 0) {
@@ -140,14 +140,14 @@ REGISTER_USER_OP("matmul")
       int32_t k_a_axis = -1;
       int32_t k_b_axis = -1;
       int32_t n_axis = -1;
-      if (ctx->GetAttr<bool>("transpose_a")) {
+      if (ctx->Attr<bool>("transpose_a")) {
         m_axis = 1;
         k_a_axis = 0;
       } else {
         m_axis = 0;
         k_a_axis = 1;
       }
-      if (ctx->GetAttr<bool>("transpose_b")) {
+      if (ctx->Attr<bool>("transpose_b")) {
         k_b_axis = 1;
         n_axis = 0;
       } else {

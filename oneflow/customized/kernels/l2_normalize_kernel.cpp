@@ -61,8 +61,8 @@ class CpuL2NormalizeKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
-    const float epsilon = ctx->GetAttr<float>("epsilon");
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     int32_t c = x->shape().At(axis);
     int32_t n = x->shape().elem_cnt() / c;
     int32_t d = x->shape().Count(axis + 1);
@@ -99,8 +99,8 @@ class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const float epsilon = ctx->GetAttr<float>("epsilon");
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     int32_t c = dy->shape().At(axis);
     int32_t n = dy->shape().elem_cnt() / c;
     int32_t d = dy->shape().Count(axis + 1);

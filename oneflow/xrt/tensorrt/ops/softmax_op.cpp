@@ -11,7 +11,7 @@ class SoftmaxOp : public TrtOpKernel {
     Shape in_shape = ctx->InputShape("in");
     CHECK_GE(in_shape.NumAxes(), 2);
 
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     if (axis < 0) { axis += in_shape.NumAxes(); }
     CHECK_LT(axis, in_shape.NumAxes());
 

@@ -16,7 +16,7 @@ class TransposeKernel final : public OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
+    const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
     NewKernelUtil<device_type>::Transpose(ctx->device_ctx(), tensor_in->shape().NumAxes(),
                                           tensor_in->shape(), tensor_out->shape(),
                                           StdVec2PbRf(perm), tensor_in->shape().elem_cnt(),
