@@ -180,15 +180,16 @@ REGISTER_USER_OP_GRAD("normalization")
           // calculate inv_variance from moving_variance
           const auto var_add_eps_op_name =
               "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
-          const auto var_add_eps_op = user_op::UserOpConfWrapperBuilder(var_add_eps_op_name)
-                                          .Op("scalar_add")
-                                          .Input("in", op.input("moving_variance", 0))
-                                          .Attr("has_float_operand", true)
-                                          .Attr("has_int_operand", false)
-                                          .Attr("int_operand", static_cast<int64_t>(0))
-                                          .Attr("float_operand", static_cast<double>(op.attr<float>("epsilon")))
-                                          .Output("out")
-                                          .Build();
+          const auto var_add_eps_op =
+              user_op::UserOpConfWrapperBuilder(var_add_eps_op_name)
+                  .Op("scalar_add")
+                  .Input("in", op.input("moving_variance", 0))
+                  .Attr("has_float_operand", true)
+                  .Attr("has_int_operand", false)
+                  .Attr("int_operand", static_cast<int64_t>(0))
+                  .Attr("float_operand", static_cast<double>(op.attr<float>("epsilon")))
+                  .Output("out")
+                  .Build();
           AddOp(var_add_eps_op);
 
           const auto variance_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
