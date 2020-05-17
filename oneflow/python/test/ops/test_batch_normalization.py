@@ -152,6 +152,8 @@ def test_batchnorm_inference(test_case):
 
 
 def test_batchnorm_trainable_without_training(test_case):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict['input_shape'] = [(2,4,3,5)]
