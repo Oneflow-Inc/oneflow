@@ -17,7 +17,7 @@ def RemoteBlob(lbi, **kw):
         blob_type = MirroredBlob
     return blob_type(lbi, **kw)
 
-class BlobDef(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait, blob_desc.BlobDesc):
+class BlobDef(blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
     def __init__(self, lbi, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
         self.job_name_ = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
