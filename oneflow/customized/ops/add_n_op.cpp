@@ -33,7 +33,7 @@ REGISTER_USER_OP("add_n")
 
 REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                          user_op::AddOpFn AddOp) {
-  int32_t in_size = op.user_op_conf().user_op_conf().input().size();
+  int32_t in_size = op.user_op_conf().user_op_conf().input().at("in").s_size();
   for (int i = 0; i < in_size; ++i) {
     if (op.NeedGenGradTensor4OpInput("in", i)) {
       op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
