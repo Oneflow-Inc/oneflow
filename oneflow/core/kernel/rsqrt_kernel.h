@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 class RsqrtKernel final : public KernelIf<device_type> {
  public:
@@ -17,6 +19,8 @@ class RsqrtKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };
+
+}  // namespace
 
 }  // namespace oneflow
 
