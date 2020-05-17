@@ -2,7 +2,7 @@ from oneflow.python.lib.core.high_order_bool import HighOrderBool
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.g_func_ctx as g_func_ctx
-import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.c_api_util as c_api_util
 
 def InRuntimeModeHOB(mode):
     assert rt_mode.IsValidMode(mode)
@@ -14,7 +14,7 @@ in_device_mode = InRuntimeModeHOB(rt_mode.DEVICE_MODE)
 
 def _IsEnvInitialized():
     assert in_normal_mode()
-    return env_util.env_proto_mutable == False
+    return c_api_util.IsEnvInited()
 
 env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
 
