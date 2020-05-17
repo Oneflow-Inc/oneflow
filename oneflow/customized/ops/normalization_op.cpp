@@ -192,15 +192,15 @@ REGISTER_USER_OP_GRAD("normalization")
                   .Build();
           AddOp(var_add_eps_op);
 
-          const auto variance_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
-          const auto variance_rsqrt_op = user_op::UserOpConfWrapperBuilder(variance_rsqrt_op_name)
-                                             .Op("rsqrt")
-                                             .Input("x", var_add_eps_op.output("out", 0))
-                                             .Output("y")
-                                             .Build();
-          AddOp(variance_rsqrt_op);
+          const auto var_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
+          const auto var_sqrt_op = user_op::UserOpConfWrapperBuilder(var_rsqrt_op_name)
+                                       .Op("rsqrt")
+                                       .Input("x", var_add_eps_op.output("out", 0))
+                                       .Output("y")
+                                       .Build();
+          AddOp(var_sqrt_op);
 
-          grad_op_builder.Input("inv_variance", variance_rsqrt_op.output("y", 0));
+          grad_op_builder.Input("inv_variance", var_sqrt_op.output("y", 0));
 
           if (op.NeedGenGradTensor4OpInput("in", 0)) {
             // calculate dx manually as cudnn cannot be used in evaluation mode
@@ -241,8 +241,8 @@ REGISTER_USER_OP_GRAD("normalization")
             const auto out_grad_mul_gamma_op = BroadcastMulAtAxis(
                 op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "out_grad_mul_gamma");
             const auto out_grad_mul_inv_var_op =
-                BroadcastMulAtAxis(variance_rsqrt_op.output("y", 0),
-                                   out_grad_mul_gamma_op.output("z", 0), "out_grad_mul_inv_var");
+                BroadcastMulAtAxis(var_sqrt_op.output("y", 0), out_grad_mul_gamma_op.output("z", 0),
+                                   "out_grad_mul_inv_var");
             op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("z", 0), "in", 0);
           }
         }
