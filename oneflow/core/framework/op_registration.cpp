@@ -178,7 +178,7 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
-    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};
+    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
   }
   return wrapper_;
 }

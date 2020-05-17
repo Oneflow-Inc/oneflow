@@ -43,6 +43,8 @@ def test_15_inputs(test_case):
     GenerateTest(test_case, (64, 64), 15)
 def test_16_inputs(test_case):
     GenerateTest(test_case, (64, 64), 16)
+def test_100_inputs(test_case):
+    GenerateTest(test_case, (64, 64), 100)
 
 def GenerateTest(test_case, shape, num_inputs):
     @flow.function(func_config)

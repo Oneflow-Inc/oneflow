@@ -26,6 +26,8 @@ class UserOpConfWrapper final {
   const std::string& output(const std::string& arg_name, int32_t index) const;
   bool has_input(const std::string& arg_name, int32_t index) const;
   bool has_output(const std::string& arg_name, int32_t index) const;
+  int32_t input_size(const std::string& arg_name) const;
+  int32_t output_size(const std::string& arg_name) const;
 
   template<typename T>
   T attr(const std::string& attr_name) const;
@@ -58,6 +60,8 @@ class UserOpWrapper final {
   const std::string& output(const std::string& arg_name, int32_t index) const {
     return conf_.output(arg_name, index);
   }
+  int32_t input_size(const std::string& arg_name) const { return conf_.input_size(arg_name); }
+  int32_t output_size(const std::string& arg_name) const { return conf_.output_size(arg_name); }
   template<typename T>
   T attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);

@@ -30,7 +30,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in->shape().At(0);
-    out_shape.at(1) = filters;
+    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
+    out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcOutAndPadding(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                         strides.at(i), padding, &out_shape.at(idx_offset + i), nullptr, nullptr);
@@ -144,7 +145,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   if (is_checked) {
     return Maybe<void>::Ok();
   } else {
-    return oneflow::Error::CheckFailed() << err;
+    return oneflow::Error::CheckFailed() << err.str();
   }
 }
 
@@ -288,7 +289,8 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr("groups", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
       CHECK_NOTNULL(x_like);
       x_like->set_use_header_only(true);
