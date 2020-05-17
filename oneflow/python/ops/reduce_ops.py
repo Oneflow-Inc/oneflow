@@ -52,7 +52,7 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
     return _get_remote_blob(x, name, "reduce_all", keepdims, axis)
 
 @oneflow_export("math.reduce_euclidean_norm")
-def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False):
     return flow.math.sqrt(
         flow.math.reduce_sum(
             flow.math.square(input_tensor),
@@ -62,7 +62,7 @@ def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
     )
 
 @oneflow_export("math.reduce_logsumexp")
-def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_logsumexp(input_tensor, axis=None, keepdims=False):
     return flow.math.log(
         flow.math.reduce_sum(
             flow.math.exp(input_tensor),
@@ -72,13 +72,17 @@ def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
     )
 
 @oneflow_export("math.reduce_std")
-def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_std(input_tensor, axis=None, keepdims=False):
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.constant_scalar(value=0.0, dtype=x.dtype, shape=input_tensor.shape)
     return flow.math.sqrt(
         flow.math.reduce_variance(input_tensor, axis, keepdims)
     )
 
 @oneflow_export("math.reduce_variance")
-def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_variance(input_tensor, axis=None, keepdims=False):
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.constant_scalar(value=0.0, dtype=x.dtype, shape=input_tensor.shape)
     return flow.math.subtract(
         flow.math.reduce_mean(flow.math.square(
             input_tensor), axis, keepdims),
