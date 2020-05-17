@@ -395,7 +395,7 @@ def batch_normalization(
                 dtype=inputs.dtype,
                 initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
                 regularizer=gamma_regularizer,
-                trainable=trainable,
+                trainable=True,
                 distribute=distribute_util.broadcast(),
             )
         else:
