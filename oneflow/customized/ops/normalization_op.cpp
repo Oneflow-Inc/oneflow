@@ -107,10 +107,8 @@ Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
   const auto x_shape = *ctx->Shape4ArgNameAndIndex("x", 0);
   const auto dy_shape = *ctx->Shape4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy_shape, x_shape);
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = dy_shape;
-  auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  if (dx) { *dx = *x; }
+  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+
   const Shape param_shape({x_shape.At(ctx->GetAttr<int32_t>("axis"))});
   const auto CheckParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
     CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), dy_type);
