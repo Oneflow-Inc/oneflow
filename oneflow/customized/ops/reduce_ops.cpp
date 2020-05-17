@@ -98,12 +98,20 @@ REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
 REGISTER_USER_OP_GRAD("reduce_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
+        const std::vector<int32_t>& axis_vec = op.attr<std::vector<int32_t>>("axis");
+        std::vector<int32_t> broadcast_axes_vec;
+        if (axis_vec.empty()) {
+          const int64_t num_axes =
+              op.TensorDesc4ArgNameAndIndex("input_tensor", 0).shape().NumAxes();
+          broadcast_axes_vec.resize(num_axes);
+          std::iota(broadcast_axes_vec.begin(), broadcast_axes_vec.end(), 0);
+        }
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper reduce_sum_grad_op =
             builder.Op("broadcast_like")
                 .Input("x", op.GetGradTensorWithOpOutput("output_tensor", 0))
                 .Input("like", op.input("input_tensor", 0))
-                .Attr("broadcast_axes", op.attr<std::vector<int32_t>>("axis"))
+                .Attr("broadcast_axes", axis_vec.empty() ? broadcast_axes_vec : axis_vec)
                 .Output("y")
                 .Build();
         op.BindGradTensorWithOpInput(reduce_sum_grad_op.output("y", 0), "input_tensor", 0);

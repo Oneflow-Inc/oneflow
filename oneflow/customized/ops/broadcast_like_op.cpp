@@ -50,12 +50,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-  if (!broadcast_axes.empty()) {
-    const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-    CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
-  } else {
-    CHECK_OR_RETURN(like_shape->dim_vec() == in_shape->dim_vec());
-  }
+  const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
   *out_shape = *like_shape;
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
   return Maybe<void>::Ok();

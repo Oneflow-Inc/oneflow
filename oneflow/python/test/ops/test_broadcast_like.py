@@ -40,6 +40,3 @@ def test_broadcast_like2(test_case):
     arg_dict["broadcast_axes"] = [[0, 1]]
     for arg in GenArgList(arg_dict):
         compare_broadcast_like_with_tf(*arg)
-
-
-

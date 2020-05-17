@@ -623,6 +623,7 @@ def expand_dims(input, axis, name=None):
 def broadcast_like(x, like, axis=None, name=None):
     if name is None:
         name = id_util.UniqueStr("BroadcastLike_")
+    assert isinstance(axis, list) and len(axis) != 0
     if axis is None:
         axis = []
     return (
@@ -636,4 +637,3 @@ def broadcast_like(x, like, axis=None, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-    
