@@ -65,7 +65,8 @@ REGISTER_USER_OP("broadcast_like")
     .Attr("broadcast_axes", UserOpAttrType::kAtListInt32)
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK_OR_RETURN(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
