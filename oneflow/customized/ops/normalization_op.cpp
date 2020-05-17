@@ -7,13 +7,13 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   // assume cudnn is enabled
   CHECK_GE_OR_RETURN(ctx->GetAttr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
 #endif
-  const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const auto data_type = in->data_type();
-  *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in;
+  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto data_type = x->data_type();
+  *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
   const auto axis = ctx->GetAttr<int32_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
-  CHECK_LT_OR_RETURN(axis, in->shape().NumAxes());
-  const Shape param_shape({in->shape().At(axis)});
+  CHECK_LT_OR_RETURN(axis, x->shape().NumAxes());
+  const Shape param_shape({x->shape().At(axis)});
   const auto CheckParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
     const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
     if (tensor_desc != nullptr) {
@@ -42,12 +42,12 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
 }
 
 REGISTER_USER_OP("normalization")
-    .Input("in")
+    .Input("x")
     .Input("moving_mean")
     .Input("moving_variance")
     .Input("gamma")
     .Input("beta")
-    .Output("out")
+    .Output("y")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
     .Attr("axis", UserOpAttrType::kAtInt32)
@@ -69,7 +69,7 @@ REGISTER_USER_OP("normalization")
     })
     .SetTensorDescInferFn(NormalizationTensorDescInfer)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       if (ctx->GetAttr<bool>("training")) {
         ctx->BatchAxis4ArgNameAndIndex("mean", 0)->clear_value();
         ctx->BatchAxis4ArgNameAndIndex("inv_variance", 0)->clear_value();
@@ -80,8 +80,8 @@ REGISTER_USER_OP("normalization")
       ctx->NewBuilder()
           .Broadcast(ctx->inputs())
           .Broadcast(ctx->outputs())
-          .Split(user_op::OpArg("in", 0), 0)
-          .Split(user_op::OpArg("out", 0), 0)
+          .Split(user_op::OpArg("x", 0), 0)
+          .Split(user_op::OpArg("y", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     });
@@ -154,12 +154,12 @@ REGISTER_USER_OP("normalization_grad")
 
 REGISTER_USER_OP_GRAD("normalization")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("in", 0) || op.NeedGenGradTensor4OpInput("gamma", 0)
+      if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("gamma", 0)
           || op.NeedGenGradTensor4OpInput("beta", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         auto grad_op_builder = builder.Op("normalization_grad")
-                                   .Input("x", op.input("in", 0))
-                                   .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                                   .Input("x", op.input("x", 0))
+                                   .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                                    .Input("gamma", op.input("gamma", 0))
                                    .Attr("axis", op.attr<int32_t>("axis"))
                                    .Attr("epsilon", op.attr<float>("epsilon"))
@@ -198,7 +198,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
           grad_op_builder.Input("inv_variance", var_sqrt_op.output("y", 0));
 
-          if (op.NeedGenGradTensor4OpInput("in", 0)) {
+          if (op.NeedGenGradTensor4OpInput("x", 0)) {
             // calculate dx manually as cudnn cannot be used in evaluation mode
             // reference: https://github.com/pytorch/pytorch/issues/4284
             const auto axis = op.attr<int32_t>("axis");
@@ -206,7 +206,7 @@ REGISTER_USER_OP_GRAD("normalization")
                                                                  const std::string& input_bn,
                                                                  const std::string& name) {
               DimVector broadcast_dim_vec;
-              const auto& in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
+              const auto& in_shape = op.TensorDesc4ArgNameAndIndex("x", 0).shape();
               FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
                 if (i != axis) {
                   broadcast_dim_vec.push_back(1);
@@ -235,17 +235,17 @@ REGISTER_USER_OP_GRAD("normalization")
               return mul_op;
             };
             const auto out_grad_mul_gamma_op = BroadcastMulAtAxis(
-                op.input("gamma", 0), op.GetGradTensorWithOpOutput("out", 0), "out_grad_mul_gamma");
+                op.input("gamma", 0), op.GetGradTensorWithOpOutput("y", 0), "out_grad_mul_gamma");
             const auto out_grad_mul_inv_var_op =
                 BroadcastMulAtAxis(var_sqrt_op.output("y", 0), out_grad_mul_gamma_op.output("z", 0),
                                    "out_grad_mul_inv_var");
-            op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("z", 0), "in", 0);
+            op.BindGradTensorWithOpInput(out_grad_mul_inv_var_op.output("z", 0), "x", 0);
           }
         }
 
         const user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
-        if (training && op.NeedGenGradTensor4OpInput("in", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
+        if (training && op.NeedGenGradTensor4OpInput("x", 0)) {
+          op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);

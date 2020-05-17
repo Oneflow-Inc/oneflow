@@ -33,8 +33,8 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->GetAttr<bool>("training");
-    const auto* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    auto* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
@@ -145,13 +145,13 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_KERNEL(op_device_type, dtype)                                       \
-  REGISTER_USER_KERNEL("normalization")                                                 \
-      .SetCreateFn<NormalizationUserKernel<DeviceType::k##op_device_type, dtype>>()     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::k##op_device_type                       \
-               && out_desc->data_type() == GetDataType<dtype>::value;                   \
+#define REGISTER_BN_KERNEL(op_device_type, dtype)                                     \
+  REGISTER_USER_KERNEL("normalization")                                               \
+      .SetCreateFn<NormalizationUserKernel<DeviceType::k##op_device_type, dtype>>()   \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
+        return ctx.device_type() == DeviceType::k##op_device_type                     \
+               && out_desc->data_type() == GetDataType<dtype>::value;                 \
       });
 
 #define REGISTER_BN_GRAD_KERNEL(op_device_type, dtype)                                  \
