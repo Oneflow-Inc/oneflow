@@ -10,18 +10,21 @@ import oneflow
 def global_mode_cur_placement_scope():
     return placement_ctx.PlacementScopeStackTop()
 
+
 @oneflow_export('placement.current_scope', enable_if=hob.in_normal_mode)
 def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
+
 @oneflow_export('fixed_placement')
 def GetFixedPlacementScope(device_tag, machine_device_ids):
-    return FixedPlacementScope(device_tag, machine_device_ids)
+    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
 
 @oneflow_export('device_prior_placement')
 def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
-    return DevicePriorPlacementScope(device_tag, machine_device_ids)
+    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+
 
 def GetDefaultMachineDeviceIds(resource):
     if resource.HasField('gpu_device_num'):
@@ -31,10 +34,12 @@ def GetDefaultMachineDeviceIds(resource):
     else:
         raise NotImplementedError
 
+
 def _GetGpuDefaultMachineDeviceIds(resource):
     assert resource.machine_num > 0
     assert resource.HasField('gpu_device_num')
     return ["%s:0-%s" % (m_id, resource.gpu_device_num - 1) for m_id in range(resource.machine_num)]
+
 
 def _GetCpuDefaultMachineDeviceIds(resource):
     assert resource.machine_num > 0

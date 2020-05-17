@@ -24,7 +24,7 @@ def Compile(function_desc, config_proto):
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         dev_ids = placement_util.GetDefaultMachineDeviceIds(config_proto.resource)
-        placement_scope = placement_util.DevicePriorPlacementScope(*dev_ids)
+        placement_scope = placement_util.GetDevicePriorPlacementScope(*dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
