@@ -5,6 +5,7 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
+from test_util import type_name_to_flow_type
 import test_global_storage
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -12,7 +13,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
+def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -26,14 +27,14 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             y = flow.get_variable(
                 "y",
                 shape=y_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
@@ -62,20 +63,21 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    assert np.array_equal(of_out.ndarray(), tf_out.numpy())
+    assert np.array_equal(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy()
     )
-    assert np.allclose(
-        test_global_storage.Get("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
+    assert np.array_equal(
+        test_global_storage.Get("y_diff"), tf_y_diff.numpy()
     )
 
 
 def test_concat(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 20, 30)]
     arg_dict["y_shape"] = [(10, 20, 30)]
+    arg_dict["dtype"] = ["float32", "double"]
     arg_dict["axis"] = [0, 1, 2]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

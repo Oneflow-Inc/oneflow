@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 class ScalarDivByTensorKernel final : public KernelIf<device_type> {
  public:
@@ -31,5 +33,7 @@ void ScalarDivByTensorKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarDivByTensorConf, ScalarDivByTensorKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
+
+}  // namespace
 
 }  // namespace oneflow

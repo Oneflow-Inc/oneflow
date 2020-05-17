@@ -297,6 +297,7 @@ void UserOp::InitFromOpConf() {
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
   val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
+    user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
     user_op::GetInputArgModifier GetInputArgModifierFn =
         [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
       std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
@@ -305,7 +306,7 @@ void UserOp::InitFromOpConf() {
       }
       return nullptr;
     };
-    val_->input_arg_modify_fn(GetInputArgModifierFn);
+    val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
   }
 }
 
@@ -475,18 +476,18 @@ void UserOp::VirtualGenKernelConf(
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
-#define BLOB_DESCS_TO_PROTO(prefix)                         \
-  for (const auto& bn : prefix##_bns()) {                   \
-    BlobDescProto proto;                                    \
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);     \
-    if (!blob_desc) { continue; }                           \
-    blob_desc->ToProto(&proto);                             \
-    (*user_conf->mutable_bn_in_op2blob_desc())[bn] = proto; \
+#define BLOB_DESCS_TO_PROTO(prefix, is_arg)                                                        \
+  for (const auto& bn : prefix##_bns()) {                                                          \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                            \
+    if (blob_desc) { blob_desc->ToProto(&(*user_conf->mutable_bn_in_op2blob_desc())[bn]); }        \
+    if (is_arg) {                                                                                  \
+      LogicalBlobDesc4BnInOp(bn).ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[bn]); \
+    }                                                                                              \
   }
 
-  BLOB_DESCS_TO_PROTO(input)
-  BLOB_DESCS_TO_PROTO(output)
-  BLOB_DESCS_TO_PROTO(tmp)
+  BLOB_DESCS_TO_PROTO(input, true)
+  BLOB_DESCS_TO_PROTO(output, true)
+  BLOB_DESCS_TO_PROTO(tmp, false)
 
 #undef BLOB_DESCS_TO_PROTO
 }

@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 class BatchGatherKernel final : public KernelIf<device_type> {
  public:
@@ -17,6 +19,8 @@ class BatchGatherKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
+
+}  // namespace
 
 }  // namespace oneflow
 
