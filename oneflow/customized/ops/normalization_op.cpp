@@ -3,8 +3,10 @@
 namespace oneflow {
 
 Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
+#ifdef WITH_CUDA
   // assume cudnn is enabled
   CHECK_GE_OR_RETURN(ctx->GetAttr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
+#endif
   const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const auto data_type = in->data_type();
   *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in;
@@ -95,8 +97,10 @@ REGISTER_USER_OP("normalization")
     });
 
 Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
+#ifdef WITH_CUDA
   // assume cudnn is enabled
   CHECK_GE_OR_RETURN(ctx->GetAttr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
+#endif
   const auto x_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
   const auto dy_type = *ctx->Dtype4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(x_type, dy_type);
