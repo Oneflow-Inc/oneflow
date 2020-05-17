@@ -53,8 +53,9 @@ class PadKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T constant_value = GetDtypeMatchedValue<T>(ctx->Attr<double>("floating_constant_value"),
-                                                     ctx->Attr<int64_t>("integral_constant_value"));
+    const T constant_value = 
+        GetDtypeMatchedValue<T>(ctx->Attr<double>("floating_constant_value"),
+                                ctx->Attr<int64_t>("integral_constant_value"));
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));

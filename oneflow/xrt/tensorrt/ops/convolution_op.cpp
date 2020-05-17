@@ -8,8 +8,8 @@ namespace tensorrt {
 
 class ConvolutionOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
-    nvinfer1::ITensor* in = ctx->Input("in");
+  void Compile(TrtOpContext *ctx) override {
+    nvinfer1::ITensor *in = ctx->Input("in");
     nvinfer1::Weights weight = ctx->Weight("weight");
 
     nvinfer1::Weights bias;
@@ -26,7 +26,7 @@ class ConvolutionOp : public TrtOpKernel {
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
 
     int filters = ctx->Attr<int32_t>("filters");
-    auto* layer = ctx->builder()->addConvolution(
+    auto *layer = ctx->builder()->addConvolution(
         *in, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
     layer->setName(ctx->op_name().c_str());
 
