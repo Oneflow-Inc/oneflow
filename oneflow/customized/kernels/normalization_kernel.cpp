@@ -3,6 +3,7 @@
 
 namespace oneflow {
 
+namespace {
 template<DeviceType device_type, typename T>
 class NormalizationUserKernel;
 
@@ -14,7 +15,6 @@ class NormalizationUserKernel<DeviceType::kCPU, T> final : public user_op::OpKer
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-namespace {
 inline cudnnBatchNormMode_t CudnnBatchNormModeTraining() {
 #if (CUDNN_VERSION >= 7000)
   return CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
@@ -22,7 +22,6 @@ inline cudnnBatchNormMode_t CudnnBatchNormModeTraining() {
   return CUDNN_BATCHNORM_SPATIAL;
 #endif
 }
-}  // namespace
 
 template<typename T>
 class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKernel {
@@ -175,4 +174,5 @@ REGISTER_BN_GRAD_KERNEL(CPU, double)
 REGISTER_BN_GRAD_KERNEL(GPU, float)
 REGISTER_BN_GRAD_KERNEL(GPU, double)
 
+}  // namespace
 }  // namespace oneflow
