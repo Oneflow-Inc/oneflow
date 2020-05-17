@@ -16,7 +16,7 @@ def compare_broadcast_like_with_tf(device_type, input_shape, like_shape, broadca
     @flow.function(func_config)
     def broadcast_like_forward(x=flow.FixedTensorDef(shape=input_shape, dtype=data_type_util.kFloat), y=flow.FixedTensorDef(shape=like_shape, dtype=data_type_util.kFloat)):
         with flow.fixed_placement(device_type, "0:0"):
-            return flow.broadcast_like(x, y, axis=broadcast_axes)
+            return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)
     x = np.random.rand(*input_shape).astype(np.float32)
     like = np.random.rand(*like_shape).astype(np.float32)
     of_out = broadcast_like_forward(x, like).get()
