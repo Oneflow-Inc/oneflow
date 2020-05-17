@@ -11,8 +11,8 @@ from test_util import type_name_to_np_type
 import test_global_storage
 
 def _compare_with_numpy(test_case, x, y, axis, keepdims=True):
+    x = test_global_storage.Get("x")
     dx = test_global_storage.Get("x_diff")
-    #dy = test_global_storage.Get("loss_diff")
     np_y = np.maximum.reduce(x, axis=axis, keepdims=True)
     test_case.assertTrue(np.array_equal(y, np_y)) 
     mask = np.where(x==y, 1, 0)
@@ -30,6 +30,7 @@ def _test_two_stage_reduce(test_case, device_type, axis, data_type, mask_type):
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
+    func_config.use_boxing_v2(True)
 
 
     @flow.function(func_config)
@@ -37,16 +38,14 @@ def _test_two_stage_reduce(test_case, device_type, axis, data_type, mask_type):
         with flow.fixed_placement(device_type, '0:0'):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=flow.float, initializer=flow.zeros_initializer())
-            x = x.with_distribute(flow.distribute.split(1))
         with flow.fixed_placement(device_type, '0:0-3'):
             loss = flow.math.two_stage_reduce_max(x.with_distribute(flow.distribute.split(1)), axis=axis, keepdims=True)
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
+            
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             return loss
-
-        flow.watch(x, test_global_storage.Setter("x"))
-        flow.watch_diff(x, test_global_storage.Setter("x_diff"))
-
         
 
     x = np.random.randint(low=0, high=2, size=(4, 4)).astype(np.float32)

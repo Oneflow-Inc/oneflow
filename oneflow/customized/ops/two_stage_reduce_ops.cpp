@@ -236,21 +236,22 @@ void GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_min_device_stage", "reduce_min_device_stage_grad")
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max_device_stage_grad")
 
-#define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP(op_name)                               \
-  REGISTER_USER_OP(op_name)                                                         \
-      .Input("in")                                                                  \
-      .Input("device_max_count")                                                    \
-      .Output("out")                                                                \
-      .Output("mask")                                                               \
-      .Attr("axis", UserOpAttrType::kAtListInt32)                                   \
-      .Attr("keepdims", UserOpAttrType::kAtBool)                                    \
-      .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                     \
-      .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                       \
-      .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) { \
-        user_op::InputArgModifier* device_max_count_modifier =                      \
-            GetInputArgModifierFn("device_max_count", 0);                           \
-        device_max_count_modifier->set_requires_grad(false);                        \
-      })                                                                            \
+#define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP(op_name)                             \
+  REGISTER_USER_OP(op_name)                                                       \
+      .Input("in")                                                                \
+      .Input("device_max_count")                                                  \
+      .Output("out")                                                              \
+      .Output("mask")                                                             \
+      .Attr("axis", UserOpAttrType::kAtListInt32)                                 \
+      .Attr("keepdims", UserOpAttrType::kAtBool)                                  \
+      .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
+      .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                     \
+      .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
+                              const user_op::UserOpConfWrapper&) {                \
+        user_op::InputArgModifier* device_max_count_modifier =                    \
+            GetInputArgModifierFn("device_max_count", 0);                         \
+        device_max_count_modifier->set_requires_grad(false);                      \
+      })                                                                          \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_min_global_stage")

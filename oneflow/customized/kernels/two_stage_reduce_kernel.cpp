@@ -7,9 +7,7 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T, typename U>
-struct CopyTensor {
-  static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst);
-};
+struct CopyTensor;
 
 template<typename T, typename U>
 struct CopyTensor<DeviceType::kCPU, T, U> {
