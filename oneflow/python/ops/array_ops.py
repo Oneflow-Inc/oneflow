@@ -680,16 +680,22 @@ def expand_dims(input, axis, name=None):
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("broadcast_like")
 def broadcast_like(x, like, broadcast_axes=None, name=None):
     if name is None:
         name = id_util.UniqueStr("BroadcastLike_")
+
     if broadcast_axes is None:
-        broadcast_axes = list(range(len(like.shape))
+        broadcast_axes = list(range(len(like.shape)))
+
     assert isinstance(broadcast_axes, (list, tuple))
+
     if len(broadcast_axes) <= 0 or len(broadcast_axes) > len(like.shape):
         raise ValueError(
-            "The length of broadcast_axes must be greater than 0 and less than or equal to number of axes of like shape")
+            "The length of broadcast_axes must be greater than 0 and less than or equal to number of axes of like shape"
+        )
+
     return (
         flow.user_op_builder(name)
         .Op("broadcast_like")
