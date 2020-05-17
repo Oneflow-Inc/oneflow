@@ -122,7 +122,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
@@ -132,11 +132,13 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
       BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
       lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
     }
-    size_t dx_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_bytes_size);
+    size_t prediction_diff_bytes_size =
+        prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
+    Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
+                        prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
-        label->dptr<K>(), dy->dptr<T>(), dx->mut_dptr<T>());
+        label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -148,10 +150,11 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                            \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
         const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0); \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);       \
+        const user_op::TensorDesc* prediction_diff_desc =                                   \
+            ctx.TensorDesc4ArgNameAndIndex("prediction_diff", 0);                           \
         return ctx.device_type() == device_type_v                                           \
                && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                  \
-               && dx_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                    \
+               && prediction_diff_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);       \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
