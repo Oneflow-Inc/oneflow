@@ -22,7 +22,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = num_classes;
+    const int64_t depth = ctx->GetAttr<int64_t>("depth");
     SoftmaxKernelUtil<device_type, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
         prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));
@@ -100,7 +100,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = num_classes;
+    const int64_t depth = ctx->GetAttr<int64_t>("depth");
     Memcpy<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), prob->dptr<T>(),
                         prediction_diff->shape().elem_cnt() * sizeof(T));
     SparseCrossEntropyKernelUtil<device_type, T, K>::BackwardSub(

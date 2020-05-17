@@ -99,7 +99,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = num_classes;
+    const int64_t depth = ctx->GetAttr<int64_t>("depth");
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
     Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,

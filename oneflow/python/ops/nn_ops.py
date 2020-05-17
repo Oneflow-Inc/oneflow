@@ -517,7 +517,6 @@ def sparse_cross_entropy(
 ):
     assert labels is not None
     assert prediction is not None
-    assert len(prediction.shape) == len(labels.shape) + 1
     if os.getenv("ENABLE_USER_OP") == 'True':
         if len(labels.shape) == len(prediction.shape):
             assert labels.shape[-1] == 1
@@ -534,6 +533,7 @@ def sparse_cross_entropy(
                 .Output("out")
                 .SetAttr("depth", int(prediction.shape[-1]), "AttrTypeInt64")
                 .Build()
+                .InferAndTryRun()
                 .RemoteBlobList()[0]
                 )
         else:
@@ -545,6 +545,7 @@ def sparse_cross_entropy(
             .Output("out")
             .SetAttr("depth", int(prediction.shape[-1]), "AttrTypeInt64")
             .Build()
+            .InferAndTryRun()
             .RemoteBlobList()[0]
             )
     else:
@@ -575,7 +576,6 @@ def sparse_softmax_cross_entropy_with_logits(
 ):
     assert labels is not None
     assert logits is not None
-    assert len(logits.shape) == len(labels.shape) + 1
     if os.getenv("ENABLE_USER_OP") == 'True':
         if len(labels.shape) == len(logits.shape):
             assert labels.shape[-1] == 1
@@ -593,6 +593,7 @@ def sparse_softmax_cross_entropy_with_logits(
                 .Output("out")
                 .SetAttr("depth", int(logits.shape[-1]), "AttrTypeInt64")
                 .Build()
+                .InferAndTryRun()
                 .RemoteBlobList()
                 )
         else:            
@@ -605,6 +606,7 @@ def sparse_softmax_cross_entropy_with_logits(
                 .Output("out")
                 .SetAttr("depth", int(logits.shape[-1]), "AttrTypeInt64")
                 .Build()
+                .InferAndTryRun()
                 .RemoteBlobList()
                 )
         return out
