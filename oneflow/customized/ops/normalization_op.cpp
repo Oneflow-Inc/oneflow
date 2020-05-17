@@ -256,9 +256,7 @@ REGISTER_USER_OP_GRAD("normalization")
           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
           need_norm_grad_op = true;
         }
-        if (need_norm_grad_op) {
-            AddOp(grad_op);
-        }
+        if (need_norm_grad_op) { AddOp(grad_op); }
       }
     });
 
