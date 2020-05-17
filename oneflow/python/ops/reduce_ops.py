@@ -74,7 +74,7 @@ def reduce_logsumexp(input_tensor, axis=None, keepdims=False):
 @oneflow_export("math.reduce_std")
 def reduce_std(input_tensor, axis=None, keepdims=False):
     if isinstance(axis, list) and len(axis) == 0:
-        return flow.constant_scalar(value=0.0, dtype=x.dtype, shape=input_tensor.shape)
+        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype)
     return flow.math.sqrt(
         flow.math.reduce_variance(input_tensor, axis, keepdims)
     )
@@ -82,7 +82,7 @@ def reduce_std(input_tensor, axis=None, keepdims=False):
 @oneflow_export("math.reduce_variance")
 def reduce_variance(input_tensor, axis=None, keepdims=False):
     if isinstance(axis, list) and len(axis) == 0:
-        return flow.constant_scalar(value=0.0, dtype=x.dtype, shape=input_tensor.shape)
+        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype)
     return flow.math.subtract(
         flow.math.reduce_mean(flow.math.square(
             input_tensor), axis, keepdims),
