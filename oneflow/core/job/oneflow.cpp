@@ -232,8 +232,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
         RequestInfo request_info{
             .op_desc = rank_desc.op_desc(),
             .rank2node = {{
-                rank_desc.rank(),
-                node,
+                rank_desc.rank(), node,
             }},
             .order = order,
             .dependency_depth = dependency_depth,
@@ -504,6 +503,39 @@ void FilterOpName2ParallelBlobConf(
         ParallelBlobConf parallel_blob_conf;
         GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
         CHECK(parallel_blob_conf == iter->second);
+      }
+    }
+  }
+}
+
+void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>>& jobs) {
+  bool has_job_enable_non_distributed_optimizer;
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) {
+      has_job_enable_non_distributed_optimizer = true;
+      break;
+    }
+  }
+  if (!has_job_enable_non_distributed_optimizer) { return; }
+
+  HashSet<std::string> var_names;
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (!jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
+      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (var_names.find(op_conf.name()) == var_names.end()) {
+        var_names.emplace(op_conf.name());
+      } else {
+        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
+      }
+    }
+  }
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
+      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (var_names.find(op_conf.name()) != var_names.end()) {
+        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
       }
     }
   }
@@ -827,6 +859,7 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defin
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,

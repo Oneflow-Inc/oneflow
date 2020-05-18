@@ -38,9 +38,10 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
   bool IsEnabled() const override {
     if (GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer()) {
       if (GlobalJobDesc().use_boxing_v2()) {
-        LOG(WARNING) << "NonDistributedOptimizerPass will be disabled when use_boxing_v2 is true";
         return true;
       } else {
+        LOG(WARNING)
+            << "NonDistributedOptimizerPass will be enabled only when use_boxing_v2 is true";
         return false;
       }
     } else {
@@ -126,11 +127,11 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     for (const auto& last_node7node_seqs : last_node2node_seqs) {
       const OpNode* last_node = last_node7node_seqs.first;
       const int64_t& parallel_id = last_node2parallel_id.at(last_node);
+      const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
       for (const OpNode* node : last_node7node_seqs.second) {
-        const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
         builder->MutParallelConfOnlyOnce(node->op().op_name(), parallel_conf);
       }
-      ParallelDesc new_pd(NonDistributedParallelConf4ParallelId(pd, parallel_id));
+      ParallelDesc new_pd(parallel_conf);
       pd2last_nodes[new_pd].push_back(last_node);
     }
   }
@@ -140,10 +141,10 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       return last_node2order.at(lhs) < last_node2order.at(rhs);
     });
     FOR_RANGE(int64_t, i, 1, last_nodes->size()) {
-      const OpNode* cur_var_node = last_node2var_node[last_nodes->at(i)];
+      const OpNode* cur_var_node = last_node2var_node.at(last_nodes->at(i));
       OperatorConf cur_var_conf(cur_var_node->op().op_conf());
-      const OpNode* before_var_node = last_node2var_node[last_nodes->at(i - 1)];
-      cur_var_conf.add_ctrl_in_op_name(before_var_node->op().op_name());
+      const OpNode* prev_var_node = last_node2var_node.at(last_nodes->at(i - 1));
+      cur_var_conf.add_ctrl_in_op_name(prev_var_node->op().op_name());
       builder->MutOpsOnlyOnce({cur_var_conf});
     }
   }
