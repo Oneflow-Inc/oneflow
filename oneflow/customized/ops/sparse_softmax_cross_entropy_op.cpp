@@ -152,7 +152,8 @@ REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_USER_OP("sparse_softmax_cross_entropy
 
 REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_cross_entropy_grad", op, AddOp);
+      return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_softmax_cross_entropy_grad", op,
+                                                         AddOp);
     });
 
 REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy_ms")
