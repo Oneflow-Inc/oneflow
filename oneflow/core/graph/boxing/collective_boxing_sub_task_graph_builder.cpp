@@ -239,13 +239,13 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       int64_t root_parallel_id;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_src_node = sorted_src_comp_tasks.front();
-        const int64_t gpu_id_copied_to = sorted_dst_comp_tasks.front()->GpuPhyId();
-        CopyHdTaskNode* copy_task = ctx->task_graph()->NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::H2D, cpu_src_node->machine_id(), gpu_id_copied_to);
-        Connect<TaskNode>(cpu_src_node, ctx->task_graph()->NewEdge(), copy_task);
-        gpu_src_node = copy_task;
-        root_parallel_id =
-            FindRootParallelId(dst_parallel_desc, cpu_src_node->machine_id(), gpu_id_copied_to);
+        auto* nearest_dst_node =
+            SubTskGphBuilderUtil::FindNearestNode(sorted_dst_comp_tasks, cpu_src_node);
+        gpu_src_node =
+            ctx->GetProxyNode(cpu_src_node, cpu_src_node->MemZoneId121(),
+                              nearest_dst_node->machine_id(), nearest_dst_node->MemZoneId121());
+        root_parallel_id = FindRootParallelId(dst_parallel_desc, gpu_src_node->machine_id(),
+                                              gpu_src_node->GpuPhyId());
       } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_comp_tasks.front();
