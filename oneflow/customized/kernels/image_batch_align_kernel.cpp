@@ -7,38 +7,30 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-void ConvertImageCvMat(const cv::Mat& input, cv::Mat* output);
-
-template<>
-void ConvertImageCvMat<uint8_t>(const cv::Mat& input, cv::Mat* output) {
-  input.convertTo(*output, CV_8U);
-}
-
-template<>
-void ConvertImageCvMat<float>(const cv::Mat& input, cv::Mat* output) {
-  input.convertTo(*output, CV_32F);
-}
-
-template<typename T>
-void CopyCvMatToImageTensor(const cv::Mat& image_mat, user_op::Tensor* image_tensor,
-                            int image_idx) {
-  CHECK_EQ(image_mat.rows, image_tensor->shape().At(1));
-  CHECK_EQ(image_mat.cols, image_tensor->shape().At(2));
-  CHECK_EQ(image_mat.channels(), image_tensor->shape().At(3));
-
-  int rows = image_mat.rows;
-  int cols = image_mat.cols * image_mat.channels();
-  if (image_mat.isContinuous()) {
-    cols *= rows;
-    rows = 1;
-  }
-  T* image_ptr = image_tensor->mut_dptr<T>() + image_idx * rows * cols;
-  FOR_RANGE(int64_t, i, 0, rows) {
-    CopyElem(image_mat.ptr<T>(i), image_ptr, cols);
-    image_ptr += cols;
+template<typename T, typename F>
+void CopyFromTensorBuffer(T* image_ptr, const TensorBuffer& image_buffer, const int batch_height,
+                          const int batch_width, const int channels) {
+  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
+  const int h = image_buffer.shape().At(0);
+  const int w = image_buffer.shape().At(1);
+  const int c = image_buffer.shape().At(2);
+  CHECK_LE(h, batch_height);
+  CHECK_LE(w, batch_width);
+  CHECK_EQ(c, channels);
+  FOR_RANGE(int, i, 0, h) {
+    const F* from = image_buffer.data<F>() + i * w * c;
+    T* to = image_ptr + i * batch_width * channels;
+    CopyElem(from, to, w * c);
   }
 }
+
+template<typename T>
+struct ImageCopier final {
+#define MAKE_COPY_FROM_TENSOR_BUFFER_SWITCH_ENTRY(func_name, F) func_name<T, F>
+  DEFINE_STATIC_SWITCH_FUNC(void, CopyFromTensorBuffer, MAKE_COPY_FROM_TENSOR_BUFFER_SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CTRV_SEQ(IMAGE_DATA_TYPE_SEQ))
+#undef MAKE_COPY_FROM_TENSOR_BUFFER_SWITCH_ENTRY
+};
 
 template<typename T>
 struct ImageBatchAlignIsMatchedPred {
@@ -64,17 +56,20 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_GT(in_tensor->shape().elem_cnt(), 0);
-    CHECK_EQ(in_tensor->shape().elem_cnt(), out_tensor->shape().At(0));
+    CHECK_EQ(out_tensor->shape().NumAxes(), 4);
+    CHECK_EQ(out_tensor->shape().At(0), in_tensor->shape().elem_cnt());
     int batch_height = out_tensor->shape().At(1);
     int batch_width = out_tensor->shape().At(2);
+    int channels = out_tensor->shape().At(3);
+    int num_elems = batch_height * batch_width * channels;
 
     MultiThreadLoop(out_tensor->shape().At(0), [&](size_t i) {
       const TensorBuffer& origin_image_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      const cv::Mat origin_image_mat = GenCvMat4ImageBuffer(origin_image_buffer);
-      cv::Mat dst = cv::Mat::zeros(cv::Size(batch_width, batch_height), origin_image_mat.type());
-      origin_image_mat.copyTo(dst(cv::Rect(0, 0, origin_image_mat.cols, origin_image_mat.rows)));
-      ConvertImageCvMat<T>(dst, &dst);
-      CopyCvMatToImageTensor<T>(dst, out_tensor, i);
+      T* out_ptr = out_tensor->mut_dptr<T>() + i * num_elems;
+      memset(out_ptr, 0, num_elems * sizeof(T));
+      ImageCopier<T>::SwitchCopyFromTensorBuffer(SwitchCase(origin_image_buffer.data_type()),
+                                                 out_ptr, origin_image_buffer, batch_height,
+                                                 batch_width, channels);
     });
   }
 
@@ -98,7 +93,8 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     mut_shape_view->Set(0, num_images);
     mut_shape_view->Set(1, max_height);
     mut_shape_view->Set(2, max_width);
-    // TODO: need to check static shape can hold dynamic shape
+    // TODO(wenxiao): need to check static shape can hold dynamic shape
+    // Tensor should add Capacity method
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
