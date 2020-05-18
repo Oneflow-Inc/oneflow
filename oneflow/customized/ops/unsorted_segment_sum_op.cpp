@@ -177,6 +177,12 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
           .PartialSum(user_op::OpArg("like", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("segment_ids", 0))
+          .Broadcast(user_op::OpArg("data", 0))
+          .Split(user_op::OpArg("like", 0), axis)
+          .Split(user_op::OpArg("out", 0), axis)
+          .Build();
       return Maybe<void>::Ok();
     });
 
