@@ -231,9 +231,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
       if (it == name2request_info.end()) {
         RequestInfo request_info{
             .op_desc = rank_desc.op_desc(),
-            .rank2node = {{
-                rank_desc.rank(), node,
-            }},
+            .rank2node = {std::make_pair(rank_desc.rank(), node)},
             .order = order,
             .dependency_depth = dependency_depth,
         };
