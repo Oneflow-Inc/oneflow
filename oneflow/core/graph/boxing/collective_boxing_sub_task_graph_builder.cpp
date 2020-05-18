@@ -248,6 +248,7 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
           dst_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
       CHECK(!std::any_of(out_slices.cbegin(), out_slices.cend(),
                          [](const TensorSliceView& slice) { return slice.IsEmpty(); }));
+      const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
@@ -266,7 +267,6 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
                               dst_node->MemZoneId121());
         // allgather
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
-        const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, out_id, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
         Connect<TaskNode>(slice_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
