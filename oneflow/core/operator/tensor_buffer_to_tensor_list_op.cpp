@@ -32,7 +32,7 @@ class TensorBufferToTensorListOp final : public Operator {
     out_desc->mut_shape() = Shape(dim_vec);
     out_desc->set_data_type(op_conf().tensor_buffer_to_tensor_list_conf().data_type());
     out_desc->set_is_tensor_list(true);
-    out_desc->set_is_dynamic(in_desc->is_dynamic());  // or must be true?
+    out_desc->set_is_dynamic(true);
     return Maybe<void>::Ok();
   }
 
