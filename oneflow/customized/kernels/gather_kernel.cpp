@@ -1,6 +1,5 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
-#include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
