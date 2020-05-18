@@ -14,7 +14,7 @@ WORKDIR /workspace
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 
-FROM centos:7
+FROM busybox:latest
 WORKDIR /workspace
 COPY --from=0 /workspace/dist/*.whl .
 COPY --from=0 /workspace/build/bin/oneflow_testexe .
