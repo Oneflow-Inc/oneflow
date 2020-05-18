@@ -4,19 +4,19 @@
 
 namespace oneflow {
 
-namespace user_op {
+namespace {
 
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class ReduceKernel final : public OpKernel {
+class ReduceKernel final : public user_op::OpKernel {
  public:
   ReduceKernel() = default;
   ~ReduceKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
-    Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
-    Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
         axis.empty() ? Shape::Ones(input_tensor->shape().NumAxes())
@@ -30,19 +30,22 @@ class ReduceKernel final : public OpKernel {
 };
 
 template<DeviceType device, typename T>
-bool IsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0);
+bool IsMatchedPred(const user_op::KernelRegContext& ctx) {
+  const user_op::TensorDesc* output_tensor_desc =
+      ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0);
   if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
     return true;
   }
   return false;
 }
 
+}  // namespace
+
 #define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)        \
   REGISTER_USER_KERNEL(op_name)                                                \
       .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                 \
       .SetIsMatchedPred(IsMatchedPred<device, dtype>)                          \
-      .SetInferTmpSizeFn([](InferContext* ctx) {                               \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                      \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0); \
         return in_shape->elem_cnt() * sizeof(dtype);                           \
       });
@@ -64,5 +67,4 @@ REGISTER_REDUCE_KERNEL(double)
 REGISTER_REDUCE_KERNEL(int32_t)
 REGISTER_REDUCE_KERNEL(int64_t)
 
-}  // namespace user_op
 }  // namespace oneflow
