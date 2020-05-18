@@ -33,8 +33,8 @@ REGISTER_USER_OP("squeeze")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
-                                      in_shape->NumAxes(), &fixed_axes_vec);
+      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape->NumAxes(),
+                                      &fixed_axes_vec);
 
       DimVector dim_vec = in_shape->dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec);

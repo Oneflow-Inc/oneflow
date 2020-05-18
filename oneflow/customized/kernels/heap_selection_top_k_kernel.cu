@@ -203,7 +203,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedPred( \
       [](const user_op::KernelRegContext& ctx) {                                                   \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU && ctx.Attr<int32_t>("k") <= 128           \
+        return ctx.device_type() == DeviceType::kGPU && ctx.Attr<int32_t>("k") <= 128              \
                && in_desc->data_type() == GetDataType<dtype>::value;                               \
       });
 

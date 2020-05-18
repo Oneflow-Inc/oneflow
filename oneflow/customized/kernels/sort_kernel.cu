@@ -48,7 +48,7 @@ class GpuSortKernel final : public user_op::OpKernel {
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
         const int32_t instance_size = in_shape->dim_vec().back();                           \
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \
-        const std::string& direction = ctx->Attr<std::string>("direction");              \
+        const std::string& direction = ctx->Attr<std::string>("direction");                 \
         if (direction == "ASCENDING") {                                                     \
           return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
         } else if (direction == "DESCENDING") {                                             \
