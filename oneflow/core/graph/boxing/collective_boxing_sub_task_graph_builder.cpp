@@ -242,24 +242,12 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
         && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0) {
       const TensorSliceView in_slice =
           SubTskGphBuilderUtil::GetBroadcastTensorSliceView(logical_blob_desc);
-      std::vector<TensorSliceView> out_slices;
-      std::vector<Range> ranges(logical_blob_desc.shape().NumAxes());
-      FOR_RANGE(int64_t, i, 0, logical_blob_desc.shape().NumAxes()) {
-        ranges[i].mut_begin() = 0;
-        ranges[i].mut_end() = logical_blob_desc.shape().At(i);
-      }
-      const auto split_axis = 0;
-      const BalancedSplitter bs(logical_blob_desc.shape().At(split_axis),
-                                dst_parallel_desc.parallel_num());
-      FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
-        if (bs.At(i).size() == 0) {
-          out_slices.emplace_back();
-        } else {
-          ranges[split_axis] = bs.At(i);
-          out_slices.emplace_back(ranges);
-        }
-      }
-      // CHECK(!ContainsEmptySlice(out_slices));
+      SbpParallel split_sbp_parallel;
+      split_sbp_parallel.mutable_split_parallel()->set_axis(0);
+      std::vector<TensorSliceView> out_slices = SubTskGphBuilderUtil::GetTensorSliceView(
+          dst_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
+      CHECK(!std::any_of(out_slices.cbegin(), out_slices.cend(),
+                         [](const TensorSliceView& slice) { return slice.IsEmpty(); }));
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
