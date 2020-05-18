@@ -1,2 +1,2 @@
-cocoapi
+pycocotools
 opencv-python
