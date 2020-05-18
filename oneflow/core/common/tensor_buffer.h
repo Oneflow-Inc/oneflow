@@ -110,6 +110,12 @@ class TensorBuffer {
     }
   }
 
+  void CopyFrom(const TensorBuffer& src) {
+    if (this == &src) { return; }
+    this->Resize(src.shape(), src.data_type());
+    memcpy(mut_data(), src.data(), nbytes());
+  }
+
  private:
   // TODO(chengcheng)
   static double growth_factor_;

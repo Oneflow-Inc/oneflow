@@ -213,13 +213,10 @@ class ImageFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* in_buffer = in_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(in_buffer->shape().NumAxes(), 3);
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_buffer != in_buffer) {
-        out_buffer->Resize(in_buffer->shape(), in_buffer->data_type());
-        memcpy(out_buffer->mut_data(), in_buffer->data(), out_buffer->nbytes());
-      }
+      out_buffer->CopyFrom(in_buffer);
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
@@ -246,14 +243,11 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* bbox_buffer = bbox_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(bbox_buffer->shape().NumAxes(), 2);
-      CHECK_EQ(bbox_buffer->shape().At(1), 4);
+      const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_bbox_buffer != bbox_buffer) {
-        out_bbox_buffer->Resize(bbox_buffer->shape(), bbox_buffer->data_type());
-        memcpy(out_bbox_buffer->mut_data(), bbox_buffer->data(), out_bbox_buffer->nbytes());
-      }
+      out_bbox_buffer->CopyFrom(bbox_buffer);
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -281,14 +275,11 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* bbox_buffer = bbox_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(bbox_buffer->shape().NumAxes(), 2);
-      CHECK_EQ(bbox_buffer->shape().At(1), 4);
+      const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_bbox_buffer != bbox_buffer) {
-        out_bbox_buffer->Resize(bbox_buffer->shape(), bbox_buffer->data_type());
-        memcpy(out_bbox_buffer->mut_data(), bbox_buffer->data(), out_bbox_buffer->nbytes());
-      }
+      out_bbox_buffer->CopyFrom(bbox_buffer);
       float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
       SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_h, scale_w);
@@ -316,15 +307,11 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
     CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* polygons_buffer = polygon_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(polygons_buffer->shape().NumAxes(), 2);
-      CHECK_EQ(polygons_buffer->shape().At(1), 2);
+      const TensorBuffer& polygons_buffer = polygon_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
+      CHECK_EQ(polygons_buffer.shape().At(1), 2);
       TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_polygons_buffer != polygons_buffer) {
-        out_polygons_buffer->Resize(polygons_buffer->shape(), polygons_buffer->data_type());
-        memcpy(out_polygons_buffer->mut_data(), polygons_buffer->data(),
-               out_polygons_buffer->nbytes());
-      }
+      out_polygons_buffer->CopyFrom(polygons_buffer);
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -352,14 +339,11 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* poly_buffer = poly_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(poly_buffer->shape().NumAxes(), 2);
-      CHECK_EQ(poly_buffer->shape().At(1), 2);
+      const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(poly_buffer.shape().NumAxes(), 2);
+      CHECK_EQ(poly_buffer.shape().At(1), 2);
       TensorBuffer* out_poly_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_poly_buffer != poly_buffer) {
-        out_poly_buffer->Resize(poly_buffer->shape(), poly_buffer->data_type());
-        memcpy(out_poly_buffer->mut_data(), poly_buffer->data(), out_poly_buffer->nbytes());
-      }
+      out_poly_buffer->CopyFrom(poly_buffer);
       float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
       SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_h,
@@ -384,13 +368,10 @@ class ImageNormalize final : public user_op::OpKernel {
     const auto& mean_vec = ctx->GetAttr<std::vector<float>>("mean");
 
     MultiThreadLoop(num_images, [&](size_t i) {
-      const TensorBuffer* in_buffer = in_tensor->dptr<TensorBuffer>() + i;
-      CHECK_EQ(in_buffer->shape().NumAxes(), 3);
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      if (out_buffer != in_buffer) {
-        out_buffer->Resize(in_buffer->shape(), in_buffer->data_type());
-        memcpy(out_buffer->mut_data(), in_buffer->data(), out_buffer->nbytes());
-      }
+      out_buffer->CopyFrom(in_buffer);
       SwitchImageNormalizeByChannel(SwitchCase(out_buffer->data_type()), out_buffer, std_vec,
                                     mean_vec);
     });
