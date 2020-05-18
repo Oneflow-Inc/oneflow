@@ -35,7 +35,7 @@ class GatherKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto axis = ctx->GetAttr<int64_t>("axis");
+    const auto axis = ctx->Attr<int64_t>("axis");
     const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
     if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == axis
         && ctx->parallel_ctx().parallel_num() > 1) {

@@ -31,7 +31,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto axis = ctx->GetAttr<int64_t>("axis");
+    const auto axis = ctx->Attr<int64_t>("axis");
     const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
     if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == axis
         && ctx->parallel_ctx().parallel_num() > 1) {
