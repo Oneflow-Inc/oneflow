@@ -22,8 +22,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
                     .Input("a", [a])\
                     .Input("b", [b])\
                     .Output("out")\
-                    .SetAttr("transpose_a", transpose_a, "AttrTypeBool")\
-                    .SetAttr("transpose_b", transpose_b, "AttrTypeBool")\
+                    .Attr("transpose_a", transpose_a, "AttrTypeBool")\
+                    .Attr("transpose_b", transpose_b, "AttrTypeBool")\
                     .Build()
         else:
             op = flow.user_op_builder(name)\
@@ -31,8 +31,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
                     .Input("a", [a])\
                     .Input("b", [b])\
                     .Output("out")\
-                    .SetAttr("transpose_a", transpose_a, "AttrTypeBool")\
-                    .SetAttr("transpose_b", transpose_b, "AttrTypeBool")\
+                    .Attr("transpose_a", transpose_a, "AttrTypeBool")\
+                    .Attr("transpose_b", transpose_b, "AttrTypeBool")\
                     .Build()
         return op.InferAndTryRun().RemoteBlobList()[0]
     else:
