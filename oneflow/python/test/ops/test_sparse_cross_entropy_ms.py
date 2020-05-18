@@ -39,7 +39,13 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
             )
             prediction = flow.nn.softmax(logits=x)
         with flow.device_prior_placement(device_type, "0:0-3"):
-            loss = flow.nn.sparse_cross_entropy(labels=labels.with_distribute(flow.distribute.broadcast()), prediction=prediction.with_distribute(flow.distribute.split(len(prediction.shape)-1)))
+            if os.getenv("ENABLE_USER_OP") == 'True':
+                lebels_distribute = flow.distribute.broadcast()
+                prediction_distribute = flow.distribute.split(len(prediction.shape)-1)
+            else:
+                lebels_distribute = flow.distribute.split(0)
+                prediction_distribute = flow.distribute.split(0)
+            loss = flow.nn.sparse_cross_entropy(labels=labels.with_distribute(lebels_distribute), prediction=prediction.with_distribute(prediction_distribute))
         with flow.device_prior_placement(device_type, "0:0"):
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
