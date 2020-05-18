@@ -30,7 +30,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in->shape().At(0);
-    out_shape.at(1) = filters;
+    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
+    out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcOutAndPadding(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                         strides.at(i), padding, &out_shape.at(idx_offset + i), nullptr, nullptr);
