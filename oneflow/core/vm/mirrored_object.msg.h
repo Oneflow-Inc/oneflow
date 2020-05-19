@@ -95,7 +95,6 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
-  OBJECT_MSG_DEFINE_PTR(LogicalObject, logical_object);
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
 
   // links
