@@ -216,11 +216,11 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
   }
 };
 
-class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskGphBuilder {
+class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public SubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingScatterAndAllGatherSubTskGphBuilder);
-  CollectiveBoxingScatterAndAllGatherSubTskGphBuilder() = default;
-  ~CollectiveBoxingScatterAndAllGatherSubTskGphBuilder() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder);
+  CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder() = default;
+  ~CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder() override = default;
 
   Maybe<void> Build(SubTskGphBuilderCtx* ctx,
                     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
@@ -242,13 +242,6 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
       split_sbp_parallel.mutable_split_parallel()->set_axis(0);
       std::vector<TensorSliceView> out_slices = SubTskGphBuilderUtil::GetTensorSliceView(
           dst_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
-      CHECK(out_slices.size() > 0
-            && !std::any_of(out_slices.cbegin(), out_slices.cend(),
-                            [&out_slices](const TensorSliceView& slice) {
-                              return slice.IsEmpty()
-                                     && slice.shape().elem_cnt()
-                                            == out_slices[0].shape().elem_cnt();
-                            }));
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
@@ -296,8 +289,8 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && dst_sbp_parallel.has_broadcast_parallel()) {
-      TaskNode* gpu_src_node;
-      int64_t root_parallel_id;
+      TaskNode* gpu_src_node = nullptr;
+      int64_t root_parallel_id = -1;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_src_node = sorted_src_comp_tasks.front();
         root_parallel_id =
@@ -341,7 +334,7 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
-  builders.emplace_back(new CollectiveBoxingScatterAndAllGatherSubTskGphBuilder());
+  builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
 }
