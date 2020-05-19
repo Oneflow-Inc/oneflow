@@ -10,6 +10,7 @@
 #endif
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
+#include "math.h"
 namespace oneflow {
 
 #define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)(FloorMod)
@@ -81,7 +82,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncFloorMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x % y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y * (static_cast<T>(floor(static_cast<float>(x) / static_cast<float>(y)))); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
@@ -227,14 +228,14 @@ struct BinaryFuncMin<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return fmodf(x, y);
+    return x - y * floorf(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return fmod(x, y);
+    return x - y * floorf(x / y);
   }
 };
 
@@ -242,7 +243,7 @@ template<>
 struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
-    return __float2half(fmodf(__half2float(x), __half2float(y)));
+    return __float2half(__half2float(x) - __half2float(y) * floorf(__half2float(x) / __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -254,21 +255,21 @@ struct BinaryFuncFloorMod<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return std::fmod(x, y);
+    return x - y * floor(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return std::fmod(x, y);
+    return x - y * floor(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<float16> final {
   static __device__ __forceinline__ const float16 Invoke(const float16 x, const float16 y) {
-    return static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
+    return static_cast<float16>(static_cast<float>(x) - static_cast<float>(y) * floor(static_cast<float>(x) / static_cast<float>(y)));
   }
 };
 

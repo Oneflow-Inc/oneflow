@@ -110,10 +110,19 @@ def compare_with_tensorflow(device_type, flow_op, tf_op, x_shape, y_shape, data_
             return flow_op(x, y)
 
     np_type = type_name_to_np_type[data_type]
-    x = np.random.uniform(low=input_minval, high=input_maxval,
+    if np_type in (np.int8, np.int32, np.int64):
+        x = np.random.randint(low=input_minval, high=input_maxval,
                         size=x_shape).astype(np_type)
-    y = np.random.uniform(low=input_minval, high=input_maxval,
-                        size=y_shape).astype(np_type)
+        y = np.random.randint(low=input_minval, high=input_maxval,
+                            size=y_shape).astype(np_type)
+    else:   
+        x = np.random.uniform(low=input_minval, high=input_maxval,
+                            size=x_shape).astype(np_type)
+        y = np.random.uniform(low=input_minval, high=input_maxval,
+                            size=y_shape).astype(np_type)
+    if isinstance(flow_op, (type(flow.math.divide), type(flow.math.mod))):
+        y[np.where(y == 0)] += 1
+
     # Oneflow
     of_out = FlowJob(x, y).get().ndarray()
     # Tensorflow
@@ -172,12 +181,12 @@ def test_broadcast_div(test_case):
 
 def test_broadcast_floormod(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["device_type"] = ["gpu"]
     arg_dict["flow_op"] = [flow.math.mod]
     arg_dict["tf_op"] = [tf.math.floormod]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["x_shape"] = [(3, 1)]
+    arg_dict["y_shape"] = [(1, 4)]
+    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
