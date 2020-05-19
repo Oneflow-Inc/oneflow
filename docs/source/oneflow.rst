@@ -35,7 +35,6 @@ System
 .. autofunction:: watch
 .. autoclass:: FixedTensorDef
 .. decorator:: function
-.. autofunction:: function
 .. autofunction:: inter_job_reuse_mem_strategy
 .. autofunction:: fixed_placement
 .. autofunction:: device_prior_placement
