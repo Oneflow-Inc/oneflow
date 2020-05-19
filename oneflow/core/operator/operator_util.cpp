@@ -63,6 +63,7 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
         static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
     // For odd values of total padding, add more padding at the 'right'
     // side of the given dimension.
+    CHECK(padding_needed % 2 == 0);
     if (padding_before) { *padding_before = padding_needed / 2; }
     if (padding_after) { *padding_after = padding_needed - padding_needed / 2; }
   } else {

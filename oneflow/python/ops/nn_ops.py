@@ -27,7 +27,7 @@ def conv2d(
 ):
     assert len(input.static_shape) == 4
     assert len(filters.static_shape) == 4
-
+    NDims = 2
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
@@ -58,14 +58,35 @@ def conv2d(
             dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
-
+ 
     if os.getenv("ENABLE_USER_OP") == 'True':
         if channel_pos == "channels_first":
+            input_size = input.static_shape[2:4]
             kernel_size_list = filters.static_shape[2:4]
         elif channel_pos == "channels_last":
+            input_size = input.static_shape[-3:-1]
             kernel_size_list = filters.static_shape[-3:-1]
         else:
             raise ValueError("invalid data_format")
+        # add pad op if needs odd padding
+        if padding.upper() == 'SAME':
+            padding_left = [0] * NDims
+            padding_right = [0] * NDims
+            for i in range(NDims):
+                effective_filter_size = (kernel_size_list[i] - 1) * dilations[i] + 1
+                tmp_output_size = (input_size[i] + strides[i] - 1) // strides[i]
+                padding_needed = max(0, (tmp_output_size - 1) * strides[i] + 
+                                        effective_filter_size - input_size[i])
+                padding_left[i] = padding_needed // 2
+                padding_right[i] = padding_needed - padding_needed // 2
+            if len(set(padding_left + padding_right)) > 1:
+                assert data_format.upper() == "NCHW"
+                input =  flow.pad(input,
+                                 [(0, 0), (0, 0),
+                                 (padding_left[0], padding_right[0]), 
+                                 (padding_left[1], padding_right[1])],
+                                  name=name + '_pad' if name is not None else None)
+                padding = "VALID"
         assert(isinstance(kernel_size_list, tuple))
         assert isinstance(groups, int)
         assert groups > 0
