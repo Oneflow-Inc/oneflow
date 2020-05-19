@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
