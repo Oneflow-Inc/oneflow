@@ -10,19 +10,19 @@ from test_util import type_name_to_np_type
 
 import test_global_storage
 
-def _compare_with_numpy(test_case, x, y, axis, keepdims=True):
+def _compare_with_numpy(test_case, np_func, x, y, axis, keepdims=True):
     x = test_global_storage.Get("x")
     dx = test_global_storage.Get("x_diff")
-    np_y = np.maximum.reduce(x, axis=axis, keepdims=True)
+    np_y = np_func(x, axis=axis, keepdims=True)
     test_case.assertTrue(np.array_equal(y, np_y)) 
     mask = np.where(x==y, 1, 0)
-    max_count = np.add.reduce(mask, axis=axis, keepdims=True)
-    np_dx = np.where(x==y, 1/max_count, 0)
+    count = np.add.reduce(mask, axis=axis, keepdims=True)
+    np_dx = np.where(x==y, 1/count, 0)
     print("dx", dx)
     print("np_dx", np_dx)
     test_case.assertTrue(np.array_equal(dx, np_dx)) 
 
-def _test_two_stage_reduce(test_case, device_type, axis, data_type, mask_type):
+def _test_two_stage_reduce(test_case, flow_func, np_func, device_type, axis, data_type):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -39,7 +39,7 @@ def _test_two_stage_reduce(test_case, device_type, axis, data_type, mask_type):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=flow.float, initializer=flow.zeros_initializer())
         with flow.fixed_placement(device_type, '0:0-3'):
-            loss = flow.math.two_stage_reduce_max(x.with_distribute(flow.distribute.split(1)), axis=axis, keepdims=True)
+            loss = flow_funcx(x.with_distribute(flow.distribute.split(1)), axis=axis, keepdims=True)
             loss = flow.identity(loss)
             flow.losses.add_loss(loss)
             
@@ -50,19 +50,29 @@ def _test_two_stage_reduce(test_case, device_type, axis, data_type, mask_type):
 
     x = np.random.randint(low=0, high=2, size=(4, 4)).astype(np.float32)
     y = two_stage_reduce_job(x).get().ndarray()
-    #assert np.array_equal(x, y)
     print("x", x)
     print("y", y)
-    _compare_with_numpy(test_case, x, y, axis=(1,))
+    _compare_with_numpy(test_case, np_func, x, y, axis=(1,))
 
 
-def test_two_stage_reduce(test_case):
+def test_two_stage_reduce_max(test_case):
     arg_dict = OrderedDict()
+    arg_dict['flow_func'] = [flow.math.two_stage_reduce_max]
+    arg_dict['np_func'] = [np.maximum.reduce]
     arg_dict['device_type'] = ['cpu', 'gpu']
     arg_dict['axis'] = [[1]]
     arg_dict['data_type'] = ["float32"]
-    arg_dict['mask_type'] = ["int32"]
 
+    for arg in GenArgList(arg_dict):
+        _test_two_stage_reduce(test_case, *arg)
+
+def test_two_stage_reduce_min(test_case):
+    arg_dict = OrderedDict()
+    arg_dict['flow_func'] = [flow.math.two_stage_reduce_min]
+    arg_dict['np_func'] = [np.minimum.reduce]
+    arg_dict['device_type'] = ['cpu', 'gpu']
+    arg_dict['axis'] = [[1]]
+    arg_dict['data_type'] = ["float32"]
 
     for arg in GenArgList(arg_dict):
         _test_two_stage_reduce(test_case, *arg)
