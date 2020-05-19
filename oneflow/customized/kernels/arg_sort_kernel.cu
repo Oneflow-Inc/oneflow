@@ -69,7 +69,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
@@ -110,7 +110,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));      \
         /* CUB Temp Storage */                                                                     \
         int32_t temp_storage_bytes = -1;                                                           \
-        const std::string& direction = ctx->GetAttr<std::string>("direction");                     \
+        const std::string& direction = ctx->Attr<std::string>("direction");                        \
         if (direction == "ASCENDING") {                                                            \
           temp_storage_bytes =                                                                     \
               InferTempStorageForSortPairsAscending<dtype, int32_t>(instance_num, instance_size);  \
