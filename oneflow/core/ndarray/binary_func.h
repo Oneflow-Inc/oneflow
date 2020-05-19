@@ -82,7 +82,9 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncFloorMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y * (static_cast<T>(floor(static_cast<float>(x) / static_cast<float>(y)))); }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+    return x - y * (static_cast<T>(floor(static_cast<float>(x) / static_cast<float>(y))));
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
@@ -243,7 +245,8 @@ template<>
 struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
-    return __float2half(__half2float(x) - __half2float(y) * floorf(__half2float(x) / __half2float(y)));
+    return __float2half(__half2float(x)
+                        - __half2float(y) * floorf(__half2float(x) / __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -269,7 +272,9 @@ struct BinaryFuncFloorMod<double> final {
 template<>
 struct BinaryFuncFloorMod<float16> final {
   static __device__ __forceinline__ const float16 Invoke(const float16 x, const float16 y) {
-    return static_cast<float16>(static_cast<float>(x) - static_cast<float>(y) * floor(static_cast<float>(x) / static_cast<float>(y)));
+    return static_cast<float16>(static_cast<float>(x)
+                                - static_cast<float>(y)
+                                      * floor(static_cast<float>(x) / static_cast<float>(y)));
   }
 };
 
