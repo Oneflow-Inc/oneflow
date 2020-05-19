@@ -161,8 +161,8 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
         CompTaskNode* src_comp_task = sorted_src_comp_tasks.at(i);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
-        TaskNode *src_node = ctx->GetProxyNode(src_comp_task, src_comp_task->MemZoneId121(),
-                dst_node->machine_id(), dst_node->MemZoneId121());
+        TaskNode* src_node = ctx->GetProxyNode(src_comp_task, src_comp_task->MemZoneId121(),
+                                               dst_node->machine_id(), dst_node->MemZoneId121());
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
@@ -248,9 +248,8 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
-        const int64_t nearest_idx =
-            SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-        CompTaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
+        CompTaskNode* src_node =
+            SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
         const auto src_machine_id = src_parallel_desc.MachineIdForParallelId(0);
