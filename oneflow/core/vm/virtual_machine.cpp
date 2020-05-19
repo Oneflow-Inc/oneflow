@@ -31,10 +31,10 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
   {
-    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
-    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(mirrored_object_accesses, access) {
-      mirrored_object_accesses->Erase(access);
-      if (access->is_mirrored_object_access_link_empty()) { continue; }
+    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
+    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(rw_mutexed_object_accesses, access) {
+      rw_mutexed_object_accesses->Erase(access);
+      if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
       auto* mirrored_object = access->mut_mirrored_object();
       mirrored_object->mut_access_list()->Erase(access);
     }
@@ -191,12 +191,13 @@ void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
                                            MirroredObject* mirrored_object,
                                            Instruction* instruction) {
   bool is_const_operand = (access_type == kConstOperandAccess);
-  auto mirrored_object_access = ObjectMsgPtr<MirroredObjectAccess>::NewFrom(
+  auto rw_mutexed_object_access = ObjectMsgPtr<RwMutexedObjectAccess>::NewFrom(
       instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
-  bool success =
-      instruction->mut_mirrored_object_id2access()->Insert(mirrored_object_access.Mutable()).second;
+  bool success = instruction->mut_mirrored_object_id2access()
+                     ->Insert(rw_mutexed_object_access.Mutable())
+                     .second;
   if (success) {
-    mirrored_object->mut_access_list()->EmplaceBack(std::move(mirrored_object_access));
+    mirrored_object->mut_access_list()->EmplaceBack(std::move(rw_mutexed_object_access));
   }
 }
 
@@ -265,11 +266,11 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         // do nothing
       }
     }
-    auto* mirrored_object_accesses = instruction->mut_mirrored_object_id2access();
-    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(mirrored_object_accesses, mirrored_object_access) {
-      auto* mirrored_object = mirrored_object_access->mut_mirrored_object();
+    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
+    OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
+      auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
       if (mirrored_object->access_list().size() == 1) { continue; }
-      if (mirrored_object_access->is_const_operand()) {
+      if (rw_mutexed_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
           ConnectInstruction(first->mut_instruction(), instruction);
@@ -277,7 +278,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       } else {
         auto* access_list = mirrored_object->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
-          if (access == mirrored_object_access) { break; }
+          if (access == rw_mutexed_object_access) { break; }
           ConnectInstruction(access->mut_instruction(), instruction);
           access_list->Erase(access);
         }
