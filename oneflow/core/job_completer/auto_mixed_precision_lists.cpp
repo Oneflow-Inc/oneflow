@@ -8,7 +8,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
-  static AMPList black_list = {"reduce_mean"};
+  // TODO(niuchong): reduce_mean?
+  static AMPList black_list = {};
   return black_list;
 }
 
@@ -24,7 +25,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): identity, tuple_identity, keep_header_only?
   static AMPList clear_list = {"gather",  "max_pool_1d", "max_pool_2d", "max_pool_3d",
-                               "reshape", "relu",        "tranpose",    "random_mask_like"};
+                               "reshape", "relu",        "transpose",   "random_mask_like"};
 
   return clear_list;
 }

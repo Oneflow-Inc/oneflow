@@ -17,6 +17,7 @@ bool IsKeyFound(const MapT& m, const KeyT& k) {
 }
 
 bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
+  if (node->op().op_conf().has_user_conf() == false) { return false; }
   const std::string op_type = node->op().op_conf().user_conf().op_type_name();
   return IsKeyFound(amp_list, op_type);
 }
@@ -194,12 +195,7 @@ class AutoMixedPrecision final : public OpGraphPass {
       : white_list_(AutoMixedPrecisionLists::WhiteList()),
         black_list_(AutoMixedPrecisionLists::BlackList()),
         gray_list_(AutoMixedPrecisionLists::GrayList()),
-        clear_list_(AutoMixedPrecisionLists::ClearList()) {
-    VerifyAMPList(white_list_);
-    VerifyAMPList(black_list_);
-    VerifyAMPList(gray_list_);
-    VerifyAMPList(clear_list_);
-  }
+        clear_list_(AutoMixedPrecisionLists::ClearList()) {}
   ~AutoMixedPrecision() = default;
 
   bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
@@ -226,6 +222,11 @@ class AutoMixedPrecision final : public OpGraphPass {
 void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
+
+  VerifyAMPList(white_list_);
+  VerifyAMPList(black_list_);
+  VerifyAMPList(gray_list_);
+  VerifyAMPList(clear_list_);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
     return node->op().op_name();
