@@ -375,27 +375,27 @@ def batch_normalization(
                 when "trainable" is False')
 
     if os.getenv("ENABLE_USER_OP") == 'True':
-        if center and trainable:
+        if center:
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
                 dtype=inputs.dtype,
-                initializer=beta_initializer if beta_initializer is not None else flow.zeros_initializer(),
+                initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
             beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
 
-        if scale and trainable:
+        if scale:
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
                 dtype=inputs.dtype,
-                initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
+                initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
