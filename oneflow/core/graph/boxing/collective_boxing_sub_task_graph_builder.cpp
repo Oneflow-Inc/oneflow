@@ -295,13 +295,12 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       int64_t root_parallel_id;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_src_node = sorted_src_comp_tasks.front();
-        const auto nearest_dst_node_idx =
+        root_parallel_id =
             SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_dst_comp_tasks, cpu_src_node);
-        auto* nearest_dst_node = sorted_dst_comp_tasks.at(nearest_dst_node_idx);
+        auto* nearest_dst_node = sorted_dst_comp_tasks.at(root_parallel_id);
         gpu_src_node =
             ctx->GetProxyNode(cpu_src_node, cpu_src_node->MemZoneId121(),
                               nearest_dst_node->machine_id(), nearest_dst_node->MemZoneId121());
-        root_parallel_id = nearest_dst_node_idx;
       } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_comp_tasks.front();
