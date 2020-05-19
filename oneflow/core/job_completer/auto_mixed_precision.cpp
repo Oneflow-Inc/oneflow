@@ -3,6 +3,7 @@
 #include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -16,7 +17,7 @@ bool IsKeyFound(const MapT& m, const KeyT& k) {
 }
 
 bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
-  OperatorConf::OpTypeCase op_type = node->op().op_conf().op_type_case();
+  const std::string op_type = node->op().op_conf().user_conf().op_type_name();
   return IsKeyFound(amp_list, op_type);
 }
 
@@ -35,6 +36,14 @@ std::string Container2Str(const ContainerT& container,
   }
   return ret;
 }
+
+void VerifyAMPList(const AMPList& amp_list) {
+  for (const auto& op_type : amp_list) {
+    CHECK(user_op::LookUpInOpRegistry(op_type) != nullptr)
+        << "Cannot find " << op_type << " of AutoMixedPrecision list in OpRegistry.";
+  }
+}
+
 void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
                            std::function<bool(OpNode*)> IsCurNodeStartNode,
                            std::function<bool(OpNode*)> IsCurNodeSatisfied,
@@ -131,21 +140,23 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   for (auto& pair : edges_group_by_lbn) {
     const std::string& lbn = pair.first;
     OpNode* src_node = pair.second.front()->src_node();
-    OperatorConf cast_op_conf;
+
+    std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
+    std::string cast_op_name = ReplaceSlashToDash4Lbn(lbn) + cast_suffix;
     {
-      std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
       DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
-      cast_op_conf.set_name(ReplaceSlashToDash4Lbn(lbn) + cast_suffix);
-      CastOpConf* cast_conf = cast_op_conf.mutable_cast_conf();
-      cast_conf->set_in(lbn);
-      cast_conf->set_out("out");
-      cast_conf->set_data_type(cast_data_type);
+      auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+                         .Op("cast")
+                         .Input("in", lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", cast_data_type)
+                         .Build();
       job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
-                          std::vector<OperatorConf>{cast_op_conf});
-      LOG(INFO) << "Insert CastOp: " << cast_op_conf.name() << " between " << lbn;
+                          std::vector<OperatorConf>{cast_op.op_conf()});
+      LOG(INFO) << "Insert CastOp: " << cast_op_name << " between " << lbn;
     }
 
-    std::string new_lbn = cast_op_conf.name() + "/out";
+    std::string new_lbn = cast_op_name + "/out";
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
@@ -162,7 +173,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      std::string new_lbn = cast_op_conf.name() + "/out";
+      std::string new_lbn = cast_op_name + "/out";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
         ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
@@ -183,7 +194,12 @@ class AutoMixedPrecision final : public OpGraphPass {
       : white_list_(AutoMixedPrecisionLists::WhiteList()),
         black_list_(AutoMixedPrecisionLists::BlackList()),
         gray_list_(AutoMixedPrecisionLists::GrayList()),
-        clear_list_(AutoMixedPrecisionLists::ClearList()) {}
+        clear_list_(AutoMixedPrecisionLists::ClearList()) {
+    VerifyAMPList(white_list_);
+    VerifyAMPList(black_list_);
+    VerifyAMPList(gray_list_);
+    VerifyAMPList(clear_list_);
+  }
   ~AutoMixedPrecision() = default;
 
   bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
