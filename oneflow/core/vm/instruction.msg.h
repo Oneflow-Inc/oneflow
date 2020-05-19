@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <mutex>
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
@@ -29,6 +30,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   PUBLIC void __Init__(const std::string& instr_type_name);
   PUBLIC void __Init__(const InstructionProto& proto);
   PUBLIC void __Init__(const InstructionMsg& instr_msg);
+  PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
   PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
@@ -97,7 +99,7 @@ class Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
   // methods
-  PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream);
+  PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<ParallelDesc>& parallel_desc);
   PUBLIC void __Delete__();
   PUBLIC bool Done() const;
   PUBLIC const StreamType& stream_type() const;
@@ -166,6 +168,7 @@ OBJECT_MSG_BEGIN(Instruction);
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
 
   // links

@@ -43,7 +43,9 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
       CHECK(op_conf_object->user_conf().input().empty());
       CHECK(op_conf_object->user_conf().output().empty());
       vm::MirroredObject* mirrored_object = instruction->mut_operand_type(view->op(i));
-      DeviceType device_type = mirrored_object->logical_object().parallel_desc()->device_type();
+      const auto& parallel_desc = instruction->parallel_desc();
+      CHECK(static_cast<bool>(parallel_desc));
+      DeviceType device_type = parallel_desc->device_type();
       mirrored_object->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
                                             device_type);
     }
@@ -231,7 +233,9 @@ template<typename T>
 void InitOutputBlobObjects(vm::Instruction* instruction, const T& args, int64_t device_id,
                            DataType data_type) {
   const auto& InitMirroredObject = [&](vm::MirroredObject* mirrored_object) {
-    DeviceType device_type = mirrored_object->logical_object().parallel_desc()->device_type();
+    const auto& parallel_desc = instruction->parallel_desc();
+    CHECK(static_cast<bool>(parallel_desc));
+    DeviceType device_type = parallel_desc->device_type();
     const auto& mem_case = MakeMemCase(device_type, device_id);
     mirrored_object->Init<BlobObject>(mem_case, data_type);
   };
@@ -333,7 +337,9 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
   DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   vm::MirroredObject* mirrored_object = instruction->mut_operand_type(args->shared_opkernel());
   if (mirrored_object->has_object()) { CHECK(mirrored_object->Has<OpKernelObject>()); }
-  CHECK_EQ(device_type, mirrored_object->logical_object().parallel_desc()->device_type());
+  const auto& parallel_desc = instruction->parallel_desc();
+  CHECK(static_cast<bool>(parallel_desc));
+  CHECK_EQ(device_type, parallel_desc->device_type());
   mirrored_object->reset_object();
   auto* opkernel_obj = mirrored_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
   OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);

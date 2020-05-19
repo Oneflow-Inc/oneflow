@@ -75,24 +75,25 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
     CHECK_NOTNULL(stream_rt_desc);
-    const auto* parallel_desc = GetInstructionDefaultParallelDesc(*instr_msg);
+    const auto& parallel_desc = GetInstructionParallelDesc(*instr_msg);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
-      if (!IsStreamInParallelDesc(parallel_desc, *stream)) { continue; }
-      new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg));
+      if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
+      new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg, parallel_desc));
     }
     instr_msg_list->Erase(instr_msg);
   }
 }
 
-const ParallelDesc* VirtualMachine::GetInstructionDefaultParallelDesc(
+const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
     const InstructionMsg& instr_msg) {
-  if (!instr_msg.has_parallel_desc_symbol_id()) { return nullptr; }
+  static const std::shared_ptr<ParallelDesc> empty_ptr;
+  if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
   auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
   CHECK_NOTNULL(logical_object);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ(map->size(), 1);
-  return &map->Begin()->Get<ObjectWrapper<ParallelDesc>>().Get();
+  return map->Begin()->Get<ObjectWrapper<ParallelDesc>>().GetPtr();
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>

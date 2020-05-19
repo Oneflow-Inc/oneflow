@@ -76,12 +76,12 @@ class InstructionsBuilder(object):
         symbol_dict.SetSymbol4ParallelConf(parallel_conf, symbol)
         return symbol
 
-    def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_conf_sym):
-        if object_dict.HasSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym):
-            return object_dict.GetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym)
-        object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_conf_sym)
-        obj = object_util.Object(object_id, parallel_conf_sym)
-        object_dict.SetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym, obj)
+    def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
+        if object_dict.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
+            return object_dict.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
+        object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
+        obj = object_util.Object(object_id, parallel_desc_sym)
+        object_dict.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
         return obj
 
     def _GetOpConfSymbol(self, op_conf):
@@ -123,9 +123,9 @@ class InstructionsBuilder(object):
         # TODO(lixinqi)
         return mut2_output_triples
 
-    def _NewBlobObject(self, parallel_conf_sym):
-        object_id = self._NewObjectId(parallel_conf_sym)
-        return object_util.Object(object_id, parallel_conf_sym)
+    def _NewBlobObject(self, parallel_desc_sym):
+        object_id = self._NewObjectId(parallel_desc_sym)
+        return object_util.Object(object_id, parallel_desc_sym)
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -147,14 +147,14 @@ class InstructionsBuilder(object):
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
 
-    def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_conf_sym):
-        return self._NewObjectId(parallel_conf_sym)
+    def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
+        return self._NewObjectId(parallel_desc_sym)
 
-    def _StatelessCall(self, parallel_conf_sym, job_conf_sym, op_conf_sym, shared_opkernel_obj,
+    def _StatelessCall(self, parallel_desc_sym, job_conf_sym, op_conf_sym, shared_opkernel_obj,
                        input_triples, output_triples, mut2_output_triples):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "%s.StatelessCallOpKernel" % parallel_conf_sym.device_tag
-        instruction.parallel_desc_symbol_id = parallel_conf_sym.symbol_id
+        instruction.instr_type_name = "%s.StatelessCallOpKernel" % parallel_desc_sym.device_tag
+        instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
@@ -183,11 +183,11 @@ class InstructionsBuilder(object):
         self.instruction_list_.instruction.append(instruction)
         return symbol_id
 
-    def _NewObjectId(self, parallel_conf_sym):
+    def _NewObjectId(self, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "NewObject"
-        instruction.operand.append(_Int64Operand(parallel_conf_sym.symbol_id))
+        instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
         self.instruction_list_.instruction.append(instruction)
         return object_id

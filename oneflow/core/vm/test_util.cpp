@@ -25,16 +25,17 @@ ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int
   return ObjectMsgPtr<VmResourceDesc>::New(machine_num, map);
 }
 
-int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_name) {
+int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_name,
+                            int64_t* parallel_desc_symbol_id) {
   auto parallel_conf = std::make_shared<ParallelConf>();
   parallel_conf->add_device_name(device_name);
-  int64_t parallel_conf_logical_object_id = ObjectIdUtil::NewLogicalSymbolId();
-  Global<Storage<ParallelConf>>::Get()->Add(parallel_conf_logical_object_id, parallel_conf);
+  *parallel_desc_symbol_id = ObjectIdUtil::NewLogicalSymbolId();
+  Global<Storage<ParallelConf>>::Get()->Add(*parallel_desc_symbol_id, parallel_conf);
   instr_msg_list->EmplaceBack(
-      NewInstruction("NewParallelDescSymbol")->add_int64_operand(parallel_conf_logical_object_id));
+      NewInstruction("NewParallelDescSymbol")->add_int64_operand(*parallel_desc_symbol_id));
   int64_t logical_object_id = ObjectIdUtil::NewLogicalObjectId();
   instr_msg_list->EmplaceBack(NewInstruction("NewObject")
-                                  ->add_int64_operand(parallel_conf_logical_object_id)
+                                  ->add_parallel_desc(*parallel_desc_symbol_id)
                                   ->add_int64_operand(logical_object_id));
   return logical_object_id;
 }

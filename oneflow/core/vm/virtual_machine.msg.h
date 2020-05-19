@@ -11,10 +11,9 @@
 #include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
 #include "oneflow/core/common/range.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
-
-class ParallelDesc;
 
 namespace vm {
 
@@ -30,6 +29,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   PUBLIC void Schedule();
   PUBLIC bool Empty() const;
+  PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(
+                                                const InstructionMsg& instr_msg);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
@@ -104,7 +105,6 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   void TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
                              const IsEdgeReadyT& IsEdgeReady);
 
-  const ParallelDesc* GetInstructionDefaultParallelDesc(const InstructionMsg& instr_msg);
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on
 

@@ -39,6 +39,11 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   reset_operand_list(instr_msg.operand_list());
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
+  set_parallel_desc_symbol_id(symbol_id);
+  return this;
+}
+
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_double_operand(double double_operand) {
   add_instr_operand()->set_double_operand(double_operand);
   return this;
@@ -211,11 +216,13 @@ const MirroredObject* Instruction::FindMirroredObjectByOperand(
 
 int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
-void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream) {
+void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
+                           const std::shared_ptr<ParallelDesc>& parallel_desc) {
   mutable_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
   stream_type().InitInstructionStatus(*stream, mutable_status_buffer());
+  *mutable_parallel_desc() = parallel_desc;
 }
 
 void Instruction::__Delete__() {
