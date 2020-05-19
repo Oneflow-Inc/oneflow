@@ -29,8 +29,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   PUBLIC void Schedule();
   PUBLIC bool Empty() const;
-  PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(
-                                                const InstructionMsg& instr_msg);
+  PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(const InstructionMsg&);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
