@@ -14,7 +14,7 @@ class ThreadCtx;
 OBJECT_MSG_BEGIN(Stream);
   // methods
   PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
-  PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg);
+  PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<ParallelDesc>& parallel_desc);
   PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
   PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   PUBLIC int64_t machine_id() const;

@@ -49,7 +49,6 @@ class NewObjectInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewObjectInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, parallel_desc);
     FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
   FLAT_MSG_VIEW_END(NewObjectInstruction);
   // clang-format on
@@ -67,16 +66,8 @@ class NewObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    {
-      auto* logical_object = vm->mut_id2logical_object()->FindPtr(view->parallel_desc());
-      CHECK_NOTNULL(logical_object);
-      auto* global_device_id2mirrored_object =
-          logical_object->mut_global_device_id2mirrored_object();
-      CHECK_EQ(global_device_id2mirrored_object->size(), 1);
-      auto* mirrored_object = global_device_id2mirrored_object->Begin();
-      parallel_desc = mirrored_object->Get<ObjectWrapper<ParallelDesc>>().GetPtr();
-    }
+    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
+    CHECK(static_cast<bool>(parallel_desc));
     const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
