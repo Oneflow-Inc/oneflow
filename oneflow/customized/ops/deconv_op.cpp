@@ -10,10 +10,10 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   CHECK_EQ(NDims + 2, in->shape().NumAxes());
 
-  const std::string& data_format = ctx->GetAttr<std::string>("data_format");
-  const auto& kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
-  const int32_t filters = ctx->GetAttr<int32_t>("filters");
+  const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
 
   // only support data parallel
@@ -21,9 +21,9 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
                   || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
-    const auto& dilation_rate = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
-    const auto& output_padding = ctx->GetAttr<std::vector<int32_t>>("output_padding");
-    const auto& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
+    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());

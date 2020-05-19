@@ -24,10 +24,10 @@ class ScalarBinaryOp : public XlaOpKernel {
     DataType data_type = ctx->InputType("in");
     std::string type = ctx->GetOneofType("scalar_operand");
     if (type == "int_operand") {
-      int64_t value = ctx->GetAttr<int64_t>(type);
+      int64_t value = ctx->Attr<int64_t>(type);
       return IntegerLiteral(builder, data_type, value);
     } else {
-      double value = ctx->GetAttr<double>(type);
+      double value = ctx->Attr<double>(type);
       return FloatLiteral(builder, data_type, value);
     }
   }

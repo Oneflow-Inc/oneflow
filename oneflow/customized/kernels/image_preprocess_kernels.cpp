@@ -47,7 +47,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int C = out_shape.At(3);
     CHECK(C == 3 || C == 1);
     int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-    std::string interp_type = ctx->GetAttr<std::string>("interp_type");
+    std::string interp_type = ctx->Attr<std::string>("interp_type");
     int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
     int opencv_inter_type = GetOpencvInterp(interp_type);
 
@@ -121,10 +121,10 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    std::vector<float> mean_vec = ctx->GetAttr<std::vector<float>>("mean");
-    std::vector<float> inv_std_vec = ctx->GetAttr<std::vector<float>>("std");
+    std::vector<float> mean_vec = ctx->Attr<std::vector<float>>("mean");
+    std::vector<float> inv_std_vec = ctx->Attr<std::vector<float>>("std");
     std::vector<int8_t> mirror;
-    std::string color_space = ctx->GetAttr<std::string>("color_space");
+    std::string color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     CHECK(mean_vec.size() == 1 || mean_vec.size() == C);
     CHECK(inv_std_vec.size() == 1 || inv_std_vec.size() == C);
@@ -159,7 +159,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     CHECK_EQ(C, in_shape.At(3));
     // int64_t in_image_elem_cnt = in_H * in_W * C;
 
-    std::string output_layout = ctx->GetAttr<std::string>("output_layout");
+    std::string output_layout = ctx->Attr<std::string>("output_layout");
     const ShapeView& out_shape = out_blob->shape();
     CHECK_EQ(output_layout, "NCHW");  // TODO(chengcheng): support NHWC
     CHECK_EQ(out_shape.At(0), N);
@@ -216,7 +216,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    float prob = ctx->GetAttr<float>("probability");
+    float prob = ctx->Attr<float>("probability");
     int64_t seed = GetOpKernelRandomSeed(ctx);
     std::shared_ptr<RandBoolGen> rand_bool_gen(new RandBoolGen(prob, seed));
     return rand_bool_gen;

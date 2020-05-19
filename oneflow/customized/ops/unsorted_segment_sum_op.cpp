@@ -10,8 +10,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
     .Attr("num_segments", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
-      const int64_t axis = ctx->GetAttr<int64_t>("axis");
-      const int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
+      const int64_t axis = ctx->Attr<int64_t>("axis");
+      const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
       CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
@@ -28,7 +28,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto axis = ctx->GetAttr<int64_t>("axis");
+      const auto axis = ctx->Attr<int64_t>("axis");
       const auto data_batch_axis = ctx->BatchAxis4ArgNameAndIndex("data", 0);
       const auto out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       const auto segment_ids_num_axes =
@@ -52,7 +52,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
           ctx->LogicalTensorDesc4InputArgNameAndIndex("data", 0).shape().NumAxes();
       const int64_t segment_ids_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
-      const int64_t axis = ctx->GetAttr<int64_t>("axis");
+      const int64_t axis = ctx->Attr<int64_t>("axis");
       FOR_RANGE(int64_t, i, 0, segment_ids_num_axes) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("segment_ids", 0), i)
@@ -108,7 +108,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       const Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
       CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
-      const int64_t axis = ctx->GetAttr<int64_t>("axis");
+      const int64_t axis = ctx->Attr<int64_t>("axis");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
       CHECK_GE_OR_RETURN(axis, 0);
@@ -139,7 +139,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
           ctx->LogicalTensorDesc4InputArgNameAndIndex("data", 0).shape().NumAxes();
       const int64_t segment_ids_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
-      const int64_t axis = ctx->GetAttr<int64_t>("axis");
+      const int64_t axis = ctx->Attr<int64_t>("axis");
       FOR_RANGE(int64_t, i, 0, segment_ids_num_axes) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("segment_ids", 0), i)

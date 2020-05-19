@@ -82,8 +82,8 @@ def _get_remote_blob(x, name=None, op_name=None, keepdims=False, axis=None):
     return flow.user_op_builder(name).Op(op_name)\
         .Input("input_tensor", [x])\
         .Output("output_tensor")\
-        .SetAttr("axis", axis, "AttrTypeListInt32")\
-        .SetAttr("keepdims", keepdims, "AttrTypeBool")\
+        .Attr("axis", axis, "AttrTypeListInt32")\
+        .Attr("keepdims", keepdims, "AttrTypeBool")\
         .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def _check_name(name, unique_name):

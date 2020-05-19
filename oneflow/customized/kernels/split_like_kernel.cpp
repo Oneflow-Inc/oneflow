@@ -13,7 +13,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const int32_t axis = ctx->Attr<int32_t>("axis");
     const int64_t row_num = in->shape().elem_cnt() / in->shape().Count(axis);
     const int64_t in_col_num = in->shape().Count(axis);
     int64_t in_col_offset = 0;
