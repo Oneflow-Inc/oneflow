@@ -34,9 +34,9 @@ class DeleteBlobObjectInstructionType final : public vm::InstructionType {
     FlatMsgView<DeleteBlobObjectInstrOperand> view;
     CHECK(view.Match(instruction->instr_msg().operand()));
     for (int i = 0; i < view->blob_size(); ++i) {
-      auto* type_mirrored_object = instruction->mut_operand_type(view->blob(i));
-      CHECK(type_mirrored_object->Has<BlobObject>());
-      type_mirrored_object->reset_object();
+      auto* type_rw_mutexed_object = instruction->mut_operand_type(view->blob(i));
+      CHECK(type_rw_mutexed_object->Has<BlobObject>());
+      type_rw_mutexed_object->reset_object();
     }
   }
 };

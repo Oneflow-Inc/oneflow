@@ -32,8 +32,8 @@ class InitSymbolInstructionType final : public InstructionType {
       const auto& operand = args->serialized_logical_object_id(i);
       int64_t logical_object_id = operand.logical_object_id();
       const auto& serialized_conf = Global<Storage<SerializedT>>::Get()->Get(logical_object_id);
-      auto* mirrored_object = instruction->mut_operand_type(operand);
-      mirrored_object->Init<ObjectWrapper<T>>(serialized_conf);
+      auto* rw_mutexed_object = instruction->mut_operand_type(operand);
+      rw_mutexed_object->Init<ObjectWrapper<T>>(serialized_conf);
     }
   }
   void Compute(Instruction* instruction) const override {

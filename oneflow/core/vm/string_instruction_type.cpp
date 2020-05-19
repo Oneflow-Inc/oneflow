@@ -34,8 +34,8 @@ class InitStringSymbolInstructionType final : public InstructionType {
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
       const auto& str = Global<Storage<std::string>>::Get()->Get(logical_object_id);
-      auto* mirrored_object = instruction->mut_operand_type(args->string(i));
-      mirrored_object->Init<StringObject>(str);
+      auto* rw_mutexed_object = instruction->mut_operand_type(args->string(i));
+      rw_mutexed_object->Init<StringObject>(str);
     }
   }
   void Compute(Instruction* instruction) const override {

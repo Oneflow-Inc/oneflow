@@ -29,8 +29,8 @@ class CudaMallocInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
       size = view->size();
-      MirroredObject* mirrored_object = instruction->mut_operand_type(view->mem_buffer());
-      mem_buffer_object_type = mirrored_object->Init<MemBufferObjectType>();
+      RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->mem_buffer());
+      mem_buffer_object_type = rw_mutexed_object->Init<MemBufferObjectType>();
       device_id = instruction->stream().device_id();
     }
     mem_buffer_object_type->set_size(size);
@@ -63,27 +63,27 @@ class CudaFreeInstructionType final : public InstructionType {
   using stream_type = DeviceHelperStreamType;
 
   void Infer(Instruction* instruction) const override {
-    MirroredObject* type_mirrored_object = nullptr;
+    RwMutexedObject* type_rw_mutexed_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
-      type_mirrored_object = instruction->mut_operand_type(view->mem_buffer());
-      const auto& buffer_type = type_mirrored_object->Get<MemBufferObjectType>();
+      type_rw_mutexed_object = instruction->mut_operand_type(view->mem_buffer());
+      const auto& buffer_type = type_rw_mutexed_object->Get<MemBufferObjectType>();
       CHECK(buffer_type.mem_case().has_device_cuda_mem());
     }
-    type_mirrored_object->reset_object();
+    type_rw_mutexed_object->reset_object();
   }
   void Compute(Instruction* instruction) const override {
-    MirroredObject* value_mirrored_object = nullptr;
+    RwMutexedObject* value_rw_mutexed_object = nullptr;
     {
       FlatMsgView<FreeInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
-      value_mirrored_object = instruction->mut_operand_value(view->mem_buffer());
+      value_rw_mutexed_object = instruction->mut_operand_value(view->mem_buffer());
     }
     const auto& stream = instruction->stream();
     cudaSetDevice(stream.device_id());
-    CudaCheck(cudaFree(value_mirrored_object->Mut<MemBufferObjectValue>()->mut_data()));
-    value_mirrored_object->reset_object();
+    CudaCheck(cudaFree(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
+    value_rw_mutexed_object->reset_object();
   }
 };
 COMMAND(RegisterInstructionType<CudaFreeInstructionType>("CudaFree"));
