@@ -242,8 +242,13 @@ class CollectiveBoxingScatterAndAllGatherSubTskGphBuilder final : public SubTskG
       split_sbp_parallel.mutable_split_parallel()->set_axis(0);
       std::vector<TensorSliceView> out_slices = SubTskGphBuilderUtil::GetTensorSliceView(
           dst_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
-      CHECK(!std::any_of(out_slices.cbegin(), out_slices.cend(),
-                         [](const TensorSliceView& slice) { return slice.IsEmpty(); }));
+      CHECK(out_slices.size() > 0
+            && !std::any_of(out_slices.cbegin(), out_slices.cend(),
+                            [&out_slices](const TensorSliceView& slice) {
+                              return slice.IsEmpty()
+                                     && slice.shape().elem_cnt()
+                                            == out_slices[0].shape().elem_cnt();
+                            }));
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
