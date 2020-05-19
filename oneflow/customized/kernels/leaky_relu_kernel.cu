@@ -28,7 +28,7 @@ class GpuLeakyReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
-    const float alpha = ctx->GetAttr<float>("alpha");
+    const float alpha = ctx->Attr<float>("alpha");
     RUN_CUDA_KERNEL((LeakyReluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, alpha,
                     x->dptr<T>(), y->mut_dptr<T>());
   }
@@ -59,7 +59,7 @@ class GpuLeakyReluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
-    const float alpha = ctx->GetAttr<float>("alpha");
+    const float alpha = ctx->Attr<float>("alpha");
     RUN_CUDA_KERNEL((LeakyReluBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, alpha,
                     x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }

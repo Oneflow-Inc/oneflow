@@ -11,7 +11,7 @@ class TopKOp : public TrtOpKernel {
     Shape in_shape = ctx->InputShape("in");
     // CHECK_GE(in_shape.NumAxes(), 2);
 
-    int32_t k = ctx->GetAttr<int32_t>("k");
+    int32_t k = ctx->Attr<int32_t>("k");
     // We only compute the top-k at the last dimension.
     // CHECK_GE(axis, 1);
     // CHECK_LT(axis, in_shape.NumAxes());

@@ -225,11 +225,11 @@ def layer_norm(
             )
             op.Input("gamma", [gamma])
             op.Output("normalized")
-        op.SetAttr("center", center, "AttrTypeBool")
-        op.SetAttr("scale", scale, "AttrTypeBool")
-        op.SetAttr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-        op.SetAttr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-        op.SetAttr("epsilon", epsilon, "AttrTypeDouble")
+        op.Attr("center", center, "AttrTypeBool")
+        op.Attr("scale", scale, "AttrTypeBool")
+        op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
+        op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+        op.Attr("epsilon", epsilon, "AttrTypeDouble")
         return (
             op
             .Build()
@@ -427,10 +427,10 @@ def batch_normalization(
             .Input("gamma", [gamma])
             .Input("beta", [beta])
             .Output("y")
-            .SetAttr("axis", axis, "AttrTypeInt32")
-            .SetAttr("epsilon", epsilon, "AttrTypeFloat")
-            .SetAttr("training", training, "AttrTypeBool")
-            .SetAttr("momentum", momentum, "AttrTypeFloat")
+            .Attr("axis", axis, "AttrTypeInt32")
+            .Attr("epsilon", epsilon, "AttrTypeFloat")
+            .Attr("training", training, "AttrTypeBool")
+            .Attr("momentum", momentum, "AttrTypeFloat")
             )
         if trainable and training:
             builder = (builder

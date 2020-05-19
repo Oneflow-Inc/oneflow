@@ -80,7 +80,7 @@ class UserOpConfBuilder(object):
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
-    def SetAttr(self, attr_name, attr_value, attr_type):
+    def Attr(self, attr_name, attr_value, attr_type):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert type(attr_name) is str
         assert type(attr_type) is str
@@ -150,7 +150,7 @@ class UserOpConfBuilder(object):
                 has_seed = True
         else:
             assert False, "Unknow distirbute strategy when set random seed to user op"
-        self = self.SetAttr("has_seed", has_seed, "AttrTypeBool")\
-                .SetAttr("seed", seed, "AttrTypeInt64")
+        self = self.Attr("has_seed", has_seed, "AttrTypeBool")\
+                .Attr("seed", seed, "AttrTypeInt64")
         return self
 

@@ -128,7 +128,7 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      AttrValAccessor<cpp_type>::SetAttr(default_val, attr_def->mutable_default_val());     \
+      AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());        \
     });                                                                                     \
     return *this;                                                                           \
   }

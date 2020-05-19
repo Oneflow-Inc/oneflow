@@ -14,7 +14,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       CHECK_GE_OR_RETURN(segment_ids->shape().NumAxes(), 1);
       CHECK_GE_OR_RETURN(data->shape().NumAxes(), segment_ids->shape().NumAxes());
       CHECK_EQ_OR_RETURN(segment_ids->is_dynamic(), data->is_dynamic());
-      const int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
+      const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       CHECK_GE_OR_RETURN(num_segments, 1);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 

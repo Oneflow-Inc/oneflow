@@ -20,11 +20,11 @@ struct SliceGpuParams {
 SliceGpuParams ConstructSliceGpuParams(user_op::KernelComputeContext* ctx,
                                        const user_op::Tensor* entire,
                                        const user_op::Tensor* sliced) {
-  const auto& begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
-  const auto& end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
-  const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-  const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-  const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+  const auto& begin_vec = ctx->Attr<std::vector<int64_t>>("begin");
+  const auto& end_vec = ctx->Attr<std::vector<int64_t>>("end");
+  const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
+  const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
+  const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
   CHECK_LE(entire->shape().NumAxes(), kSliceMaxDims);
   CHECK_EQ(entire->shape().NumAxes(), sliced->shape().NumAxes());
   CHECK_EQ(entire->shape().NumAxes(), begin_vec.size());

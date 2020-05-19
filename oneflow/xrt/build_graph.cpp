@@ -110,12 +110,12 @@ void GraphBuilder::SetupGraphEdges() {
     std::vector<Shape> time_shape;
     time_shape.push_back(OutputTimeShape(src));
     time_shape.push_back(InputTimeShape(dst));
-    edge->SetAttr("time_shape", time_shape);
+    edge->Attr("time_shape", time_shape);
     // Set sbp policy
     std::vector<SbpParallel> sbp_policy;
     sbp_policy.push_back(BlobSbpPolicy(src, name));
     sbp_policy.push_back(BlobSbpPolicy(dst, name));
-    edge->SetAttr("sbp_policy", sbp_policy);
+    edge->Attr("sbp_policy", sbp_policy);
   }
 }
 
