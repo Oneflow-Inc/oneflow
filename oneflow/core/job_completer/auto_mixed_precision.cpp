@@ -31,7 +31,7 @@ std::string Container2Str(const ContainerT& container,
     if (is_first) {
       is_first = false;
     } else {
-      ret += ", ";
+      ret += ",\n";
     }
     ret += elem2str(elem);
   }
@@ -121,7 +121,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       }
     });
     auto EdgeName4Edge = [](OpEdge* const& edge) {
-      return std::string("edge_of_") + edge->src_node()->op().op_name() + "_to_"
+      return std::string("edge of\t") + edge->src_node()->op().op_name() + "\tto\t"
              + edge->dst_node()->op().op_name();
     };
     VLOG(3) << "white_set_edges for f2h value: " << f2h << " is "
@@ -157,7 +157,6 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       LOG(INFO) << "Insert CastOp: " << cast_op_name << " between " << lbn;
     }
 
-    std::string new_lbn = cast_op_name + "/out";
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
@@ -174,7 +173,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      std::string new_lbn = cast_op_name + "/out";
+      std::string new_lbn = cast_op_name + "/out_0";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
         ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
