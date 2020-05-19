@@ -46,8 +46,10 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
 
-int64_t FindRootParallelId(const ParallelDesc& multi_device, const int64_t root_machine_id,
-                           const int64_t root_device_id) {
+int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
+  CHECK_EQ(sole_device.parallel_num(), 1);
+  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
+  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
   int64_t root_parallel_id = -1;
   FOR_RANGE(int64_t, i, 0, multi_device.parallel_num()) {
     if (multi_device.MachineIdForParallelId(i) == root_machine_id
@@ -57,13 +59,6 @@ int64_t FindRootParallelId(const ParallelDesc& multi_device, const int64_t root_
     }
   }
   return root_parallel_id;
-}
-
-int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
-  CHECK_EQ(sole_device.parallel_num(), 1);
-  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
-  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
-  return FindRootParallelId(multi_device, root_machine_id, root_device_id);
 }
 
 bool IsSourceTimeShape(const Shape& shape) {
@@ -301,13 +296,13 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       int64_t root_parallel_id;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_src_node = sorted_src_comp_tasks.front();
-        auto* nearest_dst_node =
-            SubTskGphBuilderUtil::FindNearestNode(sorted_dst_comp_tasks, cpu_src_node);
+        const auto nearest_dst_node_idx =
+            SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_dst_comp_tasks, cpu_src_node);
+        auto* nearest_dst_node = sorted_dst_comp_tasks.at(nearest_dst_node_idx);
         gpu_src_node =
             ctx->GetProxyNode(cpu_src_node, cpu_src_node->MemZoneId121(),
                               nearest_dst_node->machine_id(), nearest_dst_node->MemZoneId121());
-        root_parallel_id = FindRootParallelId(dst_parallel_desc, gpu_src_node->machine_id(),
-                                              gpu_src_node->GpuPhyId());
+        root_parallel_id = nearest_dst_node_idx;
       } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_comp_tasks.front();
