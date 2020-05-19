@@ -14,7 +14,7 @@ namespace mola {
 class ReduceOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    const auto& axis = ctx->GetAttr<std::vector<int>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int>>("axis");
     Shape in_shape = ctx->InputShape("in");
     for (int i = 0; i < axis.size(); ++i) {
       if (axis[i] < 0) { axis[i] += in_shape.NumAxes(); }
@@ -34,7 +34,7 @@ class ReduceOp : public XlaOpKernel {
     xla::XlaOp output = xla::Reduce(input, InitValue(builder, data_type), Reduction(data_type),
                                     std::vector<long long>{axis.begin(), axis.end()});
 
-    bool keep_dims = ctx->GetAttr<bool>("keep_dims");
+    bool keep_dims = ctx->Attr<bool>("keep_dims");
     if (keep_dims) {
       for (int i = 0; i < axis.size(); ++i) { in_shape.Set(axis[i], 1); }
       output = Reshape(output, in_shape);

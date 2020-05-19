@@ -8,7 +8,7 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *output_tensor_desc = *input_tensor_desc;
   DataType* dtype = output_tensor_desc->mut_data_type();
-  *dtype = ctx->GetAttr<DataType>("dtype");
+  *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 

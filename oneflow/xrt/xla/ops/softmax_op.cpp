@@ -17,7 +17,7 @@ void SoftmaxOp::Compile(XlaOpContext *ctx) {
   xla::XlaBuilder *builder = ctx->builder();
   Shape input_shape = ctx->InputShape("in");
 
-  int axis = ctx->GetAttr<int32_t>("axis");
+  int axis = ctx->Attr<int32_t>("axis");
   if (axis < 0) { axis += input_shape.NumAxes(); }
   std::vector<long long> batch_dims(input_shape.NumAxes() - 1);
   // std::iota(batch_dims.begin(), batch_dims.end(), 0);
@@ -50,7 +50,7 @@ class SoftmaxGradOp : public XlaOpKernel {
 void SoftmaxGradOp::Compile(XlaOpContext *ctx) {
   Shape y_shape = ctx->InputShape("y");
 
-  int axis = ctx->GetAttr<int32_t>("axis");
+  int axis = ctx->Attr<int32_t>("axis");
   if (axis < 0) { axis += y_shape.NumAxes(); }
 
   std::vector<long long> batch_dims(y_shape.NumAxes() - 1);

@@ -10,7 +10,7 @@ REGISTER_USER_OP("bias_add")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const auto* b_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);
-      const auto bias_add_axis = ctx->GetAttr<int32_t>("axis");
+      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
       CHECK_EQ_OR_RETURN(b_tensor_desc->shape().NumAxes(), 1);
       CHECK_GE_OR_RETURN(bias_add_axis, 0);
       CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
@@ -19,7 +19,7 @@ REGISTER_USER_OP("bias_add")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto axis = ctx->GetAttr<int32_t>("axis");
+      const auto axis = ctx->Attr<int32_t>("axis");
       for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
            ++i) {
         if (i == axis) { continue; }

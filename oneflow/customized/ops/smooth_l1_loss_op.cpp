@@ -12,7 +12,7 @@ REGISTER_USER_OP("smooth_l1_loss")
                          *ctx->Shape4ArgNameAndIndex("label", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
                          *ctx->Dtype4ArgNameAndIndex("label", 0));
-      CHECK_GE_OR_RETURN(ctx->GetAttr<float>("beta"), 0);
+      CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
       *ctx->Shape4ArgNameAndIndex("loss", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
       *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
@@ -45,7 +45,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
                          *ctx->Shape4ArgNameAndIndex("label", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
                          *ctx->Dtype4ArgNameAndIndex("label", 0));
-      CHECK_GE_OR_RETURN(ctx->GetAttr<float>("beta"), 0);
+      CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
       *ctx->Shape4ArgNameAndIndex("prediction_grad", 0) =
           *ctx->Shape4ArgNameAndIndex("loss_grad", 0);
       *ctx->Dtype4ArgNameAndIndex("prediction_grad", 0) =
