@@ -177,7 +177,7 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);
-  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(MirroredObjectAccess, mirrored_object_id, mirrored_object_id2access);
+  OBJECT_MSG_DEFINE_SKIPLIST_HEAD(RwMutexedObjectAccess, mirrored_object_id, mirrored_object_id2access);
 OBJECT_MSG_END(Instruction);
 // clang-format on
 

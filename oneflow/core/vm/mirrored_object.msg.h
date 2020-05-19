@@ -17,7 +17,7 @@ class Instruction;
 class MirroredObject;
 
 // clang-format off
-OBJECT_MSG_BEGIN(MirroredObjectAccess);
+OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   // methods
   PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
                        bool is_const_operand);
@@ -28,10 +28,10 @@ OBJECT_MSG_BEGIN(MirroredObjectAccess);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
 
   // links
-  OBJECT_MSG_DEFINE_LIST_LINK(mirrored_object_access_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_link);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
-OBJECT_MSG_END(MirroredObjectAccess);
+OBJECT_MSG_END(RwMutexedObjectAccess);
 // clang-format on
 
 // clang-format off
@@ -62,7 +62,7 @@ OBJECT_MSG_BEGIN(CudaMemBuffer);
 OBJECT_MSG_END(CudaMemBuffer);
 
 class LogicalObject;
-OBJECT_MSG_BEGIN(RWMutexedObject);
+OBJECT_MSG_BEGIN(RwMutexedObject);
   // methods
 
   PUBLIC template<typename T> bool Has() const {
@@ -93,7 +93,7 @@ OBJECT_MSG_BEGIN(RWMutexedObject);
   //fields
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
 
-OBJECT_MSG_END(RWMutexedObject);
+OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);
   // methods
@@ -112,11 +112,11 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
-  OBJECT_MSG_DEFINE_OPTIONAL(RWMutexedObject, rw_mutexed_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(RwMutexedObject, rw_mutexed_object);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(MirroredObjectAccess, mirrored_object_access_link, access_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_link, access_list);
 OBJECT_MSG_END(MirroredObject);
 
 class VirtualMachine;
