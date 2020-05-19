@@ -184,8 +184,8 @@ def test_broadcast_floormod(test_case):
     arg_dict["device_type"] = ["gpu"]
     arg_dict["flow_op"] = [flow.math.mod]
     arg_dict["tf_op"] = [tf.math.floormod]
-    arg_dict["x_shape"] = [(3, 1)]
-    arg_dict["y_shape"] = [(1, 4)]
+    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
