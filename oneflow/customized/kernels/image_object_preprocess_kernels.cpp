@@ -34,8 +34,7 @@ int CvFlipCode(FlipCode flip_code) {
 void CopyTensorBuffer(DeviceCtx* ctx, const TensorBuffer& src, TensorBuffer* dst) {
   if (dst == &src) { return; }
   dst->Resize(src.shape(), src.data_type());
-  AutoMemcpy(ctx, dst->mut_data(), src.data(), dst->nbytes(), dst->mem_case(),
-             src.mem_case());
+  AutoMemcpy(ctx, dst->mut_data(), src.data(), dst->nbytes(), dst->mem_case(), src.mem_case());
 }
 
 void FlipImage(TensorBuffer* image_buffer, FlipCode flip_code) {

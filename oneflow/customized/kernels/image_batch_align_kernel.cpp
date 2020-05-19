@@ -62,7 +62,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     int batch_width = out_tensor->shape().At(2);
     int channels = out_tensor->shape().At(3);
     int num_elems = batch_height * batch_width * channels;
-    memset(out_tensor->mut_data(), 0,
+    memset(out_tensor->mut_dptr(), 0,
            out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
     MultiThreadLoop(out_tensor->shape().At(0), [&](size_t i) {
       const TensorBuffer& origin_image_buffer = in_tensor->dptr<TensorBuffer>()[i];
