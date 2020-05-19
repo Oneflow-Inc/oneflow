@@ -189,3 +189,13 @@ def nccl_fusion_threshold_mb(val):
         return
     assert type(val) is int
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_threshold_mb = val
+
+
+@oneflow_export('config.collective_boxing.nccl_fusion_all_reduce_use_buffer')
+def nccl_fusion_all_reduce_use_buffer(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce_use_buffer = val
