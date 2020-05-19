@@ -146,8 +146,8 @@ void MarkClusterIdPass::DumpClusterInfoToGraph(XrtGraph *graph) {
     for (const ClusterNode *folded_node : node->folded_nodes()) {
       int64_t unique_id = folded_node->xrt_node()->unique_id();
       XrtNode *xrt_node = graph->Node(unique_id);
-      xrt_node->SetAttr<XrtEngine>("engine", node->engine());
-      xrt_node->SetAttr<int64_t>("cluster_id", node->cluster_id());
+      xrt_node->Attr<XrtEngine>("engine", node->engine());
+      xrt_node->Attr<int64_t>("cluster_id", node->cluster_id());
     }
   }
 }

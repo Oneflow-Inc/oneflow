@@ -7,7 +7,7 @@ REGISTER_USER_OP("concat")
     .Output("out")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
       const user_op::TensorDesc* in_0_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       DimVector out_dim_vec = in_0_desc->shape().dim_vec();
 
@@ -32,7 +32,7 @@ REGISTER_USER_OP("concat")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
       const user_op::TensorDesc& in_0_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in_0_tensor.shape().NumAxes()) {
         if (i == axis) { continue; }

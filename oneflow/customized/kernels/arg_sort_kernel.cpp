@@ -16,7 +16,7 @@ class CpuArgSortKernel final : public user_op::OpKernel {
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     const bool is_ascending = direction == "ASCENDING";
     const bool is_descending = direction == "DESCENDING";
     FOR_RANGE(int32_t, i, 0, instance_num) {

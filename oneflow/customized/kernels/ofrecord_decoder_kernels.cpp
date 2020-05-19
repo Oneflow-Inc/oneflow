@@ -83,10 +83,10 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     CHECK(record_num > 0);
     OFRecord* records = in_blob->mut_dptr<OFRecord>();
     T* out_dptr = out_blob->mut_dptr<T>();
-    std::string name = ctx->GetAttr<std::string>("name");
+    std::string name = ctx->Attr<std::string>("name");
 
-    bool auto_zero_padding = ctx->GetAttr<bool>("auto_zero_padding");
-    bool dim1_varying_length = ctx->GetAttr<bool>("dim1_varying_length");
+    bool auto_zero_padding = ctx->Attr<bool>("auto_zero_padding");
+    bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
 
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
@@ -194,13 +194,12 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int32_t num_attempts = ctx->GetAttr<int32_t>("num_attempts");
+    int32_t num_attempts = ctx->Attr<int32_t>("num_attempts");
     CHECK(num_attempts >= 1);
-    std::vector<float> random_aspect_ratio =
-        ctx->GetAttr<std::vector<float>>("random_aspect_ratio");
+    std::vector<float> random_aspect_ratio = ctx->Attr<std::vector<float>>("random_aspect_ratio");
     CHECK(random_aspect_ratio.size() == 2 && 0 < random_aspect_ratio.at(0)
           && random_aspect_ratio.at(0) <= random_aspect_ratio.at(1));
-    std::vector<float> random_area = ctx->GetAttr<std::vector<float>>("random_area");
+    std::vector<float> random_area = ctx->Attr<std::vector<float>>("random_area");
     CHECK(random_area.size() == 2 && 0 < random_area.at(0)
           && random_area.at(0) <= random_area.at(1));
     const user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -231,8 +230,8 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     CHECK_EQ(out_blob->shape(), in_blob->shape());
     OFRecord* records = in_blob->mut_dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
-    std::string name = ctx->GetAttr<std::string>("name");
-    std::string color_space = ctx->GetAttr<std::string>("color_space");
+    std::string name = ctx->Attr<std::string>("name");
+    std::string color_space = ctx->Attr<std::string>("color_space");
 
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);

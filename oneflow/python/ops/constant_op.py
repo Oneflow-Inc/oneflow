@@ -35,11 +35,11 @@ def constant(value, dtype=None, shape=None, name=None):
             shape = []
         return flow.user_op_builder(name).Op("constant")\
             .Output("out")\
-            .SetAttr("floating_value", float(value), "AttrTypeDouble")\
-            .SetAttr("integer_value", int(value), "AttrTypeInt64")\
-            .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")\
-            .SetAttr("dtype", dtype, "AttrTypeDataType")\
-            .SetAttr("shape", shape, "AttrTypeShape")\
+            .Attr("floating_value", float(value), "AttrTypeDouble")\
+            .Attr("integer_value", int(value), "AttrTypeInt64")\
+            .Attr("is_floating_value", is_floating_value, "AttrTypeBool")\
+            .Attr("dtype", dtype, "AttrTypeDataType")\
+            .Attr("shape", shape, "AttrTypeShape")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()

@@ -17,7 +17,7 @@ class ReduceKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
         axis.empty() ? Shape::Ones(input_tensor->shape().NumAxes())
                      : CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
