@@ -14,10 +14,10 @@ class ScalarMulUserKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T scalar_operand = static_cast<T>(0);
-    if (ctx->GetAttr<bool>("has_int_operand")) {
-      scalar_operand = static_cast<T>(ctx->GetAttr<int64_t>("int_operand"));
-    } else if (ctx->GetAttr<bool>("has_float_operand")) {
-      scalar_operand = static_cast<T>(ctx->GetAttr<double>("float_operand"));
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
     } else {
       UNIMPLEMENTED();
     }

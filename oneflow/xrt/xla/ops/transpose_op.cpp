@@ -9,7 +9,7 @@ namespace mola {
 class TransposeOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
+    const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
     Shape x_shape = ctx->InputShape("in");
     CHECK_EQ(perm.size(), x_shape.NumAxes());
 

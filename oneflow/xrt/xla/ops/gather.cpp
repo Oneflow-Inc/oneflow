@@ -131,7 +131,7 @@ class GatherOp : public XlaOpKernel {
     ctx->SetOutput("out", output);
   }
 
-  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
+  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->Attr<int64_t>("axis"); }
   virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
 };
 
@@ -156,8 +156,8 @@ class GatherGradOp : public XlaOpKernel {
     xla::XlaBuilder *builder = ctx->builder();
     xla::XlaOp updates = ctx->Input("out_diff");
     xla::XlaOp indices = ctx->Input("indices");
-    int64_t gather_dim_size = ctx->GetAttr<int64_t>("gather_dim_size");
-    int64_t axis = ctx->GetAttr<int64_t>("axis");
+    int64_t gather_dim_size = ctx->Attr<int64_t>("gather_dim_size");
+    int64_t axis = ctx->Attr<int64_t>("axis");
 
     Shape updates_shape = ctx->InputShape("out_diff");
     Shape indices_shape = ctx->InputShape("indices");
@@ -190,7 +190,7 @@ class UnsortedSegmentSumOp : public XlaOpKernel {
     Shape data_shape = ctx->InputShape("data");
     Shape segment_ids_shape = ctx->InputShape("segment_ids");
     DataType data_type = ctx->InputType("data");
-    int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
+    int64_t num_segments = ctx->Attr<int64_t>("num_segments");
     std::vector<int64_t> buffer_dim_vec = InitBufferDimVec(ctx);
 
     buffer_dim_vec.push_back(num_segments);
@@ -211,12 +211,12 @@ class UnsortedSegmentSumOp : public XlaOpKernel {
     ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids, false, combiner, builder));
   }
 
-  virtual int Axis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
+  virtual int Axis(XlaOpContext *ctx) const { return ctx->Attr<int64_t>("axis"); }
 
   virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
     const auto data_dim_vec = ctx->InputShape("data").dim_vec();
-    for (int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
+    for (int i = 0; i < ctx->Attr<int64_t>("axis"); ++i) {
       buffer_dim_vec.push_back(data_dim_vec[i]);
     }
     return std::move(buffer_dim_vec);

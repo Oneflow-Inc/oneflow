@@ -5,12 +5,12 @@ namespace oneflow {
 Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
 #ifdef WITH_CUDA
   // assume cudnn is enabled
-  CHECK_GE_OR_RETURN(ctx->GetAttr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
+  CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
 #endif
   const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const auto data_type = x->data_type();
   *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
-  const auto axis = ctx->GetAttr<int32_t>("axis");
+  const auto axis = ctx->Attr<int32_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, x->shape().NumAxes());
   const Shape param_shape({x->shape().At(axis)});
@@ -33,7 +33,7 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   JUST(CheckParamTensorDesc("moving_variance"));
   JUST(CheckParamTensorDesc("beta"));
   JUST(CheckParamTensorDesc("gamma"));
-  if (ctx->GetAttr<bool>("training")) {
+  if (ctx->Attr<bool>("training")) {
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
   }
@@ -69,7 +69,7 @@ REGISTER_USER_OP("normalization")
     .SetTensorDescInferFn(NormalizationTensorDescInfer)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      if (ctx->GetAttr<bool>("training")) {
+      if (ctx->Attr<bool>("training")) {
         ctx->BatchAxis4ArgNameAndIndex("mean", 0)->clear_value();
         ctx->BatchAxis4ArgNameAndIndex("inv_variance", 0)->clear_value();
       }
@@ -88,7 +88,7 @@ REGISTER_USER_OP("normalization")
 Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
 #ifdef WITH_CUDA
   // assume cudnn is enabled
-  CHECK_GE_OR_RETURN(ctx->GetAttr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
+  CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
 #endif
   const auto x_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
   const auto dy_type = *ctx->Dtype4ArgNameAndIndex("dy", 0);
@@ -98,7 +98,7 @@ Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_shape, x_shape);
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
 
-  const Shape param_shape({x_shape.At(ctx->GetAttr<int32_t>("axis"))});
+  const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
   const auto CheckParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
     CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), dy_type);
     const auto* blob_shape = ctx->Shape4ArgNameAndIndex(bn, 0);

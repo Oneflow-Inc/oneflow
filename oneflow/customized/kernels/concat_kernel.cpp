@@ -13,7 +13,7 @@ class ConcatKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const int32_t axis = ctx->Attr<int32_t>("axis");
     const int64_t row_num = out->shape().elem_cnt() / out->shape().Count(axis);
     const int64_t out_col_num = out->shape().Count(axis);
     int64_t out_col_offset = 0;

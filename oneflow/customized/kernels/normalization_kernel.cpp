@@ -31,15 +31,15 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const bool training = ctx->GetAttr<bool>("training");
+    const bool training = ctx->Attr<bool>("training");
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
     auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
-    const auto axis = ctx->GetAttr<int32_t>("axis");
-    const auto epsilon = ctx->GetAttr<float>("epsilon");
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
@@ -61,7 +61,7 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
 
     if (training) {
-      const auto momentum = ctx->GetAttr<float>("momentum");
+      const auto momentum = ctx->Attr<float>("momentum");
       auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
       auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
       CheckParamTensor(mean);
@@ -111,8 +111,8 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
     auto* beta_diff = ctx->Tensor4ArgNameAndIndex("beta_diff", 0);
     const auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const auto axis = ctx->GetAttr<int32_t>("axis");
-    const auto epsilon = ctx->GetAttr<float>("epsilon");
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
 
     const int64_t param_dim_size = x->shape().At(axis);
     const DataType data_type = x->data_type();

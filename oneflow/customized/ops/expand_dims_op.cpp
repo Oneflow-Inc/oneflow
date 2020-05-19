@@ -21,7 +21,7 @@ REGISTER_USER_OP("expand_dims")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_shape->NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape->NumAxes());
 
       auto dim_vec = in_shape->dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
@@ -34,7 +34,7 @@ REGISTER_USER_OP("expand_dims")
       const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_desc.shape().NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_desc.shape().NumAxes());
 
       if (in_batch_axis->has_value()) {
         out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
@@ -47,8 +47,8 @@ REGISTER_USER_OP("expand_dims")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int32_t axis = TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"),
-                                                           in_tensor.shape().NumAxes());
+      const int32_t axis =
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
 
       auto dim_vec = in_tensor.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {

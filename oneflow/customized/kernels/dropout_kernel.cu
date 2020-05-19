@@ -68,7 +68,7 @@ class DropoutKernelGPU final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const float scale = ctx->GetAttr<float>("scale");
+    const float scale = ctx->Attr<float>("scale");
     MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                     mask->dptr<int8_t>(), out->mut_dptr<T>());
   }
@@ -104,7 +104,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const float scale = ctx->GetAttr<float>("scale");
+    const float scale = ctx->Attr<float>("scale");
     MaskAndScale<T>(ctx->device_ctx(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
                     mask->dptr<int8_t>(), dx->mut_dptr<T>());
   }
@@ -137,7 +137,7 @@ class RandomMaskLikeKernelGPU final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
         seed, ctx->device_ctx());
   }
@@ -154,7 +154,7 @@ class RandomMaskLikeKernelGPU final : public user_op::OpKernel {
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
     random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
 
-    GenMask(ctx->device_ctx(), elem_cnt, ctx->GetAttr<float>("rate"), random_tmp, mask);
+    GenMask(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), random_tmp, mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
