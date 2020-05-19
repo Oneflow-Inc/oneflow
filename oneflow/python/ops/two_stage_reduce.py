@@ -10,12 +10,12 @@ import oneflow as flow
 @oneflow_export("math.two_stage_reduce_max")
 def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMax_")
-    two_stage_reduce(x, axis, keepdims, "reduce_max",name)
+    return two_stage_reduce(x, axis, keepdims, "reduce_max",name)
 
 @oneflow_export("math.two_stage_reduce_min")
 def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMin_")
-    two_stage_reduce(x, axis, keepdims, "reduce_min", name)
+    return two_stage_reduce(x, axis, keepdims, "reduce_min", name)
 
 def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None):
 
