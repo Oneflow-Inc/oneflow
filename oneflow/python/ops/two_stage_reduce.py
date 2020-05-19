@@ -41,14 +41,14 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
 
 
 def reduce_device_stage(x, axis, op_name, name):
-    out, mask, max_count = (flow.user_op_builder(name).Op(op_name)
+    out, mask, count = (flow.user_op_builder(name).Op(op_name)
         .Input("in", [x])
         .Output("out")
         .Output("mask")
-        .Output("max_count")
+        .Output("count")
         .Attr("axis", axis, "AttrTypeListInt32")
         .Build().InferAndTryRun().RemoteBlobList())
-    return out, max_count
+    return out, count
 
 def reduce_global_stage(x, device_max_count, axis, keepdims, op_name, name):
     out, mask = (flow.user_op_builder(name).Op(op_name)

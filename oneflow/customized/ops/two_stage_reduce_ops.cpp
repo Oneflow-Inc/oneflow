@@ -22,17 +22,17 @@ Maybe<void> InferReduceDeviceStageTensorDescFn(user_op::InferContext* ctx) {
   *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
   *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
 
-  *ctx->Shape4ArgNameAndIndex("max_count", 0) = *output_shape;
-  *ctx->Dtype4ArgNameAndIndex("max_count", 0) = DataType::kInt32;
+  *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
+  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("out_diff", 0),
-                     *ctx->Shape4ArgNameAndIndex("max_count", 0));
+                     *ctx->Shape4ArgNameAndIndex("count", 0));
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("max_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *ctx->Shape4ArgNameAndIndex("mask", 0);
   *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
 
@@ -90,16 +90,16 @@ Maybe<void> InferReduceDeviceStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
   const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
   auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
   auto* mask_batch_axis = ctx->BatchAxis4ArgNameAndIndex("mask", 0);
-  auto* max_count_batch_axis = ctx->BatchAxis4ArgNameAndIndex("max_count", 0);
+  auto* count_batch_axis = ctx->BatchAxis4ArgNameAndIndex("count", 0);
   if (in_batch_axis->has_value() && !conf_axes.empty()
       && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
     *out_batch_axis = *in_batch_axis;
     *mask_batch_axis = *in_batch_axis;
-    *max_count_batch_axis = *in_batch_axis;
+    *count_batch_axis = *in_batch_axis;
   } else {
     out_batch_axis->clear_value();
     mask_batch_axis->clear_value();
-    max_count_batch_axis->clear_value();
+    count_batch_axis->clear_value();
   }
   return Maybe<void>::Ok();
 }
@@ -151,7 +151,7 @@ Maybe<void> GetReduceDeviceStageSbpFn(user_op::SbpContext* ctx) {
           .Split(user_op::OpArg("in", 0), i)
           .Split(user_op::OpArg("out", 0), i)
           .Split(user_op::OpArg("mask", 0), i)
-          .Split(user_op::OpArg("max_count", 0), i)
+          .Split(user_op::OpArg("count", 0), i)
           .Build();
     }
   }
@@ -172,7 +172,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
     if (IsReducedAxis(i)) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("out_diff", 0), i)
-          .Split(user_op::OpArg("max_count", 0), i)
+          .Split(user_op::OpArg("count", 0), i)
           .Split(user_op::OpArg("mask", 0), i)
           .Split(user_op::OpArg("in_diff", 0), i)
           .Build();
@@ -188,7 +188,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Input("in")                                              \
       .Output("out")                                            \
       .Output("mask")                                           \
-      .Output("max_count")                                      \
+      .Output("count")                                          \
       .Attr("axis", UserOpAttrType::kAtListInt32)               \
       .SetTensorDescInferFn(InferReduceDeviceStageTensorDescFn) \
       .SetBatchAxisInferFn(InferReduceDeviceStageBatchAxisFn)   \
@@ -201,7 +201,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
   REGISTER_USER_OP(op_name)                                         \
       .Input("out_diff")                                            \
       .Input("mask")                                                \
-      .Input("max_count")                                           \
+      .Input("count")                                               \
       .Output("in_diff")                                            \
       .Attr("axis", UserOpAttrType::kAtListInt32)                   \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
@@ -218,7 +218,7 @@ void GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
     user_op::UserOpConfWrapper grad_op =
         builder.Op(op_type_name)
             .Input("mask", op.output("mask", 0))
-            .Input("max_count", op.output("max_count", 0))
+            .Input("count", op.output("count", 0))
             .Input("out_diff", op.GetGradTensorWithOpOutput("out", 0))
             .Output("in_diff")
             .Attr("axis", op.attr<std::vector<int32_t>>("axis"))

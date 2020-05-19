@@ -36,7 +36,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
-    user_op::Tensor* max_count = ctx->Tensor4ArgNameAndIndex("max_count", 0);
+    user_op::Tensor* count = ctx->Tensor4ArgNameAndIndex("count", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* reduce_tmp_buf = tmp_buffer->mut_dptr<T>();
     int32_t* mask_tmp_buf = tmp_buffer->mut_dptr<int32_t>();
@@ -57,8 +57,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
     CopyTensor<device_type, int8_t, int32_t>::Call(ctx->device_ctx(), mask->shape().elem_cnt(),
                                                    mask->dptr<int8_t>(), mask_tmp_buf);
     NdarrayUtil<device_type, int32_t>::ReduceSum(
-        ctx->device_ctx(),
-        XpuVarNdarray<int32_t>(max_count->shape(), max_count->mut_dptr<int32_t>()),
+        ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
         XpuVarNdarray<int32_t>(mask->shape(), reduce_sum_tmp_buf));
   }
@@ -108,7 +107,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
-    const user_op::Tensor* max_count = ctx->Tensor4ArgNameAndIndex("max_count", 0);
+    const user_op::Tensor* count = ctx->Tensor4ArgNameAndIndex("count", 0);
     user_op::Tensor* in_diff = ctx->Tensor4ArgNameAndIndex("in_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* tmp_buf_ptr = tmp_buffer->mut_dptr<T>();
@@ -117,7 +116,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
         ctx->device_ctx(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(),
-        max_count->dptr<int32_t>(), tmp_buf_ptr);
+        count->dptr<int32_t>(), tmp_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx->device_ctx(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
