@@ -25,6 +25,8 @@ flags.DEFINE_integer("vocab_size", 30522, "")
 flags.DEFINE_float("attention_probs_dropout_prob", 0.0, "")
 flags.DEFINE_float("hidden_dropout_prob", 0.0, "")
 flags.DEFINE_integer("hidden_size_per_head", 64, "")
+flags.DEFINE_boolean("enable_auto_mixed_precision", False,
+        "automatically change float net to mixed precision net")
 FLAGS(sys.argv)
 
 
@@ -130,6 +132,7 @@ func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
