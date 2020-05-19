@@ -87,6 +87,8 @@ class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
   void RoundUpDeallocate(std::mutex* mutex, char* ptr, std::size_t size);
 
  private:
+  int RoundUpShift(std::size_t size) const;
+
   static const std::size_t kMemSizeShiftMin = 6;
   void Prefetch();
 
