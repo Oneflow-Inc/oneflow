@@ -33,7 +33,7 @@ System
 ----------------------------------
 
 .. autofunction:: watch
-.. autoclass:: input_blob_def
+.. autoclass:: FixedTensorDef
 .. decorator:: function
 .. autofunction:: function
 .. autofunction:: inter_job_reuse_mem_strategy
