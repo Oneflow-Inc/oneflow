@@ -42,12 +42,12 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
       CHECK(op_conf_object->has_user_conf());
       CHECK(op_conf_object->user_conf().input().empty());
       CHECK(op_conf_object->user_conf().output().empty());
-      vm::MirroredObject* mirrored_object = instruction->mut_operand_type(view->op(i));
+      vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
       const auto& parallel_desc = instruction->parallel_desc();
       CHECK(static_cast<bool>(parallel_desc));
       DeviceType device_type = parallel_desc->device_type();
-      mirrored_object->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
-                                            device_type);
+      rw_mutexed_object->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
+                                              device_type);
     }
   }
   void Compute(vm::Instruction* instruction) const override {
@@ -69,9 +69,9 @@ class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
     FlatMsgView<DeleteOpKernelObjectInstrOperand> view;
     CHECK(view.Match(instruction->instr_msg().operand()));
     for (int i = 0; i < view->op_size(); ++i) {
-      auto* type_mirrored_object = instruction->mut_operand_type(view->op(i));
-      CHECK(type_mirrored_object->Has<OpKernelObject>());
-      type_mirrored_object->reset_object();
+      auto* type_rw_mutexed_object = instruction->mut_operand_type(view->op(i));
+      CHECK(type_rw_mutexed_object->Has<OpKernelObject>());
+      type_rw_mutexed_object->reset_object();
     }
   }
   void Compute(vm::Instruction* instruction) const override {
@@ -232,18 +232,18 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
 template<typename T>
 void InitOutputBlobObjects(vm::Instruction* instruction, const T& args, int64_t device_id,
                            DataType data_type) {
-  const auto& InitMirroredObject = [&](vm::MirroredObject* mirrored_object) {
+  const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
     const auto& parallel_desc = instruction->parallel_desc();
     CHECK(static_cast<bool>(parallel_desc));
     DeviceType device_type = parallel_desc->device_type();
     const auto& mem_case = MakeMemCase(device_type, device_id);
-    mirrored_object->Init<BlobObject>(mem_case, data_type);
+    rw_mutexed_object->Init<BlobObject>(mem_case, data_type);
   };
   FOR_RANGE(int, i, 0, args.output_blob_size()) {
-    InitMirroredObject(instruction->mut_operand_type(args.output_blob(i)));
+    InitRwMutexedObject(instruction->mut_operand_type(args.output_blob(i)));
   }
   FOR_RANGE(int, i, 0, args.mut2_output_blob_size()) {
-    InitMirroredObject(instruction->mut_operand_type(args.mut2_output_blob(i)));
+    InitRwMutexedObject(instruction->mut_operand_type(args.mut2_output_blob(i)));
   }
 }
 
@@ -335,13 +335,13 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
       instruction->mut_operand_type(args->op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
   CHECK(op_conf.has_user_conf());
   DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
-  vm::MirroredObject* mirrored_object = instruction->mut_operand_type(args->shared_opkernel());
-  if (mirrored_object->has_object()) { CHECK(mirrored_object->Has<OpKernelObject>()); }
+  vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args->shared_opkernel());
+  if (rw_mutexed_object->has_object()) { CHECK(rw_mutexed_object->Has<OpKernelObject>()); }
   const auto& parallel_desc = instruction->parallel_desc();
   CHECK(static_cast<bool>(parallel_desc));
   CHECK_EQ(device_type, parallel_desc->device_type());
-  mirrored_object->reset_object();
-  auto* opkernel_obj = mirrored_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
+  rw_mutexed_object->reset_object();
+  auto* opkernel_obj = rw_mutexed_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
   OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
 }
 

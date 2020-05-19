@@ -17,8 +17,6 @@
 namespace oneflow {
 namespace vm {
 
-class MirroredObject;
-
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionOperandList);
   OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
@@ -105,48 +103,48 @@ OBJECT_MSG_BEGIN(Instruction);
   PUBLIC const StreamType& stream_type() const;
 
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      const MirroredObject& operand_type(const Operand& operand) const {
+      const RwMutexedObject& operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      const MirroredObject& operand_value(const Operand& operand) const {
+      const RwMutexedObject& operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      MirroredObject* mut_operand_type(const Operand& operand) {
+      RwMutexedObject* mut_operand_type(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      MirroredObject* mut_operand_value(const Operand& operand) {
+      RwMutexedObject* mut_operand_value(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
 
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  const MirroredObject& operand_type(
+  const RwMutexedObject& operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_type<mem_zone_modifier>(operand.operand());
   }
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  const MirroredObject& operand_value(
+  const RwMutexedObject& operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_value<mem_zone_modifier>(operand.operand());
   }
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  MirroredObject* mut_operand_type(
+  RwMutexedObject* mut_operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_type<mem_zone_modifier>(operand.operand());
   }
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  MirroredObject* mut_operand_value(
+  RwMutexedObject* mut_operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
 
-  PUBLIC MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
+  PUBLIC RwMutexedObject* FindMirroredObjectByOperand(const Operand& operand,
                                                      int64_t default_global_device_id) {
     return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_global_device_id);
   }
@@ -154,15 +152,15 @@ OBJECT_MSG_BEGIN(Instruction);
   // links
   // private methods
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
+          RwMutexedObject* FindMirroredObjectByOperand(const Operand& operand,
                                                       int64_t default_global_device_id);
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          const MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
+          const RwMutexedObject* FindMirroredObjectByOperand(const Operand& operand,
                                                             int64_t default_global_device_id) const;
-  PRIVATE const MirroredObject& operand_type(const Operand& operand, int64_t default_global_device_id) const;
-  PRIVATE const MirroredObject& operand_value(const Operand& operand, int64_t default_global_device_id) const;
-  PRIVATE MirroredObject* mut_operand_type(const Operand& operand, int64_t default_global_device_id);
-  PRIVATE MirroredObject* mut_operand_value(const Operand& operand, int64_t default_global_device_id);
+  PRIVATE const RwMutexedObject& operand_type(const Operand& operand, int64_t default_global_device_id) const;
+  PRIVATE const RwMutexedObject& operand_value(const Operand& operand, int64_t default_global_device_id) const;
+  PRIVATE RwMutexedObject* mut_operand_type(const Operand& operand, int64_t default_global_device_id);
+  PRIVATE RwMutexedObject* mut_operand_value(const Operand& operand, int64_t default_global_device_id);
   PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
 
   // fields
