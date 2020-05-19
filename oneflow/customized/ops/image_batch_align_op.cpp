@@ -49,13 +49,13 @@ REGISTER_USER_OP("image_batch_align")
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
       CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1);
-      const Shape& shape_attr = ctx->GetAttr<Shape>("shape");
+      const Shape& shape_attr = ctx->Attr<Shape>("shape");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       DimVector dim_vec(shape_attr.NumAxes() + 1);
       dim_vec.at(0) = in_desc->shape().elem_cnt();
       FOR_RANGE(int64_t, i, 0, shape_attr.NumAxes()) { dim_vec.at(i + 1) = shape_attr.At(i); }
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->GetAttr<DataType>("data_type");
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("data_type");
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

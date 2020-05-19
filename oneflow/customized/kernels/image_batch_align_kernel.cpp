@@ -86,7 +86,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
       max_width = std::max(max_width, image_buffer.shape().At(1));
       CHECK_EQ(image_buffer.shape().At(2), channels);
     }
-    int32_t alignment = ctx->GetAttr<int32_t>("alignment");
+    int32_t alignment = ctx->Attr<int32_t>("alignment");
     max_height = RoundUp(max_height, alignment);
     max_width = RoundUp(max_width, alignment);
     auto* mut_shape_view = out_tensor->mut_shape();

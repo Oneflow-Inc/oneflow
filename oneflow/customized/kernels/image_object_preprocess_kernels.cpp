@@ -370,8 +370,8 @@ class ImageNormalize final : public user_op::OpKernel {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     int num_images = in_tensor->shape().elem_cnt();
     CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
-    const auto& std_vec = ctx->GetAttr<std::vector<float>>("std");
-    const auto& mean_vec = ctx->GetAttr<std::vector<float>>("mean");
+    const auto& std_vec = ctx->Attr<std::vector<float>>("std");
+    const auto& mean_vec = ctx->Attr<std::vector<float>>("mean");
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];

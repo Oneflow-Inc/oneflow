@@ -83,8 +83,8 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     TensorBuffer* out_img_buf = out_tensor->mut_dptr<TensorBuffer>();
     int32_t* size_ptr = size_tensor ? size_tensor->mut_dptr<int32_t>() : nullptr;
     float* scale_ptr = scale_tensor ? scale_tensor->mut_dptr<float>() : nullptr;
-    const int32_t target_size = ctx->GetAttr<int32_t>("target_size");
-    const int32_t max_size = ctx->GetAttr<int32_t>("max_size");
+    const int32_t target_size = ctx->Attr<int32_t>("target_size");
+    const int32_t max_size = ctx->Attr<int32_t>("max_size");
 
     MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size);
