@@ -3,7 +3,7 @@
 namespace oneflow {
 
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
-  static AMPList white_list = {"matmul", "conv2d"};
+  static AMPList white_list = {"matmul", "batch_matmul", "conv2d"};
   return white_list;
 }
 
