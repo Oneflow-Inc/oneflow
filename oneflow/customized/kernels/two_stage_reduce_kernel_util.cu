@@ -5,41 +5,37 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename K>
-__global__ void DivideMaxCountGpu(const int64_t n, const T* x, const K* max_count, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] / max_count[i]; }
+__global__ void DivideGpu(const int64_t n, const T* x, const K* count, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] / count[i]; }
 }
 
 template<typename T, typename K>
-__global__ void ElemWiseSetWithMaskGpu(const int64_t n, const T* x, const K* mask, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<bool>(mask[i]) ? x[i] : 0; }
+__global__ void MaskGpu(const int64_t n, const T* x, const K* mask, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(mask[i]) * x[i]; }
 }
 
 template<typename T, typename K>
-__global__ void MulCountGpu(const int64_t n, const T* x, const K* count, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * count[i]; }
+__global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * scale[i]; }
 }
 
 }  // namespace
 
 template<typename T, typename K>
 struct TwoStageReduceKernelUtil<DeviceType::kGPU, T, K> {
-  static void DivideMaxCount(DeviceCtx* ctx, const int64_t n, const T* x, const K* max_count,
-                             T* y) {
-    DivideMaxCountGpu<T, K>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x,
-                                                                                      max_count, y);
-  }
-
-  static void ElemWiseSetWithMask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask,
-                                  T* y) {
-    ElemWiseSetWithMaskGpu<T, K>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, mask,
-                                                                                      y);
-  }
-
-  static void MulCount(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
-    MulCountGpu<T, K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
+    DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, x, count, y);
+  }
+
+  static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y) {
+    MaskGpu<T, K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, x, mask, y);
+  }
+
+  static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y) {
+    ScaleGpu<T, K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, x, scale, y);
   }
 };
 

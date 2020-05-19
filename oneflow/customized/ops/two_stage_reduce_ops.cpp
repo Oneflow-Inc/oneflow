@@ -8,7 +8,7 @@ namespace {
 
 Maybe<void> InferReduceDeviceStageTensorDescFn(user_op::InferContext* ctx) {
   Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-  const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
   if (axis.empty()) {
     *output_shape = Shape::Ones(input_shape->NumAxes());
@@ -44,8 +44,8 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
   const Shape* device_max_count_shape = ctx->Shape4ArgNameAndIndex("device_max_count", 0);
   CHECK_EQ_OR_RETURN(*input_shape, *device_max_count_shape);
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_max_count", 0), DataType::kInt32);
-  const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
-  bool keepdims = ctx->GetAttr<bool>("keepdims");
+  const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+  bool keepdims = ctx->Attr<bool>("keepdims");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
   if (axis.empty()) {
     if (keepdims) {
@@ -85,7 +85,7 @@ Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceDeviceStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
   auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
@@ -105,7 +105,7 @@ Maybe<void> InferReduceDeviceStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
 }
 
 Maybe<void> InferReduceDeviceStageGradBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   const auto* out_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out_diff", 0);
   auto* in_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in_diff", 0);
@@ -119,7 +119,7 @@ Maybe<void> InferReduceDeviceStageGradBatchAxisFn(user_op::BatchAxisContext* ctx
 }
 
 Maybe<void> InferReduceGlobalStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
   auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
@@ -141,7 +141,7 @@ Maybe<void> GetReduceDeviceStageSbpFn(user_op::SbpContext* ctx) {
   {
     const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
     num_axes = in_tensor.shape().NumAxes();
-    const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
     conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
@@ -164,7 +164,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
   {
     const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
     num_axes = in_tensor.shape().NumAxes();
-    const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
     conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);

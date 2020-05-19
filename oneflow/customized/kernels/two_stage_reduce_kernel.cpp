@@ -115,7 +115,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
     const size_t tmp_bytes = GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(T));
     T* broadcasted_tmp_buf_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + tmp_bytes);
 
-    TwoStageReduceKernelUtil<device_type, T, int32_t>::DivideMaxCount(
+    TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
         ctx->device_ctx(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(),
         max_count->dptr<int32_t>(), tmp_buf_ptr);
 
@@ -123,7 +123,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
         ctx->device_ctx(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
         XpuVarNdarray<const T>(out_diff->shape(), tmp_buf_ptr));
 
-    TwoStageReduceKernelUtil<device_type, T, int8_t>::ElemWiseSetWithMask(
+    TwoStageReduceKernelUtil<device_type, T, int8_t>::Mask(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr,
         mask->dptr<int8_t>(), in_diff->mut_dptr<T>());
   }
@@ -176,7 +176,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape = axis.empty()
                                      ? Shape::Ones(in->shape().NumAxes())
                                      : CreateReducedShape(in->shape(), {axis.begin(), axis.end()});
@@ -250,11 +250,11 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + max_count_with_mask_bytes
                              + global_max_count_bytes + reduce_sum_tmp_bytes + divided_buf_bytes);
 
-    TwoStageReduceKernelUtil<device_type, int32_t, int8_t>::ElemWiseSetWithMask(
+    TwoStageReduceKernelUtil<device_type, int32_t, int8_t>::Mask(
         ctx->device_ctx(), device_max_count->shape().elem_cnt(), device_max_count->dptr<int32_t>(),
         mask->dptr<int8_t>(), max_count_with_mask);
 
-    const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
         axis.empty() ? Shape::Ones(device_max_count->shape().NumAxes())
                      : CreateReducedShape(device_max_count->shape(), {axis.begin(), axis.end()});
@@ -264,7 +264,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         XpuVarNdarray<const int32_t>(device_max_count->shape(), max_count_with_mask),
         XpuVarNdarray<int32_t>(device_max_count->shape(), reduce_sum_tmp_buf));
 
-    TwoStageReduceKernelUtil<device_type, T, int32_t>::DivideMaxCount(
+    TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
         ctx->device_ctx(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(), global_max_count,
         divided_buf_ptr);
 
@@ -272,7 +272,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         ctx->device_ctx(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_divided_buf_ptr),
         XpuVarNdarray<const T>(out_diff->shape(), divided_buf_ptr));
 
-    TwoStageReduceKernelUtil<device_type, T, int32_t>::MulCount(
+    TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_divided_buf_ptr,
         max_count_with_mask, in_diff->mut_dptr<T>());
   }

@@ -4,18 +4,16 @@ namespace oneflow {
 
 template<typename T, typename K>
 struct TwoStageReduceKernelUtil<DeviceType::kCPU, T, K> {
-  static void DivideMaxCount(DeviceCtx* ctx, const int64_t n, const T* x, const K* max_count,
-                             T* y) {
-    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] / max_count[i]; }
+  static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
+    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] / count[i]; }
   }
 
-  static void ElemWiseSetWithMask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask,
-                                  T* y) {
-    FOR_RANGE(int64_t, i, 0, n) { y[i] = static_cast<bool>(mask[i]) ? x[i] : 0; }
+  static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y) {
+    FOR_RANGE(int64_t, i, 0, n) { y[i] = static_cast<T>(mask[i]) * x[i]; }
   }
 
-  static void MulCount(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
-    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] * count[i]; }
+  static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y) {
+    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] * scale[i]; }
   }
 };
 
