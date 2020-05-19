@@ -50,10 +50,10 @@ def reduce_device_stage(x, axis, op_name, name):
         .Build().InferAndTryRun().RemoteBlobList())
     return out, count
 
-def reduce_global_stage(x, device_max_count, axis, keepdims, op_name, name):
+def reduce_global_stage(x, device_count, axis, keepdims, op_name, name):
     out, mask = (flow.user_op_builder(name).Op(op_name)
         .Input("in", [x])
-        .Input("device_max_count", [device_max_count])
+        .Input("device_count", [device_count])
         .Output("out")
         .Output("mask")
         .Attr("axis", axis, "AttrTypeListInt32")

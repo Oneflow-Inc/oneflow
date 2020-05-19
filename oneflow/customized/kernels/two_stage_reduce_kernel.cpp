@@ -227,44 +227,44 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
-    const user_op::Tensor* device_max_count = ctx->Tensor4ArgNameAndIndex("device_max_count", 0);
+    const user_op::Tensor* device_count = ctx->Tensor4ArgNameAndIndex("device_count", 0);
     user_op::Tensor* in_diff = ctx->Tensor4ArgNameAndIndex("in_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    int32_t* max_count_with_mask = tmp_buffer->mut_dptr<int32_t>();
-    const size_t max_count_with_mask_bytes =
-        GetCudaAlignedSize(device_max_count->shape().elem_cnt() * sizeof(int32_t));
-    int32_t* global_max_count =
-        reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + max_count_with_mask_bytes);
-    const size_t global_max_count_bytes =
+    int32_t* device_count_with_mask = tmp_buffer->mut_dptr<int32_t>();
+    const size_t device_count_with_mask_bytes =
+        GetCudaAlignedSize(device_count->shape().elem_cnt() * sizeof(int32_t));
+    int32_t* global_count =
+        reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes);
+    const size_t global_count_bytes =
         GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(int32_t));
     int32_t* reduce_sum_tmp_buf = reinterpret_cast<int32_t*>(
-        tmp_buffer->mut_dptr<char>() + max_count_with_mask_bytes + global_max_count_bytes);
+        tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes + global_count_bytes);
     const size_t reduce_sum_tmp_bytes =
-        GetCudaAlignedSize(device_max_count->shape().elem_cnt() * sizeof(int32_t));
+        GetCudaAlignedSize(device_count->shape().elem_cnt() * sizeof(int32_t));
     T* divided_buf_ptr =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + max_count_with_mask_bytes
-                             + global_max_count_bytes + reduce_sum_tmp_bytes);
+        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes
+                             + global_count_bytes + reduce_sum_tmp_bytes);
     const size_t divided_buf_bytes = GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(T));
     T* broadcasted_divided_buf_ptr =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + max_count_with_mask_bytes
-                             + global_max_count_bytes + reduce_sum_tmp_bytes + divided_buf_bytes);
+        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes
+                             + global_count_bytes + reduce_sum_tmp_bytes + divided_buf_bytes);
 
     TwoStageReduceKernelUtil<device_type, int32_t, int8_t>::Mask(
-        ctx->device_ctx(), device_max_count->shape().elem_cnt(), device_max_count->dptr<int32_t>(),
-        mask->dptr<int8_t>(), max_count_with_mask);
+        ctx->device_ctx(), device_count->shape().elem_cnt(), device_count->dptr<int32_t>(),
+        mask->dptr<int8_t>(), device_count_with_mask);
 
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
-        axis.empty() ? Shape::Ones(device_max_count->shape().NumAxes())
-                     : CreateReducedShape(device_max_count->shape(), {axis.begin(), axis.end()});
+        axis.empty() ? Shape::Ones(device_count->shape().NumAxes())
+                     : CreateReducedShape(device_count->shape(), {axis.begin(), axis.end()});
 
     NdarrayUtil<device_type, int32_t>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<int32_t>(reduced_shape, global_max_count),
-        XpuVarNdarray<const int32_t>(device_max_count->shape(), max_count_with_mask),
-        XpuVarNdarray<int32_t>(device_max_count->shape(), reduce_sum_tmp_buf));
+        ctx->device_ctx(), XpuVarNdarray<int32_t>(reduced_shape, global_count),
+        XpuVarNdarray<const int32_t>(device_count->shape(), device_count_with_mask),
+        XpuVarNdarray<int32_t>(device_count->shape(), reduce_sum_tmp_buf));
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
-        ctx->device_ctx(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(), global_max_count,
+        ctx->device_ctx(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(), global_count,
         divided_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
@@ -273,7 +273,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_divided_buf_ptr,
-        max_count_with_mask, in_diff->mut_dptr<T>());
+        device_count_with_mask, in_diff->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -291,19 +291,19 @@ bool ReduceGlobalStageGradIsMatchedPred(const KernelRegContext& ctx) {
 template<typename T>
 user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const Shape* device_max_count_shape = ctx->Shape4ArgNameAndIndex("device_max_count", 0);
+    const Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
     const Shape* out_diff_shape = ctx->Shape4ArgNameAndIndex("out_diff", 0);
     const Shape* in_diff_shape = ctx->Shape4ArgNameAndIndex("in_diff", 0);
-    const size_t max_count_with_mask_bytes =
-        GetCudaAlignedSize(device_max_count_shape->elem_cnt() * sizeof(int32_t));
-    const size_t global_max_count_bytes =
+    const size_t device_count_with_mask_bytes =
+        GetCudaAlignedSize(device_count_shape->elem_cnt() * sizeof(int32_t));
+    const size_t global_count_bytes =
         GetCudaAlignedSize(out_diff_shape->elem_cnt() * sizeof(int32_t));
     const size_t reduce_sum_tmp_bytes =
-        GetCudaAlignedSize(device_max_count_shape->elem_cnt() * sizeof(int32_t));
+        GetCudaAlignedSize(device_count_shape->elem_cnt() * sizeof(int32_t));
     const size_t divided_buf_bytes = GetCudaAlignedSize(out_diff_shape->elem_cnt() * sizeof(T));
     const size_t broadcasted_divided_buf_bytes =
         GetCudaAlignedSize(in_diff_shape->elem_cnt() * sizeof(T));
-    const size_t total_bytes = max_count_with_mask_bytes + global_max_count_bytes
+    const size_t total_bytes = device_count_with_mask_bytes + global_count_bytes
                                + reduce_sum_tmp_bytes + divided_buf_bytes
                                + broadcasted_divided_buf_bytes;
     return total_bytes;

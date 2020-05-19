@@ -41,9 +41,9 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
   const Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-  const Shape* device_max_count_shape = ctx->Shape4ArgNameAndIndex("device_max_count", 0);
-  CHECK_EQ_OR_RETURN(*input_shape, *device_max_count_shape);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_max_count", 0), DataType::kInt32);
+  const Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
+  CHECK_EQ_OR_RETURN(*input_shape, *device_count_shape);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->Attr<bool>("keepdims");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -72,11 +72,11 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
   Shape* mask_shape = ctx->Shape4ArgNameAndIndex("mask", 0);
-  Shape* device_max_count_shape = ctx->Shape4ArgNameAndIndex("device_max_count", 0);
-  CHECK_EQ_OR_RETURN(*device_max_count_shape, *mask_shape);
+  Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
+  CHECK_EQ_OR_RETURN(*device_count_shape, *mask_shape);
 
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_max_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
 
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *mask_shape;
   *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
@@ -239,7 +239,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
 #define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP(op_name)                             \
   REGISTER_USER_OP(op_name)                                                       \
       .Input("in")                                                                \
-      .Input("device_max_count")                                                  \
+      .Input("device_count")                                                      \
       .Output("out")                                                              \
       .Output("mask")                                                             \
       .Attr("axis", UserOpAttrType::kAtListInt32)                                 \
@@ -248,9 +248,9 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                     \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
                               const user_op::UserOpConfWrapper&) {                \
-        user_op::InputArgModifier* device_max_count_modifier =                    \
-            GetInputArgModifierFn("device_max_count", 0);                         \
-        device_max_count_modifier->set_requires_grad(false);                      \
+        user_op::InputArgModifier* device_count_modifier =                        \
+            GetInputArgModifierFn("device_count", 0);                             \
+        device_count_modifier->set_requires_grad(false);                          \
       })                                                                          \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
@@ -261,7 +261,7 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
   REGISTER_USER_OP(op_name)                                         \
       .Input("out_diff")                                            \
       .Input("mask")                                                \
-      .Input("device_max_count")                                    \
+      .Input("device_count")                                        \
       .Output("in_diff")                                            \
       .Attr("axis", UserOpAttrType::kAtListInt32)                   \
       .Attr("keepdims", UserOpAttrType::kAtBool)                    \
@@ -279,7 +279,7 @@ void GenBackwardOpConf4ReduceGlobalStage(const std::string& op_type_name,
     user_op::UserOpConfWrapper grad_op =
         builder.Op(op_type_name)
             .Input("mask", op.output("mask", 0))
-            .Input("device_max_count", op.input("device_max_count", 0))
+            .Input("device_count", op.input("device_count", 0))
             .Input("out_diff", op.GetGradTensorWithOpOutput("out", 0))
             .Output("in_diff")
             .Attr("axis", op.attr<std::vector<int32_t>>("axis"))
