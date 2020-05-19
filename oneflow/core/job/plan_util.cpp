@@ -55,12 +55,12 @@ RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   return ret;
 }
 
-std::function<const TaskProto&(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(const Plan& plan) {
+std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(const Plan& plan) {
   auto task_id2task_proto = std::make_shared<HashMap<int64_t, const TaskProto*>>();
   for (const TaskProto& task_proto : plan.task()) {
     task_id2task_proto->emplace(task_proto.task_id(), &task_proto);
   }
-  return [task_id2task_proto](int64_t task_id) { return *task_id2task_proto->at(task_id); };
+  return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
 }
 
 void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {

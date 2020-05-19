@@ -9,11 +9,7 @@ void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::SetDim1ValidNum(const Featu
                                                                      Blob* out_blob,
                                                                      int64_t dim0_idx) const {
   static_assert(sizeof(T) == 1, "only char and int8_t supported");
-  CHECK_GE(out_blob->static_shape().NumAxes(), 2);
-  CHECK(feature.has_bytes_list());
-  int64_t dim1_valid_num = feature.bytes_list().value_size();
-  CHECK_LE(dim1_valid_num, out_blob->static_shape().At(1));
-  out_blob->set_dim1_valid_num(dim0_idx, dim1_valid_num);
+  UNIMPLEMENTED();
 }
 
 template<typename T>
@@ -21,11 +17,7 @@ void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::SetDim2ValidNum(const Featu
                                                                      Blob* out_blob,
                                                                      int64_t dim0_idx) const {
   static_assert(sizeof(T) == 1, "only char and int8_t supported");
-  CHECK_GE(out_blob->static_shape().NumAxes(), 3);
-  CHECK(feature.has_bytes_list());
-  FOR_RANGE(int32_t, dim1_idx, 0, feature.bytes_list().value_size()) {
-    out_blob->set_dim2_valid_num(dim0_idx, dim1_idx, feature.bytes_list().value(dim1_idx).size());
-  }
+  UNIMPLEMENTED();
 }
 
 template<typename T>

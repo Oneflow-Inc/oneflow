@@ -49,7 +49,7 @@ Maybe<void> GatherMs0GradOp::InferBlobDescs(
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
-  std::vector<int64_t> in_diff_dim_vec;
+  DimVector in_diff_dim_vec;
   BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
   in_diff_dim_vec.push_back(bs.At(parallel_ctx->parallel_id()).size());
   in_diff_dim_vec.insert(in_diff_dim_vec.end(),
@@ -95,6 +95,8 @@ void GatherMs0GradOp::VirtualGenKernelConf(
   BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
   int64_t offset = bs.At(parallel_ctx->parallel_id()).begin();
   kernel_conf->mutable_gather_ms0_grad_conf()->set_offset(offset);
+  kernel_conf->mutable_gather_ms0_grad_conf()->set_indices_data_type(
+      GetBlobDesc4BnInOp("indices")->data_type());
 }
 
 REGISTER_OP(OperatorConf::kGatherMs0GradConf, GatherMs0GradOp);

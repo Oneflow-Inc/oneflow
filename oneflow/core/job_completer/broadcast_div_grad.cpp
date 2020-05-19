@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -17,8 +18,9 @@ void GenerateBackwardOpConf(
     broadcast_div_a_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("b")));
     broadcast_div_a_op_conf->set_out("out");
     op_confs->push_back(broadcast_div_a);
-    const Shape& left_extended_shape = LogicalBlobDesc4BnInOp("a").shape().CreateLeftExtendedShape(
-        LogicalBlobDesc4BnInOp("out").shape().NumAxes());
+    const Shape& left_extended_shape =
+        CreateLeftExtendedShape(ShapeView(LogicalBlobDesc4BnInOp("a").shape()),
+                                LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       DiffLbi4BnInOp("a")->set_op_name(broadcast_div_a.name());
       DiffLbi4BnInOp("a")->set_blob_name("out");
@@ -40,7 +42,7 @@ void GenerateBackwardOpConf(
       reduce_sum_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
       reduce_sum_like_a_op_conf->set_x(broadcast_div_a.name() + "/out");
       reduce_sum_like_a_op_conf->set_y("y");
-      const std::vector<int64_t>& broadcast_axis_vec =
+      const AxisVector& broadcast_axis_vec =
           left_extended_shape.Axes4BroadcastTo(LogicalBlobDesc4BnInOp("out").shape());
       *reduce_sum_like_a_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};

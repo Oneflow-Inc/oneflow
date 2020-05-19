@@ -24,28 +24,16 @@ void RecordLoadKernel::VirtualKernelInit() {
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
   piece_size_in_one_loader_ = record_load_kernel_conf.device_piece_size();
-  if (this->job_desc().IsTrain()) {
-    const size_t num_max_read = GetMaxVal<int64_t>();
-    bool save_to_local = Global<const IOConf>::Get()->save_downloaded_file_to_local_fs();
-    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true, save_to_local));
-    if (record_load_op_conf.has_random_shuffle_conf()) {
-      const int32_t shuffle_buffer_size = record_load_op_conf.random_shuffle_conf().buffer_size();
-      CHECK_GT(shuffle_buffer_size, 0);
-      record_reader_.reset(new RandomShuffleOFRecordReader(
-          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size), num_max_read));
-    } else {
-      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get(), num_max_read));
-    }
+  const size_t num_max_read = GetMaxVal<int64_t>();
+  bool save_to_local = Global<const IOConf>::Get()->save_downloaded_file_to_local_fs();
+  in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true, save_to_local));
+  if (record_load_op_conf.has_random_shuffle_conf()) {
+    const int32_t shuffle_buffer_size = record_load_op_conf.random_shuffle_conf().buffer_size();
+    CHECK_GT(shuffle_buffer_size, 0);
+    record_reader_.reset(new RandomShuffleOFRecordReader(
+        in_stream_.get(), static_cast<size_t>(shuffle_buffer_size), num_max_read));
   } else {
-    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
-    if (record_load_op_conf.has_random_shuffle_conf()) {
-      const int32_t shuffle_buffer_size = record_load_op_conf.random_shuffle_conf().buffer_size();
-      CHECK_GT(shuffle_buffer_size, 0);
-      record_reader_.reset(new RandomShuffleOFRecordReader(
-          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size)));
-    } else {
-      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get()));
-    }
+    record_reader_.reset(new NaiveOFRecordReader(in_stream_.get(), num_max_read));
   }
 }
 

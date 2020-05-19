@@ -17,13 +17,9 @@ class PackForwardCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
-  void set_related_unpack(UnpackForwardCompTaskNode* val) { related_unpack_ = val; }
-
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-
-  UnpackForwardCompTaskNode* related_unpack_;
 };
 
 }  // namespace oneflow

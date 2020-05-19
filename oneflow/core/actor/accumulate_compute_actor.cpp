@@ -34,13 +34,18 @@ void AccumulateCompActor::Act() {
   Regst* out_regst = GetNaiveCurWriteable("acc");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0 && IsFirstRegstInPieceWithOrder(in_regst, order_)) {
-    Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
-    cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
-              in_blob->ByteSizeOfDataContentField());
-  } else {
-    AsyncLaunchKernel(kernel_ctx);
+    if (GetDeviceType() == DeviceType::kCPU) {
+      Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+                               out_blob->ByteSizeOfBlobBody());
+    } else if (GetDeviceType() == DeviceType::kGPU) {
+      Memset<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+                               out_blob->ByteSizeOfBlobBody());
+    } else {
+      UNIMPLEMENTED();
+    }
   }
+  AsyncLaunchKernel(kernel_ctx);
   if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
 }
 

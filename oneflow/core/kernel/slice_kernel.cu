@@ -41,28 +41,26 @@ void SliceKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx,
                                                                 const Shape& in_shape,
                                                                 Blob* blob) const {
   const SliceOpConf& conf = op_conf().slice_conf();
-  BEFORE_CPU_INITIALIZE();
-  int64_t* host_blob_ptr = host_blob->mut_dptr<int64_t>();
-  FOR_RANGE(int64_t, i, 0, host_blob->shape().elem_cnt()) {
-    int64_t offset = 0;
-    int64_t index = i;
-    FOR_RANGE(int64_t, j, 0, host_blob->shape().NumAxes()) {
-      const int64_t dim_elem_cnt = host_blob->shape().Count(j + 1);
-      const int64_t dim_i = index / dim_elem_cnt;
-      index = index % dim_elem_cnt;
-      int64_t start = 0;
-      int64_t stride = 1;
-      if (j > 0) {
-        const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j - 1);
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    int64_t* host_blob_ptr = host_blob->mut_dptr<int64_t>();
+    FOR_RANGE(int64_t, i, 0, host_blob->shape().elem_cnt()) {
+      int64_t offset = 0;
+      int64_t index = i;
+      FOR_RANGE(int64_t, j, 0, host_blob->shape().NumAxes()) {
+        const int64_t dim_elem_cnt = host_blob->shape().Count(j + 1);
+        const int64_t dim_i = index / dim_elem_cnt;
+        index = index % dim_elem_cnt;
+        int64_t start = 0;
+        int64_t stride = 1;
+        const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j);
         if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
         if (start < 0) { start += host_blob->shape().At(j); }
         stride = dim_slice_conf.stride();
+        offset += (start + dim_i * stride) * in_shape.Count(j + 1);
       }
-      offset += (start + dim_i * stride) * in_shape.Count(j + 1);
+      host_blob_ptr[i] = offset;
     }
-    host_blob_ptr[i] = offset;
-  }
-  AFTER_CPU_INITIALIZE();
+  });
 }
 
 #define INSTANTIATE_GPU_SLICE_KERNEL(type_cpp, type_proto) \

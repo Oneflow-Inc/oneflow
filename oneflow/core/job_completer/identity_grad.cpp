@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+void GenerateIdentityBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_identity_conf());
@@ -20,8 +20,8 @@ void GenerateBackwardOpConf(
   }
 }
 
-}  // namespace
+REGISTER_OP_GRAD(OperatorConf::kIdentityConf, &GenerateIdentityBackwardOpConf);
 
-REGISTER_OP_GRAD(OperatorConf::kIdentityConf, &GenerateBackwardOpConf);
+}  // namespace
 
 }  // namespace oneflow

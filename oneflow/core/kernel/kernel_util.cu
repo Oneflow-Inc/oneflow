@@ -3,6 +3,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
@@ -12,6 +13,11 @@ namespace {
 template<typename T>
 __global__ void RsqrtGpu(const int64_t n, T* x, const float epsilon) {
   CUDA_1D_KERNEL_LOOP(i, n) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+
+template<typename T>
+__global__ void RsqrtGpu(const int64_t n, const T* x, T* y, const float epsilon) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
 }
 
 template<typename T>
@@ -247,7 +253,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void Transpose(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+void Transpose(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
                const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
@@ -340,11 +346,6 @@ void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_le
 
 }  // namespace
 
-template<>
-void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
-}
-
 #define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) cub::DeviceReduce::func_name<T*, T*>
 DEFINE_STATIC_SWITCH_FUNC(cudaError_t, Sum, MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
@@ -387,8 +388,8 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
   MatrixRowReduce<T, ReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
 
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                       const Shape& y_shape, const PbRf<int32_t>& permutation,
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                       const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   CHECK_EQ(num_axis, y_shape.NumAxes());
@@ -399,11 +400,10 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
 
 KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
-                                                      host_blob.get());
-  AFTER_CPU_INITIALIZE();
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
+                                                        host_blob);
+  });
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
@@ -537,6 +537,10 @@ KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsi
   RsqrtGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, epsilon);
 }
+KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon) {
+  RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y,
+                                                                                           epsilon);
+}
 
 KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
   SigmoidForwardGpu<T>
@@ -649,6 +653,11 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
   template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+
+template<>
+__device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
+  return atomicAdd(address, val);
+}
 
 template<>
 __device__ float gpu_atomic_add(float* address, float val) {

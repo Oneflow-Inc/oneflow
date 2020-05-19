@@ -9,12 +9,6 @@ void EsacKernel<T>::ForwardDataContent(const KernelCtx& ctx,
   KernelUtil<DeviceType::kCPU, T>::Set(ctx.device_ctx, value, BnInOp2Blob("out")->mut_dptr<T>());
 }
 
-template<typename T>
-void EsacKernel<T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kEsacConf, EsacKernel, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

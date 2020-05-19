@@ -23,4 +23,8 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
   }
 }
 
+bool ResourceDesc::enable_debug_mode() const {
+  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || resource_.enable_debug_mode();
+}
+
 }  // namespace oneflow

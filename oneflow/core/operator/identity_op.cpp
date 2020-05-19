@@ -26,7 +26,6 @@ Maybe<void> IdentityOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
-  SbpSignatureBuilder().Broadcast(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   SbpSignatureBuilder().Split(bns, 0).MakeSplitSignatureListBuilder(num_axes).Build(sbp_sig_list);

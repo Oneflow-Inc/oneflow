@@ -14,6 +14,7 @@ class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
   ~CallbackNotifyKernel() = default;
 
  private:
+  bool IsStateless() const override { return false; }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

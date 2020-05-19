@@ -1,16 +1,10 @@
 #include "oneflow/core/kernel/util/cuda_dnn_interface.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
 namespace {
-
-#define HALF_CHECK_FAILED                                             \
-  printf("half operations are only supported when CUDA_ARCH >= 530"); \
-  assert(false)
-
-__inline__ __device__ half hone() { return __float2half(1.0); }
-__inline__ __device__ half hzero() { return __float2half(0.0); }
 
 template<typename T>
 __global__ void ReluForwardGpu(const int n, const T* x, T* y) {

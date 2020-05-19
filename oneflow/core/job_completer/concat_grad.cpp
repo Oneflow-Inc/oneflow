@@ -17,7 +17,7 @@ void GenerateBackwardOpConf(
   split_like_op_conf->set_axis(concat_conf.axis());
   FOR_RANGE(int32_t, i, 0, concat_conf.in_size()) {
     const std::string& ibn_of_concat_op = op.input_bns().Get(i);
-    const std::string& obn = "out_" + i;
+    const std::string& obn = "out_" + std::to_string(i);
     split_like_op_conf->add_like(GenLogicalBlobName(op.BnInOp2Lbi(ibn_of_concat_op)));
     split_like_op_conf->add_out(obn);
     if (DiffLbi4BnInOp(ibn_of_concat_op) != nullptr) {

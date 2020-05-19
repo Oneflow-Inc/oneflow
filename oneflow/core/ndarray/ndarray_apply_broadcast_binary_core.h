@@ -15,6 +15,10 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b);
+};
+
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
+struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper final {
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x);
 };

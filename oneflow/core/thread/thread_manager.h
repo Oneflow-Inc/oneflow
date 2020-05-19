@@ -30,6 +30,9 @@ class ThreadMgr final {
   std::unique_ptr<ThreadPool> compute_thread_pool_;
 };
 
+void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

@@ -19,8 +19,8 @@ struct NdarrayReduce<
     final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
-    std::vector<int64_t> simplified_x_dim;
-    std::vector<int64_t> simplified_y_dim;
+    DimVector simplified_x_dim;
+    DimVector simplified_y_dim;
     TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
     XpuVarNdarray<T> y(Shape(simplified_y_dim), origin_y.ptr());
     XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
@@ -43,9 +43,8 @@ struct NdarrayReduce<
     }
   }
 
-  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y,
-                              std::vector<int64_t>* simplified_x,
-                              std::vector<int64_t>* simplified_y) {
+  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y, DimVector* simplified_x,
+                              DimVector* simplified_y) {
     CHECK_EQ(y.NumAxes(), x.NumAxes());
     CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
     CHECK(simplified_x->empty());

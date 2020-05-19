@@ -54,7 +54,11 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
       cur_node->BindBnWithRegst(obn, out_regst);
     }
   });
-  out_regst->set_hint_inplace_consumed_regst_desc_id(GetSoleConsumedRegst("in")->regst_desc_id());
+  // NOTE: we can ONLY set inplace when regst has ONLY ONE blob
+  auto in_regst = GetSoleConsumedRegst("in");
+  if (in_regst->NumOfLbi() == 1) {
+    out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+  }
 }
 
 void DistributeConcatCompTaskNode::InferProducedDataRegstTimeShape() {

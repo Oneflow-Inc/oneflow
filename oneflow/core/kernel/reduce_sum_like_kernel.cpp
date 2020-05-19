@@ -17,17 +17,11 @@ void ReduceSumLikeKernel<device_type, T>::ForwardDataContent(
     NdarrayUtil<device_type, T>::ReduceSum(
         ctx.device_ctx,
         XpuVarNdarray<T>(
-            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
+            CreateReducedShape(x_blob->shape(), {conf.axis().begin(), conf.axis().end()}),
             y_blob->mut_dptr<T>()),
         XpuVarNdarray<const T>(x_blob, x_blob->shape().NumAxes()),
         XpuVarNdarray<T>(temp_storage_blob, x_blob->shape().NumAxes()));
   }
-}
-
-template<DeviceType device_type, typename T>
-void ReduceSumLikeKernel<device_type, T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("y")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("like"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumLikeConf, ReduceSumLikeKernel,

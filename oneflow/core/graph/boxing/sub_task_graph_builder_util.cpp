@@ -75,8 +75,7 @@ bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel
 }
 
 bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
-  return blob_desc.has_dim0_valid_num_field() || blob_desc.has_dim1_valid_num_field()
-         || blob_desc.has_dim2_valid_num_field();
+  return blob_desc.is_dynamic();
 }
 
 bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {

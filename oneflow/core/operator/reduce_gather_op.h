@@ -24,6 +24,7 @@ class ReduceGatherOp final : public Operator {
                             const ParallelContext*, KernelConf*) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
 }  // namespace oneflow

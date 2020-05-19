@@ -58,6 +58,9 @@ class OFRecordDecoder : public OFRecordDecoderIf {
                            int64_t one_col_elem_num, int32_t random_seed) const;
 };
 
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape);
+
 template<EncodeCase encode_case, typename T>
 class OFRecordDecoderImpl;
 

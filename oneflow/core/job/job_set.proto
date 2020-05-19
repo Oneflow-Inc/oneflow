@@ -42,6 +42,7 @@ message ConfigProto {
   required Resource resource = 1;
   required IOConf io_conf = 2;
   optional ProfilerConf profiler_conf = 3;
+  repeated string load_lib_path = 4;
 }
 
 message JobSet {

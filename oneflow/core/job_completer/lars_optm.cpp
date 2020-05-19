@@ -5,8 +5,7 @@ namespace oneflow {
 namespace {
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
-                             const LogicalBlobId& total_loss_instance_num_lbi) {
+                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   OperatorConf momentum_var(op.op_conf());
   InitializerConf constant_initializer;
   constant_initializer.mutable_constant_conf()->set_value(0.f);
@@ -18,8 +17,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   OperatorConf mdupdt_op;
   mdupdt_op.set_name(op.op_name() + "_optimizer");
   auto* mdupdt_op_conf = mdupdt_op.mutable_lars_model_update_conf();
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, total_loss_instance_num_lbi, job_builder,
-                        mdupdt_op_conf);
+  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
   mdupdt_op_conf->set_momentum(momentum_var.name() + "/out");
   job_builder->AddOps(parallel_conf, {mdupdt_op});
 }

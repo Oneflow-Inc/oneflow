@@ -23,7 +23,7 @@ struct AddUtil {
     size_t in_num = ibns.size();
     if (in_num == 0) return;
     Blob* out_blob = BnInOp2Blob(add_kernel->op_attribute().output_bns(0));
-    auto in_blob = [&](int32_t idx) {
+    auto in_blob = [=](int32_t idx) {
       return BnInOp2Blob(add_kernel->op_attribute().input_bns(idx));
     };
     static const int kWidth = 8;
@@ -31,12 +31,18 @@ struct AddUtil {
     if (r) {
       tuple_switch(r, add_kernel->tp_,
                    AdditionFunction<device_type, T, decltype(add_kernel)>{
-                       out_blob, std::move(BnInOp2Blob), ctx.device_ctx, 0, add_kernel});
+                       out_blob, BnInOp2Blob, ctx.device_ctx, 0, add_kernel});
     }
     for (; r < in_num; r += kWidth) {
-      Addition<device_type, T>(ctx.device_ctx, out_blob, out_blob, in_blob(r), in_blob(r + 1),
-                               in_blob(r + 2), in_blob(r + 3), in_blob(r + 4), in_blob(r + 5),
-                               in_blob(r + 6), in_blob(r + 7));
+      if (r == 0) {
+        Addition<device_type, T>(ctx.device_ctx, out_blob, in_blob(r), in_blob(r + 1),
+                                 in_blob(r + 2), in_blob(r + 3), in_blob(r + 4), in_blob(r + 5),
+                                 in_blob(r + 6), in_blob(r + 7));
+      } else {
+        Addition<device_type, T>(ctx.device_ctx, out_blob, out_blob, in_blob(r), in_blob(r + 1),
+                                 in_blob(r + 2), in_blob(r + 3), in_blob(r + 4), in_blob(r + 5),
+                                 in_blob(r + 6), in_blob(r + 7));
+      }
     }
   }
 };

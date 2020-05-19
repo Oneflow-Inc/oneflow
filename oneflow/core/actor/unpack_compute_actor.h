@@ -9,13 +9,14 @@ class UnpackCompActor final : public CompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnpackCompActor);
   UnpackCompActor() = default;
-  ~UnpackCompActor() = default;
+  ~UnpackCompActor() override = default;
 
  private:
   void VirtualCompActorInit(const TaskProto& proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
+  bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const override;
 
   size_t total_unpack_num_;
   size_t act_num_cnt_;

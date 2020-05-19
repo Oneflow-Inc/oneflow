@@ -22,13 +22,6 @@ Maybe<void> NcclAllReduceOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name("out");
-  return ret;
-}
-
 REGISTER_OP(OperatorConf::kNcclAllReduceConf, NcclAllReduceOp);
 
 }  // namespace oneflow

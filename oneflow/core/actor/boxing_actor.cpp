@@ -11,9 +11,6 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
 
 void BoxingActor::NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>& rq) {
   if (rq.back()->regst_desc()->regst_desc_type().has_data_regst_desc() == false) { return; }
-  if (rq.back()->packed_blob()->max_col_num() > 1 && col_id_order_ == ColIdOrder::kUnCertain) {
-    TrySetColIdOrder(rq.back());
-  }
 }
 
 void BoxingActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }

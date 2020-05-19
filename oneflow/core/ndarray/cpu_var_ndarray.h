@@ -18,6 +18,10 @@ class CpuVarNdarray : public CpuNdarray<T, NDIMS> {
       : CpuNdarray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
     CHECK_GT(len_, 0);
   }
+  CpuVarNdarray(const ShapeView& shape_view, T* ptr)
+      : CpuNdarray<T, NDIMS>(XpuShape(shape_view)), ptr_(ptr), len_(shape_view.elem_cnt()) {
+    CHECK_GT(len_, 0);
+  }
   virtual ~CpuVarNdarray() = default;
 
   CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0) {

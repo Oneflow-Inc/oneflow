@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  dst->CopyDataContentFrom(ctx, src);
+  dst->CopyValidDataContentFrom(ctx, src);
 }
 
 }  // namespace
@@ -21,7 +21,6 @@ class DistributeConcatKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx &,
                           std::function<Blob *(const std::string &)>) const override;
-
   const Blob *GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
 };
 

@@ -1,13 +1,13 @@
 #include "oneflow/core/kernel/conv_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
 void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
-  CHECK(this->EnableCudnn());
-  Shape in_shape(this->GetConvKernelConf().in());
-  Shape out_shape(this->GetConvKernelConf().out());
-  Shape weight_shape(this->GetConvKernelConf().weight());
+  ShapeView in_shape(this->GetConvKernelConf().in());
+  ShapeView out_shape(this->GetConvKernelConf().out());
+  ShapeView weight_shape(this->GetConvKernelConf().weight());
 
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
@@ -15,11 +15,14 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
-                                           in_shape, this->GetCustomizedOpConf()));
+
+  const bool pseudo_half = this->job_desc().job_conf().cudnn_conv_enable_pseudo_half();
+  this->conv_desc_.reset(
+      new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value, pseudo_half), in_shape,
+                        this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
+    int32_t filters = ShapeView(this->GetConvKernelConf().bias()).At(0);
     if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(
@@ -54,15 +57,38 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->EnableCudnn());
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
-  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  CudnnConvArgs args(this->GetCustomizedOpConf(), in_blob->data_type(), in_blob->shape(),
+                     weight_blob->data_type(), weight_blob->shape(), out_blob->data_type(),
+                     out_blob->shape(),
+                     GetValFromPbMessage<std::string>(this->GetCustomizedOpConf(), "data_format"),
+                     fw_cudnn_buf->ByteSizeOfBlobBody(),
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                     this->job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+  AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(in_blob->dptr()),
+                                 const_cast<void*>(weight_blob->dptr()), out_blob->mut_dptr(),
+                                 fw_cudnn_buf->mut_dptr());
+  using perf_t = cudnnConvolutionFwdAlgoPerf_t;
+  using algo_t = cudnnConvolutionFwdAlgo_t;
+  perf_t algo_perf;
+  if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
+    algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
+        &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
+  } else {
+    algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
+  }
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+      << "op (" << this->op_conf().name()
+      << ") find algorithm perference failed. algo: " << algo_perf.algo;
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody())
+      << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
+      << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+      << fw_cudnn_buf->ByteSizeOfBlobBody();
   CudaCheck(cudnnConvolutionForward(
-      device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), this->in_desc_->Get(),
-      in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
-      this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<float16>(), this->out_desc_->Get(),
-      out_blob->mut_dptr<float16>()));
+      device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), args.xdesc.Get(), in_blob->dptr(),
+      args.wdesc.Get(), weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
+      fw_cudnn_buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr<float16>(),
+      args.ydesc.Get(), out_blob->mut_dptr()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
@@ -122,20 +148,22 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
-  Shape in_shape(this->GetConvKernelConf().in());
-  Shape out_shape(this->GetConvKernelConf().out());
-  Shape weight_shape(this->GetConvKernelConf().weight());
+  ShapeView in_shape(this->GetConvKernelConf().in());
+  ShapeView out_shape(this->GetConvKernelConf().out());
+  ShapeView weight_shape(this->GetConvKernelConf().weight());
 
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
   this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value), in_shape,
-                                           this->GetCustomizedOpConf()));
+
+  const bool pseudo_half = this->job_desc().job_conf().cudnn_conv_enable_pseudo_half();
+  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value, pseudo_half),
+                                           in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
+    int32_t filters = ShapeView(this->GetConvKernelConf().bias()).At(0);
     if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(
@@ -169,14 +197,38 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
-  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
-  CudaCheck(cudnnConvolutionForward(
-      device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
-      this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<T>(), this->out_desc_->Get(),
-      out_blob->mut_dptr<T>()));
+  CudnnConvArgs args(this->GetCustomizedOpConf(), in_blob->data_type(), in_blob->shape(),
+                     weight_blob->data_type(), weight_blob->shape(), out_blob->data_type(),
+                     out_blob->shape(),
+                     GetValFromPbMessage<std::string>(this->GetCustomizedOpConf(), "data_format"),
+                     fw_cudnn_buf->ByteSizeOfBlobBody(),
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                     this->job_desc().job_conf().cudnn_conv_enable_pseudo_half());
+  AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(in_blob->dptr()),
+                                 const_cast<void*>(weight_blob->dptr()), out_blob->mut_dptr(),
+                                 fw_cudnn_buf->mut_dptr());
+  using perf_t = cudnnConvolutionFwdAlgoPerf_t;
+  using algo_t = cudnnConvolutionFwdAlgo_t;
+  perf_t algo_perf;
+  if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
+    algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<perf_t>(
+        &args, &res, static_cast<algo_t>(this->job_desc().job_conf().cudnn_conv_force_fwd_algo()));
+  } else {
+    algo_perf = FindCudnnConvAlgorithmWithResource<perf_t>(&args, &res);
+  }
+  CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
+      << "op (" << this->op_conf().name()
+      << ") find algorithm perference failed. algo: " << algo_perf.algo;
+  CHECK_LE(algo_perf.memory, fw_cudnn_buf->ByteSizeOfBlobBody())
+      << "op (" << this->op_conf().name() << ") find algorithm " << algo_perf.algo
+      << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
+      << fw_cudnn_buf->ByteSizeOfBlobBody();
+  CudaCheck(cudnnConvolutionForward(device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(),
+                                    args.xdesc.Get(), in_blob->dptr(), args.wdesc.Get(),
+                                    weight_blob->dptr(), args.cdesc.Get(), algo_perf.algo,
+                                    fw_cudnn_buf->mut_dptr(), args.params.max_ws_size,
+                                    CudnnSPZeroPtr<T>(), args.ydesc.Get(), out_blob->mut_dptr()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
@@ -193,7 +245,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackwardWithCudnn(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* bw_cudnn_buf = BnInOp2Blob("bw_cudnn_buf");
   void* bw_cudnn_buf_ptr = bw_cudnn_buf ? bw_cudnn_buf->mut_dptr() : nullptr;
-  size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfBlobBody() : 0;
   if (this->op_conf().trainable()) {
     CudaCheck(cudnnConvolutionBackwardFilter(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
@@ -505,8 +557,8 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
-    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const ShapeView& in_shape,
+    const ShapeView& weight_shape, const ShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
@@ -519,8 +571,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
-    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const ShapeView& in_shape,
+    const ShapeView& weight_shape, const ShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
@@ -533,8 +585,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
-    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const ShapeView& in_shape,
+    const ShapeView& weight_shape, const ShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {
@@ -547,8 +599,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
-    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const ShapeView& in_shape,
+    const ShapeView& weight_shape, const ShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {

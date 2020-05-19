@@ -1,4 +1,0 @@
-net: "./predict.net"
-resource: "./1_machine_2_gpu.resource"
-placement: "./predict.placement"
-other: "./predict.other"

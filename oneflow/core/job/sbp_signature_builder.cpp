@@ -1,4 +1,5 @@
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {

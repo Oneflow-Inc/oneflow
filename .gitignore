@@ -1,4 +1,5 @@
 /build
+/dist
 /third_party/
 /examples/**/oneflow
 /benchmark/**/oneflow
@@ -6,3 +7,4 @@ log/
 *plan
 core.*
 *.pyc
+*.ipynb

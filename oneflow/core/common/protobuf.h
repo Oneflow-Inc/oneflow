@@ -36,6 +36,7 @@ using PbMd = google::protobuf::util::MessageDifferencer;
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
   OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
+  OF_PP_MAKE_TUPLE_SEQ(double, Double)      \
   OF_PP_MAKE_TUPLE_SEQ(int16_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
@@ -92,6 +93,7 @@ template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg, const std::string& field_name);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
@@ -101,6 +103,7 @@ PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& 
 // Get/Replace str val maybe repeated;  field_name with index is like "name_0"
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
 std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
+bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
 void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
                                 const std::string& old_val, const std::string& new_val);
 
@@ -196,6 +199,10 @@ inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
 }
 
 inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
+
+class BlobDescProto;
+bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs);
+inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
 
 // Persistent
 

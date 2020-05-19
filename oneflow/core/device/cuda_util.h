@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/data_type.h"
 
 #ifdef WITH_CUDA
 
@@ -31,16 +30,23 @@ void CudaCheck(T error);
 
 const int32_t kCudaThreadsNumPerBlock = 1024;
 const int32_t kCudaMaxBlocksNum = 4096;
+const int32_t kCudaWarpSize = 32;
+
+// 48KB, max byte size of shared memroy per thread block
+// TODO: limit of shared memory should be different for different arch
+const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
 int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
 bool IsCuda9OnTuringDevice();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+  CHECK_GT(n, 0);
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
 inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
+  CHECK_GT(n, 0);
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
                   GetSMCudaMaxBlocksNum());
 }

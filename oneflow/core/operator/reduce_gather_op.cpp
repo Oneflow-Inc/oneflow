@@ -38,9 +38,9 @@ void ReduceGatherOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
     reduce_gather_conf->mutable_data_offset()->Add(offset);
-    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfDataContentField();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfDataContentField());
+  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
 }
 
 LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
@@ -48,6 +48,12 @@ LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
   ret.set_op_name(op_name());
   ret.set_blob_name("out");
   return ret;
+}
+
+Symbol<OperatorConf> ReduceGatherOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  return SymbolOf(op_conf);
 }
 
 REGISTER_OP(OperatorConf::kReduceGatherConf, ReduceGatherOp);

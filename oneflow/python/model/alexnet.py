@@ -188,13 +188,13 @@ def alexnet_eval_job():
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.ctrl_port(9788)
+    flow.env.ctrl_port(9788)
 
     flow.config.default_data_type(flow.float)
 
     if args.multinode:
-        flow.config.ctrl_port(12138)
-        flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
+        flow.env.ctrl_port(12138)
+        flow.env.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
                 flow.deprecated.init_worker(scp_binary=True, use_uuid=False)

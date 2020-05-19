@@ -18,6 +18,10 @@ class CpuNdarrayBuilder final {
   CpuVarNdarray<T, NDIMS> Var(const Shape& shape, T* ptr) const {
     return CpuVarNdarray<T, NDIMS>(shape, ptr);
   }
+  template<typename T = default_data_type, int NDIMS = default_ndims>
+  CpuVarNdarray<T, NDIMS> Var(const ShapeView& shape_view, T* ptr) const {
+    return CpuVarNdarray<T, NDIMS>(shape_view, ptr);
+  }
   template<int CONCAT_AXES = 0, typename T = default_data_type, int NDIMS = default_ndims>
   CpuConcatVarNdarray<T, NDIMS, CONCAT_AXES> Concatenate(
       const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {

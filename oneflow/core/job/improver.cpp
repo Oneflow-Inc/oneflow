@@ -549,8 +549,13 @@ bool Improver::IsAnyZoneOutOfMemory(
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
-      if (CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii)
-          >= AvailableMemSize(machine_id, mem_zone_id)) {
+      const uint64_t calc =
+          CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
+      const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
+      if (calc >= available) {
+        LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id
+                  << ", mem_zone_id: " << mem_zone_id << ", calc: " << calc
+                  << ", available: " << available;
         return true;
       }
     }

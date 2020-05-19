@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  dst->CopyDataContentFrom(ctx, src);
+  dst->CopyValidDataContentFrom(ctx, src);
 }
 
 }  // namespace

@@ -16,8 +16,6 @@ Maybe<void> MaximumOp::VirtualInferBlobDescs(
   BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("mask");
   *mask_blob_desc = *in_0_blob_desc;
   mask_blob_desc->set_data_type(DataType::kInt32);
-  mask_blob_desc->set_has_data_id_field(false);
-  mask_blob_desc->set_has_col_num_field(false);
   return Maybe<void>::Ok();
 }
 

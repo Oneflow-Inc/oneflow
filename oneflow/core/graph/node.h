@@ -88,12 +88,30 @@ class Node {
     ForEachNodeOnOutEdge(Handler);
   }
 
+  void ForEachNodeOnSortedInEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : sorted_in_edges_) { Handler(edge->src_node()); }
+  }
+  void ForEachNodeOnSortedOutEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : sorted_out_edges_) { Handler(edge->dst_node()); }
+  }
+  void ForEachNodeOnSortedInOutEdge(std::function<void(NodeType*)> Handler) const {
+    ForEachNodeOnSortedInEdge(Handler);
+    ForEachNodeOnSortedOutEdge(Handler);
+  }
+
   void DisconnectAllEdges() {
     for (EdgeType* edge : in_edges_) { DisConnect(edge); }
     for (EdgeType* edge : out_edges_) { DisConnect(edge); }
   }
 
   virtual std::string VisualStr() const { return ""; }
+
+  void SortInOutEdges(std::function<bool(const EdgeType* lhs, const EdgeType* rhs)> LessThan) {
+    sorted_in_edges_.assign(in_edges_.begin(), in_edges_.end());
+    sorted_out_edges_.assign(out_edges_.begin(), out_edges_.end());
+    std::sort(sorted_in_edges_.begin(), sorted_in_edges_.end(), LessThan);
+    std::sort(sorted_out_edges_.begin(), sorted_out_edges_.end(), LessThan);
+  }
 
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);
@@ -102,6 +120,8 @@ class Node {
   int64_t node_id_;
   HashSet<EdgeType*> in_edges_;
   HashSet<EdgeType*> out_edges_;
+  std::vector<EdgeType*> sorted_in_edges_;
+  std::vector<EdgeType*> sorted_out_edges_;
 };
 
 }  // namespace oneflow

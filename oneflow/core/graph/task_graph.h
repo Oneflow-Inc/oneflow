@@ -6,6 +6,7 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/register/op_blob_arg_info.h"
 
 namespace oneflow {
 
@@ -36,7 +37,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
@@ -86,12 +86,13 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   // inplace
   void GetInplaceOpBlobArgList(
-      OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
+      InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
       const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const;
-  void GetSafeInplaceOpBlobArgList(OpBlobArgList* obas, const HashSet<TaskNode*>& dev_nodes,
+  void GetSafeInplaceOpBlobArgList(InplaceObasInfo* safe_obas_info,
+                                   const HashSet<TaskNode*>& dev_nodes,
                                    std::function<bool(const std::string&, const std::string&)>
                                        IsOpNameDataOrCtrlReachable) const;
-  void SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
+  void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
   void ForEachGpuDeviceNodes(
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;

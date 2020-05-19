@@ -47,7 +47,7 @@ def init_worker(scp_binary = True, use_uuid = True):
 
 @oneflow_export('deprecated.delete_worker')
 def delete_worker():
-    assert env_util.env_proto_mutable == False
+    # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
     assert isinstance(env_proto, EnvProto)
     global _temp_run_dir

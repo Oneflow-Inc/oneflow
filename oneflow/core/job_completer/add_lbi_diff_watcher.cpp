@@ -1,10 +1,18 @@
-#include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-void AddLbiDiffWatcherOpConfs(Job* job) {
+namespace {
+
+class AddLbiDiffWatcherOpConfs final : public OpGraphPass {
+ public:
+  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  void Apply(Job* job) const override;
+};
+
+void AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   JobBuilder job_builder(job);
   const auto& map = Global<LbiDiffWatcherInfo>::Get()->job_name2lbi_and_watcher_uuids();
   if (map.find(GlobalJobDesc().job_name()) == map.end()) { return; }
@@ -23,8 +31,12 @@ void AddLbiDiffWatcherOpConfs(Job* job) {
     auto* foreign_watcher_conf = foreign_watcher_op.mutable_foreign_watch_conf();
     foreign_watcher_conf->set_in(GenLogicalBlobName(lbi2diff_lbi.at(pair.lbi())));
     foreign_watcher_conf->set_handler_uuid(pair.watcher_uuid());
-    job_builder.AddOps(job_builder.ParallelConf4OpName(pair.lbi().op_name()), {foreign_watcher_op});
+    job_builder.AddOps(job_builder.ParallelConf4Lbi(pair.lbi()), {foreign_watcher_op});
   }
 }
+
+REGISTER_FUNCTION_PASS("AddLbiDiffWatcherOpConfs", AddLbiDiffWatcherOpConfs);
+
+}  // namespace
 
 }  // namespace oneflow

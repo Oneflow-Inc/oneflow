@@ -27,6 +27,4 @@ void AccTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kAccTick);
-
 }  // namespace oneflow
