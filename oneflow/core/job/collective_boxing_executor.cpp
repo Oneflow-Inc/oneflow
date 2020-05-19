@@ -129,7 +129,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     while (true) {
       std::unique_lock<std::mutex> lock(event_list_mutex_);
       if (event_list_.empty() && shutdown_) { break; }
-      for (auto it = event_list_.begin(); it != event_list_.end(); ++it) {
+      for (auto it = event_list_.begin(); it != event_list_.end();) {
         CudaCheck(cudaSetDevice(it->device_id));
         cudaError_t err = cudaEventQuery(it->cuda_event);
         if (err == cudaErrorNotReady) {
@@ -141,6 +141,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
           event_list_.erase(it++);
         } else {
           CudaCheck(err);
+          UNIMPLEMENTED();
         }
       }
     }
