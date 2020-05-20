@@ -40,6 +40,16 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
       *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) = fixed_blob_name;
       break;
     }
+    case OperatorConf::kUserConf: {
+      std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(input);
+      auto it = op_conf->user_conf().input().find(pair.first);
+      CHECK(it != op_conf->user_conf().input().end());
+      CHECK(pair.second >= 0 && pair.second < it->second.s_size());
+      CHECK_EQ(it->second.s(pair.second), blob_name);
+      (*(op_conf->mutable_user_conf()->mutable_input()))[pair.first].set_s(pair.second,
+                                                                           fixed_blob_name);
+      break;
+    }
     default: ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
   }
 }

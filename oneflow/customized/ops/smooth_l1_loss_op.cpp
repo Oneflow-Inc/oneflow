@@ -12,7 +12,7 @@ REGISTER_USER_OP("smooth_l1_loss")
                          *ctx->Shape4ArgNameAndIndex("label", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
                          *ctx->Dtype4ArgNameAndIndex("label", 0));
-      CHECK_GE_OR_RETURN(ctx->GetAttr<float>("beta"), 0);
+      CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
       *ctx->Shape4ArgNameAndIndex("loss", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
       *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
@@ -22,13 +22,11 @@ REGISTER_USER_OP("smooth_l1_loss")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(num_axes)
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& prediction_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+      FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -47,7 +45,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
                          *ctx->Shape4ArgNameAndIndex("label", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
                          *ctx->Dtype4ArgNameAndIndex("label", 0));
-      CHECK_GE_OR_RETURN(ctx->GetAttr<float>("beta"), 0);
+      CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
       *ctx->Shape4ArgNameAndIndex("prediction_grad", 0) =
           *ctx->Shape4ArgNameAndIndex("loss_grad", 0);
       *ctx->Dtype4ArgNameAndIndex("prediction_grad", 0) =
@@ -60,13 +58,11 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(num_axes)
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& prediction_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+      FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 

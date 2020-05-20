@@ -93,6 +93,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
+  wrapper_.reg_val.op_def.set_all_outputs_constant(true);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
@@ -123,7 +128,7 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      AttrValAccessor<cpp_type>::SetAttr(default_val, attr_def->mutable_default_val());     \
+      AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());        \
     });                                                                                     \
     return *this;                                                                           \
   }
@@ -170,10 +175,10 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
-    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
+    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
-    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier) {};
+    wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
   }
   return wrapper_;
 }

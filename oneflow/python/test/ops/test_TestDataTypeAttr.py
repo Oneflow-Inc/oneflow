@@ -14,8 +14,9 @@ def TestDataTypeAttr(input, output_type):
         .Op("TestDataTypeAttr")
         .Input("in", [input])
         .Output("out")
-        .SetAttr("output_type", output_type, "AttrTypeDataType")
+        .Attr("output_type", output_type, "AttrTypeDataType")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 

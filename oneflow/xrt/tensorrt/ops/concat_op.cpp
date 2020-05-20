@@ -12,7 +12,7 @@ class ConcatOp : public TrtOpKernel {
     int num_inputs = ctx->num_inputs();
     CHECK_GE(num_inputs, 2) << "Concat needs 2 inputs at least.";
     Shape in_shape = ctx->InputShape("in_0");
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     if (axis < 0) { axis += in_shape.NumAxes(); }
     CHECK_GE(axis, 0);
     CHECK_LT(axis, in_shape.NumAxes());

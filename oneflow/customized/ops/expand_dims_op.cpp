@@ -21,7 +21,7 @@ REGISTER_USER_OP("expand_dims")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_shape->NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape->NumAxes());
 
       auto dim_vec = in_shape->dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
@@ -34,7 +34,7 @@ REGISTER_USER_OP("expand_dims")
       const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_desc.shape().NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_desc.shape().NumAxes());
 
       if (in_batch_axis->has_value()) {
         out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
@@ -46,21 +46,21 @@ REGISTER_USER_OP("expand_dims")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->GetAttr<int32_t>("axis"), in_desc.shape().NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
 
-      auto dim_vec = in_desc.shape().dim_vec();
+      auto dim_vec = in_tensor.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
-        SbpSignatureBuilder()
-            .Split("in", 0, in_axis)
-            .Split("out", 0, in_axis < axis ? in_axis : in_axis + 1)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), in_axis)
+            .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
+            .Build();
       }
-
-      SbpSignatureBuilder().PartialSum("in", 0).PartialSum("out", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
-
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 

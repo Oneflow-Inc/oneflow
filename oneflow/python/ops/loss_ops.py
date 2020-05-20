@@ -16,9 +16,10 @@ def smooth_l1_loss(prediction, label, beta=1.0, name=None):
         .Input("label", [label])
         .Output("loss")
     )
-    op.SetAttr("beta", float(beta), "AttrTypeFloat")
+    op.Attr("beta", float(beta), "AttrTypeFloat")
     return (
         op
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
