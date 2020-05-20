@@ -69,7 +69,7 @@ class TestNetMixin:
       print(fmt_str.format(i,loss_dict['tensorflow'][i], loss_dict['oneflow'][i]))
     if FLAGS.enable_auto_mixed_precision:
         rtol, atol = self.assert_tolerance_4_mixed_precision()
-        print('rtol, atol', rtol, atol)
+        print('assert tolerance for mixed_precision are: rtol', rtol, ', atol', atol)
         self.assertTrue(numpy.allclose(loss_dict['tensorflow'], loss_dict['oneflow'],
                 rtol=rtol, atol=atol))
     else:
