@@ -90,25 +90,16 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   PUBLIC void reset_object(Object* object) { mut_object_ptr()->reset(object); }
   PUBLIC void reset_object() { reset_object(nullptr); }
 
-  //fields
+  // fields
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<Object>, object_ptr);
 
+  // links
+  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_link, access_list);
 OBJECT_MSG_END(RwMutexedObject);
 
 OBJECT_MSG_BEGIN(MirroredObject);
   // methods
   PUBLIC void __Init__(LogicalObject* logical_object, int64_t global_device_id);
-
-  PUBLIC template<typename T> bool Has() const { return rw_mutexed_object().Has<T>(); }
-  PUBLIC template<typename T> const T& Get() const { return rw_mutexed_object().Get<T>(); }
-  PUBLIC template<typename T> T* Mut() { return mut_rw_mutexed_object()->Mut<T>(); }
-  PUBLIC template<typename T, typename... Args> T* Init(Args&&... args) {
-    return mut_rw_mutexed_object()->Init<T, Args...>(std::forward<Args>(args)...);
-  }
-  PUBLIC const Object& object() const { return rw_mutexed_object().object(); }
-  PUBLIC bool has_object() const { return rw_mutexed_object().has_object(); }
-  PUBLIC void reset_object(Object* object) { mut_rw_mutexed_object()->reset_object(object); }
-  PUBLIC void reset_object() { mut_rw_mutexed_object()->reset_object(); }
 
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
@@ -116,7 +107,6 @@ OBJECT_MSG_BEGIN(MirroredObject);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
-  OBJECT_MSG_DEFINE_LIST_HEAD(RwMutexedObjectAccess, rw_mutexed_object_access_link, access_list);
 OBJECT_MSG_END(MirroredObject);
 
 class VirtualMachine;
