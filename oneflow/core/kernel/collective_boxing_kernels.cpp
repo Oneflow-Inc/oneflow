@@ -2,6 +2,7 @@
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/device/collective_boxing_device_context.h"
 
 namespace oneflow {
 
@@ -42,13 +43,15 @@ void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
   } else {
     request.recv_buff = nullptr;
   }
-  std::shared_ptr<BlockingCounter> bc(new BlockingCounter(1));
-  request.callback = [bc](const Maybe<void>& status) {
+  auto* device_ctx = dynamic_cast<CollectiveBoxingDeviceCtx*>(ctx.device_ctx);
+  CHECK_NOTNULL(device_ctx);
+  std::shared_ptr<std::atomic<bool>> ready_flag(new std::atomic<bool>(false));
+  device_ctx->SetCheckPoint(ready_flag);
+  request.callback = [ready_flag](const Maybe<void>& status) {
     CHECK(status.IsOk());
-    bc->Decrease();
+    *ready_flag = true;
   };
   Global<CollectiveBoxingExecutor>::Get()->Enqueue(rank_desc, request);
-  ctx.device_ctx->AddCallBack([bc]() { bc->WaitUntilCntEqualZero(); });
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCollectiveBoxingGenericConf,

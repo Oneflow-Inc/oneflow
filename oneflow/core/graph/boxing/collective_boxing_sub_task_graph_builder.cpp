@@ -153,7 +153,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
                     const SbpParallel& dst_sbp_parallel) const override {
     if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && src_parallel_desc.device_type() == DeviceType::kGPU  // TODO: Fix AddCallBack
+        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
@@ -234,6 +234,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         && src_parallel_desc.device_type() == DeviceType::kCPU
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
+        && logical_blob_desc.shape().elem_cnt() >= 1024
         && dst_sbp_parallel.has_broadcast_parallel()
         // a potential optimization: flat the blob and then relax this requirement
         && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0) {
@@ -287,7 +288,9 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
                     const SbpParallel& src_sbp_parallel,
                     const SbpParallel& dst_sbp_parallel) const override {
     if (src_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() > 1
-        && src_parallel_desc.device_type() == DeviceType::kGPU  // TODO: Fix AddCallBack
+        && (src_parallel_desc.device_type() == DeviceType::kGPU
+            || (src_parallel_desc.device_type() == DeviceType::kCPU
+                && logical_blob_desc.shape().elem_cnt() >= 1024))
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && dst_sbp_parallel.has_broadcast_parallel()) {
@@ -336,8 +339,7 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
-  // TODO: Fix AddCallBack
-  // builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
+  builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
 }

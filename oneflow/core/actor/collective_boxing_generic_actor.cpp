@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/device/collective_boxing_device_context.h"
 
 namespace oneflow {
 
@@ -24,7 +25,11 @@ class CollectiveBoxingGenericActor : public Actor {
     piece_id_ += 1;
   }
 
-  int64_t piece_id_;
+  void InitDeviceCtx(const ThreadCtx& thread_ctx) override {
+    mut_device_ctx().reset(new CollectiveBoxingDeviceCtx());
+  }
+
+  int64_t piece_id_ = 0;
 };
 
 REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, CollectiveBoxingGenericActor);
