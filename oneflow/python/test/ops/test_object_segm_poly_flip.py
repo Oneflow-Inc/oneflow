@@ -28,8 +28,9 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
 
 def _get_segm_poly_static_shape(poly_list):
     poly_shapes = [poly.shape for poly in poly_list]
-    poly_static_shape = np.amax(poly_shapes, axis=0)
-    return tuple([len(poly_list)] + poly_static_shape.tolist())
+    poly_static_shape = np.amax(poly_shapes, axis=0).tolist()
+    poly_static_shape.insert(0, len(poly_list))
+    return poly_static_shape
 
 
 def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_debug_info=False):
@@ -43,22 +44,20 @@ def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_d
     image_size_list = []
     for img_id in rand_img_ids:
         image_size_list.append([coco.imgs[img_id]["height"], coco.imgs[img_id]["width"]])
-        anno_ids = list(
-            filter(
-                lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, coco.getAnnIds(imgIds=[img_id])
-            )
-        )
+        poly_pts = []
+        anno_ids = coco.getAnnIds(imgIds=[img_id])
         for anno_id in anno_ids:
-            segm = coco.anns[anno_id]["segmentation"]
-            assert isinstance(segm, list)
-            poly_list = []
-            for poly in segm:
-                poly_list.extend(poly)
-        poly_array = np.array(poly_list, dtype=np.single).reshape(-1, 2)
+            anno = coco.anns[anno_id]
+            if anno["iscrowd"] != 0:
+                continue
+            assert isinstance(anno["segmentation"], list)
+            for poly in anno["segmentation"]:
+                assert isinstance(poly, list)
+                poly_pts.extend(poly)
+        poly_array = np.array(poly_pts, dtype=np.single).reshape(-1, 2)
         semg_poly_list.append(poly_array)
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
-
     of_semg_poly_list = _of_object_segm_poly_flip(semg_poly_list, image_size_array, flip_code)
     for of_poly, poly, image_size in zip(of_semg_poly_list, semg_poly_list, image_size_list):
         h, w = image_size
