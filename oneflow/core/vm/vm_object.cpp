@@ -1,4 +1,4 @@
-#include "oneflow/core/vm/mirrored_object.msg.h"
+#include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/common/util.h"
 
