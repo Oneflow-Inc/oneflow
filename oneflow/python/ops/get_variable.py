@@ -7,7 +7,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.g_func_ctx as g_func_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
@@ -28,7 +28,7 @@ def get_variable(
     assert isinstance(name, str)
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_context.GetDefaultSession()
     var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
