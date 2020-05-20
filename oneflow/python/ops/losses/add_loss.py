@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 from oneflow.python.lib.core.enable_if import enable_if
 
@@ -12,4 +12,4 @@ def add_loss(loss):
     Args:
         loss: A `Blob`.
     """
-    g_func_ctx.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.logical_blob_name)
+    c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.logical_blob_name)
