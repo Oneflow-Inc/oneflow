@@ -40,7 +40,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
-  ASSERT_TRUE(mirrored_object->Has<vm::ObjectWrapper<T>>());
+  ASSERT_TRUE(mirrored_object->rw_mutexed_object().Has<vm::ObjectWrapper<T>>());
 }
 
 TEST(InitSymbolInstructionType, job_desc) {

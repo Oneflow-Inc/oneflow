@@ -30,14 +30,12 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 
 void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
-  {
-    auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-    OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(rw_mutexed_object_accesses, access) {
-      rw_mutexed_object_accesses->Erase(access);
-      if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
-      auto* mirrored_object = access->mut_mirrored_object();
-      mirrored_object->mut_access_list()->Erase(access);
-    }
+  auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
+  OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(rw_mutexed_object_accesses, access) {
+    rw_mutexed_object_accesses->Erase(access);
+    if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
+    auto* mirrored_object = access->mut_mirrored_object();
+    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access);
   }
   TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
 }
@@ -93,7 +91,7 @@ const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
   CHECK_NOTNULL(logical_object);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ(map->size(), 1);
-  return map->Begin()->Get<ObjectWrapper<ParallelDesc>>().GetPtr();
+  return map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>().GetPtr();
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
@@ -197,7 +195,8 @@ void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
                      ->Insert(rw_mutexed_object_access.Mutable())
                      .second;
   if (success) {
-    mirrored_object->mut_access_list()->EmplaceBack(std::move(rw_mutexed_object_access));
+    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
+        std::move(rw_mutexed_object_access));
   }
 }
 
@@ -269,14 +268,14 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
       auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
-      if (mirrored_object->access_list().size() == 1) { continue; }
+      if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
       if (rw_mutexed_object_access->is_const_operand()) {
-        auto* first = mirrored_object->mut_access_list()->Begin();
+        auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
         if (!first->is_const_operand()) {
           ConnectInstruction(first->mut_instruction(), instruction);
         }
       } else {
-        auto* access_list = mirrored_object->mut_access_list();
+        auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == rw_mutexed_object_access) { break; }
           ConnectInstruction(access->mut_instruction(), instruction);

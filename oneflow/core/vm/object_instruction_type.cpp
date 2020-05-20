@@ -126,7 +126,7 @@ class DeleteObjectInstructionType final : public InstructionType {
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
       OBJECT_MSG_MAP_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
-        CHECK(!mirrored_object->has_object());
+        CHECK(!mirrored_object->rw_mutexed_object().has_object());
         global_device_id2mirrored_object->Erase(mirrored_object);
       }
       vm->mut_id2logical_object()->Erase(logical_object);

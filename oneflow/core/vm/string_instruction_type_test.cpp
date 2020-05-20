@@ -34,7 +34,7 @@ TEST(StringStreamType, init_string_object) {
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
-  ASSERT_TRUE(mirrored_object->Get<StringObject>().str() == "foobar");
+  ASSERT_TRUE(mirrored_object->rw_mutexed_object().Get<StringObject>().str() == "foobar");
 }
 
 }  // namespace test
