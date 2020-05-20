@@ -740,14 +740,14 @@ def deconv2d(
     Args:
     value: 4-d `Blob`
     filter: filter of transposed convolution, usually a variable
-    output_shape: Not supported yet
+    output_shape: A 1-D Tensor representing the output shape of the deconvolution op
     strides: `int` or `int list`
     padding: `'VALID'` or `'SAME'`
     data_format: `'NHWC'` or `'NCHW'`
     name: This operator's name
     input: Alias for value
     filters: Alias for filter
-    dilations: Not supported yet
+    dilations: The dilation factor for each dimension of input.
     Returns:
     A `Blob` with the same type as `value`.
     Raises:
@@ -810,17 +810,56 @@ def deconv2d(
     else:
         raise ValueError("strides must be an int or a list.")
 
-    if padding.upper() != "VALID":
-        raise ValueError('padding must be "VALID".')
 
     # output padding
     output_padding = [0] * NDims
-    for i in range(NDims):
-        effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-        assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
-        tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size
-        output_padding[i] = output_shape[i] - tmp_output_size
-    
+    if padding.upper() == "VALID":
+        for i in range(NDims):
+            effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
+            tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size
+            output_padding[i] = output_shape[i] - tmp_output_size
+    elif padding.upper() == "SAME":
+        padding_left = [0] * NDims
+        padding_right = [0] * NDims
+        for i in range(NDims):
+            assert (output_shape[i] + strides[i] - 1) // strides[i] == input_shape[i]
+            effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+            padding_needed = max(0, (input_shape[i] - 1) * strides[i] \
+                                + effective_filter_size - output_shape[i])
+            padding_left[i] = padding_needed // 2
+            padding_right[i] = padding_needed - padding_needed // 2
+            tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size - padding_needed
+            output_padding[i] = output_shape[i] - tmp_output_size
+        print("case", output_shape, output_padding)
+        print(padding_left, padding_right)
+    else:
+        raise ValueError('padding must be "SAME" or "VALID".')
+    # add pad op if needs odd padding
+    if padding.upper() == "SAME" and padding_left != padding_right:
+        print("add pad op")
+        assert data_format.upper() == "NCHW"
+        input = (flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+                .Op("deconv2d")
+                .Input("in", [input])
+                .Input("weight", [filters])
+                .Output("out")
+                .Attr("filters", channels, "AttrTypeInt32")
+                .Attr("padding", "valid", "AttrTypeString")
+                .Attr("data_format", channel_pos, "AttrTypeString")
+                .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
+                .Attr("strides", strides, "AttrTypeListInt32")
+                .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+                .Attr("output_padding", output_padding, "AttrTypeListInt32")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0])
+        return flow.pad_grad(input,
+                            [(0, 0), (0, 0),
+                            (padding_left[0], padding_right[0]), 
+                            (padding_left[1], padding_right[1])],
+                            name=name + '_pad_grad' if name is not None else None)
+
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("deconv2d")

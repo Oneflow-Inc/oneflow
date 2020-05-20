@@ -24,6 +24,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const std::string& padding = ctx->Attr<std::string>("padding");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
@@ -35,9 +36,8 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcOutAndPadding4Deconv(in->shape().At(idx_offset + i), kernel_size.at(i),
-                               dilation_rate.at(i), strides.at(i), output_padding.at(i),
-                               static_cast<int32_t>(0), &out_shape.at(idx_offset + i), nullptr,
-                               nullptr);
+                               dilation_rate.at(i), strides.at(i), output_padding.at(i), padding,
+                               &out_shape.at(idx_offset + i), nullptr, nullptr);
     }
     *out = *in;
     *out->mut_shape() = Shape(out_shape);
@@ -92,7 +92,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   }
 
   const std::string& padding = conf.attr<std::string>("padding");
-  if (padding != "valid") {  // only support vaild for now
+  if (!(padding == "valid" || padding == "same")) {
     err << " padding:" << padding;
     is_checked = false;
   }
