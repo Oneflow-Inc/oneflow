@@ -12,10 +12,10 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-    const std::string data_format = ctx->GetAttr<std::string>("data_format");
-    const std::string padding = ctx->GetAttr<std::string>("padding");
-    const std::vector<int32_t> pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-    const std::vector<int32_t> strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string padding = ctx->Attr<std::string>("padding");
+    const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+    const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
 
     CHECK_EQ_OR_RETURN(pool_size.size(), dim);
     for (int32_t pool_dim : pool_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }

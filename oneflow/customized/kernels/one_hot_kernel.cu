@@ -29,14 +29,14 @@ class GpuOneHotKernel final : public user_op::OpKernel {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
-    const DataType dtype = ctx->GetAttr<DataType>("dtype");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
+    const DataType dtype = ctx->Attr<DataType>("dtype");
     const T on_value = IsFloatingDataType(dtype)
-                           ? static_cast<T>(ctx->GetAttr<double>("floating_on_value"))
-                           : static_cast<T>(ctx->GetAttr<int64_t>("integer_on_value"));
+                           ? static_cast<T>(ctx->Attr<double>("floating_on_value"))
+                           : static_cast<T>(ctx->Attr<int64_t>("integer_on_value"));
     const T off_value = IsFloatingDataType(dtype)
-                            ? static_cast<T>(ctx->GetAttr<double>("floating_off_value"))
-                            : static_cast<T>(ctx->GetAttr<int64_t>("integer_off_value"));
+                            ? static_cast<T>(ctx->Attr<double>("floating_off_value"))
+                            : static_cast<T>(ctx->Attr<int64_t>("integer_off_value"));
     RUN_CUDA_KERNEL((OneHotEncodeGpu<T, K>), ctx->device_ctx(), num_indices * depth,
                     num_indices * depth, depth, on_value, off_value, indices->dptr<K>(),
                     out->mut_dptr<T>());

@@ -77,7 +77,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
-    const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
+    const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
@@ -97,7 +97,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
-        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") > 128          \
+        return ctx.device_type() == DeviceType::kGPU && ctx.Attr<int32_t>("k") > 128             \
                && in_desc->data_type() == GetDataType<dtype>::value;                             \
       })                                                                                         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
