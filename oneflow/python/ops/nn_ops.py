@@ -79,7 +79,7 @@ def conv2d(
                                         effective_filter_size - input_size[i])
                 padding_left[i] = padding_needed // 2
                 padding_right[i] = padding_needed - padding_needed // 2
-            if padding_left == padding_right:
+            if padding_left != padding_right:
                 assert data_format.upper() == "NCHW"
                 input =  flow.pad(input,
                                  [(0, 0), (0, 0),
