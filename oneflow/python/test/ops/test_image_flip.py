@@ -1,7 +1,5 @@
 import oneflow as flow
 import numpy as np
-import cv2
-
 
 def _of_image_flip(images, image_shape, flip_code):
     flow.clear_default_session()
@@ -25,6 +23,8 @@ def _of_image_flip(images, image_shape, flip_code):
 
 
 def _read_images_by_cv(image_files):
+    import cv2
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
@@ -38,6 +38,8 @@ def _get_images_static_shape(images):
 
 
 def _compare_image_flip_with_cv(test_case, image_files):
+    import cv2
+
     images = _read_images_by_cv(image_files)
     assert all([len(image.shape) == 4 for image in images])
     image_shape = _get_images_static_shape(images)

@@ -1,9 +1,5 @@
 import oneflow as flow
 import numpy as np
-import cv2
-
-from PIL import Image
-
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     flow.clear_default_session()
@@ -35,6 +31,8 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
 
 
 def _read_images_by_pil(image_files):
+    from PIL import Image
+
     images = [Image.open(image_file) for image_file in image_files]
     # convert image to BGR
     converted_images = [np.array(image).astype(np.single)[:, :, ::-1] for image in images]
@@ -42,6 +40,8 @@ def _read_images_by_pil(image_files):
 
 
 def _read_images_by_cv(image_files):
+    import cv2
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
@@ -56,6 +56,8 @@ def _get_images_static_shape(images):
 
 def _target_resize_by_cv(images, target_size, max_size):
     resized_images = []
+    import cv2
+
     for image in images:
         squeeze_image = image.squeeze()
         w, h = _get_target_resize_size(

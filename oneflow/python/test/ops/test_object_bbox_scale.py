@@ -2,8 +2,6 @@ import oneflow as flow
 import numpy as np
 import random
 import os
-import cv2
-
 
 def _random_sample_images(anno_file, image_dir, batch_size):
     from pycocotools.coco import COCO
@@ -30,6 +28,8 @@ def _random_sample_images(anno_file, image_dir, batch_size):
         image_ids.append(rand_img_id)
 
     assert len(image_files) == len(image_ids)
+    import cv2
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     bbox_list = _get_images_bbox_list(coco, image_ids)
     return images, bbox_list

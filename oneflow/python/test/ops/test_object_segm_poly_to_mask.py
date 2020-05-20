@@ -2,7 +2,6 @@ import oneflow as flow
 import numpy as np
 import random
 import os
-import cv2
 
 coco_dict = dict()
 
@@ -46,6 +45,7 @@ def _random_sample_image_ids(coco, batch_size):
 
 def _read_images_with_cv(coco, image_dir, image_ids):
     image_files = [os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids]
+    import cv2
     return [cv2.imread(image_file).astype(np.single) for image_file in image_files]
 
 
@@ -213,6 +213,7 @@ def _scale_poly_list(img_segm_poly_list, scale_list):
 
 
 def _poly_to_mask_with_cv(img_segm_poly_list, image_size_list):
+    import cv2
     assert len(img_segm_poly_list) == len(image_size_list)
 
     img_segm_mask_list = []
