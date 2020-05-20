@@ -29,7 +29,7 @@ using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<void(GetInputArgModifier)>;
+using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
@@ -65,6 +65,8 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& OptionalOutput(const std::string& name);
   OpRegistryWrapperBuilder& OptionalOutput(const std::string& name, int32_t num);
   OpRegistryWrapperBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
+
+  OpRegistryWrapperBuilder& AllOutputsConstant();
 
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>

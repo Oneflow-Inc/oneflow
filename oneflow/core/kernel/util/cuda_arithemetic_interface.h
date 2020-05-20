@@ -21,6 +21,15 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
                         const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const float16* x, float16* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const int8_t* x, int8_t* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const int32_t* x, int32_t* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const int64_t* x, int64_t* y);
 
   static void InitializeWithConstConf(DeviceCtx* ctx,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
@@ -84,6 +93,22 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int32_t value, int32_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int64_t value, int64_t* y);
+
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const float* x, const int64_t x_col_offset, const int64_t x_lda,
+                             float* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const double* x, const int64_t x_col_offset, const int64_t x_lda,
+                             double* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const int8_t* x, const int64_t x_col_offset, const int64_t x_lda,
+                             int8_t* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const int32_t* x, const int64_t x_col_offset, const int64_t x_lda,
+                             int32_t* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const int64_t* x, const int64_t x_col_offset, const int64_t x_lda,
+                             int64_t* y, const int64_t y_col_offset, const int64_t y_lda);
 };
 
 }  // namespace oneflow

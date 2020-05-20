@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("ImageResize")
+REGISTER_USER_OP("image_resize")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
@@ -39,10 +39,10 @@ REGISTER_USER_OP("ImageResize")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("in", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -51,7 +51,7 @@ REGISTER_USER_OP("ImageResize")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("CropMirrorNormalize")
+REGISTER_USER_OP("crop_mirror_normalize")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -113,10 +113,7 @@ REGISTER_USER_OP("CropMirrorNormalize")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -125,11 +122,12 @@ REGISTER_USER_OP("CropMirrorNormalize")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("CoinFlip")
+REGISTER_USER_OP("coin_flip")
     .Output("out")
     .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
     .Attr("batch_size", UserOpAttrType::kAtInt64)
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
+    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");
@@ -145,9 +143,7 @@ REGISTER_USER_OP("CoinFlip")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(user_op::OpArg("out", 0), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

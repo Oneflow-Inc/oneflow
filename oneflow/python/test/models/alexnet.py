@@ -75,7 +75,8 @@ def _conv2d_layer(
 
   if activation is not None:
     if activation == op_conf_util.kRelu:
-      output = flow.keras.activations.relu(output)
+      #output = flow.keras.activations.relu(output)
+      output = flow.nn.relu(output)
     else:
       raise NotImplementedError
 

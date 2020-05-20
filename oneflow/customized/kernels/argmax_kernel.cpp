@@ -35,7 +35,8 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
       });
     }
     bc.WaitUntilCntEqualZero();
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_ARGMAX_KERNEL(dtype)                                                \

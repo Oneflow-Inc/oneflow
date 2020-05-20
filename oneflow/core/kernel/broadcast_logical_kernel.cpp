@@ -30,26 +30,26 @@ namespace oneflow {
                                         Broadcast##type##Kernel<DeviceType::kGPU, int8_t>);        \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
                                         int8_t,                                                    \
-                                        Broadcast##type##Kernel<DeviceType::kGPU, int8_t>);        \
+                                        Broadcast##type##Kernel<DeviceType::kCPU, int8_t>);        \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kGPU,    \
                                         int32_t,                                                   \
                                         Broadcast##type##Kernel<DeviceType::kGPU, int32_t>);       \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
                                         int32_t,                                                   \
-                                        Broadcast##type##Kernel<DeviceType::kGPU, int32_t>);       \
+                                        Broadcast##type##Kernel<DeviceType::kCPU, int32_t>);       \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kGPU,    \
                                         int64_t,                                                   \
                                         Broadcast##type##Kernel<DeviceType::kGPU, int64_t>);       \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
                                         int64_t,                                                   \
-                                        Broadcast##type##Kernel<DeviceType::kGPU, int64_t>);       \
+                                        Broadcast##type##Kernel<DeviceType::kCPU, int64_t>);       \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kGPU,    \
                                         float, Broadcast##type##Kernel<DeviceType::kGPU, float>);  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
+                                        float, Broadcast##type##Kernel<DeviceType::kCPU, float>);  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kGPU,    \
                                         double,                                                    \
                                         Broadcast##type##Kernel<DeviceType::kGPU, double>);        \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
-                                        float, Broadcast##type##Kernel<DeviceType::kCPU, float>);  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBroadcast##type##Conf, DeviceType::kCPU,    \
                                         double,                                                    \
                                         Broadcast##type##Kernel<DeviceType::kCPU, double>);
