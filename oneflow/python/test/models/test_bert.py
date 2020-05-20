@@ -25,8 +25,6 @@ flags.DEFINE_integer("vocab_size", 30522, "")
 flags.DEFINE_float("attention_probs_dropout_prob", 0.0, "")
 flags.DEFINE_float("hidden_dropout_prob", 0.0, "")
 flags.DEFINE_integer("hidden_size_per_head", 64, "")
-flags.DEFINE_boolean("enable_auto_mixed_precision", False,
-        "automatically change float net to mixed precision net")
 FLAGS(sys.argv)
 
 
