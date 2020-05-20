@@ -225,11 +225,11 @@ def layer_norm(
             )
             op.Input("gamma", [gamma])
             op.Output("normalized")
-        op.SetAttr("center", center, "AttrTypeBool")
-        op.SetAttr("scale", scale, "AttrTypeBool")
-        op.SetAttr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-        op.SetAttr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-        op.SetAttr("epsilon", epsilon, "AttrTypeDouble")
+        op.Attr("center", center, "AttrTypeBool")
+        op.Attr("scale", scale, "AttrTypeBool")
+        op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
+        op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+        op.Attr("epsilon", epsilon, "AttrTypeDouble")
         return (
             op
             .Build()
@@ -375,27 +375,27 @@ def batch_normalization(
                 when "trainable" is False')
 
     if os.getenv("ENABLE_USER_OP") == 'True':
-        if center and trainable:
+        if center:
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
                 dtype=inputs.dtype,
-                initializer=beta_initializer if beta_initializer is not None else flow.zeros_initializer(),
+                initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
             beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
 
-        if scale and trainable:
+        if scale:
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
                 dtype=inputs.dtype,
-                initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
+                initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
@@ -427,10 +427,10 @@ def batch_normalization(
             .Input("gamma", [gamma])
             .Input("beta", [beta])
             .Output("y")
-            .SetAttr("axis", axis, "AttrTypeInt32")
-            .SetAttr("epsilon", epsilon, "AttrTypeFloat")
-            .SetAttr("training", training, "AttrTypeBool")
-            .SetAttr("momentum", momentum, "AttrTypeFloat")
+            .Attr("axis", axis, "AttrTypeInt32")
+            .Attr("epsilon", epsilon, "AttrTypeFloat")
+            .Attr("training", training, "AttrTypeBool")
+            .Attr("momentum", momentum, "AttrTypeFloat")
             )
         if trainable and training:
             builder = (builder

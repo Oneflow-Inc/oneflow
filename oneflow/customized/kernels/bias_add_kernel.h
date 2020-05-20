@@ -22,7 +22,7 @@ class BiasAddUserKernel final : public user_op::OpKernel {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int32_t bias_add_axis = ctx->GetAttr<int32_t>("axis");
+    const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
     const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
     const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);

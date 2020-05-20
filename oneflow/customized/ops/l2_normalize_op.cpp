@@ -12,8 +12,8 @@ REGISTER_USER_OP("l2_normalize")
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
-      const float epsilon = ctx->GetAttr<float>("epsilon");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
+      const float epsilon = ctx->Attr<float>("epsilon");
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LT_OR_RETURN(axis, x_shape->NumAxes());
       CHECK_GT_OR_RETURN(epsilon, 0);
@@ -24,7 +24,7 @@ REGISTER_USER_OP("l2_normalize")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() != ctx->GetAttr<int32_t>("axis")) {
+      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() != ctx->Attr<int32_t>("axis")) {
         *ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0) =
             *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       } else {
@@ -34,7 +34,7 @@ REGISTER_USER_OP("l2_normalize")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i != axis) {
           ctx->NewBuilder()
@@ -59,8 +59,8 @@ REGISTER_USER_OP("l2_normalize_grad")
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
-      const float epsilon = ctx->GetAttr<float>("epsilon");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
+      const float epsilon = ctx->Attr<float>("epsilon");
       CHECK_EQ_OR_RETURN(*dy_shape, *y_shape);
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LT_OR_RETURN(axis, dy_shape->NumAxes());
@@ -81,7 +81,7 @@ REGISTER_USER_OP("l2_normalize_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      const int32_t axis = ctx->GetAttr<int32_t>("axis");
+      const int32_t axis = ctx->Attr<int32_t>("axis");
       FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
         if (i != axis) {
           ctx->NewBuilder()
