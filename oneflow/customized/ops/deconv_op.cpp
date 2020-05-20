@@ -22,12 +22,12 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 
   {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
+    const auto& output_shape = ctx->Attr<std::vector<int32_t>>("output_shape");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::string& padding = ctx->Attr<std::string>("padding");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
-    CHECK_EQ_OR_RETURN(NDims, output_padding.size());
+    CHECK_EQ_OR_RETURN(NDims, output_shape.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
@@ -35,9 +35,18 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
-      CalcOutAndPadding4Deconv(in->shape().At(idx_offset + i), kernel_size.at(i),
-                               dilation_rate.at(i), strides.at(i), output_padding.at(i), padding,
-                               &out_shape.at(idx_offset + i), nullptr, nullptr);
+      int32_t effective_filter_size = (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
+      if (padding == "valid") {
+        CHECK_GE(output_shape.at(i),
+                 (in->shape().At(idx_offset + i) - effective_filter_size + strides.at(i))
+                     / strides.at(i));
+      } else if (padding == "same") {
+        CHECK_GE(output_shape.at(i),
+                 (in->shape().At(idx_offset + i) + strides.at(i) - 1) / strides.at(i));
+      } else {
+        UNIMPLEMENTED();
+      }
+      out_shape.at(idx_offset + i) = output_shape.at(i);
     }
     *out = *in;
     *out->mut_shape() = Shape(out_shape);
@@ -104,9 +113,9 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
       is_checked = false;
     }
 
-    const auto& output_padding = conf.attr<std::vector<int32_t>>("output_padding");
-    if (output_padding.size() != NDims) {
-      err << " output_padding: number of element is " << output_padding.size();
+    const auto& output_shape = conf.attr<std::vector<int32_t>>("output_shape");
+    if (output_shape.size() != NDims) {
+      err << " output_shape: number of element is " << output_shape.size();
       is_checked = false;
     }
 
@@ -192,7 +201,7 @@ REGISTER_USER_OP("deconv1d")
     .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
+    .Attr("output_shape", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
@@ -209,7 +218,7 @@ REGISTER_USER_OP("deconv2d")
     .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
+    .Attr("output_shape", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
@@ -226,7 +235,7 @@ REGISTER_USER_OP("deconv3d")
     .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
+    .Attr("output_shape", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
