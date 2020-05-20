@@ -7,7 +7,7 @@
 #include "oneflow/core/common/flat_msg.h"
 #include "oneflow/core/common/object_msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/mirrored_object.msg.h"
+#include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/object_id_util.h"
