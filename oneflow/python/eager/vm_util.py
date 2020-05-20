@@ -44,7 +44,7 @@ class InstructionsBuilder(object):
                                    input_triples, output_triples, mut2_output_triples)
 
     def DeleteBlob(self, blob_object):
-        self._DeleteBlob(blob_object)
+        self._ClearObject(blob_object)
         self._DeleteObject(blob_object)
 
     def WatchBlobHeader(self, blob_object, callback):
@@ -242,9 +242,9 @@ class InstructionsBuilder(object):
         instruction.operand.append(_Int64Operand(unique_callback_id))
         self.instruction_list_.instruction.append(instruction)
 
-    def _DeleteBlob(self, blob_object):
+    def _ClearObject(self, blob_object):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "DeleteBlobObject"
+        instruction.instr_type_name = "ClearObject"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
