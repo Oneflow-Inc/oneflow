@@ -50,14 +50,8 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
     }
     return true;
   };
-  auto HasBwNode = [&](NormalForwardCompTaskNode* node) {
-    // TODO: update method for fw bw split
-    // const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
-    // return fw_logical_node->bw_node() != nullptr;
-    return false;
-  };
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
-    if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
+    if (IsSourceTaskNode(fw_node) && !fw_node->HasBackwardCompTaskNode()) { Handler(fw_node); }
   }
 }
 
