@@ -27,7 +27,6 @@ def conv2d(
 ):
     assert len(input.static_shape) == 4
     assert len(filters.static_shape) == 4
-    NDims = 2
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
@@ -58,7 +57,6 @@ def conv2d(
             dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
- 
     if os.getenv("ENABLE_USER_OP") == 'True':
         if channel_pos == "channels_first":
             kernel_size_list = filters.static_shape[2:4]
