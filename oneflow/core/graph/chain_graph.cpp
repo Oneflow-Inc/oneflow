@@ -130,19 +130,12 @@ bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
   return true;
 }
 
-bool IsForwardOnlyTaskNode(TaskNode* node) {
-  auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-  if (fw_node == nullptr) { return true; }
-  return fw_node->HasBackwardCompTaskNode() == false;
-};
-
 bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
   if (fw_node == nullptr) { return false; }
   for (TaskEdge* edge : fw_node->out_edges()) {
     auto* fw_consumer = dynamic_cast<NormalForwardCompTaskNode*>(edge->dst_node());
     if (fw_consumer == nullptr) { return false; }
-    if (fw_consumer->HasBackwardCompTaskNode()) { return false; }
   }
   return true;
 };
@@ -268,9 +261,7 @@ void ChainGraph::PrioritizeUntrainableTaskNode(std::vector<TaskNode*>* task_node
     if (IsSourceNode(node)) { starts.push_back(node); }
   }
   task_nodes->clear();
-  auto IsPrior = [&](TaskNode* node) {
-    return IsForwardOnlyTaskNode(node) && NoOutRegstConsumedByBwNode(node);
-  };
+  auto IsPrior = [&](TaskNode* node) { return NoOutRegstConsumedByBwNode(node); };
   PartialPriorTopoForEachNode(starts, ForEachInNode, ForEachOutNode, IsPrior,
                               [&](TaskNode* node) { task_nodes->push_back(node); });
   HashSet<TaskNode*> task_nodes_set_check(task_nodes->begin(), task_nodes->end());

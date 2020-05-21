@@ -19,8 +19,6 @@ size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
 
 }  // namespace
 
-bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
-
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
   size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());

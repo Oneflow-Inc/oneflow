@@ -16,7 +16,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
-  bool HasBackwardCompTaskNode();
 
  private:
   void BuildExecGphAndRegst() override;

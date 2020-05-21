@@ -51,7 +51,7 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
     return true;
   };
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
-    if (IsSourceTaskNode(fw_node) && !fw_node->HasBackwardCompTaskNode()) { Handler(fw_node); }
+    if (IsSourceTaskNode(fw_node)) { Handler(fw_node); }
   }
 }
 
