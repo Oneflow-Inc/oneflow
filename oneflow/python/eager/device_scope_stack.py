@@ -13,6 +13,9 @@ class PhysicalPlacementScope(placement_ctx.FixedPlacementScope):
         self.physical_symbol_id_ = oneflow.vm.new_physical_symbol_id()
 
     @property
+    def is_physical_placement(self): return True
+
+    @property
     def physical_symbol_id(self): return self.physical_symbol_id_
 
 def CurrentPlacement():
@@ -28,6 +31,13 @@ def _NewPlacementScope(device_tag_and_id):
         return _NewPhysicalPlacementScope(device_tag, device_id)
     global device_scope_stack
     return device_scope_stack.NewScope(lazy.Lazy(GetPhysicalPlacementScope))
+
+@oneflow_export('eager_fixed_placement', enable_if=hob.in_normal_mode & hob.env_initialized)
+def _EagerPlacementScope(device_tag, machine_device_ids):
+    def EagerPlacementScope():
+        return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
+    global device_scope_stack
+    return device_scope_stack.NewScope(lazy.Lazy(EagerPlacementScope))
 
 def _GetInitDeviceScope():
     resource = oneflow.env.current_resource()
