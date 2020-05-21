@@ -71,6 +71,7 @@ def _FetchBlobBody(blob_object):
 def _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         # TODO(lixinqi) refactor ofblob.static_shape ofblob.shape_list
+        static_shape = ofblob.static_shape
         shape = ofblob.shape
         Yield(EagerPhysicalBlobHeader(shape, [shape], ofblob.dtype, ofblob.is_tensor_list))
     return Callback

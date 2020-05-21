@@ -1,7 +1,7 @@
 import threading
 
 def Await(counter, func):
-    assert counter > 0 
+    assert counter > 0
     cond_var = threading.Condition()
     counter_box = [counter]
     result_list = []
