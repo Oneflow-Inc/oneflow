@@ -28,8 +28,9 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
 
 def _get_bbox_static_shape(bbox_list):
     bbox_shapes = [bbox.shape for bbox in bbox_list]
-    bbox_static_shape = np.amax(bbox_shapes, axis=0)
-    return [len(bbox_list)] + bbox_static_shape.tolist()
+    bbox_static_shape = np.amax(bbox_shapes, axis=0).tolist()
+    bbox_static_shape.insert(0, len(bbox_list))
+    return bbox_static_shape
 
 
 def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_info=False):

@@ -1,7 +1,7 @@
 from oneflow.python.lib.core.high_order_bool import HighOrderBool
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.c_api_util as c_api_util
 
 def InRuntimeModeHOB(mode):
@@ -26,7 +26,7 @@ session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized
 
 def _IsCurrentFunctionTrainable():
     assert in_global_mode()
-    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
