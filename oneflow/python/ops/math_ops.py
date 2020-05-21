@@ -834,3 +834,22 @@ def squared_difference(x, y, name=None):
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+
+@oneflow_export("math.cumsum")
+def cumsum(input, axis=0, exclusive=False, reverse=False, name=None):
+    if axis < 0: axis += len(input.shape)
+    assert axis >=0 and axis < len(input.shape)
+    y = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("CumSum_"))
+        .Op("cumsum")
+        .Input("in", [input])
+        .SetAttr("axis", int(axis), "AttrTypeInt32")
+        .SetAttr("exclusive", bool(exclusive), "AttrTypeBool")
+        .SetAttr("reverse", bool(reverse), "AttrTypeBool")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+    return y

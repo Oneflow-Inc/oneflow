@@ -24,21 +24,21 @@ REGISTER_USER_OP("cumsum")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("cumsum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper cumsum_grad_op =
-            builder.Op("cumsum")
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Attr("axis", op.attr<int32_t>("axis"))
-                .Attr("exclusive", op.attr<bool>("exclusive"))
-                .Attr("reverce", not op.attr<bool>("reverse"))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(cumsum_grad_op.output("dx", 0), "in", 0);
-        AddOp(cumsum_grad_op);
-      }
-    });
+REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                          user_op::AddOpFn AddOp) {
+  if (op.NeedGenGradTensor4OpInput("in", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper cumsum_grad_op =
+        builder.Op("cumsum")
+            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("out")
+            .Attr("axis", op.attr<int32_t>("axis"))
+            .Attr("exclusive", op.attr<bool>("exclusive"))
+            .Attr("reverse", not op.attr<bool>("reverse"))
+            .Build();
+    op.BindGradTensorWithOpInput(cumsum_grad_op.output("out", 0), "in", 0);
+    AddOp(cumsum_grad_op);
+  }
+});
 
 }  // namespace oneflow
