@@ -42,19 +42,19 @@ def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_
 
     coco = COCO(anno_file)
     img_ids = coco.getImgIds()
-    rand_img_ids = random.sample(img_ids, batch_size)
 
     bbox_list = []
     image_size_list = []
-    for img_id in rand_img_ids:
-        image_size_list.append([coco.imgs[img_id]["height"], coco.imgs[img_id]["width"]])
-        anno_ids = list(
-            filter(
-                lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, coco.getAnnIds(imgIds=[img_id])
-            )
-        )
+    sample_cnt = 0
+    while sample_cnt < batch_size:
+        rand_img_id = random.choice(img_ids)
+        anno_ids = coco.getAnnIds(imgIds=[rand_img_id])
+        if len(anno_ids) == 0:
+            continue
         bbox_array = np.array([coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single)
         bbox_list.append(bbox_array)
+        image_size_list.append([coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]])
+        sample_cnt += 1
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
     of_bbox_list = _of_object_bbox_flip(bbox_list, image_size_array, flip_code)

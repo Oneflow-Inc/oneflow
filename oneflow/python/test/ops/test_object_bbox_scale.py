@@ -26,6 +26,10 @@ def _random_sample_images(anno_file, image_dir, batch_size):
         if group_id != batch_group_id:
             continue
 
+        anno_ids = coco.getAnnIds(imgIds=[rand_img_id])
+        if len(anno_ids) == 0:
+            continue
+
         image_files.append(os.path.join(image_dir, coco.imgs[rand_img_id]["file_name"]))
         image_ids.append(rand_img_id)
 
