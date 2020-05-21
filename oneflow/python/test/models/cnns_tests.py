@@ -28,7 +28,7 @@ class TestNetMixin:
     pass
 
   def assert_tolerance_4_mixed_precision(self):
-    pass
+    raise AssertionError
 
   def run_net(self, num_gpu_per_node, num_node = 1, node_list = ""):
     net_modudle = _Import(self.net)
@@ -68,7 +68,9 @@ class TestNetMixin:
       fmt_str = "{:>6}  {:>12.6f}  {:>12.6f}"
       print(fmt_str.format(i,loss_dict['tensorflow'][i], loss_dict['oneflow'][i]))
     if FLAGS.enable_auto_mixed_precision:
-        rtol, atol = self.assert_tolerance_4_mixed_precision()
+        tolerance = self.assert_tolerance_4_mixed_precision()
+        rtol = tolerance["rtol"]
+        atol = tolerance["atol"]
         print('assert tolerance for mixed_precision are: rtol', rtol, ', atol', atol)
         self.assertTrue(numpy.allclose(loss_dict['tensorflow'], loss_dict['oneflow'],
                 rtol=rtol, atol=atol))
@@ -84,7 +86,7 @@ class TestAlexNetMixin(TestNetMixin):
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
   def assert_tolerance_4_mixed_precision(self):
-      return (1e-5, 1e-2)
+      return {"rtol": 1e-5, "atol": 1e-2}
 
 class TestResNet50Mixin(TestNetMixin):
   """
@@ -95,7 +97,7 @@ class TestResNet50Mixin(TestNetMixin):
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
   def assert_tolerance_4_mixed_precision(self):
-      return (1e-8, 1e-5)
+      return {"rtol": 1e-8, "atol": 1e-5}
 
 class TestVgg16Mixin(TestNetMixin):
   """
@@ -106,7 +108,7 @@ class TestVgg16Mixin(TestNetMixin):
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
   def assert_tolerance_4_mixed_precision(self):
-      return (1e-5, 1e-2)
+      return {"rtol": 1e-4, "atol": 1e-1} # big tolerance due to running ci on 1080ti
 
 class TestInceptionV3Mixin(TestNetMixin):
   """
@@ -117,7 +119,7 @@ class TestInceptionV3Mixin(TestNetMixin):
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
   def assert_tolerance_4_mixed_precision(self):
-      return (1e-5, 1e-2)
+      return {"rtol": 1e-5, "atol": 1e-2}
 
 def _Import(name, globals=None, locals=None, fromlist=None):
   # Fast path: see if the module has already been imported.
