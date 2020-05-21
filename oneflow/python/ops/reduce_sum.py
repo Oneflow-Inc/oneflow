@@ -16,8 +16,7 @@ import collections
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if name is None:
         name = id_util.UniqueStr("ReduceSum_")
-    enable_user_op = os.getenv("ENABLE_USER_OP") == "True"
-    if enable_user_op and flow.current_global_function_desc().IsTrainable() == False:
+    if os.getenv("ENABLE_USER_OP") == "True":
         if axis is None:
             axis = []
         elif isinstance(axis, (list, tuple)):
@@ -30,8 +29,8 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
             .Op("reduce_sum")
             .Input("input_tensor", [input_tensor])
             .Output("output_tensor")
-            .SetAttr("axis", axis, "AttrTypeListInt32")
-            .SetAttr("keepdims", keepdims, "AttrTypeBool")
+            .Attr("axis", axis, "AttrTypeListInt32")
+            .Attr("keepdims", keepdims, "AttrTypeBool")
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]

@@ -13,14 +13,14 @@ REGISTER_USER_OP("one_hot")
     .Attr("integer_off_value", UserOpAttrType::kAtInt64)
     .Attr("dtype", UserOpAttrType::kAtDataType)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const int64_t depth = ctx->GetAttr<int64_t>("depth");
+      const int64_t depth = ctx->Attr<int64_t>("depth");
       CHECK_GT_OR_RETURN(depth, 0);
       const user_op::TensorDesc* indices_desc = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices_desc->data_type()));
       CHECK_GT_OR_RETURN(indices_desc->shape().NumAxes(), 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc = *indices_desc;
-      auto dtype = ctx->GetAttr<DataType>("dtype");
+      auto dtype = ctx->Attr<DataType>("dtype");
       *out_desc->mut_data_type() = dtype;
       DimVector dim_vec = indices_desc->shape().dim_vec();
       dim_vec.push_back(depth);

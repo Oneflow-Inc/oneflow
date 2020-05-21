@@ -86,13 +86,13 @@ def conv2d(
                 .Input("in", [input])
                 .Input("weight", [filters])
                 .Output("out")
-                .SetAttr("filters", filters.static_shape[0], "AttrTypeInt32")
-                .SetAttr("padding", padding.lower(), "AttrTypeString")
-                .SetAttr("data_format", channel_pos, "AttrTypeString")
-                .SetAttr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-                .SetAttr("strides", strides, "AttrTypeListInt32")
-                .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
-                .SetAttr("groups", groups, "AttrTypeInt32")
+                .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
+                .Attr("padding", padding.lower(), "AttrTypeString")
+                .Attr("data_format", channel_pos, "AttrTypeString")
+                .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+                .Attr("strides", strides, "AttrTypeListInt32")
+                .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+                .Attr("groups", groups, "AttrTypeInt32")
                 .Build()
                 .InferAndTryRun()
                 .RemoteBlobList()[0]
@@ -162,7 +162,7 @@ def bias_add(value, bias, data_format=None, name=None):
             .Input("a", [value])
             .Input("b", [bias])
             .Output("out")
-            .SetAttr("axis", bias_add_axis, "AttrTypeInt32")
+            .Attr("axis", bias_add_axis, "AttrTypeInt32")
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -202,14 +202,14 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 2, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -252,14 +252,14 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 2, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -306,14 +306,14 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NDHWC", "NCDHW"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 3, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -356,14 +356,14 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NDHWC", "NCDHW"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 3, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -633,12 +633,12 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
         .Op("random_mask_like")
         .Input("like", [like])
         .Output("out")
-        .SetAttr("rate", float(rate), "AttrTypeFloat")
+        .Attr("rate", float(rate), "AttrTypeFloat")
     )
     if seed is not None:
-        mask_op.SetAttr("seed", seed, "AttrTypeInt64")
+        mask_op.Attr("seed", seed, "AttrTypeInt64")
     else:
-        mask_op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+        mask_op.Attr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
         
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
@@ -696,7 +696,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .Input("in", [x])
         .Input("mask", [mask])
         .Output("out")
-        .SetAttr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -806,13 +806,13 @@ def deconv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .SetAttr("filters", channels, "AttrTypeInt32")
-        .SetAttr("padding", padding.lower(), "AttrTypeString")
-        .SetAttr("data_format", channel_pos, "AttrTypeString")
-        .SetAttr("kernel_size", kernel_size, "AttrTypeListInt32")
-        .SetAttr("strides", strides, "AttrTypeListInt32")
-        .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
-        .SetAttr("output_padding", output_padding, "AttrTypeListInt32")
+        .Attr("filters", channels, "AttrTypeInt32")
+        .Attr("padding", padding.lower(), "AttrTypeString")
+        .Attr("data_format", channel_pos, "AttrTypeString")
+        .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
+        .Attr("strides", strides, "AttrTypeListInt32")
+        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+        .Attr("output_padding", output_padding, "AttrTypeListInt32")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -825,7 +825,7 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")
-        .SetAttr("alpha", float(alpha), "AttrTypeFloat")
+        .Attr("alpha", float(alpha), "AttrTypeFloat")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

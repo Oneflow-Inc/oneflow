@@ -32,13 +32,13 @@ class ConstantKernel final : public OpKernel {
     CHECK(ctx->all_outputs_constant());
     if (const_state->is_inited()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
+    bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
     CHECK(elem_cnt);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), elem_cnt,
                                      is_floating_value
-                                         ? static_cast<T>(ctx->GetAttr<double>("floating_value"))
-                                         : static_cast<T>(ctx->GetAttr<int64_t>("integer_value")),
+                                         ? static_cast<T>(ctx->Attr<double>("floating_value"))
+                                         : static_cast<T>(ctx->Attr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
     const_state->set_is_inited(true);
   }
@@ -49,18 +49,15 @@ class ConstantKernel final : public OpKernel {
   REGISTER_USER_KERNEL("constant")                                                    \
       .SetCreateFn<ConstantKernel<device, dtype>>()                                   \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const auto& data_type = ctx.GetAttr<DataType>("dtype");                       \
+        const auto& data_type = ctx.Attr<DataType>("dtype");                          \
         return ctx.device_type() == device && data_type == GetDataType<dtype>::value; \
       });
 
-#define REGISTER_CONSTANT_KERNEL(dtype)                 \
-  REGISTER_CONSTANT_XPU_KERNEL(DeviceType::kCPU, dtype) \
-  REGISTER_CONSTANT_XPU_KERNEL(DeviceType::kGPU, dtype)
+#define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
+  REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-REGISTER_CONSTANT_KERNEL(float)
-REGISTER_CONSTANT_KERNEL(double)
-REGISTER_CONSTANT_KERNEL(int32_t)
-REGISTER_CONSTANT_KERNEL(int64_t)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow

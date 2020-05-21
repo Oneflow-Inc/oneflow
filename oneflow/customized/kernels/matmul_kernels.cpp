@@ -32,8 +32,8 @@ class MatmulGpuFloatingKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    CBLAS_TRANSPOSE trans_a = ctx->GetAttr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
-    CBLAS_TRANSPOSE trans_b = ctx->GetAttr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -67,8 +67,8 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    CBLAS_TRANSPOSE trans_a = ctx->GetAttr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
-    CBLAS_TRANSPOSE trans_b = ctx->GetAttr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -105,8 +105,8 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    CBLAS_TRANSPOSE trans_a = ctx->GetAttr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
-    CBLAS_TRANSPOSE trans_b = ctx->GetAttr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -152,8 +152,8 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    CBLAS_TRANSPOSE trans_a = ctx->GetAttr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
-    CBLAS_TRANSPOSE trans_b = ctx->GetAttr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buf", 0);
