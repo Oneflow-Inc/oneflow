@@ -48,13 +48,15 @@ def _get_images_bbox_list(coco, image_ids):
 def _get_images_static_shape(images):
     image_shapes = [image.shape for image in images]
     image_static_shape = np.amax(image_shapes, axis=0).tolist()
-    return [len(image_shapes)] + image_static_shape
+    image_static_shape.insert(0, len(image_shapes))
+    return image_static_shape
 
 
 def _get_bbox_static_shape(bbox_list):
     bbox_shapes = [bbox.shape for bbox in bbox_list]
-    bbox_static_shape = np.amax(bbox_shapes, axis=0)
-    return [len(bbox_list)] + bbox_static_shape.tolist()
+    bbox_static_shape = np.amax(bbox_shapes, axis=0).tolist()
+    bbox_static_shape.insert(0, len(bbox_list))
+    return bbox_static_shape
 
 
 def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
