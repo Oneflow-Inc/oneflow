@@ -25,7 +25,7 @@ TEST(ControlStreamType, new_symbol_symbol) {
   CachedObjectMsgAllocator allocator(20, 100);
   auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_id = ObjectIdUtil::NewLogicalSymbolId();
+  int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   ASSERT_TRUE(vm->pending_msg_list().empty());
   vm->Receive(&list);

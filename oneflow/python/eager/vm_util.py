@@ -14,11 +14,16 @@ import oneflow.python.eager.physical_blob_watcher as physical_blob_watcher
 import oneflow
 
 def PhysicalRun(build):
-    id_generator = id_util.PhysicalIdGenerator()
+    return _Run(build, id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction)
+
+def LogicalRun(build):
+    return _Run(build, id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction)
+
+def _Run(build, id_generator, run_api):
     instruction_list = instr_util.InstructionListProto()
     eager_symbol_list = eager_symbol_util.EagerSymbolList()
     build(InstructionsBuilder(id_generator, instruction_list, eager_symbol_list))
-    c_api_util.RunPhysicalInstruction(instruction_list, eager_symbol_list)
+    run_api(instruction_list, eager_symbol_list)
 
 class InstructionsBuilder(object):
     def __init__(self, id_generator, instruction_list, eager_symbol_list):

@@ -9,7 +9,7 @@ namespace vm {
 
 using ObjectId = int64_t;
 
-struct ObjectIdUtil final {
+struct IdUtil final {
   // usually [-4096, 4096]
   static int64_t IsErrorId(int64_t id);
 

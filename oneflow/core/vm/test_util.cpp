@@ -3,7 +3,7 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/storage.h"
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
 
@@ -29,11 +29,11 @@ int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::strin
                             int64_t* parallel_desc_symbol_id) {
   auto parallel_conf = std::make_shared<ParallelConf>();
   parallel_conf->add_device_name(device_name);
-  *parallel_desc_symbol_id = ObjectIdUtil::NewLogicalSymbolId();
+  *parallel_desc_symbol_id = IdUtil::NewLogicalSymbolId();
   Global<Storage<ParallelConf>>::Get()->Add(*parallel_desc_symbol_id, parallel_conf);
   instr_msg_list->EmplaceBack(
       NewInstruction("NewParallelDescSymbol")->add_int64_operand(*parallel_desc_symbol_id));
-  int64_t logical_object_id = ObjectIdUtil::NewLogicalObjectId();
+  int64_t logical_object_id = IdUtil::NewLogicalObjectId();
   instr_msg_list->EmplaceBack(NewInstruction("NewObject")
                                   ->add_parallel_desc(*parallel_desc_symbol_id)
                                   ->add_int64_operand(logical_object_id));
@@ -41,7 +41,7 @@ int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::strin
 }
 
 int64_t TestUtil::NewSymbol(InstructionMsgList* instr_msg_list) {
-  int64_t symbol_id = ObjectIdUtil::NewLogicalSymbolId();
+  int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   instr_msg_list->EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   return symbol_id;
 }

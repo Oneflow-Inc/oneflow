@@ -75,10 +75,10 @@ class NewSymbolInstructionType final : public InstructionType {
   // clang-format on
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&ObjectIdUtil::GetTypeId>(vm, instr_msg);
+    Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&ObjectIdUtil::GetValueId>(vm, instr_msg);
+    Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }

@@ -70,14 +70,14 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_separator() {
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(ObjectId logical_object_id) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             sole_mirrored_object);
   return this;
@@ -85,28 +85,28 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_const_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_const_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                             all_mirrored_object);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_symbol_operand(ObjectId logical_object_id) {
-  CHECK(ObjectIdUtil::IsSymbolId(logical_object_id));
+  CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mutable_symbol_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                              SoleMirroredObject());
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(ObjectId logical_object_id) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           sole_mirrored_object);
   return this;
@@ -114,28 +114,28 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                           all_mirrored_object);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_init_symbol_operand(ObjectId logical_object_id) {
-  CHECK(ObjectIdUtil::IsSymbolId(logical_object_id));
+  CHECK(IdUtil::IsSymbolId(logical_object_id));
   add_instr_operand()->mutable_init_symbol_operand()->mutable_operand()->__Init__(
       logical_object_id, SoleMirroredObject());
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(ObjectId logical_object_id) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id);
   return this;
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const SoleMirroredObject& sole_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            sole_mirrored_object);
   return this;
@@ -143,7 +143,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
     ObjectId logical_object_id, const AllMirroredObject& all_mirrored_object) {
-  CHECK(ObjectIdUtil::IsObjectId(logical_object_id));
+  CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            all_mirrored_object);
   return this;
@@ -160,56 +160,56 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
 template<>
 void CheckOperand<kHostConstMemZoneModifier>(const Operand& operand) {
   CHECK(operand.has_sole_mirrored_object());
-  CHECK(ObjectIdUtil::IsSymbolId(operand.logical_object_id()));
+  CHECK(IdUtil::IsSymbolId(operand.logical_object_id()));
 }
 
 template<>
 void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
-  CHECK(ObjectIdUtil::IsObjectId(operand.logical_object_id()));
+  CHECK(IdUtil::IsObjectId(operand.logical_object_id()));
 }
 
 const RwMutexedObject& Instruction::operand_type(const Operand& operand,
                                                  int64_t default_global_device_id) const {
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetTypeId>(operand, default_global_device_id)
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
+  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_global_device_id)
       ->rw_mutexed_object();
 }
 
 const RwMutexedObject& Instruction::operand_value(const Operand& operand,
                                                   int64_t default_global_device_id) const {
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_global_device_id)
+  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id)
       ->rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_type(const Operand& operand,
                                                int64_t default_global_device_id) {
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetTypeId>(operand, default_global_device_id)
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
+  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_global_device_id)
       ->mut_rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
                                                 int64_t default_global_device_id) {
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_global_device_id)
+  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id)
       ->mut_rw_mutexed_object();
 }
 
 MirroredObject* Instruction::mut_type_mirrored_object(const MutOperand& mut_operand) {
   const auto& operand = mut_operand.operand();
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   int64_t default_device_id = GetOperandDefaultGlobalDeviceId();
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetTypeId>(operand, default_device_id);
+  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_device_id);
 }
 
 MirroredObject* Instruction::mut_value_mirrored_object(const MutOperand& mut_operand) {
   const auto& operand = mut_operand.operand();
-  CHECK(ObjectIdUtil::IsValueId(operand.logical_object_id()));
+  CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   int64_t default_device_id = GetOperandDefaultGlobalDeviceId();
-  return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_device_id);
+  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_device_id);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>

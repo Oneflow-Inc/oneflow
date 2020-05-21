@@ -10,7 +10,7 @@
 #include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
@@ -165,7 +165,7 @@ OBJECT_MSG_BEGIN(Instruction);
 
   PRIVATE MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
                                                      int64_t default_global_device_id) {
-    return FindMirroredObjectByOperand<&ObjectIdUtil::GetValueId>(operand, default_global_device_id);
+    return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id);
   }
 
   PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;

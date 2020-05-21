@@ -121,13 +121,11 @@ void VirtualMachine::ForEachConstMirroredObject(
     int64_t global_device_id, const DoEachT& DoEach) {
   const Operand& operand = const_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
-    ForEachMirroredObject<&ObjectIdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                                     DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
+    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
+                                               DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }
@@ -140,8 +138,7 @@ void VirtualMachine::ForEachConstMirroredObject(
     int64_t global_device_id, const DoEachT& DoEach) {
   const Operand& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
     // do nothing
   } else {
@@ -156,11 +153,10 @@ void VirtualMachine::ForEachMutMirroredObject(
     int64_t global_device_id, const DoEachT& DoEach) {
   const Operand& operand = mutable_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&ObjectIdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                                     DoEach);
+    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
+                                               DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }
@@ -173,13 +169,11 @@ void VirtualMachine::ForEachMutMirroredObject(
     int64_t global_device_id, const DoEachT& DoEach) {
   const Operand& operand = mut2_operand.operand();
   if (interpret_type == InterpretType::kCompute) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
-    ForEachMirroredObject<&ObjectIdUtil::GetValueId>(id2logical_object, operand, global_device_id,
-                                                     DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
+    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
+                                               DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    ForEachMirroredObject<&ObjectIdUtil::GetTypeId>(id2logical_object, operand, global_device_id,
-                                                    DoEach);
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else {
     UNIMPLEMENTED();
   }

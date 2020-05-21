@@ -23,7 +23,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/eager/eager_util.h"
 
 namespace oneflow {
@@ -179,8 +179,9 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
-Maybe<void> RunVmInstructionList(const std::string& instruction_list_str) {
-  return vm::Run(instruction_list_str);
+Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
+                                  const std::string& eager_symbol_list_str) {
+  return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);
 }
 
 Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
@@ -193,14 +194,24 @@ Maybe<long long> CurrentMachineId() {
   return Global<MachineCtx>::Get()->this_machine_id();
 }
 
+Maybe<long long> NewLogicalObjectId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalObjectId();
+}
+
+Maybe<long long> NewLogicalSymbolId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalSymbolId();
+}
+
 Maybe<long long> NewPhysicalObjectId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
-  return vm::ObjectIdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
+  return vm::IdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 Maybe<long long> NewPhysicalSymbolId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
-  return vm::ObjectIdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
+  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 }  // namespace oneflow

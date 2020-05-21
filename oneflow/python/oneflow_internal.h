@@ -85,8 +85,9 @@ std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-void RunVmInstructionList(const std::string& vm_instruction_list, std::string* error_str) {
-  return oneflow::RunVmInstructionList(vm_instruction_list)
+void RunLogicalInstruction(const std::string& vm_instruction_list,
+                           const std::string& eager_symbol_list_str, std::string* error_str) {
+  return oneflow::RunLogicalInstruction(vm_instruction_list, eager_symbol_list_str)
       .GetDataAndSerializedErrorProto(error_str);
 }
 
@@ -98,6 +99,14 @@ void RunPhysicalInstruction(const std::string& vm_instruction_list,
 
 long CurrentMachineId(std::string* error_str) {
   return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewLogicalObjectId(std::string* error_str) {
+  return oneflow::NewLogicalObjectId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewLogicalSymbolId(std::string* error_str) {
+  return oneflow::NewLogicalSymbolId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 long NewPhysicalObjectId(std::string* error_str) {

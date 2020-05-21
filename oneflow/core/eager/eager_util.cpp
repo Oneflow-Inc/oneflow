@@ -33,6 +33,12 @@ void StorageAdd(const EagerSymbol& symbol) {
   }
 }
 
+Maybe<void> RunLogicalInstruction(const vm::InstructionListProto& instruction_list_proto,
+                                  const EagerSymbolList& eager_symbol_list) {
+  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
+  return vm::Run(instruction_list_proto);
+}
+
 Maybe<void> RunPhysicalInstruction(const vm::InstructionListProto& instruction_list_proto,
                                    const EagerSymbolList& eager_symbol_list) {
   for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
@@ -50,6 +56,17 @@ Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str
   CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, &eager_symbol_list))
       << "EagerSymbolList parse failed";
   return RunPhysicalInstruction(instruction_list_proto, eager_symbol_list);
+}
+
+Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
+                                  const std::string& eager_symbol_list_str) {
+  vm::InstructionListProto instruction_list_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(instruction_list_proto_str, &instruction_list_proto))
+      << "InstructionListProto parse failed";
+  EagerSymbolList eager_symbol_list;
+  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, &eager_symbol_list))
+      << "EagerSymbolList parse failed";
+  return RunLogicalInstruction(instruction_list_proto, eager_symbol_list);
 }
 
 }  // namespace eager

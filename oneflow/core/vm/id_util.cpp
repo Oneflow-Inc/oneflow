@@ -1,6 +1,6 @@
 #include <climits>
 #include <glog/logging.h>
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -27,52 +27,50 @@ int64_t NewPhysicalObjectIdFromCounter(int32_t machine_id) {
 
 }  // namespace
 
-int64_t ObjectIdUtil::IsErrorId(int64_t id) {
-  return id >= -kErrorCodeLimit && id <= kErrorCodeLimit;
-}
+int64_t IdUtil::IsErrorId(int64_t id) { return id >= -kErrorCodeLimit && id <= kErrorCodeLimit; }
 
-int64_t ObjectIdUtil::NewLogicalValueObjectId() {
+int64_t IdUtil::NewLogicalValueObjectId() {
   int64_t val = NewLogicalObjectIdFromCounter();
   CHECK_LT(val, kObjectIdMaximumValue);
   return val;
 }
 
-int64_t ObjectIdUtil::NewLogicalValueSymbolId() {
+int64_t IdUtil::NewLogicalValueSymbolId() {
   return NewLogicalObjectIdFromCounter() + kObjectIdMaximumValue;
 }
 
-int64_t ObjectIdUtil::IsLogicalValueId(int64_t id) {
+int64_t IdUtil::IsLogicalValueId(int64_t id) {
   CHECK(IsValueId(id));
   return ((id + 1) % kObjectIdMaximumValue) == 0;
 }
 
-int64_t ObjectIdUtil::NewPhysicalValueObjectId(int32_t machine_id) {
+int64_t IdUtil::NewPhysicalValueObjectId(int32_t machine_id) {
   int64_t val = NewPhysicalObjectIdFromCounter(machine_id);
   CHECK_LT(val, kObjectIdMaximumValue);
   return val;
 }
 
-int64_t ObjectIdUtil::NewPhysicalValueSymbolId(int32_t machine_id) {
+int64_t IdUtil::NewPhysicalValueSymbolId(int32_t machine_id) {
   return NewPhysicalObjectIdFromCounter(machine_id) + kObjectIdMaximumValue;
 }
 
-bool ObjectIdUtil::IsObjectId(int64_t object_id) { return object_id < kObjectIdMaximumValue; }
+bool IdUtil::IsObjectId(int64_t object_id) { return object_id < kObjectIdMaximumValue; }
 
-bool ObjectIdUtil::IsSymbolId(int64_t symbol_id) { return symbol_id > kObjectIdMaximumValue; }
+bool IdUtil::IsSymbolId(int64_t symbol_id) { return symbol_id > kObjectIdMaximumValue; }
 
-int64_t ObjectIdUtil::GetTypeId(int64_t id) {
+int64_t IdUtil::GetTypeId(int64_t id) {
   if (IsTypeId(id)) { return id; }
   return -id;
 }
 
-bool ObjectIdUtil::IsTypeId(int64_t id) { return id < 0; }
+bool IdUtil::IsTypeId(int64_t id) { return id < 0; }
 
-int64_t ObjectIdUtil::GetValueId(int64_t id) {
+int64_t IdUtil::GetValueId(int64_t id) {
   if (IsValueId(id)) { return id; }
   return -id;
 }
 
-bool ObjectIdUtil::IsValueId(int64_t id) { return id > 0; }
+bool IdUtil::IsValueId(int64_t id) { return id > 0; }
 
 }  // namespace vm
 }  // namespace oneflow
