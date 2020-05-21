@@ -93,30 +93,28 @@ def  _make_broadcast_logical_fn(of_func, x, y, device_type, data_type, mirrored)
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     if mirrored:
-        with flow.device_prior_placement(device_type, "0:0"):
-
-            @flow.function(func_config)
-            def broadcast_logical_fn(
-                    x_def=flow.MirroredTensorDef(x.shape, dtype=data_type),
-                    y_def=flow.MirroredTensorDef(y.shape, dtype=data_type),
-                ):
+        @flow.function(func_config)
+        def broadcast_logical_fn(
+                x_def=flow.MirroredTensorDef(x.shape, dtype=data_type),
+                y_def=flow.MirroredTensorDef(y.shape, dtype=data_type),
+            ):
+            with flow.device_prior_placement(device_type, "0:0"):
                 return eval(of_func)(x_def, y_def)
 
     else:
-        with flow.device_prior_placement(device_type, "0:0"):
-
-            @flow.function(func_config)
-            def broadcast_logical_fn(
-                x_def=flow.FixedTensorDef(x.shape, dtype=data_type),
-                y_def=flow.FixedTensorDef(y.shape, dtype=data_type),
-            ):
-                return  eval(of_func)(x_def, y_def)
+        @flow.function(func_config)
+        def broadcast_logical_fn(
+            x_def=flow.FixedTensorDef(x.shape, dtype=data_type),
+            y_def=flow.FixedTensorDef(y.shape, dtype=data_type),
+        ):
+            with flow.fixed_placement(device_type, "0:0"):
+                return eval(of_func)(x_def, y_def)
 
     return broadcast_logical_fn
 
 def _comparebroadcast_logical_with_tf(test_case, device_type, x_shape, y_shape,
         data_type, mirrored=False):
-    flow.clear_default_session()
+    # flow.clear_default_session()
     x, y = _random_inputs(x_shape, y_shape, data_type)
 
     broadcast_logical_list = ["equal", "not_equal",
@@ -152,63 +150,63 @@ def test_broadcast_logical(test_case):
         _comparebroadcast_logical_with_tf(test_case, *arg)
 
 
-#def testbroadcast_logical_case_1(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["x_shape"] = [(2, 10, 20)]
-#    arg_dict["y_shape"] = [(10, 1)]
-#    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
-#            flow.float, flow.double]
-#    for arg in GenArgList(arg_dict):
-#        if arg[0] == "cpu" and arg[3] == "float16": continue
-#        _comparebroadcast_logical_with_tf(test_case, *arg)
-#
+def testbroadcast_logical_case_1(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(2, 10, 20)]
+    arg_dict["y_shape"] = [(10, 1)]
+    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
+            flow.float, flow.double]
+    for arg in GenArgList(arg_dict):
+        if arg[0] == "cpu" and arg[3] == "float16": continue
+        _comparebroadcast_logical_with_tf(test_case, *arg)
 
-#def testbroadcast_logical_case_2(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["cpu", "gpu"]
-#    arg_dict["x_shape"] = [(209, 80)]
-#    arg_dict["y_shape"] = [(1, 80)]
-#    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
-#            flow.float, flow.double]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        if arg[0] == "cpu" and arg[3] == "float16": continue
-#        _comparebroadcast_logical_with_tf(test_case, *arg)
-#
-#def testbroadcast_logical_case_3(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["x_shape"] = [(20, 1, 1, 2)]
-#    arg_dict["y_shape"] = [(20, 500, 20, 2)]
-#    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
-#            flow.float, flow.double]
-#    for arg in GenArgList(arg_dict):
-#        if arg[0] == "cpu" and arg[3] == "float16": continue
-#        _comparebroadcast_logical_with_tf(test_case, *arg)
-#
-#def testbroadcast_logical_case_4(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["gpu"]
-#    arg_dict["x_shape"] = [(500, 1, 20)]
-#    arg_dict["y_shape"] = [(20, 500, 20, 20)]
-#    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
-#            flow.float, flow.double]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        if arg[0] == "cpu" and arg[3] == "float16": continue
-#        _comparebroadcast_logical_with_tf(test_case, *arg)
-#
-#def testbroadcast_logical_case_5(test_case):
-#    arg_dict = OrderedDict()
-#    arg_dict["device_type"] = ["cpu"]
-#    arg_dict["x_shape"] = [(5, 10, 20)]
-#    arg_dict["y_shape"] = [(10, 1)]
-#    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
-#            flow.float, flow.double]
-#    arg_dict["mirrored"] = [True]
-#    for arg in GenArgList(arg_dict):
-#        if arg[0] == "cpu" and arg[3] == "float16": continue
-#        _comparebroadcast_logical_with_tf(test_case, *arg)
-#
+
+def testbroadcast_logical_case_2(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(209, 80)]
+    arg_dict["y_shape"] = [(1, 80)]
+    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
+            flow.float, flow.double]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        if arg[0] == "cpu" and arg[3] == "float16": continue
+        _comparebroadcast_logical_with_tf(test_case, *arg)
+
+def testbroadcast_logical_case_3(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(20, 1, 1, 2)]
+    arg_dict["y_shape"] = [(20, 500, 20, 2)]
+    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
+            flow.float, flow.double]
+    for arg in GenArgList(arg_dict):
+        if arg[0] == "cpu" and arg[3] == "float16": continue
+        _comparebroadcast_logical_with_tf(test_case, *arg)
+
+def testbroadcast_logical_case_4(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(500, 1, 20)]
+    arg_dict["y_shape"] = [(20, 500, 20, 20)]
+    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
+            flow.float, flow.double]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        if arg[0] == "cpu" and arg[3] == "float16": continue
+        _comparebroadcast_logical_with_tf(test_case, *arg)
+
+def testbroadcast_logical_case_5(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu"]
+    arg_dict["x_shape"] = [(5, 10, 20)]
+    arg_dict["y_shape"] = [(10, 1)]
+    arg_dict["data_type"] = [flow.int32, flow.int8, flow.int32, flow.int64,
+            flow.float, flow.double]
+    arg_dict["mirrored"] = [True]
+    for arg in GenArgList(arg_dict):
+        if arg[0] == "cpu" and arg[3] == "float16": continue
+        _comparebroadcast_logical_with_tf(test_case, *arg)
+
 
