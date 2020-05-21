@@ -358,9 +358,10 @@ def GetFunctionConfigDef():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(func_config_def, ConfigDef())
 
-def RunVmInstructionList(vm_instruction_list):
-    serialized_vm_instruction_list = str(text_format.MessageToString(vm_instruction_list))
-    error_str = oneflow_internal.RunVmInstructionList(serialized_vm_instruction_list)
+def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
+    instructions = str(text_format.MessageToString(vm_instruction_list))
+    symbols = str(text_format.MessageToString(eager_symbol_list))
+    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -377,6 +378,17 @@ def CurrentMachineId():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return machine_id
 
+def NewLogicalObjectId():
+    object_id, error_str = oneflow_internal.NewLogicalObjectId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id
+
+def NewLogicalSymbolId():
+    object_id, error_str = oneflow_internal.NewLogicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id
 def NewPhysicalObjectId():
     object_id, error_str = oneflow_internal.NewPhysicalObjectId()
     error = text_format.Parse(error_str, error_util.ErrorProto())

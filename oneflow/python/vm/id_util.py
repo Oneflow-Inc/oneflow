@@ -15,3 +15,10 @@ class PhysicalIdGenerator(IdGenerator):
 
     def NewObjectId(self):
         return c_api_util.NewPhysicalObjectId()
+
+class LogicalIdGenerator(IdGenerator):
+    def NewSymbolId(self):
+        return c_api_util.NewLogicalSymbolId()
+
+    def NewObjectId(self):
+        return c_api_util.NewLogicalObjectId()

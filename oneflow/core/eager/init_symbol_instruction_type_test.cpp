@@ -1,5 +1,5 @@
 #define private public
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -26,7 +26,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", instr_type_name});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t symbol_id = vm::ObjectIdUtil::NewLogicalSymbolId();
+  int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
   Global<vm::Storage<SerializedT>>::Get()->Add(symbol_id, std::make_shared<SerializedT>());
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
@@ -35,8 +35,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  auto* logical_object =
-      vm->mut_id2logical_object()->FindPtr(vm::ObjectIdUtil::GetTypeId(symbol_id));
+  auto* logical_object = vm->mut_id2logical_object()->FindPtr(vm::IdUtil::GetTypeId(symbol_id));
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);

@@ -70,7 +70,7 @@ class EagerUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        vm_util.LogicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
         return self
 
     def MakeRemoteBlob(self, lbi):

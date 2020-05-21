@@ -54,10 +54,10 @@ class NewObjectInstructionType final : public InstructionType {
   // clang-format on
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&ObjectIdUtil::GetTypeId>(vm, instr_msg);
+    Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&ObjectIdUtil::GetValueId>(vm, instr_msg);
+    Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
@@ -105,10 +105,10 @@ class DeleteObjectInstructionType final : public InstructionType {
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
     // do nothing, delete objects in Compute method
-    Run<&ObjectIdUtil::GetTypeId>(vm, instr_msg);
+    Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&ObjectIdUtil::GetValueId>(vm, instr_msg);
+    Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }

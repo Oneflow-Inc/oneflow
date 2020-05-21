@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
 
 #include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/vm/object_id_util.h"
+#include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 
 namespace oneflow {
