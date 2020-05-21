@@ -28,7 +28,7 @@ class InferContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);
   }
 

@@ -87,7 +87,7 @@ REGISTER_USER_OP("TestReshape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->Attr<Shape>("shape");
       CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -100,7 +100,7 @@ REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const Shape& conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->Attr<Shape>("shape");
       CHECK_EQ(in_shape->elem_cnt(), conf_shape.elem_cnt());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -118,7 +118,9 @@ REGISTER_USER_OP("TestReshapeLike4KeepHeaderOnly")
       *out_shape = *like_shape;
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) {
+      CHECK_EQ(conf.input_size("like"), 1);
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
@@ -180,7 +182,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Attr("out_num", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      int64_t out_num = ctx->GetAttr<int64_t>("out_num");
+      int64_t out_num = ctx->Attr<int64_t>("out_num");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
       *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
@@ -305,7 +307,7 @@ REGISTER_USER_OP("TestDataTypeAttr")
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->GetAttr<DataType>("output_type");
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("output_type");
       return Maybe<void>::Ok();
     });
 
@@ -315,8 +317,8 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
     .Attr("out_shapes", UserOpAttrType::kAtListShape)
     .Attr("out_types", UserOpAttrType::kAtListDataType)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto& out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
-      const auto& out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+      const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
+      const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
         *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);

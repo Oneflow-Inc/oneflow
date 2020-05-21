@@ -59,10 +59,10 @@ class ClipByScalarKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    double floating_min = ctx->GetAttr<double>("floating_min");
-    int64_t integral_min = ctx->GetAttr<int64_t>("integral_min");
-    double floating_max = ctx->GetAttr<double>("floating_max");
-    int64_t integral_max = ctx->GetAttr<int64_t>("integral_max");
+    double floating_min = ctx->Attr<double>("floating_min");
+    int64_t integral_min = ctx->Attr<int64_t>("integral_min");
+    double floating_max = ctx->Attr<double>("floating_max");
+    int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                      GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
@@ -81,8 +81,8 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    double floating_min = ctx->GetAttr<double>("floating_min");
-    int64_t integral_min = ctx->GetAttr<int64_t>("integral_min");
+    double floating_min = ctx->Attr<double>("floating_min");
+    int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
@@ -100,8 +100,8 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    double floating_max = ctx->GetAttr<double>("floating_max");
-    int64_t integral_max = ctx->GetAttr<int64_t>("integral_max");
+    double floating_max = ctx->Attr<double>("floating_max");
+    int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
@@ -120,10 +120,10 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    double floating_min = ctx->GetAttr<double>("floating_min");
-    int64_t integral_min = ctx->GetAttr<int64_t>("integral_min");
-    double floating_max = ctx->GetAttr<double>("floating_max");
-    int64_t integral_max = ctx->GetAttr<int64_t>("integral_max");
+    double floating_min = ctx->Attr<double>("floating_min");
+    int64_t integral_min = ctx->Attr<int64_t>("integral_min");
+    double floating_max = ctx->Attr<double>("floating_max");
+    int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                          GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
@@ -143,8 +143,8 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    double floating_min = ctx->GetAttr<double>("floating_min");
-    int64_t integral_min = ctx->GetAttr<int64_t>("integral_min");
+    double floating_min = ctx->Attr<double>("floating_min");
+    int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
@@ -163,8 +163,8 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    double floating_max = ctx->GetAttr<double>("floating_max");
-    int64_t integral_max = ctx->GetAttr<int64_t>("integral_max");
+    double floating_max = ctx->Attr<double>("floating_max");
+    int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
