@@ -17,9 +17,9 @@ namespace test {
 
 TEST(VmDesc, ToDot) {
   std::string dot_str = ObjectMsgListReflection<VmDesc>().ToDot("VmDesc");
-  //  std::cout << std::endl;
-  //  std::cout << dot_str << std::endl;
-  //  std::cout << std::endl;
+  // std::cout << std::endl;
+  // std::cout << dot_str << std::endl;
+  // std::cout << std::endl;
 }
 
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
