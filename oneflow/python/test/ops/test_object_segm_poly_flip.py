@@ -28,7 +28,11 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
 
 def _get_segm_poly_static_shape(poly_list):
     poly_shapes = [poly.shape for poly in poly_list]
-    poly_static_shape = np.amax(poly_shapes, axis=0).tolist()
+    poly_static_shape = np.amax(poly_shapes, axis=0)
+    assert isinstance(
+        poly_static_shape, np.ndarray
+    ), "poly_shapes: {}, poly_static_shape: {}".format(str(poly_shapes), str(poly_static_shape))
+    poly_static_shape = poly_static_shape.tolist()
     poly_static_shape.insert(0, len(poly_list))
     return poly_static_shape
 
