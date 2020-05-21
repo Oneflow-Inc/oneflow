@@ -68,8 +68,8 @@ def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_d
         sample_cnt += 1
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
-    of_semg_poly_list = _of_object_segm_poly_flip(segm_poly_list, image_size_array, flip_code)
-    for of_poly, poly, image_size in zip(of_semg_poly_list, segm_poly_list, image_size_list):
+    of_segm_poly_list = _of_object_segm_poly_flip(segm_poly_list, image_size_array, flip_code)
+    for of_poly, poly, image_size in zip(of_segm_poly_list, segm_poly_list, image_size_list):
         h, w = image_size
         if flip_code == 1:
             poly[:, 0] = w - poly[:, 0]
