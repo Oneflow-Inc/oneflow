@@ -5,7 +5,7 @@ import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute as distribute
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -78,7 +78,7 @@ class EagerUserOp(UserOp):
 
 @oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
 def user_op_builder(op_name):    
-    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, LazyUserOp)
 
 @oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & hob.env_initialized)
