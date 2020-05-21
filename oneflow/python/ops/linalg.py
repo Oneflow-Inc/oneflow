@@ -34,7 +34,7 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
                     .SetAttr("transpose_a", transpose_a, "AttrTypeBool")\
                     .SetAttr("transpose_b", transpose_b, "AttrTypeBool")\
                     .Build()
-        return op.RemoteBlobList()[0]
+        return op.InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Matmul_"))

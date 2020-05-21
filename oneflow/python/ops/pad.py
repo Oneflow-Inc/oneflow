@@ -30,6 +30,7 @@ def pad(x, paddings, constant_value=0, name=None):
         .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
         .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
@@ -60,5 +61,6 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
         .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
+        .InferAndTryRun()
         .RemoteBlobList()[0]
     )

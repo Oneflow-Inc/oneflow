@@ -5,8 +5,6 @@ import oneflow as flow
 from collections import OrderedDict 
 
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
