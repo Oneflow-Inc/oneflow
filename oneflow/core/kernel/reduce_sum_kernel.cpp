@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 void ReduceSumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -13,7 +15,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   const Shape& reduced_shape =
       conf.axis().empty()
           ? Shape::Ones(in_blob->shape().NumAxes())
-          : in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
+          : CreateReducedShape(in_blob->shape(), {conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx.device_ctx, XpuVarNdarray<T>(reduced_shape, out_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(in_blob, in_blob->shape().NumAxes()),
@@ -22,5 +24,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kReduceSumConf, ReduceSumKernel,
                                          ARITHMETIC_DATA_TYPE_SEQ);
+
+}  // namespace
 
 }  // namespace oneflow

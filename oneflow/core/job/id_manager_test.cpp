@@ -8,52 +8,39 @@ static const int64_t machine_id_shl = 11 + 21 + 21;
 static const int64_t thread_id_shl = 21 + 21;
 static const int64_t local_work_stream_shl = 21;
 
+EnvProto GetEnvProto() {
+  EnvProto ret;
+  for (size_t i = 0; i < 10; ++i) {
+    auto* machine = ret.add_machine();
+    machine->set_id(i);
+    machine->set_addr("192.168.1." + std::to_string(i));
+  }
+  ret.set_ctrl_port(9527);
+  return ret;
+}
+
 Resource GetResource() {
   Resource ret;
-  for (size_t i = 0; i < 10; ++i) {
-    Machine* machine = ret.add_machine();
-    machine->set_addr("192.168.1." + std::to_string(i));
-    machine->set_name("machine_" + std::to_string(i));
-    machine->set_port(i + 8080);
-  }
+  ret.set_machine_num(10);
   ret.set_gpu_device_num(8);
   ret.set_cpu_device_num(5);
   ret.set_comm_net_worker_num(4);
-  ret.set_persistence_worker_num(30);
   return ret;
 }
 
 void New() {
-  JobDescProto proto;
-  *proto.mutable_resource() = GetResource();
-  TODO();
+  Global<EnvDesc>::New(GetEnvProto());
+  Global<ResourceDesc>::New(GetResource());
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
-  TODO();
+  Global<ResourceDesc>::Delete();
+  Global<EnvDesc>::Delete();
 }
 
 }  // namespace
-
-TEST(IDMgr, compile_machine_id_and_name) {
-  New();
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineID4MachineName("machine_0"), 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineID4MachineName("machine_1"), 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineID4MachineName("machine_5"), 5);
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineName4MachineId(2), "machine_2");
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineName4MachineId(3), "machine_3");
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineName4MachineId(7), "machine_7");
-  Delete();
-}
-
-TEST(IDMgr, compile_special_thrd_id) {
-  New();
-  ASSERT_EQ(Global<IDMgr>::Get()->GetPersistenceThrdId(1), 8 + 5 + 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->CommNetThrdId(), 8 + 5 + 30);
-  Delete();
-}
 
 TEST(IDMgr, compile_task_id) {
   New();

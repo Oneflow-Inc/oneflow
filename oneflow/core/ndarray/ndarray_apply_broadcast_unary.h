@@ -6,21 +6,31 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS, template<typename> class unary_func,
+template<DeviceType device_type, typename T, template<typename> class unary_func,
          typename Enable = void>
 struct NdarrayApplyBroadcastUnary;
 
-template<DeviceType device_type, typename T, int NDIMS, template<typename> class unary_func>
+template<DeviceType device_type, typename T, template<typename> class unary_func>
 struct NdarrayApplyBroadcastUnary<
-    device_type, T, NDIMS, unary_func,
+    device_type, T, unary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CheckBroadcastable(y, x);
-    NdarrayApplyBroadcastUnaryCoreWrapper<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
+    DimVector simplified_y_dim;
+    DimVector simplified_x_dim;
+    SimplifyBroadcastShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
+    SwitchApply(SwitchCase(simplified_y_dim.size()), ctx,
+                XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
+                XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
   }
 
  private:
+#define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
+  NdarrayApplyBroadcastUnaryCoreWrapper<device_type, T, NDIMS, unary_func>::func_name
+  DEFINE_STATIC_SWITCH_FUNC(void, Apply, DEFINE_NDARRAY_BROADCAST_UNARY,
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef DEFINE_NDARRAY_BROADCAST_UNARY
   static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     for (int i = 0; i < y.shape().NumAxes(); ++i) {
@@ -29,14 +39,14 @@ struct NdarrayApplyBroadcastUnary<
   }
 };
 
-template<DeviceType device_type, typename T, int NDIMS, template<typename> class unary_func>
+template<DeviceType device_type, typename T, template<typename> class unary_func>
 struct NdarrayApplyBroadcastUnary<
-    device_type, T, NDIMS, unary_func,
+    device_type, T, unary_func,
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     using NewT = typename DevDType<device_type, T>::type;
-    return NdarrayApplyBroadcastUnary<device_type, NewT, NDIMS, unary_func>::Apply(
+    return NdarrayApplyBroadcastUnary<device_type, NewT, unary_func>::Apply(
         ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(x));
   }

@@ -5,17 +5,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void CheckOpConf(const OperatorConf& op_conf) {
-  if (op_conf.input_conf().has_blob_conf()) {
-    if (op_conf.input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
-    if (op_conf.input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
-  }
-}
-
-}  // namespace
-
 void InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
   if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -27,7 +16,6 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {
-  CheckOpConf(op_conf());
   return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
                                            GetBlobDesc4BnInOp("out"), parallel_ctx);
 }
@@ -43,9 +31,8 @@ Maybe<void> InputOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignatures(&sbp_sig_list));
-  *sbp_signature = sbp_sig_list.sbp_signature(0);
+  InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
+                                              output_bns(), sbp_signature);
   return Maybe<void>::Ok();
 }
 

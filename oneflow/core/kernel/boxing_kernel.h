@@ -16,23 +16,6 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   void VirtualKernelInit() override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  template<typename Iter>
-  void ForwardField(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
-  void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void ForwardColNum(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void ForwardDim0ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
-  void ForwardDim1ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
-  void ForwardDim2ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardRecordIdInDevicePiece(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
-  void SetColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
-  void SetMaxColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;

@@ -10,6 +10,8 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       lbi2consumer_grouped_by_parallel_sbp;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
+    OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
+    if (IsClassRegistered<DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
@@ -51,8 +53,8 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
         PbMessage* consumer_op_type_conf =
             MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-        ReplaceStrValInPbFdOrPbRpf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
-                                   GenLogicalBlobName(grouped_lbi));
+        ReplaceInputLbnInOpCustomizedConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
+                                          GenLogicalBlobName(grouped_lbi));
       }
     }
   }

@@ -64,7 +64,9 @@ class CtrlClient final {
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
-#define OF_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
+#define OF_BARRIER_ALL() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
+#define OF_BARRIER() \
+  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, Global<ResourceDesc>::Get()->TotalMachineNum())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);

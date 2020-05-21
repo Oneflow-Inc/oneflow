@@ -5,16 +5,16 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/persistence/snapshot.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
+
+class Blob;
+class InitializerConf;
+class MemoryCase;
 
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
@@ -23,9 +23,8 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
+void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                    const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
@@ -113,8 +112,8 @@ struct CpuKernelUtilIf {
                      void* temp_storage, const size_t temp_storage_bytes) {
     RowSum(ctx, row_num, col_num, x, y);
   }
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
@@ -156,6 +155,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon);
   static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
@@ -219,8 +219,8 @@ struct GpuKernelUtilIf {
                      void* temp_storage, const size_t temp_storage_bytes);
   static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes);
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                        const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
@@ -266,6 +266,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
@@ -358,9 +359,7 @@ class DataContentIterator final {
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
     int64_t elem_num = blob->static_shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-    if (blob->IsColValid()) {
-      std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
-    }
+    std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
     bn_idx_ += 1;
     if (bn_idx_ == bns_->size()) {
       bn_idx_ = 0;
@@ -380,6 +379,7 @@ class DataContentIterator final {
   int32_t axis_;
 };
 
+/*
 class FieldIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FieldIterator);
@@ -473,6 +473,7 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
 };
+*/
 
 template<typename T, typename U>
 typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
@@ -488,21 +489,6 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
 
 template<typename T, typename U>
 void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
-
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 }  // namespace oneflow
 

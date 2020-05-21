@@ -1,10 +1,8 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/env_desc.h"
 #include "grpc/grpc_posix.h"
-
-DEFINE_bool(grpc_use_no_signal, false, "prevent GRPC library from using any signals");
 
 namespace oneflow {
 
@@ -26,9 +24,8 @@ CtrlServer::~CtrlServer() {
 
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
-
-  if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
-  int port = Global<ResourceDesc>::Get()->ctrl_port();
+  if (Global<EnvDesc>::Get()->grpc_use_no_signal()) { grpc_use_signal(-1); }
+  int port = Global<EnvDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
   int bound_port = 0;

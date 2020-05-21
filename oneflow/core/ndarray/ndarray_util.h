@@ -110,7 +110,7 @@ struct NdarrayUtil final {
       DeviceCtx* ctx, const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>& y,
       const XpuVarNdarray<const T>& x) {
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
-    return Unary<unary_func>::SwitchBroadcastApply(SwitchCase(x.shape().NumAxes()), ctx, y, x);
+    return NdarrayApplyBroadcastUnary<device_type, T, unary_func>::Apply(ctx, y, x);
   }
 
   template<template<typename> class binary_func>
@@ -119,7 +119,7 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
     CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
-    return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
+    return NdarrayApplyBroadcastBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
   }
 
   template<template<typename> class binary_func>
@@ -128,8 +128,7 @@ struct NdarrayUtil final {
     static_assert(std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
                   "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
-    return Binary<binary_func>::SwitchInplaceBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y,
-                                                            x);
+    return NdarrayApplyBroadcastBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
   }
 
   template<template<typename> class unary_func>
@@ -158,49 +157,13 @@ struct NdarrayUtil final {
   static void ApplyBinary(
       DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-    return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    if (a.host_ptr() == y.host_ptr()) {
+      CHECK(a.host_shape() == y.host_shape());
+      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, b);
+    } else {
+      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    }
   }
-
-  template<template<typename> class unary_func>
-  struct Unary final {
-    template<int NDIMS>
-    static void BroadcastApply(
-        DeviceCtx* ctx, const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>& y,
-        const XpuVarNdarray<const T>& x) {
-      return NdarrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
-    }
-#define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) Unary<unary_func>::func_name<NDIMS>
-    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_UNARY,
-                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef DEFINE_NDARRAY_BROADCAST_UNARY
-  };
-
-  template<template<typename> class binary_func>
-  struct Binary final {
-    template<int NDIMS>
-    static void BroadcastApply(
-        DeviceCtx* ctx,
-        const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
-        const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-      return NdarrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
-    }
-    template<int NDIMS>
-    static void InplaceBroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                                      const XpuVarNdarray<const T>& x) {
-      return NdarrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::InplaceApply(ctx, y,
-                                                                                           x);
-    }
-#define MAKE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) Binary<binary_func>::func_name<NDIMS>
-    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, MAKE_NDARRAY_BROADCAST_BINARY,
-                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef MAKE_NDARRAY_BROADCAST_BINARY
-
-#define MAKE_NDARRAY_INPLACE_BROADCAST_BINARY(func_name, NDIMS) \
-  Binary<binary_func>::func_name<NDIMS>
-    DEFINE_STATIC_SWITCH_FUNC(void, InplaceBroadcastApply, MAKE_NDARRAY_INPLACE_BROADCAST_BINARY,
-                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef MAKE_NDARRAY_INPLACE_BROADCAST_BINARY
-  };
 };
 
 }  // namespace oneflow

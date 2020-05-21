@@ -12,6 +12,10 @@ class ConvDataGradOp : public Operator {
   ~ConvDataGradOp() override = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature,
+                                std::function<void(OpContext*)> EnrollOpCtx) const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override;
@@ -23,8 +27,6 @@ class ConvDataGradOp : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
   const PbMessage& GetCustomizedConf() const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*, const OpContext*) const override;
 };
 
 }  // namespace oneflow

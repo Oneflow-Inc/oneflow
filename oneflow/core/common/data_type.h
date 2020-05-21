@@ -9,44 +9,19 @@
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
-class OFRecord;
-
-// SEQ
+#if defined(WITH_CUDA)
+#define DEVICE_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
+#else
+#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
+#endif
 
 typedef half_float::half float16;
-
-#define FLOATING_DATA_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-
-#define SIGNED_INT_DATA_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)   \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
-
-#define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
-
-#define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
-
-#define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
-
-#define ARITHMETIC_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ         \
-  INT_DATA_TYPE_SEQ
-
-#define POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
-#define PB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
-#define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
-
-#define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
-
-#if defined(WITH_CUDA)
-#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
-#endif
 
 // Type Trait: IsFloating
 
@@ -226,11 +201,19 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {
   return (lhs.has_value() && rhs.has_value() && lhs.value() == rhs.value())
          || (!lhs.has_value() && !rhs.has_value());
+}
+
+template<typename T>
+void CheckDataType(DataType data_type) {
+  LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
+                 && data_type != DataType::kChar && data_type != GetDataType<T>::value))
+      << data_type << " " << GetDataType<T>::value;
 }
 
 }  // namespace oneflow

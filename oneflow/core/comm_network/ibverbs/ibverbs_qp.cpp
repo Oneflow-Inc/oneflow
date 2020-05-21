@@ -1,5 +1,7 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/job/resource_desc.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 

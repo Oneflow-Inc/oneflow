@@ -1,44 +1,25 @@
 #include "oneflow/core/job_completer/optimizer.h"
+#include <re2/re2.h>
 
 namespace oneflow {
 
-void GenerateOptimizerOpConfWrapperStruct::Call(
-    const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-    const LogicalBlobId& diff_lbi_of_var_out,
-    const LogicalBlobId& total_loss_instance_num_lbi) const {
-  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
+void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
+                                                const ParallelConf& parallel_conf,
+                                                JobBuilder* job_builder,
+                                                const LogicalBlobId& diff_lbi_of_var_out) const {
+  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
-                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
-                               const LogicalBlobId& total_loss_instance_num_lbi) {
+                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
+  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void GenerateDownScaleOpConf(const std::string& name, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, LogicalBlobId* diff_lbi_of_var_out) {
-  int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
-  if (loss_scale_factor == 1) { return; }
-  float down_scale_factor = 1.0 / loss_scale_factor;
-
-  OperatorConf down_scale_mul_op;
-  down_scale_mul_op.set_name(name);
-  ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
-  conf->set_in(GenLogicalBlobName(*diff_lbi_of_var_out));
-  conf->set_out("out");
-  conf->set_float_operand(down_scale_factor);
-
-  *diff_lbi_of_var_out = GenLogicalBlobId(name + "/out");
-  job_builder->AddOps(parallel_conf, {down_scale_mul_op});
-}
-
-void AddOptimizerOpConf(
-    const OpGraph& op_graph, JobBuilder* job_builder,
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-    const std::function<const LogicalBlobId&(const ParallelDesc&)>& LossInstanceNum4ParallelDesc) {
+void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
+                        const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
     if (var_op == nullptr) { return; }
@@ -46,44 +27,57 @@ void AddOptimizerOpConf(
 
     LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateDownScaleOpConf(var_op->op_name() + "-down_scale", parallel_desc.parallel_conf(),
-                            job_builder, &diff_lbi_of_var_out);
     GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
-                              diff_lbi_of_var_out, LossInstanceNum4ParallelDesc(parallel_desc));
+                              diff_lbi_of_var_out);
   });
 }
 
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           const LogicalBlobId& total_loss_instance_num_lbi,
                            JobBuilder* job_builder, T* mdupdt_op_conf) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
-  mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
   const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
   const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
   if (op.op_conf().variable_conf().model_name() == "weight") {
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.weight_l1());
-    mdupdt_op_conf->set_l2(train_conf.weight_l2());
   } else if (op.op_conf().variable_conf().model_name() == "bias") {
     mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.bias_l1());
-    mdupdt_op_conf->set_l2(train_conf.bias_l2());
   } else {
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-    mdupdt_op_conf->set_l1(0);
-    mdupdt_op_conf->set_l2(0);
+  }
+  if (train_conf.model_update_conf().has_weight_decay_conf()) {
+    const WeightDecayConf& weight_decay_conf = train_conf.model_update_conf().weight_decay_conf();
+    std::function<bool(const std::string& op_name)> WeightDecayFilter;
+    if (weight_decay_conf.has_includes()) {
+      WeightDecayFilter = [&](const std::string& op_name) {
+        return std::any_of(
+            weight_decay_conf.includes().pattern().cbegin(),
+            weight_decay_conf.includes().pattern().cend(),
+            [&](const std::string& pattern) { return RE2::PartialMatch(op_name, pattern); });
+      };
+    } else if (weight_decay_conf.has_excludes()) {
+      WeightDecayFilter = [&](const std::string& op_name) {
+        return !std::any_of(
+            weight_decay_conf.excludes().pattern().cbegin(),
+            weight_decay_conf.excludes().pattern().cend(),
+            [&](const std::string& pattern) { return RE2::PartialMatch(op_name, pattern); });
+      };
+    } else {
+      WeightDecayFilter = [&](const std::string& op_name) { return true; };
+    }
+    if (WeightDecayFilter(op.op_name())) {
+      mdupdt_op_conf->set_weight_decay(weight_decay_conf.weight_decay_rate());
+    }
   }
 }
 
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                          \
-  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                             \
-                                         const LogicalBlobId& diff_lbi_of_var_out,         \
-                                         const LogicalBlobId& total_loss_instance_num_lbi, \
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                  \
+  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                     \
+                                         const LogicalBlobId& diff_lbi_of_var_out, \
                                          JobBuilder* job_builder, T* mdupdt_op_conf)
 
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);

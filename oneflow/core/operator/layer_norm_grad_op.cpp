@@ -34,7 +34,7 @@ Maybe<void> LayerNormGradOp::InferBlobDescs(
                                       : conf.begin_norm_axis();
   CHECK_GE_OR_RETURN(begin_norm_axis, 1);
   CHECK_LT_OR_RETURN(begin_norm_axis, x->shape().NumAxes());
-  std::vector<int64_t> bn_param_shape_dim_vec;
+  DimVector bn_param_shape_dim_vec;
   bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x->shape().dim_vec().cbegin(),
                                 x->shape().dim_vec().cbegin() + begin_norm_axis);
   const Shape bn_param_shape(bn_param_shape_dim_vec);

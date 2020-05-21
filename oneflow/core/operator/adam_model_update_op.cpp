@@ -23,7 +23,6 @@ Maybe<void> AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), job_desc().DefaultDataType());
-  CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("m") == *model_blob_desc);
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("v") == *model_blob_desc);
 

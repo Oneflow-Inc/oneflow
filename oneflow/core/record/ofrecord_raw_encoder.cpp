@@ -35,11 +35,9 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
                                                             const std::string& field_name,
                                                             int64_t one_col_elem_num) const {
   const auto& shape = in_blob->shape();
-  CHECK(in_blob->dim2_valid_num_ptr() == nullptr);
   CHECK_EQ(one_col_elem_num, shape.Count(1));
   CHECK_EQ(in_offset % one_col_elem_num, 0);
-  int64_t dim0_idx = in_offset / one_col_elem_num;
-  int64_t elem_num = shape.NumAxes() == 1 ? 1 : in_blob->dim1_valid_num(dim0_idx) * shape.Count(2);
+  int64_t elem_num = shape.NumAxes() == 1 ? 1 : shape.Count(1);
 
   const T* in_dptr = in_blob->dptr<T>() + in_offset;
   EncodeDataToFeature(ctx, &feature, in_dptr, elem_num);

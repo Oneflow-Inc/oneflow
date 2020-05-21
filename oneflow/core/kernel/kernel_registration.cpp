@@ -1,18 +1,11 @@
 #include "oneflow/core/kernel/kernel_registration.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 namespace kernel_registration {
 
 namespace {
-
-struct KernelRegistryVal final {
-  CreateFn func;
-  std::shared_ptr<constraint::KernelConstraint> cons;
-
-  KernelRegistryVal(CreateFn f, const std::shared_ptr<constraint::KernelConstraint>& c)
-      : func(f), cons(c) {}
-};
 
 HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegistry() {
   static HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>> creators;
@@ -21,33 +14,41 @@ HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegi
 
 }  // namespace
 
-namespace constraint {
-
-bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
-  return (dev_ == kernel_conf.op_attribute().op_conf().device_type()
-          && dtype_ == kernel_conf.data_type());
+KernelRegistrarBuilder& KernelRegistrarBuilder::SetCreateFn(CreateFn fn) {
+  registry_val_.func = fn;
+  return *this;
 }
 
-bool DeviceConstraint::IsMatched(const KernelConf& kernel_conf) {
-  return dev_ == kernel_conf.op_attribute().op_conf().device_type();
+KernelRegistrarBuilder& KernelRegistrarBuilder::SetIsMatchedPred(IsMatchedPredicator fn) {
+  registry_val_.cons.SetIsMatchedPred(fn);
+  return *this;
 }
 
-}  // namespace constraint
+void KernelRegistrarBuilder::Finalize(OperatorConf::OpTypeCase* op_type,
+                                      KernelRegistryVal* val) const {
+  *op_type = op_type_;
+  val->func = registry_val_.func;
+  val->cons = registry_val_.cons;
+}
 
-KernelRegistrar::KernelRegistrar(const OperatorConf::OpTypeCase& op_type,
-                                 constraint::KernelConstraint* cons, CreateFn f) {
+KernelRegistrar::KernelRegistrar(const KernelRegistrarBuilder& builder) {
   auto* creators = MutKernelRegistry();
-  (*creators)[op_type].emplace_back(f, std::shared_ptr<constraint::KernelConstraint>(cons));
+  OperatorConf::OpTypeCase op_type;
+  KernelRegistryVal val;
+  builder.Finalize(&op_type, &val);
+  (*creators)[op_type].emplace_back(std::move(val));
 }
 
 Kernel* CreateKernel(const KernelConf& kernel_conf) {
   auto op_type = kernel_conf.op_attribute().op_conf().op_type_case();
-  const auto& registry_vals = MutKernelRegistry()->at(op_type);
+  auto kernel_registry = MutKernelRegistry();
+  if (kernel_registry->find(op_type) == kernel_registry->end()) { return nullptr; }
+  const auto& registry_vals = kernel_registry->at(op_type);
 
   Kernel* ret = nullptr;
   bool is_matched = false;
   for (const KernelRegistryVal& val : registry_vals) {
-    if (val.cons->IsMatched(kernel_conf)) {
+    if (val.cons.IsMatched(kernel_conf)) {
       CHECK(!is_matched)
           << "There are more than one kernel constraints satisfied by kernel conf of "
           << static_cast<size_t>(op_type);
@@ -55,6 +56,7 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
       ret = val.func();
     }
   }
+  // TODO: print more info when failed
   return ret;
 }
 

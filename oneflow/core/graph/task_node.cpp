@@ -24,8 +24,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kPackForward
-         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward
-         || tt == TaskType::kEveryNth;
+         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward;
 }
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
@@ -214,7 +213,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
-  exec_gph_.ToExecSequence(true, parallel_ctx(), task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -360,7 +359,6 @@ void TaskNode::LockRegsts() {
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
     RegstDesc* produced_regst = pair.second.get();
-    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
     bool in_same_stream = true;
     for (const TaskNode* consumer : produced_regst->consumers()) {
       if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {

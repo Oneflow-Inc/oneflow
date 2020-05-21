@@ -23,9 +23,19 @@ Maybe<void> OneHotOp::InferBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *indices;
   out->set_data_type(data_type);
-  std::vector<int64_t> dim_vec = indices->shape().dim_vec();
+  DimVector dim_vec = indices->shape().dim_vec();
   dim_vec.push_back(depth);
   out->mut_shape() = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> OneHotOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("indices", 0)
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

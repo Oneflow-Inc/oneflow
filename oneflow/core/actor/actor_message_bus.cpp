@@ -2,6 +2,7 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/comm_network/comm_network.h"
 
 namespace oneflow {
 
@@ -18,7 +19,7 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()),
            Global<MachineCtx>::Get()->this_machine_id());
   int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
-  Global<ThreadMgr>::Get()->GetThrd(thrd_id)->GetMsgChannelPtr()->Send(msg);
+  Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
 }
 
 }  // namespace oneflow

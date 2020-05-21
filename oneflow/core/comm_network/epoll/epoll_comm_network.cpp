@@ -2,8 +2,11 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/env_desc.h"
 
 #ifdef PLATFORM_POSIX
+
+#include <netinet/tcp.h>
 
 namespace oneflow {
 
@@ -108,7 +111,7 @@ void EpollCommNet::InitSockets() {
 
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t this_listen_port = Global<ResourceDesc>::Get()->data_port();
+  int32_t this_listen_port = Global<EnvDesc>::Get()->data_port();
   if (this_listen_port != -1) {
     CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
     PushPort(this_machine_id,
@@ -135,6 +138,8 @@ void EpollCommNet::InitSockets() {
     auto peer_machine = Global<ResourceDesc>::Get()->machine(peer_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    const int val = 1;
+    PCHECK(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&val, sizeof(int)) == 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);

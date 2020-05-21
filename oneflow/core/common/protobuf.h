@@ -10,9 +10,9 @@
 #include <google/protobuf/util/message_differencer.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -36,6 +36,7 @@ using PbMd = google::protobuf::util::MessageDifferencer;
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
   OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
+  OF_PP_MAKE_TUPLE_SEQ(double, Double)      \
   OF_PP_MAKE_TUPLE_SEQ(int16_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
@@ -92,6 +93,7 @@ template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg, const std::string& field_name);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
@@ -101,6 +103,7 @@ PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& 
 // Get/Replace str val maybe repeated;  field_name with index is like "name_0"
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
 std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
+bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
 void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
                                 const std::string& old_val, const std::string& new_val);
 
@@ -197,6 +200,10 @@ inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
 
 inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
 
+class BlobDescProto;
+bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs);
+inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -208,32 +215,35 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name()
-                                    + std::to_string(lbi.is_packed_id()));
+    const auto& str_hash = std::hash<std::string>();
+    return str_hash(lbi.op_name()) ^ str_hash(lbi.blob_name());
   }
 };
 
 template<>
 struct hash<oneflow::OpBlobArg> {
   size_t operator()(const oneflow::OpBlobArg& oba) const {
-    return std::hash<std::string>()(oba.op_name() + oba.bn_in_op());
+    const auto& str_hash = std::hash<std::string>();
+    return str_hash(oba.op_name()) ^ str_hash(oba.bn_in_op());
   }
 };
 
 template<>
 struct hash<oneflow::SbpParallel> {
   size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
-    std::string desc;
+    const auto& str_hash = std::hash<std::string>();
+    size_t ret = 0;
     if (sbp_parallel.has_broadcast_parallel()) {
-      desc = "B";
+      ret ^= str_hash("B");
     } else if (sbp_parallel.has_partial_sum_parallel()) {
-      desc = "P";
+      ret ^= str_hash("P");
     } else if (sbp_parallel.has_split_parallel()) {
-      desc = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+      ret ^= str_hash("S");
+      ret ^= std::hash<int64_t>()(sbp_parallel.split_parallel().axis());
     } else {
       UNIMPLEMENTED();
     }
-    return std::hash<std::string>()(desc);
+    return ret;
   }
 };
 

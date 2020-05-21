@@ -1,21 +1,11 @@
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
 namespace {
-
-__inline__ half float16_2half(float16 x) {
-  // TODO: Potential loss of accuracy
-  half* ret = reinterpret_cast<half*>(&x);
-  return *ret;
-}
-
-__inline__ float16 half2float16(half x) {
-  // TODO: Potential loss of accuracy
-  float16* ret = reinterpret_cast<float16*>(&x);
-  return *ret;
-}
 
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
@@ -76,9 +66,11 @@ void HGemmWithFloat(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRA
 
 std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
                                          const Blob* c) {
-  int m = c->shape().At(0);
-  int n = c->shape().Count(1);
-  int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+  const auto& a_shape = a->shape_view();
+  const auto& c_shape = c->shape_view();
+  int m = c_shape.At(0);
+  int n = c_shape.Count(1);
+  int k = (trans_a == CblasNoTrans) ? a_shape.Count(1) : a_shape.At(0);
   return std::make_tuple(m, n, k);
 }
 

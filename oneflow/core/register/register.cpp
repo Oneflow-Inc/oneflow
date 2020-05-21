@@ -10,7 +10,6 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 Regst::Regst() {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
-  status_.model_version_id = -1;
   status_.act_id = -1;
   status_.col_id = 0;
   status_.max_col_id = 0;
@@ -37,6 +36,16 @@ void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
   CHECK(regst_desc_ == nullptr);
   regst_desc_ = regst_desc;
   status_.regst_desc_id = regst_desc_->regst_desc_id();
+}
+
+Blob* Regst::GetMutSoleBlob() {
+  CHECK_EQ(GetBlobSize(), 1);
+  return lbi2blob_.begin()->second.get();
+}
+
+const Blob* Regst::GetSoleBlob() const {
+  CHECK_EQ(GetBlobSize(), 1);
+  return lbi2blob_.begin()->second.get();
 }
 
 }  // namespace oneflow

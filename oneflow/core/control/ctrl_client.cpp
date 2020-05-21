@@ -1,6 +1,6 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -38,11 +38,10 @@ CtrlClient::~CtrlClient() {
     need_heartbeat_thread_stop_ = true;
   }
   heartbeat_thread_.join();
-  OF_BARRIER();
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name) {
-  Barrier(barrier_name, Global<ResourceDesc>::Get()->TotalMachineNum());
+  Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
@@ -143,13 +142,13 @@ void CtrlClient::EraseCount(const std::string& k) {
 }
 
 CtrlClient::CtrlClient() {
-  stubs_.reserve(Global<ResourceDesc>::Get()->TotalMachineNum());
+  stubs_.reserve(Global<EnvDesc>::Get()->TotalMachineNum());
   int32_t port = -1;
   std::string addr = "";
-  for (int64_t i = 0; i < Global<ResourceDesc>::Get()->TotalMachineNum(); ++i) {
-    const Machine& mchn = Global<ResourceDesc>::Get()->machine(i);
+  for (int64_t i = 0; i < Global<EnvDesc>::Get()->TotalMachineNum(); ++i) {
+    const Machine& mchn = Global<EnvDesc>::Get()->machine(i);
     port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent())
-                                          : Global<ResourceDesc>::Get()->ctrl_port();
+                                          : Global<EnvDesc>::Get()->ctrl_port();
     addr = mchn.addr() + ":" + std::to_string(port);
     stubs_.push_back(CtrlService::NewStub(addr));
     LoadServer(mchn.addr(), stubs_[i].get());
@@ -167,7 +166,7 @@ CtrlClient::CtrlClient() {
       }
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
-        request.set_addr(Global<ResourceDesc>::Get()->machine(i).addr());
+        request.set_addr(Global<EnvDesc>::Get()->machine(i).addr());
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
@@ -203,8 +202,7 @@ CtrlService::Stub* CtrlClient::GetThisStub() {
 }
 
 CtrlService::Stub* CtrlClient::GetResponsibleStub(const std::string& key) {
-  int64_t machine_id =
-      (std::hash<std::string>{}(key)) % Global<ResourceDesc>::Get()->TotalMachineNum();
+  int64_t machine_id = (std::hash<std::string>{}(key)) % Global<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }
 

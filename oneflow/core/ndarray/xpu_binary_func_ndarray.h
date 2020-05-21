@@ -12,12 +12,12 @@ class XpuBinaryFuncNdarray final {
 
   template<int NDIMS>
   OF_DEVICE_FUNC typename BinaryFuncTrait<binary_func, T>::return_type Get(int64_t offset) const {
-    return binary_func<T>::Invoke(a_.Get<NDIMS>(offset), b_.Get<NDIMS>(offset));
+    return binary_func<T>::Invoke(a_.template Get<NDIMS>(offset), b_.template Get<NDIMS>(offset));
   }
 
  private:
-  const A& a_;
-  const B& b_;
+  const A a_;
+  const B b_;
 };
 
 }  // namespace oneflow

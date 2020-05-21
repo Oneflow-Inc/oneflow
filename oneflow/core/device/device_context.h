@@ -19,6 +19,7 @@ class DeviceCtx {
   virtual const ncclComm_t& nccl_handle() const { UNIMPLEMENTED(); }
 #endif
 
+  virtual void SyncDevice() { UNIMPLEMENTED(); }
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:

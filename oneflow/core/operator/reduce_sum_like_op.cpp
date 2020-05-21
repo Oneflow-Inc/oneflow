@@ -12,7 +12,7 @@ void ReduceSumLikeOp::InitFromOpConf() {
   EnrollInputBn("x");
   EnrollInputBn("like", false)->set_use_header_only(true);
   EnrollOutputBn("y");
-  EnrollOutputBn("temp_storage", false);
+  EnrollTmpBn("temp_storage");
 }
 
 const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {

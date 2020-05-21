@@ -6,6 +6,7 @@
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/persistence/windows/windows_file_system.h"
+#include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
 

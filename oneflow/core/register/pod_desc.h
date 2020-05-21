@@ -63,6 +63,7 @@ class TensorPodDesc final : public PodDesc {
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
+  void ToProto(TensorPodProto* pod_proto) const;
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<TensorPodDesc>(*this); }
   bool operator==(const PodDesc& rhs) const override;
 
@@ -89,6 +90,7 @@ class StructPodDesc final : public PodDesc {
   void AddField(const FieldId& field_id, const PodDesc& pod_desc, size_t alignment);
   bool HasField(FieldKey field_key) const { return HasField(NewFieldId(field_key)); }
   bool HasField(const FieldId& field_id) const;
+  PodDesc* MutExistedField(FieldKey field_key) { return MutExistedField(NewFieldId(field_key)); }
 
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void InitFromProto(const StructPodProto& struct_pod);
@@ -102,8 +104,8 @@ class StructPodDesc final : public PodDesc {
   bool operator==(const PodDesc& rhs) const override;
 
  private:
-  void Clear();
   PodDesc* MutExistedField(const FieldId& field_id);
+  void Clear();
   void AddField(std::unique_ptr<FieldPodDesc>&& field);
   void AddField(const FieldId& field_id, std::unique_ptr<PodDesc>&& field);
   void AddField(const FieldId& field_id, std::unique_ptr<PodDesc>&& field, size_t alignment);
@@ -142,7 +144,7 @@ template<typename T>
 const T& PodDesc::Cast() const {
   static_assert(std::is_same<T, TensorPodDesc>::value || std::is_same<T, StructPodDesc>::value,
                 "only TensorPodDesc and StructPodDesc supported");
-  return *dynamic_cast<T*>(this);
+  return *dynamic_cast<const T*>(this);
 }
 
 template<typename T>

@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/framework/user_op_attr.proto";
+
+enum ConfigDefType {
+  kEnvConfigType = 1;
+  kSessionConfigType = 2;
+  kFunctionConfigType = 3;
+}
+
+message ConfigFlagDef {
+  required string name = 1;
+  required string description = 2;
+  required UserOpAttrVal default_val = 3;
+}
+
+message ConfigDef {
+  map<string, ConfigFlagDef> flag_name2flag_def = 1;
+}

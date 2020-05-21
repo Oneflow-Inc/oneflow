@@ -18,11 +18,11 @@ SnapshotReader::SnapshotReader(const std::string& snapshot_root_path)
 
 void SnapshotReader::Read(const std::string& key, Blob* blob) const {
   const std::string path = GenDataFilePath(root_path_, key);
-  const int64_t blob_size = blob->ByteSizeOfDataContentField();
+  const int64_t blob_size = blob->ByteSizeOfBlobBody();
   CHECK_EQ(SnapshotFS()->GetFileSize(path), blob_size)
       << "unexpected model snapshot size, path: " << path;
   PersistentInStream in_stream(SnapshotFS(), path);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
+  in_stream.ReadFully(blob->mut_dptr<char>(), blob_size);
 }
 
 void SnapshotReader::Close() {}
@@ -44,7 +44,7 @@ void SnapshotWriter::Write(const std::string& key, const Blob* blob) {
   const std::string dir_path = Dirname(path);
   SnapshotFS()->CreateDirIfNotExist(dir_path);
   CHECK(!SnapshotFS()->FileExists(path));
-  const int64_t blob_size = blob->ByteSizeOfDataContentField();
+  const int64_t blob_size = blob->ByteSizeOfBlobBody();
   PersistentOutStream out_stream(SnapshotFS(), path);
   out_stream.Write(blob->dptr<char>(), blob_size);
 }

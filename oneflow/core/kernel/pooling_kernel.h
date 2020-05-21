@@ -64,15 +64,20 @@ class PoolingKernelIf : public KernelIf<device_type> {
  protected:
 #ifdef WITH_CUDA
   virtual cudnnPoolingMode_t GetCudnnPoolingMode() = 0;
+  cudnnPoolingMode_t GetCudnnPoolingMode() const {
+    return const_cast<PoolingKernelIf<device_type, T>*>(this)->GetCudnnPoolingMode();
+  }
 #endif  // WITH_CUDA
   const PoolingCtx& pooling_ctx() const { return *pooling_ctx_; }
   void VirtualKernelInit() override {
-    pooling_ctx_.reset(new PoolingCtx(GetPoolingKernelConf()
+    if (!GetPoolingKernelConf().need_infer_cudnn_desc_each_forward()) {
+      pooling_ctx_.reset(new PoolingCtx(GetPoolingKernelConf()
 #ifdef WITH_CUDA
-                                          ,
-                                      this->GetCudnnPoolingMode(), GetDataType<T>::value
+                                            ,
+                                        this->GetCudnnPoolingMode(), GetDataType<T>::value
 #endif  // WITH_CUDA
-                                      ));
+                                        ));
+    }
   }
   virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
   void ForwardDataContent(const KernelCtx& kernel_ctx,

@@ -14,7 +14,6 @@ void CopyHdActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   Regst* in_regst = GetNaiveCurReadable("copy_in");
   HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
-    out_regst->set_model_version_id(in_regst->model_version_id());
     return true;
   });
 }

@@ -37,7 +37,7 @@ bool TensorSliceView::operator==(const TensorSliceView& rhs) const {
 bool TensorSliceView::operator!=(const TensorSliceView& rhs) const { return !(*this == rhs); }
 
 void TensorSliceView::UpdateShape() {
-  std::vector<int64_t> dim_vec(range_vec_.size());
+  DimVector dim_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), dim_vec.begin(),
                  [](const Range& range) { return range.size(); });
   shape_ = Shape(dim_vec);
@@ -83,7 +83,7 @@ size_t TensorSliceView::NumAxes() const { return range_vec_.size(); }
 
 NdIndex TensorSliceView::OffsetTo(const TensorSliceView& other) const {
   CHECK_EQ(other.NumAxes(), NumAxes());
-  std::vector<int64_t> indices_vec(range_vec_.size());
+  DimVector indices_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
                  indices_vec.begin(),
                  [](const Range& lhs, const Range& rhs) { return lhs.begin() - rhs.begin(); });

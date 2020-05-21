@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 
 message RankContext {
   required int64 rank_set_id = 1;
@@ -24,6 +25,12 @@ message PlacementGroup {
   required ParallelConf parallel_conf = 2;
 }
 
+message BlobPlacementGroup {
+  repeated LogicalBlobId lbi = 1;
+  required ParallelConf parallel_conf = 2;
+}
+
 message Placement {
   repeated PlacementGroup placement_group = 1;
+  repeated BlobPlacementGroup blob_placement_group = 2;
 }

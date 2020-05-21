@@ -20,10 +20,9 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                                              reinterpret_cast<T*>(temp_storage)));
-  // copy dy to dx
-  NdarrayUtil<device_type, T>::Assign(ctx, Var({n * w}, dx), Val({n * w}, dy));
-  // sub | dx[i][j] -= sum_vec[i]
-  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, dx), Val({n, 1}, sum_vec));
+  // sub | dx[i][j] = dy[i][j] - sum_vec[i]
+  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
+                                            Val({n, 1}, sum_vec));
   // elementwise multiplication | dx[i][j] *= out[i][j]
   NdarrayUtil<device_type, T>::InplaceMul(ctx, Var({n * w}, dx), Val({n * w}, out));
 }
@@ -47,15 +46,14 @@ void SoftmaxGradKernel<device_type, T>::ForwardDataContent(
     Blob* transpose_y_blob = BnInOp2Blob("transpose_y");
     Blob* transpose_dy_blob = BnInOp2Blob("transpose_dy");
     Transpose<device_type, T>(ctx.device_ctx, dy_blob, transpose_dy_blob, conf.perm());
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_dy_blob->dptr<T>(),
-                                       transpose_y_blob->dptr<T>(), tmp,
-                                       transpose_dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+    SoftmaxComputeDiff<device_type, T>(
+        ctx.device_ctx, n, w, transpose_dy_blob->dptr<T>(), transpose_y_blob->dptr<T>(), tmp,
+        transpose_dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(), buf_blob->ByteSizeOfBlobBody());
     Transpose<device_type, T>(ctx.device_ctx, transpose_dx_blob, dx_blob, conf.perm());
   } else {
     SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, dy_blob->dptr<T>(), y_blob->dptr<T>(),
                                        tmp, dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
   }
 }
 

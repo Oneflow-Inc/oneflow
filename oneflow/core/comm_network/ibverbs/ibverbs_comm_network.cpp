@@ -1,5 +1,6 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/resource_desc.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -13,6 +14,10 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
   return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
+}
+
+void IBVForkInit() {
+  if (ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
 }
 
 }  // namespace
@@ -138,6 +143,8 @@ void IBVerbsCommNet::PollCQ() {
 }
 
 const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
+
+COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_XPU_SHAPE_H_
 
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ndarray/xpu_util.h"
@@ -14,6 +15,8 @@ struct XpuShapeUtil;
 class XpuShape final {
  public:
   explicit XpuShape(const Shape& shape);
+  explicit XpuShape(const ShapeView& shape);
+  explicit XpuShape(const ShapeView& shape, int ndims_left_extend_to);
   OF_DEVICE_FUNC XpuShape(const int64_t dim[], int num_axes);
   OF_DEVICE_FUNC XpuShape(const XpuShape&) = default;
 
@@ -48,6 +51,8 @@ class XpuShape final {
       elem_num_ *= dim_[i];
     }
   }
+
+  std::string ToString() const { return ShapeView(dim_, num_axes_).ToString(); }
 
  private:
   size_t num_axes_;
@@ -94,6 +99,12 @@ SPECIALIZE_XPU_SHAPE_UTIL(3);
 #undef EXTRACT_COORD
 #undef COORD_MUL_STRIDE
 
+void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, DimVector* simplified_y,
+                             DimVector* simplified_b);
+
+void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
+                             DimVector* simplified_y, DimVector* simplified_a,
+                             DimVector* simplified_b);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_XPU_SHAPE_H_

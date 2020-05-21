@@ -10,7 +10,7 @@ void ReduceMeanGradOp::InitFromOpConf() {
   EnrollInputBn("dy");
   EnrollInputBn("x", false)->set_use_header_only(true);
   EnrollOutputBn("dx");
-  EnrollOutputBn("temp_storage");
+  EnrollTmpBn("temp_storage");
 }
 
 const PbMessage& ReduceMeanGradOp::GetCustomizedConf() const {

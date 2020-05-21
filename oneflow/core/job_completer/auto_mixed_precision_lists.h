@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_JOB_COMPLETER_AUTO_MIXED_PRECISION_LISTS_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 
 namespace oneflow {
 

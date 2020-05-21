@@ -42,6 +42,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
+  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   RegstDesc* RegstDesc4BnInOp(const std::string& bn) const { return bn_in_op2regst_.at(bn).get(); }
 
   void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
@@ -56,12 +57,11 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode* fw_node() { return fw_node_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
+  void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
 
  private:
-  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   std::function<const BlobDesc&(const std::string&)> GetLogicalBlobDesc4BnInOpFunc() const;
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
@@ -78,7 +78,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(bool is_forward, const ParallelContext*, ExecSequence*) const;
+  void ToExecSequence(const ParallelContext*, ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

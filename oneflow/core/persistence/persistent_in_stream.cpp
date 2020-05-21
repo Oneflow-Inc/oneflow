@@ -2,6 +2,7 @@
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
 
 namespace oneflow {
@@ -65,7 +66,7 @@ int32_t PersistentInStream::ReadLine(std::string* l) {
   return 0;
 }
 
-int32_t PersistentInStream::Read(char* s, size_t n) {
+int32_t PersistentInStream::ReadFully(char* s, size_t n) {
   if (IsEof()) { return -1; }
   while (n) {
     if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }

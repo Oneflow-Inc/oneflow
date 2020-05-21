@@ -2,6 +2,8 @@
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
@@ -44,7 +46,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void TransposeImpl(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
                    const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
@@ -77,7 +79,7 @@ struct TransposeUtil final {
   CHECK_EQ(num_axis, x_shape.NumAxes())
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TRANSPOSE_CHECK;
@@ -86,7 +88,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {
@@ -96,7 +98,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float16* x,
                                                 float16* y) {
@@ -106,33 +108,214 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
                                            reinterpret_cast<half*>(y));
 }
 
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int8_t* x,
+                                                int8_t* y) {
+  TRANSPOSE_CHECK;
+  TransposeUtil<int8_t>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
+                                             permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int32_t* x,
+                                                int32_t* y) {
+  TRANSPOSE_CHECK;
+  TransposeUtil<int32_t>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
+                                              permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int64_t* x,
+                                                int64_t* y) {
+  TRANSPOSE_CHECK;
+  TransposeUtil<int64_t>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
+                                              permutation, elem_cnt, x, y);
+}
+
 #undef TRANSPOSE_CHECK
-
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
     DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf,
-                                                           host_blob.get());
-  AFTER_CPU_INITIALIZE();
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
+  });
 }
 
-#undef BEFORE_CPU_INITIALIZE
-#undef AFTER_CPU_INITIALIZE
+namespace {
+
+template<typename T>
+__global__ void MulByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
+}
+
+template<>
+__global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half y, half* z) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = __hmul(x[i], y); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+template<typename T>
+__global__ void MulByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y_value; }
+}
+
+template<typename T>
+__global__ void AddByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y_value; }
+}
+
+template<typename T>
+__global__ void SubByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] - y_value; }
+}
+
+template<typename T>
+__global__ void DivByScalarPtrGpu(const int64_t n, const T* x, const T* y, T* z) {
+  const T y_value = y[0];
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y_value; }
+}
+
+template<typename T>
+__global__ void FillGpu(const int64_t n, const T value, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = value; }
+}
+
+template<typename T>
+__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
+                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
+                                  const int64_t y_col_offset, const int64_t y_lda) {
+  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
+    const int64_t i = index / col_num;
+    const int64_t j = index % col_num;
+    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
+  }
+}
+
+}  // namespace
+
+#define MUL_BY_SCALAR(T)                                                                           \
+  void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x,   \
+                                                    const T y, T* z) {                             \
+    MulByScalarGpu<T>                                                                              \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+MUL_BY_SCALAR(float)
+MUL_BY_SCALAR(double)
+MUL_BY_SCALAR(int32_t)
+MUL_BY_SCALAR(int64_t)
+
+#undef MUL_BY_SCALAR
+
+void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const float16* x,
+                                                  const float16 y, float16* z) {
+  MulByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
+}
+
+#define MUL_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::MulByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    MulByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+MUL_BY_SCALAR_PTR(float)
+MUL_BY_SCALAR_PTR(double)
+MUL_BY_SCALAR_PTR(int8_t)
+MUL_BY_SCALAR_PTR(int32_t)
+MUL_BY_SCALAR_PTR(int64_t)
+
+#undef MUL_BY_SCALAR_PTR
+
+#define ADD_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::AddByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    AddByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+ADD_BY_SCALAR_PTR(float)
+ADD_BY_SCALAR_PTR(double)
+ADD_BY_SCALAR_PTR(int8_t)
+ADD_BY_SCALAR_PTR(int32_t)
+ADD_BY_SCALAR_PTR(int64_t)
+
+#undef ADD_BY_SCALAR_PTR
+
+#define SUB_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::SubByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    SubByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+SUB_BY_SCALAR_PTR(float)
+SUB_BY_SCALAR_PTR(double)
+SUB_BY_SCALAR_PTR(int8_t)
+SUB_BY_SCALAR_PTR(int32_t)
+SUB_BY_SCALAR_PTR(int64_t)
+
+#undef SUB_BY_SCALAR_PTR
+
+#define DIV_BY_SCALAR_PTR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::DivByScalarPtr(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const T* y, T* z) {             \
+    DivByScalarPtrGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+DIV_BY_SCALAR_PTR(float)
+DIV_BY_SCALAR_PTR(double)
+DIV_BY_SCALAR_PTR(int8_t)
+DIV_BY_SCALAR_PTR(int32_t)
+DIV_BY_SCALAR_PTR(int64_t)
+
+#undef DIV_BY_SCALAR_PTR
+
+#define FILL(T)                                                                              \
+  void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
+                                             T* y) {                                         \
+    FillGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>( \
+        n, value, y);                                                                        \
+  }
+
+FILL(float)
+FILL(double)
+FILL(int8_t)
+FILL(int32_t)
+FILL(int64_t)
+
+#undef FILL
+
+#define COPY_COLS_REGION(T)                                                                    \
+  void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(                                        \
+      DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,                \
+      const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset,       \
+      const int64_t y_lda) {                                                                   \
+    CopyColsRegionGpu<T><<<BlocksNum4ThreadsNum(row_num* col_num), kCudaThreadsNumPerBlock, 0, \
+                           ctx->cuda_stream()>>>(row_num, col_num, x, x_col_offset, x_lda, y,  \
+                                                 y_col_offset, y_lda);                         \
+  }
+
+COPY_COLS_REGION(float)
+COPY_COLS_REGION(double)
+COPY_COLS_REGION(int8_t)
+COPY_COLS_REGION(int32_t)
+COPY_COLS_REGION(int64_t)
+
+#undef COPY_COLS_REGION
 
 }  // namespace oneflow

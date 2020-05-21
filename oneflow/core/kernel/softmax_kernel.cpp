@@ -20,10 +20,9 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                                              reinterpret_cast<T*>(temp_storage)));
-  // copy out_diff to in_diff
-  NdarrayUtil<device_type, T>::Assign(ctx, Var({n, w}, in_diff), Val({n, w}, out_diff));
-  // sub | in_diff[i][j] -= sum_vec[i]
-  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, in_diff), Val({n, 1}, sum_vec));
+  // sub | in_diff[i][j] = out_diff[i][j] - sum_vec[i]
+  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, in_diff), Val({n, w}, out_diff),
+                                            Val({n, 1}, sum_vec));
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   NdarrayUtil<device_type, T>::InplaceMul(ctx, Var({n, w}, in_diff), Val({n, w}, out));
 }
@@ -35,24 +34,20 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
   auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
   auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
-  // copy in blob to prob blob
-  NdarrayUtil<device_type, T>::Assign(ctx, Var({n, w}, prob), Val({n, w}, in));
-  // max | calculate max of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the data of in[i]
-  NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
+  // max | tmp[i] = Max_j(in[i][j])
+  NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                                              reinterpret_cast<T*>(temp_storage)));
-  // sub | every element of prob blob subract the max value of the same sample
-  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
-  // exp | exponentiation every element
+  // sub | prob[i][j] = in[i][j] - tmp[i]
+  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, prob), Val({n, w}, in),
+                                            Val({n, 1}, tmp));
+  // exp | prob[i][j] = exp(prob[i][j])
   NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
-  // sum | calculate sum of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the tmp data after exp
+  // sum | tmp[i] = Sum_j(prob[i][j])
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                                              reinterpret_cast<T*>(temp_storage)));
-  // div | every element of prob[i] divided by the data of tmp[i] (the sum
-  // value)
+  // div | prob[i][j] /= tmp[i]
   NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
 }
 
@@ -73,12 +68,12 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     Transpose<device_type, T>(ctx.device_ctx, in_blob, transpose_in_blob, conf.perm());
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_in_blob->dptr<T>(), tmp,
                                        transpose_out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
     Transpose<device_type, T>(ctx.device_ctx, transpose_out_blob, out_blob, conf.perm());
   } else {
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(), tmp,
                                        out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
   }
 }
 

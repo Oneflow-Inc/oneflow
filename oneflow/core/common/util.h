@@ -24,27 +24,19 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 DECLARE_string(log_dir);
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
 namespace std {
+
 template<typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   std::size_t operator()(const std::pair<T0, T1>& p) const {
     auto h0 = std::hash<T0>{}(p.first);
     auto h1 = std::hash<T1>{}(p.second);
     return h0 ^ h1;
-  }
-};
-
-template<>
-struct hash<::oneflow::OperatorConf::OpTypeCase> {
-  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
-    return std::hash<int>()(static_cast<size_t>(op_type));
   }
 };
 
@@ -159,14 +151,6 @@ inline uint32_t NewRandomSeed() {
   return gen();
 }
 
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
-
 #define DIM_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(1) \
   OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5)
@@ -183,6 +167,8 @@ inline double GetCurTime() {
 const size_t kCudaAlignSize = 256;
 const size_t kCudaMemAllocAlignSize = 256;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
+
+inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
 
 size_t GetAvailableCpuMemSize();
 
@@ -209,12 +195,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
-
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
 #elif defined(__CUDACC__)
@@ -222,6 +202,8 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #else
 #define ALWAYS_INLINE inline
 #endif
+
+bool IsKernelSafeInt32(int64_t n);
 
 }  // namespace oneflow
 

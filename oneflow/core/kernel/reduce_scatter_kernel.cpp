@@ -11,7 +11,7 @@ void ReduceScatterKernel<device_type>::ForwardDataContent(
   const char* src_cur_dptr = in_blob->dptr<char>();
   for (const std::string& obn : this->op_attribute().output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
-    size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
+    size_t out_byte_size = out_blob->ByteSizeOfBlobBody();
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), src_cur_dptr, out_byte_size);
     src_cur_dptr += out_byte_size;
   }

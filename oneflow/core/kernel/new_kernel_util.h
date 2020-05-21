@@ -27,6 +27,12 @@ template<DeviceType device_type>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
+template<DeviceType device_type>
+void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
+
+void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
+                                         std::function<void(Blob*)> Callback);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_

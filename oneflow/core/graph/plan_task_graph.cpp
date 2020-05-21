@@ -8,7 +8,7 @@ int64_t PlanTaskNode::chain_id() const {
   return chain_id;
 }
 
-bool PlanTaskGraph::IsReachableInSameArea(int64_t src_task_id, int64_t dst_task_id) const {
+bool PlanTaskGraph::IsReachable(int64_t src_task_id, int64_t dst_task_id) const {
   return IsReachableToAncestor(task_id2plan_task_node_.at(dst_task_id),
                                task_id2plan_task_node_.at(src_task_id));
 }
@@ -34,9 +34,7 @@ void PlanTaskGraph::InitEdges() {
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
       for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
         PlanTaskNode* consumer_node = task_id2plan_task_node_.at(consumer_task_id);
-        if (producer_node->area_id() == consumer_node->area_id()) {
-          Connect(producer_node, NewEdge(), consumer_node);
-        }
+        Connect(producer_node, NewEdge(), consumer_node);
       }
     }
   }

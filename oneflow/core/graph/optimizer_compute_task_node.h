@@ -15,7 +15,7 @@ class OptimizerCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kOptimizer; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMdUpdt; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kCompute; }
 
  private:
   void BuildExecGphAndRegst() override;

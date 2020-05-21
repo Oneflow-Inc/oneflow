@@ -1,0 +1,17 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/register/logical_blob_id.proto";
+
+message LbiAndDiffWatcherUuidPair {
+  required LogicalBlobId lbi = 1;
+  required string watcher_uuid = 2;
+}
+
+message LbiAndDiffWatcherUuidPairList {
+  repeated LbiAndDiffWatcherUuidPair lbi_and_uuid_pair = 1;
+}
+
+message LbiDiffWatcherInfo {
+  map<string, LbiAndDiffWatcherUuidPairList> job_name2lbi_and_watcher_uuids = 1;
+}

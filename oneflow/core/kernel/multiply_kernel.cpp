@@ -1,7 +1,20 @@
-#include "oneflow/core/kernel/multiply_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
+
+template<DeviceType device_type, typename T>
+class MultiplyKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MultiplyKernel);
+  MultiplyKernel() = default;
+  ~MultiplyKernel() override = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  const PbMessage& GetCustomizedOpConf() const override;
+};
 
 template<DeviceType device_type, typename T>
 void MultiplyKernel<device_type, T>::ForwardDataContent(

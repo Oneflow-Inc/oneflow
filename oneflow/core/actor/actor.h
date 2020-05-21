@@ -19,7 +19,6 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-inline bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) { return false; }
 
 class Actor {
  public:
@@ -199,6 +198,7 @@ class Actor {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
+  void AsyncRetInplaceConsumedRegstIfNoConsumer();
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
@@ -226,11 +226,13 @@ class Actor {
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
   bool is_inplace_consumed_eord_;
+  HashSet<int64_t> inplace_in_ids_with_no_out_consumed_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
+  std::vector<int64_t> tmp_regst_desc_id_vec_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

@@ -10,11 +10,11 @@ constexpr int64_t MAX_CHUNK_SIZE = 64 * 1024 * 1024;  // 64M
 namespace {
 
 bool ReadChunk(PersistentInStream* is, OFRecordChunk* chunk) {
-  if (is->Read(reinterpret_cast<char*>(&chunk->size), sizeof(int64_t)) == 0) {
+  if (is->ReadFully(reinterpret_cast<char*>(&chunk->size), sizeof(int64_t)) == 0) {
     CHECK_GE(chunk->size, 0);
     CHECK_LE(chunk->size, MAX_CHUNK_SIZE);
     chunk->data.reset(new char[chunk->size]);
-    CHECK_EQ(is->Read(chunk->data.get(), chunk->size), 0);
+    CHECK_EQ(is->ReadFully(chunk->data.get(), chunk->size), 0);
     return true;
   }
   return false;

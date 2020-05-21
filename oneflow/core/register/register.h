@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_H_
 
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
@@ -10,7 +9,6 @@ namespace oneflow {
 struct RegstStatus {
   int64_t regst_desc_id;
   int64_t piece_id;
-  int64_t model_version_id;
   int64_t act_id;
   int32_t col_id;
   int32_t max_col_id;
@@ -24,7 +22,6 @@ class Regst final {
   // Getters
   const RegstStatus& status() const { return status_; }
   int64_t piece_id() const { return status_.piece_id; }
-  int64_t model_version_id() const { return status_.model_version_id; }
   int64_t act_id() const { return status_.act_id; }
   int32_t col_id() const { return status_.col_id; }
   int32_t max_col_id() const { return status_.max_col_id; }
@@ -37,6 +34,9 @@ class Regst final {
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbi(const LogicalBlobId& lbi);
+  const Blob* GetSoleBlob() const;
+  Blob* GetMutSoleBlob();
+  int64_t GetBlobSize() const { return lbi2blob_.size(); }
   const HashMap<LogicalBlobId, std::unique_ptr<Blob>>& lbi2blob() const { return lbi2blob_; }
   Blob* packed_blob() { return packed_blob_.get(); }
   bool IsMaxCol() const { return col_id() == max_col_id(); }
@@ -44,7 +44,6 @@ class Regst final {
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
-  void set_model_version_id(int64_t val) { status_.model_version_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
   void set_col_id(int32_t val) { status_.col_id = val; }
   void set_max_col_id(int32_t val) { status_.max_col_id = val; }

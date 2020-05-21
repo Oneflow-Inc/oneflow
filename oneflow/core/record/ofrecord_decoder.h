@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_RECORD_OFRECORD_DECODER_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/operator/op_conf_util.h"
 
 namespace oneflow {
 
@@ -56,6 +57,9 @@ class OFRecordDecoder : public OFRecordDecoderIf {
                            Blob* out_blob, int32_t part_id, int32_t part_num,
                            int64_t one_col_elem_num, int32_t random_seed) const;
 };
+
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape);
 
 template<EncodeCase encode_case, typename T>
 class OFRecordDecoderImpl;

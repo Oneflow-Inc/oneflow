@@ -7,7 +7,6 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -24,7 +23,6 @@ class RegstMgr final {
   friend class Global<RegstMgr>;
 
   explicit RegstMgr(const Plan& plan);
-  void InitOFRecordBlobIfNeed(Blob* blob_ptr);
   void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
                           char* main_mem_ptr, char* separated_header_mem_ptr);
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;

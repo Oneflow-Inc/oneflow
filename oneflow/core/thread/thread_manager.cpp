@@ -2,6 +2,9 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -46,4 +49,23 @@ void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
 
   for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
 }
+
+void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
+  FOR_RANGE(size_t, i, 0, num) { Callback(i); }
+}
+
+void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
+  size_t thread_num = Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num();
+  thread_num = std::min(num, thread_num);
+  BalancedSplitter bs(num, thread_num);
+  BlockingCounter bc(thread_num);
+  FOR_RANGE(size_t, range_id, 0, thread_num) {
+    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([&bc, &bs, range_id, Callback] {
+      FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
+      bc.Decrease();
+    });
+  }
+  bc.WaitUntilCntEqualZero();
+}
+
 }  // namespace oneflow

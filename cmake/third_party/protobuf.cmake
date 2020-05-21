@@ -5,7 +5,11 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/protobuf/src/protobuf)
+if(WITH_XLA)
+  set(PROTOBUF_URL "https://storage.googleapis.com/mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/310ba5ee72661c081129eb878c1bbcec936b20f0.tar.gz")
+else()
+  set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/protobuf/src/protobuf)
+endif()
 
 if(WIN32)
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})

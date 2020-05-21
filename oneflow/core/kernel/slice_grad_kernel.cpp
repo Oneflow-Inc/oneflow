@@ -29,7 +29,7 @@ void SliceGradKernel<DeviceType::kCPU, T>::ForwardDataContent(
   CHECK_EQ(dy_blob->shape().NumAxes(), dx_blob->shape().NumAxes());
 
   Memset<DeviceType::kCPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                           dx_blob->ByteSizeOfDataContentField());
+                           dx_blob->ByteSizeOfBlobBody());
 
   switch (dx_blob->shape().NumAxes()) {
 // clang-format off
@@ -56,9 +56,10 @@ struct NdarraySliceUtil<T, 2> final {
     CpuNdarrayBuilder<T, 2> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
-    out_ndarray.CopyFrom(
-        in_ndarray({}, {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
-                        GetStride(rep_dim_slice.Get(0))}));
+    out_ndarray.CopyFrom(in_ndarray({GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+                                     GetStride(rep_dim_slice.Get(0))},
+                                    {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
+                                     GetStride(rep_dim_slice.Get(1))}));
   }
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
@@ -67,8 +68,10 @@ struct NdarraySliceUtil<T, 2> final {
     auto&& out_diff_ndarray =
         ndarray.Var(out_diff_blob->shape(), const_cast<T*>(out_diff_blob->dptr<T>()));
     auto&& in_diff_ndarray = ndarray.Var(in_diff_blob->shape(), in_diff_blob->mut_dptr<T>());
-    in_diff_ndarray({}, {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
-                         GetStride(rep_dim_slice.Get(0))})
+    in_diff_ndarray({GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+                     GetStride(rep_dim_slice.Get(0))},
+                    {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
+                     GetStride(rep_dim_slice.Get(1))})
         .CopyFrom(out_diff_ndarray({}, {}));
   }
 };
@@ -80,11 +83,12 @@ struct NdarraySliceUtil<T, 3> final {
     CpuNdarrayBuilder<T, 3> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
-    out_ndarray.CopyFrom(in_ndarray({},
-                                    {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+    out_ndarray.CopyFrom(in_ndarray({GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
                                      GetStride(rep_dim_slice.Get(0))},
                                     {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
-                                     GetStride(rep_dim_slice.Get(1))}));
+                                     GetStride(rep_dim_slice.Get(1))},
+                                    {GetStart(rep_dim_slice.Get(2)), GetEnd(rep_dim_slice.Get(2)),
+                                     GetStride(rep_dim_slice.Get(2))}));
   }
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
@@ -93,11 +97,12 @@ struct NdarraySliceUtil<T, 3> final {
     auto&& out_diff_ndarray =
         ndarray.Var(out_diff_blob->shape(), const_cast<T*>(out_diff_blob->dptr<T>()));
     auto&& in_diff_ndarray = ndarray.Var(in_diff_blob->shape(), in_diff_blob->mut_dptr<T>());
-    in_diff_ndarray({},
-                    {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+    in_diff_ndarray({GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
                      GetStride(rep_dim_slice.Get(0))},
                     {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
-                     GetStride(rep_dim_slice.Get(1))})
+                     GetStride(rep_dim_slice.Get(1))},
+                    {GetStart(rep_dim_slice.Get(2)), GetEnd(rep_dim_slice.Get(2)),
+                     GetStride(rep_dim_slice.Get(2))})
         .CopyFrom(out_diff_ndarray({}, {}, {}));
   }
 };
