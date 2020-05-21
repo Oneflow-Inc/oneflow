@@ -19,6 +19,9 @@ class PlacementScope(object):
         self.parallel_size_ = GetParallelSize(self.machine_id2device_id_list_)
 
     @property
+    def is_physical_placement(self): return False
+
+    @property
     def default_device_tag(self): return self.device_tag_
     
     @property

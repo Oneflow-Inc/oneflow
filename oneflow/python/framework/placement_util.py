@@ -15,8 +15,8 @@ def global_mode_cur_placement_scope():
 def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
-
-@oneflow_export('fixed_placement')
+hob_before_session = (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
+@oneflow_export('fixed_placement', enable_if=hob.in_global_mode | hob_before_session)
 def GetFixedPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 

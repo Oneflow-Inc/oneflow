@@ -65,7 +65,18 @@ class LazyUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
-class EagerUserOp(UserOp):
+class EagerPhysicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return eager_physical_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
+
+class EagerLogicalUserOp(UserOp):
     def __init__(self, op_name):
         UserOp.__init__(self, op_name)
 
@@ -77,14 +88,21 @@ class EagerUserOp(UserOp):
         return eager_physical_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
 
 @oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
-def user_op_builder(op_name):    
+def user_op_builder(op_name): 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, LazyUserOp)
 
-@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & hob.env_initialized)
-def user_op_builder(op_name):    
+in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
+@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & in_physical_placement)
+def user_op_builder(op_name):
     job_name = job_conf_ctx.CurrentJobConf().job_name
-    return UserOpConfBuilder(job_name, op_name, EagerUserOp)
+    return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
+
+in_logical_placement = (hob.env_initialized & ~hob.is_current_placement_physical)
+@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & in_logical_placement)
+def user_op_builder(op_name): 
+    job_name = job_conf_ctx.CurrentJobConf().job_name
+    return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
 
 class UserOpConfBuilder(object):
     def __init__(self, job_name, op_name, user_op_class):

@@ -4,6 +4,7 @@ import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.eager.object_dict as object_dict
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.physical_blob_watcher as physical_blob_watcher
 import oneflow.python.lib.core.async_util as async_util
 
 class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
@@ -55,17 +56,19 @@ def _GetBlobBodyCache(blob_object):
 
 def _FetchBlobHeader(blob_object):
     def AsyncFetchBlobHeader(Yield):
-        fetcher = MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield)
+        fetcher = _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobHeader(blob_object, fetcher))
+        physical_blob_watcher.DeleteRegisteredCallback(fetcher)
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 
 def _FetchBlobBody(blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = MakeFetherEagerPhysicalBlobBodyFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
+        physical_blob_watcher.DeleteRegisteredCallback(fetcher)
     return async_util.Await(1, AsyncFetchBlobBody)[0]
 
-def MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
+def _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         # TODO(lixinqi) refactor ofblob.static_shape ofblob.shape_list
         shape = ofblob.shape
