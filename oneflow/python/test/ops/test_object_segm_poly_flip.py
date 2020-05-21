@@ -28,7 +28,11 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
 
 def _get_segm_poly_static_shape(poly_list):
     poly_shapes = [poly.shape for poly in poly_list]
-    poly_static_shape = np.amax(poly_shapes, axis=0).tolist()
+    poly_static_shape = np.amax(poly_shapes, axis=0)
+    assert isinstance(
+        poly_static_shape, np.ndarray
+    ), "poly_shapes: {}, poly_static_shape: {}".format(str(poly_shapes), str(poly_static_shape))
+    poly_static_shape = poly_static_shape.tolist()
     poly_static_shape.insert(0, len(poly_list))
     return poly_static_shape
 
@@ -38,14 +42,17 @@ def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_d
 
     coco = COCO(anno_file)
     img_ids = coco.getImgIds()
-    rand_img_ids = random.sample(img_ids, batch_size)
 
-    semg_poly_list = []
+    segm_poly_list = []
     image_size_list = []
-    for img_id in rand_img_ids:
-        image_size_list.append([coco.imgs[img_id]["height"], coco.imgs[img_id]["width"]])
+    sample_cnt = 0
+    while sample_cnt < batch_size:
+        rand_img_id = random.choice(img_ids)
+        anno_ids = coco.getAnnIds(imgIds=[rand_img_id])
+        if len(anno_ids) == 0:
+            continue
+
         poly_pts = []
-        anno_ids = coco.getAnnIds(imgIds=[img_id])
         for anno_id in anno_ids:
             anno = coco.anns[anno_id]
             if anno["iscrowd"] != 0:
@@ -54,12 +61,15 @@ def _compare_segm_poly_flip(test_case, anno_file, batch_size, flip_code, print_d
             for poly in anno["segmentation"]:
                 assert isinstance(poly, list)
                 poly_pts.extend(poly)
+
         poly_array = np.array(poly_pts, dtype=np.single).reshape(-1, 2)
-        semg_poly_list.append(poly_array)
+        segm_poly_list.append(poly_array)
+        image_size_list.append([coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]])
+        sample_cnt += 1
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
-    of_semg_poly_list = _of_object_segm_poly_flip(semg_poly_list, image_size_array, flip_code)
-    for of_poly, poly, image_size in zip(of_semg_poly_list, semg_poly_list, image_size_list):
+    of_segm_poly_list = _of_object_segm_poly_flip(segm_poly_list, image_size_array, flip_code)
+    for of_poly, poly, image_size in zip(of_segm_poly_list, segm_poly_list, image_size_list):
         h, w = image_size
         if flip_code == 1:
             poly[:, 0] = w - poly[:, 0]
