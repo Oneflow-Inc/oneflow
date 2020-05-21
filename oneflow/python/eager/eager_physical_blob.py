@@ -54,27 +54,27 @@ def _GetBlobBodyCache(blob_object):
     return blob_cache.GetBodyCache(_FetchBlobBody)
 
 def _FetchBlobHeader(blob_object):
-    def AsyncFetchBlobHeader(Return):
-        fetcher = MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Return)
+    def AsyncFetchBlobHeader(Yield):
+        fetcher = MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobHeader(blob_object, fetcher))
-    return async_util.Async2Sync(1, AsyncFetchBlobHeader)[0]
+    return async_util.Await(1, AsyncFetchBlobHeader)[0]
 
 def _FetchBlobBody(blob_object):
-    def AsyncFetchBlobBody(Return):
-        fetcher = MakeFetherEagerPhysicalBlobBodyFromOfBlob(Return)
+    def AsyncFetchBlobBody(Yield):
+        fetcher = MakeFetherEagerPhysicalBlobBodyFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
-    return async_util.Async2Sync(1, AsyncFetchBlobBody)[0]
+    return async_util.Await(1, AsyncFetchBlobBody)[0]
 
-def MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Return):
+def MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         # TODO(lixinqi) refactor ofblob.static_shape ofblob.shape_list
         shape = ofblob.shape
-        Return(EagerPhysicalBlobHeader(shape, [shape], ofblob.dtype, ofblob.is_tensor_list))
+        Yield(EagerPhysicalBlobHeader(shape, [shape], ofblob.dtype, ofblob.is_tensor_list))
     return Callback
 
 
-def MakeFetherEagerPhysicalBlobBodyFromOfBlob(Return):
-    return lambda ofblob: Return(ofblob.CopyToNdarray())
+def MakeFetherEagerPhysicalBlobBodyFromOfBlob(Yield):
+    return lambda ofblob: Yield(ofblob.CopyToNdarray())
 
     
 class EagerPhysicalBlobHeader(object):
