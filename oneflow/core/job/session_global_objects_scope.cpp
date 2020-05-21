@@ -53,13 +53,8 @@ AvailableMemDesc PullAvailableMemDesc() {
 
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
-<<<<<<< HEAD:oneflow/core/job/environment_objects_scope.cpp
-Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
-  flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
-  DumpVersionInfo();
-=======
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
->>>>>>> develop:oneflow/core/job/session_global_objects_scope.cpp
+  DumpVersionInfo();
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
