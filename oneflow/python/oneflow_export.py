@@ -20,8 +20,8 @@ def _GetOneflowExportDecorator(api_names, hob_expr, location):
             assert len(fields) > 0
             global exported
             api = exported
-            for field in fields: api = api._FindOrCreateSubApi(field)
-            api._AddApiFuncOrClass(hob_expr, func_or_class, location)
+            for field in fields[:-1]: api = api._FindOrCreateSubApi(field)
+            setattr(api, fields[-1], func_or_class)
         return func_or_class
     return Decorator
 
