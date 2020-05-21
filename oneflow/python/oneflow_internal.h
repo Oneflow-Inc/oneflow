@@ -195,6 +195,12 @@ bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
   return of_blob->CurTensorIteratorEqEnd();
 }
 
+void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, long* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyStaticShapeTo(array, size);
+}
+
 void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

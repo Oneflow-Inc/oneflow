@@ -20,6 +20,13 @@ class OfBlob(object):
         return oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
 
     @property
+    def static_shape(self):
+        num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
+        oneflow_api.OfBlob_CopyStaticShapeTo(self.of_blob_ptr_, dst_ndarray)
+        return tuple(dst_ndarray.tolist())
+    
+    @property
     def shape(self):
         num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)

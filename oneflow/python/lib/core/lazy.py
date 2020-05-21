@@ -1,6 +1,6 @@
 class Lazy(object):
     def __init__(self, get_value):
-        self.value_ = None    
+        self.value_ = None
         self.has_value_ = False
         self.get_value_ = get_value
 
