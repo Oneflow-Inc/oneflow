@@ -16,21 +16,21 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   OFRecordDataset(user_op::KernelInitContext* ctx) {
     current_epoch_ = 0;
-    shuffle_after_epoch_ = ctx->GetAttr<bool>("shuffle_after_epoch");
+    shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
 
     // empty tensor
-    int32_t initial_buffer_fill = ctx->GetAttr<int32_t>("shuffle_buffer_size");
-    int32_t batch_size = ctx->GetAttr<int32_t>("batch_size");
+    int32_t initial_buffer_fill = ctx->Attr<int32_t>("shuffle_buffer_size");
+    int32_t batch_size = ctx->Attr<int32_t>("batch_size");
     int64_t total_empty_size = initial_buffer_fill + 2 * 2 * batch_size;  // maybe 2 * batch_size
-    int32_t tensor_init_bytes = ctx->GetAttr<int32_t>("tensor_init_bytes");
+    int32_t tensor_init_bytes = ctx->Attr<int32_t>("tensor_init_bytes");
     empty_tensor_mgr_.reset(
         new EmptyTensorManager<TensorBuffer>(total_empty_size, tensor_init_bytes));
 
     // in stream
-    data_part_num_ = ctx->GetAttr<int32_t>("data_part_num");
-    std::string data_dir = ctx->GetAttr<std::string>("data_dir");
-    std::string part_name_prefix = ctx->GetAttr<std::string>("part_name_prefix");
-    int32_t part_name_suffix_length = ctx->GetAttr<int32_t>("part_name_suffix_length");
+    data_part_num_ = ctx->Attr<int32_t>("data_part_num");
+    std::string data_dir = ctx->Attr<std::string>("data_dir");
+    std::string part_name_prefix = ctx->Attr<std::string>("part_name_prefix");
+    int32_t part_name_suffix_length = ctx->Attr<int32_t>("part_name_suffix_length");
 
     for (int i = 0; i < data_part_num_; ++i) {
       std::string num = std::to_string(i);

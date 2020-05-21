@@ -15,7 +15,7 @@ class OFRecordDataReader final : public DataReader<TensorBuffer> {
   OFRecordDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
     loader_.reset(new OFRecordDataset(ctx));
     parser_.reset(new OFRecordParser());
-    if (ctx->GetAttr<bool>("random_shuffle")) {
+    if (ctx->Attr<bool>("random_shuffle")) {
       loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
     }
     int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();

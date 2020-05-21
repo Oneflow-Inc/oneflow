@@ -245,14 +245,14 @@ def ofrecord_reader(
     return flow.user_op_builder(name)\
         .Op("OFRecordReader")\
         .Output("out")\
-        .SetAttr("data_dir", ofrecord_dir, "AttrTypeString")\
-        .SetAttr("data_part_num", data_part_num, "AttrTypeInt32")\
-        .SetAttr("batch_size", batch_size, "AttrTypeInt32")\
-        .SetAttr("part_name_prefix", part_name_prefix, "AttrTypeString")\
-        .SetAttr("random_shuffle", random_shuffle, "AttrTypeBool")\
-        .SetAttr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")\
-        .SetAttr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
-        .SetAttr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")\
+        .Attr("data_dir", ofrecord_dir, "AttrTypeString")\
+        .Attr("data_part_num", data_part_num, "AttrTypeInt32")\
+        .Attr("batch_size", batch_size, "AttrTypeInt32")\
+        .Attr("part_name_prefix", part_name_prefix, "AttrTypeString")\
+        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")\
+        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")\
+        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
+        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")\
         .Build()\
         .InferAndTryRun()\
         .RemoteBlobList()[0]
