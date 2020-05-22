@@ -192,38 +192,36 @@ void CMN1Sample(int64_t C, int64_t in_H, int64_t in_W, int64_t out_H, int64_t ou
     }
   }
 }
-/*
-void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,
-                int8_t mirror, const std::vector<float>& mean_vec,
-                const std::vector<float>& inv_std_vec) {
-  if (mirror) {
-    for (int64_t c = 0; c < C; ++c) {
-      float mean = mean_vec.at(c);
-      float inv_std = inv_std_vec.at(c);
-      for (int64_t h = 0; h < H; ++h) {
-        for (int64_t w = 0; w < W; ++w) {
-          int64_t mirrorw = W - 1 - w;
-          int64_t in_offset = h * W * C + mirrorw * C + c;  // N, H, W, C
-          int64_t out_offset = c * H * W + h * W + w;       // N, C, H, W
-          out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
-        }
-      }
-    }
-  } else {
-    for (int64_t c = 0; c < C; ++c) {
-      float mean = mean_vec.at(c);
-      float inv_std = inv_std_vec.at(c);
-      for (int64_t h = 0; h < H; ++h) {
-        for (int64_t w = 0; w < W; ++w) {
-          int64_t in_offset = h * W * C + w * C + c;   // N, H, W, C
-          int64_t out_offset = c * H * W + h * W + w;  // N, C, H, W
-          out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
-        }
-      }
-    }
-  }
-}
-*/
+
+#define CROP_MIRROR_NORMALIZE_KERNEL_GET_ATTR()                              \
+  std::vector<float> mean_vec = ctx->Attr<std::vector<float>>("mean");       \
+  std::vector<float> inv_std_vec = ctx->Attr<std::vector<float>>("std");     \
+  std::vector<int8_t> mirror;                                                \
+  std::string color_space = ctx->Attr<std::string>("color_space");           \
+  int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;                       \
+  CHECK(mean_vec.size() == 1 || mean_vec.size() == C);                       \
+  CHECK(inv_std_vec.size() == 1 || inv_std_vec.size() == C);                 \
+  for (auto& elem : inv_std_vec) { elem = 1.0f / elem; }                     \
+  if (mean_vec.size() == 1) { mean_vec.resize(C, mean_vec.at(0)); }          \
+  if (inv_std_vec.size() == 1) { inv_std_vec.resize(C, inv_std_vec.at(0)); } \
+  user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);           \
+  user_op::Tensor* mirror_blob = ctx->Tensor4ArgNameAndIndex("mirror", 0);   \
+  user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);         \
+  int64_t record_num = in_blob->shape().At(0);                               \
+  CHECK(record_num > 0);                                                     \
+  if (mirror_blob) {                                                         \
+    CHECK_EQ(record_num, mirror_blob->shape().elem_cnt());                   \
+    mirror.resize(record_num);                                               \
+    for (int32_t i = 0; i < record_num; ++i) {                               \
+      mirror.at(i) = *(mirror_blob->mut_dptr<int8_t>() + i);                 \
+    }                                                                        \
+  } else {                                                                   \
+    mirror.resize(record_num, 0);                                            \
+  }                                                                          \
+  float crop_pos_y = ctx->Attr<float>("crop_pos_y");                         \
+  float crop_pos_x = ctx->Attr<float>("crop_pos_x");                         \
+  std::string output_layout = ctx->Attr<std::string>("output_layout");       \
+  float* out_dptr = out_blob->mut_dptr<float>();
 
 }  // namespace
 
@@ -234,36 +232,8 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    std::vector<float> mean_vec = ctx->Attr<std::vector<float>>("mean");
-    std::vector<float> inv_std_vec = ctx->Attr<std::vector<float>>("std");
-    std::vector<int8_t> mirror;
-    std::string color_space = ctx->Attr<std::string>("color_space");
-    int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
-    CHECK(mean_vec.size() == 1 || mean_vec.size() == C);
-    CHECK(inv_std_vec.size() == 1 || inv_std_vec.size() == C);
-
-    for (auto& elem : inv_std_vec) { elem = 1.0f / elem; }
-
-    if (mean_vec.size() == 1) { mean_vec.resize(C, mean_vec.at(0)); }
-    if (inv_std_vec.size() == 1) { inv_std_vec.resize(C, inv_std_vec.at(0)); }
-
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* mirrorblob = ctx->Tensor4ArgNameAndIndex("mirror", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
-    CHECK(record_num > 0);
-    if (mirrorblob) {
-      CHECK_EQ(record_num, mirrorblob->shape().elem_cnt());
-      mirror.resize(record_num);
-      for (int32_t i = 0; i < record_num; ++i) {
-        mirror.at(i) = *(mirrorblob->mut_dptr<int8_t>() + i);
-      }
-    } else {
-      mirror.resize(record_num, 0);
-    }
-
+    CROP_MIRROR_NORMALIZE_KERNEL_GET_ATTR();
     const uint8_t* in_dptr = in_blob->dptr<uint8_t>();
-    float* out_dptr = out_blob->mut_dptr<float>();
 
     const ShapeView& in_shape = in_blob->shape();
     int64_t N = in_shape.At(0);
@@ -272,12 +242,9 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     CHECK_EQ(C, in_shape.At(3));
     int64_t in_image_elem_cnt = in_H * in_W * C;
 
-    std::string output_layout = ctx->Attr<std::string>("output_layout");
     const ShapeView& out_shape = out_blob->shape();
     CHECK_EQ(out_shape.NumAxes(), 4);
     CHECK_EQ(out_shape.At(0), N);
-    float crop_pos_y = ctx->Attr<float>("crop_pos_y");
-    float crop_pos_x = ctx->Attr<float>("crop_pos_x");
     if (output_layout == "NCHW") {
       CHECK_EQ(out_shape.At(1), C);
       int64_t out_H = out_shape.At(2);
@@ -323,6 +290,86 @@ REGISTER_USER_KERNEL("crop_mirror_normalize")
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
       if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kUInt8
+          && out_tensor->data_type() == DataType::kFloat) {
+        return true;
+      }
+      return false;
+    });
+
+class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::OpKernel {
+ public:
+  CropMirrorNormalizeFromTensorBufferToFloatKernel() = default;
+  ~CropMirrorNormalizeFromTensorBufferToFloatKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    CROP_MIRROR_NORMALIZE_KERNEL_GET_ATTR();
+    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
+
+    const ShapeView& in_shape = in_blob->shape();
+    int64_t N = in_shape.At(0);
+    CHECK_EQ(in_shape.NumAxes(), 1);
+
+    const ShapeView& out_shape = out_blob->shape();
+    CHECK_EQ(out_shape.NumAxes(), 4);
+    CHECK_EQ(out_shape.At(0), N);
+    if (output_layout == "NCHW") {
+      CHECK_EQ(out_shape.At(1), C);
+      int64_t out_H = out_shape.At(2);
+      int64_t out_W = out_shape.At(3);
+      int64_t out_image_elem_cnt = C * out_H * out_W;
+      MultiThreadLoop(record_num, [&](size_t i) {
+        const TensorBuffer* in_buffer = in_buffers + i;
+        const Shape& in_shape = in_buffer->shape();
+        CHECK_EQ(in_shape.NumAxes(), 3);  // H, W, C
+        int64_t in_H = in_shape.At(0);
+        int64_t in_W = in_shape.At(1);
+        CHECK_EQ(C, in_shape.At(2));
+        if (mirror.at(i)) {
+          CMN1Sample<TensorLayout::kNCHW, true>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        } else {
+          CMN1Sample<TensorLayout::kNCHW, false>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        }
+      });
+    } else if (output_layout == "NHWC") {
+      CHECK_EQ(out_shape.At(3), C);
+      int64_t out_H = out_shape.At(1);
+      int64_t out_W = out_shape.At(2);
+      int64_t out_image_elem_cnt = C * out_H * out_W;
+      MultiThreadLoop(record_num, [&](size_t i) {
+        const TensorBuffer* in_buffer = in_buffers + i;
+        const Shape& in_shape = in_buffer->shape();
+        CHECK_EQ(in_shape.NumAxes(), 3);  // H, W, C
+        int64_t in_H = in_shape.At(0);
+        int64_t in_W = in_shape.At(1);
+        CHECK_EQ(C, in_shape.At(2));
+        if (mirror.at(i)) {
+          CMN1Sample<TensorLayout::kNHWC, true>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        } else {
+          CMN1Sample<TensorLayout::kNHWC, false>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        }
+      });
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("crop_mirror_normalize")
+    .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kTensorBuffer
           && out_tensor->data_type() == DataType::kFloat) {
         return true;
       }
