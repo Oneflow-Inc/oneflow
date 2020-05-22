@@ -9,16 +9,10 @@ COPY tools /workspace/tools
 RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH; \
     cmake -DTHIRD_PARTY=OFF -DFOR_CI=ON .. && make -j $(nproc) ;
 
-
-WORKDIR /workspace
-
 ## BUILD WHEEL
+WORKDIR /workspace
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
-
-## BUILD DOCS
-RUN pip3 install /workspace/dist/*.whl --user
-RUN bash docs/build.sh
 
 FROM centos:7
 WORKDIR /workspace
