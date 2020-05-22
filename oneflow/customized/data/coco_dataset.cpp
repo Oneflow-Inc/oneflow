@@ -14,13 +14,13 @@ COCODataset::COCODataset(user_op::KernelInitContext* ctx,
   empty_tensor_mgr_.reset(new EmptyTensorManager<COCOImage>(total_empty_size, tensor_init_bytes));
 };
 
-COCODataset::LoadTargetShdPtr COCODataset::At(int64_t idx) const {
+COCODataset::LoadTargetShdPtr COCODataset::At(int64_t index) const {
   LoadTargetShdPtr ret = empty_tensor_mgr_->Get();
-  ret->index = idx;
-  ret->id = meta_->GetImageId(idx);
-  ret->height = meta_->GetImageHeight(idx);
-  ret->width = meta_->GetImageWidth(idx);
-  const std::string& image_file_path = meta_->GetImageFilePath(idx);
+  ret->index = index;
+  ret->id = meta_->GetImageId(index);
+  ret->height = meta_->GetImageHeight(index);
+  ret->width = meta_->GetImageWidth(index);
+  const std::string& image_file_path = meta_->GetImageFilePath(index);
   PersistentInStream in_stream(DataFS(), image_file_path);
   int64_t file_size = DataFS()->GetFileSize(image_file_path);
   ret->data.Resize(Shape({file_size}), DataType::kChar);

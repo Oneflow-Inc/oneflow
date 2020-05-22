@@ -27,7 +27,7 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
       image_size_ptr[1] = meta_->GetImageWidth(image->index);
     }
     if (image_id_tensor) {
-      auto* image_id_ptr = image_size_tensor->mut_dptr<int64_t>();
+      auto* image_id_ptr = image_id_tensor->mut_dptr<int64_t>();
       image_id_ptr[i] = image->id;
     }
     if (bbox_tensor) {

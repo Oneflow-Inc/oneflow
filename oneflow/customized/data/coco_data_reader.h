@@ -81,8 +81,8 @@ std::vector<T> COCOMeta::GetBboxVec(int64_t index) const {
     T right = left + std::max(width - alginment, min_size);
     T bottom = top + std::max(height - alginment, min_size);
     // clip to image
-    int32_t image_height = GetImageHeight(image_id);
-    int32_t image_width = GetImageWidth(image_id);
+    int32_t image_height = GetImageHeight(index);
+    int32_t image_width = GetImageWidth(index);
     left = std::min(std::max(left, min_size), image_width - alginment);
     top = std::min(std::max(top, min_size), image_height - alginment);
     right = std::min(std::max(right, min_size), image_width - alginment);
