@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 const PbMessage& BatchGatherKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().batch_gather_conf();
@@ -17,5 +19,7 @@ void BatchGatherKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchGatherConf, BatchGatherKernel,
                            FLOATING_DATA_TYPE_SEQ);
+
+}  // namespace
 
 }  // namespace oneflow

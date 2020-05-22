@@ -18,8 +18,8 @@ class MatMulOp : public TrtOpKernel {
     CHECK_GE(a_shape.NumAxes(), 2);
     CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
 
-    bool transpose_a = ctx->GetAttr<bool>("transpose_a");
-    bool transpose_b = ctx->GetAttr<bool>("transpose_b");
+    bool transpose_a = ctx->Attr<bool>("transpose_a");
+    bool transpose_b = ctx->Attr<bool>("transpose_b");
     nvinfer1::ITensor *a = ctx->Input("a");
     nvinfer1::ITensor *b = ctx->Input("b");
 

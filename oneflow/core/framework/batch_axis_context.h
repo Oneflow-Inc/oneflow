@@ -21,7 +21,7 @@ class BatchAxisContext {
   virtual OptInt64* BatchAxis4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
 
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
 

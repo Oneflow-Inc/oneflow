@@ -10,24 +10,24 @@ namespace xrt {
 namespace util {
 
 template<typename T>
-inline void GetAttr(const PbMessage &message, const std::string &attr_name, T *value) {
+inline void Attr(const PbMessage &message, const std::string &attr_name, T *value) {
   CHECK(HasFieldInPbMessage(message, attr_name));
   *value = GetValFromPbMessage<T>(message, attr_name);
 }
 
 template<typename T>
-inline void SetAttr(PbMessage *message, const std::string &attr_name, const T &value) {
+inline void Attr(PbMessage *message, const std::string &attr_name, const T &value) {
   SetValInPbMessage(message, attr_name, value);
 }
 
 template<>
-inline void GetAttr<Shape>(const PbMessage &message, const std::string &attr_name, Shape *value) {
+inline void Attr<Shape>(const PbMessage &message, const std::string &attr_name, Shape *value) {
   CHECK(HasFieldInPbMessage(message, attr_name));
   *value = Shape(GetValFromPbMessage<ShapeProto>(message, attr_name));
 }
 
 template<>
-inline void SetAttr<Shape>(PbMessage *message, const std::string &attr_name, const Shape &value) {
+inline void Attr<Shape>(PbMessage *message, const std::string &attr_name, const Shape &value) {
   ShapeProto shape;
   value.ToProto(&shape);
   SetValInPbMessage<ShapeProto>(message, attr_name, shape);
@@ -42,7 +42,7 @@ inline void GetMessage(const PbMessage &message, const std::string &attr_name, T
 
 inline std::string GetAttrAsString(const PbMessage &message, const std::string &attr_name) {
   std::string value;
-  GetAttr<std::string>(message, attr_name, &value);
+  Attr<std::string>(message, attr_name, &value);
   return std::move(value);
 }
 
@@ -86,15 +86,15 @@ class MessageAttr {
   const PbMessage &message() const { return message_; }
 
   template<typename T>
-  T GetAttr(const std::string &attr_name) const {
+  T Attr(const std::string &attr_name) const {
     T value;
-    util::GetAttr<T>(message_, attr_name, &value);
+    util::Attr<T>(message_, attr_name, &value);
     return std::move(value);
   }
 
   template<typename T>
-  void SetAttr(const std::string &attr_name, const T &value) {
-    util::SetAttr<T>(const_cast<PbMessage *>(&message_), attr_name, value);
+  void Attr(const std::string &attr_name, const T &value) {
+    util::Attr<T>(const_cast<PbMessage *>(&message_), attr_name, value);
   }
 
   bool HasAttr(const std::string &attr_name) const { return util::HasAttr(message_, attr_name); }
@@ -110,7 +110,7 @@ class MessageAttr {
 };
 
 template<>
-inline PbMessage *MessageAttr::GetAttr<PbMessage *>(const std::string &attr_name) const {
+inline PbMessage *MessageAttr::Attr<PbMessage *>(const std::string &attr_name) const {
   PbMessage *value = nullptr;
   GetMessage(message_, attr_name, &value);
   return value;

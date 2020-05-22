@@ -3,7 +3,7 @@ import numpy as np
 
 def TestReshape(x, shape, name):
     return flow.user_op_builder(name).Op("TestReshape").Input("in",[x]).Output("out") \
-            .SetAttr("shape", shape, "AttrTypeShape") \
+            .Attr("shape", shape, "AttrTypeShape") \
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def fixed_tensor_def_test(test_case, func_config):

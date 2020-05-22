@@ -121,8 +121,8 @@ class ConvGpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const {
-    const auto& data_format = ctx->GetAttr<std::string>("data_format");
-    int32_t filters = ctx->GetAttr<int32_t>("filters");
+    const auto& data_format = ctx->Attr<std::string>("data_format");
+    int32_t filters = ctx->Attr<int32_t>("filters");
 
     std::shared_ptr<ConvCudnnOpKernelState> state;
 
@@ -322,7 +322,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const {
     const auto* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
     const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-    const auto& data_format = ctx->GetAttr<std::string>("data_format");
+    const auto& data_format = ctx->Attr<std::string>("data_format");
 
     std::shared_ptr<ConvBiasGradState> state;
     if (data_format == "channels_first") {
@@ -346,7 +346,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     CHECK_GE(dy->shape().NumAxes(), 3);
     CHECK_LE(dy->shape().NumAxes(), 5);
 
-    std::string data_format = ctx->GetAttr<std::string>("data_format");
+    std::string data_format = ctx->Attr<std::string>("data_format");
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
