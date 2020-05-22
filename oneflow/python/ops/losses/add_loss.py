@@ -9,7 +9,7 @@ def add_loss(loss):
     c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.logical_blob_name)
 
 @oneflow_export("losses.add_loss")
-def api_add_loss():
+def api_add_loss(loss):
     return enable_if(
         (add_loss, hob.in_global_mode & hob.is_trainable)
-    )()
+    )(loss)

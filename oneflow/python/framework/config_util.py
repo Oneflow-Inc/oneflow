@@ -19,10 +19,10 @@ def load_libray(val):
     sess.config_proto.load_lib_path.append(val)
 
 @oneflow_export('config.load_library')
-def api_load_libray():
+def api_load_libray(val):
     return enable_if(
         (load_libray, hob.in_normal_mode & ~hob.session_initialized)
-    )()
+    )(val)
 
 def machine_num(val):
     sess = session_ctx.GetDefaultSession()
@@ -30,10 +30,10 @@ def machine_num(val):
     sess.config_proto.resource.machine_num = val
 
 @oneflow_export('config.machine_num')
-def api_machine_num():
+def api_machine_num(val):
     return enable_if(
         (machine_num, hob.in_normal_mode & ~hob.session_initialized)
-    )()
+    )(val)
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
