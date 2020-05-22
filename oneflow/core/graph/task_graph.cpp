@@ -812,16 +812,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice) {
-  for (CompTaskNode* src : sorted_src_comp_tasks) {
-    for (CompTaskNode* dst : sorted_dst_comp_tasks) {
-      if (src->machine_id() == dst->machine_id() && src->GpuPhyId() == dst->GpuPhyId()) {
-        Connect<TaskNode>(src, NewEdge(), dst);
-      }
-    }
-  }
-}
-
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
   HashSet<LogicalBlobId> lbis;
   for (const auto& obn : src_logical->SoleOp()->output_bns()) {

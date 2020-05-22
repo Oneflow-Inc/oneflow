@@ -42,8 +42,6 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
-  kNcclTupleBroadcast = 50;
-  kNcclTupleReduce = 51;
   kDistributeConcat = 55;
   kDistributeSplit = 56;
   kSliceBoxing = 57;
