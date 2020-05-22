@@ -18,8 +18,12 @@ class DistributedTrainingSampler final : public Sampler {
         pos_in_shard_(0),
         epoch_cnt_(0) {
     if (rnd_seed_ == -1) { rnd_seed_ = NewRandomSeed(); }
-    if (stride_partition) { pos_ = parallel_id; }
     shard_size_ = std::ceil(static_cast<float>(epoch_size) / num_shards_);
+    if (stride_partition) { 
+      pos_ = parallel_id; 
+    } else {
+      pos_ = parallel_id * shard_size_;
+    }
     index_seq_.resize(epoch_size);
     std::iota(index_seq_.begin(), index_seq_.end(), 0);
     GenNewIndexSequence();
@@ -37,6 +41,7 @@ class DistributedTrainingSampler final : public Sampler {
     //       |  part1   |  part2   |  part3   |  part4   |
     // iter0 | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
     // iter1 | 2, 3, 4, | 5, 6, 7, | 8, 9, 0, | 1, 2, 3, |
+    int64_t cur_pos = pos_;
     if (stride_partition_) {
       pos_ += num_shards_;
     } else {
@@ -48,7 +53,7 @@ class DistributedTrainingSampler final : public Sampler {
       }
     }
     CheckRanOutOfSize();
-    return index_seq_.at(pos_);
+    return index_seq_.at(cur_pos);
   }
 
  private:
