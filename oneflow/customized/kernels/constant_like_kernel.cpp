@@ -26,8 +26,17 @@ class ConstantLikeKernel final : public user_op::OpKernel {
   ConstantLikeKernel() = default;
   ~ConstantLikeKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<ConstState>(false);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* const_state = dynamic_cast<ConstState*>(state);
+    CHECK(ctx->all_outputs_constant());
+    if (const_state->is_inited()) { return; }
+    
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->GetAttr<bool>("is_floating_value");
 
@@ -36,6 +45,7 @@ class ConstantLikeKernel final : public user_op::OpKernel {
 
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), out->shape().elem_cnt(),
                                      static_cast<T>(value), out->mut_dptr<T>());
+    const_state->set_is_inited(true);                              
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,6 +70,6 @@ REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
 
 #undef REGISTER_CONSTANT_LIKE_KERNEL
 
-}  // namespace
+}  // namespace user_op
 
 }  // namespace oneflow
