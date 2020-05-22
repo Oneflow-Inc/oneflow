@@ -14,7 +14,7 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   user_op::Tensor* bbox_tensor = ctx->Tensor4ArgNameAndIndex("gt_bbox", 0);
   user_op::Tensor* label_tensor = ctx->Tensor4ArgNameAndIndex("gt_label", 0);
   user_op::Tensor* segm_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm", 0);
-  user_op::Tensor* segm_offset_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm_offset_mat", 0);
+  user_op::Tensor* segm_index_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm_index", 0);
 
   MultiThreadLoop(batch_data->size(), [&](size_t i) {
     TensorBuffer* image_buffer = image_tensor->mut_dptr<TensorBuffer>() + i;
@@ -44,10 +44,10 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
       label_buffer->Resize(Shape({static_cast<int64_t>(label_vec.size())}), DataType::kInt32);
       std::copy(label_vec.begin(), label_vec.end(), label_buffer->mut_data<int32_t>());
     }
-    if (segm_tensor && segm_offset_tensor) {
+    if (segm_tensor && segm_index_tensor) {
       TensorBuffer* segm_buffer = segm_tensor->mut_dptr<TensorBuffer>() + i;
-      TensorBuffer* segm_offset_buffer = segm_offset_tensor->mut_dptr<TensorBuffer>() + i;
-      meta_->ReadSegmentationsToTensorBuffer<float>(image->index, segm_buffer, segm_offset_buffer);
+      TensorBuffer* segm_index_buffer = segm_index_tensor->mut_dptr<TensorBuffer>() + i;
+      meta_->ReadSegmentationsToTensorBuffer<float>(image->index, segm_buffer, segm_index_buffer);
     }
   });
   // dynamic batch size
@@ -68,10 +68,10 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   }
   if (batch_data->size() != segm_tensor->shape().elem_cnt()) {
     CHECK_EQ(segm_tensor->shape().NumAxes(), 1);
-    CHECK_EQ(segm_offset_tensor->shape().NumAxes(), 1);
-    CHECK_EQ(segm_tensor->shape().elem_cnt(), segm_offset_tensor->shape().elem_cnt());
+    CHECK_EQ(segm_index_tensor->shape().NumAxes(), 1);
+    CHECK_EQ(segm_tensor->shape().elem_cnt(), segm_index_tensor->shape().elem_cnt());
     segm_tensor->mut_shape()->Set(0, batch_data->size());
-    segm_offset_tensor->mut_shape()->Set(0, batch_data->size());
+    segm_index_tensor->mut_shape()->Set(0, batch_data->size());
   }
 }
 

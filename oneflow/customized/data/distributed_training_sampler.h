@@ -19,8 +19,8 @@ class DistributedTrainingSampler final : public Sampler {
         epoch_cnt_(0) {
     if (rnd_seed_ == -1) { rnd_seed_ = NewRandomSeed(); }
     shard_size_ = std::ceil(static_cast<float>(epoch_size) / num_shards_);
-    if (stride_partition) { 
-      pos_ = parallel_id; 
+    if (stride_partition) {
+      pos_ = parallel_id;
     } else {
       pos_ = parallel_id * shard_size_;
     }

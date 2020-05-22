@@ -10,7 +10,7 @@ REGISTER_USER_OP("COCOReader")
     .Output("gt_bbox")
     .Output("gt_label")
     .Output("gt_segm")
-    .Output("gt_segm_offset")
+    .Output("gt_segm_index")
     .Attr("annotation_file", UserOpAttrType::kAtString)
     .Attr("image_dir", UserOpAttrType::kAtString)
     .Attr("batch_size", UserOpAttrType::kAtInt64)
@@ -28,7 +28,7 @@ REGISTER_USER_OP("COCOReader")
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_label", 0));
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm", 0));
-      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_offset", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_index", 0));
 
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
@@ -56,9 +56,9 @@ REGISTER_USER_OP("COCOReader")
       user_op::TensorDesc* segm_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm", 0);
       *segm_desc->mut_shape() = Shape({device_batch_size});
       *segm_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* segm_offset_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm_offset", 0);
-      *segm_offset_desc->mut_shape() = Shape({device_batch_size});
-      *segm_offset_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* segm_index_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm_index", 0);
+      *segm_index_desc->mut_shape() = Shape({device_batch_size});
+      *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
