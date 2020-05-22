@@ -109,8 +109,8 @@ std::vector<T> COCOMeta::GetLabelVec(int64_t index) const {
 
 template<typename T>
 void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm,
-                                               TensorBuffer* segm_offset_mat) const {
-  if (segm == nullptr || segm_offset_mat == nullptr) { return; }
+                                               TensorBuffer* segm_index) const {
+  if (segm == nullptr || segm_index == nullptr) { return; }
   int64_t image_id = image_ids_.at(index);
   const auto& anno_ids = image_id2anno_ids_.at(image_id);
   std::vector<T> segm_vec;
@@ -118,14 +118,17 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
     const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
     if (!segm_json.is_array()) { continue; }
     for (const auto& poly : segm_json) {
+      CHECK(poly.is_array());
       for (const auto& elem : poly) { segm_vec.push_back(elem.get<T>()); }
     }
   }
-  int64_t num_elems = segm_vec.size();
-  segm->Resize(Shape({num_elems}), GetDataType<T>::value);
+  CHECK_EQ(segm_vec.size() % 2, 0);
+  int64_t num_pts = segm_vec.size() / 2;
+  segm->Resize(Shape({num_pts, 2}), GetDataType<T>::value);
   std::copy(segm_vec.begin(), segm_vec.end(), segm->mut_data<T>());
-  segm_offset_mat->Resize(Shape({num_elems, 3}), DataType::kInt32);
-  int32_t* offset_ptr = segm_offset_mat->mut_data<int32_t>();
+
+  segm_index->Resize(Shape({num_pts, 3}), DataType::kInt32);
+  int32_t* index_ptr = segm_index->mut_data<int32_t>();
   int i = 0;
   int32_t offset_of_poly_in_segm = 0;
   int32_t offset_of_segm_in_img = 0;
@@ -133,17 +136,19 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
     const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
     if (!segm_json.is_array()) { continue; }
     for (const auto& poly : segm_json) {
-      FOR_RANGE(int32_t, offset_of_elem_in_poly, 0, poly.size()) {
-        offset_ptr[i * 3 + 0] = offset_of_elem_in_poly;
-        offset_ptr[i * 3 + 1] = offset_of_poly_in_segm;
-        offset_ptr[i * 3 + 2] = offset_of_segm_in_img;
+      CHECK(poly.is_array());
+      CHECK_EQ(poly.size() % 2, 0);
+      FOR_RANGE(int32_t, offset_of_pt_in_poly, 0, poly.size() / 2) {
+        index_ptr[i * 3 + 0] = offset_of_pt_in_poly;
+        index_ptr[i * 3 + 1] = offset_of_poly_in_segm;
+        index_ptr[i * 3 + 2] = offset_of_segm_in_img;
         i += 1;
       }
       offset_of_poly_in_segm += 1;
     }
     offset_of_segm_in_img += 1;
   }
-  CHECK_EQ(i, segm_vec.size());
+  CHECK_EQ(i, num_pts);
 }
 
 }  // namespace data
