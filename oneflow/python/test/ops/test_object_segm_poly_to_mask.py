@@ -110,7 +110,11 @@ def _segm_poly_to_tensor(img_segm_poly_list):
 
 def _get_images_static_shape(images):
     image_shapes = [image.shape for image in images]
-    image_static_shape = np.amax(image_shapes, axis=0).tolist()
+    image_static_shape = np.amax(image_shapes, axis=0)
+    assert isinstance(
+        image_static_shape, np.ndarray
+    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    image_static_shape = image_static_shape.tolist()
     image_static_shape.insert(0, len(image_shapes))
     return image_static_shape
 
