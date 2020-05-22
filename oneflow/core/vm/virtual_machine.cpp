@@ -101,17 +101,14 @@ void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
   int64_t logical_object_id = operand.logical_object_id();
   logical_object_id = TransformLogicalObjectId(logical_object_id);
   auto* logical_object = id2logical_object->FindPtr(logical_object_id);
+  if (logical_object == nullptr) { return; }
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   if (operand.has_all_mirrored_object()) {
     OBJECT_MSG_MAP_FOR_EACH_PTR(map, mirrored_object) { DoEach(mirrored_object); }
-    return;
+  } else {
+    auto* mirrored_object = map->FindPtr(operand.GetGlobalDeviceId(global_device_id));
+    if (mirrored_object != nullptr) { DoEach(mirrored_object); }
   }
-  CHECK_NOTNULL(logical_object);
-  int64_t device_id = operand.GetGlobalDeviceId(global_device_id);
-  auto* ret = map->FindPtr(device_id);
-  CHECK(ret != nullptr) << "device_id: " << device_id
-                        << ", default_device_id: " << global_device_id;
-  DoEach(ret);
 }
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
