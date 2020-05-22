@@ -79,6 +79,64 @@ REGISTER_USER_KERNEL("image_resize")
       return false;
     });
 
+class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
+ public:
+  ResizeShorterToTensorBufferKernel() = default;
+  ~ResizeShorterToTensorBufferKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t record_num = in_blob->shape().At(0);
+    CHECK_GT(record_num, 0);
+
+    TensorBuffer* in_buffers = in_blob->mut_dptr<TensorBuffer>();
+    TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
+    int64_t resize_shorter = ctx->Attr<int64_t>("resize_shorter");
+
+    MultiThreadLoop(record_num, [&](size_t i) {
+      TensorBuffer* in_buffer = in_buffers + i;
+      TensorBuffer* out_buffer = out_buffers + i;
+      const Shape& in_shape = in_buffer->shape();
+      CHECK_EQ(in_shape.NumAxes(), 3);  // {H, W, C}
+      int64_t H = in_shape.At(0);
+      int64_t W = in_shape.At(1);
+      int64_t C = in_shape.At(2);
+      CHECK(C == 3 || C == 1);
+      int64_t rsz_h = resize_shorter;
+      int64_t rsz_w = resize_shorter;
+      if (H < W) {
+        rsz_w = resize_shorter * (static_cast<float>(W) / static_cast<float>(H));
+      } else {
+        rsz_h = resize_shorter * (static_cast<float>(H) / static_cast<float>(W));
+      }
+      Shape out_shape({rsz_h, rsz_w, C});
+      out_buffer->Resize(out_shape, DataType::kUInt8);
+      int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
+      std::string interp_type = ctx->Attr<std::string>("interp_type");
+      int opencv_inter_type = GetOpencvInterp(interp_type);
+
+      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, in_buffer->data<uint8_t>());
+      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, out_buffer->data<uint8_t>());
+      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("image_resize")
+    .SetCreateFn<ResizeShorterToTensorBufferKernel>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kTensorBuffer
+          && out_tensor->data_type() == DataType::kTensorBuffer) {
+        return true;
+      }
+      return false;
+    });
+
 namespace {
 
 void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,

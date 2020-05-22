@@ -8,11 +8,11 @@ REGISTER_USER_OP("image_resize")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0})
-    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)
+    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")          /*not use*/
+    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0}) /*not use*/
+    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)                    /*not use*/
     .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
@@ -33,6 +33,7 @@ REGISTER_USER_OP("image_resize")
         *out_tensor->mut_data_type() = DataType::kUInt8;
         *out_tensor->mut_shape() = Shape({batch_size, resize_y, resize_x, c});
       } else {
+        CHECK_OR_RETURN(ctx->Attr<int64_t>("resize_shorter") != 0);
         *out_tensor->mut_data_type() = DataType::kTensorBuffer;
         *out_tensor->mut_shape() = Shape({batch_size});
       }
