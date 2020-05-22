@@ -5,14 +5,13 @@ from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.c_api_util as c_api_util
+from oneflow.python.lib.core.enable_if import enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('env.init', enable_if=hob.in_normal_mode & hob.env_initialized)
-def env_init():
+def do_nothing():
     print("Nothing happened because environment has been initialized")
     return False
 
-@oneflow_export('env.init', enable_if=hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
     assert len(default_env_proto.machine) > 0
@@ -21,6 +20,13 @@ def env_init():
     global env_proto_mutable
     env_proto_mutable = False
     return True
+
+@oneflow_export('env.init')
+def api_env_init():
+    return enable_if(
+        (env_init, hob.in_normal_mode & ~hob.env_initialized),
+        (do_nothing, hob.in_normal_mode & hob.env_initialized)
+    )()
 
 @oneflow_export('env.machine')
 def machine(*val):
