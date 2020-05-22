@@ -8,6 +8,14 @@
 
 namespace oneflow {
 
+namespace {
+
+int GetCudaVersionMajor(int version) { return version / 1000; }
+
+int GetCudaVersionMinor(int version) { return (version % 1000) / 10; }
+
+}  // namespace
+
 void DumpVersionInfo() {
 #ifdef WITH_GIT_VERSION
   LOG(INFO) << "OneFlow git version: " << GetOneFlowGitVersion();
@@ -18,20 +26,24 @@ void DumpVersionInfo() {
     int cuda_driver_version;
     cudaError_t err = cudaDriverGetVersion(&cuda_driver_version);
     if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA driver version: " << cuda_driver_version;
+      LOG(INFO) << "CUDA driver version: " << GetCudaVersionMajor(cuda_driver_version) << "."
+                << GetCudaVersionMinor(cuda_driver_version);
     } else {
       LOG(ERROR) << "Failed to get cuda driver version: " << cudaGetErrorString(err);
     }
   }
+
   {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
     if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA runtime version: " << cuda_runtime_version;
+      LOG(INFO) << "CUDA runtime version: " << GetCudaVersionMajor(cuda_runtime_version) << "."
+                << GetCudaVersionMinor(cuda_runtime_version);
     } else {
       LOG(ERROR) << "Failed to get cuda runtime version: " << cudaGetErrorString(err);
     }
   }
+
   do {
     int cudnn_version_major;
     int cudnn_version_minor;
@@ -63,11 +75,16 @@ void DumpVersionInfo() {
     LOG(INFO) << "cuDNN version: " << cudnn_version_major << "." << cudnn_version_minor << "."
               << cudnn_version_path;
   } while (false);
+
   {
     int nccl_version;
     ncclResult_t result = ncclGetVersion(&nccl_version);
     if (result == ncclSuccess) {
-      LOG(INFO) << "NCCL version: " << nccl_version;
+      int nccl_version_major = nccl_version / 1000;
+      int nccl_version_minor = (nccl_version % 1000) / 100;
+      int nccl_version_patch = (nccl_version % 100);
+      LOG(INFO) << "NCCL version: " << nccl_version_major << "." << nccl_version_minor << "."
+                << nccl_version_patch;
     } else {
       LOG(ERROR) << "Failed to get NCCL version: " << ncclGetErrorString(result);
     }
