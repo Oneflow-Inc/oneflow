@@ -11,18 +11,29 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
+from oneflow.python.lib.core.enable_if import enable_if
 
-@oneflow_export('config.load_library', enable_if = hob.in_normal_mode & ~hob.session_initialized)
 def load_libray(val):
     assert type(val) is str
     sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
 
-@oneflow_export('config.machine_num', enable_if = hob.in_normal_mode & ~hob.session_initialized)
+@oneflow_export('config.load_library')
+def api_load_libray():
+    return enable_if(
+        (load_libray, hob.in_normal_mode & ~hob.session_initialized)
+    )()
+
 def machine_num(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.machine_num = val
+
+@oneflow_export('config.machine_num')
+def api_machine_num():
+    return enable_if(
+        (machine_num, hob.in_normal_mode & ~hob.session_initialized)
+    )()
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
