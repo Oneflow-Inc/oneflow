@@ -27,12 +27,14 @@ class KernelInitContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
@@ -63,7 +65,7 @@ class KernelInferContext {
                                                      int32_t arg_index) = 0;
 
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
 
@@ -98,7 +100,7 @@ class KernelComputeContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }

@@ -11,6 +11,11 @@ void CopyHdKernel::ForwardDataContent(const KernelCtx& ctx,
   out_blob->CopyValidDataContentFrom(ctx.device_ctx, in_blob);
 }
 
+void CopyHdKernel::ForwardHeader(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+}
+
 REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
 
 #endif

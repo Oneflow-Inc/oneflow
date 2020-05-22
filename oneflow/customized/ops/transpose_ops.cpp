@@ -24,7 +24,7 @@ REGISTER_USER_OP("transpose")
       user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       const Shape& in_shape = in_tensor_desc->shape();
       Shape* out_shape = out_tensor_desc->mut_shape();
-      const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
+      const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
       CheckIsPerm(perm);
       if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
@@ -34,7 +34,7 @@ REGISTER_USER_OP("transpose")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
-        const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
+        const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
         ctx->BatchAxis4ArgNameAndIndex("output", 0)
             ->set_value(perm.at(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value()));
       } else {
@@ -45,7 +45,7 @@ REGISTER_USER_OP("transpose")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& input_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
-      const auto& perm = ctx->GetAttr<std::vector<int32_t>>("perm");
+      const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ(perm.size(), input_tensor.shape().NumAxes());
       FOR_RANGE(int32_t, i, 0, perm.size()) {
         int32_t axis = perm.at(i);
