@@ -10,9 +10,9 @@ namespace oneflow {
 
 namespace {
 
-int GetCudaVersionMajor(int version) { return version / 1000; }
-
-int GetCudaVersionMinor(int version) { return (version % 1000) / 10; }
+std::string GetCudaVersionString(int version) {
+  return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
+}
 
 }  // namespace
 
@@ -26,8 +26,7 @@ void DumpVersionInfo() {
     int cuda_driver_version;
     cudaError_t err = cudaDriverGetVersion(&cuda_driver_version);
     if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA driver version: " << GetCudaVersionMajor(cuda_driver_version) << "."
-                << GetCudaVersionMinor(cuda_driver_version);
+      LOG(INFO) << "CUDA driver version: " << GetCudaVersionString(cuda_driver_version);
     } else {
       LOG(ERROR) << "Failed to get cuda driver version: " << cudaGetErrorString(err);
     }
@@ -37,8 +36,7 @@ void DumpVersionInfo() {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
     if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA runtime version: " << GetCudaVersionMajor(cuda_runtime_version) << "."
-                << GetCudaVersionMinor(cuda_runtime_version);
+      LOG(INFO) << "CUDA runtime version: " << GetCudaVersionString(cuda_runtime_version);
     } else {
       LOG(ERROR) << "Failed to get cuda runtime version: " << cudaGetErrorString(err);
     }
