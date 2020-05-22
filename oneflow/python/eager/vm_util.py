@@ -164,19 +164,25 @@ class InstructionsBuilder(object):
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
-        for ibn_sym, index, blob_object in input_triples:
+        for ibn_sym, _, _ in input_triples:
             instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
+        for _, index, _ in input_triples:
             instruction.operand.append(_Int64Operand(index))
+        for _, _, blob_object in input_triples:
             instruction.operand.append(_ConstOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, index, blob_object in output_triples:
+        for obn_sym, _, _ in output_triples:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
+        for _, index, _ in output_triples:
             instruction.operand.append(_Int64Operand(index))
+        for _, _, blob_object in output_triples:
             instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, index, blob_object in mut2_output_triples:
+        for obn_sym, _, _ in mut2_output_triples:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
+        for _, index, _ in mut2_output_triples:
             instruction.operand.append(_Int64Operand(index))
+        for _, _, blob_object in mut2_output_triples:
             instruction.operand.append(_Mut2Operand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
