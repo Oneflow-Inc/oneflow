@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T>
 void BroadcastMulKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -29,4 +31,7 @@ void BroadcastMulKernel<device_type, T>::ForwardDataContent(
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastMulConf, BroadcastMulKernel,
                            FLOATING_DATA_TYPE_SEQ);
+
+}  // namespace
+
 }  // namespace oneflow

@@ -9,8 +9,8 @@ namespace user_op {
 
 template<typename T>
 struct AttrValAccessor final {
-  static T GetAttr(const UserOpAttrVal&);
-  static void SetAttr(const T&, UserOpAttrVal*);
+  static T Attr(const UserOpAttrVal&);
+  static void Attr(const T&, UserOpAttrVal*);
 };
 
 }  // namespace user_op

@@ -33,8 +33,8 @@ REGISTER_USER_OP("squeeze")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->GetAttr<std::vector<int32_t>>("axes"),
-                                      in_shape->NumAxes(), &fixed_axes_vec);
+      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape->NumAxes(),
+                                      &fixed_axes_vec);
 
       DimVector dim_vec = in_shape->dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec);
@@ -52,7 +52,7 @@ REGISTER_USER_OP("squeeze")
       const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
       auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
       AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->GetAttr<std::vector<int32_t>>("axes"),
+      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
                                       in_desc.shape().NumAxes(), &fixed_axes_vec);
 
       const int32_t in_batch_axis_value = static_cast<int32_t>(in_batch_axis->value());
@@ -71,7 +71,7 @@ REGISTER_USER_OP("squeeze")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->GetAttr<std::vector<int32_t>>("axes"),
+      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
                                       in_tensor.shape().NumAxes(), &fixed_axes_vec);
 
       DimVector dim_vec = in_tensor.shape().dim_vec();

@@ -7,9 +7,10 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-#import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.remote_blob import BlobDef
+
 
 @oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
@@ -503,3 +504,263 @@ class DataLoader(object):
             self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
 
         compile_context.CurJobAddConsistentOp(op_conf)
+
+
+@oneflow_export("tensor_list_to_tensor_buffer")
+def tensor_list_to_tensor_buffer(input, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorListToBuffer_")
+    assert isinstance(name, str)
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("tensor_buffer_to_tensor_list")
+def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
+    if name is None:
+        name = id_util.UniqueStr("TensorBufferToList_")
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
+    op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("image_decode")
+def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
+    # TODO: check color_space valiad
+    if name is None:
+        name = id_util.UniqueStr("ImageDecode_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_decode")
+        .Input("in", [images_bytes_buffer])
+        .Output("out")
+        .Attr("color_space", color_space, "AttrTypeString")
+        .Attr("data_type", dtype, "AttrTypeDataType")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("image_target_resize")
+def image_target_resize(images, target_size, max_size, name=None):
+    # TODO: check target_size and max_size valid
+    if name is None:
+        name = id_util.UniqueStr("ImageTargetResize_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_target_resize")
+        .Input("in", [images])
+        .Output("out")
+        .Output("size")
+        .Output("scale")
+        .Attr("target_size", target_size, "AttrTypeInt32")
+        .Attr("max_size", max_size, "AttrTypeInt32")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()
+
+
+@oneflow_export("image_batch_align")
+def image_batch_align(images, shape, dtype, alignment, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ImageBatchAlign_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_batch_align")
+        .Input("in", [images])
+        .Output("out")
+        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("data_type", dtype, "AttrTypeDataType")
+        .Attr("alignment", alignment, "AttrTypeInt32")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("image_normalize")
+def image_normalize(image, std, mean, name=None):
+    if name is None:
+        name = id_util.UniqueStr("ImageNormalize_")
+
+    assert isinstance(std, (list, tuple))
+    assert isinstance(mean, (list, tuple))
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_normalize")
+        .Input("in", [image])
+        .Output("out")
+        .Attr("std", std, "AttrTypeListFloat")
+        .Attr("mean", mean, "AttrTypeListFloat")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("image_flip")
+def image_flip(image, flip_code, name=None):
+    assert isinstance(image, BlobDef)
+
+    if name is None:
+        name = id_util.UniqueStr("ImageFlip_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(image.shape[0],), dtype=flow.int8, name="{}_FlipCode_".format(name)
+        )
+    else:
+        assert image.shape[0] == flip_code.shape[0]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_flip")
+        .Input("in", [image])
+        .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_bbox_flip")
+def object_bbox_flip(bbox, image_size, flip_code, name=None):
+    assert isinstance(bbox, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert bbox.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectBboxFlip_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(bbox.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+        )
+    else:
+        assert bbox.shape[0] == flip_code.shape[0]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_bbox_flip")
+        .Input("bbox", [bbox])
+        .Input("image_size", [image_size])
+        .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_bbox_scale")
+def object_bbox_scale(bbox, scale, name=None):
+    assert isinstance(bbox, BlobDef)
+    assert isinstance(scale, BlobDef)
+    assert bbox.shape[0] == scale.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectBboxScale_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_bbox_scale")
+        .Input("bbox", [bbox])
+        .Input("scale", [scale])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_flip")
+def object_segm_poly_flip(poly, image_size, flip_code, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert poly.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyFilp_")
+
+    if not isinstance(flip_code, BlobDef):
+        assert isinstance(flip_code, int)
+        flip_code = flow.constant(
+            flip_code, shape=(poly.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+        )
+    else:
+        assert poly.shape[0] == flip_code.shape[0]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_flip")
+        .Input("poly", [poly])
+        .Input("image_size", [image_size])
+        .Input("flip_code", [flip_code])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_scale")
+def object_segm_poly_scale(poly, scale, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(scale, BlobDef)
+    assert poly.shape[0] == scale.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyFilp_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_scale")
+        .Input("poly", [poly])
+        .Input("scale", [scale])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("object_segmentation_polygon_to_mask")
+def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
+    assert isinstance(poly, BlobDef)
+    assert isinstance(poly_index, BlobDef)
+    assert isinstance(image_size, BlobDef)
+    assert poly.shape[0] == poly_index.shape[0]
+    assert poly.shape[0] == image_size.shape[0]
+
+    if name is None:
+        name = id_util.UniqueStr("ObjectSegmPolyToMask_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("object_segmentation_polygon_to_mask")
+        .Input("poly", [poly])
+        .Input("poly_index", [poly_index])
+        .Input("image_size", [image_size])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]
