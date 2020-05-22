@@ -15,7 +15,7 @@ for gpu in gpus:
 def TestReshape(x, shape, name):
     return flow.user_op_builder(name).Op("TestReshape4KeepHeaderOnly") \
             .Input("in",[x]).Output("out") \
-            .SetAttr("shape", shape, "AttrTypeShape") \
+            .Attr("shape", shape, "AttrTypeShape") \
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def compare_with_tensorflow(device_type, input_shape, output_shape):

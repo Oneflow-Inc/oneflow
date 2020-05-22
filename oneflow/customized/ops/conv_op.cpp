@@ -10,10 +10,10 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   CHECK_EQ(NDims + 2, in->shape().NumAxes());
 
-  auto data_format = ctx->GetAttr<std::string>("data_format");
-  auto kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+  auto data_format = ctx->Attr<std::string>("data_format");
+  auto kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
-  int32_t filters = ctx->GetAttr<int32_t>("filters");
+  int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
 
   // only support data parallel
@@ -21,16 +21,17 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
                   || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
-    auto padding = ctx->GetAttr<std::string>("padding");
-    auto dilation_rate = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
-    auto strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    auto padding = ctx->Attr<std::string>("padding");
+    auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    auto strides = ctx->Attr<std::vector<int32_t>>("strides");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in->shape().At(0);
-    out_shape.at(1) = filters;
+    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
+    out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcOutAndPadding(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                         strides.at(i), padding, &out_shape.at(idx_offset + i), nullptr, nullptr);
@@ -40,7 +41,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   }
 
   {
-    int32_t groups = ctx->GetAttr<int32_t>("groups");
+    int32_t groups = ctx->Attr<int32_t>("groups");
     CHECK_GT_OR_RETURN(groups, 0);
     CHECK_LE_OR_RETURN(groups, filters);
     CHECK_EQ_OR_RETURN(filters % groups, 0);
@@ -144,7 +145,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   if (is_checked) {
     return Maybe<void>::Ok();
   } else {
-    return oneflow::Error::CheckFailed() << err;
+    return oneflow::Error::CheckFailed() << err.str();
   }
 }
 
@@ -288,7 +289,8 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
     .Attr("groups", UserOpAttrType::kAtInt32)
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
       CHECK_NOTNULL(x_like);
       x_like->set_use_header_only(true);
@@ -296,7 +298,7 @@ REGISTER_USER_OP("conv_data_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
-      const int32_t num_spatial_dims = ctx->GetAttr<int32_t>("num_spatial_dims");
+      const int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
       CHECK_GE_OR_RETURN(num_spatial_dims, 1);
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
@@ -342,10 +344,10 @@ REGISTER_USER_OP("conv_filter_grad")
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
 
-      const int32_t num_spatial_dims = ctx->GetAttr<int32_t>("num_spatial_dims");
-      const int32_t groups = ctx->GetAttr<int32_t>("groups");
-      const std::string& data_format = ctx->GetAttr<std::string>("data_format");
-      const std::vector<int32_t> kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+      const int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
+      const int32_t groups = ctx->Attr<int32_t>("groups");
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
+      const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
 
       CHECK_GE_OR_RETURN(num_spatial_dims, 1);
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
@@ -414,8 +416,8 @@ REGISTER_USER_OP("conv_bias_grad")
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
 
-      int32_t num_spatial_dims = ctx->GetAttr<int32_t>("num_spatial_dims");
-      std::string data_format = ctx->GetAttr<std::string>("data_format");
+      int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
+      std::string data_format = ctx->Attr<std::string>("data_format");
 
       CHECK_GE_OR_RETURN(num_spatial_dims, 1);
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);

@@ -39,10 +39,10 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   void ResetIfDynamic(user_op::KernelComputeContext* ctx) {
     if (this->is_dynamic_) {
       const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
-      const std::string data_format = ctx->GetAttr<std::string>("data_format");
-      const std::string padding = ctx->GetAttr<std::string>("padding");
-      const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-      const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+      const std::string data_format = ctx->Attr<std::string>("data_format");
+      const std::string padding = ctx->Attr<std::string>("padding");
+      const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+      const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const Params3D params_3d(dim_, x_shape, data_format, padding, pool_size, strides);
       const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
@@ -87,10 +87,10 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
       state.reset(new GPUPoolOpKernelState(dim, pooling_type));
     } else {
       const Shape& x_shape = x_desc->shape();
-      const std::string data_format = ctx->GetAttr<std::string>("data_format");
-      const std::string padding = ctx->GetAttr<std::string>("padding");
-      const std::vector<int32_t>& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-      const std::vector<int32_t>& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+      const std::string data_format = ctx->Attr<std::string>("data_format");
+      const std::string padding = ctx->Attr<std::string>("padding");
+      const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+      const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const Params3D params_3d(dim, x_shape, data_format, padding, pool_size, strides);
       const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = x_desc->data_type();

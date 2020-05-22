@@ -180,7 +180,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
+    const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
 
     // Use as many heaps as possible (# of heaps == # of threads used in thread block).
     // Limitation 1: size of shared memory
@@ -203,7 +203,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedPred( \
       [](const user_op::KernelRegContext& ctx) {                                                   \
         const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") <= 128           \
+        return ctx.device_type() == DeviceType::kGPU && ctx.Attr<int32_t>("k") <= 128              \
                && in_desc->data_type() == GetDataType<dtype>::value;                               \
       });
 

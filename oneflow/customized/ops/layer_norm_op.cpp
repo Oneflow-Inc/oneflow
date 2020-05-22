@@ -43,10 +43,10 @@ REGISTER_USER_OP("layer_norm")
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
-      const bool center = ctx->GetAttr<bool>("center");
-      const bool scale = ctx->GetAttr<bool>("scale");
+      const bool center = ctx->Attr<bool>("center");
+      const bool scale = ctx->Attr<bool>("scale");
       const int64_t begin_params_axis =
-          ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_params_axis"));
+          ShiftNegativeAxisIfNeed(x->shape(), ctx->Attr<int64_t>("begin_params_axis"));
       *y = *x;
       DimVector param_shape_dim_vec;
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
@@ -71,7 +71,7 @@ REGISTER_USER_OP("layer_norm")
         *normalized = *x;
       }
       const int64_t begin_norm_axis =
-          ShiftNegativeAxisIfNeed(x->shape(), ctx->GetAttr<int64_t>("begin_norm_axis"));
+          ShiftNegativeAxisIfNeed(x->shape(), ctx->Attr<int64_t>("begin_norm_axis"));
       *mean->mut_shape() = InferBnParamShape(x->shape(), begin_norm_axis);
       *mean->mut_data_type() = InferBnParamDataType(x->data_type());
       *inv_variance = *mean;
@@ -110,7 +110,7 @@ REGISTER_USER_OP("layer_norm_grad")
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
       CHECK_EQ_OR_RETURN(dy->shape(), x->shape());
-      const int64_t begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
+      const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
       CHECK_GT(begin_norm_axis, 0);
       const DataType& bn_param_data_type = InferBnParamDataType(x->data_type());
       const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
@@ -155,7 +155,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
         return ret;
       };
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      const int64_t begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+      const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
       const bool has_beta_diff = has_tensor("beta_diff");
       const bool has_gamma_diff = has_tensor("gamma_diff");
       const bool has_gamma = has_tensor("gamma");

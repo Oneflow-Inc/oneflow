@@ -20,7 +20,7 @@ class AdamOptimizerOp : public OptimizerOp {
     }
 
     NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
+        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->Attr<PbMessage *>("user_conf"));
     CHECK(user_conf) << "Can not get message `user_conf`.";
     if (user_conf->has_adam_conf()) {
       xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));

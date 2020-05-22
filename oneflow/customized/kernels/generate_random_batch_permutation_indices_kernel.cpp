@@ -13,7 +13,7 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<std::mt19937>>(seed);
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
