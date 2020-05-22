@@ -1,7 +1,8 @@
 import oneflow.python.lib.core.scope_stack as scope_stack
 import oneflow.python.lib.core.lazy as lazy
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export
 import re
@@ -10,7 +11,7 @@ import oneflow
 class PhysicalPlacementScope(placement_ctx.FixedPlacementScope):
     def __init__(self, device_tag, machine_device_ids):
         placement_ctx.FixedPlacementScope.__init__(self, device_tag, machine_device_ids)
-        self.physical_symbol_id_ = oneflow.vm.new_physical_symbol_id()
+        self.physical_symbol_id_ = c_api_util.NewPhysicalSymbolId()
 
     @property
     def is_physical_placement(self): return True
@@ -22,7 +23,7 @@ def CurrentPlacement():
     global device_scope_stack
     return device_scope_stack.Current().value
 
-@oneflow_export('device', enable_if=hob.in_normal_mode & hob.env_initialized)
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def _NewPlacementScope(device_tag_and_id):
     assert type(device_tag_and_id) is str
     assert re.match("^(cpu)|(gpu):\d+$", device_tag_and_id) is not None
@@ -32,12 +33,20 @@ def _NewPlacementScope(device_tag_and_id):
     global device_scope_stack
     return device_scope_stack.NewScope(lazy.Lazy(GetPhysicalPlacementScope))
 
-@oneflow_export('eager_fixed_placement', enable_if=hob.in_normal_mode & hob.env_initialized)
+@oneflow_export('device')
+def api_device(device_tag_and_id):
+    return enable_if.unique(_NewPlacementScope)(device_tag_and_id)
+
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def _EagerPlacementScope(device_tag, machine_device_ids):
     def EagerPlacementScope():
         return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
     global device_scope_stack
     return device_scope_stack.NewScope(lazy.Lazy(EagerPlacementScope))
+
+@oneflow_export('eager_fixed_placement')
+def api_eager_fixed_placement(device_tag, machine_device_ids):
+    return enable_if.unique(_EagerPlacementScope)(device_tag, machine_device_ids)
 
 def _GetInitDeviceScope():
     resource = oneflow.env.current_resource()
