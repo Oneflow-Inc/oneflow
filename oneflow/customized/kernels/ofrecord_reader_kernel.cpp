@@ -13,7 +13,7 @@ class OFRecordReaderWrapper final : public user_op::OpKernelState {
   void Read(user_op::KernelComputeContext* ctx) { reader_.Read(ctx); }
 
  private:
-  OFRecordDataReader reader_;
+  data::OFRecordDataReader reader_;
 };
 
 }  // namespace

@@ -2,6 +2,7 @@
 #define ONEFLOW_CUSTOMIZED_DATA_OFRECORD_DATASET_H_
 
 #include "oneflow/customized/data/dataset.h"
+#include "oneflow/customized/data/empty_tensor_manager.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -9,6 +10,7 @@
 #include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
+namespace data {
 
 class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
@@ -102,6 +104,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   std::unique_ptr<EmptyTensorManager<TensorBuffer>> empty_tensor_mgr_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_OFRECORD_DATASET_H_

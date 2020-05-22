@@ -4,25 +4,17 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
 namespace oneflow {
+namespace data {
 
 COCODataset::COCODataset(user_op::KernelInitContext* ctx,
                          const std::shared_ptr<const COCOMeta>& meta)
-    : meta_(meta), cur_idx_(0) {
+    : meta_(meta) {
   int64_t total_empty_size = ctx->GetAttr<int64_t>("empty_tensor_size");
   int32_t tensor_init_bytes = ctx->GetAttr<int32_t>("tensor_init_bytes");
-  empty_tensor_mgr_.reset(new COCOImageManager(total_empty_size, tensor_init_bytes));
+  empty_tensor_mgr_.reset(new EmptyTensorManager<COCOImage>(total_empty_size, tensor_init_bytes));
 };
 
-int64_t COCODataset::Size() { return meta_->Size(); }
-
-COCODataset::LoadTargetShdPtrVec COCODataset::Next() {
-  LoadTargetShdPtrVec ret;
-  ret.push_back(std::move(At(cur_idx_)));
-  cur_idx_ = (cur_idx_ + 1) % Size();
-  return ret;
-}
-
-COCODataset::LoadTargetShdPtr COCODataset::At(int64_t idx) {
+COCODataset::LoadTargetShdPtr COCODataset::At(int64_t idx) const {
   LoadTargetShdPtr ret = empty_tensor_mgr_->Get();
   ret->index = idx;
   ret->id = meta_->GetImageId(idx);
@@ -36,4 +28,7 @@ COCODataset::LoadTargetShdPtr COCODataset::At(int64_t idx) {
   return ret;
 }
 
+size_t COCODataset::Size() const { return meta_->Size(); }
+
+}  // namespace data
 }  // namespace oneflow

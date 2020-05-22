@@ -13,15 +13,13 @@ class COCOReaderWrapper final : public user_op::OpKernelState {
   void Read(user_op::KernelComputeContext* ctx) { reader_.Read(ctx); }
 
  private:
-  COCODataReader reader_;
+  data::COCODataReader reader_;
 };
-
-}  // namespace
 
 class COCOReaderKernel final : public user_op::OpKernel {
  public:
   COCOReaderKernel() = default;
-  ~COCOReaderKernel() override = default;
+  ~COCOReaderKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -34,7 +32,10 @@ class COCOReaderKernel final : public user_op::OpKernel {
     auto* reader = dynamic_cast<COCOReaderWrapper*>(state);
     reader->Read(ctx);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+}  // namespace
 
 REGISTER_USER_KERNEL("COCOReader")
     .SetCreateFn<COCOReaderKernel>()

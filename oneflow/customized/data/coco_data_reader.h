@@ -7,6 +7,7 @@
 #include <json.hpp>
 
 namespace oneflow {
+namespace data {
 
 class COCODataReader final : public DataReader<COCOImage> {
  public:
@@ -145,6 +146,7 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
   CHECK_EQ(i, segm_vec.size());
 }
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_COCO_DATA_READER_H_

@@ -5,6 +5,9 @@
 #include "oneflow/core/common/tensor_buffer.h"
 
 namespace oneflow {
+namespace data {
+
+static constexpr int kOneflowDatasetSeed = 524287;
 
 template<typename LoadTarget>
 class Dataset {
@@ -17,68 +20,43 @@ class Dataset {
   virtual LoadTargetPtrList Next() = 0;
 };
 
-static constexpr int kOneflowDatasetSeed = 524287;
-
-template<typename LoadTarget>
-void PrepareEmptyTensor(LoadTarget& tensor, int32_t tensor_init_bytes);
-
-template<typename LoadTarget>
-class EmptyTensorManager final {
+class Sampler {
  public:
-  using LoadTargetUniquePtr = std::unique_ptr<LoadTarget>;
-  using LoadTargetSharedPtr = std::shared_ptr<LoadTarget>;
-  EmptyTensorManager(int64_t total_empty_size, int32_t tensor_init_bytes)
-      : tensor_init_bytes_(tensor_init_bytes), total_tensor_count_(0) {
-    for (int i = 0; i < total_empty_size; ++i) {
-      auto tensor_ptr = LoadTargetUniquePtr(new LoadTarget());
-      PrepareEmptyTensor<LoadTarget>(*tensor_ptr, tensor_init_bytes_);
-      empty_tensors_.push_back(std::move(tensor_ptr));
-    }
-    total_tensor_count_ += total_empty_size;
-  }
-  ~EmptyTensorManager() = default;
+  Sampler() = default;
+  virtual ~Sampler() = default;
 
-  void Recycle(LoadTarget* tensor_ptr) {
-    LoadTargetUniquePtr recycle_ptr(tensor_ptr);
-    std::lock_guard<std::mutex> lock(empty_tensors_mutex_);
-    empty_tensors_.push_back(std::move(recycle_ptr));
-  }
-
-  LoadTargetSharedPtr Get() {
-    {
-      std::lock_guard<std::mutex> lock(empty_tensors_mutex_);
-      if (empty_tensors_.size() > 0) {
-        LoadTargetSharedPtr ret(empty_tensors_.back().release(),
-                                [this](LoadTarget* sample) { Recycle(sample); });
-        empty_tensors_.pop_back();
-        return ret;
-      }
-    }
-    auto tensor_ptr =
-        LoadTargetSharedPtr(new LoadTarget(), [this](LoadTarget* sample) { Recycle(sample); });
-    PrepareEmptyTensor<LoadTarget>(*tensor_ptr, tensor_init_bytes_);
-    total_tensor_count_++;
-    LOG(INFO) << "empty tensor is NOT enough , so we allocate one. The total tensor count is "
-              << total_tensor_count_;
-    return tensor_ptr;
-  }
-
- protected:
-  int64_t GetTenosrInitBytes() const { return tensor_init_bytes_; }
-  virtual void PrepareEmpty(LoadTarget& tensor) { PrepareEmptyTensor(tensor); }
-
- private:
-  const int32_t tensor_init_bytes_;
-
-  int64_t total_tensor_count_;
-
-  std::mutex empty_tensors_mutex_;
-  std::vector<LoadTargetUniquePtr> empty_tensors_;
+  virtual int64_t Next() = 0;
 };
 
-template<>
-void PrepareEmptyTensor(TensorBuffer& tensor, int32_t tensor_init_bytes);
+template<typename LoadTarget>
+class RandomAccessDataset : public Dataset<LoadTarget> {
+ public:
+  using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
+  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
+  RandomAccessDataset() = default;
+  virtual ~RandomAccessDataset() = default;
+
+  virtual LoadTargetShdPtr At(int64_t index) const = 0;
+  virtual size_t Size() const = 0;
+
+  virtual LoadTargetShdPtrVec Next() override {
+    LoadTargetShdPtrVec ret;
+    int64_t index = sampler_->Next();
+    ret.push_back(std::move(this->At(index)));
+    return ret;
+  }
+
+  void ResetSampler(std::unique_ptr<Sampler>&& sampler) { sampler_ = std::move(sampler); }
+  // Sampler* GetSampler() {
+  //   return sampler_.get();
+  // }
+
+ private:
+  std::unique_ptr<Sampler> sampler_;
+};
+
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_DATASET_H_

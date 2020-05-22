@@ -5,6 +5,7 @@
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+namespace data {
 
 template<typename LoadTarget>
 class BatchDataset final : public Dataset<LoadTarget> {
@@ -33,6 +34,7 @@ class BatchDataset final : public Dataset<LoadTarget> {
   std::unique_ptr<Dataset<LoadTarget>> loader_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_BATCH_DATASET_H_

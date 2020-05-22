@@ -7,6 +7,7 @@
 #include "oneflow/customized/data/parser.h"
 
 namespace oneflow {
+namespace data {
 
 template<typename LoadTarget>
 class DataReader {
@@ -66,6 +67,7 @@ class DataReader {
   std::thread load_thrd_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_DATA_READER_H_

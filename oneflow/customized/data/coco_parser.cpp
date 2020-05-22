@@ -3,6 +3,7 @@
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
+namespace data {
 
 void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
                        user_op::KernelComputeContext* ctx) {
@@ -74,4 +75,5 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   }
 }
 
+}  // namespace data
 }  // namespace oneflow

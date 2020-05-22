@@ -23,18 +23,18 @@ REGISTER_USER_OP("COCOReader")
     .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_label", 0));
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm", 0));
-      OF_CHECK(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_offset", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_label", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm", 0));
+      CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_offset", 0));
 
       int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       int64_t device_batch_size = batch_size;
       if (sbp.has_split_parallel() && parallel_num > 1) {
-        OF_CHECK_EQ(device_batch_size % parallel_num, 0);
+        CHECK_EQ_OR_RETURN(device_batch_size % parallel_num, 0);
         device_batch_size /= parallel_num;
       }
 
@@ -62,9 +62,7 @@ REGISTER_USER_OP("COCOReader")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

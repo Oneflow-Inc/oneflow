@@ -4,6 +4,7 @@
 #include "oneflow/customized/data/dataset.h"
 
 namespace oneflow {
+namespace data {
 
 template<typename LoadTarget>
 class GroupBatchDataset final : public Dataset<LoadTarget> {
@@ -84,9 +85,6 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
     return ret;
   }
 
-  bool EnableRandomAccess() override { return false; }
-  bool EnableGetSize() override { return false; }
-
  private:
   int64_t ReadNextDataAndGetGroup(LoadTargetShdPtr& data_ptr) {
     LoadTargetShdPtrVec data_ptr_vec = base_->Next();
@@ -109,6 +107,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
   int64_t order_count_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_GROUP_BATCH_DATASET_H_

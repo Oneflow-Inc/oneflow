@@ -1,22 +1,25 @@
 #include "oneflow/customized/data/coco_data_reader.h"
-#include "oneflow/customized/data/epoch_partition_dataset.h"
+#include "oneflow/customized/data/coco_dataset.h"
+#include "oneflow/customized/data/distributed_training_sampler.h"
 #include "oneflow/customized/data/group_batch_dataset.h"
 #include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
 namespace oneflow {
+namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->GetAttr<std::string>("annotation_file"), ctx->GetAttr<std::string>("image_dir"),
       ctx->GetAttr<bool>("remove_images_without_annotations")));
-  loader_.reset(new COCODataset(ctx, meta));
-  parser_.reset(new COCOParser(meta));
-  loader_.reset(new EpochPartitionDataset<COCOImage>(
-      ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
+  COCODataset* coco_dataset = new COCODataset(ctx, meta);
+  std::unique_ptr<Sampler> sampler(new DistributedTrainingSampler(
+      coco_dataset->Size(), ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
       ctx->GetAttr<bool>("stride_partition"), ctx->GetAttr<bool>("shuffle_after_epoch"),
-      ctx->GetAttr<int64_t>("random_seed"), std::move(loader_)));
+      ctx->GetAttr<int64_t>("random_seed")));
+  coco_dataset->ResetSampler(std::move(sampler));
+  loader_.reset(coco_dataset);
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->GetAttr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {
@@ -26,6 +29,7 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   } else {
     loader_.reset(new BatchDataset<COCOImage>(batch_size, std::move(loader_)));
   }
+  parser_.reset(new COCOParser(meta));
   StartLoadThread();
 }
 
@@ -119,4 +123,5 @@ bool COCOMeta::ImageHasValidAnnotations(int64_t image_id) const {
   return false;
 }
 
+}  // namespace data
 }  // namespace oneflow

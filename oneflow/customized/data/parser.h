@@ -5,6 +5,7 @@
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+namespace data {
 
 template<typename LoadTarget>
 class Parser {
@@ -18,6 +19,7 @@ class Parser {
                      user_op::KernelComputeContext* ctx) = 0;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_PARSER_H_

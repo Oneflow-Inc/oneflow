@@ -5,6 +5,7 @@
 #include "oneflow/customized/data/coco_dataset.h"
 
 namespace oneflow {
+namespace data {
 
 class COCOMeta;
 
@@ -23,6 +24,7 @@ class COCOParser final : public Parser<COCOImage> {
   std::shared_ptr<const COCOMeta> meta_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_COCO_PARSER_H_

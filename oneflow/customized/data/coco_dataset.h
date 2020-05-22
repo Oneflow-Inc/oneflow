@@ -2,9 +2,11 @@
 #define ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_
 
 #include "oneflow/customized/data/dataset.h"
+#include "oneflow/customized/data/empty_tensor_manager.h"
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+namespace data {
 
 struct COCOImage {
   TensorBuffer data;
@@ -16,38 +18,22 @@ struct COCOImage {
 
 class COCOMeta;
 
-class COCODataset final : public Dataset<COCOImage> {
+class COCODataset final : public RandomAccessDataset<COCOImage> {
  public:
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
-  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
   COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta);
   ~COCODataset() = default;
 
-  LoadTargetShdPtrVec Next() override;
-  LoadTargetShdPtr At(int64_t idx) override;
-  int64_t Size() override;
-
-  bool EnableRandomAccess() override { return true; }
-  bool EnableGetSize() override { return true; }
+  LoadTargetShdPtr At(int64_t index) const override;
+  size_t Size() const override;
 
  private:
   std::unique_ptr<EmptyTensorManager<COCOImage>> empty_tensor_mgr_;
   std::shared_ptr<const COCOMeta> meta_;
-  int64_t cur_idx_;
 };
 
-class COCOImageManager final : public EmptyTensorManager<COCOImage> {
- public:
-  COCOImageManager(int64_t total_empty_size, int32_t tensor_init_bytes)
-      : EmptyTensorManager<COCOImage>(total_empty_size, tensor_init_bytes){};
-
- protected:
-  void PrepareEmpty(COCOImage& image) override {
-    image.data.Resize({GetTenosrInitBytes()}, DataType::kChar);
-  }
-};
-
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_

@@ -9,6 +9,7 @@
 #include <iostream>
 
 namespace oneflow {
+namespace data {
 
 class OFRecordDataReader final : public DataReader<TensorBuffer> {
  public:
@@ -29,6 +30,7 @@ class OFRecordDataReader final : public DataReader<TensorBuffer> {
   using DataReader<TensorBuffer>::parser_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_OFRECORD_DATA_READER_H_
