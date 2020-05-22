@@ -10,9 +10,35 @@ namespace oneflow {
 
 namespace {
 
+#ifdef WITH_CUDA
+
 std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
+
+bool GetCudnnVersion(libraryPropertyType type, int* version) {
+  cudnnStatus_t status = cudnnGetProperty(type, version);
+  if (status == CUDNN_STATUS_SUCCESS) {
+    return true;
+  } else {
+    LOG(ERROR) << "Failed to get cuDNN version: " << cudnnGetErrorString(status);
+    return false;
+  }
+}
+
+bool GetCudnnVersionString(std::string* version) {
+  int version_major;
+  int version_minor;
+  int version_patch;
+  if (!GetCudnnVersion(libraryPropertyType::MAJOR_VERSION, &version_major)) { return false; }
+  if (!GetCudnnVersion(libraryPropertyType::MINOR_VERSION, &version_minor)) { return false; }
+  if (!GetCudnnVersion(libraryPropertyType::PATCH_LEVEL, &version_patch)) { return false; }
+  *version = std::to_string(version_major) + "." + std::to_string(version_minor) + "."
+             + std::to_string(version_patch);
+  return true;
+}
+
+#endif  // WITH_CUDA
 
 }  // namespace
 
@@ -42,37 +68,12 @@ void DumpVersionInfo() {
     }
   }
 
-  do {
-    int cudnn_version_major;
-    int cudnn_version_minor;
-    int cudnn_version_path;
-    {
-      cudnnStatus_t status =
-          cudnnGetProperty(libraryPropertyType::MAJOR_VERSION, &cudnn_version_major);
-      if (status != CUDNN_STATUS_SUCCESS) {
-        LOG(ERROR) << "Failed to get cuDNN version: " << cudnnGetErrorString(status);
-        break;
-      }
+  {
+    std::string cudnn_version_string;
+    if (GetCudnnVersionString(&cudnn_version_string)) {
+      LOG(INFO) << "cuDNN version: " << cudnn_version_string;
     }
-    {
-      cudnnStatus_t status =
-          cudnnGetProperty(libraryPropertyType::MINOR_VERSION, &cudnn_version_minor);
-      if (status != CUDNN_STATUS_SUCCESS) {
-        LOG(ERROR) << "Failed to get cuDNN version: " << cudnnGetErrorString(status);
-        break;
-      }
-    }
-    {
-      cudnnStatus_t status =
-          cudnnGetProperty(libraryPropertyType::PATCH_LEVEL, &cudnn_version_path);
-      if (status != CUDNN_STATUS_SUCCESS) {
-        LOG(ERROR) << "Failed to get cuDNN version: " << cudnnGetErrorString(status);
-        break;
-      }
-    }
-    LOG(INFO) << "cuDNN version: " << cudnn_version_major << "." << cudnn_version_minor << "."
-              << cudnn_version_path;
-  } while (false);
+  }
 
   {
     int nccl_version;
