@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <climits>
 #include <cfloat>
+#include <cmath>
 
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
@@ -81,7 +82,13 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncFloorMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x % y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    return x - y * (static_cast<T>(floorf(static_cast<float>(x) / static_cast<float>(y))));
+#else
+    return x - y * (static_cast<T>(std::floor(static_cast<float>(x) / static_cast<float>(y))));
+#endif
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
@@ -227,14 +234,14 @@ struct BinaryFuncMin<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return fmodf(x, y);
+    return x - y * floorf(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return fmod(x, y);
+    return x - y * floor(x / y);
   }
 };
 
@@ -242,7 +249,7 @@ template<>
 struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
-    return __float2half(fmodf(__half2float(x), __half2float(y)));
+    return __hsub(x, __hmul(y, hfloor(__hdiv(x, y))));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -253,22 +260,24 @@ struct BinaryFuncFloorMod<half> final {
 
 template<>
 struct BinaryFuncFloorMod<float> final {
-  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return std::fmod(x, y);
+  static inline const float Invoke(const float x, const float y) {
+    return x - y * std::floor(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
-  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return std::fmod(x, y);
+  static inline const double Invoke(const double x, const double y) {
+    return x - y * std::floor(x / y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<float16> final {
-  static __device__ __forceinline__ const float16 Invoke(const float16 x, const float16 y) {
-    return static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
+  static inline const float16 Invoke(const float16 x, const float16 y) {
+    return static_cast<float16>(static_cast<float>(x)
+                                - static_cast<float>(y)
+                                      * std::floor(static_cast<float>(x) / static_cast<float>(y)));
   }
 };
 
