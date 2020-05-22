@@ -16,7 +16,7 @@ REGISTER_USER_OP("OFRecordReader")
     .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      int32_t local_batch_size = ctx->GetAttr<int32_t>("batch_size");
+      int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
       const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       if (sbp.has_split_parallel() && parallel_num > 1) {

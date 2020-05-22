@@ -17,13 +17,13 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
                        std::unique_ptr<Dataset<LoadTarget>>&& data_set)
       : loader_(std::move(data_set)) {
     // random
-    seed_ = ctx->GetAttr<int64_t>("seed");
+    seed_ = ctx->Attr<int64_t>("seed");
     if (seed_ == -1) { seed_ = NewRandomSeed(); }
     std::seed_seq seq({seed_});
     e_ = std::default_random_engine(seq);
 
     // fill buffer
-    initial_buffer_fill_ = ctx->GetAttr<int32_t>("shuffle_buffer_size");
+    initial_buffer_fill_ = ctx->Attr<int32_t>("shuffle_buffer_size");
     int32_t remain_cnt = initial_buffer_fill_;
     while (remain_cnt > 0) {
       LoadTargetPtrList sample_list = loader_->Next();

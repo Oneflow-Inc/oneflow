@@ -67,14 +67,14 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
     CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
     UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
     CHECK(val.has_##field());                                                                      \
-    return AttrValAccessor<cpp_type>::GetAttr(val);                                                \
+    return AttrValAccessor<cpp_type>::Attr(val);                                                   \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
     UserOpAttrVal attr_val;                                                                        \
-    AttrValAccessor<cpp_type>::SetAttr(val, &attr_val);                                            \
+    AttrValAccessor<cpp_type>::Attr(val, &attr_val);                                               \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }

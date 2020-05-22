@@ -16,12 +16,12 @@ REGISTER_USER_OP("ofrecord_raw_decoder")
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      Shape conf_shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec(1 + conf_shape.NumAxes());
       dim_vec[0] = in_tensor->shape().At(0);
       for (int i = 1; i < dim_vec.size(); ++i) { dim_vec[i] = conf_shape.At(i - 1); }
       *out_tensor->mut_shape() = Shape(dim_vec);
-      int64_t data_type = ctx->GetAttr<int64_t>("data_type");
+      int64_t data_type = ctx->Attr<int64_t>("data_type");
       *out_tensor->mut_data_type() = static_cast<DataType>(data_type);
       return Maybe<void>::Ok();
     })
