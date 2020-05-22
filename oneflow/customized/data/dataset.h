@@ -48,9 +48,6 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
   }
 
   void ResetSampler(std::unique_ptr<Sampler>&& sampler) { sampler_ = std::move(sampler); }
-  // Sampler* GetSampler() {
-  //   return sampler_.get();
-  // }
 
  private:
   std::unique_ptr<Sampler> sampler_;
