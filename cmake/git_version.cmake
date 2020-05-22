@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 execute_process(COMMAND git describe --tags --always --dirty=-snapshot
+        WORKING_DIRECTORY ${OF_GIT_VERSION_ROOT}
         OUTPUT_VARIABLE GIT_REV
         ERROR_QUIET)
 

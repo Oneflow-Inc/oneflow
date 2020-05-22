@@ -160,6 +160,7 @@ if(BUILD_GIT_VERSION)
   add_custom_command(
           OUTPUT ${OF_GIT_VERSION_DUMMY_FILE}
           COMMAND ${CMAKE_COMMAND} -DOF_GIT_VERSION_FILE=${OF_GIT_VERSION_FILE}
+            -DOF_GIT_VERSION_ROOT=${PROJECT_SOURCE_DIR}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.cmake
           DEPENDS of_git_version_create_dir)
   add_custom_target(of_git_version
