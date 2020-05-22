@@ -12,10 +12,9 @@ parser.add_argument(
 args = parser.parse_args()
 
 class VitualModule(object):
-    def __init__(self, import_submodules=False):
+    def __init__(self):
         self._func_or_class_dict = {}
         self._submodule_dict = {}
-        self._import_submodules = import_submodules
 
     def add_func_or_class(self, api_name_base, func_or_class):
         assert api_name_base not in self._func_or_class_dict
@@ -42,9 +41,8 @@ class VitualModule(object):
         with open(init_file_path, 'w') as f:
             mod_set = set()
             lines = []
-            if self._import_submodules:
-                for k in self._submodule_dict.keys():
-                    mod_set.add(include_submodule(k))
+            for k in self._submodule_dict.keys():
+                mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
                 lines.append(include_export(k, v))
             lines = list(mod_set) + lines
@@ -71,7 +69,7 @@ def collect_exports():
                         assert is_existing == False, "exported twice: {}".format(api_name)
                         exports[api_name] = symbol
 
-    root_virmod = VitualModule(import_submodules=True)
+    root_virmod = VitualModule()
     for api_name, symbol in exports.items():
         fields = api_name.split(".")
         api = root_virmod
