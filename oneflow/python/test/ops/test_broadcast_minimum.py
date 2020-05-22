@@ -13,7 +13,7 @@ def _run_test(test_case, a, b, dtype, device):
     @flow.function(func_config)
     def BroadcastMinimum(a=flow.FixedTensorDef(a.shape, dtype=dtype), b=flow.FixedTensorDef(b.shape, dtype=dtype)):
         with flow.fixed_placement(device, "0:0"):
-            return flow.experimental.broadcast_minimum(a, b)
+            return flow.math.minimum(a, b)
 
     out = BroadcastMinimum(a, b).get()
     _check(test_case, a, b, out.ndarray())

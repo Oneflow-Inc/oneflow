@@ -33,7 +33,7 @@ class AttributeMap {
   }
 
   template<typename T>
-  void SetAttr(const std::string &name, const T &valule) {
+  void Attr(const std::string &name, const T &valule) {
     attributes_[name] = valule;
   }
 

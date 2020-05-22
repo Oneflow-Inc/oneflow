@@ -27,8 +27,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   // input layout [N, C, H, W]
   Shape input_shape = ctx->InputShape("in");
 
-  int begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
-  int begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+  int begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  int begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   CHECK_LT(begin_norm_axis, input_shape.NumAxes());
   CHECK_LT(begin_params_axis, input_shape.NumAxes());
   while (begin_norm_axis < 0) { begin_norm_axis += input_shape.NumAxes(); }
@@ -50,7 +50,7 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     input = xla::ConvertElementType(input, DataTypeToPrimitiveType(data_type));
   }
 
-  double epsilon = ctx->GetAttr<double>("epsilon");
+  double epsilon = ctx->Attr<double>("epsilon");
   // BatchNorm
   xla::XlaOp norm_output = BatchNormTraining(input, ones, zeros, epsilon);
   // Set outputs, scale and shift
@@ -70,17 +70,17 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->GetAttr<bool>("scale") && ctx->HasOutput("normalized")) {
+  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized")) {
     ctx->SetOutput("normalized", Reshape(output, input_shape));
   }
 
   Shape gamma_shape = Shape({norm_dims});
   // output = Reshape(output, Shape({batch_dims, norm_dims}));
-  if (ctx->GetAttr<bool>("scale")) {
+  if (ctx->Attr<bool>("scale")) {
     CHECK_EQ(gamma_shape, ctx->InputShape("gamma"));
     output = xla::Mul(output, ctx->Input("gamma"), {3} /*broadcast dim*/);
   }
-  if (ctx->GetAttr<bool>("center")) {
+  if (ctx->Attr<bool>("center")) {
     CHECK_EQ(gamma_shape, ctx->InputShape("beta"));
     output = xla::Add(output, ctx->Input("beta"), {3} /*broadcast dim*/);
   }
@@ -109,7 +109,7 @@ void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp inv_variance = ctx->Input("inv_variance");
 
   Shape activation_shape = ctx->InputShape("x");
-  int begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
+  int begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   CHECK_LT(begin_norm_axis, activation_shape.NumAxes());
   while (begin_norm_axis < 0) { begin_norm_axis += activation_shape.NumAxes(); }
 
@@ -118,7 +118,7 @@ void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   Shape bn_shape = Shape({1, batch_dims, 1, norm_dims});
   Shape scale_shape = Shape({batch_dims});
 
-  double epsilon = ctx->GetAttr<double>("epsilon");
+  double epsilon = ctx->Attr<double>("epsilon");
   xla::XlaOp ones = xla::ScalarLike(inv_variance, 1.0f);
   xla::XlaOp variance =
       xla::Sub(ones / (inv_variance * inv_variance), xla::ScalarLike(inv_variance, epsilon));
@@ -154,7 +154,7 @@ void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy");
   Shape output_shape = ctx->InputShape("dy");
 
-  int begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+  int begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   while (begin_params_axis < 0) { begin_params_axis += output_shape.NumAxes(); }
   std::vector<long long> batch_dims(begin_params_axis);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);

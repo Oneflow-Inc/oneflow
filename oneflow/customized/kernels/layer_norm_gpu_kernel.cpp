@@ -54,10 +54,10 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const bool scale = ctx->GetAttr<bool>("scale");
-    const bool center = ctx->GetAttr<bool>("center");
+    const bool scale = ctx->Attr<bool>("scale");
+    const bool center = ctx->Attr<bool>("center");
     user_op::Tensor* normalized = scale ? ctx->Tensor4ArgNameAndIndex("normalized", 0) : y;
-    const double epsilon = ctx->GetAttr<double>("epsilon");
+    const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -143,7 +143,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
                                           static_cast<BNParamT>(1),
                                           reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
-    const double epsilon = ctx->GetAttr<double>("epsilon");
+    const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     CudaCheck(cudnnBatchNormalizationBackward(
