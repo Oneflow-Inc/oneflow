@@ -101,6 +101,10 @@ def CropMirrorNormalize(
         mirror_blob=None,
         color_space="BGR",
         output_layout="NCHW",
+        crop_h=0,
+        crop_w=0,
+        crop_pos_y=0.5,
+        crop_pos_x=0.5,
         mean=[0.0],
         std=[1.0],
         output_dtype=flow.float,
@@ -117,6 +121,10 @@ def CropMirrorNormalize(
             .Attr("output_layout", output_layout, "AttrTypeString")\
             .Attr("mean", mean, "AttrTypeListFloat")\
             .Attr("std", std, "AttrTypeListFloat")\
+            .Attr("crop_h", crop_h, "AttrTypeInt64")\
+            .Attr("crop_w", crop_w, "AttrTypeInt64")\
+            .Attr("crop_pos_y", crop_pos_y, "AttrTypeFloat")\
+            .Attr("crop_pos_x", crop_pos_x, "AttrTypeFloat")\
             .Attr("output_dtype", output_dtype, "AttrTypeInt32")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
 

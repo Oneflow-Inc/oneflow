@@ -139,6 +139,60 @@ REGISTER_USER_KERNEL("image_resize")
 
 namespace {
 
+enum TensorLayout {
+  kNCHW = 0,
+  kNHWC = 1,
+};
+
+template<TensorLayout layout>
+inline int64_t GetOffset(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W, int64_t C);
+
+template<>
+inline int64_t GetOffset<TensorLayout::kNCHW>(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W,
+                                              int64_t C) {
+  return c * H * W + h * W + w;  // C, H, W
+}
+
+template<>
+inline int64_t GetOffset<TensorLayout::kNHWC>(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W,
+                                              int64_t C) {
+  return h * W * C + w * C + c;  // H, W, C
+}
+
+template<bool mirror>
+inline int64_t GetInputW(int64_t out_w, int64_t out_W, int64_t in_W, float crop_pos_x);
+
+template<>
+inline int64_t GetInputW<true>(int64_t out_w, int64_t out_W, int64_t in_W, float crop_pos_x) {
+  return (in_W - out_W) * crop_pos_x + (out_W - 1 - out_w);
+}
+
+template<>
+inline int64_t GetInputW<false>(int64_t out_w, int64_t out_W, int64_t in_W, float crop_pos_x) {
+  return (in_W - out_W) * crop_pos_x + out_w;
+}
+
+template<TensorLayout output_layout, bool mirror>
+void CMN1Sample(int64_t C, int64_t in_H, int64_t in_W, int64_t out_H, int64_t out_W,
+                float crop_pos_y, float crop_pos_x, const uint8_t* in_dptr, float* out_dptr,
+                const std::vector<float>& mean_vec, const std::vector<float>& inv_std_vec) {
+  CHECK_LE(out_H, in_H);
+  CHECK_LE(out_W, in_W);
+  for (int64_t c = 0; c < C; ++c) {
+    float mean = mean_vec.at(c);
+    float inv_std = inv_std_vec.at(c);
+    for (int64_t out_h = 0; out_h < out_H; ++out_h) {
+      int64_t in_h = (in_H - out_H) * crop_pos_y + out_h;
+      for (int64_t out_w = 0; out_w < out_W; ++out_w) {
+        int64_t in_w = GetInputW<mirror>(out_w, out_W, in_W, crop_pos_x);
+        int64_t in_offset = GetOffset<TensorLayout::kNHWC>(in_h, in_w, c, in_H, in_W, C);
+        int64_t out_offset = GetOffset<output_layout>(out_h, out_w, c, out_H, out_W, C);
+        out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
+      }
+    }
+  }
+}
+/*
 void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* out_dptr,
                 int8_t mirror, const std::vector<float>& mean_vec,
                 const std::vector<float>& inv_std_vec) {
@@ -169,6 +223,7 @@ void CMN1Sample(int64_t C, int64_t H, int64_t W, const uint8_t* in_dptr, float* 
     }
   }
 }
+*/
 
 }  // namespace
 
@@ -215,25 +270,49 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     int64_t in_H = in_shape.At(1);
     int64_t in_W = in_shape.At(2);
     CHECK_EQ(C, in_shape.At(3));
-    // int64_t in_image_elem_cnt = in_H * in_W * C;
+    int64_t in_image_elem_cnt = in_H * in_W * C;
 
     std::string output_layout = ctx->Attr<std::string>("output_layout");
     const ShapeView& out_shape = out_blob->shape();
-    CHECK_EQ(output_layout, "NCHW");  // TODO(chengcheng): support NHWC
+    CHECK_EQ(out_shape.NumAxes(), 4);
     CHECK_EQ(out_shape.At(0), N);
-    CHECK_EQ(out_shape.At(1), C);
-    int64_t out_H = out_shape.At(2);
-    int64_t out_W = out_shape.At(3);
-    // int64_t out_image_elem_cnt = out_H * out_W * C;
-    CHECK(in_H == out_H && in_W == out_W);  // TODO(chengcheng): support crop
-    int64_t H = in_H;
-    int64_t W = in_W;
-    int64_t one_sample_elem_cnt = C * H * W;
-
-    MultiThreadLoop(record_num, [&](size_t i) {
-      CMN1Sample(C, H, W, in_dptr + one_sample_elem_cnt * i, out_dptr + one_sample_elem_cnt * i,
-                 mirror.at(i), mean_vec, inv_std_vec);
-    });
+    float crop_pos_y = ctx->Attr<float>("crop_pos_y");
+    float crop_pos_x = ctx->Attr<float>("crop_pos_x");
+    if (output_layout == "NCHW") {
+      CHECK_EQ(out_shape.At(1), C);
+      int64_t out_H = out_shape.At(2);
+      int64_t out_W = out_shape.At(3);
+      int64_t out_image_elem_cnt = C * out_H * out_W;
+      MultiThreadLoop(record_num, [&](size_t i) {
+        if (mirror.at(i)) {
+          CMN1Sample<TensorLayout::kNCHW, true>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        } else {
+          CMN1Sample<TensorLayout::kNCHW, false>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        }
+      });
+    } else if (output_layout == "NHWC") {
+      CHECK_EQ(out_shape.At(3), C);
+      int64_t out_H = out_shape.At(1);
+      int64_t out_W = out_shape.At(2);
+      int64_t out_image_elem_cnt = C * out_H * out_W;
+      MultiThreadLoop(record_num, [&](size_t i) {
+        if (mirror.at(i)) {
+          CMN1Sample<TensorLayout::kNHWC, true>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        } else {
+          CMN1Sample<TensorLayout::kNHWC, false>(
+              C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
+              out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
+        }
+      });
+    } else {
+      UNIMPLEMENTED();
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
