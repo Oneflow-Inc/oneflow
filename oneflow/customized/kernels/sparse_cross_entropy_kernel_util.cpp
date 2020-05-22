@@ -25,13 +25,19 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-  static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                          const K* labels, const T* dy, T* dx) {
-    FOR_RANGE(int64_t, i, 0, num_instances) {
-      K label = labels[i];
+  static void ComputeBackward(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_classes,
+                              const T* prob, const K* labels, const T* dy, T* dx) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      const int32_t row_id = i / num_classes;
+      const int32_t col_id = i - row_id * num_classes;
+      K label = labels[row_id];
       CHECK_GE(label, 0);
       CHECK_LT(label, num_classes);
-      dx[i * num_classes + label] = dy[i] * (dx[i * num_classes + label] - 1);
+      if (label == col_id) {
+        dx[i] = dy[row_id] * (prob[i] - 1);
+      } else {
+        dx[i] = dy[row_id] * prob[i];
+      }
     }
   }
 };

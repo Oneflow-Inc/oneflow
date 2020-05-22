@@ -69,11 +69,9 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
-    Memcpy<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), prob->dptr<T>(),
-                        prediction_diff->shape().elem_cnt() * sizeof(T));
-    SparseCrossEntropyKernelUtil<device_type, T, K>::BackwardSub(
-        ctx->device_ctx(), num_instances, num_classes, label->dptr<K>(), dy->dptr<T>(),
-        prediction_diff->mut_dptr<T>());
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeBackward(
+        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
+        label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

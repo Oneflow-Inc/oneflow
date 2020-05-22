@@ -13,6 +13,8 @@ struct SparseCrossEntropyKernelUtil {
                           const T* x, const K* labels, const T* dy, T* dx);
   static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const K* labels, const T* dy, T* dx);
+  static void ComputeBackward(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_classes,
+                              const T* prob, const K* labels, const T* dy, T* dx);
 };
 
 }  // namespace oneflow
