@@ -20,6 +20,7 @@ import oneflow.python.vm.id_util as id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.eager_physical_blob as eager_physical_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
 import random
 
 class UserOp(object):
@@ -87,22 +88,30 @@ class EagerLogicalUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return eager_physical_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
 
-@oneflow_export('user_op_builder', enable_if=hob.in_global_mode)
-def user_op_builder(op_name): 
+@enable_if.condition(hob.in_global_mode)
+def lazy_user_op_builder(op_name): 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, LazyUserOp)
 
 in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
-@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & in_physical_placement)
-def user_op_builder(op_name):
+@enable_if.condition(hob.in_normal_mode & in_physical_placement)
+def eager_physical_user_op_builder(op_name):
     job_name = job_conf_ctx.CurrentJobConf().job_name
     return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
 
 in_logical_placement = (hob.env_initialized & ~hob.is_current_placement_physical)
-@oneflow_export('user_op_builder', enable_if=hob.in_normal_mode & in_logical_placement)
-def user_op_builder(op_name): 
+@enable_if.condition(hob.in_normal_mode & in_logical_placement)
+def eager_logical_user_op_builder(op_name): 
     job_name = job_conf_ctx.CurrentJobConf().job_name
     return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
+
+@oneflow_export('user_op_builder')
+def api_user_op_builder(op_name):
+    return enable_if.unique(
+        lazy_user_op_builder,
+        eager_physical_user_op_builder,
+        eager_logical_user_op_builder,
+    )(op_name)
 
 class UserOpConfBuilder(object):
     def __init__(self, job_name, op_name, user_op_class):
