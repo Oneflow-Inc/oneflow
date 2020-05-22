@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <nccl.h>
-#endif
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -87,7 +87,7 @@ void DumpVersionInfo() {
       LOG(ERROR) << "Failed to get NCCL version: " << ncclGetErrorString(result);
     }
   }
-#endif
+#endif  // WITH_CUDA
 }
 
 }  // namespace oneflow
