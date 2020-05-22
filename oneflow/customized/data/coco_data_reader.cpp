@@ -10,18 +10,18 @@ namespace oneflow {
 namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
-  std::shared_ptr<const COCOMeta> meta(new COCOMeta(
-      ctx->GetAttr<std::string>("annotation_file"), ctx->GetAttr<std::string>("image_dir"),
-      ctx->GetAttr<bool>("remove_images_without_annotations")));
+  std::shared_ptr<const COCOMeta> meta(
+      new COCOMeta(ctx->Attr<std::string>("annotation_file"), ctx->Attr<std::string>("image_dir"),
+                   ctx->Attr<bool>("remove_images_without_annotations")));
   COCODataset* coco_dataset = new COCODataset(ctx, meta);
   std::unique_ptr<Sampler> sampler(new DistributedTrainingSampler(
       coco_dataset->Size(), ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
-      ctx->GetAttr<bool>("stride_partition"), ctx->GetAttr<bool>("shuffle_after_epoch"),
-      ctx->GetAttr<int64_t>("random_seed")));
+      ctx->Attr<bool>("stride_partition"), ctx->Attr<bool>("shuffle_after_epoch"),
+      ctx->Attr<int64_t>("random_seed")));
   coco_dataset->ResetSampler(std::move(sampler));
   loader_.reset(coco_dataset);
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-  if (ctx->GetAttr<bool>("group_by_ratio")) {
+  if (ctx->Attr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {
       return static_cast<int64_t>(sample->height / sample->width);
     };

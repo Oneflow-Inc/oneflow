@@ -9,8 +9,8 @@ namespace data {
 COCODataset::COCODataset(user_op::KernelInitContext* ctx,
                          const std::shared_ptr<const COCOMeta>& meta)
     : meta_(meta) {
-  int64_t total_empty_size = ctx->GetAttr<int64_t>("empty_tensor_size");
-  int32_t tensor_init_bytes = ctx->GetAttr<int32_t>("tensor_init_bytes");
+  int64_t total_empty_size = ctx->Attr<int64_t>("empty_tensor_size");
+  int32_t tensor_init_bytes = ctx->Attr<int32_t>("tensor_init_bytes");
   empty_tensor_mgr_.reset(new EmptyTensorManager<COCOImage>(total_empty_size, tensor_init_bytes));
 };
 
