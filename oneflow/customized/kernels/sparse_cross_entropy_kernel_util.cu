@@ -3,6 +3,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
+namespace user_op {
 
 namespace {
 
@@ -159,4 +160,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_GP
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_GPU
 
+}  // namespace user_op
 }  // namespace oneflow

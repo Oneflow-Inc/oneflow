@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
+namespace user_op {
 
 template<DeviceType device_type, typename T, typename K>
 struct SparseCrossEntropyKernelUtil {
@@ -14,7 +15,7 @@ struct SparseCrossEntropyKernelUtil {
   static void ComputeBackward(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_classes,
                               const T* prob, const K* labels, const T* dy, T* dx);
 };
-
+}  // namespace user_op
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_KERNELS_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_H_

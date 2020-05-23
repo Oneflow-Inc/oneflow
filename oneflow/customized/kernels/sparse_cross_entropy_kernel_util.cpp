@@ -2,6 +2,7 @@
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
+namespace user_op {
 
 template<typename T, typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
@@ -49,4 +50,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CP
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CPU
 
+}  // namespace user_op
 }  // namespace oneflow
