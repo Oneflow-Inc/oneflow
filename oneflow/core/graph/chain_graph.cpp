@@ -130,16 +130,6 @@ bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
   return true;
 }
 
-bool NoOutRegstConsumedByBwNode(TaskNode* node) {
-  auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-  if (fw_node == nullptr) { return false; }
-  for (TaskEdge* edge : fw_node->out_edges()) {
-    auto* fw_consumer = dynamic_cast<NormalForwardCompTaskNode*>(edge->dst_node());
-    if (fw_consumer == nullptr) { return false; }
-  }
-  return true;
-};
-
 bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
   if (dst_task->in_edges().size() <= 1) { return false; }
   const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
@@ -261,8 +251,7 @@ void ChainGraph::PrioritizeUntrainableTaskNode(std::vector<TaskNode*>* task_node
     if (IsSourceNode(node)) { starts.push_back(node); }
   }
   task_nodes->clear();
-  auto IsPrior = [&](TaskNode* node) { return NoOutRegstConsumedByBwNode(node); };
-  PartialPriorTopoForEachNode(starts, ForEachInNode, ForEachOutNode, IsPrior,
+  PartialPriorTopoForEachNode(starts, ForEachInNode, ForEachOutNode,
                               [&](TaskNode* node) { task_nodes->push_back(node); });
   HashSet<TaskNode*> task_nodes_set_check(task_nodes->begin(), task_nodes->end());
   CHECK(task_nodes_set == task_nodes_set_check);
@@ -272,12 +261,10 @@ void ChainGraph::PartialPriorTopoForEachNode(
     const std::list<TaskNode*> starts,
     const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachInNode,
     const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachOutNode,
-    const std::function<bool(TaskNode*)>& IsPrior,
     const std::function<void(TaskNode*)>& Handler) const {
   // collect prior nodes
   HashSet<TaskNode*> prior_nodes;
   auto IsTaskNodePrior = [&](TaskNode* node) {
-    if (!IsPrior(node)) { return false; }
     bool is_prior = true;
     ForEachInNode(node, [&](TaskNode* in_node) {
       is_prior = is_prior && (prior_nodes.find(in_node) != prior_nodes.end());

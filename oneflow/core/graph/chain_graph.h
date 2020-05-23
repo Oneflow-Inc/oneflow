@@ -83,7 +83,6 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
       const std::list<TaskNode*> starts,
       const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachInNode,
       const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachOutNode,
-      const std::function<bool(TaskNode*)>& IsPrior,
       const std::function<void(TaskNode*)>& Handler) const;
   void InitChainNode(const std::vector<std::vector<TaskNode*>>& chains);
   void InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains);
