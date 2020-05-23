@@ -14,6 +14,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
   using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  OF_DISALLOW_COPY_AND_MOVE(OFRecordDataset);
   OFRecordDataset(user_op::KernelInitContext* ctx) {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");

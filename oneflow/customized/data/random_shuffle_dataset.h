@@ -19,7 +19,7 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
     seed_ = ctx->Attr<int64_t>("seed");
     if (seed_ == -1) { seed_ = NewRandomSeed(); }
     std::seed_seq seq({seed_});
-    e_ = std::default_random_engine(seq);
+    rand_engine_ = std::default_random_engine(seq);
 
     // fill buffer
     initial_buffer_fill_ = ctx->Attr<int32_t>("shuffle_buffer_size");
@@ -38,7 +38,7 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
     LoadTargetPtrList ret = loader_->Next();
     for (auto& sample_ptr : ret) {
       std::uniform_int_distribution<> dis(0, sample_buffer_.size() - 1);
-      int offset = dis(e_);
+      int offset = dis(rand_engine_);
       std::swap(sample_buffer_[offset], sample_ptr);
     }
     return ret;
@@ -50,7 +50,7 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
 
   int32_t initial_buffer_fill_;
 
-  std::default_random_engine e_;
+  std::default_random_engine rand_engine_;
   int64_t seed_;
 };
 

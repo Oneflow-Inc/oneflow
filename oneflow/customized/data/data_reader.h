@@ -8,12 +8,15 @@
 
 namespace oneflow {
 
+static const int32_t kDataReaderBatchBufferSize = 4;
+
 template<typename LoadTarget>
 class DataReader {
  public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
-  DataReader(user_op::KernelInitContext* ctx) : is_closed_(false), batch_buffer_(4) {}
+  DataReader(user_op::KernelInitContext* ctx)
+      : is_closed_(false), batch_buffer_(kDataReaderBatchBufferSize) {}
   virtual ~DataReader() {
     Close();
     if (load_thrd_.joinable()) { load_thrd_.join(); }
@@ -41,7 +44,7 @@ class DataReader {
   void StartLoadThread() {
     if (load_thrd_.joinable()) { return; }
     load_thrd_ = std::thread([this] {
-      while (!is_closed_.load()) { LoadBatch(); }
+      while (!is_closed_.load() && LoadBatch()) {}
     });
   }
 
@@ -51,14 +54,14 @@ class DataReader {
  private:
   std::shared_ptr<LoadTargetPtrList> FetchBatchData() {
     std::shared_ptr<LoadTargetPtrList> batch_data(nullptr);
-    batch_buffer_.Receive(&batch_data);
+    CHECK_EQ(batch_buffer_.Receive(&batch_data), BufferStatus::kBufferStatusSuccess);
     return batch_data;
   }
 
-  void LoadBatch() {
+  bool LoadBatch() {
     std::shared_ptr<LoadTargetPtrList> batch_data =
         std::make_shared<LoadTargetPtrList>(std::move(loader_->Next()));
-    batch_buffer_.Send(batch_data);
+    return batch_buffer_.Send(batch_data) == BufferStatus::kBufferStatusSuccess;
   }
 
   std::atomic<bool> is_closed_;

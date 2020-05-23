@@ -16,14 +16,12 @@ class BatchDataset final : public Dataset<LoadTarget> {
   ~BatchDataset() = default;
 
   LoadTargetPtrList Next() override {
-    int32_t remain_cnt = batch_size_;
     LoadTargetPtrList ret;
-    while (remain_cnt > 0) {
+    ret.reserve(batch_size_);
+    for (int32_t i = 0; i < batch_size_; ++i) {
       LoadTargetPtrList tmp = loader_->Next();
-      for (auto& sample_ptr : tmp) {
-        ret.push_back(std::move(sample_ptr));
-        remain_cnt--;
-      }
+      CHECK_EQ(tmp.size(), 1);
+      ret.push_back(std::move(tmp.at(0)));
     }
     return ret;
   }
