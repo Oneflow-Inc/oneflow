@@ -11,7 +11,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-class VitualModule(object):
+class VirtualModule(object):
     def __init__(self):
         self._func_or_class_dict = {}
         self._submodule_dict = {}
@@ -22,7 +22,7 @@ class VitualModule(object):
         self._func_or_class_dict[api_name_base] = func_or_class
 
     def find_or_create_submodule(self, submodule_name):
-        return self._submodule_dict.setdefault(submodule_name, VitualModule()) 
+        return self._submodule_dict.setdefault(submodule_name, VirtualModule()) 
     
     def __str__(self):
         ret = ""
@@ -69,7 +69,7 @@ def collect_exports():
                         assert is_existing == False, "exported twice: {}".format(api_name)
                         exports[api_name] = symbol
 
-    root_virmod = VitualModule()
+    root_virmod = VirtualModule()
     for api_name, symbol in exports.items():
         fields = api_name.split(".")
         api = root_virmod
