@@ -156,6 +156,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.parallel_num() > 1
+        && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
         && src_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
