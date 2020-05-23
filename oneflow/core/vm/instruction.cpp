@@ -8,6 +8,23 @@
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+template<InterpretType interpret_type>
+int64_t GetObjectId(int64_t);
+
+template<>
+int64_t GetObjectId<kCompute>(int64_t val) {
+  return IdUtil::GetValueId(val);
+}
+
+template<>
+int64_t GetObjectId<kInfer>(int64_t val) {
+  return IdUtil::GetTypeId(val);
+}
+
+}  // namespace
+
 InstructionOperand* InstructionMsg::add_instr_operand() {
   auto* operand_vec = mutable_operand();
   operand_vec->emplace_back();
@@ -198,18 +215,31 @@ RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
       ->mut_rw_mutexed_object();
 }
 
-MirroredObject* Instruction::mut_type_mirrored_object(const MutOperand& mut_operand) {
-  const auto& operand = mut_operand.operand();
+template<InterpretType interpret_type>
+const MirroredObject* Instruction::MirroredObjectUtil<interpret_type>::Get(
+    const Instruction& instruction, const ConstOperand& const_operand) {
+  const auto& operand = const_operand.operand();
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  int64_t default_device_id = GetOperandDefaultGlobalDeviceId();
-  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_device_id);
+  int64_t default_device_id = instruction.GetOperandDefaultGlobalDeviceId();
+  return instruction.FindMirroredObjectByOperand<&GetObjectId<interpret_type>>(operand,
+                                                                               default_device_id);
 }
 
-MirroredObject* Instruction::mut_value_mirrored_object(const MutOperand& mut_operand) {
+template<InterpretType interpret_type>
+MirroredObject* Instruction::MirroredObjectUtil<interpret_type>::Mut(
+    Instruction* instruction, const MutOperand& mut_operand) {
   const auto& operand = mut_operand.operand();
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  int64_t default_device_id = GetOperandDefaultGlobalDeviceId();
-  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_device_id);
+  int64_t default_device_id = instruction->GetOperandDefaultGlobalDeviceId();
+  return instruction->FindMirroredObjectByOperand<&GetObjectId<interpret_type>>(operand,
+                                                                                default_device_id);
+}
+
+MirroredObject* Instruction::mut_type_mirrored_object(const MutOperand& mut_operand) {
+  return MutMirroredObject<kInfer>(mut_operand);
+}
+MirroredObject* Instruction::mut_value_mirrored_object(const MutOperand& mut_operand) {
+  return MutMirroredObject<kCompute>(mut_operand);
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>

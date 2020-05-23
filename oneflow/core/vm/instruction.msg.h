@@ -11,6 +11,7 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
+#include "oneflow/core/vm/vm_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 
@@ -144,6 +145,16 @@ OBJECT_MSG_BEGIN(Instruction);
     return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
 
+  PUBLIC template<InterpretType interpret_type>
+         MirroredObject* MutMirroredObject(const MutOperand& mut_operand) {
+    return MirroredObjectUtil<interpret_type>::Mut(this, mut_operand);
+  }
+
+  PUBLIC template<InterpretType interpret_type>
+         const MirroredObject* GetMirroredObject(const ConstOperand& const_operand) const {
+    return MirroredObjectUtil<interpret_type>::Get(*this, const_operand);
+  }
+
   PUBLIC MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
   PUBLIC MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
 
@@ -169,6 +180,12 @@ OBJECT_MSG_BEGIN(Instruction);
   }
 
   PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
+
+  template<InterpretType interpret_type>
+  struct MirroredObjectUtil {
+    static const MirroredObject* Get(const Instruction&, const ConstOperand&);
+    static MirroredObject* Mut(Instruction*, const MutOperand&);
+  };
 
   // fields
   OBJECT_MSG_DEFINE_FLAT_MSG(InstructionStatusBuffer, status_buffer);
