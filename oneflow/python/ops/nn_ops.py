@@ -702,6 +702,34 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .RemoteBlobList()[0]
     )
 
+@oneflow_export("nn.dropout_v2")
+def dropout_v2(x, noise_shape=None, seed=None, rate=None, name=None):
+    assert rate is not None and rate >= 0.0 and rate < 1.0
+    dropout_op = (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("DropoutV2_"))
+        .Op("dropout_v2")
+        .Input("in", [x])
+        .Output("out")
+        .Output("mask")
+        .Attr("rate", float(rate), "AttrTypeFloat")
+        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+    )
+    if seed is not None:
+        dropout_op.Attr("seed", seed, "AttrTypeInt64")
+    else:
+        dropout_op.Attr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+        
+    if noise_shape is not None:
+        assert 0, "noise_shape will be supported later."
+        assert isinstance(noise_shape, (list, tuple))
+    return (
+        dropout_op
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
     value=None,
