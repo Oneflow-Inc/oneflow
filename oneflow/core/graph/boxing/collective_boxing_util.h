@@ -46,8 +46,8 @@ template<>
 struct hash<oneflow::boxing::collective::DeviceDesc> {
   size_t operator()(const oneflow::boxing::collective::DeviceDesc& device_desc) const {
     size_t hash = std::hash<int64_t>()(device_desc.machine_id());
-    oneflow::HashCombine(hash, std::hash<int64_t>()(device_desc.device_type()));
-    oneflow::HashCombine(hash, std::hash<int64_t>()(device_desc.device_id()));
+    oneflow::HashCombine(&hash, std::hash<int64_t>()(device_desc.device_type()));
+    oneflow::HashCombine(&hash, std::hash<int64_t>()(device_desc.device_id()));
     return hash;
   }
 };
@@ -57,7 +57,7 @@ struct hash<oneflow::boxing::collective::DeviceSet> {
   size_t operator()(const oneflow::boxing::collective::DeviceSet& device_set) const {
     size_t hash = 0;
     for (const auto& device : device_set.device()) {
-      oneflow::HashCombine(hash, std::hash<oneflow::boxing::collective::DeviceDesc>()(device));
+      oneflow::HashCombine(&hash, std::hash<oneflow::boxing::collective::DeviceDesc>()(device));
     }
     return hash;
   }
