@@ -15,7 +15,7 @@ def oneflow_export(*api_names, **kwargs):
 
 def _GetOneflowExportDecorator(api_names, hob_expr, location):
     def Decorator(func_or_class):
-        setattr(func_or_class, "_ONEFLOW_API", api_names)
+        func_or_class._ONEFLOW_API = api_names
         return func_or_class
     return Decorator
 
