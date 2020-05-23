@@ -17,6 +17,31 @@ function(oneflow_add_library)
   endif()
 endfunction()
 
+set(_COUNTER 0)
+macro(copy_files file_paths source_dir dest_dir target)
+  find_program(rsync rsync)
+  if (rsync)
+    set(CACHE_FILELIST ${PROJECT_BINARY_DIR}/cache_${_COUNTER})
+    math(EXPR _COUNTER "${_COUNTER} + 1")
+    file(WRITE ${CACHE_FILELIST} "")
+    foreach(file ${file_paths})
+      file(RELATIVE_PATH rel_path "${source_dir}" ${file})
+      file(APPEND ${CACHE_FILELIST} ${rel_path}\n)
+    endforeach()
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${rsync}
+      ARGS -a --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
+  else()
+    foreach(file ${file_paths})
+      file(RELATIVE_PATH rel_path "${source_dir}" ${file})
+      add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy
+        "${file}"
+        "${dest_dir}/${rel_path}")
+    endforeach()
+  endif()
+endmacro()
+
 # source_group
 if(WIN32)
   set(oneflow_platform "windows")
@@ -236,13 +261,7 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND python3 "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
-foreach(oneflow_python_file ${oneflow_all_python_file})
-  file(RELATIVE_PATH oneflow_python_rel_file_path "${PROJECT_SOURCE_DIR}" ${oneflow_python_file})
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${oneflow_python_file}"
-    "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
-endforeach()
+copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
 add_dependencies(of_pyscript_copy of_protoobj)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
@@ -290,22 +309,10 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
   #list(APPEND oneflow_all_include_file ${hpp_files})
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  foreach(of_hdr_file ${oneflow_all_include_file})
-    file(RELATIVE_PATH of_include_rel_file_path ${of_include_src_dir} ${of_hdr_file})
-    add_custom_command(TARGET of_include_copy POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy
-      "${of_hdr_file}"
-      "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-  endforeach()
+  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
-foreach(of_proto_hdr_file ${PROTO_HDRS})
-  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_BINARY_DIR} ${of_proto_hdr_file})
-  add_custom_command(TARGET of_include_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${of_proto_hdr_file}"
-    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-endforeach()
+copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
 list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
@@ -319,10 +326,4 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_u
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
-foreach(of_core_hdr_file ${OF_CORE_HDRS})
-  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
-  add_custom_command(TARGET of_include_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${of_core_hdr_file}"
-    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-endforeach()
+copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
