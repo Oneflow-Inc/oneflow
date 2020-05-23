@@ -1,13 +1,29 @@
 import oneflow.python.lib.core.traceinfo as traceinfo
+import inspect
 
-def enable_if(*args):
-    conditional_functions = [(hob_expr, func, func.__name__) for func, hob_expr in args]
+def condition(hob_expr):
+    def Decorator(func):
+        func.__oneflow_condition_hob__ = hob_expr
+        return func
+    return Decorator
+
+def unique(*args):
+    conditional_functions = []
+    for arg in args:
+        if isinstance(arg, tuple):
+            func, hob_expr = arg
+        elif inspect.isfunction(arg):
+            func = arg
+            assert hasattr(func, '__oneflow_condition_hob__')
+            hob_expr = func.__oneflow_condition_hob__
+        else:
+            raise NotImplementedError
+        conditional_functions.append((hob_expr, func, func.__name__))
     matched_func = GetMatchedFunction(conditional_functions)
     if matched_func is not None: return matched_func
     def default(get_failed_info, *args, **kwargs):
         raise NotImplementedError(get_failed_info())
     return MakeDefaultFunction(default, conditional_functions)
-
 
 def GetMatchedFunction(conditional_functions):
     select_triple = (None, None, None)
