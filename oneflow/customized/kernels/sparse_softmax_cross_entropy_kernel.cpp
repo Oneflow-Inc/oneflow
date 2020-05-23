@@ -70,7 +70,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
-    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeBackward(
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
