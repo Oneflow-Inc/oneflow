@@ -117,9 +117,9 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
   for (int64_t anno_id : anno_ids) {
     const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
     if (!segm_json.is_array()) { continue; }
-    for (const auto& poly : segm_json) {
-      CHECK(poly.is_array());
-      for (const auto& elem : poly) { segm_vec.push_back(elem.get<T>()); }
+    for (const auto& poly_json : segm_json) {
+      CHECK(poly_json.is_array());
+      for (const auto& elem : poly_json) { segm_vec.push_back(elem.get<T>()); }
     }
   }
   CHECK_EQ(segm_vec.size() % 2, 0);
@@ -130,23 +130,22 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
   segm_index->Resize(Shape({num_pts, 3}), DataType::kInt32);
   int32_t* index_ptr = segm_index->mut_data<int32_t>();
   int i = 0;
-  int32_t offset_of_poly_in_segm = 0;
-  int32_t offset_of_segm_in_img = 0;
+  int32_t segm_idx = 0;
   for (int64_t anno_id : anno_ids) {
     const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
-    if (!segm_json.is_array()) { continue; }
-    for (const auto& poly : segm_json) {
-      CHECK(poly.is_array());
-      CHECK_EQ(poly.size() % 2, 0);
-      FOR_RANGE(int32_t, offset_of_pt_in_poly, 0, poly.size() / 2) {
-        index_ptr[i * 3 + 0] = offset_of_pt_in_poly;
-        index_ptr[i * 3 + 1] = offset_of_poly_in_segm;
-        index_ptr[i * 3 + 2] = offset_of_segm_in_img;
+    CHECK(segm_json.is_array());
+    FOR_RANGE(int32_t, poly_idx, 0, segm_json.size()) {
+      const auto& poly_json = segm_json[poly_idx];
+      CHECK(poly_json.is_array());
+      CHECK_EQ(poly_json.size() % 2, 0);
+      FOR_RANGE(int32_t, pt_idx, 0, poly_json.size() / 2) {
+        index_ptr[i * 3 + 0] = pt_idx;
+        index_ptr[i * 3 + 1] = poly_idx;
+        index_ptr[i * 3 + 2] = segm_idx;
         i += 1;
       }
-      offset_of_poly_in_segm += 1;
     }
-    offset_of_segm_in_img += 1;
+    segm_idx += 1;
   }
   CHECK_EQ(i, num_pts);
 }

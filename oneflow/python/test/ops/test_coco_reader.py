@@ -1,5 +1,7 @@
 import numpy as np
 import oneflow as flow
+import os
+import cv2
 
 coco_dict = dict()
 
@@ -83,9 +85,7 @@ def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partiti
                 decoded_image, shape=(640, 800, 3), dtype=flow.uint8
             )
             bbox_list = flow.tensor_buffer_to_tensor_list(gt_bbox, shape=(128, 4), dtype=flow.float)
-            label_list = flow.tensor_buffer_to_tensor_list(
-                gt_label, shape=(128,), dtype=flow.int32
-            )
+            label_list = flow.tensor_buffer_to_tensor_list(gt_label, shape=(128,), dtype=flow.int32)
             segm_list = flow.tensor_buffer_to_tensor_list(gt_segm, shape=(512, 2), dtype=flow.float)
             segm_index_list = flow.tensor_buffer_to_tensor_list(
                 gt_segm_index, shape=(512, 3), dtype=flow.int32
@@ -105,10 +105,145 @@ def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partiti
     )
 
 
-def _coco_load_imgs(anno_file):
+def _get_coco_image_samples(anno_file, image_dir, image_ids):
+    coco = _coco(anno_file)
+    category_id_to_contiguous_id_map = _get_category_id_to_contiguous_id_map(coco)
+    image, image_size = _read_images_with_cv(coco, image_dir, image_ids)
+    bbox = _read_bbox(coco, image_ids)
+    label = _read_label(coco, image_ids, category_id_to_contiguous_id_map)
+    img_segm_poly_list = _read_segm_poly(coco, image_ids)
+    poly, poly_index = _segm_poly_list_to_tensor(img_segm_poly_list)
+    samples = []
+    for im, ims, b, l, p, pi in zip(image, image_size, bbox, label, poly, poly_index):
+        samples.append(dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi))
+    return samples
+
+
+def _get_category_id_to_contiguous_id_map(coco):
+    return {v: i + 1 for i, v in enumerate(coco.getCatIds())}
+
+
+def _read_images_with_cv(coco, image_dir, image_ids):
+    image_files = [os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids]
+    image_size = [(coco.imgs[img_id]["height"], coco.imgs[img_id]["width"]) for img_id in image_ids]
+    return [cv2.imread(image_file).astype(np.single) for image_file in image_files], image_size
+
+
+def _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w):
+    x, y, w, h = bbox
+    x1, y1 = x, y
+    x2 = x1 + max(w - 1, 0)
+    y2 = y1 + max(h - 1, 0)
+
+    # clip to image
+    x1 = min(max(x1, 0), image_w - 1)
+    y1 = min(max(y1, 0), image_h - 1)
+    x2 = min(max(x2, 0), image_w - 1)
+    y2 = min(max(y2, 0), image_h - 1)
+
+    if x1 >= x2 or y1 >= y2:
+        return None
+
+    return [x1, y1, x2, y2]
+
+
+def _read_bbox(coco, image_ids):
+    img_bbox_list = []
+    for img_id in image_ids:
+        anno_ids = coco.getAnnIds(imgIds=[img_id])
+        assert len(anno_ids) > 0, "image with id {} has no anno".format(img_id)
+        image_h = coco.imgs[img_id]["height"]
+        image_w = coco.imgs[img_id]["width"]
+
+        bbox_list = []
+        for anno_id in anno_ids:
+            anno = coco.anns[anno_id]
+            if anno["iscrowd"] != 0:
+                continue
+
+            bbox = anno["bbox"]
+            assert isinstance(bbox, list)
+            bbox_ = _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w)
+            if bbox_ is not None:
+                bbox_list.append(bbox_)
+
+        bbox_array = np.array(bbox_list, dtype=np.single)
+        img_bbox_list.append(bbox_array)
+
+    return img_bbox_list
+
+
+def _read_label(coco, image_ids, category_id_to_contiguous_id_map):
+    img_label_list = []
+    for img_id in image_ids:
+        anno_ids = coco.getAnnIds(imgIds=[img_id])
+        assert len(anno_ids) > 0, "image with id {} has no anno".format(img_id)
+
+        label_list = []
+        for anno_id in anno_ids:
+            anno = coco.anns[anno_id]
+            if anno["iscrowd"] != 0:
+                continue
+            cate_id = anno["category_id"]
+            isinstance(cate_id, int)
+            label_list.append(category_id_to_contiguous_id_map[cate_id])
+        label_array = np.array(label_list, dtype=np.int32)
+        img_label_list.append(label_array)
+    return img_label_list
+
+
+def _read_segm_poly(coco, image_ids):
+    img_segm_poly_list = []
+    for img_id in image_ids:
+        anno_ids = coco.getAnnIds(imgIds=[img_id])
+        assert len(anno_ids) > 0, "img {} has no anno".format(img_id)
+
+        segm_poly_list = []
+        for anno_id in anno_ids:
+            anno = coco.anns[anno_id]
+            if anno["iscrowd"] != 0:
+                continue
+            segm = anno["segmentation"]
+            assert isinstance(segm, list)
+            assert len(segm) > 0, str(len(segm))
+            assert all([len(poly) > 0 for poly in segm]), str([len(poly) for poly in segm])
+            segm_poly_list.append(segm)
+
+        img_segm_poly_list.append(segm_poly_list)
+
+    return img_segm_poly_list
+
+
+def _segm_poly_list_to_tensor(img_segm_poly_list):
+    poly_array_list = []
+    poly_index_array_list = []
+    for img_idx, segm_poly_list in enumerate(img_segm_poly_list):
+        img_poly_elem_list = []
+        img_poly_index_list = []
+
+        for obj_idx, poly_list in enumerate(segm_poly_list):
+            for poly_idx, poly in enumerate(poly_list):
+                img_poly_elem_list.extend(poly)
+                for pt_idx, pt in enumerate(poly):
+                    if pt_idx % 2 == 0:
+                        img_poly_index_list.append([pt_idx / 2, poly_idx, obj_idx])
+
+        img_poly_array = np.array(img_poly_elem_list, dtype=np.single).reshape(-1, 2)
+        assert img_poly_array.size > 0, segm_poly_list
+        poly_array_list.append(img_poly_array)
+
+        img_poly_index_array = np.array(img_poly_index_list, dtype=np.int32)
+        assert img_poly_index_array.size > 0, segm_poly_list
+        poly_index_array_list.append(img_poly_index_array)
+
+    return poly_array_list, poly_index_array_list
+
+
+def _coco_sorted_img_ids(anno_file):
     coco = _coco(anno_file)
     img_ids = coco.getImgIds()
     img_ids.sort()
+    print("Info of the first 20 images:")
     for i, img_id in enumerate(img_ids[:20]):
         img_h = coco.imgs[img_id]["height"]
         img_w = coco.imgs[img_id]["width"]
@@ -120,27 +255,23 @@ def _coco_load_imgs(anno_file):
             )
         )
 
+    return img_ids
+
 
 def test_coco_reader(test_case):
-    image_id, image_size, image, bbox, label, segm, segm_index = _of_coco_data_load(
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        "/dataset/mscoco_2017/val2017",
-        1,
-        2,
-        False,
-    )
-    print(type(image_id))
-    print(image_id)
-    print(image_size)
-    print(len(image))
-    print([len(img) for img in image])
-    print([[im.shape for im in img] for img in image])
-    print(len(bbox))
-    print([len(box) for box in bbox])
-    print([[b.shape for b in box] for box in bbox])
-    print(bbox)
-    print(label)
-    print(segm)
-    print(segm_index)
+    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+    image_dir = "/dataset/mscoco_2017/val2017"
+    # _coco_sorted_img_ids(anno_file)
 
-    _coco_load_imgs("/dataset/mscoco_2017/annotations/instances_val2017.json")
+    image_id, image_size, image, bbox, label, poly, poly_index = _of_coco_data_load(
+        anno_file, image_dir, 1, 2, False
+    )
+
+    samples = _get_coco_image_samples(anno_file, image_dir, image_id)
+    for i, sample in enumerate(samples):
+        test_case.assertTrue(np.array_equal(image[0][i].squeeze(), sample["image"]))
+        test_case.assertTrue(np.array_equal(image_size[i], sample["image_size"]))
+        test_case.assertTrue(np.allclose(bbox[0][i].squeeze(), sample["bbox"]))
+        test_case.assertTrue(np.array_equal(label[0][i].squeeze(), sample["label"]))
+        test_case.assertTrue(np.allclose(poly[0][i].squeeze(), sample["poly"]))
+        test_case.assertTrue(np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"]))
