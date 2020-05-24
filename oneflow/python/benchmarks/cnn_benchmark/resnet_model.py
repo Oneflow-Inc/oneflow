@@ -24,7 +24,7 @@ def _conv2d(
 ):
     weight = flow.get_variable(
         name + "-weight",
-        shape=(filters, input.static_shape[1], kernel_size, kernel_size),
+        shape=(filters, input.shape[1], kernel_size, kernel_size),
         dtype=input.dtype,
         initializer=weight_initializer,
         trainable=trainable,
