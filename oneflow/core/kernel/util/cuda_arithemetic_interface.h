@@ -101,6 +101,9 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              const double* x, const int64_t x_col_offset, const int64_t x_lda,
                              double* y, const int64_t y_col_offset, const int64_t y_lda);
   static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const float16* x, const int64_t x_col_offset, const int64_t x_lda,
+                             float16* y, const int64_t y_col_offset, const int64_t y_lda);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
                              const int8_t* x, const int64_t x_col_offset, const int64_t x_lda,
                              int8_t* y, const int64_t y_col_offset, const int64_t y_lda);
   static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
