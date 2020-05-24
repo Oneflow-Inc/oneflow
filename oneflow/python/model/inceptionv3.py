@@ -60,7 +60,7 @@ def _conv2d_layer(
         kernel_size = (kernel_size, kernel_size)
     else:
         kernel_size = tuple(kernel_size)
-    weight_shape = (filters, input.static_shape[1]) + kernel_size
+    weight_shape = (filters, input.shape[1]) + kernel_size
     weight = flow.get_variable(
         name + "-weight",
         shape=weight_shape,
