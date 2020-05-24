@@ -25,7 +25,11 @@ def dense(
     name=None,
     model_distribute=distribute_util.broadcast(),
 ):
-    in_shape = inputs.static_shape
+    r"""
+    Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+
+    """
+    in_shape = inputs.shape
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
 
@@ -47,7 +51,7 @@ def dense(
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
-        shape=(units, inputs.static_shape[1]),
+        shape=(units, inputs.shape[1]),
         dtype=inputs.dtype,
         initializer=(
             kernel_initializer
@@ -131,14 +135,14 @@ def conv2d(
     assert groups <= filters
     assert filters % groups == 0
     if data_format.upper() == "NCHW":
-        assert groups <= inputs.static_shape[1]
-        assert inputs.static_shape[1] % groups == 0
-        weight_shape = (filters, inputs.static_shape[1] // groups) + kernel_size
+        assert groups <= inputs.shape[1]
+        assert inputs.shape[1] % groups == 0
+        weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
     elif data_format.upper() == "NHWC":
         assert groups == 1
-        assert groups <= inputs.static_shape[3]
-        assert inputs.static_shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.static_shape[3] // groups)
+        assert groups <= inputs.shape[3]
+        assert inputs.shape[3] % groups == 0
+        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.shape[3] // groups)
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
@@ -189,6 +193,10 @@ def layer_norm(
     epsilon=1e-5,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
@@ -363,6 +371,10 @@ def batch_normalization(
     training=True,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+
+    """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
