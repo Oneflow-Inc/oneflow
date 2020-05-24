@@ -4,6 +4,13 @@ namespace oneflow {
 
 namespace {
 
+struct half4 {
+  half x;
+  half y;
+  half z;
+  half w;
+};
+
 template<typename T>
 struct DataType4;
 
@@ -17,10 +24,10 @@ struct DataType4<double> {
   typedef double4 type;
 };
 
-// template<>
-// struct DataType4<half> {
-//  typedef half4 type;
-//};
+template<>
+struct DataType4<half> {
+  typedef half4 type;
+};
 
 template<>
 struct DataType4<int8_t> {
@@ -47,19 +54,19 @@ __device__ T4 MaskAndScale4(T4 x_val, char4 mask_val, float scale) {
   return y_val;
 }
 
-// template<>
-//__device__ half4 MaskAndScale4<half4>(half4 x_val, char4 mask_val, float scale) {
-//  half4 y_val;
-//  half mask_x = mask_val.x;
-//  half mask_y = mask_val.y;
-//  half mask_z = mask_val.z;
-//  half mask_w = mask_val.w;
-//  y_val.x = __hmul(__hmul(x_val.x, mask_x), scale);
-//  y_val.y = __hmul(__hmul(x_val.y, mask_y), scale);
-//  y_val.z = __hmul(__hmul(x_val.z, mask_z), scale);
-//  y_val.w = __hmul(__hmul(x_val.w, mask_w), scale);
-//  return y_val;
-//}
+template<>
+__device__ half4 MaskAndScale4<half4>(half4 x_val, char4 mask_val, float scale) {
+  half4 y_val;
+  half mask_x = mask_val.x;
+  half mask_y = mask_val.y;
+  half mask_z = mask_val.z;
+  half mask_w = mask_val.w;
+  y_val.x = __hmul(__hmul(x_val.x, mask_x), scale);
+  y_val.y = __hmul(__hmul(x_val.y, mask_y), scale);
+  y_val.z = __hmul(__hmul(x_val.z, mask_z), scale);
+  y_val.w = __hmul(__hmul(x_val.w, mask_w), scale);
+  return y_val;
+}
 
 template<typename T>
 __device__ T MaskAndScale(T x_val, int8_t mask_val, float scale) {
