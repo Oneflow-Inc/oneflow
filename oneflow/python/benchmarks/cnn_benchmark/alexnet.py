@@ -70,7 +70,7 @@ def _conv2d_layer(
     weight_initializer=flow.random_uniform_initializer(),
     bias_initializer=None,
 ):
-    weight_shape = (filters, input.static_shape[1], kernel_size, kernel_size)
+    weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
     weight = flow.get_variable(
         name + "-weight",
         shape=weight_shape,
@@ -121,7 +121,7 @@ def alexnet(images, labels):
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
     if len(pool5.shape) > 2:
-        pool5 = flow.reshape(pool5, shape=(pool5.static_shape[0], -1))
+        pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
     fc1 = flow.layers.dense(
         inputs=pool5,

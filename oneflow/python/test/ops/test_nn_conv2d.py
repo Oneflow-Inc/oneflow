@@ -51,7 +51,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            weight_shape = (filters, int(x.static_shape[1]/groups), kernel_size, kernel_size)
+            weight_shape = (filters, int(x.shape[1]/groups), kernel_size, kernel_size)
             weight = flow.get_variable(
                 "conv-weight",
                 shape=weight_shape,
