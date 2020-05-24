@@ -3,6 +3,7 @@ import oneflow as flow
 import os
 import cv2
 
+VERBOSE = False
 coco_dict = dict()
 
 
@@ -53,7 +54,16 @@ def _make_coco_reader_op(
     )
 
 
-def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partition):
+def _make_coco_data_load_fn(
+    anno_file,
+    image_dir,
+    nthread,
+    batch_size,
+    stride_partition,
+    shuffle_after_epoch,
+    ret_image_id_only=False,
+):
+    flow.clear_default_session()
     flow.config.cpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -67,7 +77,7 @@ def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partiti
                 image_dir=image_dir,
                 batch_size=batch_size,
                 stride_partition=stride_partition,
-                shuffle=False,
+                shuffle=shuffle_after_epoch,
             )
 
             (
@@ -80,9 +90,12 @@ def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partiti
                 gt_segm_index,
             ) = coco_reader.InferAndTryRun().RemoteBlobList()
 
-            decoded_image = flow.image_decode(image)
+            if ret_image_id_only:
+                return image_id
+
+            decoded_image = flow.image_decode(image, dtype=flow.float)
             image_list = flow.tensor_buffer_to_tensor_list(
-                decoded_image, shape=(640, 800, 3), dtype=flow.uint8
+                decoded_image, shape=(800, 1333, 3), dtype=flow.float
             )
             bbox_list = flow.tensor_buffer_to_tensor_list(gt_bbox, shape=(128, 4), dtype=flow.float)
             label_list = flow.tensor_buffer_to_tensor_list(gt_label, shape=(128,), dtype=flow.int32)
@@ -93,16 +106,7 @@ def _of_coco_data_load(anno_file, image_dir, nthread, batch_size, stride_partiti
 
         return image_id, image_size, image_list, bbox_list, label_list, segm_list, segm_index_list
 
-    image_id, image_size, image, gt_bbox, gt_label, gt_segm, gt_segm_index = coco_load_fn().get()
-    return (
-        image_id.ndarray(),
-        image_size.ndarray(),
-        image.ndarray_lists(),
-        gt_bbox.ndarray_lists(),
-        gt_label.ndarray_lists(),
-        gt_segm.ndarray_lists(),
-        gt_segm_index.ndarray_lists(),
-    )
+    return coco_load_fn
 
 
 def _get_coco_image_samples(anno_file, image_dir, image_ids):
@@ -239,39 +243,174 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
     return poly_array_list, poly_index_array_list
 
 
-def _coco_sorted_img_ids(anno_file):
+def _get_coco_sorted_imgs(anno_file):
     coco = _coco(anno_file)
     img_ids = coco.getImgIds()
     img_ids.sort()
-    print("Info of the first 20 images:")
-    for i, img_id in enumerate(img_ids[:20]):
+    img_info_list = []
+    for i, img_id in enumerate(img_ids):
         img_h = coco.imgs[img_id]["height"]
         img_w = coco.imgs[img_id]["width"]
         group_id = int(img_h / img_w)
-        anno_ids = coco.getAnnIds(imgIds=[img_id])
-        print(
-            "index: {}, image_id: {}, group_id: {}, anno len: {}".format(
-                i, img_id, group_id, len(anno_ids)
-            )
+        anno_ids = coco.getAnnIds(imgIds=img_id, iscrowd=None)
+        anno = coco.loadAnns(anno_ids)
+        if not _has_valid_annotation(anno):
+            continue
+
+        img_info_list.append(
+            dict(index=i, image_id=img_id, group_id=group_id, anno_len=len(anno_ids))
         )
 
-    return img_ids
+    return img_info_list
 
 
-def test_coco_reader(test_case):
+def _count_visible_keypoints(anno):
+    return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
+
+
+def _has_only_empty_bbox(anno):
+    return all(any(o <= 1 for o in obj["bbox"][2:]) for obj in anno)
+
+
+def _has_valid_annotation(anno):
+    # if it's empty, there is no annotation
+    if len(anno) == 0:
+        return False
+    # if all boxes have close to zero area, there is no annotation
+    if _has_only_empty_bbox(anno):
+        return False
+    # keypoints task have a slight different critera for considering
+    # if an annotation is valid
+    if "keypoints" not in anno[0]:
+        return True
+    # for keypoint detection tasks, only consider valid images those
+    # containing at least min_keypoints_per_image
+    if _count_visible_keypoints(anno) >= 10:
+        return True
+
+    return False
+
+
+class GroupedDistributedStrideSampler(object):
+    def __init__(self, shards, batch_size, images, max_iter=3):
+        assert batch_size % shards == 0
+        self._shards = shards
+        self._batch_size = batch_size
+        self._batch_size_per_shard = batch_size // shards
+        self._images = images
+        self._max_iter = max_iter
+        self._sample_idx = list(range(shards))
+        self._group_buckets = [[[] for _ in range(2)] for _ in range(shards)]
+
+    def __iter__(self):
+        for i in range(self._max_iter):
+            sample_ids = []
+            for rank in range(self._shards):
+                sample_cnt_cur_rank = 0
+                sample_ids_cur_rank = []
+                group_buckets_cur_rank = self._group_buckets[rank]
+
+                if len(group_buckets_cur_rank[0]) > 0 and len(group_buckets_cur_rank[1]) > 0:
+                    if (
+                        group_buckets_cur_rank[0][0]["index"]
+                        < group_buckets_cur_rank[1][0]["index"]
+                    ):
+                        sample = group_buckets_cur_rank[0].pop(0)
+                    else:
+                        sample = group_buckets_cur_rank[1].pop(0)
+                elif len(group_buckets_cur_rank[0]) > 0:
+                    sample = group_buckets_cur_rank[0].pop(0)
+                elif len(group_buckets_cur_rank[1]) > 0:
+                    sample = group_buckets_cur_rank[1].pop(0)
+                else:
+                    sample = self._images[self._sample_idx[rank]]
+                    self._sample_idx[rank] += self._shards
+
+                group_id = sample["group_id"]
+                sample_ids_cur_rank.append(sample["image_id"])
+                sample_cnt_cur_rank += 1
+
+                while sample_cnt_cur_rank < self._batch_size_per_shard:
+                    if len(group_buckets_cur_rank[group_id]) > 0:
+                        sample = group_buckets_cur_rank[group_id].pop(0)
+                        sample_ids_cur_rank.append(sample["image_id"])
+                        sample_cnt_cur_rank += 1
+                        continue
+
+                    sample = self._images[self._sample_idx[rank]]
+                    self._sample_idx[rank] += self._shards
+
+                    if sample["group_id"] == group_id:
+                        sample_ids_cur_rank.append(sample["image_id"])
+                        sample_cnt_cur_rank += 1
+                    else:
+                        group_buckets_cur_rank[sample["group_id"]].append(sample)
+
+                sample_ids.extend(sample_ids_cur_rank)
+
+            yield sample_ids
+
+
+def test_coco_reader(test_case, verbose=VERBOSE):
     anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
     image_dir = "/dataset/mscoco_2017/val2017"
-    # _coco_sorted_img_ids(anno_file)
 
-    image_id, image_size, image, bbox, label, poly, poly_index = _of_coco_data_load(
-        anno_file, image_dir, 1, 2, False
-    )
+    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 1, 2, True, True)
+    image_id, image_size, image, bbox, label, poly, poly_index = of_coco_load_fn().get()
+    image_id = image_id.ndarray()
+    image_size = image_size.ndarray()
+    image = image.ndarray_lists()
+    bbox = bbox.ndarray_lists()
+    label = label.ndarray_lists()
+    poly = poly.ndarray_lists()
+    poly_index = poly_index.ndarray_lists()
 
     samples = _get_coco_image_samples(anno_file, image_dir, image_id)
     for i, sample in enumerate(samples):
+        if verbose:
+            print(
+                "#{} of label:\n".format(i),
+                label[0][i].squeeze(),
+                type(label[0][i].squeeze()),
+                label[0][i].squeeze().shape,
+            )
+            print(
+                "#{} coco label:\n".format(i),
+                sample["label"],
+                type(sample["label"]),
+                sample["label"].shape,
+            )
         test_case.assertTrue(np.array_equal(image[0][i].squeeze(), sample["image"]))
         test_case.assertTrue(np.array_equal(image_size[i], sample["image_size"]))
         test_case.assertTrue(np.allclose(bbox[0][i].squeeze(), sample["bbox"]))
-        test_case.assertTrue(np.array_equal(label[0][i].squeeze(), sample["label"]))
+        cur_label = label[0][i].squeeze()
+        if len(cur_label.shape) == 0:
+            # when cur_label is scalar
+            cur_label = np.array([cur_label])
+        test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
         test_case.assertTrue(np.allclose(poly[0][i].squeeze(), sample["poly"]))
         test_case.assertTrue(np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"]))
+
+
+def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
+    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+    image_dir = "/dataset/mscoco_2017/val2017"
+
+    image_info_list = _get_coco_sorted_imgs(anno_file)
+    if verbose:
+        print("Info of the first 20 images:")
+        for i, image_info in enumerate(image_info_list[:20]):
+            print(
+                "index: {}, image_id: {}, group_id: {}, anno len: {}".format(
+                    i, image_info["image_id"], image_info["group_id"], image_info["anno_len"]
+                )
+            )
+
+    sampler = GroupedDistributedStrideSampler(4, 8, image_info_list)
+    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, True, False, True)
+    for i, sample_ids in enumerate(sampler):
+        image_id = of_coco_load_fn().get().ndarray()
+        if verbose:
+            print("#{} image_id:".format(i), image_id)
+            print("#{} sample_ids:".format(i), sample_ids)
+        test_case.assertTrue(np.array_equal(image_id, sample_ids))
