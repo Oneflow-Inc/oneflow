@@ -181,7 +181,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
     assert isinstance(perm, (tuple, list))
 
     if name is None:
-        name = id_util.UniqueStr("Tranpose_")
+        name = id_util.UniqueStr("Transpose_")
 
     if conjugate:
         raise NotImplementedError
