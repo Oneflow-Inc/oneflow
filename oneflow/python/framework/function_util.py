@@ -42,6 +42,25 @@ class FunctionConfig(object):
 
 @oneflow_export('function')
 def oneflow_function(function_config = FunctionConfig()):
+    r"""Creates a callable OneFlow graph from a Python function.
+    For instance::
+
+        @oneflow.function(flow.FunctionConfig())
+        def train(
+            image_blob=oneflow.input_blob_def(
+                shape=(2, 255, 255, 3), dtype=flow.float32, is_dynamic=True
+            )
+        ):
+            # your network
+
+    Args:
+        job_func: job function to be compiled. Usually the function is decorated by decorator `@oneflow.function`
+    Returns:
+        If func is not None, returns a callable that will execute the compiled 
+        function (and return zero or more Blob objects). 
+        If func is None, returns a decorator that, when invoked with a single 
+        func argument, returns a callable equivalent to the case above.
+    """
     assert isinstance(function_config, FunctionConfig)
     def Decorator(job_func):
         sess = session_ctx.GetDefaultSession()

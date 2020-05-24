@@ -22,7 +22,7 @@ def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
                 trainable=True,
             )
             fc = of.matmul(
-                of.reshape(conv, (conv.static_shape[0], -1)), fcw, name="fc"
+                of.reshape(conv, (conv.shape[0], -1)), fcw, name="fc"
             )
             fcb = of.get_variable(
                 "fc_bias",

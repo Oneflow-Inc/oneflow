@@ -17,7 +17,7 @@ def conv2d_layer(
     weight_initializer=flow.random_uniform_initializer(),
     bias_initializer=flow.constant_initializer(),
 ):
-    weight_shape = (filters, input.static_shape[1], kernel_size, kernel_size)
+    weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
     weight = flow.get_variable(
         name + "-weight",
         shape=weight_shape,

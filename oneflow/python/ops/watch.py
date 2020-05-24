@@ -14,6 +14,12 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("watch")
 def Watch(blob_watched, handler_or_prompt=None):
+    r"""Register callback for a blob or a list of blob. The callback will be called after the computation of the operators produce the blobs are finished.
+
+    Args:
+        watched: a `Blob` or a `list` of of `Blob`
+        handler: a function has an argument of a `Blob` or a `Blob` `list`
+    """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
         handler_uuid = str(uuid.uuid1())
