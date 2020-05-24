@@ -24,7 +24,7 @@ class BlobDef(blob_desc.BlobDesc):
             placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf))
 
     @property
-    def static_shape(self):
+    def shape(self):
         raise NotImplementedError
 
     @property
@@ -129,7 +129,7 @@ class ConsistentBlob(BlobDef):
         if auto_watched_within_scope: watch_scope_util.TryWatchOnce(self)
 
     @property
-    def static_shape(self):
+    def shape(self):
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -183,7 +183,7 @@ class MirroredBlob(BlobDef):
     def sub_consistent_blob_list(self): return self.sub_consistent_blob_list_
 
     @property
-    def static_shape(self):
+    def shape(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(self.job_name_, self.lbn_)
 
     @property
