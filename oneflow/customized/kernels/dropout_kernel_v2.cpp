@@ -1,6 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/customized/kernels/dropout_util.h"
+#include "oneflow/customized/kernels/fused_dropout.h"
 
 namespace oneflow {
 
@@ -13,8 +13,8 @@ class DropoutKernelV2 final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->Attr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<DropoutUtil<device_type>>>(seed,
-                                                                            ctx->device_ctx());
+    return std::make_shared<OpKernelStateWrapper<FusedDropout<device_type>>>(seed,
+                                                                             ctx->device_ctx());
   }
 
  private:
@@ -24,9 +24,9 @@ class DropoutKernelV2 final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->Attr<float>("scale");
     const float threshold = ctx->Attr<float>("rate");
-    auto* dropout_util = dynamic_cast<OpKernelStateWrapper<DropoutUtil<device_type>>*>(state);
-    dropout_util->Mutable()->Dropout(in->shape().elem_cnt(), scale, threshold, in->dptr<T>(),
-                                     out->mut_dptr<T>(), mask->mut_dptr<int8_t>());
+    auto* fused_dropout = dynamic_cast<OpKernelStateWrapper<FusedDropout<device_type>>*>(state);
+    fused_dropout->Mutable()->Dropout(in->shape().elem_cnt(), threshold, scale, in->dptr<T>(),
+                                      out->mut_dptr<T>(), mask->mut_dptr<int8_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
