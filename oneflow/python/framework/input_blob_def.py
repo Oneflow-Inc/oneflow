@@ -35,9 +35,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.split_axis_ = split_axis
 
     @property
-    def static_shape(self): return self.shape_
-
-    @property
     def shape(self): return self.shape_
 
     @property

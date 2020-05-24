@@ -1,22 +1,29 @@
 import oneflow.python.lib.core.traceinfo as traceinfo
+import inspect
 
-def enable_if(bool_functor, default):
-    assert default.__name__ == 'default'
-    patterns_field = 'invoke_patterns__do_not_use_me_directly__'
-    if not hasattr(default, patterns_field): setattr(default, patterns_field, [])
-    conditional_functions = getattr(default, patterns_field)
-    location = traceinfo.GetFrameLocationStr(-2)
-    default_func = MakeDefaultFunction(default, conditional_functions)
-    def decorator(func):
-        assert func.__name__ == 'invoke'
-        conditional_functions.append((bool_functor, func, location))
-        def wrapper(*args, **kwargs):
-            matched_func = GetMatchedFunction(conditional_functions)
-            if matched_func is None: matched_func = default_func
-            return matched_func(*args, **kwargs)
-        wrapper.__is_specialization_supported__ = True
-        return wrapper
-    return decorator
+def condition(hob_expr):
+    def Decorator(func):
+        func.__oneflow_condition_hob__ = hob_expr
+        return func
+    return Decorator
+
+def unique(*args):
+    conditional_functions = []
+    for arg in args:
+        if isinstance(arg, tuple):
+            func, hob_expr = arg
+        elif inspect.isfunction(arg):
+            func = arg
+            assert hasattr(func, '__oneflow_condition_hob__')
+            hob_expr = func.__oneflow_condition_hob__
+        else:
+            raise NotImplementedError
+        conditional_functions.append((hob_expr, func, func.__name__))
+    matched_func = GetMatchedFunction(conditional_functions)
+    if matched_func is not None: return matched_func
+    def default(get_failed_info, *args, **kwargs):
+        raise NotImplementedError(get_failed_info())
+    return MakeDefaultFunction(default, conditional_functions)
 
 def GetMatchedFunction(conditional_functions):
     select_triple = (None, None, None)

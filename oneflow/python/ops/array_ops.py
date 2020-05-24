@@ -216,7 +216,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
     assert isinstance(perm, (tuple, list))
 
     if name is None:
-        name = id_util.UniqueStr("Tranpose_")
+        name = id_util.UniqueStr("Transpose_")
 
     if conjugate:
         raise NotImplementedError
@@ -254,7 +254,7 @@ def slice(input_, begin, size, name=None):
             to input_'s number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
     """
-    ndims = len(input_.static_shape)
+    ndims = len(input_.shape)
     assert (
         isinstance(begin, (list, tuple)) and len(begin) == ndims
     ), "begin must be a list or tuple whose length is the same with input_'s number of dimensions."
@@ -269,7 +269,7 @@ def slice(input_, begin, size, name=None):
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
     if os.getenv("ENABLE_USER_OP") == 'True':
         slice_tup_list = []
-        for b, s, d in list(zip(begin, size, input_.static_shape)):
+        for b, s, d in list(zip(begin, size, input_.shape)):
             begin, end, stride = None, None, 1
             if b is not None:
                 if b < -d or b > d - 1:
@@ -296,7 +296,7 @@ def slice(input_, begin, size, name=None):
             slice_tup_list.append((begin, end, stride))
         return slice_v2(input_, slice_tup_list, name=name)
     slice_conf_list = []
-    for b, s, d in list(zip(begin, size, input_.static_shape)):
+    for b, s, d in list(zip(begin, size, input_.shape)):
         slice_conf = op_conf_util.DimSliceConf()
         if b is not None:
             if b < -d or b > d - 1:

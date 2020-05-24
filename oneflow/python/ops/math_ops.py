@@ -18,11 +18,11 @@ def add(x, y, name=None):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
-    elif x.static_shape == (1,):
+    elif x.shape == (1,):
         return scalar_add_by_tensor(y, x, name)
-    elif y.static_shape == (1,):
+    elif y.shape == (1,):
         return scalar_add_by_tensor(x, y, name)
     else:
         return broadcast_add(x, y, name)
@@ -73,12 +73,12 @@ def subtract(x, y, name=None):
         return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, -1 * y, name)
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_sub_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_sub_by_tensor(x, y, name)
     else:
         return broadcast_sub(x, y, name)
@@ -90,11 +90,11 @@ def multiply(x, y, name=None):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_mul(x, y, name)
-    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
         return element_wise_mul(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_mul_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_mul_by_tensor(x, y, name)
     else:
         return broadcast_mul(x, y, name)
@@ -106,12 +106,12 @@ def divide(x, y, name=None):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
         raise NotImplementedError
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_div_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_div_by_tensor(x, y, name)
     else:
         return broadcast_div(x, y, name)
@@ -123,7 +123,7 @@ def floor_mod(x, y, name=None):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
         raise NotImplementedError
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_floor_mod(x, y, name)
     else:
