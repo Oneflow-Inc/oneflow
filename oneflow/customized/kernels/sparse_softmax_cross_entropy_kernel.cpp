@@ -3,6 +3,7 @@
 #include "oneflow/customized/kernels/softmax_kernel_util.h"
 
 namespace oneflow {
+namespace user_op {
 
 template<DeviceType device_type, typename T, typename K>
 class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
@@ -69,11 +70,9 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
-    Memcpy<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), prob->dptr<T>(),
-                        prediction_diff->shape().elem_cnt() * sizeof(T));
-    SparseCrossEntropyKernelUtil<device_type, T, K>::BackwardSub(
-        ctx->device_ctx(), num_instances, num_classes, label->dptr<K>(), dy->dptr<T>(),
-        prediction_diff->mut_dptr<T>());
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
+        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
+        label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -102,5 +101,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
+}  // namespace user_op
 }  // namespace oneflow
