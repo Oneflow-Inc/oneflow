@@ -80,7 +80,7 @@ def max_mdsave_worker_num(val):
     sess.config_proto.resource.max_mdsave_worker_num = val
 
 @oneflow_export('config.compute_thread_pool_size')
-def max_mdsave_worker_num(val):
+def compute_thread_pool_size(val):
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
