@@ -188,7 +188,7 @@ void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
 const RwMutexedObject& Instruction::operand_type(const Operand& operand,
                                                  int64_t default_global_device_id) const {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_global_device_id)
+  return GetMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id)
       ->rw_mutexed_object();
 }
 
@@ -196,14 +196,14 @@ const RwMutexedObject& Instruction::operand_value(const Operand& operand,
                                                   int64_t default_global_device_id) const {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id)
+  return GetMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id)
       ->rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_type(const Operand& operand,
                                                int64_t default_global_device_id) {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  return FindMirroredObjectByOperand<&IdUtil::GetTypeId>(operand, default_global_device_id)
+  return MutMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id)
       ->mut_rw_mutexed_object();
 }
 
@@ -211,7 +211,7 @@ RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
                                                 int64_t default_global_device_id) {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id)
+  return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id)
       ->mut_rw_mutexed_object();
 }
 
@@ -221,8 +221,7 @@ const MirroredObject* Instruction::MirroredObjectUtil<interpret_type>::Get(
   const auto& operand = const_operand.operand();
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   int64_t default_device_id = instruction.GetOperandDefaultGlobalDeviceId();
-  return instruction.FindMirroredObjectByOperand<&GetObjectId<interpret_type>>(operand,
-                                                                               default_device_id);
+  return instruction.GetMirroredObject<&GetObjectId<interpret_type>>(operand, default_device_id);
 }
 
 template<InterpretType interpret_type>
@@ -231,8 +230,7 @@ MirroredObject* Instruction::MirroredObjectUtil<interpret_type>::Mut(
   const auto& operand = mut_operand.operand();
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   int64_t default_device_id = instruction->GetOperandDefaultGlobalDeviceId();
-  return instruction->FindMirroredObjectByOperand<&GetObjectId<interpret_type>>(operand,
-                                                                                default_device_id);
+  return instruction->MutMirroredObject<&GetObjectId<interpret_type>>(operand, default_device_id);
 }
 
 MirroredObject* Instruction::mut_type_mirrored_object(const MutOperand& mut_operand) {
@@ -243,8 +241,8 @@ MirroredObject* Instruction::mut_value_mirrored_object(const MutOperand& mut_ope
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-MirroredObject* Instruction::FindMirroredObjectByOperand(const Operand& operand,
-                                                         int64_t default_global_device_id) {
+MirroredObject* Instruction::MutMirroredObject(const Operand& operand,
+                                               int64_t default_global_device_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
@@ -253,8 +251,8 @@ MirroredObject* Instruction::FindMirroredObjectByOperand(const Operand& operand,
 }
 
 template<int64_t (*TransformLogicalObjectId)(int64_t)>
-const MirroredObject* Instruction::FindMirroredObjectByOperand(
-    const Operand& operand, int64_t default_global_device_id) const {
+const MirroredObject* Instruction::GetMirroredObject(const Operand& operand,
+                                                     int64_t default_global_device_id) const {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
   const auto* access = mirrored_object_id2access().FindPtr(mirrored_object_id.Get());

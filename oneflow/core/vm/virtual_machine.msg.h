@@ -30,6 +30,9 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   PUBLIC void Schedule();
   PUBLIC bool Empty() const;
   PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(const InstructionMsg&);
+  PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
+  PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
+                                                 int64_t global_device_id);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
