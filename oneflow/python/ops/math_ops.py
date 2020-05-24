@@ -455,6 +455,13 @@ def broadcast_floor_mod(x, y, name=None):
 
 @oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
+    r"""Computes hyperbolic tangent of `x` element-wise.
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_"))
@@ -479,6 +486,13 @@ def tanh(x, name=None):
 
 @oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
+    r"""Gaussian Error Linear Units.
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
             flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -503,6 +517,13 @@ def gelu(x, name=None):
 
 @oneflow_export("math.relu", "nn.relu")
 def relu(x, name=None):
+    r"""ReLU activation
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_"))
@@ -527,6 +548,13 @@ def relu(x, name=None):
 
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
+    r"""Computes sigmoid of `x` element-wise.
+    
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -635,6 +663,14 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
 
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
+    r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
+
+    Args:
+        x: a `Blob`.
+        dtype: a OneFlow data type. For instance, `oneflow.float`.
+    Returns:
+        A `Blob`
+    """
     if x.dtype == dtype:
         return x
     if name is None:
