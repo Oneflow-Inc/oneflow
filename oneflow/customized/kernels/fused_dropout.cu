@@ -1,5 +1,4 @@
 #include "oneflow/customized/kernels/fused_dropout.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -35,7 +34,7 @@ struct DataType4<int32_t> {
 
 template<>
 struct DataType4<int64_t> {
-  typedef long4 type;
+  typedef longlong4 type;
 };
 
 template<typename T4>
@@ -86,10 +85,9 @@ __global__ void DropoutGpu(curandState* state, const int64_t n, const float thre
                            int8_t* mask) {
   int id = threadIdx.x + blockIdx.x * thread_num;
   curandState localState = state[id];
-
-  char4* mask4 = reinterpret_cast<char4*>(mask);
   const T4* x4 = reinterpret_cast<const T4*>(x);
   T4* y4 = reinterpret_cast<T4*>(y);
+  char4* mask4 = reinterpret_cast<char4*>(mask);
   char4 mask4_val;
   CUDA_1D_KERNEL_LOOP(i, n / 4) {
     mask4_val.x = curand_uniform(&localState) > threshold;

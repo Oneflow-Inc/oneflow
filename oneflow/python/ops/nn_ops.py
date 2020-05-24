@@ -722,12 +722,13 @@ def dropout_v2(x, noise_shape=None, seed=None, rate=None, name=None):
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
         assert isinstance(noise_shape, (list, tuple))
-    return (
+    out, mask = (
         dropout_op
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .RemoteBlobList()
     )
+    return out
 
 
 @oneflow_export("nn.conv2d_transpose")
