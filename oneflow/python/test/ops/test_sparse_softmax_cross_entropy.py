@@ -36,7 +36,7 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
                 trainable=True,
             )
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
-            loss = flow.identity(loss)
+            loss = flow.math.square(loss)
             flow.losses.add_loss(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
@@ -57,6 +57,7 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.nn.sparse_softmax_cross_entropy_with_logits(labels, x)
+        tf_out = tf.math.square(tf_out)
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
