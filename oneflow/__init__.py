@@ -15,10 +15,8 @@ del dtype
 import traceback
 try:
     from oneflow.generated import *
-except Exception as e:
-    print("warning: failed to import generated API\n{}".format(e))
-    traceback.print_exc()
-del traceback
+except Exception as _e:
+    pass
 
 import oneflow.python.__export_symbols__
 import oneflow.python.oneflow_export as oneflow_export
