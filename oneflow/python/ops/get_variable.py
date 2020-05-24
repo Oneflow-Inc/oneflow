@@ -34,7 +34,7 @@ def get_variable(
     var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
-        assert var_blob.static_shape == shape
+        assert var_blob.shape == shape
         assert var_blob.dtype == dtype
     else:
         op_conf = _GenerateVariableOpConf(

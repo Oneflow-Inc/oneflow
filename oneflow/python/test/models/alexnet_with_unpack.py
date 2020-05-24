@@ -56,7 +56,7 @@ def _conv2d_layer(
     weight_initializer=flow.random_uniform_initializer(),
     bias_initializer=flow.random_uniform_initializer(),
 ):
-  weight_shape = (filters, input.static_shape[1], kernel_size, kernel_size)
+  weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
   weight = flow.get_variable(
     name + "-weight",
     shape=weight_shape,
@@ -119,7 +119,7 @@ def _dense_layer(
         trainable=True,
         name=None,
 ):
-  in_shape = inputs.static_shape
+  in_shape = inputs.shape
   in_num_axes = len(in_shape)
   assert in_num_axes >= 2
 
@@ -130,7 +130,7 @@ def _dense_layer(
 
   weight = flow.get_variable(
     name="{}-weight".format(name_prefix),
-    shape=(units, inputs.static_shape[1]),
+    shape=(units, inputs.shape[1]),
     dtype=inputs.dtype,
     initializer=(
       kernel_initializer
@@ -205,7 +205,7 @@ def alexnet(args, images, labels, trainable=True):
     return kernel_initializer
 
   if len(pool5.shape) > 2:
-    pool5 = flow.reshape(pool5, shape=(pool5.static_shape[0], -1))
+    pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
   fc1 = _dense_layer(
     inputs=pool5,
