@@ -53,7 +53,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
             )
             loss = flow.layers.conv2d(
                 x, filters, kernel_size=kernel_size, strides=[1,1], padding="valid", data_format="NCHW", dilation_rate=1, groups=groups, use_bias=False, kernel_initializer=flow.random_uniform_initializer(minval=0, maxval=100), weight_name="conv2d_weight")
-            weight_shape = (filters, x.static_shape[1]//groups, kernel_size, kernel_size)
+            weight_shape = (filters, x.shape[1]//groups, kernel_size, kernel_size)
             weight = flow.get_variable(
                 "conv2d_weight",
                 shape=weight_shape,
