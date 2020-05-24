@@ -267,6 +267,11 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
 add_dependencies(of_pyscript_copy of_protoobj)
+add_custom_target(generate_api ALL
+  COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && python3 ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
+add_dependencies(generate_api of_pyscript_copy)
+add_dependencies(generate_api oneflow_internal)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
