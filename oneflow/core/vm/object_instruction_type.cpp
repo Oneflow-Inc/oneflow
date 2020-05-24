@@ -90,6 +90,63 @@ class NewObjectInstructionType final : public InstructionType {
 COMMAND(RegisterInstructionType<NewObjectInstructionType>("NewObject"));
 COMMAND(RegisterLocalInstructionType<NewObjectInstructionType>("LocalNewObject"));
 
+class ReplaceMirroredInstructionType final : public InstructionType {
+ public:
+  ReplaceMirroredInstructionType() = default;
+  ~ReplaceMirroredInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  // clang-format off
+  FLAT_MSG_VIEW_BEGIN(ReplaceMirroredInstruction);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, lhs_object_id);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(OperandSeparator, separator);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, rhs_object_id);
+  FLAT_MSG_VIEW_END(ReplaceMirroredInstruction);
+  // clang-format on
+
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&IdUtil::GetTypeId>(vm, instr_msg);
+  }
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    Run<&IdUtil::GetValueId>(vm, instr_msg);
+  }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+
+ private:
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+    FlatMsgView<ReplaceMirroredInstruction> args(instr_msg->operand());
+    auto DoEachRhsObject = [&](MirroredObject* lhs, int64_t global_device_id) {
+      CHECK_EQ(lhs->rw_mutexed_object().access_list().size(), 0);
+      FOR_RANGE(int, i, 0, args->rhs_object_id_size()) {
+        int64_t rhs_object_id = GetLogicalObjectId(args->rhs_object_id(i));
+        const auto* rhs = vm->GetMirroredObject(rhs_object_id, global_device_id);
+        if (rhs != nullptr) {
+          lhs->reset_rw_mutexed_object(rhs->rw_mutexed_object());
+          break;
+        }
+      }
+    };
+    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
+    CHECK(static_cast<bool>(parallel_desc));
+    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
+    ForEachMachineIdAndDeviceIdInRange(
+        *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+          FOR_RANGE(int, i, 0, args->lhs_object_id_size()) {
+            int64_t global_device_id =
+                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+            int64_t lhs_object_id = GetLogicalObjectId(args->lhs_object_id(i));
+            auto* lhs = vm->MutMirroredObject(lhs_object_id, global_device_id);
+            if (lhs != nullptr) { DoEachRhsObject(lhs, global_device_id); }
+          }
+        });
+  }
+};
+COMMAND(RegisterInstructionType<ReplaceMirroredInstructionType>("ReplaceMirrored"));
+COMMAND(RegisterLocalInstructionType<ReplaceMirroredInstructionType>("LocalReplaceMirrored"));
+
 class DeleteObjectInstructionType final : public InstructionType {
  public:
   DeleteObjectInstructionType() = default;

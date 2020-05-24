@@ -160,11 +160,11 @@ OBJECT_MSG_BEGIN(Instruction);
 
   // private methods
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
-                                                      int64_t default_global_device_id);
+          MirroredObject* MutMirroredObject(const Operand& operand,
+                                            int64_t default_global_device_id);
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
-          const MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
-                                                            int64_t default_global_device_id) const;
+          const MirroredObject* GetMirroredObject(const Operand& operand,
+                                                  int64_t default_global_device_id) const;
   PRIVATE const RwMutexedObject& operand_type(const Operand& operand,
                                               int64_t default_global_device_id) const;
   PRIVATE const RwMutexedObject& operand_value(const Operand& operand,
@@ -174,9 +174,9 @@ OBJECT_MSG_BEGIN(Instruction);
   PRIVATE RwMutexedObject* mut_operand_value(const Operand& operand,  
                                              int64_t default_global_device_id);
 
-  PRIVATE MirroredObject* FindMirroredObjectByOperand(const Operand& operand,
+  PRIVATE MirroredObject* MutMirroredObject(const Operand& operand,
                                                      int64_t default_global_device_id) {
-    return FindMirroredObjectByOperand<&IdUtil::GetValueId>(operand, default_global_device_id);
+    return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
   }
 
   PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;

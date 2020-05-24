@@ -94,6 +94,18 @@ const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
   return map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>().GetPtr();
 }
 
+MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
+                                                  int64_t global_device_id) {
+  auto* logical_object = mut_id2logical_object()->FindPtr(logical_object_id);
+  if (logical_object == nullptr) { return nullptr; }
+  return logical_object->mut_global_device_id2mirrored_object()->FindPtr(global_device_id);
+}
+
+const MirroredObject* VirtualMachine::GetMirroredObject(int64_t logical_object_id,
+                                                        int64_t global_device_id) {
+  return MutMirroredObject(logical_object_id, global_device_id);
+}
+
 template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
 void VirtualMachine::ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                                            const Operand& operand, int64_t global_device_id,
