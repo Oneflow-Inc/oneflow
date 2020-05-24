@@ -339,12 +339,14 @@ def slice(x, begin, size, name=None):
 @oneflow_export("slice_v2")
 def slice_v2(x, slice_tup_list, name=None):
     r"""Extracts a slice from a tensor.
+
     Args:
         x: A `Blob`.
         slice_tup_list: A list of tuple, indicate each dimension slice (begin, end, stride). 
             Note: The function don't support slice at dim0 for now , first element of slice_tup_list must be 
             (None, None, None).
         name: A name for the operation (optional).
+
     """
     name = name or id_util.UniqueStr("SliceV2_")
     if not isinstance(name, str):
