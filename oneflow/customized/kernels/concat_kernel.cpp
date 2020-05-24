@@ -47,4 +47,10 @@ class ConcatKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONCAT_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 
+REGISTER_USER_KERNEL("concat")
+    .SetCreateFn<ConcatKernel<DeviceType::kGPU, float16>>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      return ctx.device_type() == DeviceType::kGPU && out_desc->data_type() == DataType::kFloat16;
+    });
 }  // namespace oneflow

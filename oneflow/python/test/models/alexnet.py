@@ -12,7 +12,7 @@ _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/alexnet/models/of_model_bk"
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
 class DLNetSpec(object):
-  def __init__(self):
+  def __init__(self, enable_auto_mixed_precision):
     self.batch_size = 8
     self.data_part_num = 32
     self.eval_dir = _DATA_DIR
@@ -22,6 +22,7 @@ class DLNetSpec(object):
     self.num_nodes = 1
     self.gpu_num_per_node = 1
     self.iter_num = 10
+    self.enable_auto_mixed_precision = enable_auto_mixed_precision
 
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-nn", "--num_nodes", type=str, default=1, required=False)
@@ -54,7 +55,7 @@ def _conv2d_layer(
     weight_initializer=flow.random_uniform_initializer(),
     bias_initializer=flow.random_uniform_initializer(),
 ):
-  weight_shape = (filters, input.static_shape[1], kernel_size, kernel_size)
+  weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
   weight = flow.get_variable(
     name + "-weight",
     shape=weight_shape,
@@ -128,7 +129,7 @@ def alexnet(args, images, labels, trainable=True):
     return kernel_initializer
 
   if len(pool5.shape) > 2:
-    pool5 = flow.reshape(pool5, shape=(pool5.static_shape[0], -1))
+    pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
   fc1 = flow.layers.dense(
     inputs=pool5,
@@ -183,6 +184,7 @@ def main(args):
   func_config.cudnn_conv_force_fwd_algo(0)
   func_config.cudnn_conv_force_bwd_data_algo(1)
   func_config.cudnn_conv_force_bwd_filter_algo(1)
+  func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
   @flow.function(func_config)
   def alexnet_train_job():
     (labels, images) = _data_load_layer(args, args.train_dir)
@@ -192,6 +194,7 @@ def main(args):
 
   func_config = flow.FunctionConfig()
   func_config.default_data_type(flow.float)
+  func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 #  print(func_config.function_desc.job_config_proto)
   @flow.function(func_config)
   def alexnet_eval_job():
