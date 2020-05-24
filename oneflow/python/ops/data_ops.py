@@ -369,12 +369,18 @@ class ImageNormalizeByChannel(object):
 @oneflow_export("data.ImageRandomFlip")
 class ImageRandomFlip(object):
     r"""Random flip image.
-    params:
-        @flip_code:
-            0 means flipping vertically as also as flipping around the horizontal axis
+
+    Random flip image.
+
+    Args:
+        flip_code: 0 means flipping vertically as also as flipping around the horizontal axis
             >= 1 means flipping horizontally as also as flipping around the vertical axis
             <= -1 means flipping around both axes
-        @probability: probability of random flip image
+        probability: probability of random flip image
+
+    Returns:
+        True if successful, False otherwise.
+
     """
     def __init__(self, flip_code=1, probability=0.5):
         self.flip_code = flip_code
