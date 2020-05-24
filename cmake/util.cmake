@@ -63,3 +63,29 @@ function(SHOW_VARIABLES)
     message(STATUS "${_variableName}=${${_variableName}}")
   endforeach()
 endfunction()
+
+set(_COUNTER 0)
+macro(copy_files file_paths source_dir dest_dir target)
+  find_program(rsync rsync)
+  if (rsync)
+    set(CACHE_FILELIST ${PROJECT_BINARY_DIR}/cache_${_COUNTER})
+    math(EXPR _COUNTER "${_COUNTER} + 1")
+    file(WRITE ${CACHE_FILELIST} "")
+    foreach(file ${file_paths})
+      file(RELATIVE_PATH rel_path "${source_dir}" ${file})
+      file(APPEND ${CACHE_FILELIST} ${rel_path}\n)
+    endforeach()
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${rsync}
+      ARGS -a --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
+  else()
+    foreach(file ${file_paths})
+      file(RELATIVE_PATH rel_path "${source_dir}" ${file})
+      add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy
+        "${file}"
+        "${dest_dir}/${rel_path}")
+    endforeach()
+  endif()
+endmacro()
+
