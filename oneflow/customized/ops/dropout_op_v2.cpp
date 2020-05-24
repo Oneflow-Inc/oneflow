@@ -8,7 +8,6 @@ REGISTER_USER_OP("dropout_v2")
     .Input("in")
     .Output("out")
     .Output("mask")
-    .Attr("scale", UserOpAttrType::kAtFloat)
     .Attr("rate", UserOpAttrType::kAtFloat)
     .Attr("seed", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -37,8 +36,6 @@ REGISTER_USER_OP("dropout_v2")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float scale = op_conf.attr<float>("scale");
-      CHECK_GT_OR_RETURN(scale, 1);
       float rate = op_conf.attr<float>("rate");
       CHECK_GE_OR_RETURN(rate, 0);
       CHECK_LT_OR_RETURN(rate, 1);
@@ -49,12 +46,14 @@ REGISTER_USER_OP_GRAD("dropout_v2")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        const float rate = op.attr<float>("rate");
+        const float scale = 1.0 / (1.0 - rate);
         user_op::UserOpConfWrapper dropout_grad_op =
             builder.Op("dropout_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("mask", op.output("mask", 0))
                 .Output("dx")
-                .Attr("scale", op.attr<float>("scale"))
+                .Attr("scale", scale)
                 .Build();
         op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
         AddOp(dropout_grad_op);

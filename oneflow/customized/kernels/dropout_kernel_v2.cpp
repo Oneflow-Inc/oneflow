@@ -22,10 +22,10 @@ class DropoutKernelV2 final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const float scale = ctx->Attr<float>("scale");
-    const float threshold = ctx->Attr<float>("rate");
+    const float rate = ctx->Attr<float>("rate");
+    const float scale = 1.0 / (1.0 - rate);
     auto* fused_dropout = dynamic_cast<OpKernelStateWrapper<FusedDropout<device_type>>*>(state);
-    fused_dropout->Mutable()->Dropout(in->shape().elem_cnt(), threshold, scale, in->dptr<T>(),
+    fused_dropout->Mutable()->Dropout(in->shape().elem_cnt(), rate, scale, in->dptr<T>(),
                                       out->mut_dptr<T>(), mask->mut_dptr<int8_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -40,7 +40,9 @@ class DropoutKernelV2 final : public user_op::OpKernel {
                && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);               \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_V2_KERNEL, DEVICE_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_V2_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_V2_KERNEL, (DeviceType::kGPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

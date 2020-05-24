@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CUSTOMIZED_KERNELS_DORPOUT_UTIL_H_
-#define ONEFLOW_CUSTOMIZED_KERNELS_DORPOUT_UTIL_H_
+#ifndef ONEFLOW_CUSTOMIZED_KERNELS_FUSED_DORPOUT_H_
+#define ONEFLOW_CUSTOMIZED_KERNELS_FUSED_DORPOUT_H_
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/device_context.h"
@@ -19,7 +19,7 @@ class FusedDropout<DeviceType::kCPU> final {
   ~FusedDropout() {}
 
   template<typename T>
-  void Dropout(const int64_t elem_cnt, const float threshold, const float scale, const T* x, T* y,
+  void Dropout(const int64_t elem_cnt, const float rate, const float scale, const T* x, T* y,
                int8_t* mask);
 
  private:
@@ -34,7 +34,7 @@ class FusedDropout<DeviceType::kGPU> final {
   ~FusedDropout();
 
   template<typename T>
-  void Dropout(const int64_t elem_cnt, const float threshold, const float scale, const T* x, T* y,
+  void Dropout(const int64_t elem_cnt, const float rate, const float scale, const T* x, T* y,
                int8_t* mask);
 
  private:
@@ -45,4 +45,4 @@ class FusedDropout<DeviceType::kGPU> final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_KERNELS_DORPOUT_UTIL_H_
+#endif  // ONEFLOW_CUSTOMIZED_KERNELS_FUSED_DORPOUT_H_

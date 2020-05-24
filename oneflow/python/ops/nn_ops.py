@@ -712,7 +712,6 @@ def dropout_v2(x, noise_shape=None, seed=None, rate=None, name=None):
         .Output("out")
         .Output("mask")
         .Attr("rate", float(rate), "AttrTypeFloat")
-        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
     )
     if seed is not None:
         dropout_op.Attr("seed", seed, "AttrTypeInt64")
