@@ -28,10 +28,14 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
 def api_fixed_placement(device_tag, machine_device_ids):
     return enable_if.unique(GetFixedPlacementScope)(device_tag, machine_device_ids)
 
-@oneflow_export('device_prior_placement')
+@enable_if.condition(hob.in_global_mode
+                     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized))
 def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
 
+@oneflow_export('device_prior_placement')
+def api_device_prior_placement(device_tag, machine_device_ids):
+    return enable_if.unqiue(GetDevicePriorPlacementScope)(device_tag, machine_device_ids)
 
 def GetDefaultMachineDeviceIds(resource):
     if resource.HasField('gpu_device_num'):

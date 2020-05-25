@@ -25,6 +25,20 @@ def get_variable(
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
+    r"""Create a new variable or get a existing variable by name.
+
+    Args:
+        name: name of this variable. Variable could be shared across different function created by annotation `@oneflow.function` :func:`~oneflow.function`. `None` by defauilt
+        shape: shape of the variable. `None` by defauilt
+        dtype: data type of the variable. `None` by defauilt
+        initializer: a initializer_conf. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
+        trainable: a `bool` to indicate if this variable is trainable. `True` by defauilt
+        model_name: a `string`. `'weight'` or `'bias'`. `None` by defauilt
+        random_seed: random seed for initialization. `None` by defauilt
+    Returns:
+        A `Blob`
+
+    """
     assert isinstance(name, str)
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
 
@@ -34,7 +48,7 @@ def get_variable(
     var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
-        assert var_blob.static_shape == shape
+        assert var_blob.shape == shape
         assert var_blob.dtype == dtype
     else:
         op_conf = _GenerateVariableOpConf(

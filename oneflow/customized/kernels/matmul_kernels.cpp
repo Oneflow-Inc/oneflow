@@ -156,7 +156,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buf", 0);
+    user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t num_axes = a->shape().NumAxes();
     CHECK_GT(num_axes, 2);
