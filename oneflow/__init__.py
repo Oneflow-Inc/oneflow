@@ -12,6 +12,12 @@ for x in dir(dtype):
 del x
 del dtype
 
+import traceback
+try:
+    from oneflow.generated import *
+except Exception as _e:
+    pass
+
 import oneflow.python.__export_symbols__
 import oneflow.python.oneflow_export as oneflow_export
 for field, api in oneflow_export.exported._SubApi().items(): locals()[field] = api

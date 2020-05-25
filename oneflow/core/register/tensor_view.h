@@ -21,7 +21,7 @@ class TensorViewBase {
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>(data_type());
-    return static_cast<const T*>(dptr_);
+    return reinterpret_cast<const T*>(dptr_);
   }
   size_t ByteSize() const { return shape().elem_cnt() * GetSizeOfDataType(data_type()); }
   void reset(typename ShapeViewType::DimType* shape_ptr, ByteType* dptr) {
@@ -59,7 +59,7 @@ class MutTensorView : public TensorViewBase<ShapeViewType, char> {
   template<typename T = void>
   T* mut_dptr() const {
     CheckDataType<T>(this->data_type());
-    return static_cast<T*>(this->mem_dptr());
+    return reinterpret_cast<T*>(this->mem_dptr());
   }
 
  protected:

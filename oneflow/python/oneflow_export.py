@@ -15,13 +15,7 @@ def oneflow_export(*api_names, **kwargs):
 
 def _GetOneflowExportDecorator(api_names, hob_expr, location):
     def Decorator(func_or_class):
-        for api_name in api_names:
-            fields = api_name.split(".")
-            assert len(fields) > 0
-            global exported
-            api = exported
-            for field in fields: api = api._FindOrCreateSubApi(field)
-            api._AddApiFuncOrClass(hob_expr, func_or_class, location)
+        func_or_class._ONEFLOW_API = api_names
         return func_or_class
     return Decorator
 

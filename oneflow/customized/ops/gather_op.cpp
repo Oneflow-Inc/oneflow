@@ -10,7 +10,7 @@ REGISTER_USER_OP("gather")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
-      const int64_t axis = ctx->GetAttr<int64_t>("axis");
+      const int64_t axis = ctx->Attr<int64_t>("axis");
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
@@ -31,7 +31,7 @@ REGISTER_USER_OP("gather")
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       if (ctx->BatchAxis4ArgNameAndIndex("indices", 0)->has_value()) {
         ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(
-            ctx->GetAttr<int64_t>("axis") + ctx->BatchAxis4ArgNameAndIndex("indices", 0)->value());
+            ctx->Attr<int64_t>("axis") + ctx->BatchAxis4ArgNameAndIndex("indices", 0)->value());
       } else {
         ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       }
@@ -42,7 +42,7 @@ REGISTER_USER_OP("gather")
           ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       const int64_t indices_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
-      const int64_t gather_axis = ctx->GetAttr<int64_t>("axis");
+      const int64_t gather_axis = ctx->Attr<int64_t>("axis");
       CHECK_GE_OR_RETURN(gather_axis, 0);
       CHECK_LT_OR_RETURN(gather_axis, in_num_axes);
       FOR_RANGE(int64_t, i, 0, indices_num_axes) {
@@ -53,12 +53,19 @@ REGISTER_USER_OP("gather")
             .Build();
       }
       FOR_RANGE(int64_t, i, 0, in_num_axes) {
-        if (i == gather_axis) { continue; }
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
-            .Build();
+        if (i == gather_axis) {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("indices", 0))
+              .Split(user_op::OpArg("in", 0), i)
+              .PartialSum(user_op::OpArg("out", 0))
+              .Build();
+        } else {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("indices", 0))
+              .Split(user_op::OpArg("in", 0), i)
+              .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
+              .Build();
+        }
       }
       return Maybe<void>::Ok();
     });

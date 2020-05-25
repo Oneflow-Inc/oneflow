@@ -13,7 +13,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const int32_t axis = ctx->Attr<int32_t>("axis");
     const int64_t row_num = in->shape().elem_cnt() / in->shape().Count(axis);
     const int64_t in_col_num = in->shape().Count(axis);
     int64_t in_col_offset = 0;
@@ -46,5 +46,12 @@ class SplitLikeKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPLIT_LIKE_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
+
+REGISTER_USER_KERNEL("split_like")
+    .SetCreateFn<SplitLikeKernel<DeviceType::kGPU, float16>>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      return ctx.device_type() == DeviceType::kGPU && out_desc->data_type() == DataType::kFloat16;
+    });
 
 }  // namespace oneflow

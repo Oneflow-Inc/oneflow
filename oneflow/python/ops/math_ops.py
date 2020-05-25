@@ -18,11 +18,11 @@ def add(x, y, name=None):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
-    elif x.static_shape == (1,):
+    elif x.shape == (1,):
         return scalar_add_by_tensor(y, x, name)
-    elif y.static_shape == (1,):
+    elif y.shape == (1,):
         return scalar_add_by_tensor(x, y, name)
     else:
         return broadcast_add(x, y, name)
@@ -73,12 +73,12 @@ def subtract(x, y, name=None):
         return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, -1 * y, name)
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_sub_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_sub_by_tensor(x, y, name)
     else:
         return broadcast_sub(x, y, name)
@@ -90,11 +90,11 @@ def multiply(x, y, name=None):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_mul(x, y, name)
-    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
         return element_wise_mul(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_mul_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_mul_by_tensor(x, y, name)
     else:
         return broadcast_mul(x, y, name)
@@ -106,12 +106,12 @@ def divide(x, y, name=None):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
         raise NotImplementedError
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
-    elif x.static_shape == (1, ):
+    elif x.shape == (1, ):
         return scalar_div_by_tensor(y, x, name)
-    elif y.static_shape == (1, ):
+    elif y.shape == (1, ):
         return scalar_div_by_tensor(x, y, name)
     else:
         return broadcast_div(x, y, name)
@@ -123,7 +123,7 @@ def floor_mod(x, y, name=None):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
         raise NotImplementedError
-    elif x.static_shape == y.static_shape:
+    elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_floor_mod(x, y, name)
     else:
@@ -140,15 +140,15 @@ def scalar_add(x, operand, name=None):
             .Output("out")
             )
         if isinstance(operand, int):
-            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
-                .SetAttr("has_float_operand", False, "AttrTypeBool")
-                .SetAttr("int_operand", operand, "AttrTypeInt64")
-                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+            builder = (builder.Attr("has_int_operand", True, "AttrTypeBool")
+                .Attr("has_float_operand", False, "AttrTypeBool")
+                .Attr("int_operand", operand, "AttrTypeInt64")
+                .Attr("float_operand", 0.0, "AttrTypeDouble"))
         elif isinstance(operand, float):
-            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
-                .SetAttr("has_float_operand", True, "AttrTypeBool")
-                .SetAttr("int_operand", 0, "AttrTypeInt64")
-                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+            builder = (builder.Attr("has_int_operand", False, "AttrTypeBool")
+                .Attr("has_float_operand", True, "AttrTypeBool")
+                .Attr("int_operand", 0, "AttrTypeInt64")
+                .Attr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
             .InferAndTryRun()
@@ -170,6 +170,16 @@ def scalar_add(x, operand, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_add_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
+                .Op("scalar_add_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarAddByTensor_")
@@ -184,6 +194,8 @@ def scalar_add_by_tensor(x, scalar, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def element_wise_add(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.math.add_n([x, y], name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -199,8 +211,18 @@ def element_wise_add(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def build_broadcast_binary_op(math_op, x, y, name=None):
+    if name is None:
+        name = id_util.UniqueStr(math_op + "_")
+    return flow.user_op_builder(name).Op(math_op)\
+        .Input("x", [x])\
+        .Input("y", [y])\
+        .Output("z")\
+        .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def broadcast_add(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_add", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -216,8 +238,9 @@ def broadcast_add(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 def broadcast_sub(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_sub", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -234,6 +257,16 @@ def broadcast_sub(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_sub_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
+                .Op("scalar_sub_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarSubByTensor_")
@@ -277,6 +310,8 @@ def element_wise_mul(x, y, name=None):
 
 
 def broadcast_mul(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_mul", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -292,7 +327,6 @@ def broadcast_mul(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 def scalar_mul(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarMul_")
@@ -303,15 +337,15 @@ def scalar_mul(x, operand, name=None):
             .Output("out")
             )
         if isinstance(operand, int):
-            builder = (builder.SetAttr("has_int_operand", True, "AttrTypeBool")
-                .SetAttr("has_float_operand", False, "AttrTypeBool")
-                .SetAttr("int_operand", operand, "AttrTypeInt64")
-                .SetAttr("float_operand", 0.0, "AttrTypeDouble"))
+            builder = (builder.Attr("has_int_operand", True, "AttrTypeBool")
+                .Attr("has_float_operand", False, "AttrTypeBool")
+                .Attr("int_operand", operand, "AttrTypeInt64")
+                .Attr("float_operand", 0.0, "AttrTypeDouble"))
         elif isinstance(operand, float):
-            builder = (builder.SetAttr("has_int_operand", False, "AttrTypeBool")
-                .SetAttr("has_float_operand", True, "AttrTypeBool")
-                .SetAttr("int_operand", 0, "AttrTypeInt64")
-                .SetAttr("float_operand", operand, "AttrTypeDouble"))
+            builder = (builder.Attr("has_int_operand", False, "AttrTypeBool")
+                .Attr("has_float_operand", True, "AttrTypeBool")
+                .Attr("int_operand", 0, "AttrTypeInt64")
+                .Attr("float_operand", operand, "AttrTypeDouble"))
         return (builder
             .Build()
             .InferAndTryRun()
@@ -334,6 +368,16 @@ def scalar_mul(x, operand, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_mul_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
+                .Op("scalar_mul_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMulByTensor_")
@@ -348,6 +392,8 @@ def scalar_mul_by_tensor(x, scalar, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def broadcast_div(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_div", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -364,6 +410,16 @@ def broadcast_div(x, y, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 def scalar_div_by_tensor(x, scalar, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return (flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
+                .Op("scalar_div_by_tensor")
+                .Input("x", [x])
+                .Input("scalar", [scalar])
+                .Output("y")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+                )
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarDivByTensor_")
@@ -379,6 +435,8 @@ def scalar_div_by_tensor(x, scalar, name=None):
 
 
 def broadcast_floor_mod(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -397,6 +455,13 @@ def broadcast_floor_mod(x, y, name=None):
 
 @oneflow_export("math.tanh", "keras.activations.tanh")
 def tanh(x, name=None):
+    r"""Computes hyperbolic tangent of `x` element-wise.
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_"))
@@ -421,6 +486,13 @@ def tanh(x, name=None):
 
 @oneflow_export("math.gelu", "keras.activations.gelu")
 def gelu(x, name=None):
+    r"""Gaussian Error Linear Units.
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") == 'True':
         return (
             flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -445,6 +517,13 @@ def gelu(x, name=None):
 
 @oneflow_export("math.relu", "nn.relu")
 def relu(x, name=None):
+    r"""ReLU activation
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_"))
@@ -469,6 +548,13 @@ def relu(x, name=None):
 
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
+    r"""Computes sigmoid of `x` element-wise.
+    
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -501,8 +587,8 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
            .Input("data", [data])\
            .Input("segment_ids", [segment_ids])\
            .Output("out")\
-           .SetAttr("axis", int(axis), "AttrTypeInt64")\
-           .SetAttr("num_segments", int(num_segments), "AttrTypeInt64")\
+           .Attr("axis", int(axis), "AttrTypeInt64")\
+           .Attr("num_segments", int(num_segments), "AttrTypeInt64")\
            .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -532,7 +618,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
           .Input("segment_ids", [segment_ids])\
           .Input("like", [like])\
           .Output("out")\
-          .SetAttr("axis", int(axis), "AttrTypeInt64")\
+          .Attr("axis", int(axis), "AttrTypeInt64")\
           .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -552,24 +638,39 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
 
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
 def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
-    if name is None:
-        name = id_util.UniqueStr("UnsortedBatchSegmentSum_")
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return flow.user_op_builder(name if name is
+               not None else id_util.UniqueStr("UnsortedBatchSegmentSum_"))\
+          .Op("unsorted_batch_segment_sum")\
+          .Input("data", [data])\
+          .Input("segment_ids", [segment_ids])\
+          .Output("out")\
+          .Attr("num_segments", int(num_segments), "AttrTypeInt64")\
+          .Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
+        op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
+        op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
+        op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
+        op_conf.unsorted_batch_segment_sum_conf.out = "out"
 
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
-    op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
-    op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
-    op_conf.unsorted_batch_segment_sum_conf.out = "out"
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
+    r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
+
+    Args:
+        x: a `Blob`.
+        dtype: a OneFlow data type. For instance, `oneflow.float`.
+    Returns:
+        A `Blob`
+    """
     if x.dtype == dtype:
         return x
     if name is None:
@@ -578,7 +679,7 @@ def cast(x, dtype, name=None):
         return flow.user_op_builder(name).Op("cast")\
             .Input("in", [x])\
             .Output("out")\
-            .SetAttr("dtype", dtype, "AttrTypeDataType")\
+            .Attr("dtype", dtype, "AttrTypeDataType")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -611,6 +712,8 @@ def naive_logical_and(lhs, rhs, name=None):
 
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -629,6 +732,8 @@ def equal(x, y, name=None):
 
 @oneflow_export("math.not_equal")
 def not_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -647,6 +752,8 @@ def not_equal(x, y, name=None):
 
 @oneflow_export("math.less")
 def less(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_less", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -665,6 +772,8 @@ def less(x, y, name=None):
 
 @oneflow_export("math.less_equal")
 def less_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -683,6 +792,8 @@ def less_equal(x, y, name=None):
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_greater", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -701,6 +812,8 @@ def greater(x, y, name=None):
 
 @oneflow_export("math.greater_equal")
 def greater_equal(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -719,6 +832,8 @@ def greater_equal(x, y, name=None):
 
 @oneflow_export("math.logical_and")
 def logical_and(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -737,15 +852,17 @@ def logical_and(x, y, name=None):
 
 @oneflow_export("math.minimum")
 def broadcast_min(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMin_"),
     )
-    op_conf.broadcast_min_conf.a = x.logical_blob_name
-    op_conf.broadcast_min_conf.b = y.logical_blob_name
-    op_conf.broadcast_min_conf.out = "out"
+    op_conf.broadcast_minimum_conf.a = x.logical_blob_name
+    op_conf.broadcast_minimum_conf.b = y.logical_blob_name
+    op_conf.broadcast_minimum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -755,15 +872,17 @@ def broadcast_min(x, y, name=None):
 
 @oneflow_export("math.maximum")
 def broadcast_max(x, y, name=None):
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("BroadcastMax_"),
     )
-    op_conf.broadcast_max_conf.a = x.logical_blob_name
-    op_conf.broadcast_max_conf.b = y.logical_blob_name
-    op_conf.broadcast_max_conf.out = "out"
+    op_conf.broadcast_maximum_conf.a = x.logical_blob_name
+    op_conf.broadcast_maximum_conf.b = y.logical_blob_name
+    op_conf.broadcast_maximum_conf.out = 'out'
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -797,8 +916,8 @@ def top_k(input, k=1, sorted=True, name=None):
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
-        .SetAttr("k", k, "AttrTypeInt32",)
-        .SetAttr("sorted", sorted, "AttrTypeBool",)
+        .Attr("k", k, "AttrTypeInt32",)
+        .Attr("sorted", sorted, "AttrTypeBool",)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -846,24 +965,24 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
-            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
-            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
-            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value), "AttrTypeDouble")
+            .Attr("integral_min", int(min_value), "AttrTypeInt64")
+            .Attr("floating_max", float(max_value), "AttrTypeDouble")
+            .Attr("integral_max", int(max_value), "AttrTypeInt64")
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .SetAttr("floating_min", float(min_value), "AttrTypeDouble")
-            .SetAttr("integral_min", int(min_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value), "AttrTypeDouble")
+            .Attr("integral_min", int(min_value), "AttrTypeInt64")
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .SetAttr("floating_max", float(max_value), "AttrTypeDouble")
-            .SetAttr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_max", float(max_value), "AttrTypeDouble")
+            .Attr("integral_max", int(max_value), "AttrTypeInt64")
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
@@ -881,8 +1000,8 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .Input("x", [input])
         .Output("y")
         .Output("square_x_sum")
-        .SetAttr("axis", int(axis), "AttrTypeInt32")
-        .SetAttr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Attr("axis", int(axis), "AttrTypeInt32")
+        .Attr("epsilon", float(epsilon), "AttrTypeFloat")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

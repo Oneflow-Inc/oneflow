@@ -5,14 +5,15 @@ from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('env.init', enable_if=hob.in_normal_mode & hob.env_initialized)
-def env_init():
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
+def do_nothing():
     print("Nothing happened because environment has been initialized")
     return False
 
-@oneflow_export('env.init', enable_if=hob.in_normal_mode & ~hob.env_initialized)
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
     assert len(default_env_proto.machine) > 0
@@ -22,8 +23,19 @@ def env_init():
     env_proto_mutable = False
     return True
 
+@oneflow_export('env.init')
+def api_env_init():
+    return enable_if.unique(env_init, do_nothing)()
+
 @oneflow_export('env.machine')
 def machine(*val):
+    r"""Set machines' hostnames. 
+
+    Args:
+        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
+
+            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
+    """
     assert env_proto_mutable == True
     del default_env_proto.machine[:]
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
@@ -32,12 +44,22 @@ def machine(*val):
 
 @oneflow_export('env.ctrl_port')
 def ctrl_port(val):
+    r"""Set port number used to control the execution across multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.ctrl_port = val
 
 @oneflow_export('env.data_port')
 def data_port(val):
+    r"""Set port number used to data transfer among multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.data_port = val

@@ -14,10 +14,21 @@ import collections
 
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
+    r"""Sum of elements across dimensions of a `Blob`.
+    
+    Analogous to `tf.math.reduce_sum <https://www.tensorflow.org/api_docs/python/tf/math/reduce_sum>`_
+
+    Args:
+        input_tensor: A `Blob`.
+        axis: Dimensions to reduce. By default, all dimensions will be reduced.
+        keepdims: If true, every reduced dimension with a length of 1 will be kept.
+        name: A name for the operator (optional).
+    Returns:
+        A `Blob`.
+    """
     if name is None:
         name = id_util.UniqueStr("ReduceSum_")
-    enable_user_op = os.getenv("ENABLE_USER_OP") == "True"
-    if enable_user_op and flow.current_global_function_desc().IsTrainable() == False:
+    if os.getenv("ENABLE_USER_OP") == "True":
         if axis is None:
             axis = []
         elif isinstance(axis, (list, tuple)):
@@ -30,8 +41,8 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
             .Op("reduce_sum")
             .Input("input_tensor", [input_tensor])
             .Output("output_tensor")
-            .SetAttr("axis", axis, "AttrTypeListInt32")
-            .SetAttr("keepdims", keepdims, "AttrTypeBool")
+            .Attr("axis", axis, "AttrTypeListInt32")
+            .Attr("keepdims", keepdims, "AttrTypeBool")
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
