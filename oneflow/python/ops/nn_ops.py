@@ -25,6 +25,11 @@ def conv2d(
     groups=1,
     name=None,
 ):
+    r"""2d convolution 
+
+    Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
+
+    """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
 
@@ -140,6 +145,10 @@ def conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
+    r"""
+    Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
+
+    """
     # TODO: name unused, fix it
     if name is None:
         name = id_util.UniqueStr("BiasAdd_")
@@ -194,6 +203,10 @@ def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
 
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool2D_"))
@@ -244,6 +257,10 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool2D_"))
@@ -298,6 +315,10 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool3D_"))
@@ -348,6 +369,10 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool3D_"))
@@ -419,6 +444,10 @@ def _softmax_need_transpose(x, axis):
 
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
+    r"""
+    Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+
+    """
     if axis is None:
         axis = -1
 
@@ -560,6 +589,10 @@ def sparse_cross_entropy(
 def sparse_softmax_cross_entropy_with_logits(
     labels=None, logits=None, name=None
 ):
+    r"""
+    Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
 
@@ -588,7 +621,11 @@ def sparse_softmax_cross_entropy_with_logits(
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
     labels=None, logits=None, name=None
-):
+):  
+    r"""
+    Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
@@ -652,6 +689,10 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+    r"""
+    Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         # dropout op
         op_conf = op_conf_util.OperatorConf()
