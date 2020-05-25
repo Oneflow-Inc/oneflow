@@ -59,8 +59,8 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
                .Output("out")\
                .Build().InferAndTryRun().RemoteBlobList()[0]
             else:
-                setattr(op_conf.batch_gather_conf, "in", params.logical_blob_name)
-                op_conf.batch_gather_conf.indices = indices.logical_blob_name
+                setattr(op_conf.batch_gather_conf, "in", params.unique_name)
+                op_conf.batch_gather_conf.indices = indices.unique_name
                 op_conf.batch_gather_conf.out = "out"
         elif axis > batch_dims:
             raise NotImplementedError
@@ -70,8 +70,8 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             "ENABLE_USER_OP") != 'True':
         assert axis == 0
         assert batch_dims == 0
-        setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
-        op_conf.gather_ms0_conf.indices = indices.logical_blob_name
+        setattr(op_conf.gather_ms0_conf, "in", params.unique_name)
+        op_conf.gather_ms0_conf.indices = indices.unique_name
         op_conf.gather_ms0_conf.out = "out"
     else:
         if os.getenv("ENABLE_USER_OP") == 'True':
@@ -84,8 +84,8 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
            .Attr("axis", int(axis), "AttrTypeInt64")\
            .Build().InferAndTryRun().RemoteBlobList()[0]
         else:
-            setattr(op_conf.gather_conf, "in", params.logical_blob_name)
-            op_conf.gather_conf.indices = indices.logical_blob_name
+            setattr(op_conf.gather_conf, "in", params.unique_name)
+            op_conf.gather_conf.indices = indices.unique_name
             op_conf.gather_conf.out = "out"
             op_conf.gather_conf.axis = axis
 
@@ -101,8 +101,8 @@ def local_gather(params, indices, axis=0, name=None):
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("LocalGather_"))
     if axis < 0:
         axis += len(params.shape)
-    setattr(op_conf.local_gather_conf, "in", params.logical_blob_name)
-    setattr(op_conf.local_gather_conf, "indices", indices.logical_blob_name)
+    setattr(op_conf.local_gather_conf, "in", params.unique_name)
+    setattr(op_conf.local_gather_conf, "indices", indices.unique_name)
     setattr(op_conf.local_gather_conf, "axis", axis)
     setattr(op_conf.local_gather_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -154,12 +154,12 @@ def reshape(x, shape, name=None):
         op_conf = op_conf_util.OperatorConf()
         if x.is_dynamic:
             setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
-            setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
+            setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
             op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
             setattr(op_conf.dynamic_reshape_conf, "out", "out")
         else:
             op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-            setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
+            setattr(op_conf.reshape_conf, "in", x.unique_name)
             op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
             op_conf.reshape_conf.out = "out"
         compile_context.CurJobAddOp(op_conf)
@@ -173,8 +173,8 @@ def reshape(x, shape, name=None):
 def reshape_like(x, like, name=None):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("ReshapeLike_")
-    setattr(op_conf.reshape_like_conf, "x", x.logical_blob_name)
-    setattr(op_conf.reshape_like_conf, "like", like.logical_blob_name)
+    setattr(op_conf.reshape_like_conf, "x", x.unique_name)
+    setattr(op_conf.reshape_like_conf, "like", like.unique_name)
     op_conf.reshape_like_conf.y = "y"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -189,7 +189,7 @@ def dynamic_reshape(x, shape, name=None):
     shape = list(shape)
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
-    setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
+    setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
     op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -230,7 +230,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
-        setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
+        setattr(op_conf.transpose_conf, "in", a.unique_name)
         op_conf.transpose_conf.out = "out"
         op_conf.transpose_conf.perm.extend(list(perm))
 
@@ -325,7 +325,7 @@ def slice(x, begin, size, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
-    setattr(op_conf.slice_conf, "in", x.logical_blob_name)
+    setattr(op_conf.slice_conf, "in", x.unique_name)
     setattr(op_conf.slice_conf, "out", "out")
     op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
 
@@ -440,7 +440,7 @@ def concat(values, axis, name=None):
         op_conf.concat_conf.out = "out"
         if not isinstance(values, (list, tuple)):
             values = [values]
-        getattr(op_conf.concat_conf, "in").extend([v.logical_blob_name for v in values])
+        getattr(op_conf.concat_conf, "in").extend([v.unique_name for v in values])
         op_conf.concat_conf.axis = axis
         compile_context.CurJobAddOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -519,7 +519,7 @@ def argwhere(condition, dtype=None, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.arg_where_conf, "in", condition.logical_blob_name)
+    setattr(op_conf.arg_where_conf, "in", condition.unique_name)
     setattr(op_conf.arg_where_conf, "out", "out")
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
@@ -582,7 +582,7 @@ def piece_slice(inputs, output_size, name=None):
     assert inputs.shape[0] == output_size
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_"))
-    setattr(op_conf.piece_slice_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.piece_slice_conf, "in", inputs.unique_name)
     op_conf.piece_slice_conf.out.extend(["out_" + str(i) for i in range(output_size)])
     compile_context.CurJobAddOp(op_conf)
     ret = []
@@ -598,7 +598,7 @@ def piece_slice(inputs, output_size, name=None):
 def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("ElemCnt_"))
-    op_conf.shape_elem_cnt_conf.x = inputs.logical_blob_name
+    op_conf.shape_elem_cnt_conf.x = inputs.unique_name
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
@@ -615,8 +615,8 @@ def elem_cnt(inputs, dtype=None, name=None):
 def sync_dynamic_resize(inputs, size, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("SyncDynamicResize_"))
-    setattr(op_conf.sync_dynamic_resize_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.sync_dynamic_resize_conf, "size", size.logical_blob_name)
+    setattr(op_conf.sync_dynamic_resize_conf, "in", inputs.unique_name)
+    setattr(op_conf.sync_dynamic_resize_conf, "size", size.unique_name)
     setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
     setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -638,7 +638,7 @@ def stack(inputs, axis, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.logical_blob_name for input in inputs])
+    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
     setattr(op_conf.stack_conf, "axis", axis)
     setattr(op_conf.stack_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -652,8 +652,8 @@ def stack(inputs, axis, name=None):
 def assign(ref, value, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Assign_"))
-    op_conf.assign_conf.ref = ref.logical_blob_name
-    op_conf.assign_conf.value = value.logical_blob_name
+    op_conf.assign_conf.ref = ref.unique_name
+    op_conf.assign_conf.value = value.unique_name
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
@@ -702,7 +702,7 @@ def identity(x, name=None):
         name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.logical_blob_name)
+    setattr(op_conf.identity_conf, "in", x.unique_name)
     op_conf.identity_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

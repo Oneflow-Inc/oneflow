@@ -317,7 +317,7 @@ void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
 void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
-  DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
 }
 
@@ -334,7 +334,7 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
   const auto& op_conf =
       instruction->mut_operand_type(args->op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
   CHECK(op_conf.has_user_conf());
-  DeviceType device_type = *CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args->shared_opkernel());
   if (rw_mutexed_object->has_object()) { CHECK(rw_mutexed_object->Has<OpKernelObject>()); }
   const auto& parallel_desc = instruction->parallel_desc();
