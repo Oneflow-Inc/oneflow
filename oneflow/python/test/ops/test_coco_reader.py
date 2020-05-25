@@ -4,7 +4,7 @@ import os
 import cv2
 import math
 
-VERBOSE = True
+VERBOSE = False
 coco_dict = dict()
 
 
@@ -435,6 +435,21 @@ def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
 
     sampler = GroupedDistributedSampler(4, 8, image_info_list, True)
     of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, True, False, True)
+    for i, sample_ids in enumerate(sampler):
+        image_id = of_coco_load_fn().get().ndarray()
+        if verbose:
+            print("#{} image_id:".format(i), image_id)
+            print("#{} sample_ids:".format(i), sample_ids)
+        test_case.assertTrue(np.array_equal(image_id, sample_ids))
+
+
+def test_coco_reader_distributed_contiguous(test_case, verbose=VERBOSE):
+    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+    image_dir = "/dataset/mscoco_2017/val2017"
+
+    image_info_list = _get_coco_sorted_imgs(anno_file)
+    sampler = GroupedDistributedSampler(4, 8, image_info_list, False)
+    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, False, False, True)
     for i, sample_ids in enumerate(sampler):
         image_id = of_coco_load_fn().get().ndarray()
         if verbose:
