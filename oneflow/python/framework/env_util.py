@@ -37,6 +37,13 @@ def api_get_env_resource():
 
 @oneflow_export('env.machine')
 def machine(*val):
+    r"""Set machines' hostnames. 
+
+    Args:
+        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
+
+            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
+    """
     assert env_proto_mutable == True
     del default_env_proto.machine[:]
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
@@ -53,12 +60,22 @@ def api_current_machine_id():
 
 @oneflow_export('env.ctrl_port')
 def ctrl_port(val):
+    r"""Set port number used to control the execution across multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.ctrl_port = val
 
 @oneflow_export('env.data_port')
 def data_port(val):
+    r"""Set port number used to data transfer among multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert env_proto_mutable == True
     assert type(val) is int
     default_env_proto.data_port = val

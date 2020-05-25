@@ -29,7 +29,7 @@ def alexnet(images, trainable=True):
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
     if len(pool5.shape) > 2:
-        pool5 = flow.reshape(pool5, shape=(pool5.static_shape[0], -1))
+        pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
     fc1 = flow.layers.dense(
         inputs=pool5,

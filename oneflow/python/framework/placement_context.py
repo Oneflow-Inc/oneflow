@@ -50,12 +50,22 @@ class PlacementScope(object):
 
 
 class FixedPlacementScope(PlacementScope):
+    r"""Class for fixed placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with fixed parallel configuration.
+    """
     def __init__(self, device_tag, machine_device_ids):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 
     def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
 
 class DevicePriorPlacementScope(PlacementScope):
+    r"""Class for device prior placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with device prior parallel configuration.
+    """
     def __init__(self, device_tag, machine_device_ids):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 

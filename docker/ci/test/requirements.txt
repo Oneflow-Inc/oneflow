@@ -1,2 +1,4 @@
 pycocotools
 opencv-python
+sphinx
+recommonmark
