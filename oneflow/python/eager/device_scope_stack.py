@@ -37,7 +37,7 @@ def _NewPlacementScope(device_tag_and_id):
 def api_device(device_tag_and_id):
     return enable_if.unique(_NewPlacementScope)(device_tag_and_id)
 
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized & hob.is_current_machine_master)
 def _EagerPlacementScope(device_tag, machine_device_ids):
     def EagerPlacementScope():
         return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)

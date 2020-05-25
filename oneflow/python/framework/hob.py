@@ -46,3 +46,8 @@ def _IsCurrentPlacementPhysical():
 
 is_current_placement_physical = HighOrderBool("Current placement is physical",
                                               _IsCurrentPlacementPhysical)
+
+def _IsCurrentMachineMaster():
+    return c_api_util.CurrentMachineId() == 0
+
+is_current_machine_master = HighOrderBool("Current machine is master", _IsCurrentMachineMaster)
