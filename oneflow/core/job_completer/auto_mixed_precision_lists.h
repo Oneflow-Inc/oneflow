@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-typedef HashSet<OperatorConf::OpTypeCase> AMPList;
+typedef HashSet<std::string> AMPList;
 
 class AutoMixedPrecisionLists final {
  public:

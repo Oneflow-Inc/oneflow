@@ -9,7 +9,7 @@ def pad(x, paddings, constant_value=0, name=None):
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.static_shape), ValueError(
+        assert len(paddings) == len(x.shape), ValueError(
             "paddings must be the same size of input dims"
         )
         for p in paddings:
@@ -25,10 +25,10 @@ def pad(x, paddings, constant_value=0, name=None):
         .Op("pad")
         .Input("x", [x])
         .Output("y")
-        .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
-        .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
-        .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
-        .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
+        .Attr("padding_before", padding_before, "AttrTypeListInt64")
+        .Attr("padding_after", padding_after, "AttrTypeListInt64")
+        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
+        .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -40,7 +40,7 @@ def pad_grad(x, paddings, constant_value=0, name=None):
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.static_shape), ValueError(
+        assert len(paddings) == len(x.shape), ValueError(
             "paddings must be the same size of input dims"
         )
         for p in paddings:
@@ -56,10 +56,10 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .Op("pad_grad")
         .Input("dy", [x])
         .Output("dx")
-        .SetAttr("padding_before", padding_before, "AttrTypeListInt64")
-        .SetAttr("padding_after", padding_after, "AttrTypeListInt64")
-        .SetAttr("floating_constant_value", float(constant_value), "AttrTypeDouble")
-        .SetAttr("integral_constant_value", int(constant_value), "AttrTypeInt64")
+        .Attr("padding_before", padding_before, "AttrTypeListInt64")
+        .Attr("padding_after", padding_after, "AttrTypeListInt64")
+        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
+        .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

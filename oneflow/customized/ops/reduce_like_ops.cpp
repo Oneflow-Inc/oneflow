@@ -11,7 +11,7 @@ REGISTER_USER_OP("reduce_sum_like")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-      const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+      const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
       if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
       CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
       user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -28,7 +28,7 @@ REGISTER_USER_OP("reduce_sum_like")
       {
         const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
         num_axes = in_tensor.shape().NumAxes();
-        const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("axis");
+        const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
         conf_axes = {reduced_axes.begin(), reduced_axes.end()};
       }
       auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
