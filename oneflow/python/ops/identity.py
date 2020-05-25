@@ -12,7 +12,7 @@ def sleep_identity(x, seconds, name=None):
     if name is None: name = id_util.UniqueStr("Sleep_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.sleep_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sleep_conf, "in", x.unique_name)
     op_conf.sleep_conf.seconds = seconds
     op_conf.sleep_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)

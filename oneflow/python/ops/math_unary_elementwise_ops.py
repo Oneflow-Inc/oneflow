@@ -122,7 +122,7 @@ def rsqrt(x, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
-    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.rsqrt_conf, "in", x.unique_name)
     setattr(op_conf.rsqrt_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -157,7 +157,7 @@ def sqrt(x, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
-    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sqrt_conf, "in", x.unique_name)
     setattr(op_conf.sqrt_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -175,7 +175,7 @@ def square(x, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("square_"),
     )
-    setattr(op_conf.square_conf, "in", x.logical_blob_name)
+    setattr(op_conf.square_conf, "in", x.unique_name)
     setattr(op_conf.square_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

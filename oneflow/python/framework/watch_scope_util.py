@@ -21,12 +21,12 @@ class WatchScope(object):
         self.diff_blob_watcher_ = diff_blob_watcher
 
     def WatchOnce(self, blob_def):
-        if blob_def.logical_blob_name in self.watched_blob_lbn: return
+        if blob_def.unique_name in self.watched_blob_lbn: return
         if self.blob_watcher_ is not None:
             oneflow.watch(blob_def, _MakeBlobWatchCallback(self.blob_watcher_, blob_def))
         if self.diff_blob_watcher_ is not None:
             oneflow.watch_diff(blob_def, _MakeBlobWatchCallback(self.diff_blob_watcher_, blob_def))
-        self.watched_blob_lbn.add(blob_def.logical_blob_name)
+        self.watched_blob_lbn.add(blob_def.unique_name)
 
 @oneflow_export("watch_scope")
 @contextmanager
@@ -39,7 +39,7 @@ def _MakeBlobWatchCallback(storage_or_func, blob_def):
     if isinstance(storage_or_func, dict):
         storage = storage_or_func
         def StoreFunc(blob):
-            storage[blob_def.logical_blob_name] = dict(blob=blob, blob_def=blob_def)
+            storage[blob_def.unique_name] = dict(blob=blob, blob_def=blob_def)
         return StoreFunc
     elif callable(storage_or_func):
         func = storage_or_func
