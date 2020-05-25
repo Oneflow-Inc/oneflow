@@ -10,27 +10,23 @@ __global__ void SetupKernel(int64_t seed, curandState* state) {
 }
 
 __global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, int8_t* mask) {
-  using CuInt64T = unsigned long long int;
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = state[id];
+  using PackType = unsigned long long int;
   union Pack {
-    CuInt64T i_value;
-    int8_t b_value[8];
+    PackType i_value;
+    int8_t b_value[sizeof(PackType)];
   };
-  CuInt64T* mask_as_int = reinterpret_cast<CuInt64T*>(mask);
+  PackType* pack_mask = reinterpret_cast<PackType*>(mask);
   Pack pack;
-  CUDA_1D_KERNEL_LOOP(i, n / 8) {
-    pack.b_value[0] = curand_uniform(&localState) > rate;
-    pack.b_value[1] = curand_uniform(&localState) > rate;
-    pack.b_value[2] = curand_uniform(&localState) > rate;
-    pack.b_value[3] = curand_uniform(&localState) > rate;
-    pack.b_value[4] = curand_uniform(&localState) > rate;
-    pack.b_value[5] = curand_uniform(&localState) > rate;
-    pack.b_value[6] = curand_uniform(&localState) > rate;
-    pack.b_value[7] = curand_uniform(&localState) > rate;
-    mask_as_int[i] = pack.i_value;
+  CUDA_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
+#pragma unroll
+    for (int j = 0; j < sizeof(PackType); j++) {
+      pack.b_value[j] = curand_uniform(&localState) > rate;
+    }
+    pack_mask[i] = pack.i_value;
   }
-  const int32_t other_cnt = n % 8;
+  const int32_t other_cnt = n % sizeof(PackType);
   const int32_t fast_cnt = n - other_cnt;
   if (id < other_cnt) { mask[id + fast_cnt] = curand_uniform(&localState) > rate; }
   state[id] = localState;
@@ -38,8 +34,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const float rat
 
 }  // namespace
 
-RandomMaskGenerator<DeviceType::kGPU>::RandomMaskGenerator(int64_t seed, DeviceCtx* device_ctx) {
-  CHECK_NOTNULL(device_ctx);
+RandomMaskGenerator<DeviceType::kGPU>::RandomMaskGenerator(int64_t seed) {
   cudaDeviceProp prop;
   CudaCheck(cudaGetDeviceProperties(&prop, 0));
   block_num_ = prop.multiProcessorCount;
@@ -52,9 +47,10 @@ RandomMaskGenerator<DeviceType::kGPU>::~RandomMaskGenerator() {
   CudaCheck(cudaFree(curand_states_));
 }
 
-void RandomMaskGenerator<DeviceType::kGPU>::Generate(const int64_t elem_cnt, const float rate,
-                                                     int8_t* mask) {
-  GenerateGpu<<<block_num_, thread_num_>>>(curand_states_, elem_cnt, rate, mask);
+void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
+                                                     const float rate, int8_t* mask) {
+  GenerateGpu<<<block_num_, thread_num_, 0, device_ctx->cuda_stream()>>>(curand_states_, n, rate,
+                                                                         mask);
 }
 
 template class RandomMaskGenerator<DeviceType::kGPU>;

@@ -49,8 +49,6 @@ void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const f
           n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
 }
 
-}  // namespace
-
 template<typename T>
 class DropoutKernelGPU final : public user_op::OpKernel {
  public:
@@ -123,4 +121,5 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
+}  // namespace
 }  // namespace oneflow

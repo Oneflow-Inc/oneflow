@@ -15,10 +15,10 @@ template<>
 class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(int64_t seed, DeviceCtx* device_ctx) : mt19937_generator_(seed) {}
+  RandomMaskGenerator(int64_t seed) : mt19937_generator_(seed) {}
   ~RandomMaskGenerator() {}
 
-  void Generate(int64_t n, float rate, int8_t* mask);
+  void Generate(DeviceCtx* device_ctx, const int64_t n, const float rate, int8_t* mask);
 
  private:
   std::mt19937 mt19937_generator_;
@@ -28,10 +28,10 @@ template<>
 class RandomMaskGenerator<DeviceType::kGPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(int64_t seed, DeviceCtx* device_ctx);
+  RandomMaskGenerator(int64_t seed);
   ~RandomMaskGenerator();
 
-  void Generate(int64_t n, float rate, int8_t* mask);
+  void Generate(DeviceCtx* device_ctx, const int64_t n, const float rate, int8_t* mask);
 
  private:
   curandState* curand_states_;
