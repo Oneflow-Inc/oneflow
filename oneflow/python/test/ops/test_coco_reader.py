@@ -2,8 +2,9 @@ import numpy as np
 import oneflow as flow
 import os
 import cv2
+import math
 
-VERBOSE = False
+VERBOSE = True
 coco_dict = dict()
 
 
@@ -291,16 +292,28 @@ def _has_valid_annotation(anno):
     return False
 
 
-class GroupedDistributedStrideSampler(object):
-    def __init__(self, shards, batch_size, images, max_iter=3):
+class GroupedDistributedSampler(object):
+    def __init__(self, shards, batch_size, images, stride_sample, max_iter=3):
         assert batch_size % shards == 0
+        self._images = images
         self._shards = shards
+        self._shard_size = math.ceil(len(images) / shards)
         self._batch_size = batch_size
         self._batch_size_per_shard = batch_size // shards
-        self._images = images
+        self._stride_sample = stride_sample
         self._max_iter = max_iter
-        self._sample_idx = list(range(shards))
-        self._group_buckets = [[[] for _ in range(2)] for _ in range(shards)]
+        self._init_sample_idx()
+        self._init_group_buckets()
+
+    def _init_sample_idx(self):
+        if self._stride_sample:
+            self._sample_idx = list(range(self._shards))
+        else:
+            self._sample_idx = [rank * self._shard_size for rank in range(self._shards)]
+            self._sample_idx_in_shard = [0 for _ in range(self._shards)]
+
+    def _init_group_buckets(self):
+        self._group_buckets = [[[] for _ in range(2)] for _ in range(self._shards)]
 
     def __iter__(self):
         for i in range(self._max_iter):
@@ -323,8 +336,7 @@ class GroupedDistributedStrideSampler(object):
                 elif len(group_buckets_cur_rank[1]) > 0:
                     sample = group_buckets_cur_rank[1].pop(0)
                 else:
-                    sample = self._images[self._sample_idx[rank]]
-                    self._sample_idx[rank] += self._shards
+                    sample = self._next_sample(rank)
 
                 group_id = sample["group_id"]
                 sample_ids_cur_rank.append(sample["image_id"])
@@ -337,8 +349,7 @@ class GroupedDistributedStrideSampler(object):
                         sample_cnt_cur_rank += 1
                         continue
 
-                    sample = self._images[self._sample_idx[rank]]
-                    self._sample_idx[rank] += self._shards
+                    sample = self._next_sample(rank)
 
                     if sample["group_id"] == group_id:
                         sample_ids_cur_rank.append(sample["image_id"])
@@ -349,6 +360,22 @@ class GroupedDistributedStrideSampler(object):
                 sample_ids.extend(sample_ids_cur_rank)
 
             yield sample_ids
+
+    def _next_sample(self, rank):
+        sample = self._images[self._sample_idx[rank]]
+        if self._stride_sample:
+            self._sample_idx[rank] += self._shards
+        else:
+            self._sample_idx_in_shard[rank] += 1
+            self._sample_idx[rank] += 1
+            if self._sample_idx_in_shard[rank] == self._shard_size:
+                self._sample_idx[rank] += (self._shards - 1) * self._shard_size
+                self._sample_idx_in_shard[rank] = 0
+
+        if self._sample_idx[rank] >= len(self._images):
+            self._sample_idx[rank] %= len(self._images)
+
+        return sample
 
 
 def test_coco_reader(test_case, verbose=VERBOSE):
@@ -406,7 +433,7 @@ def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
                 )
             )
 
-    sampler = GroupedDistributedStrideSampler(4, 8, image_info_list)
+    sampler = GroupedDistributedSampler(4, 8, image_info_list, True)
     of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, True, False, True)
     for i, sample_ids in enumerate(sampler):
         image_id = of_coco_load_fn().get().ndarray()
