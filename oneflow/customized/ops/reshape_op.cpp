@@ -8,7 +8,7 @@ namespace {
 
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-  const Shape& shape = ctx->GetAttr<Shape>("shape");
+  const Shape& shape = ctx->Attr<Shape>("shape");
   ShapeProto shape_proto;
   shape.ToProto(&shape_proto);
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
@@ -16,7 +16,7 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const Shape& shape = ctx->GetAttr<Shape>("shape");
+  const Shape& shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   const Shape& in_shape = in_tensor_desc->shape();

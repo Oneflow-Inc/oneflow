@@ -25,8 +25,13 @@ def conv2d(
     groups=1,
     name=None,
 ):
-    assert len(input.static_shape) == 4
-    assert len(filters.static_shape) == 4
+    r"""2d convolution 
+
+    Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
+
+    """
+    assert len(input.shape) == 4
+    assert len(filters.shape) == 4
 
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -61,9 +66,9 @@ def conv2d(
 
     if os.getenv("ENABLE_USER_OP") == 'True':
         if channel_pos == "channels_first":
-            kernel_size_list = filters.static_shape[2:4]
+            kernel_size_list = filters.shape[2:4]
         elif channel_pos == "channels_last":
-            kernel_size_list = filters.static_shape[-3:-1]
+            kernel_size_list = filters.shape[-3:-1]
         else:
             raise ValueError("invalid data_format")
         assert(isinstance(kernel_size_list, tuple))
@@ -71,11 +76,11 @@ def conv2d(
         assert groups > 0
         if groups > 1:
             if data_format.upper() == "NCHW":
-                assert groups <= filters.static_shape[0]
-                assert filters.static_shape[0] % groups == 0
-                assert groups <= input.static_shape[1]
-                assert input.static_shape[1] % groups == 0
-                assert filters.static_shape[1] == input.static_shape[1] // groups
+                assert groups <= filters.shape[0]
+                assert filters.shape[0] % groups == 0
+                assert groups <= input.shape[1]
+                assert input.shape[1] % groups == 0
+                assert filters.shape[1] == input.shape[1] // groups
             elif data_format.upper() == "NHWC":
                 raise ValueError("data_format NHWC not support groups > 1")
             else:
@@ -86,13 +91,13 @@ def conv2d(
                 .Input("in", [input])
                 .Input("weight", [filters])
                 .Output("out")
-                .SetAttr("filters", filters.static_shape[0], "AttrTypeInt32")
-                .SetAttr("padding", padding.lower(), "AttrTypeString")
-                .SetAttr("data_format", channel_pos, "AttrTypeString")
-                .SetAttr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-                .SetAttr("strides", strides, "AttrTypeListInt32")
-                .SetAttr("dilation_rate", dilations, "AttrTypeListInt32")
-                .SetAttr("groups", groups, "AttrTypeInt32")
+                .Attr("filters", filters.shape[0], "AttrTypeInt32")
+                .Attr("padding", padding.lower(), "AttrTypeString")
+                .Attr("data_format", channel_pos, "AttrTypeString")
+                .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+                .Attr("strides", strides, "AttrTypeListInt32")
+                .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+                .Attr("groups", groups, "AttrTypeInt32")
                 .Build()
                 .InferAndTryRun()
                 .RemoteBlobList()[0]
@@ -103,13 +108,13 @@ def conv2d(
         setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
         op_conf.conv_2d_conf.out = "out"
         op_conf.conv_2d_conf.weight = filters.logical_blob_name
-        op_conf.conv_2d_conf.filters = filters.static_shape[0]
+        op_conf.conv_2d_conf.filters = filters.shape[0]
         op_conf.conv_2d_conf.padding = padding.lower()
         op_conf.conv_2d_conf.data_format = channel_pos
         if channel_pos == "channels_first":
-            op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[2:4])
+            op_conf.conv_2d_conf.kernel_size.extend(filters.shape[2:4])
         elif channel_pos == "channels_last":
-            op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[-3:-1])
+            op_conf.conv_2d_conf.kernel_size.extend(filters.shape[-3:-1])
         else:
             raise ValueError("invalid data_format")
         op_conf.conv_2d_conf.strides.extend(strides)
@@ -120,11 +125,11 @@ def conv2d(
         assert groups > 0
         if groups > 1:
             if data_format.upper() == "NCHW":
-                assert groups <= filters.static_shape[0]
-                assert filters.static_shape[0] % groups == 0
-                assert groups <= input.static_shape[1]
-                assert input.static_shape[1] % groups == 0
-                assert filters.static_shape[1] == input.static_shape[1] // groups
+                assert groups <= filters.shape[0]
+                assert filters.shape[0] % groups == 0
+                assert groups <= input.shape[1]
+                assert input.shape[1] % groups == 0
+                assert filters.shape[1] == input.shape[1] // groups
             elif data_format.upper() == "NHWC":
                 raise ValueError("data_format NHWC not support groups > 1")
             else:
@@ -140,6 +145,10 @@ def conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
+    r"""
+    Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
+
+    """
     # TODO: name unused, fix it
     if name is None:
         name = id_util.UniqueStr("BiasAdd_")
@@ -150,7 +159,7 @@ def bias_add(value, bias, data_format=None, name=None):
         if data_format.startswith("NC"):
             bias_add_axis = 1
         elif data_format.startswith("N") and data_format.endswith("C"):
-            bias_add_axis = len(value.static_shape) - 1
+            bias_add_axis = len(value.shape) - 1
         else:
             raise ValueError(
                 "data_format must be of the form `N...C` or `NC...`"
@@ -162,7 +171,7 @@ def bias_add(value, bias, data_format=None, name=None):
             .Input("a", [value])
             .Input("b", [bias])
             .Output("out")
-            .SetAttr("axis", bias_add_axis, "AttrTypeInt32")
+            .Attr("axis", bias_add_axis, "AttrTypeInt32")
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -194,6 +203,10 @@ def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
 
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool2D_"))
@@ -202,14 +215,14 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 2, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -244,6 +257,10 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool2D_"))
@@ -252,14 +269,14 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 2, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -298,6 +315,10 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool3D_"))
@@ -306,14 +327,14 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NDHWC", "NCDHW"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 3, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -348,6 +369,10 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
             oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool3D_"))
@@ -356,14 +381,14 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             .Output("y")
         )
         assert padding in ["VALID", "SAME"]
-        op.SetAttr("padding", padding.lower(), "AttrTypeString")
+        op.Attr("padding", padding.lower(), "AttrTypeString")
         assert data_format in ["NDHWC", "NCDHW"]
         data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.SetAttr("data_format", data_format, "AttrTypeString")
+        op.Attr("data_format", data_format, "AttrTypeString")
         pool_size = _GetSequence(ksize, 3, "ksize")
-        op.SetAttr("pool_size", pool_size, "AttrTypeListInt32")
+        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
-        op.SetAttr("strides", strides, "AttrTypeListInt32")
+        op.Attr("strides", strides, "AttrTypeListInt32")
         return (
             op
             .Build()
@@ -419,6 +444,10 @@ def _softmax_need_transpose(x, axis):
 
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
+    r"""
+    Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+
+    """
     if axis is None:
         axis = -1
 
@@ -560,6 +589,10 @@ def sparse_cross_entropy(
 def sparse_softmax_cross_entropy_with_logits(
     labels=None, logits=None, name=None
 ):
+    r"""
+    Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
 
@@ -588,7 +621,11 @@ def sparse_softmax_cross_entropy_with_logits(
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
     labels=None, logits=None, name=None
-):
+):  
+    r"""
+    Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
@@ -633,12 +670,12 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
         .Op("random_mask_like")
         .Input("like", [like])
         .Output("out")
-        .SetAttr("rate", float(rate), "AttrTypeFloat")
+        .Attr("rate", float(rate), "AttrTypeFloat")
     )
     if seed is not None:
-        mask_op.SetAttr("seed", seed, "AttrTypeInt64")
+        mask_op.Attr("seed", seed, "AttrTypeInt64")
     else:
-        mask_op.SetAttr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
+        mask_op.Attr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
         
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
@@ -652,6 +689,10 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+    r"""
+    Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         # dropout op
         op_conf = op_conf_util.OperatorConf()
@@ -696,7 +737,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .Input("in", [x])
         .Input("mask", [mask])
         .Output("out")
-        .SetAttr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -708,7 +749,7 @@ def deconv2d(
     filter=None,
     output_shape=None,
     strides=None,
-    padding='SAME',
+    padding='VALID',
     data_format='NHWC',
     name=None,
     input=None,
@@ -738,49 +779,14 @@ def deconv2d(
         filters is not None), "only one of `filter` and `filters` could be not None"
     filters = filters or filter
     input = input or value
-    assert output_shape is None, "output_shape not supported yet"
-    assert dilations is None, "dilations not supported yet"
-    assert len(input.static_shape) == 4
-    assert len(filters.static_shape) == 4
 
-    if isinstance(strides, (list, tuple)):
-        assert len(strides) == 2, ValueError(
-            "strides length must be 2 when passed as a list."
-        )
-    elif isinstance(strides, int):
-        strides = [strides, strides]
-    else:
-        raise ValueError("strides must be an int or a list.")
+    NDims = 2
+    assert len(input.shape) == 2 + NDims
+    assert len(filters.shape) == 2 + NDims
+    assert len(output_shape) == 2 + NDims
+    assert output_shape[0] == input.shape[0]
 
-    if padding.upper() != "SAME" and padding.upper() != "VALID":
-        raise ValueError('padding must be "SAME" or "VALID".')
-
-    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
-        raise ValueError('data_format must be "NHWC" or "NCHW".')
-
-    channel_pos = (
-        "channels_first" if data_format.startswith("NC") else "channels_last"
-    )
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name",
-            name if name is not None else id_util.UniqueStr("Deconv2d_"))
-    op_conf.deconv_conf.x = input.logical_blob_name
-    op_conf.deconv_conf.y = "out"
-    op_conf.deconv_conf.filter = filters.logical_blob_name
-    op_conf.deconv_conf.conv_conf.padding = padding.lower()
-    op_conf.deconv_conf.conv_conf.data_format = channel_pos
-    if channel_pos == "channels_first":
-        op_conf.deconv_conf.filters = filters.static_shape[1]
-        op_conf.deconv_conf.conv_conf.kernel_size.extend(
-            filters.static_shape[2:4])
-    elif channel_pos == "channels_last":
-        op_conf.deconv_conf.filters = filters.static_shape[3]
-        op_conf.deconv_conf.conv_conf.kernel_size.extend(
-            filters.static_shape[-3:-1])
-    else:
-        raise ValueError("invalid data_format")
-
+    # dilations
     if dilations is None:
         dilations = [1, 1]
     else:
@@ -793,15 +799,65 @@ def deconv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    op_conf.deconv_conf.conv_conf.strides.extend(strides)
-    op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
-    op_conf.deconv_conf.use_bias = False
-    op_conf.deconv_conf.conv_conf.num_spatial_dims = 2
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    # data format
+    if data_format.upper() == "NCHW":
+        input_shape = input.shape[2:]
+        kernel_size = filters.shape[2:4]
+        output_shape = output_shape[2:4]
+        channels = filters.shape[1]
+    elif data_format.upper() == "NHWC":
+        input_shape = input.shape[1:3]
+        kernel_size = filters.shape[-3:-1]
+        output_shape = output_shape[1:3]
+        channels = filters.shape[3]
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
+    else:
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = (
+        "channels_first" if data_format.startswith("NC") else "channels_last"
+    )
+
+    # strides
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == NDims, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if padding.upper() != "VALID":
+        raise ValueError('padding must be "VALID".')
+
+    # output padding
+    output_padding = [0] * NDims
+    for i in range(NDims):
+        effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+        assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
+        tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size
+        output_padding[i] = output_shape[i] - tmp_output_size
+    
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("deconv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", channels, "AttrTypeInt32")
+        .Attr("padding", padding.lower(), "AttrTypeString")
+        .Attr("data_format", channel_pos, "AttrTypeString")
+        .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
+        .Attr("strides", strides, "AttrTypeListInt32")
+        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+        .Attr("output_padding", output_padding, "AttrTypeListInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(x, alpha=0.2, name=None):
@@ -810,7 +866,7 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")
-        .SetAttr("alpha", float(alpha), "AttrTypeFloat")
+        .Attr("alpha", float(alpha), "AttrTypeFloat")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

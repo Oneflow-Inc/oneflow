@@ -15,8 +15,8 @@ class BatchMatMulOp : public XlaOpKernel {
     CHECK_EQ(shape_a.NumAxes(), shape_b.NumAxes());
     CHECK_GT(shape_a.NumAxes(), 2);
 
-    bool transpose_a = ctx->GetAttr<bool>("transpose_a");
-    bool transpose_b = ctx->GetAttr<bool>("transpose_b");
+    bool transpose_a = ctx->Attr<bool>("transpose_a");
+    bool transpose_b = ctx->Attr<bool>("transpose_b");
 
     xla::XlaOp a = ctx->Input("a");
     xla::XlaOp b = ctx->Input("b");

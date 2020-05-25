@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
-  if (ctx->GetAttr<std::vector<int32_t>>("axis").empty()) { return 0; }
+  if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
   const user_op::TensorDesc* tensor_desc_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   return tensor_desc_x->shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x->data_type());
 }
@@ -23,7 +23,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto& axis = ctx->GetAttr<std::vector<int32_t>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_x->shape());
       Memcpy<device_type>(ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
