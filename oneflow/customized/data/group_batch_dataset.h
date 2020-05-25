@@ -40,6 +40,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
 
   LoadTargetShdPtrVec Next() override {
     LoadTargetShdPtrVec ret;
+    ret.reserve(batch_size_);
     int64_t group_id = -1;
     int64_t min_order = -1;
     for (const auto& pair : group_id2buffered_samples_) {

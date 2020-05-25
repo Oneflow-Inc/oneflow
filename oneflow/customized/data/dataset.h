@@ -43,7 +43,7 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
   virtual LoadTargetShdPtrVec Next() override {
     LoadTargetShdPtrVec ret;
     int64_t index = sampler_->Next();
-    ret.push_back(std::move(this->At(index)));
+    ret.emplace_back(std::move(this->At(index)));
     return ret;
   }
 
