@@ -22,8 +22,8 @@ def relu(x, alpha=0.0, max_value=None, threshold=0.0, name=None):
 def gelu_grad(x, dy):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('GeluGrad_')
-    setattr(op_conf.gelu_grad_conf, 'x', x.logical_blob_name)
-    setattr(op_conf.gelu_grad_conf, 'dy', dy.logical_blob_name)
+    setattr(op_conf.gelu_grad_conf, 'x', x.unique_name)
+    setattr(op_conf.gelu_grad_conf, 'dy', dy.unique_name)
     op_conf.gelu_grad_conf.dx = "dx"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -35,8 +35,8 @@ def gelu_grad(x, dy):
 def tanh_grad(y, dy):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('TanhGrad_')
-    setattr(op_conf.tanh_grad_conf, 'y', y.logical_blob_name)
-    setattr(op_conf.tanh_grad_conf, 'dy', dy.logical_blob_name)
+    setattr(op_conf.tanh_grad_conf, 'y', y.unique_name)
+    setattr(op_conf.tanh_grad_conf, 'dy', dy.unique_name)
     op_conf.tanh_grad_conf.dx = "dx"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

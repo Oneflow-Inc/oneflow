@@ -42,8 +42,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Matmul_"))
-        setattr(op_conf.matmul_conf, "a", a.logical_blob_name)
-        setattr(op_conf.matmul_conf, "b", b.logical_blob_name)
+        setattr(op_conf.matmul_conf, "a", a.unique_name)
+        setattr(op_conf.matmul_conf, "b", b.unique_name)
         setattr(op_conf.matmul_conf, "transpose_a", transpose_a)
         setattr(op_conf.matmul_conf, "transpose_b", transpose_b)
         setattr(op_conf.matmul_conf, "out", "out")

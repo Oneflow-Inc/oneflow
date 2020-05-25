@@ -171,7 +171,7 @@ class MirroredBlob(BlobDef):
         BlobDef.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
-        lbn = self.logical_blob_name
+        lbn = self.unique_name
         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(self.job_name_, lbn)
         for i in range(num_sub_lbi):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(self.job_name_, lbn, i)
