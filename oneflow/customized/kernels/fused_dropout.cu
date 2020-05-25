@@ -25,6 +25,11 @@ struct Vec4Type<double> {
 };
 
 template<>
+struct Vec4Type<half> {
+  typedef half4 type;
+};
+
+template<>
 struct Vec4Type<int8_t> {
   typedef char4 type;
 };
@@ -49,15 +54,16 @@ __device__ half MaskAndScale<half>(half x, int8_t mask, float scale) {
   return __hmul(x, __float2half(mask * scale));
 }
 
-__global__ void SetupKernel(int64_t seed, int32_t thread_num, curandState* state) {
-  int id = threadIdx.x + blockIdx.x * thread_num;
+__global__ void SetupKernel(int64_t seed, curandState* state) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
   curand_init(seed, id, 0, &state[id]);
 }
 
-template<typename T, typename Vec4>
+template<typename T>
 __global__ void DropoutGpu(curandState* state, const int64_t n, const float rate, const float scale,
-                           const int32_t thread_num, const T* x, T* y, int8_t* mask) {
-  int id = threadIdx.x + blockIdx.x * thread_num;
+                           const T* x, T* y, int8_t* mask) {
+  using Vec4 = typename Vec4Type<T>::type;
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = state[id];
   const Vec4* x4 = reinterpret_cast<const Vec4*>(x);
   Vec4* y4 = reinterpret_cast<Vec4*>(y);
@@ -96,7 +102,7 @@ FusedDropout<DeviceType::kGPU>::FusedDropout(int64_t seed, DeviceCtx* device_ctx
   block_num_ = prop.multiProcessorCount;
   thread_num_ = 256;
   CudaCheck(cudaMalloc((void**)&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
-  SetupKernel<<<block_num_, thread_num_>>>(seed, thread_num_, curand_states_);
+  SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
 }
 
 FusedDropout<DeviceType::kGPU>::~FusedDropout() { CudaCheck(cudaFree(curand_states_)); }
@@ -104,17 +110,16 @@ FusedDropout<DeviceType::kGPU>::~FusedDropout() { CudaCheck(cudaFree(curand_stat
 template<typename T>
 void FusedDropout<DeviceType::kGPU>::Dropout(const int64_t elem_cnt, const float rate,
                                              const float scale, const T* x, T* y, int8_t* mask) {
-  DropoutGpu<T, typename Vec4Type<T>::type>
-      <<<block_num_, thread_num_>>>(curand_states_, elem_cnt, rate, scale, thread_num_, x, y, mask);
+  DropoutGpu<T><<<block_num_, thread_num_>>>(curand_states_, elem_cnt, rate, scale, x, y, mask);
 }
 
 template<>
 void FusedDropout<DeviceType::kGPU>::Dropout<float16>(const int64_t elem_cnt, const float rate,
                                                       const float scale, const float16* x,
                                                       float16* y, int8_t* mask) {
-  DropoutGpu<half, half4><<<block_num_, thread_num_>>>(
-      curand_states_, elem_cnt, rate, scale, thread_num_, reinterpret_cast<const half*>(x),
-      reinterpret_cast<half*>(y), mask);
+  DropoutGpu<half><<<block_num_, thread_num_>>>(curand_states_, elem_cnt, rate, scale,
+                                                reinterpret_cast<const half*>(x),
+                                                reinterpret_cast<half*>(y), mask);
 }
 
 #define INITIATE_GPU_FUSED_DROPOUT(T, typeproto)                                                \
