@@ -318,4 +318,16 @@ COPY_COLS_REGION(int64_t)
 
 #undef COPY_COLS_REGION
 
+void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(DeviceCtx* ctx, const int64_t row_num,
+                                                     const int64_t col_num, const float16* x,
+                                                     const int64_t x_col_offset,
+                                                     const int64_t x_lda, float16* y,
+                                                     const int64_t y_col_offset,
+                                                     const int64_t y_lda) {
+  CopyColsRegionGpu<half>
+      <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          row_num, col_num, reinterpret_cast<const half*>(x), x_col_offset, x_lda,
+          reinterpret_cast<half*>(y), y_col_offset, y_lda);
+}
+
 }  // namespace oneflow

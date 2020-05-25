@@ -9,6 +9,8 @@ import oneflow
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('python_bin', 'python3', 'python binary program name or filepath.')
+flags.DEFINE_boolean("enable_auto_mixed_precision", False,
+        "automatically change float net to mixed precision net")
 
 class TestNetMixin:
   """
@@ -25,9 +27,12 @@ class TestNetMixin:
   def set_params(self):
     pass
 
+  def assert_tolerance_4_mixed_precision(self):
+    raise AssertionError
+
   def run_net(self, num_gpu_per_node, num_node = 1, node_list = ""):
     net_modudle = _Import(self.net)
-    spec = net_modudle.DLNetSpec()
+    spec = net_modudle.DLNetSpec(FLAGS.enable_auto_mixed_precision)
     spec.num_nodes = num_node
     spec.gpu_num_per_node = num_gpu_per_node
     net_modudle.main(spec)
@@ -62,7 +67,15 @@ class TestNetMixin:
     for i in range(self.num_iter):
       fmt_str = "{:>6}  {:>12.6f}  {:>12.6f}"
       print(fmt_str.format(i,loss_dict['tensorflow'][i], loss_dict['oneflow'][i]))
-    self.assertTrue(numpy.allclose(loss_dict['tensorflow'], loss_dict['oneflow']))
+    if FLAGS.enable_auto_mixed_precision:
+        tolerance = self.assert_tolerance_4_mixed_precision()
+        rtol = tolerance["rtol"]
+        atol = tolerance["atol"]
+        print('assert tolerance for mixed_precision are: rtol', rtol, ', atol', atol)
+        self.assertTrue(numpy.allclose(loss_dict['tensorflow'], loss_dict['oneflow'],
+                rtol=rtol, atol=atol))
+    else:
+        self.assertTrue(numpy.allclose(loss_dict['tensorflow'], loss_dict['oneflow']))
 
 class TestAlexNetMixin(TestNetMixin):
   """
@@ -72,6 +85,8 @@ class TestAlexNetMixin(TestNetMixin):
     self.net = 'alexnet'
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
+  def assert_tolerance_4_mixed_precision(self):
+      return {"rtol": 1e-5, "atol": 1e-2}
 
 class TestResNet50Mixin(TestNetMixin):
   """
@@ -81,6 +96,8 @@ class TestResNet50Mixin(TestNetMixin):
     self.net = 'resnet50'
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
+  def assert_tolerance_4_mixed_precision(self):
+      return {"rtol": 1e-8, "atol": 1e-5}
 
 class TestVgg16Mixin(TestNetMixin):
   """
@@ -90,6 +107,8 @@ class TestVgg16Mixin(TestNetMixin):
     self.net = 'vgg16'
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
+  def assert_tolerance_4_mixed_precision(self):
+      return {"rtol": 1e-4, "atol": 1e-1} # big tolerance due to running ci on 1080ti
 
 class TestInceptionV3Mixin(TestNetMixin):
   """
@@ -99,6 +118,8 @@ class TestInceptionV3Mixin(TestNetMixin):
     self.net = 'inceptionv3'
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
+  def assert_tolerance_4_mixed_precision(self):
+      return {"rtol": 1e-5, "atol": 1e-2}
 
 def _Import(name, globals=None, locals=None, fromlist=None):
   # Fast path: see if the module has already been imported.

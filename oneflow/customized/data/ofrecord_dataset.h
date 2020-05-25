@@ -16,17 +16,10 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
   using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  OF_DISALLOW_COPY_AND_MOVE(OFRecordDataset);
   OFRecordDataset(user_op::KernelInitContext* ctx) {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
-
-    // empty tensor
-    int32_t initial_buffer_fill = ctx->Attr<int32_t>("shuffle_buffer_size");
-    int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-    int64_t total_empty_size = initial_buffer_fill + 2 * 2 * batch_size;  // maybe 2 * batch_size
-    int32_t tensor_init_bytes = ctx->Attr<int32_t>("tensor_init_bytes");
-    empty_tensor_mgr_.reset(
-        new EmptyTensorManager<TensorBuffer>(total_empty_size, tensor_init_bytes));
 
     // in stream
     data_part_num_ = ctx->Attr<int32_t>("data_part_num");
@@ -56,7 +49,8 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
 
   LoadTargetPtrList Next() override {
     LoadTargetPtrList ret;
-    LoadTargetPtr sample_ptr = empty_tensor_mgr_->Get();
+    LoadTargetPtr sample_ptr(new TensorBuffer());
+    ;
     ReadSample(*sample_ptr);
     ret.push_back(std::move(sample_ptr));
     return ret;
@@ -100,8 +94,6 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   std::vector<std::string> data_file_paths_;
   bool save_to_local_;
   std::unique_ptr<PersistentInStream> in_stream_;
-
-  std::unique_ptr<EmptyTensorManager<TensorBuffer>> empty_tensor_mgr_;
 };
 
 }  // namespace data

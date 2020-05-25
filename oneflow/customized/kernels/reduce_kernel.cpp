@@ -66,4 +66,12 @@ REGISTER_REDUCE_KERNEL(double)
 REGISTER_REDUCE_KERNEL(int32_t)
 REGISTER_REDUCE_KERNEL(int64_t)
 
+REGISTER_USER_KERNEL("reduce_sum")
+    .SetCreateFn<ReduceKernel<BinaryFuncSum, DeviceType::kGPU, float16>>()
+    .SetIsMatchedPred(IsMatchedPred<DeviceType::kGPU, float16>)
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+      return in_shape->elem_cnt() * sizeof(float16);
+    });
+
 }  // namespace oneflow

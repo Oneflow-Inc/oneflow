@@ -18,6 +18,7 @@
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
+#include "oneflow/core/job/version.h"
 
 namespace oneflow {
 
@@ -53,6 +54,7 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  DumpVersionInfo();
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());

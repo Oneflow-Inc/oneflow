@@ -18,6 +18,20 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("gather")
 def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
+    r"""Gather slices from params axis axis according to indices.
+
+    Analogous to `tf.gather <https://www.tensorflow.org/api_docs/python/tf/gather>`_
+
+    Args:
+        params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
+        indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
+        axis: A `int`. The axis in params to gather indices from. Defaults to the first dimension. 
+            Supports negative indexes.
+        batch_dims: An optional `int`. Defaults to 0.
+        name: A name for the operation (optional).
+    Returns:
+        A blob. Has the same type as params.
+    """
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("Gather_")
@@ -115,6 +129,15 @@ def infer_shape(x, shape):
 
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
+    r"""Reshapes a blob.
+
+    Args:
+        x: A `Blob`.
+        shape: Defines the shape of the output blob.
+        name: A name for the operation (optional).
+    Returns:
+        A blob. Has the same type as `x`.
+    """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
@@ -178,10 +201,22 @@ def dynamic_reshape(x, shape, name=None):
 
 @oneflow_export("transpose")
 def transpose(a, perm=None, conjugate=False, name=None):
+    r"""Transposes `a`.
+
+    Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
+
+    Args:
+        a: A `Blob`.
+        perm: A permutation of the dimensions of `a`.
+        conjugate: False. Not supported.
+        name: A name for the operation (optional).
+    Returns:
+        A transposed blob.
+    """
     assert isinstance(perm, (tuple, list))
 
     if name is None:
-        name = id_util.UniqueStr("Tranpose_")
+        name = id_util.UniqueStr("Transpose_")
 
     if conjugate:
         raise NotImplementedError
@@ -207,25 +242,25 @@ def transpose(a, perm=None, conjugate=False, name=None):
 
 
 @oneflow_export("slice")
-def slice(input_, begin, size, name=None):
+def slice(x, begin, size, name=None):
     r"""Extracts a slice from a tensor.
 
     Args:
-        input_: A `Blob`.
+        x: A `Blob`.
         begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal
-            to input_'s number of dimensions, the first element of beign must be set to None.
+            to x's number of dimensions, the first element of beign must be set to None.
             (because oneflow internal slice op do not support slice at dim0 at present)
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal
-            to input_'s number of dimensions, the first element of beign must be set to None.
+            to x's number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
     """
-    ndims = len(input_.static_shape)
+    ndims = len(x.shape)
     assert (
         isinstance(begin, (list, tuple)) and len(begin) == ndims
-    ), "begin must be a list or tuple whose length is the same with input_'s number of dimensions."
+    ), "begin must be a list or tuple whose length is the same with x's number of dimensions."
     assert (
         isinstance(size, (list, tuple)) and len(size) == ndims
-    ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
+    ), "size must be a list or tuple whose length is the same with x's number of dimensions."
     # assert (
     #     begin[0] is None
     # ), "begin not support dim0 slice at present, the first element of begin must be set to None"
@@ -234,13 +269,13 @@ def slice(input_, begin, size, name=None):
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
     if os.getenv("ENABLE_USER_OP") == 'True':
         slice_tup_list = []
-        for b, s, d in list(zip(begin, size, input_.static_shape)):
+        for b, s, d in list(zip(begin, size, x.shape)):
             begin, end, stride = None, None, 1
             if b is not None:
                 if b < -d or b > d - 1:
                     raise ValueError(
-                        "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
-                        "and less than input_'s 'i'th dimension."
+                        "'i'th element of begin must be greater than or equal to negative x's 'i'th dimension "
+                        "and less than x's 'i'th dimension."
                     )
                 b = b + d if b < 0 else b
                 begin = b
@@ -249,7 +284,7 @@ def slice(input_, begin, size, name=None):
                     if b + s > d:
                         raise ValueError(
                             "the sum of 'i'th element of begin and 'i'th element of size must be "
-                            "less than or equal to input_'s 'i'th dimension."
+                            "less than or equal to x's 'i'th dimension."
                         )
                     end = b + s
                 elif s == -1:
@@ -259,15 +294,15 @@ def slice(input_, begin, size, name=None):
                         "elements of size must be an int that greater then 0 or equal to -1"
                     )
             slice_tup_list.append((begin, end, stride))
-        return slice_v2(input_, slice_tup_list, name=name)
+        return slice_v2(x, slice_tup_list, name=name)
     slice_conf_list = []
-    for b, s, d in list(zip(begin, size, input_.static_shape)):
+    for b, s, d in list(zip(begin, size, x.shape)):
         slice_conf = op_conf_util.DimSliceConf()
         if b is not None:
             if b < -d or b > d - 1:
                 raise ValueError(
-                    "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
-                    "and less than input_'s 'i'th dimension."
+                    "'i'th element of begin must be greater than or equal to negative x's 'i'th dimension "
+                    "and less than x's 'i'th dimension."
                 )
             b = b + d if b < 0 else b
             slice_conf.start = b
@@ -276,7 +311,7 @@ def slice(input_, begin, size, name=None):
                 if b + s > d:
                     raise ValueError(
                         "the sum of 'i'th element of begin and 'i'th element of size must be "
-                        "less than or equal to input_'s 'i'th dimension."
+                        "less than or equal to x's 'i'th dimension."
                     )
                 slice_conf.end = b + s
             elif s == -1:
@@ -290,7 +325,7 @@ def slice(input_, begin, size, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
-    setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
+    setattr(op_conf.slice_conf, "in", x.logical_blob_name)
     setattr(op_conf.slice_conf, "out", "out")
     op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
 
@@ -302,27 +337,29 @@ def slice(input_, begin, size, name=None):
 
 
 @oneflow_export("slice_v2")
-def slice_v2(input, slice_tup_list, name=None):
+def slice_v2(x, slice_tup_list, name=None):
     r"""Extracts a slice from a tensor.
+
     Args:
-        input: A `Blob`.
+        x: A `Blob`.
         slice_tup_list: A list of tuple, indicate each dimension slice (begin, end, stride). 
             Note: The function don't support slice at dim0 for now , first element of slice_tup_list must be 
             (None, None, None).
         name: A name for the operation (optional).
+
     """
     name = name or id_util.UniqueStr("SliceV2_")
     if not isinstance(name, str):
         raise ValueError('param "name" must be a string')
 
-    ndims = len(input.shape)
+    ndims = len(x.shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
         raise ValueError(
             'param "slice_tup_list" must be a list or tuple whose length should be '
-            "less than or equal to number of dimensions of input"
+            "less than or equal to number of dimensions of x"
         )
 
-    # if length of slice_tup_list is less than number of dimensions of input, fill it to length of ndims reduce 1
+    # if length of slice_tup_list is less than number of dimensions of x, fill it to length of ndims reduce 1
     if len(slice_tup_list) < ndims:
         slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list))
 
@@ -331,7 +368,7 @@ def slice_v2(input, slice_tup_list, name=None):
     stride_list = []
     has_begin_list = []
     has_end_list = []
-    for slice_tup, dim in zip(slice_tup_list, input.shape):
+    for slice_tup, dim in zip(slice_tup_list, x.shape):
         if not isinstance(slice_tup, (tuple, list)):
             raise ValueError(
                 "element of slice_tup_list must be a list or tuple with form (begin, end, stride)"
@@ -356,7 +393,7 @@ def slice_v2(input, slice_tup_list, name=None):
     op = (
         flow.user_op_builder(name)
         .Op("slice_v2")
-        .Input("x", [input])
+        .Input("x", [x])
         .Output("y")
         .Attr("begin", begin_list, "AttrTypeListInt64")
         .Attr("end", end_list, "AttrTypeListInt64")
@@ -369,6 +406,18 @@ def slice_v2(input, slice_tup_list, name=None):
 
 @oneflow_export("concat")
 def concat(values, axis, name=None):
+    r"""Concatenate two or more `Blob` s at specified axis. 
+
+    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
+
+    Args:
+        values: a `list` of `Blob`
+        axis: a `int`
+        name: name of this operator. `None` by default
+    
+    Returns:
+        A `Blob`
+    """
     if os.getenv("ENABLE_USER_OP") == 'True':
         assert isinstance(values, (list, tuple))
         assert len(values) >= 2
@@ -640,6 +689,15 @@ def shuffle(value, seed=None, name=None):
 
 @oneflow_export("identity")
 def identity(x, name=None):
+    r"""Return a `Blob` has identical content and data type to input `Blob`. Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
+
+    Args:
+        input: a `Blob`
+        name: name of this operator. `None` by default
+    
+    Returns:
+        A `Blob`
+    """
     if name is None:
         name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
