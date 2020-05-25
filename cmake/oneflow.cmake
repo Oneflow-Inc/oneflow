@@ -150,6 +150,26 @@ add_custom_target(of_format
             ${CMAKE_CURRENT_SOURCE_DIR}/oneflow
             --fix)
 
+# generate version
+if(BUILD_GIT_VERSION)
+  set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
+  set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
+  set(OF_GIT_VERSION_DUMMY_FILE ${OF_GIT_VERSION_DIR}/_version.cpp)
+  add_custom_target(of_git_version_create_dir
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${OF_GIT_VERSION_DIR})
+  add_custom_command(
+          OUTPUT ${OF_GIT_VERSION_DUMMY_FILE}
+          COMMAND ${CMAKE_COMMAND} -DOF_GIT_VERSION_FILE=${OF_GIT_VERSION_FILE}
+            -DOF_GIT_VERSION_ROOT=${PROJECT_SOURCE_DIR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.cmake
+          DEPENDS of_git_version_create_dir)
+  add_custom_target(of_git_version
+          DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
+  set_source_files_properties(${OF_GIT_VERSION_FILE} PROPERTIES GENERATED TRUE)
+  list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
+  add_definitions(-DWITH_GIT_VERSION)
+endif()
+
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
@@ -176,6 +196,9 @@ include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+if (BUILD_GIT_VERSION)
+  add_dependencies(of_ccobj of_git_version)
+endif()
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
@@ -236,14 +259,13 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND python3 "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
-foreach(oneflow_python_file ${oneflow_all_python_file})
-  file(RELATIVE_PATH oneflow_python_rel_file_path "${PROJECT_SOURCE_DIR}" ${oneflow_python_file})
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${oneflow_python_file}"
-    "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
-endforeach()
+copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
 add_dependencies(of_pyscript_copy of_protoobj)
+add_custom_target(generate_api ALL
+  COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && python3 ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
+add_dependencies(generate_api of_pyscript_copy)
+add_dependencies(generate_api oneflow_internal)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
@@ -290,22 +312,10 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
   #list(APPEND oneflow_all_include_file ${hpp_files})
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  foreach(of_hdr_file ${oneflow_all_include_file})
-    file(RELATIVE_PATH of_include_rel_file_path ${of_include_src_dir} ${of_hdr_file})
-    add_custom_command(TARGET of_include_copy POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy
-      "${of_hdr_file}"
-      "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-  endforeach()
+  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
-foreach(of_proto_hdr_file ${PROTO_HDRS})
-  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_BINARY_DIR} ${of_proto_hdr_file})
-  add_custom_command(TARGET of_include_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${of_proto_hdr_file}"
-    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-endforeach()
+copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
 list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
@@ -319,10 +329,4 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_u
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
-foreach(of_core_hdr_file ${OF_CORE_HDRS})
-  file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
-  add_custom_command(TARGET of_include_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${of_core_hdr_file}"
-    "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-endforeach()
+copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)

@@ -9,7 +9,7 @@ def pad(x, paddings, constant_value=0, name=None):
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.static_shape), ValueError(
+        assert len(paddings) == len(x.shape), ValueError(
             "paddings must be the same size of input dims"
         )
         for p in paddings:
@@ -40,7 +40,7 @@ def pad_grad(x, paddings, constant_value=0, name=None):
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.static_shape), ValueError(
+        assert len(paddings) == len(x.shape), ValueError(
             "paddings must be the same size of input dims"
         )
         for p in paddings:
