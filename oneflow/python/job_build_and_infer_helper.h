@@ -101,7 +101,7 @@ Maybe<long long> JobBuildAndInferCtx_GetDataType(const std::string& job_name,
                                                  const std::string& lbn) {
   auto* mgr = JUST(GlobalMaybe<JobBuildAndInferCtxMgr>());
   auto* ctx = JUST(mgr->FindJobBuildAndInferCtx(job_name));
-  return *JUST(ctx->GetDataType(lbn));
+  return JUST(ctx->GetDataType(lbn));
 }
 
 Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn) {
@@ -182,7 +182,7 @@ Maybe<long long> JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& 
                                                              const std::string& lbn) {
   auto* mgr = JUST(GlobalMaybe<JobBuildAndInferCtxMgr>());
   auto* ctx = JUST(mgr->FindJobBuildAndInferCtx(job_name));
-  return *JUST(ctx->MirroredBlobGetDataType(lbn));
+  return JUST(ctx->MirroredBlobGetDataType(lbn));
 }
 
 Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsDynamic(const std::string& job_name,

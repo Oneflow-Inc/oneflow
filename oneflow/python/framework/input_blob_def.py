@@ -155,7 +155,7 @@ class MirroredTensorDef(ArgBlobDef):
     def is_tensor_list(self): return False
 
     def AddAndInferOp(self, op_conf):
-        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        _AddAndInferMirroredOp(self.unique_name, op_conf, self.sub_consistent_blob_list_)
         
     def _CheckNdarray(self, ndarray_list):
         assert isinstance(ndarray_list, (list, tuple))
@@ -189,7 +189,7 @@ class MirroredTensorListDef(ArgBlobDef):
     def is_tensor_list(self): return True
 
     def AddAndInferOp(self, op_conf):
-        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        _AddAndInferMirroredOp(self.unique_name, op_conf, self.sub_consistent_blob_list_)
         
     def _CheckNdarray(self, ndarray_lists):
         assert isinstance(ndarray_lists, (list, tuple))

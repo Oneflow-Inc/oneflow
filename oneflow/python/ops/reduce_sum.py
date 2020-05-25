@@ -50,7 +50,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
-        setattr(op_conf.reduce_sum_conf, "in", input_tensor.logical_blob_name)
+        setattr(op_conf.reduce_sum_conf, "in", input_tensor.unique_name)
         setattr(op_conf.reduce_sum_conf, "out", "out")
         if axis is not None:
             if isinstance(axis, list) and len(axis) == 0:
