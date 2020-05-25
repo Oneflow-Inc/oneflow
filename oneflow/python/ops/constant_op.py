@@ -73,7 +73,7 @@ def constant_like(like, value, dtype=None, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ConstantLike_"),
     )
-    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
+    setattr(op_conf.constant_like_conf, "like", like.unique_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):

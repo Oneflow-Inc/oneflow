@@ -22,7 +22,7 @@ def InputOpByArgBlobDef(blob_def):
 def RetOpByRemoteBlob(remote_blob, allow_cpu_return_op = True):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Return_')
-    setattr(op_conf.return_conf, 'in', remote_blob.logical_blob_name)
+    setattr(op_conf.return_conf, 'in', remote_blob.unique_name)
     op_conf.return_conf.out = "out"
     parallel_conf = placement_proto_pb.ParallelConf()
     parallel_conf.CopyFrom(remote_blob.parallel_conf)
