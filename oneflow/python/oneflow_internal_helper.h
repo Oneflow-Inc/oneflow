@@ -121,6 +121,14 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
   return ret;
 }
 
+Maybe<std::string> GetSerializedJobSet() {
+  const auto* job_ctx_mgr = Global<JobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(job_ctx_mgr->job_set(), &ret);
+  return ret;
+}
+
 Maybe<std::string> GetFunctionConfigDef() {
   std::string ret;
   google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
