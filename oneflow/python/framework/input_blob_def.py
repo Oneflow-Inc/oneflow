@@ -98,7 +98,8 @@ class ArgBlobDef(blob_desc.BlobDesc):
 
 @oneflow_export('FixedTensorDef')
 class FixedTensorDef(ArgBlobDef):
-    """create a placeholder for numpy input of a OneFlow function. 
+    """`FixedTensorDef` is a placeholder for numpy input of a OneFlow function. 
+    A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
     For instance::
         
         @oneflow.function
@@ -109,7 +110,7 @@ class FixedTensorDef(ArgBlobDef):
         ):
             # your network
         
-        train(np.random.randn(2, 255, 255, 3))
+        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
         
     """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0,
@@ -139,6 +140,22 @@ class FixedTensorDef(ArgBlobDef):
         
 @oneflow_export('MirroredTensorDef')
 class MirroredTensorDef(ArgBlobDef):
+    """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
+    A `numpy.ndarray` take a `MirroredTensorDef`'s place could have any shape as long as it has the same rank and a smaller/equal size.
+    For instance::
+        
+        @oneflow.function
+        def train(
+            image_blob=oneflow.MirroredTensorDef(
+                shape=(2, 255, 255, 3), dtype=flow.float32
+            )
+        ):
+            # your network
+        
+        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
+        train(np.random.randn(2, 251, 251, 3).astype(np.float32))
+
+    """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
         assert type(shape) is tuple
         assert type(batch_axis) is int
