@@ -10,7 +10,7 @@ import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_dict as symbol_dict
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_dict as object_dict
-import oneflow.python.eager.physical_blob_watcher as physical_blob_watcher
+import oneflow.python.eager.physical_blob_callback as physical_blob_callback
 import oneflow
 
 def PhysicalRun(build):
@@ -244,7 +244,7 @@ class InstructionsBuilder(object):
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _WatchBlob(self, instruction_name, blob_object, fetcher):
-        unique_callback_id = physical_blob_watcher.GetIdForRegisteredCallback(fetcher)
+        unique_callback_id = physical_blob_callback.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s"%(device_tag, instruction_name)
