@@ -13,13 +13,11 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   std::shared_ptr<const COCOMeta> meta(
       new COCOMeta(ctx->Attr<std::string>("annotation_file"), ctx->Attr<std::string>("image_dir"),
                    ctx->Attr<bool>("remove_images_without_annotations")));
-  COCODataset* coco_dataset = new COCODataset(ctx, meta);
-  std::unique_ptr<Sampler> sampler(new DistributedTrainingSampler(
-      coco_dataset->Size(), ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
+  std::shared_ptr<Sampler> sampler(new DistributedTrainingSampler(
+      meta->Size(), ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
       ctx->Attr<bool>("stride_partition"), ctx->Attr<bool>("shuffle_after_epoch"),
       ctx->Attr<int64_t>("random_seed")));
-  coco_dataset->ResetSampler(std::move(sampler));
-  loader_.reset(coco_dataset);
+  loader_.reset(new COCODataset(ctx, meta, sampler));
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->Attr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {

@@ -34,7 +34,7 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
   using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  RandomAccessDataset() = default;
+  RandomAccessDataset(const std::shared_ptr<Sampler>& sampler) : sampler_(sampler) {}
   virtual ~RandomAccessDataset() = default;
 
   virtual LoadTargetShdPtr At(int64_t index) const = 0;
@@ -47,10 +47,8 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
     return ret;
   }
 
-  void ResetSampler(std::unique_ptr<Sampler>&& sampler) { sampler_ = std::move(sampler); }
-
  private:
-  std::unique_ptr<Sampler> sampler_;
+  std::shared_ptr<Sampler> sampler_;
 };
 
 }  // namespace data
