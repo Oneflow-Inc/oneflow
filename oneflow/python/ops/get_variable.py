@@ -35,8 +35,6 @@ def get_variable(
         trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
         model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
         random_seed: Random seed for random initializers. `None` by defauilt
-    Returns:
-        A `Blob`
 
     """
     assert isinstance(name, str)
