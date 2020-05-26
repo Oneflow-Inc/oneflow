@@ -12,7 +12,7 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
-        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype, name=name+"_constant_scalar"), name+"_not_equal")
     return _get_remote_blob(x, name, "reduce_any", keepdims, axis)
 
 @oneflow_export("math.reduce_min")
@@ -48,46 +48,56 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
-        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype, name=name+"_constant_scalar"), name+"_not_equal")
     return _get_remote_blob(x, name, "reduce_all", keepdims, axis)
 
 @oneflow_export("math.reduce_euclidean_norm")
-def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False):
+def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
+    name = _check_name(name, "ReduceEuclideanNorm_")
     return flow.math.sqrt(
         flow.math.reduce_sum(
-            flow.math.square(input_tensor),
+            flow.math.square(input_tensor, name+"_square"),
             axis,
-            keepdims
-        )
+            keepdims,
+            name + "_reduce_sum"
+        ),
+        name + "_sqrt"
     )
 
 @oneflow_export("math.reduce_logsumexp")
-def reduce_logsumexp(input_tensor, axis=None, keepdims=False):
+def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
+    name = _check_name(name, "ReduceLogSumExp_")
     return flow.math.log(
         flow.math.reduce_sum(
-            flow.math.exp(input_tensor),
+            flow.math.exp(input_tensor, name+"_exp"),
             axis,
-            keepdims
-        )
+            keepdims,
+            name + "_reduce_sum"
+        ),
+        name + "_log"
     )
 
 @oneflow_export("math.reduce_std")
-def reduce_std(input_tensor, axis=None, keepdims=False):
+def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
+    name = _check_name(name, "ReduceStd_")
     if isinstance(axis, list) and len(axis) == 0:
-        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype)
+        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype, name=name+"_zeros_like")
     return flow.math.sqrt(
-        flow.math.reduce_variance(input_tensor, axis, keepdims)
+        flow.math.reduce_variance(input_tensor, axis, keepdims, name+"_reduce_variance"),
+        name + "_sqrt"
     )
 
 @oneflow_export("math.reduce_variance")
-def reduce_variance(input_tensor, axis=None, keepdims=False):
+def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
+    name = _check_name(name, "ReduceVariance_")
     if isinstance(axis, list) and len(axis) == 0:
-        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype)
+        return flow.zeros_like(input_tensor, dtype=input_tensor.dtype, name=name+"_zeros_like")
     return flow.math.subtract(
         flow.math.reduce_mean(flow.math.square(
-            input_tensor), axis, keepdims),
+            input_tensor, name+"_square_0"), axis, keepdims, name+"_reduce_mean_0"),
         flow.math.square(flow.math.reduce_mean(
-            input_tensor, axis, keepdims))
+            input_tensor, axis, keepdims, name+"_reduce_mean_1"), name+"_square_1"),
+        name+"_subtract"
     )
 
 
