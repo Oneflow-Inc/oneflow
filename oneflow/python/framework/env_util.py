@@ -29,12 +29,12 @@ def api_env_init():
 
 @oneflow_export('env.machine')
 def machine(*val):
-    r"""Set machines' hostnames. 
+    r"""Set machines' hostnames.  For instance::
+
+        oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
     Args:
-        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
-
-            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
+        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
     """
     assert env_proto_mutable == True
     del default_env_proto.machine[:]
