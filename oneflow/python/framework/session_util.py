@@ -182,6 +182,9 @@ def clear_default_session():
 
 @oneflow_export("sync_default_session")
 def sync_default_session():
+    r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
+
+    """
     session_ctx.GetDefaultSession().Sync()
 
 def _TryCompleteConfigProto(config_proto):
