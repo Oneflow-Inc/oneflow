@@ -13,6 +13,9 @@ import oneflow.python.lib.core.pb_util as pb_util
 
 @oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
+    """OneFlow function's configurations.
+        
+    """
     def __init__(self):
         self.function_desc = FunctionDesc()
 
