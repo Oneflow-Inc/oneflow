@@ -13,10 +13,10 @@ class ForeignWatcher {
   virtual void Call(const std::string& handler_uuid, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 };
 
-class ForeignWorkerWatcher {
+class ForeignWorkerCallback {
  public:
-  ForeignWorkerWatcher() = default;
-  virtual ~ForeignWorkerWatcher() = default;
+  ForeignWorkerCallback() = default;
+  virtual ~ForeignWorkerCallback() = default;
 
   virtual void Call(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 };
