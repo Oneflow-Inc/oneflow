@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_SHARED_OR_PLAIN_H_
 
 #include <cstring>
-#include "oneflow/core/common/util.h"
+#include <glog/logging.h>
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
