@@ -11,21 +11,35 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 
-@oneflow_export('config.load_library', enable_if = hob.in_normal_mode & ~hob.session_initialized)
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def load_libray(val):
     assert type(val) is str
     sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
 
-@oneflow_export('config.machine_num', enable_if = hob.in_normal_mode & ~hob.session_initialized)
+@oneflow_export('config.load_library')
+def api_load_libray(val):
+    return enable_if.unique(load_libray)(val)
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def machine_num(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.machine_num = val
 
+@oneflow_export('config.machine_num')
+def api_machine_num(val):
+    return enable_if.unique(machine_num)(val)
+
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
+    r"""Set number of GPUs on each machine to run oneflow on.
+
+    Args:
+        val: number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use on each machine.
+    """
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
@@ -35,6 +49,11 @@ def gpu_device_num(val):
 
 @oneflow_export('config.cpu_device_num')
 def cpu_device_num(val):
+    r"""Set number of CPUs on each machine to run oneflow on. Usually you don't need to set this.
+
+    Args:
+        val: number of CPUs. It is identical on every machine.
+    """
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)
@@ -61,7 +80,7 @@ def max_mdsave_worker_num(val):
     sess.config_proto.resource.max_mdsave_worker_num = val
 
 @oneflow_export('config.compute_thread_pool_size')
-def max_mdsave_worker_num(val):
+def compute_thread_pool_size(val):
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
         print("flow.config.* are disabled when session running", file=sys.stderr)

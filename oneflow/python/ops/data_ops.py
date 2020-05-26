@@ -255,7 +255,7 @@ def decode_random(
         )
 
     if tick:
-        op_conf.decode_random_conf.tick = tick.logical_blob_name
+        op_conf.decode_random_conf.tick = tick.unique_name
     op_conf.decode_random_conf.out = "out"
 
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -369,12 +369,18 @@ class ImageNormalizeByChannel(object):
 @oneflow_export("data.ImageRandomFlip")
 class ImageRandomFlip(object):
     r"""Random flip image.
-    params:
-        @flip_code:
-            0 means flipping vertically as also as flipping around the horizontal axis
+
+    Random flip image.
+
+    Args:
+        flip_code: 0 means flipping vertically as also as flipping around the horizontal axis
             >= 1 means flipping horizontally as also as flipping around the vertical axis
             <= -1 means flipping around both axes
-        @probability: probability of random flip image
+        probability: probability of random flip image
+
+    Returns:
+        True if successful, False otherwise.
+
     """
     def __init__(self, flip_code=1, probability=0.5):
         self.flip_code = flip_code
@@ -514,7 +520,7 @@ def tensor_list_to_tensor_buffer(input, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.unique_name)
     setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
 
@@ -531,7 +537,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.unique_name)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)

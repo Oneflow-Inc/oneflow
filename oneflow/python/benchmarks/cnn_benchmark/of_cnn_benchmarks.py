@@ -114,6 +114,13 @@ parser.add_argument(
     required=False,
     help="log info save directory",
 )
+parser.add_argument(
+    "--enable_auto_mixed_precision",
+    type=bool,
+    default=False,
+    required=False,
+    help="automatically change the float net into mixed precision net",
+)
 
 args = parser.parse_args()
 
@@ -146,6 +153,7 @@ func_config.train.model_update_conf(optimizer_dict[args.optimizer])
 func_config.disable_all_reduce_sequence(True)
 func_config.all_reduce_group_min_mbyte(8)
 func_config.all_reduce_group_num(128)
+func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
 if args.weight_l2:
     func_config.train.weight_l2(args.weight_l2)

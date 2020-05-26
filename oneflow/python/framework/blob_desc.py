@@ -30,10 +30,7 @@ class BlobDesc(object):
     def blob_name(self): return self.lbi_.blob_name
 
     @property
-    def shape(self): return self.static_shape
-
-    @property
-    def static_shape(self):
+    def shape(self):
         raise NotImplementedError
 
     @property
@@ -88,7 +85,7 @@ class BlobDesc(object):
         return self.distribute_
 
     @property
-    def logical_blob_name(self):
+    def unique_name(self):
         return self.lbn_ + self._Distribute2Str() + self._DisableBoxing2Str()
 
     def Clone(self):
