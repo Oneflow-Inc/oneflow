@@ -18,7 +18,7 @@
 %shared_ptr(oneflow::ForeignJobInstance);
 %feature("director") oneflow::ForeignJobInstance;
 %feature("director") oneflow::ForeignWatcher;
-%feature("director") oneflow::ForeignWorkerWatcher;
+%feature("director") oneflow::ForeignWorkerCallback;
 %feature("director:except") {
   if ($error != NULL) { LOG(FATAL) << "Swig::DirectorMethodException"; }
 }

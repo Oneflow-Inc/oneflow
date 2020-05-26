@@ -20,8 +20,8 @@ def RegisterWatcherOnlyOnce(watcher):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def RegisterWorkerWatcherOnlyOnce(watcher):
-    error_str = oneflow_internal.RegisterWorkerWatcherOnlyOnce(watcher)
+def RegisterWorkerCallbackOnlyOnce(callback):
+    error_str = oneflow_internal.RegisterWorkerCallbackOnlyOnce(callback)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 

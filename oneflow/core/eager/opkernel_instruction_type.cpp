@@ -358,7 +358,7 @@ void WatchBlob(vm::Instruction* instruction) {
   auto* blob_object = instruction->mut_operand_type(args->blob())->Mut<BlobObject>();
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  Global<ForeignWorkerWatcher>::Get()->Call(args->unique_callback_id(), of_blob_ptr);
+  Global<ForeignWorkerCallback>::Get()->Call(args->unique_callback_id(), of_blob_ptr);
 }
 
 void WatchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {

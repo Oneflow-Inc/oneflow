@@ -3,8 +3,10 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 
-void RegisterWorkerWatcherOnlyOnce(oneflow::ForeignWorkerWatcher* watcher, std::string* error_str) {
-  return oneflow::RegisterWorkerWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
+void RegisterWorkerCallbackOnlyOnce(oneflow::ForeignWorkerCallback* callback,
+                                    std::string* error_str) {
+  return oneflow::RegisterWorkerCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
+      error_str);
 }
 
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {

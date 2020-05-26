@@ -20,9 +20,9 @@ def DeleteRegisteredCallback(cb):
     assert id(cb) in unique_id2handler
     del unique_id2handler[id(cb)]
 
-class _WorkerWatcher(oneflow_internal.ForeignWorkerWatcher):
+class _WorkerCallback(oneflow_internal.ForeignWorkerCallback):
     def __init__(self):
-        oneflow_internal.ForeignWorkerWatcher.__init__(self)
+        oneflow_internal.ForeignWorkerCallback.__init__(self)
 
     def Call(self, unique_id, of_blob_ptr):
         try:
@@ -40,5 +40,5 @@ def _WatcherHandler(unique_id, of_blob_ptr):
 
 unique_id2handler = {}
 # static lifetime 
-_worker_watcher = _WorkerWatcher()
-c_api_util.RegisterWorkerWatcherOnlyOnce(_worker_watcher)
+_worker_callback = _WorkerCallback()
+c_api_util.RegisterWorkerCallbackOnlyOnce(_worker_callback)
