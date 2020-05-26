@@ -420,7 +420,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
   auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
   OperatorConf sub_op_conf(op_conf);
-  FOR_RANGE(int32_t, i, 0, parallel_num) {
+  int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
+  FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
     ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
@@ -432,8 +433,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   for (const auto& obn : op->output_bns()) {
     const auto& lbi = op->BnInOp2Lbi(obn);
     auto* sub_lbis = &mirrored_lbi2sub_lbis_[lbi];
-    sub_lbis->resize(parallel_num, op->BnInOp2Lbi(obn));
-    FOR_RANGE(int32_t, i, 0, parallel_num) { sub_lbis->at(i).set_op_name(GetSubOpName(i)); }
+    sub_lbis->resize(sub_op_list_size, op->BnInOp2Lbi(obn));
+    FOR_RANGE(int32_t, i, 0, sub_op_list_size) { sub_lbis->at(i).set_op_name(GetSubOpName(i)); }
     CHECK(mirrored_lbi2parallel_desc_.emplace(lbi, parallel_desc).second);
     auto* sbp_parallel = &mirrored_lbi2sbp_parallel_[lbi];
     if (is_broadcast) {

@@ -91,7 +91,7 @@ Maybe<void> DestroyGlobalSession() {
 Maybe<void> StartGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
