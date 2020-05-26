@@ -1,16 +1,23 @@
-#ifndef ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_SAMPLER_H_
-#define ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_SAMPLER_H_
+#ifndef ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_DATASET_H_
+#define ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_DATASET_H_
 
 #include "oneflow/customized/data/dataset.h"
 
 namespace oneflow {
 namespace data {
 
-class DistributedTrainingSampler final : public Sampler {
+template<typename LoadTarget>
+class DistributedTrainingDataset final : public Dataset<LoadTarget> {
  public:
-  DistributedTrainingSampler(int64_t epoch_size, int64_t parallel_num, int64_t parallel_id,
-                             bool stride_partition, bool shuffle, int64_t random_seed)
-      : shuffle_(shuffle),
+  using BaseDataset = RandomAccessDataset<LoadTarget>;
+  using BaseDatasetUnqPtr = std::unique_ptr<BaseDataset>;
+  using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
+  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
+
+  DistributedTrainingDataset(int64_t parallel_num, int64_t parallel_id, bool stride_partition,
+                             bool shuffle, int64_t random_seed, BaseDatasetUnqPtr&& dataset)
+      : base_dataset_(std::move(dataset)),
+        shuffle_(shuffle),
         stride_partition_(stride_partition),
         rnd_seed_(random_seed),
         num_shards_(parallel_num),
@@ -18,19 +25,19 @@ class DistributedTrainingSampler final : public Sampler {
         pos_in_shard_(0),
         epoch_cnt_(0) {
     if (rnd_seed_ == -1) { rnd_seed_ = NewRandomSeed(); }
-    shard_size_ = std::ceil(static_cast<float>(epoch_size) / num_shards_);
+    shard_size_ = std::ceil(static_cast<float>(base_dataset_->Size()) / num_shards_);
     if (stride_partition) {
       pos_ = parallel_id;
     } else {
       pos_ = parallel_id * shard_size_;
     }
-    index_seq_.resize(epoch_size);
+    index_seq_.resize(base_dataset_->Size());
     std::iota(index_seq_.begin(), index_seq_.end(), 0);
     GenNewIndexSequence();
   }
-  virtual ~DistributedTrainingSampler() = default;
+  virtual ~DistributedTrainingDataset() = default;
 
-  int64_t Next() override {
+  virtual LoadTargetShdPtrVec Next() override {
     // There are 2 partition strategies
     // assume epoch size is 10, index seq don't shuffle and there are 4 parts
     // stride partition strategy (when stride_partition is true):
@@ -41,7 +48,8 @@ class DistributedTrainingSampler final : public Sampler {
     //       |  part1   |  part2   |  part3   |  part4   |
     // iter0 | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
     // iter1 | 2, 3, 4, | 5, 6, 7, | 8, 9, 0, | 1, 2, 3, |
-    int64_t cur_pos = pos_;
+    LoadTargetShdPtrVec ret;
+    ret.emplace_back(base_dataset_->At(index_seq_.at(pos_)));
     if (stride_partition_) {
       pos_ += num_shards_;
     } else {
@@ -53,7 +61,7 @@ class DistributedTrainingSampler final : public Sampler {
       }
     }
     CheckRanOutOfSize();
-    return index_seq_.at(cur_pos);
+    return ret;
   }
 
  private:
@@ -72,6 +80,7 @@ class DistributedTrainingSampler final : public Sampler {
     epoch_cnt_ += 1;
   }
 
+  BaseDatasetUnqPtr base_dataset_;
   bool shuffle_;
   bool stride_partition_;
   int64_t rnd_seed_;
@@ -86,4 +95,4 @@ class DistributedTrainingSampler final : public Sampler {
 }  // namespace data
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_SAMPLER_H_
+#endif  // ONEFLOW_CUSTOMIZED_DATA_DISTRIBUTED_TRAINING_DATASET_H_

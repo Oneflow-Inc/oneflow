@@ -1,6 +1,6 @@
 #include "oneflow/customized/data/coco_data_reader.h"
 #include "oneflow/customized/data/coco_dataset.h"
-#include "oneflow/customized/data/distributed_training_sampler.h"
+#include "oneflow/customized/data/distributed_training_dataset.h"
 #include "oneflow/customized/data/group_batch_dataset.h"
 #include "oneflow/customized/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -13,11 +13,13 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   std::shared_ptr<const COCOMeta> meta(
       new COCOMeta(ctx->Attr<std::string>("annotation_file"), ctx->Attr<std::string>("image_dir"),
                    ctx->Attr<bool>("remove_images_without_annotations")));
-  std::shared_ptr<Sampler> sampler(new DistributedTrainingSampler(
-      meta->Size(), ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
+
+  std::unique_ptr<RandomAccessDataset<COCOImage>> coco_dataset_ptr(new COCODataset(ctx, meta));
+  loader_.reset(new DistributedTrainingDataset<COCOImage>(
+      ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
       ctx->Attr<bool>("stride_partition"), ctx->Attr<bool>("shuffle_after_epoch"),
-      ctx->Attr<int64_t>("random_seed")));
-  loader_.reset(new COCODataset(ctx, meta, sampler));
+      ctx->Attr<int64_t>("random_seed"), std::move(coco_dataset_ptr)));
+
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->Attr<bool>("group_by_ratio")) {
     auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {
@@ -27,6 +29,7 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   } else {
     loader_.reset(new BatchDataset<COCOImage>(batch_size, std::move(loader_)));
   }
+
   parser_.reset(new COCOParser(meta));
   StartLoadThread();
 }

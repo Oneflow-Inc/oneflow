@@ -21,9 +21,8 @@ class COCODataset final : public RandomAccessDataset<COCOImage> {
  public:
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
 
-  COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta,
-              const std::shared_ptr<Sampler>& sampler)
-      : RandomAccessDataset(sampler), meta_(meta) {}
+  COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
+      : meta_(meta) {}
   ~COCODataset() = default;
 
   LoadTargetShdPtr At(int64_t index) const override;
