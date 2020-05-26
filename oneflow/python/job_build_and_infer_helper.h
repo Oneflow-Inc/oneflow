@@ -12,28 +12,34 @@ namespace oneflow {
 namespace {
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  auto* mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(mgr);
-  return mgr;
+  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+}
+
+Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(job_name);
 }
 
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  const auto job_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
-  return JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name);
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
 }
 
 }  // namespace
 
 Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
-  return JUST(GlobalJobBuildAndInferCtxMgr())->OpenJobBuildAndInferCtx(job_name);
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->OpenJobBuildAndInferCtx(job_name);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
-  return JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName();
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->GetCurrentJobName();
 }
 
 Maybe<void> JobBuildAndInferCtx_Close() {
-  JUST(GlobalJobBuildAndInferCtxMgr())->CloseCurrentJobBuildAndInferCtx();
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  mgr->CloseCurrentJobBuildAndInferCtx();
   return Maybe<void>::Ok();
 }
 
@@ -89,15 +95,16 @@ Maybe<void> CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& op
 
 Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
     const std::string& lbi_uuid_pair_str) {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   LbiAndDiffWatcherUuidPair lbi_uuid_pair;
   CHECK_OR_RETURN(TxtString2PbMessage(lbi_uuid_pair_str, &lbi_uuid_pair))
       << "LbiAndDiffWatcherUuidPair parse failed";
-  return JUST(GlobalJobBuildAndInferCtxMgr())->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
+  return mgr->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
                                                                         const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   const auto& shape = JUST(ctx->GetStaticShape(lbn));
   Int64List id_list;
   *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
@@ -106,40 +113,40 @@ Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const st
 
 Maybe<long long> JobBuildAndInferCtx_GetDataType(const std::string& job_name,
                                                  const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return JUST(ctx->GetDataType(lbn));
 }
 
 Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->IsDynamic(lbn);
 }
 
 Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->DisableBoxing(lbn);
 }
 
 Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->IsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
                                                     const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(*JUST(ctx->GetBatchAxis(lbn)));
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
                                                                     const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(*JUST(ctx->GetSplitAxisFromProducerView(lbn)));
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
     const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(JUST(ctx->GetParallelDescFromProducerView(lbn))->parallel_conf());
 }
 
@@ -149,25 +156,25 @@ Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
 
 Maybe<bool> JobBuildAndInferCtx_IsMirroredBlob(const std::string& job_name,
                                                const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->IsMirroredBlob(lbn);
 }
 
 Maybe<int> JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(const std::string& job_name,
                                                         const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->MirroredBlobGetNumSubLbi(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSubLbi(const std::string& job_name,
                                                              const std::string& lbn, int index) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSubLbi(lbn, index)));
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(
     const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   const auto& shape = JUST(ctx->MirroredBlobGetStaticShape(lbn));
   Int64List id_list;
   *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
@@ -176,37 +183,37 @@ Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticSh
 
 Maybe<long long> JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& job_name,
                                                              const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return JUST(ctx->MirroredBlobGetDataType(lbn));
 }
 
 Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsDynamic(const std::string& job_name,
                                                       const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->MirroredBlobIsDynamic(lbn);
 }
 
 Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_name,
                                                          const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->MirroredBlobIsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
                                                                 const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetBatchAxis(lbn)));
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
     const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(lbn)));
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
     const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(JUST(GlobalJobBuildAndInferCtxMgr())->FindJobBuildAndInferCtx(job_name));
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(
       JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
 }
