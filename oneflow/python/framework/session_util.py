@@ -174,6 +174,9 @@ class Session(object):
 
 @oneflow_export("clear_default_session")
 def clear_default_session():
+    r"""Clear the default session. All compiled OneFlow functions will be deleted.
+
+    """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
 
