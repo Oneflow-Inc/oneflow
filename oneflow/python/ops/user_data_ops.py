@@ -58,7 +58,7 @@ def OFRecordImageDecoderRandomCrop(
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
-def OFRecordImageDecoderRandomCrop(
+def OFRecordImageDecoder(
         input_blob,
         blob_name,
         color_space="BGR",
