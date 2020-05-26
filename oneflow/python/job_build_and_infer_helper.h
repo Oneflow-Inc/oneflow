@@ -13,8 +13,7 @@ namespace {
 
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
   auto* mgr = JUST(GlobalMaybe<JobBuildAndInferCtxMgr>());
-  const auto job_name = *JUST(mgr->GetCurrentJobName());
-  return mgr->FindJobBuildAndInferCtx(job_name);
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
 }
 
 }  // namespace
