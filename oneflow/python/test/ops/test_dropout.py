@@ -105,6 +105,7 @@ def test_dropout(test_case):
         of_run_and_dump_to_numpy(*arg)
         if arg[4] is None: continue
         for name in ['x', 'x_diff', 'loss', 'loss_diff']:
+            if arg[0] == "gpu": continue #new dropout cannot get same result with no user op
             check_npy(name)
         model_load_dir = os.path.join(get_temp_dir(), 'init_snapshot')
         if os.path.isdir(model_load_dir):
