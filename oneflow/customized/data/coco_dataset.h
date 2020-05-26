@@ -20,12 +20,13 @@ class COCOMeta;
 class COCODataset final : public RandomAccessDataset<COCOImage> {
  public:
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
+  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
   COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
       : meta_(meta) {}
   ~COCODataset() = default;
 
-  LoadTargetShdPtr At(int64_t index) const override;
+  LoadTargetShdPtrVec At(int64_t index) const override;
   size_t Size() const override;
 
  private:

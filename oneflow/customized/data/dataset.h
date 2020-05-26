@@ -29,12 +29,11 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
   RandomAccessDataset() = default;
   virtual ~RandomAccessDataset() = default;
 
-  virtual LoadTargetShdPtr At(int64_t index) const = 0;
+  virtual LoadTargetShdPtrVec At(int64_t index) const = 0;
   virtual size_t Size() const = 0;
 
-  virtual LoadTargetShdPtrVec Next() final {
-    LoadTargetShdPtrVec ret;
-    ret.emplace_back(this->At(cur_idx_));
+  LoadTargetShdPtrVec Next() final {
+    LoadTargetShdPtrVec ret = this->At(cur_idx_);
     cur_idx_ += 1;
     if (cur_idx_ >= this->Size()) { cur_idx_ %= this->Size(); }
     return ret;

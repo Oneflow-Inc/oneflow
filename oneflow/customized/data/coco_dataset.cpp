@@ -6,7 +6,8 @@
 namespace oneflow {
 namespace data {
 
-COCODataset::LoadTargetShdPtr COCODataset::At(int64_t index) const {
+COCODataset::LoadTargetShdPtrVec COCODataset::At(int64_t index) const {
+  LoadTargetShdPtrVec ret;
   LoadTargetShdPtr sample(new COCOImage());
   sample->index = index;
   sample->id = meta_->GetImageId(index);
@@ -17,7 +18,8 @@ COCODataset::LoadTargetShdPtr COCODataset::At(int64_t index) const {
   int64_t file_size = DataFS()->GetFileSize(image_file_path);
   sample->data.Resize(Shape({file_size}), DataType::kChar);
   CHECK_EQ(in_stream.ReadFully(sample->data.mut_data<char>(), sample->data.nbytes()), 0);
-  return sample;
+  ret.emplace_back(std::move(sample));
+  return ret;
 }
 
 size_t COCODataset::Size() const { return meta_->Size(); }

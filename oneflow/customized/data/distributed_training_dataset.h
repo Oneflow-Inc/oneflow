@@ -48,8 +48,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
     //       |  part1   |  part2   |  part3   |  part4   |
     // iter0 | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
     // iter1 | 2, 3, 4, | 5, 6, 7, | 8, 9, 0, | 1, 2, 3, |
-    LoadTargetShdPtrVec ret;
-    ret.emplace_back(base_dataset_->At(index_seq_.at(pos_)));
+    LoadTargetShdPtrVec ret = base_dataset_->At(index_seq_.at(pos_));
     if (stride_partition_) {
       pos_ += num_shards_;
     } else {
