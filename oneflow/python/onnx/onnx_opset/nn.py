@@ -195,7 +195,7 @@ def conv_kernel_shape(ctx, node, input_idx, spatial=2):
     return kernel_shape
 
 
-@tf_op(["Conv1D", "Conv2D", "Conv3D", "conv2d"])
+@tf_op(["Conv1D", "Conv2D", "Conv3D", "conv2d"], flow_inputs=['in', 'weight'])
 class ConvOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -203,8 +203,6 @@ class ConvOp:
         #                       @string padding, @string data_format)
         # T Y = Conv(T X, T W, T B, @AttrType.STRING auto_pad, @AttrType.INTS dilations, @AttrType.INT group,
         #                       @AttrType.INTS kernel_shape, @AttrType.INTS pads, @AttrType.INTS strides)
-        node.input[0] = ctx.get_inputs(node, 'in')[0]
-        node.input[1] = ctx.get_inputs(node, 'weight')[0]
         node.type = "Conv"
         kernel_shape = conv_kernel_shape(ctx, node, 1, spatial=2)
         strides = conv_dims_attr(node, "strides")

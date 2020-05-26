@@ -325,15 +325,13 @@ class LRN:
                                       name=op_name, shapes=shapes, dtypes=dtypes)
 
 
-@tf_op(["matmul", "BatchMatMul", "BatchMatMulV2"])
+@tf_op(["matmul", "BatchMatMul", "BatchMatMulV2"], flow_inputs=['a', 'b'])
 class MatMul:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         # tensorflow allows transpose and conjugated. If found, insert the required transpose.
         # We could use Gemm as well but tensorflow does not pass bias in matmul.
         node.type = "MatMul"
-        node.input[0] = ctx.get_inputs(node, 'a')[0]
-        node.input[1] = ctx.get_inputs(node, 'b')[0]
 
         attrs = ["transpose_a", "transpose_b", "adjoint_a", "adjoint_b", "adj_x", "adj_y"]
         attrs_val = [node.get_attr(attr) for attr in attrs]

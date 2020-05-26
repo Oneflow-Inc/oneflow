@@ -410,6 +410,10 @@ def tensorflow_onnx_mapping(g, ops_mapping):
             onnx_op = kwargs.get("onnx_op")
             if onnx_op:
                 node.type = onnx_op
+            flow_inputs = kwargs.get("flow_inputs")
+            if flow_inputs:
+                for i, ipt in enumerate(flow_inputs):
+                    node.input[i] = g.get_inputs(node, ipt)[0]
         body_graphs = node.get_body_graphs()
         if body_graphs:
             for attr, b_g in body_graphs.items():
