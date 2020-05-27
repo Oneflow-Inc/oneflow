@@ -5,6 +5,7 @@ import numpy as np
 from test_util import GenArgDict
 from test_util import Args
 from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 import test_global_storage
 
 from collections import OrderedDict
