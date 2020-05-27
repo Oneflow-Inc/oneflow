@@ -54,9 +54,8 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     x_diff = test_global_storage.Get("x_diff")
     out_scale = of_out[np.where(of_out!=0)] / x[np.where(of_out!=0)]
     diff_scale = x_diff[np.where(of_out!=0)] / out_diff[np.where(of_out!=0)]
-    assert np.allclose(out_scale.mean(), 1.0 / (1.0 - rate), atol=1e-5)
-    
-    assert np.allclose(out_scale, diff_scale, atol=1e-5)
+    assert np.allclose(out_scale, 1.0 / (1.0 - rate), atol=1e-5)
+    assert np.allclose(diff_scale, 1.0 / (1.0 - rate), atol=1e-5)
 
 
 def test_dropout(test_case):
