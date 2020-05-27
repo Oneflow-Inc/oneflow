@@ -13,6 +13,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
             ...
 
     """
+    
     def __enter__(self, *argc, **kwarg):
         distribute_ctx.PushMirroredStrategyEnabled(True)
 
