@@ -136,7 +136,7 @@ def reshape(x, shape, name=None):
         shape: Shape of the output blob.
         name: A name for the operation (optional).
     Returns:
-        A `Blob`. Has the same type as `x`.
+        A `Blob`, has the same type as `x`.
     """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
