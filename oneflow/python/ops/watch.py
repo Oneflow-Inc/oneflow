@@ -14,11 +14,11 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("watch")
 def Watch(blob_watched, handler_or_prompt=None):
-    r"""Register callback for a blob or a list of blob. The callback will be called after the computation of the operators produce the blobs are finished.
+    r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
 
     Args:
-        watched: a `Blob` or a `list` of of `Blob`
-        handler: a function has an argument of a `Blob` or a `Blob` `list`
+        blob_watched: a `Blob`
+        handler_or_prompt: a function has an argument of a `Blob`
     """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
@@ -39,6 +39,12 @@ def Watch(blob_watched, handler_or_prompt=None):
 
 @oneflow_export("watch_diff")
 def WatchDiff(blob_watched, handler_or_prompt=None):
+    r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
+
+    Args:
+        blob_watched: a `Blob`
+        handler_or_prompt: a function has an argument of a `Blob`
+    """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
         handler_uuid = str(uuid.uuid1())
