@@ -10,10 +10,23 @@
 
 namespace oneflow {
 
+class EagerExecutionOption {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerExecutionOption);
+  explicit EagerExecutionOption() : enable_eager_execution_(false) {}
+  ~EagerExecutionOption() {}
+
+  bool enable_eager_execution() const { return enable_eager_execution_; }
+  void set_enable_eager_execution(bool val) { enable_eager_execution_ = val; }
+
+ private:
+  bool enable_eager_execution_;
+};
+
 class JobBuildAndInferCtxMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
-  ~JobBuildAndInferCtxMgr() = default;
+  virtual ~JobBuildAndInferCtxMgr() = default;
 
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
@@ -23,14 +36,27 @@ class JobBuildAndInferCtxMgr {
 
   const JobSet& job_set() const { return job_set_; }
 
- private:
+ protected:
+  virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
   JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
-  friend class Global<JobBuildAndInferCtxMgr>;
 
+ private:
   JobSet job_set_;
   bool has_cur_job_;
   std::string cur_job_name_;
   HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
+};
+
+class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtxMgr);
+  LazyJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~LazyJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<LazyJobBuildAndInferCtxMgr>;
+
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
 
 }  // namespace oneflow

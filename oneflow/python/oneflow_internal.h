@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "oneflow/python/oneflow_internal_helper.h"
+#include "oneflow/core/job/resource_desc.h"
 
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
@@ -8,6 +9,20 @@ void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* erro
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case)
       .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+std::string CurrentResource(std::string* error_str) {
+  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
+}
+
+void EnableEagerExecution(bool enable_eager_execution) {
+  using namespace oneflow;
+  return Global<EagerExecutionOption>::Get()->set_enable_eager_execution(enable_eager_execution);
+}
+
+bool EagerExecutionEnabled() {
+  using namespace oneflow;
+  return Global<EagerExecutionOption>::Get()->enable_eager_execution();
 }
 
 bool IsEnvInited() {
