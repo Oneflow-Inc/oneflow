@@ -44,20 +44,25 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         origin_axis = axis
         axis += params_ndims
         assert axis >= 0 and axis < params_ndims, ValueError(
-            "Expected axis to between [%d, %d).  But received: %d " %(-params_ndims,
-                params_ndims, origin_axis)
-            )
+            "Expected axis to between [%d, %d).  But received: %d "
+            % (-params_ndims, params_ndims, origin_axis)
+        )
 
     if batch_dims > 0:
         if axis == batch_dims:
-            if os.getenv("ENABLE_USER_OP") == 'True':
-                return flow.user_op_builder(name if name is
-                    not None else id_util.UniqueStr("BatchGather_"))\
-               .Op("batch_gather")\
-               .Input("in", [params])\
-               .Input("indices", [indices])\
-               .Output("out")\
-               .Build().InferAndTryRun().RemoteBlobList()[0]
+            if os.getenv("ENABLE_USER_OP") == "True":
+                return (
+                    flow.user_op_builder(
+                        name if name is not None else id_util.UniqueStr("BatchGather_")
+                    )
+                    .Op("batch_gather")
+                    .Input("in", [params])
+                    .Input("indices", [indices])
+                    .Output("out")
+                    .Build()
+                    .InferAndTryRun()
+                    .RemoteBlobList()[0]
+                )
             else:
                 setattr(op_conf.batch_gather_conf, "in", params.unique_name)
                 op_conf.batch_gather_conf.indices = indices.unique_name
@@ -66,23 +71,29 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             raise NotImplementedError
         else:
             raise AttributeError
-    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0) and os.getenv(
-            "ENABLE_USER_OP") != 'True':
+    elif (
+        params.has_batch_axis() == False
+        and params.distribute is distribute_util.split(0)
+        and os.getenv("ENABLE_USER_OP") != "True"
+    ):
         assert axis == 0
         assert batch_dims == 0
         setattr(op_conf.gather_ms0_conf, "in", params.unique_name)
         op_conf.gather_ms0_conf.indices = indices.unique_name
         op_conf.gather_ms0_conf.out = "out"
     else:
-        if os.getenv("ENABLE_USER_OP") == 'True':
-            return flow.user_op_builder(name if name is
-                not None else id_util.UniqueStr("Gather_"))\
-           .Op("gather")\
-           .Input("in", [params])\
-           .Input("indices", [indices])\
-           .Output("out")\
-           .Attr("axis", int(axis), "AttrTypeInt64")\
-           .Build().InferAndTryRun().RemoteBlobList()[0]
+        if os.getenv("ENABLE_USER_OP") == "True":
+            return (
+                flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gather_"))
+                .Op("gather")
+                .Input("in", [params])
+                .Input("indices", [indices])
+                .Output("out")
+                .Attr("axis", int(axis), "AttrTypeInt64")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+            )
         else:
             setattr(op_conf.gather_conf, "in", params.unique_name)
             op_conf.gather_conf.indices = indices.unique_name
@@ -94,6 +105,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
@@ -116,6 +128,7 @@ def local_gather(params, indices, axis=0, name=None):
 
     return flow.advanced.distribute_map((params, indices), gather_lambda)
 
+
 def infer_shape(x, shape):
     dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
     in_elem_cnt = reduce(operator.mul, x.shape, 1)
@@ -126,6 +139,7 @@ def infer_shape(x, shape):
     else:
         assert in_elem_cnt == out_elem_cnt
     return shape
+
 
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
@@ -142,18 +156,25 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == 'True'):
+    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == "True"):
         if name is None:
             name = id_util.UniqueStr("Reshape_")
-        return flow.user_op_builder(name).Op("reshape")\
-            .Input("in", [x])\
-            .Output("out")\
-            .Attr("shape", infer_shape(x, shape), "AttrTypeShape")\
-            .Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(name)
+            .Op("reshape")
+            .Input("in", [x])
+            .Output("out")
+            .Attr("shape", infer_shape(x, shape), "AttrTypeShape")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
         op_conf = op_conf_util.OperatorConf()
         if x.is_dynamic:
-            setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_"))
+            setattr(
+                op_conf, "name", name if name is not None else id_util.UniqueStr("DynamicReshape_")
+            )
             setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
             op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
             setattr(op_conf.dynamic_reshape_conf, "out", "out")
@@ -221,12 +242,17 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return flow.user_op_builder(name).Op("transpose")\
-            .Input("input", [a])\
-            .Output("output")\
-            .Attr("perm", perm, "AttrTypeListInt32")\
-            .Build().InferAndTryRun().RemoteBlobList()[0]
+    if os.getenv("ENABLE_USER_OP") == "True":
+        return (
+            flow.user_op_builder(name)
+            .Op("transpose")
+            .Input("input", [a])
+            .Output("output")
+            .Attr("perm", perm, "AttrTypeListInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
@@ -267,7 +293,7 @@ def slice(x, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         slice_tup_list = []
         for b, s, d in list(zip(begin, size, x.shape)):
             begin, end, stride = None, None, 1
@@ -404,6 +430,7 @@ def slice_v2(x, slice_tup_list, name=None):
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
 
+
 @oneflow_export("concat")
 def concat(values, axis, name=None):
     r"""Concatenate two or more `Blob` s at specified axis. 
@@ -418,10 +445,11 @@ def concat(values, axis, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         assert isinstance(values, (list, tuple))
         assert len(values) >= 2
-        if axis < 0: axis += len(values[0].shape)
+        if axis < 0:
+            axis += len(values[0].shape)
         assert axis >= 0 and axis < len(values[0].shape)
         out = (
             flow.user_op_builder(name if name is not None else id_util.UniqueStr("Concat_"))
@@ -552,7 +580,7 @@ def nonzero(a, name=None):
 
 
 @oneflow_export("where")
-def where(condition, x=None, y=None, name=None): 
+def where(condition, x=None, y=None, name=None):
     if x is None and y is None:
         return argwhere(condition, name=name)
     elif x is not None and y is not None:
@@ -650,21 +678,30 @@ def stack(inputs, axis, name=None):
 
 @oneflow_export("assign")
 def assign(ref, value, dtype=None, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Assign_"))
-    op_conf.assign_conf.ref = ref.unique_name
-    op_conf.assign_conf.value = value.unique_name
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "y")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    if name is None:
+        name = id_util.UniqueStr("Assign_")
+
+    if os.getenv("ENABLE_USER_OP") != "True":
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        op_conf.assign_conf.ref = ref.unique_name
+        op_conf.assign_conf.value = value.unique_name
+        compile_context.CurJobAddOp(op_conf)
+
+    op = flow.user_op_builder(name).Op("assign").Input("ref", [ref]).Input("value", [value]).Build()
+    op.InferAndTryRun()
+
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
 def generate_random_batch_permutation_indices(value, seed=None, name=None):
     import random
+
     op = (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices"))
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices")
+        )
         .Op("generate_random_batch_permutation_indices")
         .Input("x", [value])
         .Output("y")
@@ -672,19 +709,13 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
     if seed is not None:
         op.Attr("seed", seed, "AttrTypeInt64")
     else:
-        op.Attr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
-    return (
-        op
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
 
 @oneflow_export("random.shuffle")
 def shuffle(value, seed=None, name=None):
-    return flow.gather(
-        value, generate_random_batch_permutation_indices(value, seed)
-    )
+    return flow.gather(value, generate_random_batch_permutation_indices(value, seed))
 
 
 @oneflow_export("identity")
