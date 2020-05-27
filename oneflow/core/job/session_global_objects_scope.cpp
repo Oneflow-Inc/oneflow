@@ -54,6 +54,7 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  if (Global<ResourceDesc>::Get() != nullptr) { Global<ResourceDesc>::Delete(); }
   DumpVersionInfo();
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
