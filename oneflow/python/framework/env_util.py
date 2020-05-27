@@ -27,14 +27,22 @@ def env_init():
 def api_env_init():
     return enable_if.unique(env_init, do_nothing)()
 
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
+def get_env_resource():
+    return c_api_util.CurrentResource()
+
+@oneflow_export('env.current_resource')
+def api_get_env_resource():
+    return enable_if.unique(get_env_resource)()
+
 @oneflow_export('env.machine')
 def machine(*val):
-    r"""Set machines' hostnames. 
+    r"""Set machines' hostnames.  For instance::
+
+        oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
     Args:
-        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
-
-            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
+        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
     """
     assert env_proto_mutable == True
     del default_env_proto.machine[:]

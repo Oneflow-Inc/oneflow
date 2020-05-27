@@ -29,8 +29,8 @@ def roi_align(
         "name",
         name if name is not None else id_util.UniqueStr("RoiAlign_"),
     )
-    op_conf.roi_align_conf.x = x.logical_blob_name
-    op_conf.roi_align_conf.rois = rois.logical_blob_name
+    op_conf.roi_align_conf.x = x.unique_name
+    op_conf.roi_align_conf.rois = rois.unique_name
     op_conf.roi_align_conf.y = "out"
     op_conf.roi_align_conf.roi_align_args.pooled_h = pooled_h
     op_conf.roi_align_conf.roi_align_args.pooled_w = pooled_w
@@ -59,10 +59,10 @@ def pos_neg_sampler(
         else id_util.UniqueStr("MaskrcnnPositiveNegativeSample_"),
     )
     op_conf.maskrcnn_positive_negative_sample_conf.pos_inds = (
-        pos_inds.logical_blob_name
+        pos_inds.unique_name
     )
     op_conf.maskrcnn_positive_negative_sample_conf.neg_inds = (
-        neg_inds.logical_blob_name
+        neg_inds.unique_name
     )
     op_conf.maskrcnn_positive_negative_sample_conf.total_subsample_num = (
         total_subsample_num
@@ -92,8 +92,8 @@ def calc_iou_matrix(boxes1, boxes2, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("CalcIoUMatrix_"),
     )
-    op_conf.calc_iou_matrix_conf.boxes1 = boxes1.logical_blob_name
-    op_conf.calc_iou_matrix_conf.boxes2 = boxes2.logical_blob_name
+    op_conf.calc_iou_matrix_conf.boxes1 = boxes1.unique_name
+    op_conf.calc_iou_matrix_conf.boxes2 = boxes2.unique_name
     op_conf.calc_iou_matrix_conf.iou_matrix = "iou_matrix"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -110,8 +110,8 @@ def box_encode(ref_boxes, boxes, regression_weights, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("BoxEncode_"),
     )
-    op_conf.box_encode_conf.ref_boxes = ref_boxes.logical_blob_name
-    op_conf.box_encode_conf.boxes = boxes.logical_blob_name
+    op_conf.box_encode_conf.ref_boxes = ref_boxes.unique_name
+    op_conf.box_encode_conf.boxes = boxes.unique_name
     op_conf.box_encode_conf.boxes_delta = "boxes_delta"
     regression_weights_proto = op_conf_util.BBoxRegressionWeights()
     regression_weights_proto.weight_x = regression_weights["weight_x"]
@@ -136,8 +136,8 @@ def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("BoxDecode_"),
     )
-    op_conf.box_decode_conf.ref_boxes = ref_boxes.logical_blob_name
-    op_conf.box_decode_conf.boxes_delta = boxes_delta.logical_blob_name
+    op_conf.box_decode_conf.ref_boxes = ref_boxes.unique_name
+    op_conf.box_decode_conf.boxes_delta = boxes_delta.unique_name
     regression_weights_proto = op_conf_util.BBoxRegressionWeights()
     regression_weights_proto.weight_x = regression_weights["weight_x"]
     regression_weights_proto.weight_y = regression_weights["weight_y"]
@@ -170,7 +170,7 @@ def level_map(
         "name",
         name if name is not None else id_util.UniqueStr("LevelMap_"),
     )
-    setattr(op_conf.level_map_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.level_map_conf, "in", inputs.unique_name)
     op_conf.level_map_conf.min_level = min_level
     op_conf.level_map_conf.max_level = max_level
     op_conf.level_map_conf.canonical_level = canonical_level
@@ -198,7 +198,7 @@ def anchor_generate(
     if isinstance(anchor_scales, (list, tuple)) == False:
         anchor_scales = [anchor_scales]
     assert isinstance(anchor_scales, (list, tuple))
-    setattr(op_conf.anchor_generate_conf, "images", images.logical_blob_name)
+    setattr(op_conf.anchor_generate_conf, "images", images.unique_name)
     op_conf.anchor_generate_conf.feature_map_stride = feature_map_stride
     op_conf.anchor_generate_conf.aspect_ratios.extend(aspect_ratios)
     op_conf.anchor_generate_conf.anchor_scales.extend(anchor_scales)
@@ -221,7 +221,7 @@ def identify_non_small_boxes(inputs, min_size=0.0, name=None):
         else id_util.UniqueStr("IdentifyNonSmallBoxes_"),
     )
     setattr(
-        op_conf.identify_non_small_boxes_conf, "in", inputs.logical_blob_name
+        op_conf.identify_non_small_boxes_conf, "in", inputs.unique_name
     )
     op_conf.identify_non_small_boxes_conf.min_size = min_size
     op_conf.identify_non_small_boxes_conf.out = "out"
@@ -242,9 +242,9 @@ def identify_outside_anchors(anchors, image_size, tolerance=0.0, name=None):
         if name is not None
         else id_util.UniqueStr("IdentifyOutsideAnchors_"),
     )
-    op_conf.identify_outside_anchors_conf.anchors = anchors.logical_blob_name
+    op_conf.identify_outside_anchors_conf.anchors = anchors.unique_name
     op_conf.identify_outside_anchors_conf.image_size = (
-        image_size.logical_blob_name
+        image_size.unique_name
     )
     op_conf.identify_outside_anchors_conf.tolerance = tolerance
     op_conf.identify_outside_anchors_conf.out = "out"
@@ -263,8 +263,8 @@ def clip_boxes_to_image(boxes, image_size, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ClipBoxesToImage_"),
     )
-    op_conf.clip_boxes_to_image_conf.boxes = boxes.logical_blob_name
-    op_conf.clip_boxes_to_image_conf.image_size = image_size.logical_blob_name
+    op_conf.clip_boxes_to_image_conf.boxes = boxes.unique_name
+    op_conf.clip_boxes_to_image_conf.image_size = image_size.unique_name
     op_conf.clip_boxes_to_image_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -282,7 +282,7 @@ def extract_piece_slice_id(inputs, name=None):
         name if name is not None else id_util.UniqueStr("ExtractPieceSliceId_"),
     )
     getattr(op_conf.extract_piece_slice_id_conf, "in").extend(
-        [i.logical_blob_name for i in inputs]
+        [i.unique_name for i in inputs]
     )
     op_conf.extract_piece_slice_id_conf.out.extend(
         ["out_" + str(i) for i in range(len(inputs))]
@@ -310,7 +310,7 @@ def non_maximum_suppression(
         else id_util.UniqueStr("NonMaximumSuppression_"),
     )
     setattr(
-        op_conf.non_maximum_suppression_conf, "in", inputs.logical_blob_name
+        op_conf.non_maximum_suppression_conf, "in", inputs.unique_name
     )
     op_conf.non_maximum_suppression_conf.nms_iou_threshold = nms_iou_threshold
     op_conf.non_maximum_suppression_conf.post_nms_top_n = post_nms_top_n
@@ -330,7 +330,7 @@ def upsample_nearest(inputs, scale, data_format, name=None):
         name if name is not None else id_util.UniqueStr("UpsampleNearest_"),
     )
     assert isinstance(scale, int)
-    setattr(op_conf.upsample_nearest_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.upsample_nearest_conf, "in", inputs.unique_name)
     op_conf.upsample_nearest_conf.scale = scale
     op_conf.upsample_nearest_conf.data_format = data_format
     op_conf.upsample_nearest_conf.out = "out"
@@ -407,7 +407,7 @@ def dim0_dynamic_to_fixed(inputs, name=None):
         name if name is not None else id_util.UniqueStr("Dim0DynamicToFixed_"),
     )
     getattr(op_conf.dim0_dynamic_to_fixed_conf, "in").extend(
-        [i.logical_blob_name for i in inputs]
+        [i.unique_name for i in inputs]
     )
     op_conf.dim0_dynamic_to_fixed_conf.out.extend(
         ["out_" + str(i) for i in range(len(inputs))]
@@ -435,9 +435,9 @@ def maskrcnn_split(input, segms, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("MaskrcnnSplit_"),
     )
-    setattr(op_conf.maskrcnn_split_conf, "in", input.logical_blob_name)
+    setattr(op_conf.maskrcnn_split_conf, "in", input.unique_name)
     op_conf.maskrcnn_split_conf.segm[:] = [
-        segm.logical_blob_name for segm in segms
+        segm.unique_name for segm in segms
     ]
     op_conf.maskrcnn_split_conf.out[:] = [
         "out_" + str(i) for i in range(len(segms))
@@ -463,8 +463,8 @@ def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
     name = name or id_util.UniqueStr("masks_crop_and_resize_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    op_conf.masks_crop_and_resize_conf.masks = masks.logical_blob_name
-    op_conf.masks_crop_and_resize_conf.rois = rois.logical_blob_name
+    op_conf.masks_crop_and_resize_conf.masks = masks.unique_name
+    op_conf.masks_crop_and_resize_conf.rois = rois.unique_name
     op_conf.masks_crop_and_resize_conf.mask_height = mask_h
     op_conf.masks_crop_and_resize_conf.mask_width = mask_w
     op_conf.masks_crop_and_resize_conf.out = "out"
