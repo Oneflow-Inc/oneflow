@@ -141,7 +141,7 @@ class FixedTensorDef(ArgBlobDef):
 @oneflow_export('MirroredTensorDef')
 class MirroredTensorDef(ArgBlobDef):
     """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `numpy.ndarray` take a `MirroredTensorDef`'s place could have any shape as long as it has the same rank and a smaller/equal size.
+    A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
     For instance::
         
         @oneflow.function
@@ -152,8 +152,10 @@ class MirroredTensorDef(ArgBlobDef):
         ):
             # your network
         
-        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
-        train(np.random.randn(2, 251, 251, 3).astype(np.float32))
+        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
+        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
+        train([input1])
+        train([input2])
 
     """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
@@ -190,6 +192,24 @@ class MirroredTensorDef(ArgBlobDef):
             
 @oneflow_export('MirroredTensorListDef')
 class MirroredTensorListDef(ArgBlobDef):
+    """`MirroredTensorListDef` is a placeholder for numpy input of a OneFlow function. 
+    A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
+    For instance::
+        
+        @oneflow.function
+        def train(
+            image_blob=oneflow.MirroredTensorListDef(
+                shape=(2, 255, 255, 3), dtype=flow.float32
+            )
+        ):
+            # your network
+        
+        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
+        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
+        train([[input1]])
+        train([[input2]])
+
+    """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
         assert type(shape) is tuple
         assert type(batch_axis) is int
