@@ -42,21 +42,29 @@ class FunctionConfig(object):
                                           % (attr_name, type(attr_value)))
         return FunctionConfigSetter
 
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def lazy_oneflow_function(function_config = FunctionConfig()):
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_oneflow_function(function_config = FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
     def Decorator(job_func):
         sess = session_ctx.GetDefaultSession()
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
-        if function_desc.enable_eager_execution:
-            @functools.wraps(job_func)
-            def Func(*args):
-                return _RunEagerJob(sess, function_desc, job_func, *args)
-        else:
-            @functools.wraps(job_func)
-            def Func(*args):
-                return _RunLazyJob(sess, job_func, *args)
-            sess.AddJob(function_desc)
+        @functools.wraps(job_func)
+        def Func(*args, **kwargs):
+            return _RunEagerJob(sess, function_desc, job_func, *args, **kwargs)
+        for x in dir(job_func):
+            if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
+        return Func
+    return Decorator
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled & ~hob.session_initialized)
+def lazy_oneflow_function(function_config = FunctionConfig()):
+    assert isinstance(function_config, FunctionConfig)
+    def Decorator(job_func):
+        sess = session_ctx.GetDefaultSession()
+        @functools.wraps(job_func)
+        def Func(*args, **kwargs):
+            return _RunLazyJob(sess, job_func, *args, **kwargs)
+        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         for x in dir(job_func):
             if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
         return Func
@@ -83,7 +91,7 @@ def api_oneflow_function(function_config = FunctionConfig()):
         If func is None, returns a decorator that, when invoked with a single 
         func argument, returns a callable equivalent to the case above.
     """
-    return enable_if.unique(lazy_oneflow_function)(function_config)
+    return enable_if.unique(lazy_oneflow_function, eager_oneflow_function)(function_config)
 
 def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
@@ -128,8 +136,8 @@ def _MakeLeafJobConfigCall(method):
 def _RunEagerJob(session, function_desc, job_func, *args):
     return session.TryInit().EagerRun(function_desc, job_func, *args)
 
-def _RunLazyJob(session, job_func, *args):
-    return session.TryInit().LazyRun(job_func, *args)
+def _RunLazyJob(session, job_func, *args, **kwargs):
+    return session.TryInit().LazyRun(job_func, *args, **kwargs)
 
 @oneflow_function_config('default_data_type')
 def set_default_data_type(func_desc, value):
