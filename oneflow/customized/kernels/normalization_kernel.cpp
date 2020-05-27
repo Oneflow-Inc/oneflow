@@ -69,9 +69,8 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
       CudaCheck(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), CudnnBatchNormModeTraining(), CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
-          inv_variance->mut_dptr()));
+          param_desc.Get(), gamma->dptr(), beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(),
+          moving_variance->mut_dptr(), epsilon, mean->mut_dptr(), inv_variance->mut_dptr()));
     } else {
       CudaCheck(cudnnBatchNormalizationForwardInference(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
