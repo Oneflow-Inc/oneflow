@@ -200,8 +200,8 @@ std::vector<int8_t> GetMirrorVec(user_op::KernelComputeContext* ctx) {
   int64_t record_num = in_blob->shape().At(0);
   if (mirror_blob) {
     CHECK_EQ(record_num, mirror_blob->shape().elem_cnt());
-    mirror.resize(record_num);
-    for (int32_t i = 0; i < record_num; ++i) { mirror.at(i) = *(mirror_blob->dptr<int8_t>() + i); }
+    mirror.insert(mirror.end(), mirror_blob->dptr<int8_t>(),
+                  mirror_blob->dptr<int8_t>() + record_num);
   } else {
     mirror.resize(record_num, 0);
   }
