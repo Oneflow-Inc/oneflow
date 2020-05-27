@@ -132,9 +132,9 @@ class Session(object):
         if remote_blobs is None: return
         return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
 
-    def EagerRun(self, function_desc, job_func, *arg):
+    def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            return TODO()
+            return compiler.EagerRun(function_desc, self.config_proto_, arg)
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING

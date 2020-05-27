@@ -12,7 +12,11 @@ namespace oneflow {
 namespace {
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  if (Global<EagerExecutionOption>::Get()->enable_eager_execution()) {
+    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
