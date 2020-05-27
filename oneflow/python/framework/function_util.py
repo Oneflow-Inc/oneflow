@@ -50,7 +50,7 @@ def eager_oneflow_function(function_config = FunctionConfig()):
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
         @functools.wraps(job_func)
         def Func(*args, **kwargs):
-            return _RunEagerJob(sess, function_desc, job_func, *args, **kwargs)
+            return _RunEagerJob(sess, function_desc, *args, **kwargs)
         for x in dir(job_func):
             if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
         return Func
@@ -133,8 +133,8 @@ def _MakeInnerJobConfigClassProperty(return_obj_class):
 def _MakeLeafJobConfigCall(method):
     return lambda self, *argv, **kwarg: method(self.function_desc, *argv, **kwarg)
 
-def _RunEagerJob(session, function_desc, job_func, *args):
-    return session.TryInit().EagerRun(function_desc, job_func, *args)
+def _RunEagerJob(session, function_desc, *args):
+    return session.TryInit().EagerRun(function_desc, *args)
 
 def _RunLazyJob(session, job_func, *args, **kwargs):
     return session.TryInit().LazyRun(job_func, *args, **kwargs)

@@ -10,12 +10,26 @@ import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.ops as ops
 from oneflow.python.lib.core.box import Box
 
 from contextlib import contextmanager
 
 def Compile(function_desc, config_proto):
+    with InterpretScope(function_desc, config_proto):
+        _CompileJob(function_desc)
+        c_api_util.CurJobBuildAndInferCtx_Complete()
+
+def EagerRun(function_desc, config_proto, args):
+    with InterpretScope(function_desc, config_proto):
+        ret = _InterpretJob(function_desc)
+        c_api_util.CurJobBuildAndInferCtx_Complete()
+    return ret
+
+@contextmanager
+def InterpretScope(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
@@ -28,8 +42,7 @@ def Compile(function_desc, config_proto):
 
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        _CompileJob(function_desc)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        yield
 
 def _CompileJob(function_desc):
     func = function_desc.job_func
@@ -39,11 +52,15 @@ def _CompileJob(function_desc):
     with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE): ret = func(*inputs)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
+def _InterpretJob(function_desc): return _CompileJob(function_desc)
+
 @contextmanager
 def _JobBuildAndInferCtx(job_name):
     c_api_util.JobBuildAndInferCtx_Open(job_name)
-    yield
-    c_api_util.JobBuildAndInferCtx_Close()
+    try:
+        yield
+    finally: 
+        c_api_util.JobBuildAndInferCtx_Close()
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
