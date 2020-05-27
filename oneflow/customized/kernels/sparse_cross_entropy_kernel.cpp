@@ -20,7 +20,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
@@ -42,7 +42,7 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (ctx->parallel_ctx().parallel_num() > 1) {
       BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
@@ -101,7 +101,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     size_t prediction_diff_bytes_size =
         prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
     Memset<device_type>(ctx->device_ctx(), prediction_diff->mut_dptr<T>(), 0,
@@ -128,7 +128,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (ctx->parallel_ctx().parallel_num() > 1) {
       BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());

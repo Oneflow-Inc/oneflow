@@ -23,7 +23,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     SoftmaxKernelUtil<device_type, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
         prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));
@@ -101,10 +101,10 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound, prob->dptr<T>(),
-        label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -124,15 +124,15 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prob->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
-    const int64_t depth = ctx->GetAttr<int64_t>("depth");
+    const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (ctx->parallel_ctx().parallel_num() > 1) {
       BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
       lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
     }
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound, prob->dptr<T>(),
-        label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
