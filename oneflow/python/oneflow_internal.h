@@ -11,8 +11,19 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
+
 std::string CurrentResource(std::string* error_str) {
   return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
+}
+
+void EnableEagerExecution(bool enable_eager_execution) {
+  using namespace oneflow;
+  return Global<EagerExecutionOption>::Get()->set_enable_eager_execution(enable_eager_execution);
+}
+
+bool EagerExecutionEnabled() {
+  using namespace oneflow;
+  return Global<EagerExecutionOption>::Get()->enable_eager_execution();
 }
 
 bool IsEnvInited() {
