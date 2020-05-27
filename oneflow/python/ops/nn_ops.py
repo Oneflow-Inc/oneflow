@@ -663,6 +663,7 @@ def _GetSequence(value, n, name):
             )
         )
 
+@oneflow_export("nn.random_mask_like")
 def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (

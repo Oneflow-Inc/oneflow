@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -11,10 +12,16 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   int64_t job_id = job_set_.job_size();
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
-  job_name2infer_ctx_.emplace(job_name, std::make_unique<JobBuildAndInferCtx>(job, job_id));
+  std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
+  job_name2infer_ctx_.emplace(job_name, std::move(ctx));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
   return Maybe<void>::Ok();
+}
+
+JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                        int64_t job_id) const {
+  return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
@@ -57,5 +64,7 @@ void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
 }
+
+COMMAND(Global<EagerExecutionOption>::SetAllocated(new EagerExecutionOption()));
 
 }  // namespace oneflow

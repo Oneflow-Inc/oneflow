@@ -37,6 +37,11 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
+Maybe<std::string> CurrentResource() {
+  CHECK_NOTNULL_OR_RETURN(Global<ResourceDesc>::Get());
+  return PbMessage2TxtString(Global<ResourceDesc>::Get()->resource());
+}
+
 Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
@@ -91,7 +96,7 @@ Maybe<void> DestroyGlobalSession() {
 Maybe<void> StartGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
