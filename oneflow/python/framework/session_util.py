@@ -98,7 +98,7 @@ class Session(object):
         if not c_api_util.EagerExecutionEnabled():
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(func_desc, self.config_proto_)
-            assert len(job_name2function_desc_.items()) > 0
+            assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         return self
