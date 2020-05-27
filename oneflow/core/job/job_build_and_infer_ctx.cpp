@@ -66,6 +66,7 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     DoPass("CompleteOfrecordDecoder");
     DoPass("SetDefaultVariableConf");
     DoPass("AutoMixedPrecision");
+    DoPass("HalfBoxingPass");
     DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
     DoPass("NonDistributedOptimizerPass");
     DoPass("AutoTrainStep");
