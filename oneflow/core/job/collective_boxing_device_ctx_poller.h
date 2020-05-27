@@ -20,12 +20,15 @@ class CollectiveBoxingDeviceCtxPoller final {
   void Enqueue(const std::shared_ptr<std::atomic<bool>>& ready_flag, const std::function<void()>&);
 
  private:
+  using EventList = std::list<std::pair<std::shared_ptr<std::atomic<bool>>, std::function<void()>>>;
   friend class Global<CollectiveBoxingDeviceCtxPoller>;
   CollectiveBoxingDeviceCtxPoller();
-  std::thread poller_thread_;
-  std::mutex mutex_;
-  std::list<std::pair<std::shared_ptr<std::atomic<bool>>, std::function<void()>>> event_list_;
+  std::vector<std::thread> poller_thread_vec_;
+  std::vector<std::unique_ptr<std::mutex>> mutex_vec_;
+  std::vector<EventList> event_list_vec_;
   std::atomic<bool> shutdown_;
+  std::atomic<int64_t> counter_;
+  int64_t num_threads_;
 };
 
 }  // namespace collective

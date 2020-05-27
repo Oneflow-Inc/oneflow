@@ -190,6 +190,16 @@ def enable_fusion(val=True):
     sess.config_proto.resource.collective_boxing_conf.enable_fusion = val
 
 
+@oneflow_export('config.collective_boxing.num_callback_threads')
+def num_callback_threads(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is int
+    sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
+
+
 @oneflow_export('config.collective_boxing.nccl_num_streams')
 def nccl_num_streams(val):
     sess = session_ctx.GetDefaultSession()
