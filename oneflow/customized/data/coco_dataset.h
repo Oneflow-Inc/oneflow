@@ -5,30 +5,35 @@
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+namespace data {
 
-struct COCODataInstance {
-  TensorBuffer image;
-  int64_t label;
-  int64_t image_height;
-  int64_t image_width;
-  // ... store other data like bbox , segmentation
+struct COCOImage {
+  TensorBuffer data;
+  int64_t index;
+  int64_t id;
+  int32_t height;
+  int32_t width;
 };
 
-class COCODataset final : public Dataset<COCODataInstance> {
+class COCOMeta;
+
+class COCODataset final : public RandomAccessDataset<COCOImage> {
  public:
-  using LoadTargetPtr = std::shared_ptr<COCODataInstance>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
-  COCODataset(user_op::KernelInitContext* ctx) { TODO(); }
+  using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
+  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
+
+  COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
+      : meta_(meta) {}
   ~COCODataset() = default;
 
-  LoadTargetPtrList Next() override { TODO(); }
+  LoadTargetShdPtrVec At(int64_t index) const override;
+  size_t Size() const override;
 
  private:
-  // maybe not this member
-  std::vector<int64_t> image_ids_;
-  // other member list like image name, anno ...
+  std::shared_ptr<const COCOMeta> meta_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_COCO_DATASET_H_

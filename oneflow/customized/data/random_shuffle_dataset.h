@@ -6,6 +6,7 @@
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+namespace data {
 
 template<typename LoadTarget>
 class RandomShuffleDataset final : public Dataset<LoadTarget> {
@@ -54,6 +55,7 @@ class RandomShuffleDataset final : public Dataset<LoadTarget> {
   int64_t seed_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_RANDOM_SHUFFLE_DATASET_H_

@@ -7,6 +7,7 @@
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
+namespace data {
 
 class OFRecordParser final : public Parser<TensorBuffer> {
  public:
@@ -30,6 +31,7 @@ class OFRecordParser final : public Parser<TensorBuffer> {
   }
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_OFRECORD_PARSER_H_

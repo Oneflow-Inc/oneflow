@@ -7,6 +7,7 @@
 #include "oneflow/customized/data/parser.h"
 
 namespace oneflow {
+namespace data {
 
 static const int32_t kDataReaderBatchBufferSize = 4;
 
@@ -69,6 +70,7 @@ class DataReader {
   std::thread load_thrd_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_DATA_READER_H_

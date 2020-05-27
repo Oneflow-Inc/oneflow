@@ -9,6 +9,7 @@
 #include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
+namespace data {
 
 class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
@@ -48,7 +49,6 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   LoadTargetPtrList Next() override {
     LoadTargetPtrList ret;
     LoadTargetPtr sample_ptr(new TensorBuffer());
-    ;
     ReadSample(*sample_ptr);
     ret.push_back(std::move(sample_ptr));
     return ret;
@@ -94,6 +94,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   std::unique_ptr<PersistentInStream> in_stream_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CUSTOMIZED_DATA_OFRECORD_DATASET_H_
