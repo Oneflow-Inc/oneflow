@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -68,5 +69,7 @@ void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
 }
+
+COMMAND(Global<EagerExecutionOption>::SetAllocated(new EagerExecutionOption()));
 
 }  // namespace oneflow

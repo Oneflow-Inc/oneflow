@@ -37,6 +37,12 @@ def CurrentResource():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(resource, resource_util.Resource())
 
+def EnableEagerExecution(enable_eager_execution):
+    return oneflow_internal.EnableEagerExecution(enable_eager_execution)
+
+def EagerExecutionEnabled():
+    return oneflow_internal.EagerExecutionEnabled()
+
 def IsEnvInited():
     return oneflow_internal.IsEnvInited()
 
