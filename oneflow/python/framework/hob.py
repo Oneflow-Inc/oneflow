@@ -18,6 +18,18 @@ def _IsEnvInitialized():
 
 env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
 
+def _AnyGlobalFunctionDefined():
+    assert in_normal_mode()
+    return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
+
+any_global_function_defined = HighOrderBool("Any global function defined",
+                                            _AnyGlobalFunctionDefined)
+
+def _EagerExecutionEnabled():
+    return c_api_util.EagerExecutionEnabled()
+
+eager_execution_enabled = HighOrderBool("Eager execution enabled ", _EagerExecutionEnabled)
+
 def _IsSessionInitialized():
     assert in_normal_mode()
     return session_ctx.GetDefaultSession().is_running
