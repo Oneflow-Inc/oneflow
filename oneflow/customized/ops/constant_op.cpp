@@ -11,8 +11,8 @@ REGISTER_USER_OP("constant")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const Shape& shape = ctx->GetAttr<Shape>("shape");
-      auto dtype = ctx->GetAttr<DataType>("dtype");
+      const Shape& shape = ctx->Attr<Shape>("shape");
+      auto dtype = ctx->Attr<DataType>("dtype");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());

@@ -7,7 +7,7 @@ namespace {
 
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-  const auto& reduced_axes = ctx->GetAttr<std::vector<int32_t>>("broadcast_axes");
+  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axis = 0;
@@ -45,7 +45,7 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const auto& broadcast_axes = ctx->GetAttr<std::vector<int32_t>>("broadcast_axes");
+  const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
   const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);

@@ -35,11 +35,11 @@ def constant(value, dtype=None, shape=None, name=None):
             shape = []
         return flow.user_op_builder(name).Op("constant")\
             .Output("out")\
-            .SetAttr("floating_value", float(value), "AttrTypeDouble")\
-            .SetAttr("integer_value", int(value), "AttrTypeInt64")\
-            .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")\
-            .SetAttr("dtype", dtype, "AttrTypeDataType")\
-            .SetAttr("shape", shape, "AttrTypeShape")\
+            .Attr("floating_value", float(value), "AttrTypeDouble")\
+            .Attr("integer_value", int(value), "AttrTypeInt64")\
+            .Attr("is_floating_value", is_floating_value, "AttrTypeBool")\
+            .Attr("dtype", dtype, "AttrTypeDataType")\
+            .Attr("shape", shape, "AttrTypeShape")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -73,7 +73,7 @@ def constant_like(like, value, dtype=None, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ConstantLike_"),
     )
-    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
+    setattr(op_conf.constant_like_conf, "like", like.unique_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):

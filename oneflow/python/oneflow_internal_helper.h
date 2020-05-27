@@ -91,7 +91,7 @@ Maybe<void> DestroyGlobalSession() {
 Maybe<void> StartGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
@@ -145,7 +145,7 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 }
 
 Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
-  return *JUST(DeviceType4DeviceTag(device_tag));
+  return JUST(DeviceType4DeviceTag(device_tag));
 }
 
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(

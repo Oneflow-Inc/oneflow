@@ -3,6 +3,8 @@
 #include "oneflow/customized/kernels/sparse_cross_entropy_kernel_util.h"
 
 namespace oneflow {
+namespace user_op {
+
 template<DeviceType device_type, typename T, typename K>
 class SparseCrossEntropyKernel final : public user_op::OpKernel {
  public:
@@ -173,5 +175,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
+}  // namespace user_op
 }  // namespace oneflow

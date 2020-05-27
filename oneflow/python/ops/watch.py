@@ -8,18 +8,24 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.framework.remote_blob import MirroredBlob, ConsistentBlob
 import oneflow.python.framework.local_blob as local_blob_util
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("watch")
 def Watch(blob_watched, handler_or_prompt=None):
+    r"""Register callback for a blob or a list of blob. The callback will be called after the computation of the operators produce the blobs are finished.
+
+    Args:
+        watched: a `Blob` or a `list` of of `Blob`
+        handler: a function has an argument of a `Blob` or a `Blob` `list`
+    """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
-        setattr(op_conf.foreign_watch_conf, "in", blob_watched.logical_blob_name)
+        setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
         compile_context.CurJobAddOp(op_conf, blob_watched.parallel_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
@@ -39,7 +45,7 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
         lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
         lbi_and_uuid.watcher_uuid = handler_uuid
-        g_func_ctx.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif type(blob_watched) is MirroredBlob:
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)

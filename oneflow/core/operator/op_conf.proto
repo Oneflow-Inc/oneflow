@@ -1751,6 +1751,18 @@ message BroadcastToCompatibleWithOpConf {
   required string y = 3;
 }
 
+message TensorBufferToTensorListOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+  required DataType data_type = 4;
+}
+
+message TensorListToTensorBufferOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1823,6 +1835,8 @@ message OperatorConf {
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
+    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     UserOpConf user_conf = 199;
     
     // domain op

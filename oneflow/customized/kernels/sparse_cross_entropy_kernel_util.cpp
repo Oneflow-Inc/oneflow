@@ -2,6 +2,7 @@
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
+namespace user_op {
 
 template<typename T, typename K>
 struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
@@ -29,15 +30,20 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-  static void BackwardSub(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                          const int64_t depth, const int64_t lower_bound, const K* labels,
-                          const T* dy, T* dx) {
-    FOR_RANGE(int64_t, i, 0, num_instances) {
+  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+                                     const int64_t num_classes, const int64_t depth, const int64_t lower_bound, const T* prob, const K* labels,
+                                     const T* dy, T* dx) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      const int32_t row_id = i / num_classes;
+      const int32_t col_id = i - row_id * num_classes;
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
-      K label = labels[i] - lower_bound;
-      if (label >= 0 && label < num_classes) {
-        dx[i * num_classes + label] = dy[i] * (dx[i * num_classes + label] - 1);
+      K label = labels[row_id] - lower_bound;
+
+      if (label == col_id) {
+        dx[i] = dy[row_id] * (prob[i] - 1);
+      } else {
+        dx[i] = dy[row_id] * prob[i];
       }
     }
   }
@@ -50,4 +56,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CP
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_CPU
 
+}  // namespace user_op
 }  // namespace oneflow

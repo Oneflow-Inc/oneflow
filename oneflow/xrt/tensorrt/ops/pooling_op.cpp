@@ -17,9 +17,9 @@ class PoolingOp : public TrtOpKernel {
     CHECK_GE(in_shape.NumAxes(), 3);
     CHECK_LE(in_shape.NumAxes(), 5);
 
-    const std::string& padding = ctx->GetAttr<std::string>("padding");
-    const auto& pool_size = ctx->GetAttr<std::vector<int32_t>>("pool_size");
-    const auto& strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    const std::string& padding = ctx->Attr<std::string>("padding");
+    const auto& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
     nvinfer1::ITensor *in = ctx->Input("in");
     auto *layer =

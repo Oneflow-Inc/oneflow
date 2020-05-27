@@ -22,8 +22,8 @@ def indexed_slices_reduce_sum(indices, values, name=None):
     else:
         op_conf.name = name
 
-    op_conf.indexed_slices_reduce_sum_conf.x_indices = indices.logical_blob_name
-    op_conf.indexed_slices_reduce_sum_conf.x_values = values.logical_blob_name
+    op_conf.indexed_slices_reduce_sum_conf.x_indices = indices.unique_name
+    op_conf.indexed_slices_reduce_sum_conf.x_values = values.unique_name
     op_conf.indexed_slices_reduce_sum_conf.y_indices = 'y_indices'
     op_conf.indexed_slices_reduce_sum_conf.y_values = 'y_values'
     op_conf.indexed_slices_reduce_sum_conf.num_unique = 'num_unique'

@@ -22,7 +22,7 @@ def square_sum(x, name=None):
     else:
         op_conf.name = name
 
-    op_conf.square_sum_conf.x = x.logical_blob_name
+    op_conf.square_sum_conf.x = x.unique_name
     op_conf.square_sum_conf.y = 'y'
 
     compile_context.CurJobAddOp(op_conf)
