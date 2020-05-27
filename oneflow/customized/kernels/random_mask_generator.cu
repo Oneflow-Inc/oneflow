@@ -32,7 +32,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 }
 
 __device__ int8_t GenMask(curandState* state, const float rate) {
-  return curand_uniform(state) > rate;
+  return curand_uniform(state) >= rate;
 }
 
 __global__ void SetupKernel(int64_t seed, curandState* state) {
