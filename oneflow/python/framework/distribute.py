@@ -24,7 +24,7 @@ def MirroredStrategyEnabled():
     r"""
 
     Returns:
-        bool: `True` if mirrored strategy is enable in current context where this function is called.
+        bool: `True` if mirrored strategy is enabled in current context where this function is called.
 
     """
     return distribute_ctx.IsMirroredStrategyEnabled()
@@ -49,7 +49,7 @@ def ConsistentStrategyEnabled():
     r"""
 
     Returns:
-        bool: `True` if consistent strategy is enable in current context where this function is called.
+        bool: `True` if consistent strategy is enabled in current context where this function is called.
 
     """
     return distribute_ctx.IsConsistentStrategyEnabled()
