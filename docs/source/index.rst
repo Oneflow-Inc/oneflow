@@ -20,6 +20,7 @@ OneFlow Documentation
     nn
     layers
     data
+    distribute
 
 
 Indices and tables
