@@ -36,7 +36,6 @@ def _of_assign_and_relu(value, dtype, device_type):
                 initializer=flow.constant_initializer(0),
             )
             flow.assign(var, value_def)
-            return
 
     @flow.function(func_config)
     def relu_fn():
@@ -49,9 +48,7 @@ def _of_assign_and_relu(value, dtype, device_type):
             )
             return flow.nn.relu(var)
 
-    checkpoint = flow.train.CheckPoint()
-    checkpoint.init()
-    assign_fn(value).get()
+    assign_fn(value)
     return relu_fn().get().ndarray()
 
 
