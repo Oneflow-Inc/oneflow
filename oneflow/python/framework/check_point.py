@@ -10,10 +10,8 @@ import datetime
 
 @oneflow_export('train.CheckPoint')
 class CheckPoint(object):
-    """Class for checkpoint management manually.
+    """Create a `CheckPoint` object to manage checkpoint manually.
 
-    This class defines the check point management object with `save`, `init` 
-    and `load` function.
     """
     def __init__(self):
         pass
@@ -84,10 +82,7 @@ def _MakeModelSaveJobFunc(path):
 
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
-    r"""Class for a simple checkpoint management.
-
-    This class defines a simple checkpoint management object which save and restore 
-    checkpoint automaticly.
+    r"""`SimpleCheckPointManager` is a simple automatic checkpoint manager.
 
     Args:
         root_path: root path of snapshot

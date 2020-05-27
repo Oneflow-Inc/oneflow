@@ -190,12 +190,18 @@ def api_eager_execution_enabled():
 
 @oneflow_export("clear_default_session")
 def clear_default_session():
+    r"""Clear the default session. All compiled OneFlow functions will be deleted.
+
+    """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
     c_api_util.EnableEagerExecution(False)
 
 @oneflow_export("sync_default_session")
 def sync_default_session():
+    r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
+
+    """
     session_ctx.GetDefaultSession().Sync()
 
 def _TryCompleteConfigProto(config_proto):
