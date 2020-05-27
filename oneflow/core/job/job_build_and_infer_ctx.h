@@ -121,6 +121,16 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
 };
 
+class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtx);
+  EagerJobBuildAndInferCtx(Job* job, int64_t job_id) : JobBuildAndInferCtx(job, job_id) {}
+  virtual ~EagerJobBuildAndInferCtx() = default;
+
+ private:
+  int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CTX_H_

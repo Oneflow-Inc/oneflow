@@ -23,6 +23,11 @@ JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job
   return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
+JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                         int64_t job_id) const {
+  return new EagerJobBuildAndInferCtx(job, job_id);
+}
+
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
     const std::string& job_name) {
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
