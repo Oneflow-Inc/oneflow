@@ -12,7 +12,7 @@ def add_loss(loss):
     Args:
         loss: A `Blob`.
     """
-    c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.logical_blob_name)
+    c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.unique_name)
 
 @oneflow_export("losses.add_loss")
 def api_add_loss(loss):

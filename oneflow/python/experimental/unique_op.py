@@ -22,7 +22,7 @@ def unique_with_counts(x, out_idx=flow.int32, name=None):
     else:
         op_conf.name = name
 
-    op_conf.unique_with_counts_conf.x = x.logical_blob_name
+    op_conf.unique_with_counts_conf.x = x.unique_name
     op_conf.unique_with_counts_conf.y = 'y'
     op_conf.unique_with_counts_conf.idx = 'idx'
     op_conf.unique_with_counts_conf.count = 'count'

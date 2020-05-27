@@ -22,8 +22,8 @@ def broadcast_minimum(a, b, name=None):
     else:
         op_conf.name = name
 
-    op_conf.broadcast_minimum_conf.a = a.logical_blob_name
-    op_conf.broadcast_minimum_conf.b = b.logical_blob_name
+    op_conf.broadcast_minimum_conf.a = a.unique_name
+    op_conf.broadcast_minimum_conf.b = b.unique_name
     op_conf.broadcast_minimum_conf.out = 'out'
 
     compile_context.CurJobAddOp(op_conf)

@@ -255,7 +255,7 @@ def decode_random(
         )
 
     if tick:
-        op_conf.decode_random_conf.tick = tick.logical_blob_name
+        op_conf.decode_random_conf.tick = tick.unique_name
     op_conf.decode_random_conf.out = "out"
 
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -520,7 +520,7 @@ def tensor_list_to_tensor_buffer(input, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.unique_name)
     setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
 
@@ -537,7 +537,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.unique_name)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
