@@ -37,6 +37,11 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
+Maybe<std::string> CurrentResource() {
+  CHECK_NOTNULL_OR_RETURN(Global<ResourceDesc>::Get());
+  return PbMessage2TxtString(Global<ResourceDesc>::Get()->resource());
+}
+
 Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
