@@ -25,7 +25,7 @@ def Watch(blob_watched, handler_or_prompt=None):
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
-        setattr(op_conf.foreign_watch_conf, "in", blob_watched.logical_blob_name)
+        setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
         compile_context.CurJobAddOp(op_conf, blob_watched.parallel_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)

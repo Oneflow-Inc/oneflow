@@ -25,6 +25,12 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
+def EnableEagerExecution(enable_eager_execution):
+    return oneflow_internal.EnableEagerExecution(enable_eager_execution)
+
+def EagerExecutionEnabled():
+    return oneflow_internal.EagerExecutionEnabled()
+
 def IsEnvInited():
     return oneflow_internal.IsEnvInited()
 

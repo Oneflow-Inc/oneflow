@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
+#include "oneflow/core/common/maybe.h"
 
 DECLARE_string(log_dir);
 
@@ -85,6 +86,12 @@ class Global final {
     return &ptr;
   }
 };
+
+template<typename T>
+Maybe<T*> GlobalMaybe() {
+  CHECK_NOTNULL_OR_RETURN(Global<T>::Get()) << " typeid: " << typeid(T).name();
+  return Global<T>::Get();
+}
 
 #define OF_COMMA ,
 

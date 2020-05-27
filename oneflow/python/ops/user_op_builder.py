@@ -67,7 +67,7 @@ class UserOpConfBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.logical_blob_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
         return self
 
     def Output(self, output_name, num = 1):

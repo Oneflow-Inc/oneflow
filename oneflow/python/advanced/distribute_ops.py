@@ -13,7 +13,7 @@ def distribute_clone(x, name=None):
     if name is None: name = id_util.UniqueStr("DistributeClone_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.distribute_clone_conf, "in", x.logical_blob_name)
+    setattr(op_conf.distribute_clone_conf, "in", x.unique_name)
     parallel_size = oneflow.placement.current_scope().parallel_size
     op_conf.distribute_clone_conf.out.extend(["out_%d" % i for i in range(parallel_size)])
     compile_context.CurJobAddConsistentOp(op_conf)
@@ -45,7 +45,7 @@ def distribute_split(x, axis=0, name=None):
     if name is None: name = id_util.UniqueStr("DistributeSplit_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.distribute_split_conf, "in", x.logical_blob_name)
+    setattr(op_conf.distribute_split_conf, "in", x.unique_name)
     op_conf.distribute_split_conf.axis = axis
     parallel_size = oneflow.placement.current_scope().parallel_size
     op_conf.distribute_split_conf.out.extend(["out_%d" % i for i in range(parallel_size)])
@@ -88,9 +88,9 @@ def distribute_map(xs, f, axis = 0):
 
 def _SoleConsistentLbn(blob):
     assert blob.parallel_size == 1
-    if isinstance(blob, remote_blob_util.ConsistentBlob): return blob.logical_blob_name
+    if isinstance(blob, remote_blob_util.ConsistentBlob): return blob.unique_name
     if isinstance(blob, remote_blob_util.MirroredBlob):
-      return blob.sub_consistent_blob_list[0].logical_blob_name
+      return blob.sub_consistent_blob_list[0].unique_name
     raise NotImplementedError
 
 def _AssertInputOrOutput(xs):

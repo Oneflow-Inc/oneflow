@@ -2,12 +2,9 @@ OneFlow Documentation
 ===================================
 .. toctree::
     :maxdepth: 1
-    :caption: OneFlow Tutorial
 
-    tutorials/quick_start
-    tutorials/ofrecord
-    tutorials/alexnet
-    tutorials/models
+    models
+    mandarin
 
 
 .. toctree::
