@@ -722,7 +722,7 @@ def identity_n(inputs, name=None):
     assert len(inputs) > 1
     out_bns = []
     for idx, blob in enumerate(inputs):
-        getattr(op_conf.tuple_identity_conf, "in").append(blob.logical_blob_name)
+        getattr(op_conf.tuple_identity_conf, "in").append(blob.unique_name)
         out_bn = "out_" + str(idx)
         getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
         out_bns.append(out_bn)
