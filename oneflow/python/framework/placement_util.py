@@ -35,7 +35,7 @@ def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
 
 @oneflow_export('device_prior_placement')
 def api_device_prior_placement(device_tag, machine_device_ids):
-    return enable_if.unqiue(GetDevicePriorPlacementScope)(device_tag, machine_device_ids)
+    return enable_if.unique(GetDevicePriorPlacementScope)(device_tag, machine_device_ids)
 
 def GetDefaultMachineDeviceIds(resource):
     if resource.HasField('gpu_device_num'):
