@@ -10,6 +10,19 @@
 
 namespace oneflow {
 
+class EagerExecutionOption {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerExecutionOption);
+  explicit EagerExecutionOption() : enable_eager_execution_(false) {}
+  ~EagerExecutionOption() {}
+
+  bool enable_eager_execution() const { return enable_eager_execution_; }
+  void set_enable_eager_execution(bool val) { enable_eager_execution_ = val; }
+
+ private:
+  bool enable_eager_execution_;
+};
+
 class JobBuildAndInferCtxMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
