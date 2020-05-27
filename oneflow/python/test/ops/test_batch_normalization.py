@@ -68,6 +68,7 @@ def test_watch_scope(test_case):
 
 
 def RunTensorFlowBn(x, tf_args, training, trainable):
+    x = x.astype(np.float32)
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
@@ -98,7 +99,7 @@ def RunOneflowBn(device_type, x, data_type, flow_args, training=True, trainable=
         func_config.train.primary_lr(0)
         func_config.train.model_update_conf(dict(naive_conf={}))
     @flow.function(func_config)
-    def FlowJob(x=flow.FixedTensorDef(x.shape)):
+    def FlowJob(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=dtype, initializer=flow.zeros_initializer())
