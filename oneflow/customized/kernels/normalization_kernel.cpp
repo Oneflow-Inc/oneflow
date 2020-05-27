@@ -69,14 +69,14 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
       CudaCheck(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), CudnnBatchNormModeTraining(), CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), 1.0 - momentum,
+          param_desc.Get(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
           moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
           inv_variance->mut_dptr()));
     } else {
       CudaCheck(cudnnBatchNormalizationForwardInference(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), moving_mean->dptr(),
+          param_desc.Get(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
           moving_variance->dptr(), epsilon));
     }
   }
@@ -165,12 +165,14 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
 REGISTER_BN_KERNEL(CPU, float)
 REGISTER_BN_KERNEL(CPU, double)
 
+REGISTER_BN_KERNEL(GPU, float16)
 REGISTER_BN_KERNEL(GPU, float)
 REGISTER_BN_KERNEL(GPU, double)
 
 REGISTER_BN_GRAD_KERNEL(CPU, float)
 REGISTER_BN_GRAD_KERNEL(CPU, double)
 
+REGISTER_BN_GRAD_KERNEL(GPU, float16)
 REGISTER_BN_GRAD_KERNEL(GPU, float)
 REGISTER_BN_GRAD_KERNEL(GPU, double)
 
