@@ -687,6 +687,7 @@ def assign(ref, value, dtype=None, name=None):
         op_conf.assign_conf.ref = ref.unique_name
         op_conf.assign_conf.value = value.unique_name
         compile_context.CurJobAddOp(op_conf)
+        return
 
     op = flow.user_op_builder(name).Op("assign").Input("ref", [ref]).Input("value", [value]).Build()
     op.InferAndTryRun()
