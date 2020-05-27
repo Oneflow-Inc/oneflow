@@ -86,8 +86,11 @@ def RunOneflowBn(device_type, x, data_type, flow_args, training=True, trainable=
     if data_type == "float16":
         func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
+        np_dtype = np.float32
     else:
         dtype = type_name_to_flow_type[data_type]
+        np_dtype = type_name_to_np_type[data_type]
+    x = x.astype(np_dtype)
 
     func_config.default_data_type(dtype)
     if trainable:
@@ -126,7 +129,7 @@ def CompareBnWithTensorFlow(device_type, input_shape, data_type,
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
     x = np.random.uniform(low=input_minval, high=input_maxval,
-                          size=input_shape).astype(np.float32)
+                          size=input_shape)
     if trainable:
         of_y, of_x_diff = RunOneflowBn(device_type, x, data_type, flow_args, training=training, trainable=trainable)
         tf_y, tf_x_diff = RunTensorFlowBn(x, tf_args, training=training, trainable=trainable)
