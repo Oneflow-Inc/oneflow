@@ -80,6 +80,9 @@ def grpc_use_no_signal(val = True):
 
 @oneflow_export('env.log_dir')
 def log_dir(val):
+    r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
+
+    """
     assert env_proto_mutable == True
     assert type(val) is str
     default_env_proto.cpp_logging_conf.log_dir = val
