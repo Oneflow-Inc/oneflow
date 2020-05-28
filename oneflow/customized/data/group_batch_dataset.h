@@ -25,7 +25,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
 
   LoadTargetShdPtrVec Next() override {
     LoadTargetShdPtrVec ret;
-    int64_t group_id = GetEarliestBatchGroupId();
+    int64_t group_id = FindEarliestBatchGroupId();
     auto group_it = group_id2buffered_samples_.find(group_id);
     if (group_it != group_id2buffered_samples_.end()) {
       auto& batch_sample_list = group_it->second;
@@ -62,7 +62,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
   }
 
  private:
-  int64_t GetEarliestBatchGroupId() const {
+  int64_t FindEarliestBatchGroupId() const {
     int64_t group_id = -1;
     int64_t min_order = -1;
     for (const auto& pair : group_id2buffered_samples_) {
