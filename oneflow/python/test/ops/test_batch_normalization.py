@@ -67,6 +67,60 @@ def test_watch_scope(test_case):
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
 
+def CompareFp16(input_shape):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_data_type(flow.float32)
+    func_config.train.primary_lr(0)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+
+    axis = 1
+    epsilon = 1e-5
+
+    x = np.random.uniform(low=-10, high=10, size=input_shape).astype(np.float32)
+    param_shape = input_shape[axis]
+    mean = np.random.uniform(low=-10, high=10, size=param_shape).astype(np.float32)
+    variance = np.random.uniform(low=0, high=10, size=param_shape).astype(np.float32)
+    offset = np.random.uniform(low=-10, high=10, size=param_shape).astype(np.float32)
+    scale = np.random.uniform(low=-10, high=10, size=param_shape).astype(np.float32)
+
+    @flow.function(func_config)
+    def FlowFp16Job(x=flow.FixedTensorDef(x.shape), mean=flow.FixedTensorDef(mean.shape), variance=flow.FixedTensorDef(variance.shape), offset=flow.FixedTensorDef(offset.shape), scale=flow.FixedTensorDef(scale.shape)):
+        with flow.device_prior_placement('gpu', "0:0"):
+            x += flow.get_variable(name='v1', shape=(1,),
+                                   dtype=flow.float32, initializer=flow.zeros_initializer())
+            x = flow.cast(x, flow.float16)
+            y = flow.nn.batch_normalization(x, mean, variance, offset, scale, epsilon, axis=axis)
+            y = flow.cast(y, flow.float32)
+            flow.losses.add_loss(y)
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            return y
+
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+    of_y = FlowFp16Job(x, mean, variance, offset, scale).get().ndarray()
+    of_x_diff = test_global_storage.Get("x_diff")
+
+    def TensorFlowFp16Bn(x, mean, variance, offset, scale):
+        tf_params_shape = [1, 1, 1, 1]
+        tf_params_shape[axis] = input_shape[axis]
+        with tf.GradientTape(persistent=True) as tape:
+            x = tf.cast(tf.Variable(x), tf.float16)
+            mean = tf.Variable(mean.reshape(tf_params_shape))
+            variance = tf.Variable(variance.reshape(tf_params_shape))
+            offset = tf.Variable(offset.reshape(tf_params_shape))
+            scale = tf.Variable(scale.reshape(tf_params_shape))
+            y = tf.cast(tf.nn.batch_normalization(x, mean, variance, offset, scale, epsilon), tf.float32)
+        x_diff = tape.gradient(y, x)
+        return y.numpy(), x_diff.numpy()
+    tf_y, tf_x_diff = TensorFlowFp16Bn(x, mean, variance, offset, scale)
+    assert np.allclose(of_y, tf_y, rtol=5e-2)
+    print(of_x_diff)
+    print(tf_x_diff)
+    assert np.allclose(of_x_diff, tf_x_diff, rtol=5e-2)
+
+
 def RunTensorFlowBn(x, tf_args, training, trainable):
     x = x.astype(np.float32)
     # TensorFlow
@@ -81,7 +135,7 @@ def RunTensorFlowBn(x, tf_args, training, trainable):
         return y.numpy()
 
 
-def RunOneflowBn(device_type, x, data_type, flow_args, training=True, trainable=True):
+def RunOneflowLayerBn(device_type, x, data_type, flow_args, training=True, trainable=True):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -103,6 +157,8 @@ def RunOneflowBn(device_type, x, data_type, flow_args, training=True, trainable=
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=dtype, initializer=flow.zeros_initializer())
+            if data_type == 'float16':
+                x = flow.cast(x, flow.float16)
             loss = flow.layers.batch_normalization(x, *flow_args, trainable=trainable, training=training)
             if trainable:
                 flow.losses.add_loss(loss)
@@ -133,14 +189,14 @@ def CompareBnWithTensorFlow(device_type, input_shape, data_type,
     x = np.random.uniform(low=input_minval, high=input_maxval,
                           size=input_shape)
     if trainable:
-        of_y, of_x_diff = RunOneflowBn(device_type, x, data_type, flow_args, training=training, trainable=trainable)
+        of_y, of_x_diff = RunOneflowLayerBn(device_type, x, data_type, flow_args, training=training, trainable=trainable)
         tf_y, tf_x_diff = RunTensorFlowBn(x, tf_args, training=training, trainable=trainable)
         assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
         assert np.allclose(
             of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
         )
     else:
-        of_y = RunOneflowBn(device_type, x, data_type, flow_args, training=training, trainable=trainable)
+        of_y = RunOneflowLayerBn(device_type, x, data_type, flow_args, training=training, trainable=trainable)
         tf_y = RunTensorFlowBn(x, tf_args, training=training, trainable=trainable)
         assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
 
@@ -175,3 +231,11 @@ def test_batchnorm_trainable_without_training(test_case):
     arg_dict['op_args'] = [Args([1]), Args([2]), Args([1, 0.95, 0.0001]), Args([1, 0.99, 0.001, False]), Args([1, 0.99, 0.001, False, False]), Args([]), Args([1, 0.95, 0.1])]
     for arg in GenArgDict(arg_dict):
         CompareBnWithTensorFlow(**arg, training=False, trainable=True)
+
+
+def test_batchnorm_fp16_on_nn_bn(test_case):
+    arg_dict = OrderedDict()
+    arg_dict['input_shape'] = [(2,4,3,5)]
+    for arg in GenArgDict(arg_dict):
+        CompareFp16(**arg)
+

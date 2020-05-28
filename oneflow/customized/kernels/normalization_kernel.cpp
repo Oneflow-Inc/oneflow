@@ -49,16 +49,17 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
                             x->shape().At(axis), x->shape().Count(axis + 1), 1);
     const int64_t param_dim_size = x->shape().At(axis);
+    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamTensor = [&](const user_op::Tensor* tensor) {
       CHECK_EQ(tensor->shape().NumAxes(), 1);
       CHECK_EQ(tensor->shape().At(0), param_dim_size);
-      CHECK_EQ(tensor->data_type(), data_type);
+      CHECK_EQ(tensor->data_type(), param_data_type);
     };
     CheckParamTensor(gamma);
     CheckParamTensor(beta);
     CheckParamTensor(moving_mean);
     CheckParamTensor(moving_variance);
-    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
+    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, param_data_type, 1, param_dim_size, 1, 1);
 
     if (training) {
       const auto momentum = ctx->Attr<float>("momentum");
@@ -123,15 +124,16 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
                             x->shape().At(axis), x->shape().Count(axis + 1), 1);
+    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamTensor = [&](const user_op::Tensor* tensor) {
       CHECK_EQ(tensor->shape().NumAxes(), 1);
       CHECK_EQ(tensor->shape().At(0), param_dim_size);
-      CHECK_EQ(tensor->data_type(), data_type);
+      CHECK_EQ(tensor->data_type(), param_data_type);
     };
     CheckParamTensor(gamma);
     CheckParamTensor(gamma_diff);
     CheckParamTensor(beta_diff);
-    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
+    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, param_data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationBackward(
         ctx->device_ctx()->cudnn_handle(), CudnnBatchNormModeTraining(), CudnnSPOnePtr<T>(),
         CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(),

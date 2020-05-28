@@ -14,10 +14,11 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, x->shape().NumAxes());
   const Shape param_shape({x->shape().At(axis)});
+  const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
   const auto CheckParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
     const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
     if (tensor_desc != nullptr) {
-      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), param_data_type);
       CHECK_EQ_OR_RETURN(tensor_desc->shape(), param_shape);
     }
     return Maybe<void>::Ok();
@@ -25,7 +26,7 @@ Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
   const auto SetParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
     auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
     CHECK_OR_RETURN(tensor_desc != nullptr);
-    *tensor_desc->mut_data_type() = data_type;
+    *tensor_desc->mut_data_type() = param_data_type;
     *tensor_desc->mut_shape() = param_shape;
     return Maybe<void>::Ok();
   };
@@ -99,8 +100,9 @@ Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
 
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
+  const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
   const auto CheckParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
-    CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), dy_type);
+    CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), param_data_type);
     const auto* blob_shape = ctx->Shape4ArgNameAndIndex(bn, 0);
     if (blob_shape) { CHECK_EQ_OR_RETURN(*blob_shape, param_shape); }
     return Maybe<void>::Ok();
@@ -108,7 +110,7 @@ Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
   const auto SetParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
     auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
     if (tensor_desc) {
-      *tensor_desc->mut_data_type() = dy_type;
+      *tensor_desc->mut_data_type() = param_data_type;
       *tensor_desc->mut_shape() = param_shape;
     }
     return Maybe<void>::Ok();
@@ -233,11 +235,42 @@ REGISTER_USER_OP_GRAD("normalization")
               AddOp(mul_op);
               return mul_op;
             };
-            const auto dy_mul_gamma_op = BroadcastMulAtAxis(
-                op.input("gamma", 0), op.GetGradTensorWithOpOutput("y", 0), "out_grad_mul_gamma");
+            bool fp16 = op.TensorDesc4ArgNameAndIndex("y", 0).data_type() == DataType::kFloat16;
+            std::string dy_fp32;
+            if (fp16) {
+              const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-h2f";
+              const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+                                       .Op("cast")
+                                       .Input("in", op.GetGradTensorWithOpOutput("y", 0))
+                                       .Output("out")
+                                       .Attr("dtype", DataType::kFloat)
+                                       .Build();
+              AddOp(cast_op);
+              dy_fp32 = cast_op.output("out", 0);
+            } else {
+              dy_fp32 = op.GetGradTensorWithOpOutput("y", 0);
+            }
+            const auto dy_mul_gamma_op =
+                BroadcastMulAtAxis(op.input("gamma", 0), dy_fp32, "out_grad_mul_gamma");
             const auto dy_mul_inv_var_op = BroadcastMulAtAxis(
                 var_sqrt_op.output("y", 0), dy_mul_gamma_op.output("z", 0), "out_grad_mul_inv_var");
-            op.BindGradTensorWithOpInput(dy_mul_inv_var_op.output("z", 0), "x", 0);
+
+            std::string dx_fp32 = dy_mul_inv_var_op.output("z", 0);
+            std::string dx;
+            if (fp16) {
+              const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-f2h";
+              const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+                                       .Op("cast")
+                                       .Input("in", dx_fp32)
+                                       .Output("out")
+                                       .Attr("dtype", DataType::kFloat16)
+                                       .Build();
+              AddOp(cast_op);
+              dx = cast_op.output("out", 0);
+            } else {
+              dx = dx_fp32;
+            }
+            op.BindGradTensorWithOpInput(dx, "x", 0);
           }
         }
 

@@ -142,6 +142,35 @@ def conv2d(
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.batch_normalization")
+def batch_normalization(x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
+
+    if name is None:
+        name = id_util.UniqueStr("BatchNorm_")
+
+    builder = (flow.user_op_builder(name)
+        .Op("normalization")
+        .Input("x", [x])
+        .Input("moving_mean", [mean])
+        .Input("moving_variance", [variance])
+        .Input("gamma", [scale])
+        .Input("beta", [offset])
+        .Output("y")
+        .Output("mean")
+        .Output("inv_variance")
+        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
+        .Attr("training", False, "AttrTypeBool")
+        # momentum is not used
+        .Attr("momentum", 0.0, "AttrTypeFloat")
+        )
+    return (builder
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0])
+    
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):

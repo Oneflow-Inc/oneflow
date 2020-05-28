@@ -378,6 +378,7 @@ def batch_normalization(
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
@@ -391,32 +392,32 @@ def batch_normalization(
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
 
         if scale:
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            gamma = flow.constant(1, dtype=inputs.dtype, shape=params_shape)
+            gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
 
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
@@ -425,7 +426,7 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
@@ -458,7 +459,7 @@ def batch_normalization(
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
@@ -469,7 +470,7 @@ def batch_normalization(
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
@@ -479,7 +480,7 @@ def batch_normalization(
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
@@ -488,7 +489,7 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
