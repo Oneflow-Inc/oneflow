@@ -161,4 +161,9 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
+Maybe<long long> CurrentMachineId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return Global<MachineCtx>::Get()->this_machine_id();
+}
+
 }  // namespace oneflow
