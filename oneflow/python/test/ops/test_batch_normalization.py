@@ -159,13 +159,14 @@ def RunOneflowLayerBn(device_type, x, data_type, flow_args, training=True, train
                                    dtype=dtype, initializer=flow.zeros_initializer())
             if data_type == 'float16':
                 x = flow.cast(x, flow.float16)
-            loss = flow.layers.batch_normalization(x, *flow_args, trainable=trainable, training=training)
+            y = flow.layers.batch_normalization(x, *flow_args, trainable=trainable, training=training)
+            y = flow.cast(y, flow.float)
             if trainable:
-                flow.losses.add_loss(loss)
+                flow.losses.add_loss(y)
 
                 flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
-            return loss
+            return y
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -185,6 +186,9 @@ def CompareBnWithTensorFlow(device_type, input_shape, data_type,
         flow_args, tf_args = [], []
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
+    if data_type == 'float16':
+        print('rtol is set to 5e-2 in float16 test')
+        y_rtol, x_diff_rtol = 5e-2, 5e-2
 
     x = np.random.uniform(low=input_minval, high=input_maxval,
                           size=input_shape)
