@@ -26,7 +26,7 @@ class RandomAccessDataset : public Dataset<LoadTarget> {
   using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  RandomAccessDataset() = default;
+  RandomAccessDataset() : cur_idx_(0) {}
   virtual ~RandomAccessDataset() = default;
 
   virtual LoadTargetShdPtrVec At(int64_t index) const = 0;
