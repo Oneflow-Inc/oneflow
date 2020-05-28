@@ -51,6 +51,7 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
         if (batch_sample_list.empty() || batch_sample_list.back().data.size() == batch_size_) {
           BatchSample batch_sample;
           std::swap(batch_sample.data, next_sample_vec);
+          batch_sample.data.reserve(batch_size_);
           batch_sample.order = order_count_++;
           batch_sample_list.push_back(std::move(batch_sample));
         } else {
