@@ -55,6 +55,8 @@ class JobBuildAndInferCtx {
 
  protected:
   virtual int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const = 0;
+  virtual ParallelConf GetMirroredOpParallelConf(const ParallelDesc&,
+                                                 int64_t parallel_id) const = 0;
 
  private:
   Maybe<ParallelConf> InferOpParallelConf(
@@ -119,6 +121,7 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
 
  private:
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
+  ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
 };
 
 class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
@@ -129,6 +132,7 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
 
  private:
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
+  ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
 };
 
 }  // namespace oneflow

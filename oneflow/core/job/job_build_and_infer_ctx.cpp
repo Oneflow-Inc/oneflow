@@ -423,7 +423,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
       ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
     }
-    AddAndInferConsistentOp(sub_op_conf, parallel_desc.GetParallelIdOnlyParallelConf(i));
+    AddAndInferConsistentOp(sub_op_conf, GetMirroredOpParallelConf(parallel_desc, i));
   }
   bool is_broadcast = JUST(AllInputsBroadcastParallel(*op));
   for (const auto& obn : op->output_bns()) {
@@ -730,5 +730,15 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
 }
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }
+
+ParallelConf LazyJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
+                                                                int64_t parallel_id) const {
+  return parallel_desc.GetParallelIdOnlyParallelConf(parallel_id);
+}
+
+ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
+                                                                 int64_t parallel_id) const {
+  return parallel_desc.parallel_conf();
+}
 
 }  // namespace oneflow
