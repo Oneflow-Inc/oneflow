@@ -414,7 +414,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   ParallelDesc parallel_desc(origin_parallel_conf);
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
-  auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
+  auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
   int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
@@ -730,6 +730,16 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
 }
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }
+
+std::string LazyJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_name,
+                                                       int64_t parallel_id) const {
+  return op_name + "_" + std::to_string(parallel_id);
+}
+
+std::string EagerJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_name,
+                                                        int64_t parallel_id) const {
+  return op_name;
+}
 
 ParallelConf LazyJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
                                                                 int64_t parallel_id) const {
