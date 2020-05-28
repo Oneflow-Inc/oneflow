@@ -8,6 +8,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(elem_type, elem_field_name, field_name)               \
   static_assert(__is_object_message_type__, "this struct is not a object message");               \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported");   \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                                 \
   _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
                                        field_name);
@@ -15,27 +16,28 @@ namespace oneflow {
 #define OBJECT_MSG_MUTEXED_LIST(obj_msg_type, obj_msg_field)                              \
   ObjectMsgMutexedList<StructField<OBJECT_MSG_TYPE_CHECK(obj_msg_type), EmbeddedListLink, \
                                    OBJECT_MSG_TYPE_CHECK(obj_msg_type)::OF_PP_CAT(        \
-                                       obj_msg_field, _DssFieldOffset)()>>
+                                       obj_msg_field, _kDssFieldOffset)>>
 
 // details
 
-#define _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(field_counter, elem_type, elem_field_name, \
-                                             field_name)                                \
-  _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)    \
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, \
-                                             field_name);                               \
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name,  \
-                                            field_name);                                \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedMutexedListHeadInit);        \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedMutexedListHeadDelete);    \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(field_counter, elem_type, elem_field_name,        \
+                                             field_name)                                       \
+  _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)           \
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name,        \
+                                             field_name);                                      \
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_LINK_EDGES(field_counter, elem_type, elem_field_name,         \
+                                            field_name);                                       \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedMutexedListHeadInit);               \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedMutexedListHeadDelete);           \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgListType), \
+                   OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD_FIELD(elem_type, elem_field_name, field_name)        \
  public:                                                                                          \
   using OF_PP_CAT(field_name, _ObjectMsgListType) =                                               \
       TrivialObjectMsgMutexedList<StructField<OBJECT_MSG_TYPE_CHECK(elem_type), EmbeddedListLink, \
                                               OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(        \
-                                                  elem_field_name, _DssFieldOffset)()>>;          \
+                                                  elem_field_name, _kDssFieldOffset)>>;           \
   const OF_PP_CAT(field_name, _ObjectMsgListType) & field_name() const {                          \
     return OF_PP_CAT(field_name, _);                                                              \
   }                                                                                               \
@@ -109,12 +111,12 @@ class TrivialObjectMsgMutexedList {
     return list_head_.PopFront();
   }
 
-  void MoveFrom(TrivialObjectMsgList<LinkField>* src) {
+  void MoveFrom(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* src) {
     std::unique_lock<std::mutex> lock(mutex_);
     src->MoveToDstBack(&list_head_);
   }
 
-  void MoveTo(TrivialObjectMsgList<LinkField>* dst) {
+  void MoveTo(TrivialObjectMsgList<kDisableSelfLoopLink, LinkField>* dst) {
     std::unique_lock<std::mutex> lock(mutex_);
     list_head_.MoveToDstBack(dst);
   }
@@ -122,7 +124,7 @@ class TrivialObjectMsgMutexedList {
   void Clear() { list_head_.Clear(); }
 
  private:
-  TrivialObjectMsgList<LinkField> list_head_;
+  TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
   std::mutex mutex_;
 };
 

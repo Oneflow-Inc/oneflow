@@ -6,36 +6,43 @@
 
 namespace oneflow {
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                    \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
-                                  OBJECT_MSG_TYPE_CHECK(T), field_name);
+#define OBJECT_MSG_DEFINE_SKIPLIST_KEY(max_level, T, field_name)                          \
+  static_assert(__is_object_message_type__, "this struct is not a object message");       \
+  static_assert(std::is_standard_layout<T>::value, "this struct is not standard layout"); \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
+  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level, T, field_name);
 
-#define OBJECT_MSG_DEFINE_SKIPLIST_FLAT_MSG_KEY(max_level, T, field_name)           \
-  static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
-  _OBJECT_MSG_DEFINE_SKIPLIST_KEY(STATIC_COUNTER(field_counter), max_level,         \
-                                  FLAT_MSG_TYPE_CHECK(T), field_name);
-
-#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)               \
-  static_assert(__is_object_message_type__, "this struct is not a object message");           \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                             \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
+#define OBJECT_MSG_DEFINE_SKIPLIST_HEAD(elem_type, elem_field_name, field_name)                 \
+  static_assert(__is_object_message_type__, "this struct is not a object message");             \
+  static_assert(!std::is_same<self_type, elem_type>::value, "self loop link is not supported"); \
+  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                               \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name,   \
                                    field_name);
 
 #define OBJECT_MSG_SKIPLIST(elem_type, elem_field_name) \
   ObjectMsgSkipList<OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)>
 
+#define OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_ptr, elem)                                         \
+  _OBJECT_MSG_SKIPLIST_FOR_EACH(std::remove_pointer<decltype(skiplist_ptr)>::type, skiplist_ptr, \
+                                elem)
+
+#define OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_ptr, elem)                           \
+  _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
+                                    skiplist_ptr, elem)
+
+#define OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_ptr, elem)                           \
+  _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(std::remove_pointer<decltype(skiplist_ptr)>::type, \
+                                           skiplist_ptr, elem)
 // details
 
-#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)  \
-  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                \
-  OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name); \
-  OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);  \
-  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                    \
-  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+#define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD(field_counter, elem_type, elem_field_name, field_name)    \
+  _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name);                  \
+  OBJECT_MSG_DEFINE_SKIPLIST_ELEM_STRUCT(field_counter, elem_type, elem_field_name, field_name);   \
+  OBJECT_MSG_DEFINE_SKIPLIST_LINK_EDGES(field_counter, elem_type, elem_field_name, field_name);    \
+  OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListHeadInit);                      \
+  OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListHeadDelete);                  \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _ObjectMsgSkipListType), \
+                   OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_SKIPLIST_HEAD_FIELD(elem_type, elem_field_name, field_name)             \
  public:                                                                                           \
@@ -81,29 +88,55 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, T, field_name)                     \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgEmbeddedSkipListIteratorInit);     \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgEmbeddedSkipListIteratorDelete); \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(field_counter, "object message",                                   \
+                   OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType), OF_PP_CAT(field_name, _));
 
-#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)                     \
- public:                                                                                           \
-  using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                         \
-      EmbeddedSkipListKey<key_type, max_level>;                                                    \
-  const key_type& field_name() const { return OF_PP_CAT(field_name, _).key(); }                    \
-  key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }           \
-  key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }       \
-  template<typename T>                                                                             \
-  void OF_PP_CAT(set_, field_name)(const T& val) {                                                 \
-    static_assert(std::is_arithmetic<T>::value || std::is_enum<T>::value, "T is not scalar type"); \
-    *OF_PP_CAT(mut_, field_name)() = val;                                                          \
-  }                                                                                                \
-                                                                                                   \
- private:                                                                                          \
-  EmbeddedSkipListKey<key_type, max_level> OF_PP_CAT(field_name, _);
+#define _OBJECT_MSG_DEFINE_SKIPLIST_KEY_FIELD(max_level, key_type, field_name)               \
+ public:                                                                                     \
+  using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                   \
+      EmbeddedSkipListKey<key_type, max_level>;                                              \
+  bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
+    return OF_PP_CAT(field_name, _).empty();                                                 \
+  }                                                                                          \
+  ConstType<key_type>& field_name() const { return OF_PP_CAT(field_name, _).key(); }         \
+  key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }     \
+  key_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); } \
+  template<typename T>                                                                       \
+  void OF_PP_CAT(set_, field_name)(const T& val) {                                           \
+    static_assert(std::is_scalar<T>::value, "T is not scalar type");                         \
+    *OF_PP_CAT(mut_, field_name)() = val;                                                    \
+  }                                                                                          \
+                                                                                             \
+ private:                                                                                    \
+  OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) OF_PP_CAT(field_name, _);
 
-#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)             \
-  StructField<OBJECT_MSG_TYPE_CHECK(elem_type),                                       \
-              OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name,            \
-                                                          _ObjectMsgSkipListKeyType), \
-              OBJECT_MSG_TYPE_CHECK(elem_type)::OF_PP_CAT(elem_field_name, _DssFieldOffset)()>
+#define OBJECT_MSG_SKIPLIST_ELEM_STRUCT_FIELD(elem_type, elem_field_name)                \
+  StructField<elem_type,                                                                 \
+              typename elem_type::OF_PP_CAT(elem_field_name, _ObjectMsgSkipListKeyType), \
+              elem_type::OF_PP_CAT(elem_field_name, _kDssFieldOffset)>
+
+#define _OBJECT_MSG_SKIPLIST_FOR_EACH(skiplist_type, skiplist_ptr, elem)                     \
+  for (ObjectMsgPtr<skiplist_type::value_type> elem, *end_if_not_null = nullptr;             \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)             \
+  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                          \
+      (StructField<                                                                          \
+          skiplist_type, EmbeddedListLink,                                                   \
+          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+      skiplist_type::elem_level0_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
+
+#define _OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)                 \
+  EMBEDDED_LIST_FOR_EACH(                                                                    \
+      (StructField<                                                                          \
+          skiplist_type, EmbeddedListLink,                                                   \
+          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+      skiplist_type::elem_level0_link_struct_field, elem)
+
+#define _OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(skiplist_type, skiplist_ptr, elem)          \
+  EMBEDDED_LIST_UNSAFE_FOR_EACH(                                                             \
+      (StructField<                                                                          \
+          skiplist_type, EmbeddedListLink,                                                   \
+          skiplist_type::ContainerLevelZeroLinkOffset()>::FieldPtr4StructPtr(skiplist_ptr)), \
+      skiplist_type::elem_level0_link_struct_field, elem)
 
 template<typename WalkCtxType, typename PtrFieldType>
 struct ObjectMsgEmbeddedSkipListHeadInit {
@@ -128,31 +161,42 @@ struct ObjectMsgEmbeddedSkipListIteratorDelete {
 template<typename ElemKeyField>
 class TrivialObjectMsgSkipList {
  public:
-  using elem_type = typename ElemKeyField::struct_type;
+  using value_type = typename ElemKeyField::struct_type;
   using key_type = typename ElemKeyField::field_type::key_type;
+  using elem_key_level0_link_struct_field =
+      StructField<typename ElemKeyField::field_type, EmbeddedListLink,
+                  ElemKeyField::field_type::LevelZeroLinkOffset()>;
+  using elem_level0_link_struct_field =
+      typename ComposeStructField<ElemKeyField, elem_key_level0_link_struct_field>::type;
+  template<typename Enabled = void>
+  static constexpr int ContainerLevelZeroLinkOffset() {
+    return offsetof(TrivialObjectMsgSkipList, skiplist_head_)
+           + EmbeddedSkipListHead<ElemKeyField>::ContainerLevelZeroLinkOffset();
+  }
 
   void __Init__() { skiplist_head_.__Init__(); }
 
   std::size_t size() const { return skiplist_head_.size(); }
   bool empty() const { return skiplist_head_.empty(); }
-
-  ObjectMsgPtr<elem_type> Find(const key_type& key) {
-    ObjectMsgPtr<elem_type> ret;
+  value_type* Begin() { return skiplist_head_.Begin(); }
+  ObjectMsgPtr<value_type> Find(const key_type& key) {
+    ObjectMsgPtr<value_type> ret;
     ret.Reset(skiplist_head_.Find(key));
     return ret;
   }
-  elem_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
-  bool EqualsEnd(const ObjectMsgPtr<elem_type>& ptr) { return !ptr; }
+  value_type* FindPtr(const key_type& key) { return skiplist_head_.Find(key); }
+  const value_type* FindPtr(const key_type& key) const { return skiplist_head_.Find(key); }
+  bool EqualsEnd(const ObjectMsgPtr<value_type>& ptr) { return !ptr; }
   void Erase(const key_type& key) { ObjectMsgPtrUtil::ReleaseRef(skiplist_head_.Erase(key)); }
-  void Erase(elem_type* elem_ptr) {
+  void Erase(value_type* elem_ptr) {
     skiplist_head_.Erase(elem_ptr);
     ObjectMsgPtrUtil::ReleaseRef(elem_ptr);
   }
-  std::pair<ObjectMsgPtr<elem_type>, bool> Insert(elem_type* elem_ptr) {
-    elem_type* ret_elem = nullptr;
+  std::pair<ObjectMsgPtr<value_type>, bool> Insert(value_type* elem_ptr) {
+    value_type* ret_elem = nullptr;
     bool success = false;
     std::tie(ret_elem, success) = skiplist_head_.Insert(elem_ptr);
-    std::pair<ObjectMsgPtr<elem_type>, bool> ret;
+    std::pair<ObjectMsgPtr<value_type>, bool> ret;
     ret.first.Reset(ret_elem);
     ret.second = success;
     if (success) { ObjectMsgPtrUtil::Ref(elem_ptr); }
@@ -160,7 +204,7 @@ class TrivialObjectMsgSkipList {
   }
 
   void Clear() {
-    skiplist_head_.Clear([](elem_type* elem) { ObjectMsgPtrUtil::ReleaseRef(elem); });
+    skiplist_head_.Clear([](value_type* elem) { ObjectMsgPtrUtil::ReleaseRef(elem); });
   }
 
  private:
