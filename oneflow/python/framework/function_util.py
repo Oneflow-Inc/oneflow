@@ -15,6 +15,9 @@ import oneflow.python.lib.core.pb_util as pb_util
 
 @oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
+    """OneFlow function's configurations.
+        
+    """
     def __init__(self):
         self.function_desc = FunctionDesc()
 
@@ -72,24 +75,17 @@ def lazy_oneflow_function(function_config = FunctionConfig()):
 
 @oneflow_export('function')
 def api_oneflow_function(function_config = FunctionConfig()):
-    r"""Creates a callable OneFlow graph from a Python function.
+    r"""Creates a callable OneFlow function from a Python function.
     For instance::
 
         @oneflow.function(flow.FunctionConfig())
-        def train(
-            image_blob=oneflow.input_blob_def(
-                shape=(2, 255, 255, 3), dtype=flow.float32, is_dynamic=True
-            )
-        ):
-            # your network
+        def train():
+            # your model
 
     Args:
-        job_func: job function to be compiled. Usually the function is decorated by decorator `@oneflow.function`
+        function_config: a `FunctionConfig` object
     Returns:
-        If func is not None, returns a callable that will execute the compiled 
-        function (and return zero or more Blob objects). 
-        If func is None, returns a decorator that, when invoked with a single 
-        func argument, returns a callable equivalent to the case above.
+        a callable which is called to execute the compiled function
     """
     return enable_if.unique(lazy_oneflow_function, eager_oneflow_function)(function_config)
 

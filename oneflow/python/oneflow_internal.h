@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/resource_desc.h"
 
 void RegisterWorkerCallbackOnlyOnce(oneflow::ForeignWorkerCallback* callback,
                                     std::string* error_str) {

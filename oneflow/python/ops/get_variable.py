@@ -25,18 +25,16 @@ def get_variable(
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
-    r"""Create a new variable or get a existing variable by name.
+    r"""Create a variable or retrieve an existing one.
 
     Args:
-        name: name of this variable. Variable could be shared across different function created by annotation `@oneflow.function` :func:`~oneflow.function`. `None` by defauilt
-        shape: shape of the variable. `None` by defauilt
-        dtype: data type of the variable. `None` by defauilt
-        initializer: a initializer_conf. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
-        trainable: a `bool` to indicate if this variable is trainable. `True` by defauilt
-        model_name: a `string`. `'weight'` or `'bias'`. `None` by defauilt
-        random_seed: random seed for initialization. `None` by defauilt
-    Returns:
-        A `Blob`
+        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by defauilt
+        shape: Shape of the variable. `None` by defauilt
+        dtype: Data type of the variable. `None` by defauilt
+        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
+        trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
+        model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
+        random_seed: Random seed for random initializers. `None` by defauilt
 
     """
     assert isinstance(name, str)
