@@ -654,8 +654,6 @@ def assign(ref, value, dtype=None, name=None):
         name = id_util.UniqueStr("Assign_")
 
     if os.getenv("ENABLE_USER_OP") == "True":
-        print("ENABLE_USER_OP", os.getenv("ENABLE_USER_OP"))
-        assert False
         op = flow.user_op_builder(name).Op("assign").Input("ref", [ref]).Input("value", [value]).Build()
         op.InferAndTryRun()
     else:

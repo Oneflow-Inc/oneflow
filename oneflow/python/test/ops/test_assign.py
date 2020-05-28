@@ -32,7 +32,6 @@ def _of_assign_and_relu(value, dtype, device_type):
 
     @flow.function(func_config)
     def assign_fn(value_def=flow.FixedTensorDef(value.shape, dtype=dtype)):
-        # with flow.fixed_placement(device_type, "0:0"):
         var = flow.get_variable(
             name="var",
             shape=value.shape,
@@ -43,7 +42,6 @@ def _of_assign_and_relu(value, dtype, device_type):
 
     @flow.function(func_config)
     def relu_fn():
-        # with flow.fixed_placement(device_type, "0:0"):
         var = flow.get_variable(
             name="var",
             shape=value.shape,
@@ -52,8 +50,6 @@ def _of_assign_and_relu(value, dtype, device_type):
         )
         return flow.nn.relu(var)
 
-    # checkpoint = flow.train.CheckPoint()
-    # checkpoint.init()
     assign_fn(value)
     return relu_fn().get().ndarray()
 
@@ -65,17 +61,13 @@ def _np_relu(x):
 def _compare_with_np(test_case, shape, dtype, device_type):
     x = _random_input(shape, flow_to_np_dtype_dict[dtype])
     of_y = _of_assign_and_relu(x, dtype, device_type)
-    print("of_y shape", of_y.shape)
     test_case.assertTrue(np.allclose(_np_relu(x), of_y))
 
 
 def test_argwhere(test_case):
     arg_dict = OrderedDict()
-    # arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    # arg_dict["dtype"] = [flow.float, flow.double]
-    arg_dict["shape"] = [(10)]
-    arg_dict["dtype"] = [flow.float]
+    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+    arg_dict["dtype"] = [flow.float, flow.double]
     arg_dict["device_type"] = ["gpu", "cpu"]
-    # arg_dict["device_type"] = ["cpu", "gpu"]
     for arg in GenArgDict(arg_dict):
         _compare_with_np(test_case, **arg)
