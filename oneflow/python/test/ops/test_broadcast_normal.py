@@ -14,8 +14,6 @@ gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
-# os.environ['ENABLE_USER_OP'] = 'True'
-
 
 def RunOneflowOp(device_type, flow_op, x, y, data_type):
     flow.clear_default_session()
