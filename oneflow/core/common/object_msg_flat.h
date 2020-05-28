@@ -17,7 +17,7 @@ namespace oneflow {
   _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(FLAT_MSG_TYPE_CHECK(field_type), field_name) \
   OBJECT_MSG_OVERLOAD_INIT(field_counter, ObjectMsgFlatMsgInit);                 \
   OBJECT_MSG_OVERLOAD_DELETE(field_counter, ObjectMsgFlatMsgDelete);             \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(field_counter, "object message", field_type, OF_PP_CAT(field_name, _));
 
 #define _OBJECT_MSG_DEFINE_FLAT_MSG_FIELD(field_type, field_name)                     \
  public:                                                                              \
