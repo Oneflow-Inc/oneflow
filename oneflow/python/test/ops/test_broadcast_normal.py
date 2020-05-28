@@ -2,6 +2,7 @@ import oneflow as flow
 import numpy as np
 import tensorflow as tf
 import os
+import threading
 
 from collections import OrderedDict
 import test_global_storage
@@ -13,8 +14,6 @@ from test_util import type_name_to_np_type
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-
-os.environ['ENABLE_USER_OP'] = 'True'
 
 
 def RunOneflowOp(device_type, flow_op, x, y, data_type):
@@ -77,11 +76,13 @@ def compare_with_tensorflow_grad(device_type, flow_op, tf_op, x_shape, y_shape, 
     assert device_type in ["gpu", "cpu"]
 
     np_type = type_name_to_np_type[data_type]
+    lock = threading.Lock()
     x = np.random.uniform(low=input_minval, high=input_maxval,
                         size=x_shape).astype(np_type)
     y = np.random.uniform(low=input_minval, high=input_maxval,
                         size=y_shape).astype(np_type)
-    of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
+    with lock:
+        of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
@@ -152,16 +153,16 @@ def test_broadcast_sub(test_case):
     arg_dict["y_shape"] = [(4, 1, 6)]
     arg_dict["data_type"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_grad(*arg)
+        compare_with_tensorflow(*arg)
 
 
 def test_broadcast_mul(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["flow_op"] = [flow.math.multiply]
     arg_dict["tf_op"] = [tf.math.multiply]
-    arg_dict["x_shape"] = [(3, 1, 4, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 5)]
+    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
     arg_dict["data_type"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_grad(*arg)
