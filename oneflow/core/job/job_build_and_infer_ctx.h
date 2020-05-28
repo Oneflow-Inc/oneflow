@@ -54,6 +54,7 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckJob() const;
 
  protected:
+  virtual std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const = 0;
   virtual int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const = 0;
   virtual ParallelConf GetMirroredOpParallelConf(const ParallelDesc&,
                                                  int64_t parallel_id) const = 0;
@@ -120,6 +121,7 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~LazyJobBuildAndInferCtx() = default;
 
  private:
+  std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
 };
@@ -131,6 +133,7 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~EagerJobBuildAndInferCtx() = default;
 
  private:
+  std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
 };
