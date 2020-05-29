@@ -751,6 +751,14 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerJobBuildAndInferCtx::Complete() { TODO(); }
+Maybe<void> EagerJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
+  DoPass("GenerateBackwardAndOptimizerOpConfs");
+  TODO();
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
