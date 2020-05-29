@@ -88,7 +88,7 @@ class ConsistentUserOp(UserOp):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@enable_if.condition(hob.in_global_mode)
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
