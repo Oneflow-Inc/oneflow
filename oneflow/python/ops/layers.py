@@ -378,6 +378,7 @@ def batch_normalization(
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
+    # Float32 required to avoid precision-loss when using fp16 input/output
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
     if name is None:
