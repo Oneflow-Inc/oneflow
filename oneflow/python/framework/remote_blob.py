@@ -9,7 +9,7 @@ import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.object_dict as object_dict
+import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 
 import oneflow
@@ -177,7 +177,7 @@ class LazyMirroredBlob(MirroredBlob):
 class EagerMirroredBlob(MirroredBlob):
     def __init__(self, lbi, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
-        self.blob_object_ = object_dict.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
+        self.blob_object_ = object_cache.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         self.shape_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(

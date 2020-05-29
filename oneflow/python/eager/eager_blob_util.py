@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_trait as blob_trait
-import oneflow.python.eager.object_dict as object_dict
+import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
@@ -10,7 +10,7 @@ import oneflow.python.lib.core.async_util as async_util
 class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
     def __init__(self, blob_name):
         self.blob_name_ = blob_name
-        self.blob_object_ = object_dict.GetObject4BlobName(blob_name)
+        self.blob_object_ = object_cache.GetObject4BlobName(blob_name)
 
     @property
     def logical_blob_name(self): return self.blob_name_

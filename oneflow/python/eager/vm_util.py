@@ -7,9 +7,9 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.symbol as symbol_util
-import oneflow.python.eager.symbol_dict as symbol_dict
+import oneflow.python.eager.symbol_cache as symbol_cache
 import oneflow.python.eager.object as object_util
-import oneflow.python.eager.object_dict as object_dict
+import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
 import oneflow
 
@@ -59,34 +59,35 @@ class InstructionsBuilder(object):
         return self._WatchBlob("WatchBlobBody", blob_object, callback)
 
     def GetSymbol4String(self, string):
-        if symbol_dict.HasSymbol4String(string): return symbol_dict.GetSymbol4String(string)
+        if symbol_cache.HasSymbol4String(string): return symbol_cache.GetSymbol4String(string)
         symbol_id = self._NewSymbolId4String(string)
         symbol = symbol_util.Symbol(symbol_id, string)
-        symbol_dict.SetSymbol4String(string, symbol)
+        symbol_cache.SetSymbol4String(string, symbol)
         return symbol
 
     def GetJobConfSymbol(self, job_conf):
-        if symbol_dict.HasSymbol4JobConf(job_conf):
-            return symbol_dict.GetSymbol4JobConf(job_conf)
+        if symbol_cache.HasSymbol4JobConf(job_conf):
+            return symbol_cache.GetSymbol4JobConf(job_conf)
         symbol_id = self._NewSymbolId4JobConf(job_conf)
         symbol = symbol_util.Symbol(symbol_id, job_conf)
-        symbol_dict.SetSymbol4JobConf(job_conf, symbol)
+        symbol_cache.SetSymbol4JobConf(job_conf, symbol)
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf, device_tag):
-        if symbol_dict.HasSymbol4ParallelConf(parallel_conf):
-            return symbol_dict.GetSymbol4ParallelConf(parallel_conf)
+        serialized_parallel_conf = parallel_conf.SerializeToString()
+        if symbol_cache.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
+            return symbol_cache.GetSymbol4SerializedParallelConf(serialized_parallel_conf)
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
         symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
-        symbol_dict.SetSymbol4ParallelConf(parallel_conf, symbol)
+        symbol_cache.SetSymbol4SerializedParallelConf(serialized_parallel_conf, symbol)
         return symbol
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
-        if object_dict.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-            return object_dict.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
+        if object_cache.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
+            return object_cache.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
         object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
         obj = object_util.Object(object_id, parallel_desc_sym)
-        object_dict.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
+        object_cache.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
         return obj
 
     def _GetOpConfSymbol(self, op_conf):
@@ -97,11 +98,11 @@ class InstructionsBuilder(object):
         new_op_conf.user_conf.ClearField("input")
         new_op_conf.user_conf.ClearField("output")
         serialized_op_conf = new_op_conf.SerializeToString()
-        if symbol_dict.HasSymbol4SerializedOpConf(serialized_op_conf):
-            return symbol_dict.GetSymbol4SerializedOpConf(serialized_op_conf)
+        if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
+            return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
         symbol_id = self._NewSymbolId4OpConf(new_op_conf)
         symbol = symbol_util.Symbol(symbol_id, new_op_conf)
-        symbol_dict.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
     def _GetInputTriples(self, op_conf):
@@ -109,7 +110,7 @@ class InstructionsBuilder(object):
         for ibn, lbns in op_conf.user_conf.input.items():
             ibn_sym = self.GetSymbol4String(ibn)
             for i in range(len(lbns.s)):
-                in_object = object_dict.GetObject4BlobName(lbns.s[i])
+                in_object = object_cache.GetObject4BlobName(lbns.s[i])
                 input_triples.append((ibn_sym, i, in_object))
         return input_triples
 
@@ -119,7 +120,7 @@ class InstructionsBuilder(object):
             obn_sym = self.GetSymbol4String(obn)
             for i in range(len(lbns.s)):
                 out_object = self._NewBlobObject(parallel_desc_sym)
-                object_dict.SetObject4BlobName(lbns.s[i], out_object)
+                object_cache.SetObject4BlobName(lbns.s[i], out_object)
                 output_triples.append((obn_sym, i, out_object))
         return output_triples
 
