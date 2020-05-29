@@ -144,6 +144,11 @@ def conv2d(
 
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None):
+    r"""
+    This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
+    are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+
+    """
     if os.getenv("ENABLE_USER_OP") != 'True':
         raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
 

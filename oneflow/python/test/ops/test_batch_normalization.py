@@ -90,8 +90,8 @@ def CompareFp16(input_shape):
         with flow.device_prior_placement('gpu', "0:0"):
             x += flow.get_variable(name='v1', shape=(1,),
                                    dtype=flow.float32, initializer=flow.zeros_initializer())
-            x = flow.cast(x, flow.float16)
-            y = flow.nn.batch_normalization(x, mean, variance, offset, scale, epsilon, axis=axis)
+            x_cast = flow.cast(x, flow.float16)
+            y = flow.nn.batch_normalization(x_cast, mean, variance, offset, scale, epsilon, axis=axis)
             y = flow.cast(y, flow.float32)
             flow.losses.add_loss(y)
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -116,8 +116,6 @@ def CompareFp16(input_shape):
         return y.numpy(), x_diff.numpy()
     tf_y, tf_x_diff = TensorFlowFp16Bn(x, mean, variance, offset, scale)
     assert np.allclose(of_y, tf_y, rtol=5e-2)
-    print(of_x_diff)
-    print(tf_x_diff)
     assert np.allclose(of_x_diff, tf_x_diff, rtol=5e-2)
 
 
@@ -153,18 +151,20 @@ def RunOneflowLayerBn(device_type, x, data_type, flow_args, training=True, train
         func_config.train.primary_lr(0)
         func_config.train.model_update_conf(dict(naive_conf={}))
     @flow.function(func_config)
-    def FlowJob(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
+    def FlowJob(x_full_precision=flow.FixedTensorDef(x.shape, dtype=dtype)):
         with flow.device_prior_placement(device_type, "0:0"):
-            x += flow.get_variable(name='v1', shape=(1,),
+            x_full_precision += flow.get_variable(name='v1', shape=(1,),
                                    dtype=dtype, initializer=flow.zeros_initializer())
             if data_type == 'float16':
-                x = flow.cast(x, flow.float16)
+                x = flow.cast(x_full_precision, flow.float16)
+            else:
+                x = x_full_precision
             y = flow.layers.batch_normalization(x, *flow_args, trainable=trainable, training=training)
             y = flow.cast(y, flow.float)
             if trainable:
                 flow.losses.add_loss(y)
 
-                flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+                flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
 
             return y
 
@@ -187,8 +187,9 @@ def CompareBnWithTensorFlow(device_type, input_shape, data_type,
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
     if data_type == 'float16':
-        print('rtol is set to 5e-2 in float16 test')
+        print('atol and rtol is set to 1e-4 and 5e-2 in float16 test')
         y_rtol, x_diff_rtol = 5e-2, 5e-2
+        y_atol, x_diff_atol = 1e-4, 1e-4
 
     x = np.random.uniform(low=input_minval, high=input_maxval,
                           size=input_shape)
