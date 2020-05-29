@@ -43,17 +43,17 @@ def SetSymbol4JobConf(job_conf, symbol):
 
 job_conf_id2symbol = {}
 
-def HasSymbol4ParallelConf(parallel_conf):
-    global parallel_conf_id2symbol
-    return id(parallel_conf) in parallel_conf_id2symbol
+def HasSymbol4SerializedParallelConf(serialized_parallel_conf):
+    global serialized_parallel_conf2symbol
+    return serialized_parallel_conf in serialized_parallel_conf2symbol
 
-def GetSymbol4ParallelConf(parallel_conf):
-    global parallel_conf_id2symbol
-    return parallel_conf_id2symbol[id(parallel_conf)]
+def GetSymbol4SerializedParallelConf(serialized_parallel_conf):
+    global serialized_parallel_conf2symbol
+    return serialized_parallel_conf2symbol[serialized_parallel_conf]
 
-def SetSymbol4ParallelConf(parallel_conf, symbol):
-    assert not HasSymbol4ParallelConf(parallel_conf)
-    global parallel_conf_id2symbol
-    parallel_conf_id2symbol[id(parallel_conf)] = symbol
+def SetSymbol4SerializedParallelConf(serialized_parallel_conf, symbol):
+    assert not HasSymbol4SerializedParallelConf(serialized_parallel_conf)
+    global serialized_parallel_conf2symbol
+    serialized_parallel_conf2symbol[serialized_parallel_conf] = symbol
 
-parallel_conf_id2symbol = {}
+serialized_parallel_conf2symbol = {}
