@@ -152,6 +152,9 @@ def batch_normalization(x, mean, variance, offset, scale, variance_epsilon, axis
     if os.getenv("ENABLE_USER_OP") != 'True':
         raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
 
+    assert axis >= -len(x.shape) and axis < len(x.shape)
+    if axis < 0: axis += len(x.shape)
+
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
