@@ -19,42 +19,6 @@ def _coco(anno_file):
     return coco_dict[anno_file]
 
 
-def _make_coco_reader_op(
-    annotation_file,
-    image_dir,
-    batch_size,
-    stride_partition=True,
-    shuffle=True,
-    random_seed=-1,
-    name=None,
-):
-    if name is None:
-        name = "COCOReader"
-    assert isinstance(name, str)
-
-    return (
-        flow.user_op_builder(name)
-        .Op("COCOReader")
-        .Output("image")
-        .Output("image_id")
-        .Output("image_size")
-        .Output("gt_bbox")
-        .Output("gt_label")
-        .Output("gt_segm")
-        .Output("gt_segm_index")
-        .Attr("annotation_file", annotation_file, "AttrTypeString")
-        .Attr("image_dir", image_dir, "AttrTypeString")
-        .Attr("batch_size", batch_size, "AttrTypeInt64")
-        .Attr("shuffle_after_epoch", shuffle, "AttrTypeBool")
-        .Attr("random_seed", random_seed, "AttrTypeInt64")
-        .Attr("group_by_ratio", True, "AttrTypeBool")
-        .Attr("stride_partition", stride_partition, "AttrTypeBool")
-        .Attr("empty_tensor_size", 32, "AttrTypeInt64")
-        .Attr("tensor_init_bytes", 1048576, "AttrTypeInt32")
-        .Build()
-    )
-
-
 def _make_coco_data_load_fn(
     anno_file,
     image_dir,
@@ -73,14 +37,6 @@ def _make_coco_data_load_fn(
     @flow.function(func_config)
     def coco_load_fn():
         with flow.fixed_placement("cpu", "0:0-{}".format(nthread - 1)):
-            coco_reader = _make_coco_reader_op(
-                annotation_file=anno_file,
-                image_dir=image_dir,
-                batch_size=batch_size,
-                stride_partition=stride_partition,
-                shuffle=shuffle_after_epoch,
-            )
-
             (
                 image,
                 image_id,
@@ -89,7 +45,13 @@ def _make_coco_data_load_fn(
                 gt_label,
                 gt_segm,
                 gt_segm_index,
-            ) = coco_reader.InferAndTryRun().RemoteBlobList()
+            ) = flow.data.coco_reader(
+                annotation_file=anno_file,
+                image_dir=image_dir,
+                batch_size=batch_size,
+                shuffle=shuffle_after_epoch,
+                stride_partition=stride_partition,
+            )
 
             if ret_image_id_only:
                 return image_id
@@ -100,9 +62,9 @@ def _make_coco_data_load_fn(
             )
             bbox_list = flow.tensor_buffer_to_tensor_list(gt_bbox, shape=(128, 4), dtype=flow.float)
             label_list = flow.tensor_buffer_to_tensor_list(gt_label, shape=(128,), dtype=flow.int32)
-            segm_list = flow.tensor_buffer_to_tensor_list(gt_segm, shape=(512, 2), dtype=flow.float)
+            segm_list = flow.tensor_buffer_to_tensor_list(gt_segm, shape=(1024, 2), dtype=flow.float)
             segm_index_list = flow.tensor_buffer_to_tensor_list(
-                gt_segm_index, shape=(512, 3), dtype=flow.int32
+                gt_segm_index, shape=(1024, 3), dtype=flow.int32
             )
 
         return image_id, image_size, image_list, bbox_list, label_list, segm_list, segm_index_list

@@ -19,8 +19,6 @@ REGISTER_USER_OP("COCOReader")
     .Attr<bool>("group_by_ratio", UserOpAttrType::kAtBool, true)
     .Attr<bool>("remove_images_without_annotations", UserOpAttrType::kAtBool, true)
     .Attr<bool>("stride_partition", UserOpAttrType::kAtBool, false)
-    .Attr<int64_t>("empty_tensor_size", UserOpAttrType::kAtInt64, 32)
-    .Attr<int32_t>("tensor_init_bytes", UserOpAttrType::kAtInt32, 1048576)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));

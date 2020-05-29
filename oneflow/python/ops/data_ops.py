@@ -799,3 +799,39 @@ def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("data.coco_reader")
+def api_coco_reader(
+    annotation_file,
+    image_dir,
+    batch_size,
+    shuffle=True,
+    random_seed=-1,
+    group_by_aspect_ratio=True,
+    stride_partition=True,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("COCOReader_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("COCOReader")
+        .Output("image")
+        .Output("image_id")
+        .Output("image_size")
+        .Output("gt_bbox")
+        .Output("gt_label")
+        .Output("gt_segm")
+        .Output("gt_segm_index")
+        .Attr("annotation_file", annotation_file, "AttrTypeString")
+        .Attr("image_dir", image_dir, "AttrTypeString")
+        .Attr("batch_size", batch_size, "AttrTypeInt64")
+        .Attr("shuffle_after_epoch", shuffle, "AttrTypeBool")
+        .Attr("random_seed", random_seed, "AttrTypeInt64")
+        .Attr("group_by_ratio", group_by_aspect_ratio, "AttrTypeBool")
+        .Attr("stride_partition", stride_partition, "AttrTypeBool")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()
