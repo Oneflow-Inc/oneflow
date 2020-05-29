@@ -286,4 +286,6 @@ def test_batchnorm_fp16(test_case):
     for arg in GenArgDict(arg_dict):
         CompareFp16WithFp32(**arg, training=False, trainable=False, y_rtol=1e-3, y_atol=1e-3)
         CompareFp16WithFp32(**arg, training=True, trainable=True, y_rtol=1e-3, y_atol=1e-3, x_diff_rtol=1e-3, x_diff_atol=1e-3)
+        if os.getenv("ENABLE_USER_OP") == 'True':
+            CompareFp16WithFp32(**arg, training=False, trainable=True, y_rtol=1e-3, y_atol=1e-3, x_diff_rtol=1e-3, x_diff_atol=1e-3)
 
