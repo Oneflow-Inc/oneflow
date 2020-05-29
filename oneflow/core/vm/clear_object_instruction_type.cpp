@@ -13,46 +13,47 @@
 namespace oneflow {
 namespace vm {
 
-class ClearObjectInstructionType final : public InstructionType {
+class TryClearObjectInstructionType final : public InstructionType {
  public:
-  ClearObjectInstructionType() = default;
-  ~ClearObjectInstructionType() override = default;
+  TryClearObjectInstructionType() = default;
+  ~TryClearObjectInstructionType() override = default;
 
   using stream_type = DeviceHelperStreamType;
 
   // clang-format off
-  FLAT_MSG_VIEW_BEGIN(ClearObjectInstrOperand);
+  FLAT_MSG_VIEW_BEGIN(TryClearObjectInstrOperand);
     FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, object);
-  FLAT_MSG_VIEW_END(ClearObjectInstrOperand);
+  FLAT_MSG_VIEW_END(TryClearObjectInstrOperand);
   // clang-format on
 
   void Infer(Instruction* instruction) const override {
     ForEachObject(instruction, [&](const MutOperand& operand) {
-      ClearObject(instruction->mut_type_mirrored_object(operand));
+      TryClearObject(instruction->mut_type_mirrored_object(operand));
     });
   }
   void Compute(Instruction* instruction) const override {
     ForEachObject(instruction, [&](const MutOperand& operand) {
-      ClearObject(instruction->mut_type_mirrored_object(operand));
-      ClearObject(instruction->mut_value_mirrored_object(operand));
+      TryClearObject(instruction->mut_type_mirrored_object(operand));
+      TryClearObject(instruction->mut_value_mirrored_object(operand));
     });
   }
 
  private:
   template<typename DoEachT>
   void ForEachObject(Instruction* instruction, const DoEachT& DoEach) const {
-    FlatMsgView<ClearObjectInstrOperand> view;
+    FlatMsgView<TryClearObjectInstrOperand> view;
     CHECK(view.Match(instruction->instr_msg().operand()));
     for (int i = 0; i < view->object_size(); ++i) { DoEach(view->object(i)); }
   }
 
-  void ClearObject(MirroredObject* mirrored_object) const {
+  void TryClearObject(MirroredObject* mirrored_object) const {
     if (mirrored_object == nullptr) { return; }
-    mirrored_object->clear_rw_mutexed_object();
+    if (mirrored_object->rw_mutexed_object().ref_cnt() > 1) { return; }
+    mirrored_object->mut_rw_mutexed_object()->reset_object();
   }
 };
-COMMAND(RegisterInstructionType<ClearObjectInstructionType>("ClearObject"));
-COMMAND(RegisterLocalInstructionType<ClearObjectInstructionType>("LocalClearObject"));
+COMMAND(RegisterInstructionType<TryClearObjectInstructionType>("TryClearObject"));
+COMMAND(RegisterLocalInstructionType<TryClearObjectInstructionType>("LocalTryClearObject"));
 
 }  // namespace vm
 }  // namespace oneflow

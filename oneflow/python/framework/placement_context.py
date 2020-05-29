@@ -107,7 +107,7 @@ def _MakeParallelConf(device_tag, machine_device_ids):
     return parallel_conf
 
 def MakeMachineId2DeviceIdList(parallel_conf):
-    parallel_conf_str = str(parallel_conf)
+    parallel_conf_str = parallel_conf.SerializeToString()
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
         _parallel_conf_str2ofrecord[parallel_conf_str] = \
