@@ -53,32 +53,6 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id_);
-  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(job_); };
-  if (GlobalJobDesc().Bool("__is_user_function__")) {
-    DoPass("CompleteOfrecordDecoder");
-    DoPass("SetDefaultVariableConf");
-    DoPass("AutoMixedPrecision");
-    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
-    DoPass("NonDistributedOptimizerPass");
-    DoPass("AutoTrainStep");
-    DoPass("AutoLearningRate");
-    DoPass("GenerateBackwardAndOptimizerOpConfs");
-    DoPass("IndexedSlicesOptimizerRewritePass");
-    DoPass("SequentializeNcclTupleBroadcastReducePass");
-    DoPass("AddAllReduceGroupPass");
-    DoPass("AddLbiDiffWatcherOpConfs");
-    DoPass("SequentializeAllReduceGroupPass");
-    DoPass("PruneParallelCastOpsPass");
-    DoPass("DumpVariableInfoPass");
-  }
-  DoPass("DumpTimeShapeAndBlobParallelConfPass");
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
     const std::string& op_name, const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc(parallel_conf);
@@ -750,5 +724,33 @@ ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelD
                                                                  int64_t parallel_id) const {
   return parallel_desc.parallel_conf();
 }
+
+Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
+    DoPass("CompleteOfrecordDecoder");
+    DoPass("SetDefaultVariableConf");
+    DoPass("AutoMixedPrecision");
+    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
+    DoPass("NonDistributedOptimizerPass");
+    DoPass("AutoTrainStep");
+    DoPass("AutoLearningRate");
+    DoPass("GenerateBackwardAndOptimizerOpConfs");
+    DoPass("IndexedSlicesOptimizerRewritePass");
+    DoPass("SequentializeNcclTupleBroadcastReducePass");
+    DoPass("AddAllReduceGroupPass");
+    DoPass("AddLbiDiffWatcherOpConfs");
+    DoPass("SequentializeAllReduceGroupPass");
+    DoPass("PruneParallelCastOpsPass");
+    DoPass("DumpVariableInfoPass");
+  }
+  DoPass("DumpTimeShapeAndBlobParallelConfPass");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerJobBuildAndInferCtx::Complete() { TODO(); }
 
 }  // namespace oneflow
