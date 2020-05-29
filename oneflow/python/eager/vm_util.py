@@ -2,9 +2,11 @@ from __future__ import absolute_import
 
 import oneflow.python.vm.id_util as id_util
 import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.job.placement_pb2 as placement_pb_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_cache as symbol_cache
@@ -49,7 +51,7 @@ class InstructionsBuilder(object):
                                    input_triples, output_triples, mut2_output_triples)
 
     def DeleteBlob(self, blob_object):
-        self._ClearObject(blob_object)
+        self._TryClearObject(blob_object)
         self._DeleteObject(blob_object)
 
     def WatchBlobHeader(self, blob_object, callback):
@@ -57,6 +59,29 @@ class InstructionsBuilder(object):
 
     def WatchBlobBody(self, blob_object, callback):
         return self._WatchBlob("WatchBlobBody", blob_object, callback)
+
+    def UnpackLogicalBlobNameToPhysicalBlobNames(self, blob_name):
+        blob_object = object_cache.GetObject4BlobName(blob_name)
+        parallel_desc_symbol = blob_object.parallel_desc_symbol
+        parallel_conf = parallel_desc_symbol.parallel_conf
+        device_tag = parallel_desc_symbol.device_tag
+        machine_id2device_ids = placement_ctx.MakeMachineId2DeviceIdList(parallel_conf)
+        def GetPhysicalBlob(machine_id, device_id):
+            parallel_conf = placement_pb_util.ParallelConf()
+            parallel_conf.device_name.append("%d:%s:%d" % (machine_id, device_tag, device_id))
+            parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
+            physical_blob_name = "%s/%d/%d" % (blob_name, machine_id, device_id)
+            pyhsical_blob_object = self._NewBlobObject(physical_blob_name, parallel_desc_sym)
+            return physical_blob_name, pyhsical_blob_object
+        physical_blob_names = []
+        physical_blob_objects = []
+        for machine_id, device_ids in machine_id2device_ids.items():
+            for device_id in device_ids: 
+                physical_blob_name, pyhsical_blob_object = GetPhysicalBlob(machine_id, device_id)
+                physical_blob_names.append(physical_blob_name)
+                physical_blob_objects.append(pyhsical_blob_object)
+        self._ReplaceMirrored(parallel_desc_symbol, physical_blob_objects, [blob_object])
+        return physical_blob_names
 
     def GetSymbol4String(self, string):
         if symbol_cache.HasSymbol4String(string): return symbol_cache.GetSymbol4String(string)
@@ -119,8 +144,7 @@ class InstructionsBuilder(object):
         for obn, lbns in op_conf.user_conf.output.items():
             obn_sym = self.GetSymbol4String(obn)
             for i in range(len(lbns.s)):
-                out_object = self._NewBlobObject(parallel_desc_sym)
-                object_cache.SetObject4BlobName(lbns.s[i], out_object)
+                out_object = self._NewBlobObject(lbns.s[i], parallel_desc_sym)
                 output_triples.append((obn_sym, i, out_object))
         return output_triples
 
@@ -129,9 +153,11 @@ class InstructionsBuilder(object):
         # TODO(lixinqi)
         return mut2_output_triples
 
-    def _NewBlobObject(self, parallel_desc_sym):
+    def _NewBlobObject(self, blob_name, parallel_desc_sym):
         object_id = self._NewObjectId(parallel_desc_sym)
-        return object_util.Object(object_id, parallel_desc_sym)
+        blob_object = object_util.Object(object_id, parallel_desc_sym)
+        object_cache.SetObject4BlobName(blob_name, blob_object)
+        return blob_object
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -254,9 +280,9 @@ class InstructionsBuilder(object):
         instruction.operand.append(_Int64Operand(unique_callback_id))
         self.instruction_list_.instruction.append(instruction)
 
-    def _ClearObject(self, blob_object):
+    def _TryClearObject(self, blob_object):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "ClearObject"
+        instruction.instr_type_name = "TryClearObject"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
@@ -265,6 +291,17 @@ class InstructionsBuilder(object):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "DeleteObject"
         instruction.operand.append(_DelObjectOperand(blob_object.object_id))
+        self.instruction_list_.instruction.append(instruction)
+
+    def _ReplaceMirrored(self, parallel_desc_sym, lhs_objects, rhs_objects):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "ReplaceMirrored"
+        instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
+        for lhs_object in lhs_objects:
+            instruction.operand.append(_Int64Operand(lhs_object.object_id))
+        instruction.operand.append(_OperandSeparator())
+        for rhs_object in rhs_objects:
+            instruction.operand.append(_Int64Operand(rhs_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
 def _SymbolOperand(val):

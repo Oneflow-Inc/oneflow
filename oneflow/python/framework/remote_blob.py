@@ -11,6 +11,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.vm_util as vm_util
 
 import oneflow
 
@@ -177,7 +178,7 @@ class LazyMirroredBlob(MirroredBlob):
 class EagerMirroredBlob(MirroredBlob):
     def __init__(self, lbi, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
-        self.blob_object_ = object_cache.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
+        self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         self.shape_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
@@ -196,10 +197,12 @@ class EagerMirroredBlob(MirroredBlob):
 
     def numpy_mirrored_list(self):
         assert not self.is_tensor_list
-        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
-        def Fetch(blob_object):
-            return eager_blob_util.FetchTensorBlobAsNumpyList(self.parallel_size, blob_object)
-        return blob_cache.GetBodyCache(Fetch)
+        box = [[]]
+        def UnpackLogicalBlobNameToPhysicalBlobNames(builder):
+            box[0] = builder.UnpackLogicalBlobNameToPhysicalBlobNames(self.unique_name)
+        vm_util.LogicalRun(UnpackLogicalBlobNameToPhysicalBlobNames)
+        sub_blob_names = box[0]
+        return [eager_blob_util.EagerPhysicalBlob(name).numpy() for name in  sub_blob_names]
 
     @property
     def sub_consistent_blob_list(self): raise NotImplementedError
@@ -227,4 +230,8 @@ class EagerMirroredBlob(MirroredBlob):
 
     @property
     def parallel_conf(self): return self.parallel_conf_
+
+    def __del__(self):
+        blob_cache_util.TryDisableBlobCache(self.blob_object_)
+        vm_util.LogicalRun(lambda builder: builder.DeleteBlob(self.blob_object_))
 
