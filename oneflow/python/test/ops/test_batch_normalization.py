@@ -277,6 +277,8 @@ def test_nn_batchnorm(test_case):
 
 
 def test_batchnorm_fp16(test_case):
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict['input_shape'] = [(2,4,3,5)]
@@ -286,6 +288,5 @@ def test_batchnorm_fp16(test_case):
     for arg in GenArgDict(arg_dict):
         CompareFp16WithFp32(**arg, training=False, trainable=False, y_rtol=1e-3, y_atol=1e-3)
         CompareFp16WithFp32(**arg, training=True, trainable=True, y_rtol=1e-3, y_atol=1e-3, x_diff_rtol=1e-3, x_diff_atol=1e-3)
-        if os.getenv("ENABLE_USER_OP") == 'True':
-            CompareFp16WithFp32(**arg, training=False, trainable=True, y_rtol=1e-3, y_atol=1e-3, x_diff_rtol=1e-3, x_diff_atol=1e-3)
+        CompareFp16WithFp32(**arg, training=False, trainable=True, y_rtol=1e-3, y_atol=1e-3, x_diff_rtol=1e-3, x_diff_atol=1e-3)
 
