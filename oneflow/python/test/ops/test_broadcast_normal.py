@@ -79,6 +79,7 @@ def compare_with_tensorflow_grad(device_type, flow_op, tf_op, x_shape, y_shape, 
                         size=x_shape).astype(np_type)
     y = np.random.uniform(low=input_minval, high=input_maxval,
                         size=y_shape).astype(np_type)
+
     of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
@@ -150,16 +151,16 @@ def test_broadcast_sub(test_case):
     arg_dict["y_shape"] = [(4, 1, 6)]
     arg_dict["data_type"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_grad(*arg)
+        compare_with_tensorflow(*arg)
 
 
 def test_broadcast_mul(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["flow_op"] = [flow.math.multiply]
     arg_dict["tf_op"] = [tf.math.multiply]
-    arg_dict["x_shape"] = [(3, 1, 4, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 5)]
+    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
     arg_dict["data_type"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_grad(*arg)
