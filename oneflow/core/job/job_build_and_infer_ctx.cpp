@@ -618,11 +618,6 @@ Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn
   return lbi2logical_blob_desc_.at(lbi)->is_tensor_list();
 }
 
-Maybe<bool> JobBuildAndInferCtx::MirroredBlobDisableBoxing(const std::string& lbn_with_hint) const {
-  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
-  return true;
-}
-
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetBatchAxis(
     const std::string& lbn_with_hint) const {
   CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
@@ -757,7 +752,6 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
   DoPass("GenerateBackwardAndOptimizerOpConfs");
-  TODO();
   return Maybe<void>::Ok();
 }
 

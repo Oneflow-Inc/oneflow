@@ -43,7 +43,6 @@ class JobBuildAndInferCtx {
   Maybe<DataType> MirroredBlobGetDataType(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsDynamic(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsTensorList(const std::string& lbn_with_hint) const;
-  Maybe<bool> MirroredBlobDisableBoxing(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> MirroredBlobGetBatchAxis(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> MirroredBlobGetSplitAxisFromProducerView(const std::string& lbn_with_hint) const;
   Maybe<const ParallelDesc*> MirroredBlobGetParallelDescFromProducerView(
