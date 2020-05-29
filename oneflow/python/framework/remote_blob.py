@@ -8,15 +8,18 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
+import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.eager.object_dict as object_dict
+import oneflow.python.eager.blob_cache as blob_cache_util
 
 import oneflow
 
 def RemoteBlob(lbi, **kw):
-    return enable_if.unique(EagerRemoteBlob, LazyRemoteBlob)(lbi, **kw)
+    return enable_if.unique(EagerLogicalBlob, LazyRemoteBlob)(lbi, **kw)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def EagerRemoteBlob(lbi, **kw):
+def EagerLogicalBlob(lbi, **kw):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
     if (c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)):
@@ -38,6 +41,7 @@ class BlobDef(blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobH
     def __init__(self, lbi, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.parallel_size_ = 0
 
     @property
     def batch_axis(self):
@@ -57,8 +61,10 @@ class BlobDef(blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobH
 
     @property
     def parallel_size(self):
-        return placement_ctx.GetParallelSize(
-            placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf))
+        if self.parallel_size_ == 0:
+            self.parallel_size_ = placement_ctx.GetParallelSize(
+                    placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf))
+        return self.parallel_size_
 
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
@@ -130,6 +136,8 @@ class LazyMirroredBlob(MirroredBlob):
             self.sub_consistent_blob_list_.append(consistent_blob)
         watch_scope_util.TryWatchOnce(self)
 
+    def numpy_mirrored_list(self): return []
+
     @property
     def sub_consistent_blob_list(self): return self.sub_consistent_blob_list_
 
@@ -169,6 +177,7 @@ class LazyMirroredBlob(MirroredBlob):
 class EagerMirroredBlob(MirroredBlob):
     def __init__(self, lbi, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
+        self.blob_object_ = object_dict.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         self.shape_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
@@ -184,6 +193,13 @@ class EagerMirroredBlob(MirroredBlob):
         self.parallel_conf_ = (
                 c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
                     self.job_name_, self.lbn_))
+
+    def numpy_mirrored_list(self):
+        assert not self.is_tensor_list
+        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
+        def Fetch(blob_object):
+            return eager_blob_util.FetchTensorBlobAsNumpyList(self.parallel_size, blob_object)
+        return blob_cache.GetBodyCache(Fetch)
 
     @property
     def sub_consistent_blob_list(self): raise NotImplementedError

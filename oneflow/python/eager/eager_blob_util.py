@@ -10,65 +10,74 @@ import oneflow.python.lib.core.async_util as async_util
 class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
     def __init__(self, blob_name):
         self.blob_name_ = blob_name
-        self.blob_object = object_dict.GetObject4BlobName(blob_name)
+        self.blob_object_ = object_dict.GetObject4BlobName(blob_name)
 
     @property
     def logical_blob_name(self): return self.blob_name_
 
     @property
     def static_shape(self):
-        return _GetBlobHeaderCache(self.blob_object).static_shape
+        return _GetPhysicalBlobHeaderCache(self.blob_object_).static_shape
 
     @property
     def shape(self):
-        return _GetBlobHeaderCache(self.blob_object).shape
+        return _GetPhysicalBlobHeaderCache(self.blob_object_).shape
 
     @property
     def dtype(self):
-        return _GetBlobHeaderCache(self.blob_object).dtype
+        return _GetPhysicalBlobHeaderCache(self.blob_object_).dtype
 
     @property
     def is_dynamic(self): return True
 
     @property
     def is_tensor_list(self):
-        return _GetBlobHeaderCache(self.blob_object).is_tensor_list
+        return _GetPhysicalBlobHeaderCache(self.blob_object_).is_tensor_list
 
     def numpy(self):
         assert not self.is_tensor_list
-        return _GetBlobBodyCache(self.blob_object)
+        return _GetPhysicalBlobBodyCache(self.blob_object_)
 
     def __str__(self):
         return ("EagerPhysicalBlob(shape=%s, dtype=%s, is_tensor_list=%s)"
                 %(self.shape, self.dtype, self.is_tensor_list))
 
     def __del__(self):
-        blob_cache_util.TryDisableBlobCache(self.blob_object)
-        vm_util.PhysicalRun(lambda builder: builder.DeleteBlob(self.blob_object))
+        blob_cache_util.TryDisableBlobCache(self.blob_object_)
+        vm_util.PhysicalRun(lambda builder: builder.DeleteBlob(self.blob_object_))
 
-def _GetBlobHeaderCache(blob_object):
+
+def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
+    def AsyncFetchBlobBody(Yield):
+        fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
+        vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
+        physical_blob_callback.DeleteRegisteredCallback(fetcher)
+    return async_util.Await(parallel_size, AsyncFetchBlobBody)
+
+
+def _GetPhysicalBlobHeaderCache(blob_object):
     blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetHeaderCache(_FetchBlobHeader)
 
-def _GetBlobBodyCache(blob_object):
+
+def _GetPhysicalBlobBodyCache(blob_object):
     blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
-    return blob_cache.GetBodyCache(_FetchBlobBody)
+    return blob_cache.GetBodyCache(_FetchPhysicalBlobBody)
+
 
 def _FetchBlobHeader(blob_object):
     def AsyncFetchBlobHeader(Yield):
-        fetcher = _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield)
+        fetcher = _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobHeader(blob_object, fetcher))
         physical_blob_callback.DeleteRegisteredCallback(fetcher)
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 
-def _FetchBlobBody(blob_object):
-    def AsyncFetchBlobBody(Yield):
-        fetcher = MakeFetherEagerPhysicalBlobBodyFromOfBlob(Yield)
-        vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
-        physical_blob_callback.DeleteRegisteredCallback(fetcher)
-    return async_util.Await(1, AsyncFetchBlobBody)[0]
 
-def _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
+def _FetchPhysicalBlobBody(blob_object):
+    return FetchTensorBlobAsNumpyList(1, blob_object)[0]
+
+
+def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         # TODO(lixinqi) refactor ofblob.static_shape ofblob.shape_list
         static_shape = ofblob.static_shape
@@ -77,7 +86,7 @@ def _MakeFetherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     return Callback
 
 
-def MakeFetherEagerPhysicalBlobBodyFromOfBlob(Yield):
+def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
     return lambda ofblob: Yield(ofblob.CopyToNdarray())
 
     
