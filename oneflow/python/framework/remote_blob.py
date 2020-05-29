@@ -12,9 +12,9 @@ import oneflow
 def RemoteBlob(lbi, **kw):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
-    blob_type = ConsistentBlob
+    blob_type = LazyConsistentBlob
     if (c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)):
-        blob_type = MirroredBlob
+        blob_type = LazyMirroredBlob
     return blob_type(lbi, **kw)
 
 class BlobDef(blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
@@ -53,8 +53,12 @@ class BlobDef(blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobH
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 class ConsistentBlob(BlobDef):
+    def __init__(self, *args, **kwargs):
+        BlobDef.__init__(self, *args, **kwargs)
+
+class LazyConsistentBlob(ConsistentBlob):
     def __init__(self, lbi, auto_watched_within_scope = True, **kw):
-        BlobDef.__init__(self, lbi, **kw)
+        ConsistentBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         if auto_watched_within_scope: watch_scope_util.TryWatchOnce(self)
 
@@ -97,15 +101,19 @@ class ConsistentBlob(BlobDef):
                                                                               self.lbn_)
 
 class MirroredBlob(BlobDef):
+    def __init__(self, *args, **kwargs):
+        BlobDef.__init__(self, *args, **kwargs)
+
+class LazyMirroredBlob(MirroredBlob):
     def __init__(self, lbi, **kw):
-        BlobDef.__init__(self, lbi, **kw)
+        MirroredBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         lbn = self.unique_name
         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(self.job_name_, lbn)
         for i in range(num_sub_lbi):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(self.job_name_, lbn, i)
-            consistent_blob = ConsistentBlob(sub_lbi, auto_watched_within_scope=False)
+            consistent_blob = LazyConsistentBlob(sub_lbi, auto_watched_within_scope=False)
             self.sub_consistent_blob_list_.append(consistent_blob)
         watch_scope_util.TryWatchOnce(self)
 
