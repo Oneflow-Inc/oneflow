@@ -84,6 +84,10 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
+long CurrentMachineId(std::string* error_str) {
+  return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

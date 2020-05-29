@@ -37,7 +37,9 @@ __device__ int8_t GenMask(curandState* state, const float rate) {
 
 __global__ void SetupKernel(int64_t seed, curandState* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curand_init(seed, id, 0, &state[id]);
+  size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
+                       + (static_cast<size_t>(id) >> 2U));
+  curand_init(local_seed, 0, 0, &state[id]);
 }
 
 __global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, int8_t* mask) {

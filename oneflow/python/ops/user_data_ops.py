@@ -57,11 +57,28 @@ def OFRecordImageDecoderRandomCrop(
             .Attr("random_aspect_ratio", random_aspect_ratio, "AttrTypeListFloat")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
+@oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
+def OFRecordImageDecoder(
+        input_blob,
+        blob_name,
+        color_space="BGR",
+        name=None):
+    if name is None:
+        name = id_util.UniqueStr("OFRecordImageDecoder_")
+    return flow.user_op_builder(name)\
+            .Op("ofrecord_image_decoder")\
+            .Input("in",[input_blob])\
+            .Output("out")\
+            .Attr("name", blob_name, "AttrTypeString")\
+            .Attr("color_space", color_space, "AttrTypeString")\
+            .Build().InferAndTryRun().RemoteBlobList()[0]
+
 @oneflow_export("image.Resize", "image.resize")
 def Resize(
         input_blob,
         color_space="BGR",
         interp_type="Linear",
+        resize_shorter=0,
         resize_x=0,
         resize_y=0,
         name=None):
@@ -73,6 +90,7 @@ def Resize(
             .Output("out")\
             .Attr("color_space", color_space, "AttrTypeString")\
             .Attr("interp_type", interp_type, "AttrTypeString")\
+            .Attr("resize_shorter", resize_shorter, "AttrTypeInt64")\
             .Attr("resize_x", resize_x, "AttrTypeInt64")\
             .Attr("resize_y", resize_y, "AttrTypeInt64")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
@@ -83,6 +101,10 @@ def CropMirrorNormalize(
         mirror_blob=None,
         color_space="BGR",
         output_layout="NCHW",
+        crop_h=0,
+        crop_w=0,
+        crop_pos_y=0.5,
+        crop_pos_x=0.5,
         mean=[0.0],
         std=[1.0],
         output_dtype=flow.float,
@@ -99,6 +121,10 @@ def CropMirrorNormalize(
             .Attr("output_layout", output_layout, "AttrTypeString")\
             .Attr("mean", mean, "AttrTypeListFloat")\
             .Attr("std", std, "AttrTypeListFloat")\
+            .Attr("crop_h", crop_h, "AttrTypeInt64")\
+            .Attr("crop_w", crop_w, "AttrTypeInt64")\
+            .Attr("crop_pos_y", crop_pos_y, "AttrTypeFloat")\
+            .Attr("crop_pos_x", crop_pos_x, "AttrTypeFloat")\
             .Attr("output_dtype", output_dtype, "AttrTypeInt32")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
