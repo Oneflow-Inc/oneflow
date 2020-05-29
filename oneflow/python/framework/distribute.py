@@ -6,6 +6,14 @@ import oneflow.python.framework.distribute_context as distribute_ctx
 
 @oneflow_export("distribute.mirrored_strategy")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
+    r"""Create a mirrored strategy scope. All operators within the scope will be mirrored among diffierent accelerators.
+    Usage::
+
+        with oneflow.distribute.mirrored_strategy():
+            ...
+
+    """
+    
     def __enter__(self, *argc, **kwarg):
         distribute_ctx.PushMirroredStrategyEnabled(True)
 
@@ -14,10 +22,23 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     
 @oneflow_export("distribute.mirrored_strategy_enabled")
 def MirroredStrategyEnabled():
+    r"""
+
+    Returns:
+        bool: `True` if mirrored strategy is enabled in current context where this function is called.
+
+    """
     return distribute_ctx.IsMirroredStrategyEnabled()
 
 @oneflow_export("distribute.consistent_strategy")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
+    r"""Create a consistent strategy scope. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    Usage::
+
+        with oneflow.distribute.consistent_strategy():
+            ...
+
+    """
     def __enter__(self, *argc, **kwarg):
         distribute_ctx.PushMirroredStrategyEnabled(False)
 
@@ -26,6 +47,12 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 @oneflow_export("distribute.consistent_strategy_enabled")
 def ConsistentStrategyEnabled():
+    r"""
+
+    Returns:
+        bool: `True` if consistent strategy is enabled in current context where this function is called.
+
+    """
     return distribute_ctx.IsConsistentStrategyEnabled()
 
 @oneflow_export("distribute.split")

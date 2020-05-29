@@ -795,21 +795,24 @@ def deconv2d(
     dilations=None
 ):
     r"""2d transposed convolution
+
     Args:
-    value: 4-d `Blob`
-    filter: filter of transposed convolution, usually a variable
-    output_shape: Not supported yet
-    strides: `int` or `int list`
-    padding: `'VALID'` or `'SAME'`
-    data_format: `'NHWC'` or `'NCHW'`
-    name: This operator's name
-    input: Alias for value
-    filters: Alias for filter
-    dilations: Not supported yet
+        value: 4-d `Blob`
+        filter: filter of transposed convolution, usually a variable
+        output_shape: Not supported yet
+        strides: `int` or `int list`
+        padding: `'VALID'` or `'SAME'`
+        data_format: `'NHWC'` or `'NCHW'`
+        name: This operator's name
+        input: Alias for value
+        filters: Alias for filter
+        dilations: Not supported yet
+
     Returns:
-    A `Blob` with the same type as `value`.
+        A `Blob` with the same type as `value`.
+
     Raises:
-    ValueError: shapes of `filter` and `input` must match.
+        ValueError: shapes of `filter` and `input` must match.
     """
     assert (value is not None) ^ (
         input is not None), "only one of `input` and `value` could be not None"

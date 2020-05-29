@@ -2,6 +2,8 @@ import oneflow
 import sys
 import os
 import argparse
+import inspect
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-root", "--root_path", type=str, required=True
@@ -44,7 +46,7 @@ class VirtualModule(object):
             for k in self._submodule_dict.keys():
                 mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
-                lines.append(include_export(k, v))
+                lines += include_export(k, v)
             lines = list(mod_set) + lines
             f.write("\n".join(lines))
 
@@ -53,9 +55,15 @@ def include_submodule(modname):
 
 def include_export(api_name_base, symbol):
     if symbol.__name__ == api_name_base:
-        return "from {} import {}".format(symbol.__module__, api_name_base)    
+        return ["from {} import {}".format(symbol.__module__, api_name_base)]    
     else:
-        return "from {} import {} as {}".format(symbol.__module__, symbol.__name__, api_name_base)    
+        if inspect.isclass(symbol):
+            return [
+                "from {} import {}".format(symbol.__module__, symbol.__name__),
+                "{} = {}".format(api_name_base, symbol.__name__)
+            ]
+        else:
+            return ["from {} import {} as {}".format(symbol.__module__, symbol.__name__, api_name_base)]    
 
 def collect_exports():
     exports = {}

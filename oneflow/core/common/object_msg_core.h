@@ -13,25 +13,25 @@
 
 namespace oneflow {
 
-#define BEGIN_OBJECT_MSG(class_name)                         \
-  struct class_name final : public ObjectMsgStruct {         \
-   public:                                                   \
-    using self_type = class_name;                            \
-    static const bool __is_object_message_type__ = true;     \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);            \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), class_name, 0); \
-    OBJECT_MSG_DEFINE_DEFAULT(class_name);                   \
-    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                   \
-    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();               \
-    OBJECT_MSG_DEFINE_INIT();                                \
-    OBJECT_MSG_DEFINE_DELETE();                              \
+#define OBJECT_MSG_BEGIN(class_name)                      \
+  struct class_name final : public ObjectMsgStruct {      \
+   public:                                                \
+    using self_type = class_name;                         \
+    static const bool __is_object_message_type__ = true;  \
+    PRIVATE DEFINE_STATIC_COUNTER(field_counter);         \
+    DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
+    OBJECT_MSG_DEFINE_DEFAULT(class_name);                \
+    OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                \
+    OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT();            \
+    OBJECT_MSG_DEFINE_INIT();                             \
+    OBJECT_MSG_DEFINE_DELETE();                           \
     OBJECT_MSG_DEFINE_BASE();
 
-#define END_OBJECT_MSG(class_name)                                                  \
+#define OBJECT_MSG_END(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);       \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
-  END_DSS(STATIC_COUNTER(field_counter), "object message", class_name);             \
+  DSS_END(STATIC_COUNTER(field_counter), "object message", class_name);             \
   }                                                                                 \
   ;
 
@@ -68,7 +68,8 @@ namespace oneflow {
   using OF_PP_CAT(field_name, _OneofFieldType) = typename OBJECT_MSG_STRUCT_MEMBER(field_type);
 
 #define OBJECT_MSG_DSS_DEFINE_UION_FIELD(field_counter, oneof_name, type_and_field_name_seq) \
-  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_FIELD(field_counter, "object message", OF_PP_CAT(oneof_name, _UnionStructType), \
+                   OF_PP_CAT(oneof_name, _));                                                \
   DSS_DEFINE_UNION_FIELD_VISITOR(                                                            \
       field_counter, case_,                                                                  \
       OF_PP_FOR_EACH_TUPLE(OBJECT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
@@ -123,6 +124,12 @@ namespace oneflow {
 #define OBJECT_MSG_MAKE_ONEOF_FIELD_RESETTER(oneof_name, pair)                     \
  public:                                                                           \
   template<typename T>                                                             \
+  void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(const T& rhs) {                  \
+    static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
+    static_assert(T::__is_object_message_type__, "object message supported only"); \
+    OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(const_cast<T*>(&rhs));              \
+  }                                                                                \
+  template<typename T>                                                             \
   void OF_PP_CAT(reset_, OF_PP_PAIR_SECOND(pair))(T * rhs) {                       \
     static_assert(std::is_same<T, OF_PP_PAIR_FIRST(pair)>::value, "error type");   \
     static_assert(T::__is_object_message_type__, "object message supported only"); \
@@ -136,7 +143,7 @@ namespace oneflow {
 #define OBJECT_MSG_MAKE_ONEOF_CLEARER(field_counter, oneof_name)                                 \
  public:                                                                                         \
   void OF_PP_CAT(clear_, oneof_name)() {                                                         \
-    __DSS__VisitField<field_counter, ObjectMsgField__Delete__, void,                             \
+    __DssVisitField__<field_counter, ObjectMsgField__Delete__, void,                             \
                       OF_PP_CAT(oneof_name, _UnionStructType)>::Call(nullptr,                    \
                                                                      &OF_PP_CAT(oneof_name, _)); \
     OF_PP_CAT(set_, OF_PP_CAT(oneof_name, _case))                                                \
@@ -221,7 +228,8 @@ namespace oneflow {
  private:                                                                                   \
   ObjectMsgBase __object_msg_base__;                                                        \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                           \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", __object_msg_base__);
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgBase,          \
+                   __object_msg_base__);
 
 #define OBJECT_MSG_DEFINE_CONTAINER_ELEM_STRUCT()     \
  public:                                              \
@@ -258,6 +266,12 @@ namespace oneflow {
   template<typename WalkCtxType, typename PtrFieldType>                   \
   struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType> \
       : public init_template<WalkCtxType, PtrFieldType> {};
+
+#define OBJECT_MSG_OVERLOAD_INIT_WITH_FIELD_INDEX(field_counter, init_template) \
+ private:                                                                       \
+  template<typename WalkCtxType, typename PtrFieldType>                         \
+  struct ObjectMsgField__Init__<field_counter, WalkCtxType, PtrFieldType>       \
+      : public init_template<field_counter, WalkCtxType, PtrFieldType> {};
 
 #define OBJECT_MSG_DEFINE_DELETE()                                                \
  public:                                                                          \

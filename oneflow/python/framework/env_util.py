@@ -50,6 +50,14 @@ def machine(*val):
     default_env_proto.ClearField('machine')
     default_env_proto.machine.extend(_MakeMachine(val))
 
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
+def CurrentMachineId():
+  return c_api_util.CurrentMachineId()
+
+@oneflow_export('current_machine_id')
+def api_current_machine_id():
+    return enable_if.unique(CurrentMachineId)()
+
 @oneflow_export('env.ctrl_port')
 def ctrl_port(val):
     r"""Set port number used to control the execution across multiple machines. Same on every machine.
@@ -80,6 +88,9 @@ def grpc_use_no_signal(val = True):
 
 @oneflow_export('env.log_dir')
 def log_dir(val):
+    r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
+
+    """
     assert env_proto_mutable == True
     assert type(val) is str
     default_env_proto.cpp_logging_conf.log_dir = val

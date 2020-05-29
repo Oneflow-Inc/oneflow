@@ -38,7 +38,7 @@ def gpu_device_num(val):
     r"""Set number of GPUs on each machine to run oneflow on.
 
     Args:
-        val: number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use on each machine.
+        val (int): number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use on each machine.
     """
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
@@ -52,7 +52,7 @@ def cpu_device_num(val):
     r"""Set number of CPUs on each machine to run oneflow on. Usually you don't need to set this.
 
     Args:
-        val: number of CPUs. It is identical on every machine.
+        val (int): number of CPUs. It is identical on every machine.
     """
     sess = session_ctx.GetDefaultSession()
     if sess.is_running:
