@@ -40,10 +40,6 @@ def get_current_machine_id():
 
 @oneflow_export('env.machine')
 def api_machine(*val):
-    return enable_if.unique(machine, do_nothing)(*val)
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def machine(*val):
     r"""Set machines' hostnames.  For instance::
 
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
@@ -51,6 +47,11 @@ def machine(*val):
     Args:
         val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
     """
+    return enable_if.unique(machine, do_nothing)(*val)
+
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def machine(*val):
+
     del default_env_proto.machine[:]
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
     default_env_proto.ClearField('machine')
@@ -58,29 +59,29 @@ def machine(*val):
 
 @oneflow_export('env.ctrl_port')
 def api_ctrl_port(val):
-    return enable_if.unique(ctrl_port, do_nothing)(val)
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def ctrl_port(val):
     r"""Set port number used to control the execution across multiple machines. Same on every machine.
 
     Args:
         val: a port number accessible to peer machines
     """
+    return enable_if.unique(ctrl_port, do_nothing)(val)
+
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def ctrl_port(val):
     assert type(val) is int
     default_env_proto.ctrl_port = val
 
 @oneflow_export('env.data_port')
 def api_data_port(val):
-    return enable_if.unique(data_port, do_nothing)(val)
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def data_port(val):
     r"""Set port number used to data transfer among multiple machines. Same on every machine.
 
     Args:
         val: a port number accessible to peer machines
     """
+    return enable_if.unique(data_port, do_nothing)(val)
+
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def data_port(val):
     assert type(val) is int
     default_env_proto.data_port = val
 
@@ -95,13 +96,13 @@ def grpc_use_no_signal(val = True):
 
 @oneflow_export('env.log_dir')
 def api_log_dir(val):
+    r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
+
+    """
     return enable_if.unique(log_dir, do_nothing)(val)
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def log_dir(val):
-    r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
-
-    """
     assert type(val) is str
     default_env_proto.cpp_logging_conf.log_dir = val
 
