@@ -48,7 +48,7 @@ void GenerateBackwardOpConf(
                                                     broadcast_axis_vec.end()};
       op_confs->push_back(reduce_sum_like_a);
       DiffLbi4BnInOp("a")->set_op_name(reduce_sum_like_a.name());
-      DiffLbi4BnInOp("a")->set_blob_name("out");
+      DiffLbi4BnInOp("a")->set_blob_name("y");
     }
   }
   if (DiffLbi4BnInOp("b") != nullptr) {

@@ -26,9 +26,9 @@ void CheckSoleFieldName(T* flat_msg, const std::string& expected) {
   ASSERT_EQ(field_names.at(0), expected);
 }
 // clang-format off
-BEGIN_FLAT_MSG(TestOptional)
+FLAT_MSG_BEGIN(TestOptional)
   FLAT_MSG_DEFINE_OPTIONAL(int32_t, bar);
-END_FLAT_MSG(TestOptional)
+FLAT_MSG_END(TestOptional)
 // clang-format on
 
 TEST(FlatMsg, optional) {
@@ -47,12 +47,12 @@ TEST(FlatMsg, optional) {
 }
 
 // clang-format off
-BEGIN_FLAT_MSG(FooOneof)
+FLAT_MSG_BEGIN(FooOneof)
   FLAT_MSG_DEFINE_ONEOF(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
       FLAT_MSG_ONEOF_FIELD(int64_t, case_1)
       FLAT_MSG_ONEOF_FIELD(TestOptional, bar));
-END_FLAT_MSG(FooOneof)
+FLAT_MSG_END(FooOneof)
 // clang-format on
 
 TEST(FlatMsg, oneof) {
@@ -73,10 +73,10 @@ TEST(FlatMsg, oneof) {
 }
 
 // clang-format off
-BEGIN_FLAT_MSG(FooRepeated)
+FLAT_MSG_BEGIN(FooRepeated)
   FLAT_MSG_DEFINE_REPEATED(char, char_field, 1);
   FLAT_MSG_DEFINE_REPEATED(TestOptional, bar, 10);
-END_FLAT_MSG(FooRepeated)
+FLAT_MSG_END(FooRepeated)
 // clang-format on
 
 TEST(FlatMsg, repeated) {
@@ -103,9 +103,9 @@ TEST(FlatMsg, repeated) {
 
 // clang-format off
 template<int N>
-BEGIN_FLAT_MSG(TestTemplateFlatMsg);
+FLAT_MSG_BEGIN(TestTemplateFlatMsg);
   FLAT_MSG_DEFINE_REPEATED(char, char_field, N);
-END_FLAT_MSG(TestTemplateFlatMsg);
+FLAT_MSG_END(TestTemplateFlatMsg);
 // clang-format on
 
 TEST(FlatMsg, flat_msg_template) {
