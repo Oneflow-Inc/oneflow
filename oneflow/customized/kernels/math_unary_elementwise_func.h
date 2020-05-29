@@ -227,7 +227,7 @@ struct Log1pFunctor<float> {
 template<>
 struct LogSigmoidFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
-    return MATH_FUNC_F(log, (1.0f / (1.0f + MATH_FUNC_F(exp, -x))));
+    return -MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, -x)));
   }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
