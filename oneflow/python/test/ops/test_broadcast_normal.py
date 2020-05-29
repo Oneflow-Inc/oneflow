@@ -2,7 +2,6 @@ import oneflow as flow
 import numpy as np
 import tensorflow as tf
 import os
-import threading
 
 from collections import OrderedDict
 import test_global_storage
@@ -76,13 +75,12 @@ def compare_with_tensorflow_grad(device_type, flow_op, tf_op, x_shape, y_shape, 
     assert device_type in ["gpu", "cpu"]
 
     np_type = type_name_to_np_type[data_type]
-    lock = threading.Lock()
     x = np.random.uniform(low=input_minval, high=input_maxval,
                         size=x_shape).astype(np_type)
     y = np.random.uniform(low=input_minval, high=input_maxval,
                         size=y_shape).astype(np_type)
-    with lock:
-        of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
+
+    of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
