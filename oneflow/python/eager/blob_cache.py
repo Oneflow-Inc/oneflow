@@ -22,11 +22,11 @@ class BlobCache(object):
     def blob_object(self): return self.blob_object_
 
     def GetHeaderCache(self, fetch):
-        if self.header_cache_ is None: self.header_cache_ = fetch(self.blob_object)
+        if self.header_cache_ is None: self.header_cache_ = fetch(self.blob_object_)
         return self.header_cache_
 
     def GetBodyCache(self, fetch):
-        if self.body_cache_ is None: self.body_cache_ = fetch(self.blob_object)
+        if self.body_cache_ is None: self.body_cache_ = fetch(self.blob_object_)
         return self.body_cache_
 
 object_id2blob_cache = {}

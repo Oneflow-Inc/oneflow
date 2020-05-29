@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 import oneflow.oneflow_internal as oneflow_api
-import oneflow.python.framework.local_blob as local_blob_util
-import oneflow.python.framework.remote_blob as remote_blob_util
 from google.protobuf import text_format
 from oneflow.python.lib.core.box import Box
 import numpy as np

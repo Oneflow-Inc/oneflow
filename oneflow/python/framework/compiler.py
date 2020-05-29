@@ -14,6 +14,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.ops as ops
 from oneflow.python.lib.core.box import Box
+import oneflow
 
 from contextlib import contextmanager
 
@@ -34,8 +35,8 @@ def InterpretScope(function_desc, config_proto):
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
-        dev_ids = placement_util.GetDefaultMachineDeviceIds(config_proto.resource)
-        placement_scope = placement_util.GetDevicePriorPlacementScope(*dev_ids)
+        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(oneflow.env.current_resource())
+        placement_scope = placement_util.GetDevicePriorPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()

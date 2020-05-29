@@ -5,8 +5,6 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.local_blob as local_blob_util
 import traceback
 
 def GetIdForRegisteredCallback(cb):

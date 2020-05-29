@@ -30,7 +30,7 @@ class Session(object):
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
         self.uuid2watch_handler_ = {}
-        self.config_proto_ = _GetDefaultConfigProto()
+        self.config_proto_ = None
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
@@ -46,7 +46,9 @@ class Session(object):
     def is_running(self): return self.status_ is SessionStatus.RUNNING
 
     @property
-    def config_proto(self): return self.config_proto_
+    def config_proto(self):
+        if self.config_proto_ is None: self.config_proto_ = _GetDefaultConfigProto()
+        return self.config_proto_
 
     @property
     def uuid2watch_handler(self): return self.uuid2watch_handler_
@@ -93,11 +95,11 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
         if not c_api_util.IsEnvInited(): oneflow.env.init()
-        _TryCompleteConfigProto(self.config_proto_)
-        c_api_util.InitGlobalSession(self.config_proto_)
+        _TryCompleteConfigProto(self.config_proto)
+        c_api_util.InitGlobalSession(self.config_proto)
         if not c_api_util.EagerExecutionEnabled():
             for job_name, func_desc in self.job_name2function_desc_.items():
-                compiler.Compile(func_desc, self.config_proto_)
+                compiler.Compile(func_desc, self.config_proto)
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
@@ -134,7 +136,7 @@ class Session(object):
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            return compiler.EagerRun(function_desc, self.config_proto_, arg)
+            return compiler.EagerRun(function_desc, self.config_proto, arg)
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
@@ -236,8 +238,7 @@ def _TryCompleteConfigProto(config_proto):
 
 def _GetDefaultConfigProto():
     config_proto = job_set_util.ConfigProto()
-    config_proto.resource.machine_num = 0
-    config_proto.resource.gpu_device_num = 1
+    config_proto.resource.CopyFrom(oneflow.env.current_resource())
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
