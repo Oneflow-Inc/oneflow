@@ -22,13 +22,21 @@ def env_init():
     env_proto_mutable = False
     return True
 
-@oneflow_export('env.current_resource')
-def api_get_env_current_resource():
-    return enable_if.unique(get_env_current_resource)()
+@oneflow_export('current_resource')
+def api_get_current_resource():
+    return enable_if.unique(get_current_resource)()
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_env_current_resource():
+def get_current_resource():
     return c_api_util.CurrentResource()
+
+@oneflow_export('current_machine_id')
+def api_get_current_machine_id():
+    return enable_if.unique(get_current_machine_id)()
+
+@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
+def get_current_machine_id():
+  return c_api_util.CurrentMachineId()
 
 @oneflow_export('env.machine')
 def api_machine(*val):
@@ -47,14 +55,6 @@ def machine(*val):
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
     default_env_proto.ClearField('machine')
     default_env_proto.machine.extend(_MakeMachine(val))
-
-@oneflow_export('current_machine_id')
-def api_get_current_machine_id():
-    return enable_if.unique(get_current_machine_id)()
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id():
-  return c_api_util.CurrentMachineId()
 
 @oneflow_export('env.ctrl_port')
 def api_ctrl_port(val):
