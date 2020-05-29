@@ -9,7 +9,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def do_nothing():
+def do_nothing(*args, **kwargs):
     print("Nothing happened because environment has been initialized")
     return False
 

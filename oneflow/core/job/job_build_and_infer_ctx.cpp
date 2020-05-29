@@ -40,10 +40,6 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), 
   has_job_conf_ = false;
 }
 
-Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
-  return CheckAndCompleteUserOpConfImpl(op_conf);
-}
-
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   CHECK_OR_RETURN(!is_job_conf_frozen_) << JobBuildAndInferError::kJobConfFrozen;
   CHECK_OR_RETURN(!has_job_conf_) << JobBuildAndInferError::kJobConfRepeatedSet;
@@ -54,32 +50,6 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   job_->mutable_job_conf()->CopyFrom(job_conf);
   CHECK_ISNULL(Global<JobDesc>::Get());
   Global<JobDesc>::New(job_conf, job_id_);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id_);
-  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(job_); };
-  if (GlobalJobDesc().Bool("__is_user_function__")) {
-    DoPass("CompleteOfrecordDecoder");
-    DoPass("SetDefaultVariableConf");
-    DoPass("AutoMixedPrecision");
-    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
-    DoPass("NonDistributedOptimizerPass");
-    DoPass("AutoTrainStep");
-    DoPass("AutoLearningRate");
-    DoPass("GenerateBackwardAndOptimizerOpConfs");
-    DoPass("IndexedSlicesOptimizerRewritePass");
-    DoPass("SequentializeNcclTupleBroadcastReducePass");
-    DoPass("AddAllReduceGroupPass");
-    DoPass("AddLbiDiffWatcherOpConfs");
-    DoPass("SequentializeAllReduceGroupPass");
-    DoPass("PruneParallelCastOpsPass");
-    DoPass("DumpVariableInfoPass");
-  }
-  DoPass("DumpTimeShapeAndBlobParallelConfPass");
   return Maybe<void>::Ok();
 }
 
@@ -418,7 +388,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
   ParallelDesc parallel_desc(origin_parallel_conf);
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
-  auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
+  auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
   int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
@@ -427,7 +397,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_co
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
       ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
     }
-    AddAndInferConsistentOp(sub_op_conf, parallel_desc.GetParallelIdOnlyParallelConf(i));
+    AddAndInferConsistentOp(sub_op_conf, GetMirroredOpParallelConf(parallel_desc, i));
   }
   bool is_broadcast = JUST(AllInputsBroadcastParallel(*op));
   for (const auto& obn : op->output_bns()) {
@@ -648,11 +618,6 @@ Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn
   return lbi2logical_blob_desc_.at(lbi)->is_tensor_list();
 }
 
-Maybe<bool> JobBuildAndInferCtx::MirroredBlobDisableBoxing(const std::string& lbn_with_hint) const {
-  CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
-  return true;
-}
-
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetBatchAxis(
     const std::string& lbn_with_hint) const {
   CHECK_OR_RETURN(IsMirroredBlob(lbn_with_hint));
@@ -734,5 +699,60 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
 }
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }
+
+std::string LazyJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_name,
+                                                       int64_t parallel_id) const {
+  return op_name + "_" + std::to_string(parallel_id);
+}
+
+std::string EagerJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_name,
+                                                        int64_t parallel_id) const {
+  return op_name;
+}
+
+ParallelConf LazyJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
+                                                                int64_t parallel_id) const {
+  return parallel_desc.GetParallelIdOnlyParallelConf(parallel_id);
+}
+
+ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
+                                                                 int64_t parallel_id) const {
+  return parallel_desc.parallel_conf();
+}
+
+Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
+    DoPass("CompleteOfrecordDecoder");
+    DoPass("SetDefaultVariableConf");
+    DoPass("AutoMixedPrecision");
+    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
+    DoPass("NonDistributedOptimizerPass");
+    DoPass("AutoTrainStep");
+    DoPass("AutoLearningRate");
+    DoPass("GenerateBackwardAndOptimizerOpConfs");
+    DoPass("IndexedSlicesOptimizerRewritePass");
+    DoPass("SequentializeNcclTupleBroadcastReducePass");
+    DoPass("AddAllReduceGroupPass");
+    DoPass("AddLbiDiffWatcherOpConfs");
+    DoPass("SequentializeAllReduceGroupPass");
+    DoPass("PruneParallelCastOpsPass");
+    DoPass("DumpVariableInfoPass");
+  }
+  DoPass("DumpTimeShapeAndBlobParallelConfPass");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
+  DoPass("GenerateBackwardAndOptimizerOpConfs");
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

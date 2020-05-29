@@ -20,6 +20,11 @@ def RegisterWatcherOnlyOnce(watcher):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
+def RegisterWorkerCallbackOnlyOnce(callback):
+    error_str = oneflow_internal.RegisterWorkerCallbackOnlyOnce(callback)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     ret, error_str = oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
     error = text_format.Parse(error_str, error_util.ErrorProto())
@@ -115,10 +120,9 @@ def CurJobBuildAndInferCtx_Complete():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
+def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf
-    new_op_conf, error_str = AddDefaultVal(serialized_op_conf)
+    new_op_conf, error_str = oneflow_internal.CheckAndCompleteUserOpConf(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
@@ -360,8 +364,45 @@ def GetFunctionConfigDef():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(func_config_def, ConfigDef())
 
+def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
+    instructions = str(text_format.MessageToString(vm_instruction_list))
+    symbols = str(text_format.MessageToString(eager_symbol_list))
+    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
+    instructions = str(text_format.MessageToString(vm_instruction_list))
+    symbols = str(text_format.MessageToString(eager_symbol_list))
+    error_str = oneflow_internal.RunPhysicalInstruction(instructions, symbols)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def CurrentMachineId():
     machine_id, error_str = oneflow_internal.CurrentMachineId()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return machine_id
+
+def NewLogicalObjectId():
+    object_id, error_str = oneflow_internal.NewLogicalObjectId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id
+
+def NewLogicalSymbolId():
+    object_id, error_str = oneflow_internal.NewLogicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id
+def NewPhysicalObjectId():
+    object_id, error_str = oneflow_internal.NewPhysicalObjectId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id
+
+def NewPhysicalSymbolId():
+    object_id, error_str = oneflow_internal.NewPhysicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id

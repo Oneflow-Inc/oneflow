@@ -1,9 +1,6 @@
 import oneflow as flow
 import numpy as np
 
-from PIL import Image
-
-
 def _of_image_decode(images):
     image_files = [open(im, "rb") for im in images]
     images_bytes = [imf.read() for imf in image_files]
@@ -37,6 +34,8 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
     The jpg image's decoded results with opencv and pil image are slightly different,
     their green channels have difference of 1.
     """
+    from PIL import Image
+
     of_decoded_images = _of_image_decode(images)
     pil_images = [Image.open(image) for image in images]
     # convert image to BGR

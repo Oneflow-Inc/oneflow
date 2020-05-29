@@ -33,5 +33,6 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     ndarray_lists = ofblob.OfBlob(of_blob_ptr).CopyToNdarrayLists()
     handler(local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched))
 
+# static lifetime
 _global_watcher = _Watcher()
 c_api_util.RegisterWatcherOnlyOnce(_global_watcher)

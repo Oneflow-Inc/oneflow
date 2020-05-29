@@ -122,4 +122,5 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
 }  // namespace
+
 }  // namespace oneflow

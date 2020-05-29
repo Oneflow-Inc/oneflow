@@ -20,6 +20,7 @@
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
+#include "oneflow/core/vm/oneflow_vm.h"
 
 namespace std {
 

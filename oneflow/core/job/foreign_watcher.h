@@ -13,6 +13,14 @@ class ForeignWatcher {
   virtual void Call(const std::string& handler_uuid, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 };
 
+class ForeignWorkerCallback {
+ public:
+  ForeignWorkerCallback() = default;
+  virtual ~ForeignWorkerCallback() = default;
+
+  virtual void Call(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_FOREIGN_WATCHER_H_

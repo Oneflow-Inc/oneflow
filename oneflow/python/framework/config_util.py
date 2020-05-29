@@ -9,6 +9,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
@@ -60,6 +61,13 @@ def cpu_device_num(val):
         return
     assert type(val) is int
     sess.config_proto.resource.cpu_device_num = val
+
+@oneflow_export('config.device_num')
+def device_num():
+    resource = session_ctx.GetDefaultSession().config_proto.resource.cpu_device_num
+    if resource.HasField('cpu_device_num'): return resource.cpu_device_num
+    if resource.HasField('gpu_device_num'): return resource.bpu_device_num
+    raise NotImplementedError
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):

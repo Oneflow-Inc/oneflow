@@ -98,6 +98,9 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   }
   ClearUp();
   SanityCheck();
+  for (const auto& pair : machine_id2sorted_dev_phy_ids_) {
+    machine_id2dev_phy_ids_[pair.first] = {pair.second.begin(), pair.second.end()};
+  }
   return Maybe<void>::Ok();
 }
 
@@ -169,6 +172,12 @@ int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
 
 int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
+}
+
+bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
+  const auto& machine_iter = machine_id2dev_phy_ids_.find(machine_id);
+  if (machine_iter == machine_id2dev_phy_ids_.end()) { return false; }
+  return machine_iter->second.find(device_id) != machine_iter->second.end();
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(

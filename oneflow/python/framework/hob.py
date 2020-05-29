@@ -2,7 +2,7 @@ from oneflow.python.lib.core.high_order_bool import HighOrderBool
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow
 
 def InRuntimeModeHOB(mode):
     assert rt_mode.IsValidMode(mode)
@@ -34,7 +34,9 @@ def _IsSessionInitialized():
     assert in_normal_mode()
     return session_ctx.GetDefaultSession().is_running
 
+
 session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized)
+
 
 def _IsCurrentFunctionTrainable():
     assert in_global_mode()
@@ -42,3 +44,21 @@ def _IsCurrentFunctionTrainable():
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
+
+
+def _InPlacementScope():
+    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
+
+in_placement_scope = HighOrderBool("In a placement scope", _InPlacementScope)
+
+
+def _IsCurrentPlacementPhysical():
+    return oneflow.placement.current_scope().is_physical_placement
+
+is_current_placement_physical = HighOrderBool("Current placement is physical",
+                                              _IsCurrentPlacementPhysical)
+
+def _IsCurrentMachineMaster():
+    return c_api_util.CurrentMachineId() == 0
+
+is_current_machine_master = HighOrderBool("Current machine is master", _IsCurrentMachineMaster)

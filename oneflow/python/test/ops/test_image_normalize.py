@@ -1,7 +1,5 @@
 import oneflow as flow
 import numpy as np
-import cv2
-
 
 def _of_image_normalize(images, image_shape, std, mean):
     flow.clear_default_session()
@@ -25,6 +23,8 @@ def _of_image_normalize(images, image_shape, std, mean):
 
 
 def _read_images_by_cv(image_files):
+    import cv2
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 

@@ -19,9 +19,22 @@
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/id_util.h"
+#include "oneflow/core/eager/eager_util.h"
 
 namespace oneflow {
+
+Maybe<void> RegisterWorkerCallbackOnlyOnce(ForeignWorkerCallback* callback) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignWorkerCallback>::Get())
+      << "foreign woker callback registered";
+  // no delete
+  Global<ForeignWorkerCallback>::SetAllocated(callback);
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
@@ -161,9 +174,45 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
+Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
+}
+
+Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
+                                  const std::string& eager_symbol_list_str) {
+  return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);
+}
+
+Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
+                                   const std::string& eager_symbol_list_str) {
+  return eager::RunPhysicalInstruction(instruction_list_str, eager_symbol_list_str);
+}
+
 Maybe<long long> CurrentMachineId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return Global<MachineCtx>::Get()->this_machine_id();
+}
+
+Maybe<long long> NewLogicalObjectId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalObjectId();
+}
+
+Maybe<long long> NewLogicalSymbolId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalSymbolId();
+}
+
+Maybe<long long> NewPhysicalObjectId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
+}
+
+Maybe<long long> NewPhysicalSymbolId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 }  // namespace oneflow

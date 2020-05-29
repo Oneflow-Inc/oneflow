@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.c_api_util as c_api_util
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -51,7 +53,21 @@ class FunctionDesc(object):
             return attr_value.at_string
         else: raise NotImplementedError()
 
-@oneflow_export('current_global_function_desc')
-def GetCurrentGlobalFunctionDesc():
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def GetCurrentEagerGlobalFunctionDesc():
+    sess = session_ctx.GetDefaultSession()
+    ret = sess.CurrentEagerGlobalFunctionDesc()
+    assert ret is not None
+    return ret
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def GetCurrentLazyGlobalFunctionDesc():
+    sess = session_ctx.GetDefaultSession()
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
+    ret = sess.GetLazyFunctionDesc(job_name)
+    assert ret is not None
+    return ret
+
+@oneflow_export('current_global_function_desc')
+def api_current_global_function_desc():
+    return enable_if.unique(GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc)()

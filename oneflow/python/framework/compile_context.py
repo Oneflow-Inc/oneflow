@@ -10,7 +10,9 @@ import oneflow
 
 def GetCurJobConfigProto():
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetJobConfigProto(job_name)
+    function_desc = session_ctx.GetDefaultSession().GetLazyFunctionDesc(job_name)
+    assert function_desc is not None
+    return function_desc.job_config_proto
 
 logged_op_confs = set({})
 def CurJobAddOp(op_conf, parallel_conf=None):

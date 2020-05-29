@@ -2,6 +2,12 @@
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
 
+void RegisterWorkerCallbackOnlyOnce(oneflow::ForeignWorkerCallback* callback,
+                                    std::string* error_str) {
+  return oneflow::RegisterWorkerCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
+      error_str);
+}
+
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
 }
@@ -84,8 +90,42 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                       std::string* error_str) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+void RunLogicalInstruction(const std::string& vm_instruction_list,
+                           const std::string& eager_symbol_list_str, std::string* error_str) {
+  return oneflow::RunLogicalInstruction(vm_instruction_list, eager_symbol_list_str)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
+void RunPhysicalInstruction(const std::string& vm_instruction_list,
+                            const std::string& eager_symbol_list_str, std::string* error_str) {
+  return oneflow::RunPhysicalInstruction(vm_instruction_list, eager_symbol_list_str)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
 long CurrentMachineId(std::string* error_str) {
   return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewLogicalObjectId(std::string* error_str) {
+  return oneflow::NewLogicalObjectId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewLogicalSymbolId(std::string* error_str) {
+  return oneflow::NewLogicalSymbolId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewPhysicalObjectId(std::string* error_str) {
+  return oneflow::NewPhysicalObjectId().GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+long NewPhysicalSymbolId(std::string* error_str) {
+  return oneflow::NewPhysicalSymbolId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
@@ -164,6 +204,12 @@ bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurTensorIteratorEqEnd();
+}
+
+void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, long* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyStaticShapeTo(array, size);
 }
 
 void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {

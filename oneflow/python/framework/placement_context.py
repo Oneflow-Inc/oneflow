@@ -6,6 +6,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.python.framework.op_util as op_util
 
 class PlacementScope(object):
     def __init__(self, device_tag, machine_device_ids):
@@ -16,6 +17,9 @@ class PlacementScope(object):
         self.default_parallel_conf_ = _MakeParallelConf(self.device_tag_, self.machine_device_ids_)
         self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(self.default_parallel_conf_)
         self.parallel_size_ = GetParallelSize(self.machine_id2device_id_list_)
+
+    @property
+    def is_physical_placement(self): return False
 
     @property
     def default_device_tag(self): return self.device_tag_
@@ -43,6 +47,31 @@ class PlacementScope(object):
 
     def __exit__(self, *args):
         assert self == PlacementScopeStackPop()
+
+
+class FixedPlacementScope(PlacementScope):
+    r"""Class for fixed placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with fixed parallel configuration.
+    """
+    def __init__(self, device_tag, machine_device_ids):
+        PlacementScope.__init__(self, device_tag, machine_device_ids)
+
+    def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
+
+class DevicePriorPlacementScope(PlacementScope):
+    r"""Class for device prior placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with device prior parallel configuration.
+    """
+    def __init__(self, device_tag, machine_device_ids):
+        PlacementScope.__init__(self, device_tag, machine_device_ids)
+
+    def GetDeviceTag4OpConf(self, op_conf):
+        if op_util.IsOpConfOnlyCpuSupported(op_conf): return "cpu"
+        return self.default_device_tag
 
 def PlacementScopeStackPush(placement_policy):
     session_ctx.GetDefaultSession().placement_scope_stack.insert(0, placement_policy)
@@ -78,7 +107,7 @@ def _MakeParallelConf(device_tag, machine_device_ids):
     return parallel_conf
 
 def MakeMachineId2DeviceIdList(parallel_conf):
-    parallel_conf_str = str(parallel_conf)
+    parallel_conf_str = parallel_conf.SerializeToString()
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
         _parallel_conf_str2ofrecord[parallel_conf_str] = \
