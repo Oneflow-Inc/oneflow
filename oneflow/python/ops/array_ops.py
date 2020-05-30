@@ -650,15 +650,19 @@ def stack(inputs, axis, name=None):
 
 @oneflow_export("assign")
 def assign(ref, value, dtype=None, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Assign_"))
-    op_conf.assign_conf.ref = ref.unique_name
-    op_conf.assign_conf.value = value.unique_name
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "y")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    if name is None:
+        name = id_util.UniqueStr("Assign_")
+
+    if os.getenv("ENABLE_USER_OP") == "True":
+        op = flow.user_op_builder(name).Op("assign").Input("ref", [ref]).Input("value", [value]).Build()
+        op.InferAndTryRun()
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        op_conf.assign_conf.ref = ref.unique_name
+        op_conf.assign_conf.value = value.unique_name
+        compile_context.CurJobAddOp(op_conf)
+
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
 def generate_random_batch_permutation_indices(value, seed=None, name=None):
