@@ -24,7 +24,6 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
         pos_(0),
         pos_in_shard_(0),
         epoch_cnt_(0) {
-    if (rnd_seed_ == -1) { rnd_seed_ = NewRandomSeed(); }
     shard_size_ = std::ceil(static_cast<float>(base_dataset_->Size()) / num_shards_);
     if (stride_partition) {
       pos_ = parallel_id;

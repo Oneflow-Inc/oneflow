@@ -807,13 +807,19 @@ def api_coco_reader(
     image_dir,
     batch_size,
     shuffle=True,
-    random_seed=-1,
+    random_seed=None,
     group_by_aspect_ratio=True,
     stride_partition=True,
     name=None,
 ):
+    import random
+    import sys
+
     if name is None:
         name = id_util.UniqueStr("COCOReader_")
+
+    if random_seed is None:
+        random_seed = random.randrange(sys.maxsize)
 
     op = (
         flow.user_op_builder(name)
