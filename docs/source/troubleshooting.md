@@ -1,4 +1,4 @@
-# Q&A
+# Troubleshooting
 
 - Failed to compile `.cu` files
     1. Please refer to [CUDA System Requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) . Make sure your linux distribution and libraries shipped with it meet the requirements.
