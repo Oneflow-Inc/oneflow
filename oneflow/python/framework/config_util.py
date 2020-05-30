@@ -8,7 +8,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 
 @oneflow_export('config.load_library')
 def api_load_library(val):
-    return enable_if.unique(load_library)(val)
+    return enable_if.unique(load_library, do_nothing)(val)
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def load_library(val):
@@ -188,5 +188,5 @@ def collect_act_event(val = True):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
-    print("Nothing happened because session has been initialized")
+    print("Nothing happened because session running")
     return False
