@@ -70,6 +70,6 @@ void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   Global<JobDesc>::Delete();
 }
 
-COMMAND(Global<EagerExecutionOption>::SetAllocated(new EagerExecutionOption()));
+COMMAND(Global<bool, EagerExecutionOption>::SetAllocated(new bool(false)));
 
 }  // namespace oneflow
