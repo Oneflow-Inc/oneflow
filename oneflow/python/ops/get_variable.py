@@ -10,6 +10,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.ops.user_op_builder as user_op_builder_util
+import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -86,7 +87,7 @@ def get_eager_variable(
             distribute=distribute,
         )
         op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        var_blob = _CreateEagerVariableBlob(shape, dtype, op_conf, parallel_conf)
+        var_blob = _CreateEagerVariableBlob(op_conf, parallel_conf)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     assert var_blob.shape == shape
     assert var_blob.dtype == dtype
@@ -193,19 +194,11 @@ def _CreateVariableBlob(op_conf, parallel_conf):
     lbi.blob_name = op_conf.variable_conf.out
     return remote_blob_util.RemoteBlob(lbi)
 
-def _CreateEagerVariableBlob(shape, dtype, op_conf, parallel_conf):
-    # the blob_name of fake user op's Output is out_0
-    op_conf.variable_conf.out = "out_0"
+def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
-    user_op_builder = user_op_builder_util.NonTraceableEagerLogicalUserOpBuilder 
-    # TODO(lixinqi) using constant op as variable op is semantically wrong
-    # fake user op
-    return (user_op_builder(op_conf.name)
-            .Op("constant")
-            .Output("out")
-            .Attr("floating_value", float(0), "AttrTypeDouble")
-            .Attr("integer_value", int(0), "AttrTypeInt64")
-            .Attr("is_floating_value", False, "AttrTypeBool")
-            .Attr("shape", shape, "AttrTypeShape")
-            .Attr("dtype", dtype, "AttrTypeDataType")
-            .Build().InferAndTryRun().RemoteBlobList()[0])
+    vm_util.LogicalRun(
+            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = op_conf.variable_conf.out
+    return remote_blob_util.EagerLogicalBlob(lbi)

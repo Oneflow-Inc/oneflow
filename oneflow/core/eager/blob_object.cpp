@@ -20,7 +20,10 @@ void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   Blob* blob = mut_blob();
   CHECK_NOTNULL(blob);
   std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
-  if (blob->dptr() != nullptr && blob_body_bytes_ == required_body_bytes) { return; }
+  if (blob->dptr() != nullptr) {
+    CHECK_EQ(blob_body_bytes_, required_body_bytes);
+    return;
+  }
   {
     // reset blob_dptr_;
     auto Free = [allocator, required_body_bytes](char* dptr) {

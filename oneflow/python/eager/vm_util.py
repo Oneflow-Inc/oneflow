@@ -47,8 +47,29 @@ class InstructionsBuilder(object):
         input_triples = self._GetInputTriples(op_conf)
         output_triples = self._GetOutputTriples(op_conf, parallel_desc_sym)
         mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_desc_sym)
-        return self._StatelessCall(parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
-                                   input_triples, output_triples, mut2_output_triples)
+        return self._StatelessCall("StatelessCallOpKernel",
+                parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
+                input_triples, output_triples, mut2_output_triples)
+
+    def DeprecatedStatelessCall(self, op_conf, const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
+        assert isinstance(const_arg_bns, (list, tuple))
+        assert isinstance(mut_arg_bns, (list, tuple))
+        assert isinstance(mut2_arg_bns, (list, tuple))
+        assert len(const_arg_bns) + len(mut_arg_bns) + len(mut2_arg_bns) > 0
+        placement_scope = oneflow.placement.current_scope()
+        parallel_conf = placement_scope.default_parallel_conf
+        device_tag = placement_scope.default_device_tag
+        parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
+        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
+        op_conf_sym = self._DeprecatedGetOpConfSymbol(op_conf)
+        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
+        input_triples = self._DeprecatedGetInputTriples(op_conf, const_arg_bns)
+        output_triples = self._DeprecatedGetOutputTriples(op_conf, mut_arg_bns, parallel_desc_sym)
+        mut2_output_triples = self._DeprecatedGetMut2OutputTriples(
+                op_conf, mut2_arg_bns, parallel_desc_sym)
+        return self._StatelessCall("DeprecatedStatelessCallOpKernel",
+                parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
+                input_triples, output_triples, mut2_output_triples)
 
     def DeleteBlob(self, blob_object):
         self._TryClearObject(blob_object)
@@ -130,6 +151,17 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
+    def _DeprecatedGetOpConfSymbol(self, op_conf):
+        new_op_conf = op_conf_util.OperatorConf()
+        new_op_conf.CopyFrom(op_conf)
+        serialized_op_conf = new_op_conf.SerializeToString()
+        if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
+            return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
+        symbol_id = self._NewSymbolId4OpConf(new_op_conf)
+        symbol = symbol_util.Symbol(symbol_id, new_op_conf)
+        symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        return symbol
+
     def _GetInputTriples(self, op_conf):
         input_triples = []
         for ibn, lbns in op_conf.user_conf.input.items():
@@ -137,6 +169,17 @@ class InstructionsBuilder(object):
             for i in range(len(lbns.s)):
                 in_object = object_cache.GetObject4BlobName(lbns.s[i])
                 input_triples.append((ibn_sym, i, in_object))
+        return input_triples
+
+    def _DeprecatedGetInputTriples(self, op_conf, ibns):
+        field = op_conf.WhichOneof('op_type')
+        assert field is not None
+        deprecated_op_conf = getattr(op_conf, field)
+        input_triples = []
+        for ibn in ibns:
+            ibn_sym = self.GetSymbol4String(ibn)
+            in_object = object_cache.GetObject4BlobName(getattr(deprecated_op_conf, ibn))
+            input_triples.append((ibn_sym, 0, in_object))
         return input_triples
 
     def _GetOutputTriples(self, op_conf, parallel_desc_sym):
@@ -148,7 +191,30 @@ class InstructionsBuilder(object):
                 output_triples.append((obn_sym, i, out_object))
         return output_triples
 
+    def _DeprecatedGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+        field = op_conf.WhichOneof('op_type')
+        assert field is not None
+        deprecated_op_conf = getattr(op_conf, field)
+        def GetLogicalBlobName(bn_in_op):
+            blob_name = getattr(deprecated_op_conf, bn_in_op)
+            if blob_name.find("/") > 0: return blob_name
+            return "%s/%s"%(op_conf.name, blob_name)
+        output_triples = []
+        for bn_in_op in bns_in_op:
+            obn_sym = self.GetSymbol4String(bn_in_op)
+            out_object = self._NewBlobObject(GetLogicalBlobName(bn_in_op), parallel_desc_sym)
+            output_triples.append((obn_sym, 0, out_object))
+        return output_triples
+
     def _GetMut2OutputTriples(self, op_conf, parallel_desc_sym):
+        mut2_output_triples = []
+        # TODO(lixinqi)
+        return mut2_output_triples
+
+    def _DeprecatedGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+        field = op_conf.WhichOneof('op_type')
+        assert field is not None
+        deprecated_op_conf = getattr(op_conf, field)
         mut2_output_triples = []
         # TODO(lixinqi)
         return mut2_output_triples
@@ -182,10 +248,10 @@ class InstructionsBuilder(object):
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
         return self._NewObjectId(parallel_desc_sym)
 
-    def _StatelessCall(self, parallel_desc_sym, job_conf_sym, op_conf_sym, shared_opkernel_obj,
-                       input_triples, output_triples, mut2_output_triples):
+    def _StatelessCall(self, instr_name, parallel_desc_sym, job_conf_sym, op_conf_sym,
+                       shared_opkernel_obj, input_triples, output_triples, mut2_output_triples):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "%s.StatelessCallOpKernel" % parallel_desc_sym.device_tag
+        instruction.instr_type_name = "%s.%s" % (parallel_desc_sym.device_tag, instr_name)
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
