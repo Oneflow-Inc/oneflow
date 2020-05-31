@@ -28,7 +28,7 @@ def EagerLogicalBlob(lbi, **kw):
     else:
         raise NotImplementedError("EagerConsistentBlob not supported yet")
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(~hob.eager_execution_enabled)
 def LazyRemoteBlob(lbi, **kw):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
@@ -234,4 +234,3 @@ class EagerMirroredBlob(MirroredBlob):
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
         vm_util.LogicalRun(lambda builder: builder.DeleteBlob(self.blob_object_))
-

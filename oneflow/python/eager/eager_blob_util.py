@@ -16,6 +16,9 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
     def logical_blob_name(self): return self.blob_name_
 
     @property
+    def unique_name(self): return self.blob_name_
+
+    @property
     def static_shape(self):
         return _GetPhysicalBlobHeaderCache(self.blob_object_).static_shape
 
