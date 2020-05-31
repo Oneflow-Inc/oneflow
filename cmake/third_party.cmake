@@ -14,6 +14,7 @@ include(eigen)
 include(cocoapi)
 include(half)
 include(re2)
+include(json)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -121,6 +122,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   re2
+  json_copy_headers_to_destination
 )
 
 
@@ -138,6 +140,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${RE2_INCLUDE_DIR}
+    ${JSON_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)

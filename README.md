@@ -22,7 +22,7 @@
 
 - #### Common Questions
 
-  [Q&A](docs/source/q-and-a.md)
+  [Troubleshooting](docs/source/troubleshooting.md)
 
 - #### Clone Source Code
 
