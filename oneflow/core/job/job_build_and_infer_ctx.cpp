@@ -593,7 +593,11 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::MirroredBlobGetSubLbi(
 }
 
 bool JobBuildAndInferCtx::IsMirroredBlob(const std::string& lbn) const {
-  return GetMirroredLbi(lbn).IsOk();
+  bool is_mirrored_blob = TRY(GetMirroredLbi(lbn)).IsOk();
+  if (is_mirrored_blob) { return is_mirrored_blob; }
+  const LogicalBlobId& lbi = GenLogicalBlobId(lbn);
+  CHECK(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) << "lbn: " << lbn;
+  return false;
 }
 
 Maybe<Shape> JobBuildAndInferCtx::MirroredBlobGetStaticShape(

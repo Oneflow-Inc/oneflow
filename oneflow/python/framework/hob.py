@@ -62,3 +62,8 @@ def _IsCurrentMachineMaster():
     return c_api_util.CurrentMachineId() == 0
 
 is_current_machine_master = HighOrderBool("Current machine is master", _IsCurrentMachineMaster)
+
+def _ConsistentViewEnabled():
+    return oneflow.distribute.consistent_strategy_enabled()
+
+consistent_view_enabled = HighOrderBool("Consistent view enabled", _ConsistentViewEnabled)

@@ -5,10 +5,22 @@ import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow
 
 def GetCurJobConfigProto():
+    return enable_if.unique(GetEagerCurJobConfigProto, GetLazyCurJobConfigProto)()
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def GetEagerCurJobConfigProto():
+    function_desc = session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
+    assert function_desc is not None
+    return function_desc.job_config_proto
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def GetLazyCurJobConfigProto():
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     function_desc = session_ctx.GetDefaultSession().GetLazyFunctionDesc(job_name)
     assert function_desc is not None

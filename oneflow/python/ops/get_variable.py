@@ -8,13 +8,15 @@ import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.ops.user_op_builder as user_op_builder_util
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
 
-
 @oneflow_export("get_variable")
-def get_variable(
+def api_get_variable(
     name,
     shape=None,
     dtype=None,
@@ -37,6 +39,72 @@ def get_variable(
         random_seed: Random seed for random initializers. `None` by defauilt
 
     """
+    return enable_if.unique(get_lazy_variable, get_eager_variable)(
+            name,
+            shape=shape,
+            dtype=dtype,
+            initializer=initializer,
+            regularizer=regularizer,
+            trainable=trainable,
+            model_name=model_name,
+            random_seed=random_seed,
+            distribute=distribute)
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled
+                     & ~hob.consistent_view_enabled)
+def get_eager_variable(
+    name,
+    shape=None,
+    dtype=None,
+    initializer=None,
+    regularizer=None,
+    trainable=None,
+    model_name=None,
+    random_seed=None,
+    distribute=distribute_util.broadcast(),
+):
+    assert isinstance(name, str)
+    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    # TODO(lixinqi) only BroadcastDistribute supported yet
+    assert isinstance(distribute, distribute_util.BroadcastDistribute)
+
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    name = name_scope.GetJobNameScopePrefix(job_name) + name
+    sess = session_context.GetDefaultSession()
+    var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+
+    if var_blob is None:
+        op_conf = _GenerateVariableOpConf(
+            name=name,
+            shape=shape,
+            dtype=dtype,
+            initializer=initializer,
+            regularizer=regularizer,
+            trainable=trainable,
+            model_name=model_name,
+            random_seed=random_seed,
+            distribute=distribute,
+        )
+        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
+        var_blob = _CreateEagerVariableBlob(shape, dtype, op_conf, parallel_conf)
+        sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
+    assert var_blob.shape == shape
+    assert var_blob.dtype == dtype
+    return var_blob
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def get_lazy_variable(
+    name,
+    shape=None,
+    dtype=None,
+    initializer=None,
+    regularizer=None,
+    trainable=None,
+    model_name=None,
+    random_seed=None,
+    distribute=distribute_util.broadcast(),
+):
     assert isinstance(name, str)
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
 
@@ -119,8 +187,25 @@ def _GenerateVariableOpConf(
 
 
 def _CreateVariableBlob(op_conf, parallel_conf):
-    compile_context.CurJobAddConsistentOp(op_conf)
+    compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
     return remote_blob_util.RemoteBlob(lbi)
+
+def _CreateEagerVariableBlob(shape, dtype, op_conf, parallel_conf):
+    # the blob_name of fake user op's Output is out_0
+    op_conf.variable_conf.out = "out_0"
+    compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
+    user_op_builder = user_op_builder_util.NonTraceableEagerLogicalUserOpBuilder 
+    # TODO(lixinqi) using constant op as variable op is semantically wrong
+    # fake user op
+    return (user_op_builder(op_conf.name)
+            .Op("constant")
+            .Output("out")
+            .Attr("floating_value", float(0), "AttrTypeDouble")
+            .Attr("integer_value", int(0), "AttrTypeInt64")
+            .Attr("is_floating_value", False, "AttrTypeBool")
+            .Attr("shape", shape, "AttrTypeShape")
+            .Attr("dtype", dtype, "AttrTypeDataType")
+            .Build().InferAndTryRun().RemoteBlobList()[0])

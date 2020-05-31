@@ -97,6 +97,17 @@ class EagerLogicalUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
+class NonTraceableEagerLogicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        vm_util.LogicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.EagerLogicalBlob(lbi)
+
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name): 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
@@ -106,6 +117,10 @@ def lazy_user_op_builder(op_name):
 def eager_logical_user_op_builder(op_name): 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
+
+def NonTraceableEagerLogicalUserOpBuilder(op_name): 
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
 
 in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
 @enable_if.condition(hob.in_normal_mode & in_physical_placement)
