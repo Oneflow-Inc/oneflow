@@ -27,7 +27,7 @@ class LocalMirroredTensorList(object):
     def ndarray_lists(self): return self.ndarray_lists_
 
 def MakeLocalBlob(ndarray_lists, consistent_blob):
-    assert type(consistent_blob) is remote_blob_util.ConsistentBlob
+    assert isinstance(consistent_blob, remote_blob_util.ConsistentBlob), type(consistent_blob)
     if consistent_blob.is_tensor_list:
         return LocalMirroredTensorList(ndarray_lists)
     assert len(ndarray_lists) == 1
