@@ -4,6 +4,7 @@ OneFlow Documentation
     :maxdepth: 1
 
     models
+    troubleshooting
     mandarin
 
 
