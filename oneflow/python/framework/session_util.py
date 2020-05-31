@@ -111,6 +111,7 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
+        del self.job_name2var_name2var_blob_
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
