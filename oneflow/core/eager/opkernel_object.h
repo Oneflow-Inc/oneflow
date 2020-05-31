@@ -66,6 +66,37 @@ class OpKernelObject : public vm::Object {
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
 };
 
+class DeprecatedOpKernelObject : public vm::Object {
+ public:
+  DeprecatedOpKernelObject(const DeprecatedOpKernelObject&) = delete;
+  DeprecatedOpKernelObject(DeprecatedOpKernelObject&&) = delete;
+  DeprecatedOpKernelObject(const OperatorConf& op_conf,
+                           const std::shared_ptr<const JobDesc>& job_desc, DeviceType device_type)
+      : op_conf_(op_conf), job_desc_(job_desc), device_type_(device_type), kernel_(nullptr) {}
+  ~DeprecatedOpKernelObject() override = default;
+
+  const JobDesc& job_desc() const { return *job_desc_; }
+
+  const std::string& op_name() const { return op_conf_.name(); }
+
+  const Kernel& kernel() const { return *kernel_; }
+
+  void ResetKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+
+ private:
+  void InferBlobDescs(const Operator& op,
+                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx);
+  void ResetKernel(const Operator& op,
+                   const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                   const ParallelContext* parallel_ctx, OpContext* op_ctx);
+
+  OperatorConf op_conf_;
+  std::shared_ptr<const JobDesc> job_desc_;
+  DeviceType device_type_;
+  std::unique_ptr<const Kernel> kernel_;
+};
+
 }  // namespace eager
 }  // namespace oneflow
 

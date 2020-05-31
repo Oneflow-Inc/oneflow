@@ -33,6 +33,19 @@ class StatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
+class DeprecatedStatelessCallOpKernelInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  DeprecatedStatelessCallOpKernelInstructionType() = default;
+  virtual ~DeprecatedStatelessCallOpKernelInstructionType() = default;
+
+ private:
+  virtual const char* device_tag() const = 0;
+};
+
 class WatchBlobHeaderInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;

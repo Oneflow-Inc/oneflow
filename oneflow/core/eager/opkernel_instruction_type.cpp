@@ -121,7 +121,7 @@ void ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.input_index(i);
     const auto& blob_object =
         instruction->operand_type(args.input_blob(i)).template Get<BlobObject>();
-    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
+    Callback(bn_in_op, index, blob_object);
   }
 }
 
@@ -159,7 +159,7 @@ void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.output_blob(i))->template Mut<BlobObject>();
-    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
+    Callback(bn_in_op, index, blob_object);
   }
   CHECK_EQ(args.mut2_obn_size(), args.mut2_output_index_size());
   CHECK_EQ(args.mut2_obn_size(), args.mut2_output_blob_size());
@@ -169,7 +169,7 @@ void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.mut2_output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.mut2_output_blob(i))->template Mut<BlobObject>();
-    Callback(GenRepeatedBn(bn_in_op, index), blob_object);
+    Callback(bn_in_op, index, blob_object);
   }
 }
 
@@ -179,17 +179,18 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
   const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
     HashSet<const BlobDesc*> out_blob_descs;
-    ForEachObnAndBlobObject(instruction, args,
-                            [&](const std::string& bn_in_op, BlobObject* blob_object) {
-                              auto* blob_desc = blob_object->mut_blob_desc();
-                              CHECK(out_blob_descs.insert(blob_desc).second);
-                              CHECK(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
-                            });
+    ForEachObnAndBlobObject(
+        instruction, args, [&](const std::string& bn_in_op, int64_t i, BlobObject* blob_object) {
+          auto* blob_desc = blob_object->mut_blob_desc();
+          CHECK(out_blob_descs.insert(blob_desc).second);
+          CHECK(obn2blob_desc->emplace(GenRepeatedBn(bn_in_op, i), blob_desc).second);
+        });
   }
   const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
   ForEachIbnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, const BlobObject& blob_object) {
-        CHECK(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
+      instruction, args,
+      [&](const std::string& bn_in_op, int64_t i, const BlobObject& blob_object) {
+        CHECK(ibn2blob_desc->emplace(GenRepeatedBn(bn_in_op, i), &blob_object.blob_desc()).second);
       });
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   BlobDesc* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob_desc();
@@ -204,19 +205,47 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
 }
 
 template<typename T>
+std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
+    vm::Instruction* instruction, const T& args, DeprecatedOpKernelObject* opkernel_obj) {
+  const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
+  {
+    HashSet<const BlobDesc*> out_blob_descs;
+    ForEachObnAndBlobObject(instruction, args,
+                            [&](const std::string& bn_in_op, int64_t, BlobObject* blob_object) {
+                              auto* blob_desc = blob_object->mut_blob_desc();
+                              CHECK(out_blob_descs.insert(blob_desc).second);
+                              CHECK(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
+                            });
+  }
+  const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
+  ForEachIbnAndBlobObject(
+      instruction, args, [&](const std::string& bn_in_op, int64_t, const BlobObject& blob_object) {
+        CHECK(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
+      });
+  return [obn2blob_desc, ibn2blob_desc](const std::string& bn_in_op) -> BlobDesc* {
+    const auto& output_iter = obn2blob_desc->find(bn_in_op);
+    if (output_iter != obn2blob_desc->end()) { return output_iter->second; }
+    const auto& input_iter = ibn2blob_desc->find(bn_in_op);
+    if (input_iter != ibn2blob_desc->end()) { return const_cast<BlobDesc*>(input_iter->second); }
+    return nullptr;
+  };
+}
+
+template<typename T>
 std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instruction* instruction,
                                                                   const T& args,
                                                                   OpKernelObject* opkernel_obj) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
-  ForEachObnAndBlobObject(instruction, args,
-                          [&](const std::string& bn_in_op, BlobObject* blob_object) {
-                            CHECK(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
-                          });
+  ForEachObnAndBlobObject(
+      instruction, args, [&](const std::string& bn_in_op, int64_t i, BlobObject* blob_object) {
+        CHECK(obn2blob->emplace(GenRepeatedBn(bn_in_op, i), blob_object->mut_blob()).second);
+      });
   const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  ForEachIbnAndBlobObject(instruction, args,
-                          [&](const std::string& bn_in_op, const BlobObject& blob_object) {
-                            CHECK(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
-                          });
+  ForEachIbnAndBlobObject(
+      instruction, args,
+      [&](const std::string& bn_in_op, int64_t i, const BlobObject& blob_object) {
+        CHECK(ibn2blob->emplace(GenRepeatedBn(bn_in_op, i), &blob_object.blob()).second);
+      });
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   Blob* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob();
   return [obn2blob, ibn2blob, tmp_bn, tmp](const std::string& bn_in_op) -> Blob* {
@@ -225,6 +254,28 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
     const auto& input_iter = ibn2blob->find(bn_in_op);
     if (input_iter != ibn2blob->end()) { return const_cast<Blob*>(input_iter->second); }
     if (tmp_bn == bn_in_op) { return tmp; }
+    return nullptr;
+  };
+}
+
+template<typename T>
+std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(
+    vm::Instruction* instruction, const T& args, DeprecatedOpKernelObject* opkernel_obj) {
+  const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
+  ForEachObnAndBlobObject(instruction, args,
+                          [&](const std::string& bn_in_op, int64_t, BlobObject* blob_object) {
+                            CHECK(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
+                          });
+  const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
+  ForEachIbnAndBlobObject(instruction, args,
+                          [&](const std::string& bn_in_op, int64_t, const BlobObject& blob_object) {
+                            CHECK(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
+                          });
+  return [obn2blob, ibn2blob](const std::string& bn_in_op) -> Blob* {
+    const auto& output_iter = obn2blob->find(bn_in_op);
+    if (output_iter != obn2blob->end()) { return output_iter->second; }
+    const auto& input_iter = ibn2blob->find(bn_in_op);
+    if (input_iter != ibn2blob->end()) { return const_cast<Blob*>(input_iter->second); }
     return nullptr;
   };
 }
@@ -284,32 +335,78 @@ void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, c
   UpdateUserOpConfInputAndOutput(*instruction, opkernel_obj->mut_user_op_conf(),
                                  opkernel_obj->op_name(), args);
   opkernel_obj->ResetOpAndKernel(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj));
-  ForEachObnAndBlobObject(instruction, args, [](const std::string& _, BlobObject* blob_object) {
-    blob_object->mutable_blob();
-  });
+  ForEachObnAndBlobObject(
+      instruction, args,
+      [](const std::string&, int64_t, BlobObject* blob_object) { blob_object->mutable_blob(); });
   if (opkernel_obj->tmp_buffer_blob_object().blob_desc().shape().elem_cnt() > 0) {
     opkernel_obj->mut_tmp_buffer_blob_object()->mutable_blob();
   }
   opkernel_obj->kernel().Infer(MakeBlob4BnInOp(instruction, args, opkernel_obj));
 }
 
+void OpKernelInfer(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* instruction,
+                   const StatelessCallOpKernelInstrOperand& args, DeviceType device_type) {
+  {
+    DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
+    int64_t device_id = instruction->stream().device_id();
+    InitOutputBlobObjects(instruction, args, device_id, default_data_type);
+  }
+  opkernel_obj->ResetKernel(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj));
+  ForEachObnAndBlobObject(
+      instruction, args,
+      [](const std::string&, int64_t, BlobObject* blob_object) { blob_object->mutable_blob(); });
+  const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
+  opkernel_obj->kernel().DeprecatedForwardHeader(KernelCtx(), Blob4BnInOp);
+}
+
 template<typename T>
 void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args) {
-  const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  ForEachObnAndBlobObject(instruction, args, [&](const std::string&, BlobObject* blob_object) {
-    blob_object->TryAllocateBlobBodyMemory(device_ctx);
-  });
+  ForEachObnAndBlobObject(instruction, args,
+                          [&](const std::string&, int64_t, BlobObject* blob_object) {
+                            blob_object->TryAllocateBlobBodyMemory(device_ctx);
+                          });
   if (opkernel_obj->mut_tmp_buffer_blob_object()->blob_desc().shape().elem_cnt() > 0) {
     opkernel_obj->mut_tmp_buffer_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
   std::shared_ptr<user_op::OpKernelState> new_state;
   {
+    const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
     EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
     const auto& old_state = opkernel_obj->opkernel_state();
     new_state = eager_kernel->EagerModelForward(old_state, device_ctx, Blob4BnInOp);
   }
   opkernel_obj->reset_opkernel_state(new_state);
+}
+
+void OpKernelCompute(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* instruction,
+                     const StatelessCallOpKernelInstrOperand& args) {
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  ForEachObnAndBlobObject(instruction, args,
+                          [&](const std::string&, int64_t, BlobObject* blob_object) {
+                            blob_object->TryAllocateBlobBodyMemory(device_ctx);
+                          });
+  KernelCtx kernel_ctx;
+  kernel_ctx.device_ctx = device_ctx;
+  const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
+  opkernel_obj->kernel().DeprecatedForwardDataContent(kernel_ctx, Blob4BnInOp);
+}
+
+template<typename T>
+T* GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
+                     const StatelessCallOpKernelInstrOperand& args) {
+  const auto& job_desc_ptr =
+      instruction->operand_type(args.job_desc()).Get<vm::ObjectWrapper<JobDesc>>().GetPtr();
+  const auto& op_conf =
+      instruction->mut_operand_type(args.op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
+  vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
+  CHECK(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
+        || rw_mutexed_object->Has<DeprecatedOpKernelObject>());
+  const auto& parallel_desc = instruction->parallel_desc();
+  CHECK(static_cast<bool>(parallel_desc));
+  CHECK_EQ(device_type, parallel_desc->device_type());
+  rw_mutexed_object->reset_object();
+  return rw_mutexed_object->Init<T>(op_conf, job_desc_ptr, device_type);
 }
 
 }  // namespace
@@ -329,26 +426,30 @@ void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
 
 void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  const auto& job_desc_ptr =
-      instruction->operand_type(args->job_desc()).Get<vm::ObjectWrapper<JobDesc>>().GetPtr();
-  const auto& op_conf =
-      instruction->mut_operand_type(args->op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
-  CHECK(op_conf.has_user_conf());
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
-  vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args->shared_opkernel());
-  if (rw_mutexed_object->has_object()) { CHECK(rw_mutexed_object->Has<OpKernelObject>()); }
-  const auto& parallel_desc = instruction->parallel_desc();
-  CHECK(static_cast<bool>(parallel_desc));
-  CHECK_EQ(device_type, parallel_desc->device_type());
-  rw_mutexed_object->reset_object();
-  auto* opkernel_obj = rw_mutexed_object->Init<OpKernelObject>(op_conf, job_desc_ptr, device_type);
-  OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
+  auto* opkernel = GetSharedOpKernel<OpKernelObject>(instruction, device_type, args.Get());
+  OpKernelInfer(opkernel, instruction, args.Get(), device_type);
 }
 
 void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
       instruction->mut_operand_type(args->shared_opkernel())->Mut<OpKernelObject>();
+  OpKernelCompute(opkernel_obj, instruction, args.Get());
+}
+
+void DeprecatedStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  auto* opkernel =
+      GetSharedOpKernel<DeprecatedOpKernelObject>(instruction, device_type, args.Get());
+  OpKernelInfer(opkernel, instruction, args.Get(), device_type);
+}
+
+void DeprecatedStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  auto* opkernel_obj =
+      instruction->mut_operand_type(args->shared_opkernel())->Mut<DeprecatedOpKernelObject>();
   OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 

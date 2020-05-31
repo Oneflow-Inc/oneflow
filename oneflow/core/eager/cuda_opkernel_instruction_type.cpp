@@ -38,6 +38,20 @@ class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKer
 COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
     "gpu.StatelessCallOpKernel"));
 
+class CudaDeprecatedStatelessCallOpKernelInstructionType final
+    : public DeprecatedStatelessCallOpKernelInstructionType {
+ public:
+  CudaDeprecatedStatelessCallOpKernelInstructionType() = default;
+  ~CudaDeprecatedStatelessCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaDeprecatedStatelessCallOpKernelInstructionType>(
+    "gpu.DeprecatedStatelessCallOpKernel"));
+
 class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:
   GpuWatchBlobHeaderInstructionType() = default;

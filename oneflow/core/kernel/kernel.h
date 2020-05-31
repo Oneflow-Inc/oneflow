@@ -40,6 +40,15 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
+  void DeprecatedForwardHeader(const KernelCtx& ctx,
+                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardHeader(ctx, BnInOp2Blob);
+  }
+  void DeprecatedForwardDataContent(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   void InitBase(const JobDesc* job_desc, const KernelConf&);
