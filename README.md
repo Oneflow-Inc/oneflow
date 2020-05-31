@@ -20,6 +20,10 @@
   https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
   ```
 
+- #### Common Questions
+
+  [Troubleshooting](docs/source/troubleshooting.md)
+
 - #### Clone Source Code
 
   Clone source code and submodules (faster, recommended)

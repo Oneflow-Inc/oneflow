@@ -10,20 +10,36 @@ import datetime
 
 @oneflow_export('train.CheckPoint')
 class CheckPoint(object):
+    """Create a `CheckPoint` object to manage checkpoint manually.
+
+    """
     def __init__(self):
         pass
 
     @session_ctx.try_init_default_session
     def save(self, path):
+        r"""save a checkpoint to `path`.
+
+        Args:
+            path: A `string` of path to save checkpoint. 
+        """
         assert type(path) is str
         session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
 
     @session_ctx.try_init_default_session
     def init(self):
+        r"""Initialize models by default initializer of op or Job.
+        """
         session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
+
 
     @session_ctx.try_init_default_session
     def load(self, path):
+        r"""load a checkpoint from `path` and initialize models.
+
+        Args:
+            path: A `string` of path to load checkpoint.
+        """
         assert type(path) is str
         session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
 
@@ -66,6 +82,12 @@ def _MakeModelSaveJobFunc(path):
 
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
+    r"""`SimpleCheckPointManager` is a simple automatic checkpoint manager.
+
+    Args:
+        root_path: root path of snapshot
+        prefix: prefix of snapshot
+    """
     def __init__(self, root_path, prefix='snapshot_'):
         if not os.path.exists(root_path):
             os.makedirs(root_path)
