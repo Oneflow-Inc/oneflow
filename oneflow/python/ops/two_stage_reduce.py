@@ -24,7 +24,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     device_stage_out_list=[]
     device_stage_count_list=[]
     x_list = flow.advanced.distribute_split(x)
-    for i in range(4):
+    for i in range(len(x_list)):
       with flow.device_prior_placement("gpu", "0:" + str(i)):
           device_stage_out, device_stage_count = reduce_device_stage(x_list[i], axis, op_type_name+"_device_stage", name+"_device_stage"+str(i))
           device_stage_out_list.append(device_stage_out)

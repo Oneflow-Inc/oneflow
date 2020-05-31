@@ -67,10 +67,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
 template<DeviceType device, typename T>
 bool ReduceDeviceStageIsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-  if (ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
+  return ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value;
 }
 
 template<typename T>
@@ -133,10 +130,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
 template<DeviceType device, typename T>
 bool ReduceDeviceStageGradIsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* in_diff_desc = ctx.TensorDesc4ArgNameAndIndex("in_diff", 0);
-  if (ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
+  return ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value;
 }
 
 template<typename T>
@@ -195,10 +189,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
 template<DeviceType device, typename T>
 bool ReduceGlobalStageIsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-  if (ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
+  return ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value;
 }
 
 #define REGISTER_REDUCE_GLOBAL_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
@@ -282,10 +273,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
 template<DeviceType device, typename T>
 bool ReduceGlobalStageGradIsMatchedPred(const KernelRegContext& ctx) {
   const TensorDesc* in_diff_desc = ctx.TensorDesc4ArgNameAndIndex("in_diff", 0);
-  if (ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
+  return ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value;
 }
 
 template<typename T>
