@@ -61,7 +61,7 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO"
 
-template<typename T>
+template<typename T, typename Kind = void>
 class Global final {
  public:
   static T* Get() { return *GetPPtr(); }
@@ -82,8 +82,15 @@ class Global final {
 
  private:
   static T** GetPPtr() {
+    CheckKind();
     static T* ptr = nullptr;
     return &ptr;
+  }
+  static void CheckKind() {
+    if (!std::is_same<Kind, void>::value) {
+      CHECK(Global<T>::Get() == nullptr)
+          << typeid(Global<T>).name() << " are disable for avoiding misuse";
+    }
   }
 };
 
