@@ -1,11 +1,11 @@
-from __future__ import absolute_import
-
+import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute as distribute
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -23,14 +23,6 @@ import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 
-@oneflow_export('user_op_builder')
-def api_user_op_builder(op_name):
-    return enable_if.unique(
-        lazy_user_op_builder,
-        eager_logical_user_op_builder,
-        eager_physical_user_op_builder,
-    )(op_name)
-
 class UserOp(object):
     def __init__(self, op_name):
         self.op_conf_ = op_conf_util.OperatorConf()
@@ -47,21 +39,40 @@ class UserOp(object):
         remote_blob_list = []
         for k in self.op_conf_.user_conf.output:
             if k not in self.output_arg_key_list_:
-                raise ValueError("Error: In op_name: \"" + self.op_conf_.name
-                        + "\" output_arg_name: \"" + k + "\" is not set in python op builder")
+                raise ValueError(
+                    "output_arg_name {} of {} op is not set in python op builder".format(
+                        k, self.op_conf_.name
+                    )
+                )
+
         for output_arg_name in self.output_arg_key_list_:
-            assert(output_arg_name in self.op_conf_.user_conf.output)
+            assert output_arg_name in self.op_conf_.user_conf.output
             for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
-                lbi.blob_name = output_arg_name + '_' + str(i)
+                lbi.blob_name = "{}_{}".format(output_arg_name, i)
                 remote_blob_list.append(self.MakeRemoteBlob(lbi))
+
         return tuple(remote_blob_list)
 
     def SoleOutputBlob(self):
         blobs = self.RemoteBlobList()
         assert len(blobs) == 1
         return blobs[0]
+
+
+@oneflow_export('user_op_builder')
+def api_user_op_builder(op_name):
+    return enable_if.unique(
+        lazy_user_op_builder,
+        eager_logical_user_op_builder,
+        eager_physical_user_op_builder,
+    )(op_name)
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def lazy_user_op_builder(op_name): 
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
 
 class LazyUserOp(UserOp):
     def __init__(self, op_name):
@@ -74,16 +85,10 @@ class LazyUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
-class EagerPhysicalUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
-
-    def InferAndTryRun(self):
-        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return eager_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def eager_logical_user_op_builder(op_name): 
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
 
 class EagerLogicalUserOp(UserOp):
     def __init__(self, op_name):
@@ -97,6 +102,49 @@ class EagerLogicalUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
+in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
+@enable_if.condition(hob.in_normal_mode & in_physical_placement)
+def eager_physical_user_op_builder(op_name):
+    job_name = job_conf_ctx.CurrentJobConf().job_name
+    return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
+
+class EagerPhysicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return eager_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
+
+
+@oneflow_export("consistent_user_op_builder")
+def api_consistent_user_op_builder(op_name):
+    return enable_if.unique(consistent_user_op_builder)(op_name)
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def consistent_user_op_builder(op_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
+
+class ConsistentUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        compile_context.CurJobAddConsistentOp(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.RemoteBlob(lbi)
+
+
+def NonTraceableEagerLogicalUserOpBuilder(op_name): 
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
+
 class NonTraceableEagerLogicalUserOp(UserOp):
     def __init__(self, op_name):
         UserOp.__init__(self, op_name)
@@ -108,25 +156,6 @@ class NonTraceableEagerLogicalUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_builder(op_name): 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
-
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_builder(op_name): 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
-
-def NonTraceableEagerLogicalUserOpBuilder(op_name): 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
-
-in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
-@enable_if.condition(hob.in_normal_mode & in_physical_placement)
-def eager_physical_user_op_builder(op_name):
-    job_name = job_conf_ctx.CurrentJobConf().job_name
-    return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
 
 class UserOpConfBuilder(object):
     def __init__(self, job_name, op_name, user_op_class):
@@ -149,11 +178,11 @@ class UserOpConfBuilder(object):
             self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
         return self
 
-    def Output(self, output_name, num = 1):
-        assert type(num) is int and num >= 1
+    def Output(self, output_name, num=1):
+        assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = self.user_op_.op_conf_.name + '/' + output_name + '_' + str(i)
+            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -161,25 +190,25 @@ class UserOpConfBuilder(object):
 
     def Attr(self, attr_name, attr_value, attr_type):
         attribute = user_op_attr_util.UserOpAttrVal()
-        assert type(attr_name) is str
-        assert type(attr_type) is str
+        assert isinstance(attr_name, str)
+        assert isinstance(attr_type, str)
         if attr_type == "AttrTypeInt32":
-            assert type(attr_value) is int
+            assert isinstance(attr_value, int)
             attribute.at_int32 = attr_value
         elif attr_type == "AttrTypeInt64":
-            assert type(attr_value) is int
+            assert isinstance(attr_value, int)
             attribute.at_int64 = attr_value
         elif attr_type == "AttrTypeBool":
-            assert type(attr_value) is bool
+            assert isinstance(attr_value, bool)
             attribute.at_bool = attr_value
         elif attr_type == "AttrTypeFloat":
-            assert type(attr_value) is float
+            assert isinstance(attr_value, float)
             attribute.at_float = attr_value
         elif attr_type == "AttrTypeDouble":
-            assert type(attr_value) is float
+            assert isinstance(attr_value, float)
             attribute.at_double = attr_value
         elif attr_type == "AttrTypeString":
-            assert type(attr_value) is str
+            assert isinstance(attr_value, str)
             attribute.at_string = attr_value
         elif attr_type == "AttrTypeShape":
             assert isinstance(attr_value, (tuple, list))
@@ -212,24 +241,21 @@ class UserOpConfBuilder(object):
                 shape.dim[:] = list(attr_value[i])
                 attribute.at_list_shape.val.append(shape)
         else:
-            assert False, "Unknow op attribute type: {}".format(attr_type)
+            raise ValueError("Invalid op attribute type {}".format(attr_type))
+
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
 
-    def SetRandomSeed(self, seed):
-        has_seed = False
+    def SetRandomSeed(self, seed=None):
         if distribute.ConsistentStrategyEnabled():
-            has_seed = True
             if seed is None:
                 seed = random.randint(-2147483648, 2147483647)
         elif distribute.MirroredStrategyEnabled():
             if seed is None:
                 seed = -1
-            else:
-                has_seed = True
         else:
-            assert False, "Unknow distirbute strategy when set random seed to user op"
-        self = self.Attr("has_seed", has_seed, "AttrTypeBool")\
-                .Attr("seed", seed, "AttrTypeInt64")
-        return self
+            raise ValueError("Unknow distirbute strategy when set random seed to user op")
 
+        return self.Attr("has_seed", (seed is not None), "AttrTypeBool").Attr(
+            "seed", seed, "AttrTypeInt64"
+        )

@@ -1510,6 +1510,11 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message CopyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1925,7 +1930,7 @@ message OperatorConf {
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
     ArgWhereOpConf arg_where_conf = 342;
-
+    CopyOpConf copy_conf = 343;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op

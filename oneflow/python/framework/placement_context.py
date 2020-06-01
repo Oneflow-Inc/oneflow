@@ -48,7 +48,6 @@ class PlacementScope(object):
     def __exit__(self, *args):
         assert self == PlacementScopeStackPop()
 
-
 class FixedPlacementScope(PlacementScope):
     r"""Class for fixed placement scope.
 

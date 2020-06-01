@@ -7,6 +7,10 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
 
+@oneflow_export('placement.current_scope')
+def api_current_placement_scope():
+    return enable_if.unique(global_mode_cur_placement_scope, normal_mode_cur_placement_scope)()
+
 @enable_if.condition(hob.in_global_mode & hob.in_placement_scope)
 def global_mode_cur_placement_scope():
     return placement_ctx.PlacementScopeStackTop()
@@ -15,14 +19,6 @@ def global_mode_cur_placement_scope():
 def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
-@oneflow_export('placement.current_scope')
-def api_current_placement_scope():
-    return enable_if.unique(global_mode_cur_placement_scope, normal_mode_cur_placement_scope)()
-
-@enable_if.condition(hob.in_global_mode
-                     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized))
-def GetFixedPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
 @oneflow_export('fixed_placement')
 def api_fixed_placement(device_tag, machine_device_ids):
@@ -30,12 +26,19 @@ def api_fixed_placement(device_tag, machine_device_ids):
 
 @enable_if.condition(hob.in_global_mode
                      | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized))
-def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+def GetFixedPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
+
 
 @oneflow_export('device_prior_placement')
 def api_device_prior_placement(device_tag, machine_device_ids):
     return enable_if.unique(GetDevicePriorPlacementScope)(device_tag, machine_device_ids)
+
+@enable_if.condition(hob.in_global_mode
+                     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized))
+def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+
 
 def GetDefaultMachineDeviceIds(resource):
     if resource.HasField('gpu_device_num'):
