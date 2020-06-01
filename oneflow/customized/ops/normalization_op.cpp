@@ -238,7 +238,8 @@ REGISTER_USER_OP_GRAD("normalization")
             bool fp16 = op.TensorDesc4ArgNameAndIndex("y", 0).data_type() == DataType::kFloat16;
             std::string dy_fp32_or_fp64;
             if (fp16) {
-              const DataType param_data_type = op.TensorDesc4ArgNameAndIndex("gamma", 0).data_type();
+              const DataType param_data_type =
+                  op.TensorDesc4ArgNameAndIndex("gamma", 0).data_type();
               const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-h2f";
               const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
                                        .Op("cast")
