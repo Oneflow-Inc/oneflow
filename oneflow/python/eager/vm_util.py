@@ -15,6 +15,8 @@ import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
 import oneflow
 
+from contextlib import contextmanager
+
 def PhysicalRun(build):
     return _Run(build, id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction)
 
@@ -143,6 +145,20 @@ class InstructionsBuilder(object):
         obj = object_util.Object(object_id, parallel_desc_sym)
         object_cache.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
         return obj
+
+    @contextmanager
+    def CudaHostPinBlob(self, blob_object):
+        self._CudaHostRegisterBlob(blob_object)
+        try:
+            yield
+        finally:
+            self._CudaHostUnregisterBlob(blob_object)
+
+    def _CudaHostRegisterBlob(self, blob_object):
+        TODO()
+
+    def _CudaHostUnregisterBlob(self, blob_object):
+        TODO()
 
     def _GetOpConfSymbol(self, op_conf):
         new_op_conf = op_conf_util.OperatorConf()
