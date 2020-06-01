@@ -32,34 +32,6 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
-// clang-format on
-
-// clang-format off
-OBJECT_MSG_BEGIN(HostMemBuffer);
-  // methods
-  PUBLIC void __Init__(size_t size, char* data) {
-    set_size(size);
-    set_data(data);
-  }
-
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
-  OBJECT_MSG_DEFINE_PTR(char, data);
-OBJECT_MSG_END(HostMemBuffer);
-// clang-format on
-
-// clang-format off
-OBJECT_MSG_BEGIN(CudaMemBuffer);
-  // methods
-  PUBLIC void __Init__(size_t size, char* data) {
-    set_size(size);
-    set_data(data);
-  }
-
-  // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(size_t, size);
-  OBJECT_MSG_DEFINE_PTR(char, data);
-OBJECT_MSG_END(CudaMemBuffer);
 
 class LogicalObject;
 OBJECT_MSG_BEGIN(RwMutexedObject);
