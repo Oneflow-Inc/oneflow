@@ -43,5 +43,28 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
 
+class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
+ public:
+  CudaHostUnregisterBlobInstructionType() = default;
+  ~CudaHostUnregisterBlobInstructionType() override = default;
+
+  using stream_type = vm::DeviceHelperStreamType;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override {
+    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
+    auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
+    CHECK(blob->mem_case().has_host_mem());
+    CHECK(!blob->mem_case().host_mem().has_cuda_pinned_mem());
+    void* dptr = blob->mut_dptr();
+    CHECK_NOTNULL(dptr);
+    CudaCheck(cudaHostUnregister(dptr));
+  }
+};
+COMMAND(
+    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
+
 }  // namespace eager
 }  // namespace oneflow
