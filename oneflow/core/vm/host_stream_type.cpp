@@ -92,7 +92,6 @@ class MallocInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
-COMMAND(RegisterLocalInstructionType<MallocInstructionType>("LocalMalloc"));
 
 class CudaFreeHostInstructionType final : public InstructionType {
  public:
@@ -161,7 +160,6 @@ class FreeInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<FreeInstructionType>("Free"));
-COMMAND(RegisterLocalInstructionType<FreeInstructionType>("LocalFree"));
 
 }  // namespace
 
@@ -191,24 +189,14 @@ void HostStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> HostStreamType::MakeWorkerStreamDesc(const Resource& resource,
-                                                              int64_t this_machine_id) const {
+ObjectMsgPtr<StreamDesc> HostStreamType::MakeStreamDesc(const Resource& resource,
+                                                        int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
   ret->set_start_global_device_id(this_machine_id);
-  return ret;
-}
-
-ObjectMsgPtr<StreamDesc> HostStreamType::MakeMasterStreamDesc(const Resource& resource) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<HostStreamType>());
-  ret->set_num_machines(1);
-  ret->set_num_streams_per_machine(1);
-  ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(0);
   return ret;
 }
 

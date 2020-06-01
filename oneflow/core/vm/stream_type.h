@@ -6,7 +6,7 @@
 #include <glog/logging.h>
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -45,11 +45,8 @@ class StreamType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
-  virtual ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
-                                                        int64_t this_machine_id) const = 0;
-  virtual ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const {
-    return ObjectMsgPtr<StreamDesc>();
-  }
+  virtual ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                                  int64_t this_machine_id) const = 0;
 
   virtual bool SharingVirtualMachineThread() const { return false; }
   virtual void Infer(VirtualMachine* vm, Instruction* instruction) const {
@@ -63,29 +60,6 @@ class StreamType {
   }
   virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
-  }
-
-  template<VmType vm_type, typename Enabled = void>
-  struct MakeStreamDescUtil {};
-
-  template<typename Enabled>
-  struct MakeStreamDescUtil<VmType::kWorker, Enabled> {
-    static ObjectMsgPtr<StreamDesc> Call(const StreamType& self, const Resource& resource,
-                                         int64_t this_machine_id) {
-      return self.MakeWorkerStreamDesc(resource, this_machine_id);
-    }
-  };
-  template<typename Enabled>
-  struct MakeStreamDescUtil<VmType::kMaster, Enabled> {
-    static ObjectMsgPtr<StreamDesc> Call(const StreamType& self, const Resource& resource,
-                                         int64_t this_machine_id) {
-      return self.MakeMasterStreamDesc(resource);
-    }
-  };
-
-  template<VmType vm_type>
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource, int64_t this_machine_id) const {
-    return MakeStreamDescUtil<vm_type>::Call(*this, resource, this_machine_id);
   }
 
  protected:

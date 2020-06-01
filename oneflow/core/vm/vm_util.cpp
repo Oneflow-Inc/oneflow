@@ -26,26 +26,16 @@ Maybe<void> Run(const std::string& instruction_list_str) {
 
 Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
   if (JUST(GlobalMaybe<ResourceDesc>())->TotalMachineNum() > 1) { TODO(); }
-  InstructionMsgList local_instr_msg_list;
-  InstructionMsgList remote_instr_msg_list;
+  InstructionMsgList instr_msg_list;
   for (const auto& instr_proto : instruction_list_proto.instruction()) {
     auto instr_msg = ObjectMsgPtr<InstructionMsg>::New(instr_proto);
-    if (instr_msg->instr_type_id().type() == kWorker) {
-      remote_instr_msg_list.EmplaceBack(std::move(instr_msg));
-    } else if (instr_msg->instr_type_id().type() == kMaster) {
-      local_instr_msg_list.EmplaceBack(std::move(instr_msg));
-    } else {
-      UNIMPLEMENTED();
-    }
+    instr_msg_list.EmplaceBack(std::move(instr_msg));
   }
-  auto* local_vm = JUST(GlobalMaybe<OneflowVM<vm::kMaster>>())->mut_vm();
-  auto* remote_vm = JUST(GlobalMaybe<OneflowVM<vm::kWorker>>())->mut_vm();
-  remote_vm->Receive(&remote_instr_msg_list);
-  while (!(local_vm->Empty() && remote_vm->Empty())) {
-    local_vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(local_vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
-    remote_vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(remote_vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+  auto* vm = JUST(GlobalMaybe<OneflowVM>())->mut_vm();
+  vm->Receive(&instr_msg_list);
+  while (!vm->Empty()) {
+    vm->Schedule();
+    OBJECT_MSG_LIST_FOR_EACH(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   return Maybe<void>::Ok();
 }

@@ -8,16 +8,10 @@ namespace vm {
 
 VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
   const auto& machine_ctx = *Global<MachineCtx>::Get();
-  if (machine_ctx.IsThisMachineMaster()) {
-    Global<OneflowVM<vm::kMaster>>::New(resource, machine_ctx.this_machine_id());
-  }
-  Global<OneflowVM<vm::kWorker>>::New(resource, machine_ctx.this_machine_id());
+  Global<OneflowVM>::New(resource, machine_ctx.this_machine_id());
 }
 
-VirtualMachineScope::~VirtualMachineScope() {
-  Global<OneflowVM<vm::kWorker>>::Delete();
-  if (Global<OneflowVM<vm::kMaster>>::Get()) { Global<OneflowVM<vm::kMaster>>::Delete(); }
-}
+VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }
 
 }  // namespace vm
 }  // namespace oneflow

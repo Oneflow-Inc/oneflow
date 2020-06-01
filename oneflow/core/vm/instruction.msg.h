@@ -11,7 +11,7 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 

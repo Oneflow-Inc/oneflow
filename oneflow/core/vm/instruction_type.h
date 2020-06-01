@@ -34,8 +34,7 @@ class InstrTypeId;
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
 void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type, InterpretType interpret_type,
-                         VmType vm_type);
+                         const InstructionType* instruction_type, InterpretType interpret_type);
 
 HashMap<std::type_index, const InstructionType*>* InstructionType4TypeIndex();
 
@@ -53,10 +52,9 @@ const InstructionType* LookupInstructionType() {
 
 template<typename T>
 void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type,
-                         InterpretType interpret_type, VmType vm_type) {
+                         InterpretType interpret_type) {
   TryRegisterInstructionType<T>();
-  RegisterInstrTypeId(instr_type_name, stream_type, LookupInstructionType<T>(), interpret_type,
-                      vm_type);
+  RegisterInstrTypeId(instr_type_name, stream_type, LookupInstructionType<T>(), interpret_type);
 }
 
 template<typename T>
@@ -65,25 +63,10 @@ void RegisterInstructionType(const std::string& instr_type_name) {
   TryRegisterStreamType4TypeIndex<InferStreamType<typename T::stream_type>>();
   TryRegisterInferStreamTypeId<InferStreamType<typename T::stream_type>, typename T::stream_type>();
   RegisterInstrTypeId<T>(instr_type_name, LookupStreamType4TypeIndex<typename T::stream_type>(),
-                         InterpretType::kCompute, VmType::kWorker);
+                         InterpretType::kCompute);
   RegisterInstrTypeId<T>(std::string("Infer-") + instr_type_name,
                          LookupStreamType4TypeIndex<InferStreamType<typename T::stream_type>>(),
-                         InterpretType::kInfer, VmType::kWorker);
-  RegisterInstrTypeId<T>(std::string("LocalInfer-") + instr_type_name,
-                         LookupStreamType4TypeIndex<InferStreamType<typename T::stream_type>>(),
-                         InterpretType::kInfer, VmType::kMaster);
-}
-
-template<typename T>
-void RegisterLocalInstructionType(const std::string& instr_type_name) {
-  TryRegisterStreamType4TypeIndex<typename T::stream_type>();
-  TryRegisterStreamType4TypeIndex<InferStreamType<typename T::stream_type>>();
-  TryRegisterInferStreamTypeId<InferStreamType<typename T::stream_type>, typename T::stream_type>();
-  RegisterInstrTypeId<T>(instr_type_name, LookupStreamType4TypeIndex<typename T::stream_type>(),
-                         InterpretType::kCompute, VmType::kMaster);
-  RegisterInstrTypeId<T>(std::string("Infer-") + instr_type_name,
-                         LookupStreamType4TypeIndex<InferStreamType<typename T::stream_type>>(),
-                         InterpretType::kInfer, VmType::kMaster);
+                         InterpretType::kInfer);
 }
 
 }  // namespace vm

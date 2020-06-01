@@ -55,8 +55,6 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
   }
 };
 COMMAND(vm::RegisterInstructionType<InitOpKernelObjectInstructionType>("InitOpKernelObject"));
-COMMAND(
-    vm::RegisterLocalInstructionType<InitOpKernelObjectInstructionType>("LocalInitOpKernelObject"));
 
 class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
@@ -79,8 +77,6 @@ class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
   }
 };
 COMMAND(vm::RegisterInstructionType<DeleteOpKernelObjectInstructionType>("DeleteOpKernelObject"));
-COMMAND(vm::RegisterLocalInstructionType<DeleteOpKernelObjectInstructionType>(
-    "DeleteLocalOpKernelObject"));
 
 namespace {
 

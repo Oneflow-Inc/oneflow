@@ -32,10 +32,9 @@ HashMap<std::type_index, const InstructionType*>* InstructionType4TypeIndex() {
 }
 
 void RegisterInstrTypeId(const std::string& instruction_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type, InterpretType interpret_type,
-                         VmType vm_type) {
+                         const InstructionType* instruction_type, InterpretType interpret_type) {
   InstrTypeId instr_type_id;
-  instr_type_id.__Init__(stream_type, instruction_type, interpret_type, vm_type);
+  instr_type_id.__Init__(stream_type, instruction_type, interpret_type);
   CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
 }
 

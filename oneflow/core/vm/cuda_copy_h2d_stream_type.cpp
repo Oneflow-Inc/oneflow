@@ -38,8 +38,8 @@ void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeWorkerStreamDesc(
-    const Resource& resource, int64_t this_machine_id) const {
+ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(const Resource& resource,
+                                                               int64_t this_machine_id) const {
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyH2DStreamType>());

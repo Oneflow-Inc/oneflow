@@ -24,30 +24,15 @@ TEST(VmDesc, ToDot) {
 
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
-template<VmType vm_type>
-std::string MallocInstruction();
-
-template<>
-std::string MallocInstruction<VmType::kWorker>() {
-  return "Malloc";
-}
-template<>
-std::string MallocInstruction<VmType::kMaster>() {
-  return "LocalMalloc";
-}
-
-template<VmType vm_type>
 ObjectMsgPtr<VirtualMachine> NewTestVirtualMachine(int64_t* object_id, size_t size) {
   Resource resource;
   resource.set_machine_num(1);
   resource.set_gpu_device_num(1);
-  auto vm_desc = MakeVmDesc<vm_type>(resource, 0);
+  auto vm_desc = MakeVmDesc(resource, 0);
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   *object_id = TestUtil::NewObject(&list, "0:cpu:0");
-  list.EmplaceBack(NewInstruction(MallocInstruction<vm_type>())
-                       ->add_mut_operand(*object_id)
-                       ->add_int64_operand(size));
+  list.EmplaceBack(NewInstruction("Malloc")->add_mut_operand(*object_id)->add_int64_operand(size));
   vm->Receive(&list);
   return vm;
 }
@@ -57,9 +42,9 @@ TEST(VmDesc, basic) {
   int64_t src_object_id = 9527;
   int64_t dst_object_id = 9528;
   size_t size = 1024;
-  auto vm0 = NewTestVirtualMachine<VmType::kMaster>(&src_object_id, size);
-  auto vm1 = NewTestVirtualMachine<VmType::kWorker>(&dst_object_id, size);
-  vm0->Receive(NewInstruction("L2RLocalSend")
+  auto vm0 = NewTestVirtualMachine(&src_object_id, size);
+  auto vm1 = NewTestVirtualMachine(&dst_object_id, size);
+  vm0->Receive(NewInstruction("L2RSend")
                    ->add_const_operand(src_object_id)
                    ->add_int64_operand(logical_token)
                    ->add_int64_operand(size));

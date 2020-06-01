@@ -3,7 +3,7 @@
 
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_type.h"
+#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
 #include "oneflow/core/common/range.h"
 
@@ -30,7 +30,6 @@ OBJECT_MSG_BEGIN(VmDesc);
 OBJECT_MSG_END(VmDesc);
 // clang-format on
 
-template<VmType vm_type>
 ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
 
 }  // namespace vm

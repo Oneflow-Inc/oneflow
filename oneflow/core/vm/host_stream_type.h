@@ -29,9 +29,8 @@ class HostStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
-                                                int64_t this_machine_id) const override;
-  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override;
+  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                          int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

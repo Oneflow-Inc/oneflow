@@ -53,7 +53,6 @@ class TryClearObjectInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<TryClearObjectInstructionType>("TryClearObject"));
-COMMAND(RegisterLocalInstructionType<TryClearObjectInstructionType>("LocalTryClearObject"));
 
 }  // namespace vm
 }  // namespace oneflow

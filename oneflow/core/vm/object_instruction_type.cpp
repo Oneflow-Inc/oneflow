@@ -88,7 +88,6 @@ class NewObjectInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<NewObjectInstructionType>("NewObject"));
-COMMAND(RegisterLocalInstructionType<NewObjectInstructionType>("LocalNewObject"));
 
 class ReplaceMirroredInstructionType final : public InstructionType {
  public:
@@ -145,7 +144,6 @@ class ReplaceMirroredInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<ReplaceMirroredInstructionType>("ReplaceMirrored"));
-COMMAND(RegisterLocalInstructionType<ReplaceMirroredInstructionType>("LocalReplaceMirrored"));
 
 class DeleteObjectInstructionType final : public InstructionType {
  public:
@@ -193,7 +191,6 @@ class DeleteObjectInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<DeleteObjectInstructionType>("DeleteObject"));
-COMMAND(RegisterLocalInstructionType<DeleteObjectInstructionType>("LocalDeleteObject"));
 
 }  // namespace vm
 }  // namespace oneflow

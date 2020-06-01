@@ -46,15 +46,9 @@ class InferStreamType<ControlStreamType> final : public StreamType {
 
   bool SharingVirtualMachineThread() const override { return true; }
 
-  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
-                                                int64_t this_machine_id) const override {
-    auto stream_desc = ControlStreamType().MakeWorkerStreamDesc(resource, this_machine_id);
-    stream_desc->mut_stream_type_id()->CopyFrom(
-        LookupInferStreamTypeId(stream_desc->stream_type_id()));
-    return stream_desc;
-  }
-  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override {
-    auto stream_desc = ControlStreamType().MakeMasterStreamDesc(resource);
+  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                          int64_t this_machine_id) const override {
+    auto stream_desc = ControlStreamType().MakeStreamDesc(resource, this_machine_id);
     stream_desc->mut_stream_type_id()->CopyFrom(
         LookupInferStreamTypeId(stream_desc->stream_type_id()));
     return stream_desc;
@@ -102,7 +96,6 @@ class NewSymbolInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
-COMMAND(RegisterLocalInstructionType<NewSymbolInstructionType>("LocalNewSymbol"));
 
 void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
   const auto& instr_type_id = instr_msg->instr_type_id();
@@ -146,24 +139,14 @@ bool ControlStreamType::QueryInstructionStatusDone(
 
 void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeWorkerStreamDesc(const Resource& resource,
-                                                                 int64_t this_machine_id) const {
+ObjectMsgPtr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
+                                                           int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
   ret->set_start_global_device_id(this_machine_id);
-  return ret;
-}
-
-ObjectMsgPtr<StreamDesc> ControlStreamType::MakeMasterStreamDesc(const Resource& resource) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
-  ret->set_num_machines(1);
-  ret->set_num_streams_per_machine(1);
-  ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(0);
   return ret;
 }
 

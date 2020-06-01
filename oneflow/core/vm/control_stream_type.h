@@ -26,9 +26,8 @@ class ControlStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
-                                                int64_t this_machine_id) const override;
-  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override;
+  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                          int64_t this_machine_id) const override;
   void Compute(Instruction* instruction) const override;
 
   bool SharingVirtualMachineThread() const override { return true; }

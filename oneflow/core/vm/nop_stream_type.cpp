@@ -28,9 +28,8 @@ class NopStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  ObjectMsgPtr<StreamDesc> MakeWorkerStreamDesc(const Resource& resource,
-                                                int64_t this_machine_id) const override;
-  ObjectMsgPtr<StreamDesc> MakeMasterStreamDesc(const Resource& resource) const override;
+  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                          int64_t this_machine_id) const override;
 };
 
 class NopInstructionType final : public InstructionType {
@@ -45,7 +44,6 @@ class NopInstructionType final : public InstructionType {
   void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 COMMAND(RegisterInstructionType<NopInstructionType>("Nop"));
-COMMAND(RegisterLocalInstructionType<NopInstructionType>("LocalNop"));
 
 void NopStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
@@ -68,24 +66,14 @@ void NopStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> NopStreamType::MakeWorkerStreamDesc(const Resource& resource,
-                                                             int64_t this_machine_id) const {
+ObjectMsgPtr<StreamDesc> NopStreamType::MakeStreamDesc(const Resource& resource,
+                                                       int64_t this_machine_id) const {
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
   ret->set_start_global_device_id(this_machine_id);
-  return ret;
-}
-
-ObjectMsgPtr<StreamDesc> NopStreamType::MakeMasterStreamDesc(const Resource& resource) const {
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<NopStreamType>());
-  ret->set_num_machines(1);
-  ret->set_num_streams_per_machine(1);
-  ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(0);
   return ret;
 }
 

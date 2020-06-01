@@ -43,7 +43,6 @@ class InitStringSymbolInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<InitStringSymbolInstructionType>("InitStringSymbol"));
-COMMAND(RegisterLocalInstructionType<InitStringSymbolInstructionType>("LocalInitStringSymbol"));
 
 }  // namespace vm
 }  // namespace oneflow

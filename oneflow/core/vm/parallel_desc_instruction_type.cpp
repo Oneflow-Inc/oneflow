@@ -59,8 +59,6 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
 };
 COMMAND(Global<Storage<ParallelConf>>::SetAllocated(new Storage<ParallelConf>()));
 COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
-COMMAND(RegisterLocalInstructionType<NewParallelDescSymbolInstructionType>(
-    "LocalNewParallelDescSymbol"));
 
 }  // namespace vm
 }  // namespace oneflow

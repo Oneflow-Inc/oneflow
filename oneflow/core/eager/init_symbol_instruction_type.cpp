@@ -9,12 +9,10 @@ namespace eager {
 COMMAND(Global<vm::Storage<JobConfigProto>>::SetAllocated(new vm::Storage<JobConfigProto>()));
 using JobDescInstr = vm::InitSymbolInstructionType<JobDesc, JobConfigProto>;
 COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
-COMMAND(vm::RegisterLocalInstructionType<JobDescInstr>("LocalInitJobDescSymbol"));
 
 COMMAND(Global<vm::Storage<OperatorConf>>::SetAllocated(new vm::Storage<OperatorConf>()));
 using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf, OperatorConf>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
-COMMAND(vm::RegisterLocalInstructionType<OperatorConfInstr>("LocalInitOperatorConfSymbol"));
 
 }  // namespace eager
 }  // namespace oneflow
