@@ -305,17 +305,29 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
+Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
                                                                    int32_t parallel_num) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
-    const auto& iter = mirrored_lbi2sub_lbis_.find(lbi);
+    const auto& iter = mirrored_lbi2sub_lbis().find(lbi);
     int32_t ibn_parallel_num = 0;
-    if (iter != mirrored_lbi2sub_lbis_.end()) {
+    if (iter != mirrored_lbi2sub_lbis().end()) {
       ibn_parallel_num = iter->second.size();
     } else {
       ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
     }
+    CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
+        << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
+        << "is not equals to op' parallel_num";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                                   int32_t parallel_num) const {
+  for (const auto& ibn : op.input_bns()) {
+    const auto& lbi = op.BnInOp2Lbi(ibn);
+    int32_t ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
     CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
         << "is not equals to op' parallel_num";

@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
 @oneflow_export("copy")
 def api_copy(x, name=None):
@@ -24,8 +25,9 @@ def lazy_copy(x, name=None):
 def eager_copy(x, name=None):
     op_conf, lbi = _CopyOpConfAndLbi(x, name=name)
     compile_context.CurJobAddMirroredOp(op_conf)
-    vm_util.LogicalRun(
-            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+    def CallCopy(builder):
+        builder.DeprecatedStatelessCall(op_conf, const_arg_bns=['in'], mut_arg_bns=['out'])
+    vm_util.LogicalRun(CallCopy)
     return remote_blob_util.EagerLogicalBlob(lbi)
 
 def _CopyOpConfAndLbi(x, name = None):
