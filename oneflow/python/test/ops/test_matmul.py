@@ -88,7 +88,7 @@ def filter_args(arg_list):
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["a_shape"] = [(512, 256), (256, 512)]
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
@@ -96,7 +96,7 @@ def gen_arg_list():
     matmul_args = filter_args(GenArgList(arg_dict))
 
     arg_dict.clear()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["a_shape"] = [(10, 10, 64, 32), (10, 10, 32, 64)]
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]

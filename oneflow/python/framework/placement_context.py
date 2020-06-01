@@ -6,6 +6,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.python.framework.op_util as op_util
 
 class PlacementScope(object):
     def __init__(self, device_tag, machine_device_ids):
@@ -43,6 +44,30 @@ class PlacementScope(object):
 
     def __exit__(self, *args):
         assert self == PlacementScopeStackPop()
+
+class FixedPlacementScope(PlacementScope):
+    r"""Class for fixed placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with fixed parallel configuration.
+    """
+    def __init__(self, device_tag, machine_device_ids):
+        PlacementScope.__init__(self, device_tag, machine_device_ids)
+
+    def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
+
+class DevicePriorPlacementScope(PlacementScope):
+    r"""Class for device prior placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with device prior parallel configuration.
+    """
+    def __init__(self, device_tag, machine_device_ids):
+        PlacementScope.__init__(self, device_tag, machine_device_ids)
+
+    def GetDeviceTag4OpConf(self, op_conf):
+        if op_util.IsOpConfOnlyCpuSupported(op_conf): return "cpu"
+        return self.default_device_tag
 
 def PlacementScopeStackPush(placement_policy):
     session_ctx.GetDefaultSession().placement_scope_stack.insert(0, placement_policy)
