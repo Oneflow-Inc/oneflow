@@ -16,6 +16,7 @@ def get_lib():
 def get_compile_flags():
     flags = []
     flags.append("-I%s" % get_include())
+    flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
     flags.append("-DWITH_CUDA")
     return flags
 
