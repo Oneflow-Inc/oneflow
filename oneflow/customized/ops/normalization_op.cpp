@@ -236,39 +236,40 @@ REGISTER_USER_OP_GRAD("normalization")
               return mul_op;
             };
             bool fp16 = op.TensorDesc4ArgNameAndIndex("y", 0).data_type() == DataType::kFloat16;
-            std::string dy_fp32;
+            std::string dy_fp32_or_fp64;
             if (fp16) {
+              const DataType param_data_type = op.TensorDesc4ArgNameAndIndex("gamma", 0).data_type();
               const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-h2f";
               const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
                                        .Op("cast")
                                        .Input("in", op.GetGradTensorWithOpOutput("y", 0))
                                        .Output("out")
-                                       .Attr("dtype", DataType::kFloat)
+                                       .Attr("dtype", param_data_type)
                                        .Build();
               AddOp(cast_op);
-              dy_fp32 = cast_op.output("out", 0);
+              dy_fp32_or_fp64 = cast_op.output("out", 0);
             } else {
-              dy_fp32 = op.GetGradTensorWithOpOutput("y", 0);
+              dy_fp32_or_fp64 = op.GetGradTensorWithOpOutput("y", 0);
             }
             const auto dy_mul_gamma_op =
-                BroadcastMulAtAxis(op.input("gamma", 0), dy_fp32, "out_grad_mul_gamma");
+                BroadcastMulAtAxis(op.input("gamma", 0), dy_fp32_or_fp64, "out_grad_mul_gamma");
             const auto dy_mul_inv_var_op = BroadcastMulAtAxis(
                 var_sqrt_op.output("y", 0), dy_mul_gamma_op.output("z", 0), "out_grad_mul_inv_var");
 
-            std::string dx_fp32 = dy_mul_inv_var_op.output("z", 0);
+            std::string dx_fp32_or_fp64 = dy_mul_inv_var_op.output("z", 0);
             std::string dx;
             if (fp16) {
-              const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-f2h";
+              const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dx-f2h";
               const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
                                        .Op("cast")
-                                       .Input("in", dx_fp32)
+                                       .Input("in", dx_fp32_or_fp64)
                                        .Output("out")
                                        .Attr("dtype", DataType::kFloat16)
                                        .Build();
               AddOp(cast_op);
               dx = cast_op.output("out", 0);
             } else {
-              dx = dx_fp32;
+              dx = dx_fp32_or_fp64;
             }
             op.BindGradTensorWithOpInput(dx, "x", 0);
           }
