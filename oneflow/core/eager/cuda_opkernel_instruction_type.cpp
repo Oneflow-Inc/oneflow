@@ -80,7 +80,7 @@ class CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType final
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType>(
-    "gpu.copy_d2h.DeprecatedStatelessCallOpKernel"));
+    "cpu.copy_d2h.DeprecatedStatelessCallOpKernel"));
 
 class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:

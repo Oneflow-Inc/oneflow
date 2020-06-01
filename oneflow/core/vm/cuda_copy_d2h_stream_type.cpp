@@ -1,12 +1,12 @@
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
+#include "oneflow/core/vm/cuda_copy_d2h_device_context.h"
 
 namespace oneflow {
 namespace vm {
 
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
-  device_ctx->reset(
-      new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
+  device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
 }
 
 void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
