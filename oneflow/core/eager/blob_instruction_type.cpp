@@ -14,7 +14,6 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(PinBlobInstruction);
-  //Decide whether to call cudaHostMalloc to allocate memory
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, blob);
 FLAT_MSG_VIEW_END(PinBlobInstruction);
 // clang-format on
@@ -44,10 +43,10 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
 
-class CudaHostUnRegisterBlobInstructionType final : public vm::InstructionType {
+class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
  public:
-  CudaHostUnRegisterBlobInstructionType() = default;
-  ~CudaHostUnRegisterBlobInstructionType() override = default;
+  CudaHostUnregisterBlobInstructionType() = default;
+  ~CudaHostUnregisterBlobInstructionType() override = default;
 
   using stream_type = vm::DeviceHelperStreamType;
 
@@ -61,12 +60,11 @@ class CudaHostUnRegisterBlobInstructionType final : public vm::InstructionType {
     CHECK(!blob->mem_case().host_mem().has_cuda_pinned_mem());
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
-    size_t size = blob->AlignedByteSizeOfBlobBody();
-    CudaCheck(cudaHostUnRegister(dptr, size, cudaHostRegisterDefault));
+    CudaCheck(cudaHostUnregister(dptr));
   }
 };
 COMMAND(
-    vm::RegisterInstructionType<CudaHostUnRegisterBlobInstructionType>("CudaHostUnRegisterBlob"));
+    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 
 }  // namespace eager
 }  // namespace oneflow

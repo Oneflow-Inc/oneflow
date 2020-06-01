@@ -152,22 +152,20 @@ class InstructionsBuilder(object):
         try:
             yield
         finally:
-            self._CudaHostUnRegisterBlob(blob_object)
+            self._CudaHostUnregisterBlob(blob_object)
 
     def _CudaHostRegisterBlob(self, blob_object):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "CudaHostRegisterBlob"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
-        instruction.operand.append(_ConstOperand(blob_object.object_id))
-        instruction.operand.append(_Int64Operand(instruction.parallel_desc_symbol_id))
+        instruction.operand.append(_MutOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
-    def _CudaHostUnRegisterBlob(self, blob_object):
+    def _CudaHostUnregisterBlob(self, blob_object):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "CudaHostUnRegisterBlob"
+        instruction.instr_type_name = "CudaHostUnregisterBlob"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
-        instruction.operand.append(_ConstOperand(blob_object.object_id))
-        instruction.operand.append(_Int64Operand(instruction.parallel_desc_symbol_id))
+        instruction.operand.append(_MutOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
     def _GetOpConfSymbol(self, op_conf):
