@@ -22,7 +22,7 @@ def env_init():
     env_proto_mutable = False
     return True
 
-oneflow_export("env.current_resource", "current_resource")
+@oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource():
     return enable_if.unique(get_current_resource)()
 
