@@ -36,7 +36,7 @@ class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKer
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
-    "gpu.StatelessCallOpKernel"));
+    "gpu.compute.StatelessCallOpKernel"));
 
 class CudaDeprecatedStatelessCallOpKernelInstructionType final
     : public DeprecatedStatelessCallOpKernelInstructionType {
@@ -50,7 +50,7 @@ class CudaDeprecatedStatelessCallOpKernelInstructionType final
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaDeprecatedStatelessCallOpKernelInstructionType>(
-    "gpu.DeprecatedStatelessCallOpKernel"));
+    "gpu.compute.DeprecatedStatelessCallOpKernel"));
 
 class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:

@@ -36,6 +36,9 @@ class InstructionsBuilder(object):
         self.id_generator_ = id_generator
 
     def StatelessCall(self, op_conf):
+        return self._StatelessCall("compute", op_conf)
+
+    def _StatelessCall(self, stream_tag, op_conf):
         assert op_conf.HasField('user_conf')
         placement_scope = oneflow.placement.current_scope()
         parallel_conf = placement_scope.default_parallel_conf
@@ -47,11 +50,16 @@ class InstructionsBuilder(object):
         input_triples = self._GetInputTriples(op_conf)
         output_triples = self._GetOutputTriples(op_conf, parallel_desc_sym)
         mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_desc_sym)
-        return self._StatelessCall("StatelessCallOpKernel",
+        return self._StatelessCallOpKernel("%s.StatelessCallOpKernel" % stream_tag,
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
     def DeprecatedStatelessCall(self, op_conf, const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
+        return self._DeprecatedStatelessCall("compute", op_conf,
+                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
+
+    def _DeprecatedStatelessCall(self, stream_tag, op_conf,
+                                 const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
         assert isinstance(const_arg_bns, (list, tuple))
         assert isinstance(mut_arg_bns, (list, tuple))
         assert isinstance(mut2_arg_bns, (list, tuple))
@@ -67,7 +75,7 @@ class InstructionsBuilder(object):
         output_triples = self._DeprecatedGetOutputTriples(op_conf, mut_arg_bns, parallel_desc_sym)
         mut2_output_triples = self._DeprecatedGetMut2OutputTriples(
                 op_conf, mut2_arg_bns, parallel_desc_sym)
-        return self._StatelessCall("DeprecatedStatelessCallOpKernel",
+        return self._StatelessCallOpKernel("%s.DeprecatedStatelessCallOpKernel" % stream_tag,
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
@@ -248,8 +256,9 @@ class InstructionsBuilder(object):
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
         return self._NewObjectId(parallel_desc_sym)
 
-    def _StatelessCall(self, instr_name, parallel_desc_sym, job_conf_sym, op_conf_sym,
-                       shared_opkernel_obj, input_triples, output_triples, mut2_output_triples):
+    def _StatelessCallOpKernel(self, instr_name, parallel_desc_sym, job_conf_sym, op_conf_sym,
+                               shared_opkernel_obj, input_triples, output_triples,
+                               mut2_output_triples):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "%s.%s" % (parallel_desc_sym.device_tag, instr_name)
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id

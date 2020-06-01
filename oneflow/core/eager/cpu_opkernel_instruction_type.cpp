@@ -36,7 +36,7 @@ class CpuStatelessCallOpKernelInstructionType final : public StatelessCallOpKern
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuStatelessCallOpKernelInstructionType>(
-    "cpu.StatelessCallOpKernel"));
+    "cpu.compute.StatelessCallOpKernel"));
 
 class CpuDeprecatedStatelessCallOpKernelInstructionType final
     : public DeprecatedStatelessCallOpKernelInstructionType {
@@ -50,7 +50,7 @@ class CpuDeprecatedStatelessCallOpKernelInstructionType final
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuDeprecatedStatelessCallOpKernelInstructionType>(
-    "cpu.DeprecatedStatelessCallOpKernel"));
+    "cpu.compute.DeprecatedStatelessCallOpKernel"));
 
 class CpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:
