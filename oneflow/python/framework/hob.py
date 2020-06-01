@@ -40,8 +40,11 @@ session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized
 
 def _IsCurrentFunctionTrainable():
     assert in_global_mode()
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
+    if c_api_util.EagerExecutionEnabled():
+        return session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
+    else:
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
 
