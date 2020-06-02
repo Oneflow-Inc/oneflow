@@ -277,13 +277,12 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(
 }
 
 template<typename T>
-void InitOutputBlobObjects(vm::Instruction* instruction, const T& args, int64_t device_id,
-                           DataType data_type) {
+void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
+                           const std::shared_ptr<MemoryCase>& mem_case, DataType data_type) {
   const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
     const auto& parallel_desc = instruction->parallel_desc();
     CHECK(static_cast<bool>(parallel_desc));
     DeviceType device_type = parallel_desc->device_type();
-    const auto& mem_case = MakeMemCase(device_type, device_id);
     rw_mutexed_object->Init<BlobObject>(mem_case, data_type);
   };
   FOR_RANGE(int, i, 0, args.output_blob_size()) {
@@ -321,11 +320,11 @@ void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_ty
 
 template<typename T>
 void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
-                   DeviceType device_type) {
+                   const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
+    InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
     int64_t device_id = instruction->stream().device_id();
-    InitOutputBlobObjects(instruction, args, device_id, default_data_type);
     ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
   UpdateUserOpConfInputAndOutput(*instruction, opkernel_obj->mut_user_op_conf(),
@@ -341,11 +340,11 @@ void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, c
 }
 
 void OpKernelInfer(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* instruction,
-                   const StatelessCallOpKernelInstrOperand& args, DeviceType device_type) {
+                   const StatelessCallOpKernelInstrOperand& args,
+                   const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
-    int64_t device_id = instruction->stream().device_id();
-    InitOutputBlobObjects(instruction, args, device_id, default_data_type);
+    InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
   }
   opkernel_obj->ResetKernel(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj));
   ForEachObnAndBlobObject(
@@ -411,7 +410,9 @@ void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
-  OpKernelInfer(opkernel_obj, instruction, args.Get(), device_type);
+  int64_t device_id = instruction->stream().device_id();
+  const auto& mem_case = MakeMemCase(device_type, device_id);
+  OpKernelInfer(opkernel_obj, instruction, args.Get(), mem_case, device_type);
 }
 
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
@@ -423,8 +424,10 @@ void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
 void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  int64_t device_id = instruction->stream().device_id();
   auto* opkernel = GetSharedOpKernel<OpKernelObject>(instruction, device_type, args.Get());
-  OpKernelInfer(opkernel, instruction, args.Get(), device_type);
+  const auto& mem_case = MakeMemCase(device_type, device_id);
+  OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type);
 }
 
 void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
@@ -434,12 +437,19 @@ void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction)
   OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 
+std::shared_ptr<MemoryCase> DeprecatedStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
+    const DeviceType device_type, const int64_t device_id) const {
+  return MakeMemCase(device_type, device_id);
+}
+
 void DeprecatedStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  int64_t device_id = instruction->stream().device_id();
   auto* opkernel =
       GetSharedOpKernel<DeprecatedOpKernelObject>(instruction, device_type, args.Get());
-  OpKernelInfer(opkernel, instruction, args.Get(), device_type);
+  const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
+  OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type);
 }
 
 void DeprecatedStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {

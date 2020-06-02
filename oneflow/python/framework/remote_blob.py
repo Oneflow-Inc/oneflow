@@ -194,6 +194,8 @@ class EagerMirroredBlob(MirroredBlob):
         self.parallel_conf_ = (
                 c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
                     self.job_name_, self.lbn_))
+    @property
+    def blob_object(self): return self.blob_object_
 
     def numpy_mirrored_list(self):
         assert not self.is_tensor_list

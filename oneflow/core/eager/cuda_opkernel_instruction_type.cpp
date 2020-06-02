@@ -76,11 +76,18 @@ class CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType final
 
   using stream_type = vm::CudaCopyD2HStreamType;
 
+  std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
+                                                const int64_t device_id) const override {
+    auto mem_case = std::make_shared<MemoryCase>();
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
+    return mem_case;
+  }
+
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType>(
-    "cpu.copy_d2h.DeprecatedStatelessCallOpKernel"));
+    "gpu.copy_d2h.DeprecatedStatelessCallOpKernel"));
 
 class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:

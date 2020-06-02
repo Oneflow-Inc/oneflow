@@ -54,7 +54,8 @@ class JobBuildAndInferCtx {
   virtual Maybe<void> Complete() = 0;
 
  protected:
-  virtual Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op, int32_t parallel_num) const = 0;
+  virtual Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                        int32_t parallel_num) const = 0;
   virtual std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const = 0;
   virtual int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const = 0;
   virtual ParallelConf GetMirroredOpParallelConf(const ParallelDesc&,
@@ -127,7 +128,8 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~LazyJobBuildAndInferCtx() = default;
 
  private:
-  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op, int32_t parallel_num) const override;
+  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
@@ -141,7 +143,8 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~EagerJobBuildAndInferCtx() = default;
 
  private:
-  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op, int32_t parallel_num) const override;
+  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;

@@ -57,28 +57,42 @@ class InstructionsBuilder(object):
                 input_triples, output_triples, mut2_output_triples)
 
     def DeprecatedStatelessCall(self, op_conf, const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
-        return self._DeprecatedStatelessCall("compute", op_conf,
+        placement_scope = oneflow.placement.current_scope()
+        parallel_conf = placement_scope.default_parallel_conf
+        device_tag = placement_scope.default_device_tag
+        return self._DeprecatedStatelessCall("compute", op_conf, parallel_conf, device_tag,
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
 
-    def _DeprecatedStatelessCall(self, stream_tag, op_conf,
+    def DeprecatedCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
+                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
+        return self._DeprecatedStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
+                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
+
+    def DeprecatedCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
+                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
+        return self._DeprecatedStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
+                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
+
+    def _DeprecatedStatelessCall(self, stream_tag, op_conf, parallel_conf, device_tag,
                                  const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
         assert isinstance(const_arg_bns, (list, tuple))
         assert isinstance(mut_arg_bns, (list, tuple))
         assert isinstance(mut2_arg_bns, (list, tuple))
         assert len(const_arg_bns) + len(mut_arg_bns) + len(mut2_arg_bns) > 0
+        opkernel_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
         placement_scope = oneflow.placement.current_scope()
-        parallel_conf = placement_scope.default_parallel_conf
-        device_tag = placement_scope.default_device_tag
-        parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
+        blob_parallel_desc_sym = self.GetParallelDescSymbol(
+                placement_scope.default_parallel_conf, placement_scope.default_device_tag)
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._DeprecatedGetOpConfSymbol(op_conf)
-        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
+        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(opkernel_parallel_desc_sym)
         input_triples = self._DeprecatedGetInputTriples(op_conf, const_arg_bns)
-        output_triples = self._DeprecatedGetOutputTriples(op_conf, mut_arg_bns, parallel_desc_sym)
+        output_triples = self._DeprecatedGetOutputTriples(
+                op_conf, mut_arg_bns, blob_parallel_desc_sym)
         mut2_output_triples = self._DeprecatedGetMut2OutputTriples(
-                op_conf, mut2_arg_bns, parallel_desc_sym)
+                op_conf, mut2_arg_bns, blob_parallel_desc_sym)
         return self._StatelessCallOpKernel("%s.DeprecatedStatelessCallOpKernel" % stream_tag,
-                parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
+                opkernel_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
     def DeleteBlob(self, blob_object):
