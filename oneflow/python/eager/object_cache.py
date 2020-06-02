@@ -22,9 +22,14 @@ def GetObject4BlobName(blob_name):
     assert HasObject4BlobName(blob_name), "blob_name %s not found" % blob_name
     return blob_name2object[blob_name]
 
-def SetObject4BlobName(blob_name, object):
+def SetObject4BlobName(blob_name, obj):
     assert not HasObject4BlobName(blob_name)
     global blob_name2object
-    blob_name2object[blob_name] = object
+    blob_name2object[blob_name] = obj
+
+def ClearObject4BlobName(blob_name):
+    assert HasObject4BlobName(blob_name)
+    global blob_name2object
+    del blob_name2object[blob_name]
 
 blob_name2object = {}

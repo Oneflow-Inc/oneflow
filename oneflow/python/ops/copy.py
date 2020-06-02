@@ -26,7 +26,7 @@ def lazy_copy(x, name=None):
 def eager_copy(x, name=None):
     op_conf, lbi = _CopyOpConfAndLbi(x, name=name)
     compile_context.CurJobAddMirroredOp(op_conf)
-    vm_util.LogicalRun(vm_util.MakeCopyInstructionBuilderFunction(x.blob_object, op_conf))
+    vm_util.LogicalRun(vm_util.MakeFunctionCopyInstructionBuilder(x.blob_object, op_conf))
     return remote_blob_util.EagerLogicalBlob(lbi)
 
 def _CopyOpConfAndLbi(x, name = None):
