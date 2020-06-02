@@ -185,6 +185,7 @@ Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuild
   for (const auto& op_node7op_conf : op_node2op_conf) {
     builder->MutOpsOnlyOnce({op_node7op_conf.second});
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("NonDistributedOptimizerPass", NonDistributedOptimizerPass);
