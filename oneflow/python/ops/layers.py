@@ -25,6 +25,10 @@ def dense(
     name=None,
     model_distribute=distribute_util.broadcast(),
 ):
+    r"""
+    Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+
+    """
     in_shape = inputs.shape
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
@@ -189,6 +193,10 @@ def layer_norm(
     epsilon=1e-5,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
@@ -257,7 +265,7 @@ def layer_norm(
                 model_name="beta",
                 distribute=distribute_util.broadcast(),
             )
-            setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
+            setattr(op_conf.layer_norm_conf, "beta", beta.unique_name)
         if scale:
             gamma = flow.get_variable(
                 name="{}-gamma".format(name),
@@ -268,10 +276,10 @@ def layer_norm(
                 model_name="gamma",
                 distribute=distribute_util.broadcast(),
             )
-            setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
+            setattr(op_conf.layer_norm_conf, "gamma", gamma.unique_name)
         setattr(op_conf, "name", name)
         setattr(op_conf, "trainable", trainable)
-        setattr(op_conf.layer_norm_conf, "in", inputs.logical_blob_name)
+        setattr(op_conf.layer_norm_conf, "in", inputs.unique_name)
         setattr(op_conf.layer_norm_conf, "out", "out")
         setattr(op_conf.layer_norm_conf, "center", center)
         setattr(op_conf.layer_norm_conf, "scale", scale)
@@ -297,10 +305,10 @@ def layer_norm_grad(
     name = name if name is not None else id_util.UniqueStr(
         "LayerNormGrad_")
     setattr(op_conf, "name", name)
-    setattr(op_conf.layer_norm_grad_conf, "dy", dy.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "x", x.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "mean", mean.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "mean", mean.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
     setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
@@ -322,9 +330,9 @@ def layer_norm_param_grad(
     name = name if name is not None else id_util.UniqueStr(
         "LayerNormParamGrad_")
     setattr(op_conf, "name", name)
-    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.logical_blob_name)
-    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.logical_blob_name)
-    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
     setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
@@ -363,6 +371,10 @@ def batch_normalization(
     training=True,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+
+    """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
@@ -484,7 +496,7 @@ def batch_normalization(
 
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
-        setattr(op_conf.normalization_conf, "in", inputs.logical_blob_name)
+        setattr(op_conf.normalization_conf, "in", inputs.unique_name)
         setattr(op_conf.normalization_conf, "out", "out")
         setattr(op_conf.normalization_conf, "axis", axis)
         setattr(op_conf.normalization_conf, "momentum", momentum)
@@ -492,17 +504,17 @@ def batch_normalization(
         setattr(op_conf.normalization_conf, "center", center)
         setattr(op_conf.normalization_conf, "scale", scale)
         setattr(
-            op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
+            op_conf.normalization_conf, "moving_mean", moving_mean.unique_name
         )
         setattr(
             op_conf.normalization_conf,
             "moving_variance",
-            moving_variance.logical_blob_name,
+            moving_variance.unique_name,
         )
         if center:
-            setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
+            setattr(op_conf.normalization_conf, "beta", beta.unique_name)
         if scale:
-            setattr(op_conf.normalization_conf, "gamma", gamma.logical_blob_name)
+            setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
         if trainable:
             if not training:
                 raise ValueError("training == False && trainable == True doesn't work in non-user-op mode")

@@ -16,7 +16,7 @@ class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);
   JobBuildAndInferCtx(Job* job, int64_t job_id);
-  ~JobBuildAndInferCtx() = default;
+  virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<OperatorConf> CheckAndCompleteUserOpConf(const OperatorConf& op_conf);
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
@@ -53,6 +53,9 @@ class JobBuildAndInferCtx {
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
+
+ protected:
+  virtual int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const = 0;
 
  private:
   Maybe<ParallelConf> InferOpParallelConf(
@@ -107,6 +110,16 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, SbpParallel> mirrored_lbi2sbp_parallel_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
+};
+
+class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtx);
+  LazyJobBuildAndInferCtx(Job* job, int64_t job_id) : JobBuildAndInferCtx(job, job_id) {}
+  virtual ~LazyJobBuildAndInferCtx() = default;
+
+ private:
+  int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
 };
 
 }  // namespace oneflow

@@ -453,11 +453,11 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
 }
 
 void CollectiveBoxingExecutor::Init() {
-  for (const auto& job_id7topo_desc : collective_boxing_plan_.job_id2request_set()) {
+  for (const auto& job_id7request_set : collective_boxing_plan_.job_id2request_set()) {
     const CollectiveBoxingConf collective_boxing_conf =
         Global<ResourceDesc>::Get()->collective_boxing_conf();
-    const int64_t job_id = job_id7topo_desc.first;
-    const RequestSet& request_set = job_id7topo_desc.second;
+    const int64_t job_id = job_id7request_set.first;
+    const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
     requests.reserve(request_set.request_size());
     for (const auto& request : request_set.request()) {

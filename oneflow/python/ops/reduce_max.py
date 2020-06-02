@@ -18,7 +18,7 @@ def reduce_max(input_tensor, axis=None, keepdims=False, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ReduceMean_"),
     )
-    setattr(op_conf.reduce_max_conf, "in", input_tensor.logical_blob_name)
+    setattr(op_conf.reduce_max_conf, "in", input_tensor.unique_name)
     setattr(op_conf.reduce_max_conf, "out", "out")
     if axis is not None:
         op_conf.reduce_max_conf.axis[:] = (

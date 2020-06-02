@@ -14,12 +14,18 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("watch")
 def Watch(blob_watched, handler_or_prompt=None):
+    r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
+
+    Args:
+        blob_watched: a `Blob`
+        handler_or_prompt: a function has an argument of a `Blob`
+    """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
-        setattr(op_conf.foreign_watch_conf, "in", blob_watched.logical_blob_name)
+        setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
         compile_context.CurJobAddOp(op_conf, blob_watched.parallel_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
@@ -33,6 +39,12 @@ def Watch(blob_watched, handler_or_prompt=None):
 
 @oneflow_export("watch_diff")
 def WatchDiff(blob_watched, handler_or_prompt=None):
+    r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
+
+    Args:
+        blob_watched: a `Blob`
+        handler_or_prompt: a function has an argument of a `Blob`
+    """
     handler = _MakeHandler(handler_or_prompt)
     if type(blob_watched) is ConsistentBlob:
         handler_uuid = str(uuid.uuid1())

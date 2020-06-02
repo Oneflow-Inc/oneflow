@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "oneflow/python/oneflow_internal_helper.h"
+#include "oneflow/core/job/resource_desc.h"
 
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
@@ -8,6 +9,20 @@ void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* erro
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case)
       .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+std::string CurrentResource(std::string* error_str) {
+  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
+}
+
+void EnableEagerExecution(bool enable_eager_execution) {
+  using namespace oneflow;
+  *Global<bool, EagerExecutionOption>::Get() = enable_eager_execution;
+}
+
+bool EagerExecutionEnabled() {
+  using namespace oneflow;
+  return *Global<bool, EagerExecutionOption>::Get();
 }
 
 bool IsEnvInited() {
@@ -67,6 +82,10 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+long CurrentMachineId(std::string* error_str) {
+  return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {

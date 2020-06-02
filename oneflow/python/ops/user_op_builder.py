@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.c_api_util as c_api_util
@@ -13,7 +12,9 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.lib.core.enable_if as enable_if
 import random
 
 class UserOp(object):
@@ -23,8 +24,10 @@ class UserOp(object):
         self.output_arg_key_list_ = []
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddOp(self.op_conf_)
-        return self
+        raise NotImplementedError
+
+    def MakeRemoteBlob(self, lbi):
+        raise NotImplementedError
 
     def RemoteBlobList(self):
         remote_blob_list = []
@@ -38,7 +41,7 @@ class UserOp(object):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = output_arg_name + '_' + str(i)
-                remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
+                remote_blob_list.append(self.MakeRemoteBlob(lbi))
         return tuple(remote_blob_list)
 
     def SoleOutputBlob(self):
@@ -46,12 +49,30 @@ class UserOp(object):
         assert len(blobs) == 1
         return blobs[0]
 
-@oneflow_export('user_op_builder')
-class UserOpConfBuilder(object):
+class LazyUserOp(UserOp):
     def __init__(self, op_name):
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        compile_context.CurJobAddOp(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.RemoteBlob(lbi)
+
+@enable_if.condition(hob.in_global_mode)
+def lazy_user_op_builder(op_name): 
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+
+@oneflow_export('user_op_builder')
+def api_user_op_builder(op_name):
+    return enable_if.unique(lazy_user_op_builder)(op_name)
+
+class UserOpConfBuilder(object):
+    def __init__(self, job_name, op_name, user_op_class):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
-        self.user_op_ = UserOp(name_scope_prefix + op_name)
+        self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
@@ -67,7 +88,7 @@ class UserOpConfBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.logical_blob_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
         return self
 
     def Output(self, output_name, num = 1):
