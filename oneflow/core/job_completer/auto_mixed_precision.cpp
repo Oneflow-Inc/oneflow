@@ -94,9 +94,11 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
     for (const std::string& obn : node->op().output_bns()) {
       LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
       // TODO(niuchong): this ain't right for fw-bw-opgraph, but right for fw-opgraph
-      if (node->BatchAxis4Lbi(lbi).has_value() == false) { return; }
+      if (node->BatchAxis4Lbi(lbi).has_value()) {
+        INSERT_CHECK(allowed_set->insert(node));
+        return;
+      }
     }
-    INSERT_CHECK(allowed_set->insert(node));
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
@@ -377,6 +379,11 @@ struct NoCastRegistrar final {
 
 // For Example:
 // REGISTER_NO_CAST_REGISTRY("matmul", "b", 0);
+
+REGISTER_NO_CAST_REGISTRY("normalization", "moving_mean", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "moving_variance", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "gamma", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
 
 }  // namespace
 
