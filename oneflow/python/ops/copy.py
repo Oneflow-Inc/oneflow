@@ -26,7 +26,7 @@ def lazy_copy(x, name=None):
 def eager_copy(x, name=None):
     op_conf, lbi = _CopyOpConfAndLbi(x, name=name)
     compile_context.CurJobAddMirroredOp(op_conf)
-    vm_util.LogicalRun(_MakeCopyInstructionBuilderFunction(x, op_conf))
+    vm_util.LogicalRun(vm_util.MakeCopyInstructionBuilderFunction(x.blob_object, op_conf))
     return remote_blob_util.EagerLogicalBlob(lbi)
 
 def _CopyOpConfAndLbi(x, name = None):
@@ -39,28 +39,3 @@ def _CopyOpConfAndLbi(x, name = None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return op_conf, lbi
-
-def _MakeCopyInstructionBuilderFunction(x, op_conf):
-    assert isinstance(x, remote_blob_util.EagerMirroredBlob), type(x)
-    current_devices = oneflow.placement.current_scope().machine_id2device_id_list
-    x_devices = x.blob_object.parallel_desc_symbol.machine_id2device_id_list
-    assert current_devices == x_devices,\
-            "\ncurrent_devices: %s\nx_devices: %s" %(current_devices, x_devices)
-    current_device_tag = oneflow.placement.current_scope().default_device_tag
-    x_device_tag = x.blob_object.parallel_desc_symbol.device_tag
-    if current_device_tag == x_device_tag:
-        return lambda builder: builder.DeprecatedStatelessCall(op_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "cpu" and x_device_tag == "gpu":
-        x_parallel_conf = x.blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.DeprecatedCudaD2HStatelessCall(op_conf, x_parallel_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "gpu" and x_device_tag == "cpu":
-        out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        def Build(builder):
-            with builder.CudaHostPinBlob(x.blob_object):
-                builder.DeprecatedCudaH2DStatelessCall(op_conf, out_parallel_conf,
-                        const_arg_bns=["in"], mut_arg_bns=["out"])
-        return Build
-    raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"
-                              %(current_device_tag, x_device_tag))
