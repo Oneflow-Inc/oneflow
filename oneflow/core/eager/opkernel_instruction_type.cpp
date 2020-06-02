@@ -283,7 +283,11 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
     const auto& parallel_desc = instruction->parallel_desc();
     CHECK(static_cast<bool>(parallel_desc));
     DeviceType device_type = parallel_desc->device_type();
-    rw_mutexed_object->Init<BlobObject>(mem_case, data_type);
+    if (rw_mutexed_object->has_object()) {
+      CHECK(rw_mutexed_object->Has<BlobObject>());
+    } else {
+      rw_mutexed_object->Init<BlobObject>(mem_case, data_type);
+    }
   };
   FOR_RANGE(int, i, 0, args.output_blob_size()) {
     InitRwMutexedObject(instruction->mut_operand_type(args.output_blob(i)));

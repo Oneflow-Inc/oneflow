@@ -18,6 +18,7 @@ class BlobCache(object):
         self.header_cache_ = None
         self.body_cache_ = None
         self.delegate_blob_cache_ = {}
+        self.numpy_mirrored_list_ = None
 
     @property
     def blob_object(self): return self.blob_object_
@@ -37,6 +38,9 @@ class BlobCache(object):
                     delegate_blob_object, release)
         return self.delegate_blob_cache_[id(parallel_desc_symbol)].blob_object
 
+    def GetCachedNumpyMirroredList(self, fetch):
+        if self.numpy_mirrored_list_ is None: self.numpy_mirrored_list_ = fetch(self.blob_object_)
+        return self.numpy_mirrored_list_
 
 class RAIIBlobObject(object):
     def __init__(self, blob_object, release):

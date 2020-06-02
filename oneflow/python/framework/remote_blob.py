@@ -199,12 +199,15 @@ class EagerMirroredBlob(MirroredBlob):
 
     def numpy_mirrored_list(self):
         assert not self.is_tensor_list
+        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
         box = [[]]
         def UnpackLogicalBlobNameToPhysicalBlobNames(builder):
             box[0] = builder.UnpackLogicalBlobNameToPhysicalBlobNames(self.unique_name)
-        vm_util.LogicalRun(UnpackLogicalBlobNameToPhysicalBlobNames)
-        sub_blob_names = box[0]
-        return [eager_blob_util.EagerPhysicalBlob(name).numpy() for name in  sub_blob_names]
+        def Fetch(blob_object):
+            vm_util.LogicalRun(UnpackLogicalBlobNameToPhysicalBlobNames)
+            sub_blob_names = box[0]
+            return [eager_blob_util.EagerPhysicalBlob(name).numpy() for name in  sub_blob_names]
+        return blob_cache.GetCachedNumpyMirroredList(Fetch)
 
     @property
     def sub_consistent_blob_list(self): raise NotImplementedError
@@ -236,3 +239,4 @@ class EagerMirroredBlob(MirroredBlob):
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
         vm_util.LogicalRun(lambda builder: builder.DeleteBlob(self.blob_object_))
+        object_cache.ClearObject4BlobName(self.unique_name)

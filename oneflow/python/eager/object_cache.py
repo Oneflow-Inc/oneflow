@@ -23,7 +23,7 @@ def GetObject4BlobName(blob_name):
     return blob_name2object[blob_name]
 
 def SetObject4BlobName(blob_name, obj):
-    assert not HasObject4BlobName(blob_name)
+    assert not HasObject4BlobName(blob_name), blob_name
     global blob_name2object
     blob_name2object[blob_name] = obj
 
