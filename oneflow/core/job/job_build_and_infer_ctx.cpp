@@ -1,6 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -38,10 +37,6 @@ void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
-}
-
-Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
-  return CheckAndCompleteUserOpConfImpl(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
