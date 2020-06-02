@@ -4,14 +4,25 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.eager.device_scope_stack as device_scope_stack
 
 @oneflow_export('placement.current_scope')
 def api_placement_current_scope():
-    return enable_if.unique(placement_current_scope)()
+    return enable_if.unique(global_mode_placement_current_scope,
+                            global_mode_on_placement_scope, normal_mode_placement_current_scope)()
 
 @enable_if.condition(hob.in_global_mode & hob.in_placement_scope)
-def placement_current_scope():
+def global_mode_placement_current_scope():
     return placement_ctx.PlacementScopeStackTop()
+
+@enable_if.condition(hob.in_global_mode & ~hob.in_placement_scope)
+def global_mode_on_placement_scope():
+    print("No placement scope found")
+    return False
+
+@enable_if.condition(hob.in_normal_mode)
+def normal_mode_placement_current_scope():
+    return device_scope_stack.CurrentPlacement()
 
 @oneflow_export('fixed_placement')
 def api_fixed_placement_scope(device_tag, machine_device_ids):

@@ -365,3 +365,9 @@ def CurrentMachineId():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return machine_id
+
+def NewPhysicalSymbolId():
+    object_id, error_str = oneflow_internal.NewPhysicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return object_id

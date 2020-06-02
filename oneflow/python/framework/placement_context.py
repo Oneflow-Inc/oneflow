@@ -76,7 +76,6 @@ def PlacementScopeStackPop():
     return session_ctx.GetDefaultSession().placement_scope_stack.pop(0)
     
 def PlacementScopeStackTop():
-    assert len(session_ctx.GetDefaultSession().placement_scope_stack) > 0, "no placement scope found"
     return session_ctx.GetDefaultSession().placement_scope_stack[0]
     
 def CurPlacementGroupGetDeviceType(op_conf):

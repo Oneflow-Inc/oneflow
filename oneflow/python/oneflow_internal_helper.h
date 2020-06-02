@@ -20,6 +20,7 @@
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/id_util.h"
 
 namespace oneflow {
 
@@ -164,6 +165,11 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
 Maybe<long long> CurrentMachineId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return Global<MachineCtx>::Get()->this_machine_id();
+}
+
+Maybe<long long> NewPhysicalSymbolId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 }  // namespace oneflow
