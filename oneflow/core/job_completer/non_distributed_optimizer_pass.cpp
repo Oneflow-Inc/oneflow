@@ -119,7 +119,6 @@ Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuild
       }
       pd2last_nodes[pd].push_back(last_node);
     }
-    return Maybe<void>::Ok();
   }
   const int64_t group_size =
       GlobalJobDesc().non_distributed_optimizer_group_size_mbyte() * 1024 * 1024;
