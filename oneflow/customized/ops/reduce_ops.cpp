@@ -5,38 +5,31 @@
 namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
-  const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-  bool keepdims = ctx->Attr<bool>("keepdims");
+  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+  const auto& reduce_axes_vec = ctx->Attr<AxisVector>("reduce_axes");
+  CHECK_OR_RETURN(!reduce_axes_vec.empty());
+  const Shape& reduced_shape = CreateReducedShape(*input_shape, reduce_axes_vec);
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
-  if (axis.empty()) {
-    if (keepdims) {
-      *output_shape = Shape::Ones(input_shape->NumAxes());
-    } else {
-      *output_shape = Shape({1});
-    }
+  if (ctx->Attr<bool>("keep_dims")) {
+    *output_shape = reduced_shape;
   } else {
-    const AxisVector axis_vec = {axis.begin(), axis.end()};
-    const Shape& reduced_shape = CreateReducedShape(*input_shape, axis_vec);
-    if (keepdims) {
-      *output_shape = reduced_shape;
-    } else {
-      *output_shape = reduced_shape.RemoveOnes(axis_vec);
-    }
+    *output_shape = reduced_shape.RemoveOnes(reduce_axes_vec);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  const auto& reduce_axes_vec = ctx->Attr<AxisVector>("reduce_axes");
+  const bool keep_dims = ctx->Attr<bool>("keep_dims");
   const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("input_tensor", 0);
   auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output_tensor", 0);
-  if (in_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-    *out_batch_axis = *in_batch_axis;
-  } else {
-    out_batch_axis->clear_value();
+  out_batch_axis->clear_value();
+  if (in_batch_axis->has_value()) {
+    if (keep_dims
+        || std::find(reduce_axes_vec.begin(), reduce_axes_vec.end(), in_batch_axis->value())
+               == reduce_axes_vec.end()) {
+      *out_batch_axis = *in_batch_axis;
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -53,18 +46,12 @@ void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
 
 template<template<typename> class binary_func>
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
-  int32_t num_axes = 0;
-  bool keep_dims = false;
-  HashSet<int32_t> conf_axes;
-  {
-    const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
-    num_axes = in_tensor.shape().NumAxes();
-    keep_dims = ctx->Attr<bool>("keepdims");
-    const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-    conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  }
-  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
-  int32_t num_reduced_axes = 0;
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
+  const int64_t num_axes = in_tensor.shape().NumAxes();
+  const bool keep_dims = ctx->Attr<bool>("keep_dims");
+  const auto& reduce_axes_vec = ctx->Attr<AxisVector>("axis");
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(reduce_axes_vec);
+  int64_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
       GeneratePartialSbp<binary_func>(ctx, i);
@@ -79,14 +66,14 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_USER_OP(op_name, binary_func) \
-  REGISTER_USER_OP(op_name)                           \
-      .Input("input_tensor")                          \
-      .Output("output_tensor")                        \
-      .Attr("axis", UserOpAttrType::kAtListInt32)     \
-      .Attr("keepdims", UserOpAttrType::kAtBool)      \
-      .SetTensorDescInferFn(InferTensorDescFn)        \
-      .SetBatchAxisInferFn(InferBatchAxisFn)          \
+#define REGISTER_REDUCE_USER_OP(op_name, binary_func)    \
+  REGISTER_USER_OP(op_name)                              \
+      .Input("input_tensor")                             \
+      .Output("output_tensor")                           \
+      .Attr("reduce_axes", UserOpAttrType::kAtListInt64) \
+      .Attr("keep_dims", UserOpAttrType::kAtBool)        \
+      .SetTensorDescInferFn(InferTensorDescFn)           \
+      .SetBatchAxisInferFn(InferBatchAxisFn)             \
       .SetGetSbpFn(GetSbpFn<binary_func>);
 
 REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
@@ -98,20 +85,13 @@ REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
 REGISTER_USER_OP_GRAD("reduce_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
-        const std::vector<int32_t>& axis_vec = op.attr<std::vector<int32_t>>("axis");
-        std::vector<int32_t> broadcast_axes_vec;
-        if (axis_vec.empty()) {
-          const int64_t num_axes =
-              op.TensorDesc4ArgNameAndIndex("input_tensor", 0).shape().NumAxes();
-          broadcast_axes_vec.resize(num_axes);
-          std::iota(broadcast_axes_vec.begin(), broadcast_axes_vec.end(), 0);
-        }
+        const auto& reduce_axes_vec = op.attr<AxisVector>("reduce_axes");
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper reduce_sum_grad_op =
             builder.Op("broadcast_like")
                 .Input("x", op.GetGradTensorWithOpOutput("output_tensor", 0))
                 .Input("like", op.input("input_tensor", 0))
-                .Attr("broadcast_axes", axis_vec.empty() ? broadcast_axes_vec : axis_vec)
+                .Attr("broadcast_axes", reduce_axes_vec)
                 .Output("y")
                 .Build();
         op.BindGradTensorWithOpInput(reduce_sum_grad_op.output("y", 0), "input_tensor", 0);

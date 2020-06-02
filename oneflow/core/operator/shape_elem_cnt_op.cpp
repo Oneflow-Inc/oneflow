@@ -6,19 +6,19 @@ namespace oneflow {
 
 namespace {
 
-HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_axes) {
-  HashSet<int32_t> ret;
+HashSet<int64_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int64_t num_axes) {
+  HashSet<int64_t> ret;
   if (conf.has_exclude_axis_conf()) {
-    HashSet<int32_t> exclude_axes(conf.exclude_axis_conf().axis().begin(),
+    HashSet<int64_t> exclude_axes(conf.exclude_axis_conf().axis().begin(),
                                   conf.exclude_axis_conf().axis().end());
-    FOR_RANGE(int32_t, i, 0, num_axes) {
+    FOR_RANGE(int64_t, i, 0, num_axes) {
       if (exclude_axes.find(i) == exclude_axes.end()
           && exclude_axes.find(i - num_axes) == exclude_axes.end()) {
         ret.insert(i);
       }
     }
   } else if (conf.has_include_axis_conf()) {
-    for (int32_t axis : conf.include_axis_conf().axis()) {
+    for (int64_t axis : conf.include_axis_conf().axis()) {
       if (axis < 0) { axis += num_axes; }
       CHECK_GE(axis, 0);
       CHECK_LT(axis, num_axes);
@@ -54,9 +54,8 @@ Maybe<void> ShapeElemCntOp::InferBlobDescs(
 void ShapeElemCntOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  int32_t num_axes = GetBlobDesc4BnInOp("x")->shape().NumAxes();
-  const HashSet<int32_t>& inclusive_axis =
-      GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
+  int64_t num_axes = GetBlobDesc4BnInOp("x")->shape().NumAxes();
+  const auto& inclusive_axis = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   *kernel_conf->mutable_shape_elem_cnt_conf()->mutable_axis() = {inclusive_axis.begin(),
                                                                  inclusive_axis.end()};
 }
@@ -70,9 +69,9 @@ Maybe<void> ShapeElemCntOp::InferBatchAxis(
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
   const auto& inclusive_axes = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
-  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes, num_axes);
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
       SbpSignatureBuilder()

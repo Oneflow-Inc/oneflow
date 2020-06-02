@@ -17,9 +17,9 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
+    const auto& broadcast_axes_vec = ctx->Attr<AxisVector>("broadcast_axes");
     const Shape& reduced_shape =
-        CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
+        CreateReducedShapeOrOnesShape(like_tensor->shape(), broadcast_axes_vec);
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx->device_ctx(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
@@ -27,13 +27,10 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
+template<DeviceType device_type, typename T>
 bool IsMatchedPred(const user_op::KernelRegContext& ctx) {
-  const user_op::TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-  if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
+  const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
+  return ctx.device_type() == device_type && y_desc->data_type() == GetDataType<T>::value;
 }
 
 }  // namespace

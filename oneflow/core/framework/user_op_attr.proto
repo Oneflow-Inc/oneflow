@@ -18,6 +18,7 @@ enum UserOpAttrType {
   kAtListFloat = 11;
   kAtListDataType = 12;
   kAtListShape = 13;
+  kAtAxes = 14;
 }
 
 message UserOpAttrVal {
@@ -50,5 +51,6 @@ message UserOpAttrVal {
     ListFloat at_list_float = 11;
     ListDataType at_list_data_type = 12;
     ListShape at_list_shape = 13;
+    AxesProto at_axes = 14;
   }
 }

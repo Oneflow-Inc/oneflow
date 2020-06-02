@@ -13,3 +13,7 @@ message ShapeSignature {
 message ShapeSignatureList {
   repeated ShapeSignature shape_signature = 1;
 }
+
+message AxesProto {
+  repeated int64 axes = 1;
+}

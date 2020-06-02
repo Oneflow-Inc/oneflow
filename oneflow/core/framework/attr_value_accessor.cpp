@@ -37,6 +37,19 @@ void AttrValAccessor<Shape>::Attr(const Shape& cpp_val, UserOpAttrVal* attr_val)
   cpp_val.ToProto(attr_val->mutable_at_shape());
 }
 
+template<>
+AxisVector AttrValAccessor<AxisVector>::Attr(const UserOpAttrVal& val) {
+  return AxisVector(val.at_axes().axes().begin(), val.at_axes().axes().end());
+}
+template<>
+void AttrValAccessor<AxisVector>::Attr(const AxisVector& cpp_val, UserOpAttrVal* attr_val) {
+  AxesProto* mut_at_axes = attr_val->mutable_at_axes();
+  mut_at_axes->clear_axes();
+  for (int64_t axis : cpp_val) {
+    mut_at_axes->add_axes(axis);
+  }
+}
+
 // List of Basic Attr
 #define LIST_BASIC_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                    \

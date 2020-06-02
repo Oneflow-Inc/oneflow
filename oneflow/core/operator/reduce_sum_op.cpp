@@ -59,9 +59,9 @@ Maybe<void> ReduceSumOp::InferBatchAxis(
 Maybe<void> ReduceSumOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   auto IsReducedAxis =
-      ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_conf().axis(), num_axes);
+      ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_conf().axis());
   int32_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {

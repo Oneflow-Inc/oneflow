@@ -42,7 +42,7 @@ Maybe<void> ReduceSumLikeOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
   auto IsReducedAxis =
-      ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_like_conf().axis(), num_axes);
+      ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_like_conf().axis());
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
       SbpSignatureBuilder()

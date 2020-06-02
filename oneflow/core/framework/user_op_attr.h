@@ -21,7 +21,9 @@ namespace user_op {
 
 #define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, UserOpAttrType::kAtDataType)
 
-#define MESSAGE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape)
+#define MESSAGE_ATTR_SEQ                                          \
+  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, UserOpAttrType::kAtShape) \
+  OF_PP_MAKE_TUPLE_SEQ(at_shape, AxisVector, UserOpAttrType::kAtAxes)
 
 #define LIST_BASIC_ATTR_SEQ                                                               \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, UserOpAttrType::kAtListInt32) \
