@@ -106,9 +106,7 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
-        self.user_op_.op_conf_ = c_api_util.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(
-            self.user_op_.op_conf_
-        )
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
         return self.user_op_
 
     def Op(self, op_type_name):
