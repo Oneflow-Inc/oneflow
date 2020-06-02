@@ -25,7 +25,9 @@ class OpGraphPass {
     JobBuilder job_builder(job);
     Apply(op_graph, &job_builder);
   }
-  virtual void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const { UNIMPLEMENTED(); }
+  virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+    UNIMPLEMENTED();
+  }
 };
 
 #define REGISTER_FUNCTION_PASS(pass_name, pass_type) \
