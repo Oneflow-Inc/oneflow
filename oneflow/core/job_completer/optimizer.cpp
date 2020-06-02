@@ -1,5 +1,6 @@
 #include "oneflow/core/job_completer/optimizer.h"
 #include <re2/re2.h>
+#include <oneflow/core/job_completer/optimizer_registry.h>
 
 namespace oneflow {
 
@@ -13,6 +14,10 @@ void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
+  if (train_conf.model_update_conf().has_naive_conf()) {
+    OptimizerRegistry::Lookup("sgd")->Build("", 1);
+    return;
+  }
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
   obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);

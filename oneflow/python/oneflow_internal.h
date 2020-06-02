@@ -128,6 +128,11 @@ long NewPhysicalSymbolId(std::string* error_str) {
   return oneflow::NewPhysicalSymbolId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
+void RegisterOptimizer(const std::string& name, oneflow::OptimizerBase* optimizer,
+                       std::string* error_str) {
+  return oneflow::RegisterOptimizer(name, optimizer).GetDataAndSerializedErrorProto(error_str);
+}
+
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

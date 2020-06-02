@@ -25,6 +25,7 @@
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/eager/eager_util.h"
+#include "oneflow/core/job_completer/optimizer_registry.h"
 
 namespace oneflow {
 
@@ -213,6 +214,10 @@ Maybe<long long> NewPhysicalObjectId() {
 Maybe<long long> NewPhysicalSymbolId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
+}
+
+Maybe<void> RegisterOptimizer(std::string name, OptimizerBase* optimizer) {
+  return OptimizerRegistry::Register(name, optimizer);
 }
 
 }  // namespace oneflow
