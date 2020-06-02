@@ -37,7 +37,7 @@ Maybe<void> MatmulOp::InferBlobDescs(
   int64_t b_mid_dim_index = conf.transpose_b() ? num_axes - 1 : num_axes - 2;
   CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(a_mid_dim_index),
                      b_blob_desc->shape().At(b_mid_dim_index));
-  if (device_type() == DeviceType::kGPU && num_axes >= 3) {
+  if (num_axes >= 3) {
     int batch_num = a_blob_desc->shape().Count(0, num_axes - 2);
     // Assume gpu address is 64 bit
     BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");

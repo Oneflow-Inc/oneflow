@@ -9,20 +9,20 @@ namespace test {
 namespace {
 
 // clang-format off
-BEGIN_OBJECT_MSG(Foo);
+OBJECT_MSG_BEGIN(Foo);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int, x);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(link);
-END_OBJECT_MSG(Foo);
+OBJECT_MSG_END(Foo);
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(FooList);
+OBJECT_MSG_BEGIN(FooList);
   // links
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Foo, link, list);
-END_OBJECT_MSG(FooList);
+OBJECT_MSG_END(FooList);
 // clang-format on
 
 using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, link);
@@ -37,14 +37,26 @@ void CallFromSenderThread(ConditionListFoo* condition_list, Range range) {
   }
 }
 
-void CallFromReceiverThread(std::vector<int>* visit, ConditionListFoo* condition_list) {
+void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ConditionListFoo* condition_list) {
   ObjectMsgPtr<Foo> foo;
   while (condition_list->PopFront(&foo) == kObjectMsgConditionListStatusSuccess) {
     ++visit->at(foo->x());
   }
 }
 
-TEST(ObjectMsgConditionList, 30sender40receiver) {
+void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* condition_list) {
+  OBJECT_MSG_LIST(Foo, link) tmp_list;
+  while (condition_list->MoveTo(&tmp_list) == kObjectMsgConditionListStatusSuccess) {
+    OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
+      ++visit->at(foo->x());
+      tmp_list.Erase(foo);
+    }
+  }
+}
+
+typedef void (*ThreadHandlerType)(std::vector<int>* visit, ConditionListFoo* condition_list);
+
+void TestConditionList(ThreadHandlerType ThreadHandler) {
   ConditionListFoo condition_list;
   std::vector<std::thread> senders;
   std::vector<std::thread> receivers;
@@ -61,7 +73,7 @@ TEST(ObjectMsgConditionList, 30sender40receiver) {
     senders.push_back(std::thread(CallFromSenderThread, &condition_list, Range(0, range_num)));
   }
   for (int i = 0; i < receiver_num; ++i) {
-    receivers.push_back(std::thread(CallFromReceiverThread, &visits[i], &condition_list));
+    receivers.push_back(std::thread(ThreadHandler, &visits[i], &condition_list));
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
   condition_list.Close();
@@ -72,6 +84,15 @@ TEST(ObjectMsgConditionList, 30sender40receiver) {
     ASSERT_EQ(visit_count, sender_num);
   }
 }
+
+TEST(ObjectMsgConditionList, 30sender40receiver_pop_front) {
+  TestConditionList(&CallFromReceiverThreadByPopFront);
+}
+
+TEST(ObjectMsgConditionList, 30sender40receiver_move_to) {
+  TestConditionList(&CallFromReceiverThreadByMoveTo);
+}
+
 }  // namespace
 
 }  // namespace test

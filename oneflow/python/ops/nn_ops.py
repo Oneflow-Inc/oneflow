@@ -105,9 +105,9 @@ def conv2d(
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
-        setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.conv_2d_conf, "in", input.unique_name)
         op_conf.conv_2d_conf.out = "out"
-        op_conf.conv_2d_conf.weight = filters.logical_blob_name
+        op_conf.conv_2d_conf.weight = filters.unique_name
         op_conf.conv_2d_conf.filters = filters.shape[0]
         op_conf.conv_2d_conf.padding = padding.lower()
         op_conf.conv_2d_conf.data_format = channel_pos
@@ -142,6 +142,43 @@ def conv2d(
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.batch_normalization")
+def batch_normalization(x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None):
+    r"""
+    This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
+    are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+
+    """
+    if os.getenv("ENABLE_USER_OP") != 'True':
+        raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
+
+    assert axis >= -len(x.shape) and axis < len(x.shape)
+    if axis < 0: axis += len(x.shape)
+
+    if name is None:
+        name = id_util.UniqueStr("BatchNorm_")
+
+    builder = (flow.user_op_builder(name)
+        .Op("normalization")
+        .Input("x", [x])
+        .Input("moving_mean", [mean])
+        .Input("moving_variance", [variance])
+        .Input("gamma", [scale])
+        .Input("beta", [offset])
+        .Output("y")
+        .Output("mean")
+        .Output("inv_variance")
+        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
+        .Attr("training", False, "AttrTypeBool")
+        # momentum is not used
+        .Attr("momentum", 0.0, "AttrTypeFloat")
+        )
+    return (builder
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0])
+    
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
@@ -179,8 +216,8 @@ def bias_add(value, bias, data_format=None, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
-        setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
-        setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "a", value.unique_name)
+        setattr(op_conf.bias_add_conf, "b", bias.unique_name)
         setattr(op_conf.bias_add_conf, "out", "out")
         setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
         compile_context.CurJobAddOp(op_conf)
@@ -236,7 +273,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             "name",
             name if name is not None else id_util.UniqueStr("MaxPool2D_"),
         )
-        setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.max_pooling_2d_conf, "in", input.unique_name)
         setattr(op_conf.max_pooling_2d_conf, "out", "out")
         op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
         op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
@@ -290,7 +327,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             "name",
             name if name is not None else id_util.UniqueStr("AveragePool2D_"),
         )
-        setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.average_pooling_2d_conf, "in", input.unique_name)
         setattr(op_conf.average_pooling_2d_conf, "out", "out")
         op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(
             ksize, 2, "ksize"
@@ -348,7 +385,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             "name",
             name if name is not None else id_util.UniqueStr("MaxPool3D_"),
         )
-        setattr(op_conf.max_pooling_3d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.max_pooling_3d_conf, "in", input.unique_name)
         setattr(op_conf.max_pooling_3d_conf, "out", "out")
         op_conf.max_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
         op_conf.max_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
@@ -402,7 +439,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             "name",
             name if name is not None else id_util.UniqueStr("AveragePool3D_"),
         )
-        setattr(op_conf.average_pooling_3d_conf, "in", input.logical_blob_name)
+        setattr(op_conf.average_pooling_3d_conf, "in", input.unique_name)
         setattr(op_conf.average_pooling_3d_conf, "out", "out")
         op_conf.average_pooling_3d_conf.pool_size[:] = _GetSequence(
             ksize, 3, "ksize"
@@ -459,7 +496,7 @@ def softmax(logits, axis=None, name=None):
             "name",
             name if name is not None else id_util.UniqueStr("Softmax_"),
         )
-        setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
+        setattr(op_conf.softmax_conf, "in", logits.unique_name)
         op_conf.softmax_conf.axis = axis
         op_conf.softmax_conf.out = "out"
         compile_context.CurJobAddOp(op_conf)
@@ -504,8 +541,8 @@ def softmax_grad(y, dy, axis=None, name=None):
         if need_transpose:
             y = oneflow.transpose(y, perm=permute)
             dy = oneflow.transpose(dy, perm=permute)
-        setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
-        setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
+        setattr(op_conf.softmax_grad_conf, "y", y.unique_name)
+        setattr(op_conf.softmax_grad_conf, "dy", dy.unique_name)
 
         op_conf.softmax_grad_conf.axis = -1
         op_conf.softmax_grad_conf.dx = "dx"
@@ -573,10 +610,10 @@ def sparse_cross_entropy(
         setattr(
             op_conf.sparse_cross_entropy_conf,
             "prediction",
-            prediction.logical_blob_name,
+            prediction.unique_name,
         )
         setattr(
-            op_conf.sparse_cross_entropy_conf, "label", labels.logical_blob_name
+            op_conf.sparse_cross_entropy_conf, "label", labels.unique_name
         )
         setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
         compile_context.CurJobAddOp(op_conf)
@@ -634,8 +671,8 @@ def sigmoid_cross_entropy_with_logits(
         "name",
         name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
     )
-    op_conf.sigmoid_cross_entropy_conf.prediction = logits.logical_blob_name
-    op_conf.sigmoid_cross_entropy_conf.label = labels.logical_blob_name
+    op_conf.sigmoid_cross_entropy_conf.prediction = logits.unique_name
+    op_conf.sigmoid_cross_entropy_conf.label = labels.unique_name
     op_conf.sigmoid_cross_entropy_conf.loss = "loss"
     op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype
     compile_context.CurJobAddOp(op_conf)
@@ -663,6 +700,7 @@ def _GetSequence(value, n, name):
             )
         )
 
+@oneflow_export("nn.random_mask_like")
 def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
@@ -700,12 +738,12 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
             op_conf.name = id_util.UniqueStr("Dropout_")
         else:
             op_conf.name = name
-        setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
+        setattr(op_conf.dropout_conf, "in", x.unique_name)
         setattr(op_conf.dropout_conf, "out", "out")
         # random mask like op
         mask_op_conf = op_conf_util.OperatorConf()
         mask_op_conf.name = "RandomMask4" + op_conf.name;
-        setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
+        setattr(mask_op_conf.random_mask_like_conf, "like", x.unique_name)
         setattr(mask_op_conf.random_mask_like_conf, "out", "out")
         if noise_shape is not None:
             assert isinstance(noise_shape, (list, tuple))
@@ -720,7 +758,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         mask_lbi.blob_name = "out"
         mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
 
-        setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
+        setattr(op_conf.dropout_conf, "mask", mask_blob.unique_name)
         setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
 
         compile_context.CurJobAddOp(op_conf)
@@ -757,21 +795,24 @@ def deconv2d(
     dilations=None
 ):
     r"""2d transposed convolution
+
     Args:
-    value: 4-d `Blob`
-    filter: filter of transposed convolution, usually a variable
-    output_shape: Not supported yet
-    strides: `int` or `int list`
-    padding: `'VALID'` or `'SAME'`
-    data_format: `'NHWC'` or `'NCHW'`
-    name: This operator's name
-    input: Alias for value
-    filters: Alias for filter
-    dilations: Not supported yet
+        value: 4-d `Blob`
+        filter: filter of transposed convolution, usually a variable
+        output_shape: Not supported yet
+        strides: `int` or `int list`
+        padding: `'VALID'` or `'SAME'`
+        data_format: `'NHWC'` or `'NCHW'`
+        name: This operator's name
+        input: Alias for value
+        filters: Alias for filter
+        dilations: Not supported yet
+
     Returns:
-    A `Blob` with the same type as `value`.
+        A `Blob` with the same type as `value`.
+
     Raises:
-    ValueError: shapes of `filter` and `input` must match.
+        ValueError: shapes of `filter` and `input` must match.
     """
     assert (value is not None) ^ (
         input is not None), "only one of `input` and `value` could be not None"

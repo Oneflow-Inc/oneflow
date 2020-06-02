@@ -37,6 +37,11 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
+Maybe<std::string> CurrentResource() {
+  CHECK_NOTNULL_OR_RETURN(Global<ResourceDesc>::Get());
+  return PbMessage2TxtString(Global<ResourceDesc>::Get()->resource());
+}
+
 Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
@@ -91,7 +96,7 @@ Maybe<void> DestroyGlobalSession() {
 Maybe<void> StartGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
@@ -153,7 +158,7 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 }
 
 Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
-  return *JUST(DeviceType4DeviceTag(device_tag));
+  return JUST(DeviceType4DeviceTag(device_tag));
 }
 
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
@@ -162,6 +167,11 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
       << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
+Maybe<long long> CurrentMachineId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return Global<MachineCtx>::Get()->this_machine_id();
 }
 
 }  // namespace oneflow

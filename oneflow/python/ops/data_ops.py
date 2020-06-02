@@ -227,6 +227,35 @@ def ofrecord_loader(
     compile_context.CurJobAddConsistentOp(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("data.ofrecord_reader")
+def ofrecord_reader(
+    ofrecord_dir,
+    batch_size=1,
+    data_part_num=1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    random_shuffle=False,
+    shuffle_buffer_size=1024,
+    shuffle_after_epoch=False,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OFRecord_Reader_")
+
+    return flow.user_op_builder(name)\
+        .Op("OFRecordReader")\
+        .Output("out")\
+        .Attr("data_dir", ofrecord_dir, "AttrTypeString")\
+        .Attr("data_part_num", data_part_num, "AttrTypeInt32")\
+        .Attr("batch_size", batch_size, "AttrTypeInt32")\
+        .Attr("part_name_prefix", part_name_prefix, "AttrTypeString")\
+        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")\
+        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")\
+        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")\
+        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")\
+        .Build()\
+        .InferAndTryRun()\
+        .RemoteBlobList()[0]
 
 @oneflow_export("data.decode_random")
 def decode_random(
@@ -255,7 +284,7 @@ def decode_random(
         )
 
     if tick:
-        op_conf.decode_random_conf.tick = tick.logical_blob_name
+        op_conf.decode_random_conf.tick = tick.unique_name
     op_conf.decode_random_conf.out = "out"
 
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -520,7 +549,7 @@ def tensor_list_to_tensor_buffer(input, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.unique_name)
     setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
 
@@ -537,7 +566,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.logical_blob_name)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.unique_name)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
@@ -770,3 +799,45 @@ def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("data.coco_reader")
+def api_coco_reader(
+    annotation_file,
+    image_dir,
+    batch_size,
+    shuffle=True,
+    random_seed=None,
+    group_by_aspect_ratio=True,
+    stride_partition=True,
+    name=None,
+):
+    import random
+    import sys
+
+    if name is None:
+        name = id_util.UniqueStr("COCOReader_")
+
+    if random_seed is None:
+        random_seed = random.randrange(sys.maxsize)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("COCOReader")
+        .Output("image")
+        .Output("image_id")
+        .Output("image_size")
+        .Output("gt_bbox")
+        .Output("gt_label")
+        .Output("gt_segm")
+        .Output("gt_segm_index")
+        .Attr("annotation_file", annotation_file, "AttrTypeString")
+        .Attr("image_dir", image_dir, "AttrTypeString")
+        .Attr("batch_size", batch_size, "AttrTypeInt64")
+        .Attr("shuffle_after_epoch", shuffle, "AttrTypeBool")
+        .Attr("random_seed", random_seed, "AttrTypeInt64")
+        .Attr("group_by_ratio", group_by_aspect_ratio, "AttrTypeBool")
+        .Attr("stride_partition", stride_partition, "AttrTypeBool")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()

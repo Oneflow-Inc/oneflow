@@ -18,6 +18,18 @@ def _IsEnvInitialized():
 
 env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
 
+def _AnyGlobalFunctionDefined():
+    assert in_normal_mode()
+    return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
+
+any_global_function_defined = HighOrderBool("Any global function defined",
+                                            _AnyGlobalFunctionDefined)
+
+def _EagerExecutionEnabled():
+    return c_api_util.EagerExecutionEnabled()
+
+eager_execution_enabled = HighOrderBool("Eager execution enabled ", _EagerExecutionEnabled)
+
 def _IsSessionInitialized():
     assert in_normal_mode()
     return session_ctx.GetDefaultSession().is_running
@@ -30,3 +42,8 @@ def _IsCurrentFunctionTrainable():
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
+
+def _InPlacementScope():
+    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
+
+in_placement_scope = HighOrderBool("In a placement scope", _InPlacementScope)

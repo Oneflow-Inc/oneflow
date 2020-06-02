@@ -22,7 +22,7 @@ def repeat(
         "name",
         name if name is not None else id_util.UniqueStr("Repeat_"),
     )
-    setattr(op_conf.repeat_conf, "in", input.logical_blob_name)
+    setattr(op_conf.repeat_conf, "in", input.unique_name)
     op_conf.repeat_conf.out = "out"
     op_conf.repeat_conf.repeat_num = repeat_num
     compile_context.CurJobAddOp(op_conf)
@@ -43,7 +43,7 @@ def acc(
         "name",
         name if name is not None else id_util.UniqueStr("Acc_"),
     )
-    op_conf.acc_conf.one = one.logical_blob_name
+    op_conf.acc_conf.one = one.unique_name
     op_conf.acc_conf.acc = "acc"
     op_conf.acc_conf.max_acc_num = max_acc_num
     compile_context.CurJobAddOp(op_conf)
@@ -64,7 +64,7 @@ def unpack(
         "name",
         name if name is not None else id_util.UniqueStr("Unpack_"),
     )
-    setattr(op_conf.unpack_conf, "in", input.logical_blob_name)
+    setattr(op_conf.unpack_conf, "in", input.unique_name)
     op_conf.unpack_conf.out = "out"
     op_conf.unpack_conf.unpack_num = unpack_num
     compile_context.CurJobAddOp(op_conf)
@@ -85,7 +85,7 @@ def pack(
         "name",
         name if name is not None else id_util.UniqueStr("Pack_"),
     )
-    setattr(op_conf.pack_conf, "in", input.logical_blob_name)
+    setattr(op_conf.pack_conf, "in", input.unique_name)
     op_conf.pack_conf.out = "out"
     op_conf.pack_conf.pack_num = pack_num
     compile_context.CurJobAddOp(op_conf)
@@ -106,7 +106,7 @@ def parallel_cast(
         name if name is not None else id_util.UniqueStr("ParallelCast_"),
     )
     op_conf.parallel_cast_conf.out = "out"
-    setattr(op_conf.parallel_cast_conf, "in", input.logical_blob_name)
+    setattr(op_conf.parallel_cast_conf, "in", input.unique_name)
 
     def to_split_axis(dist):
         split_axis = data_type_util.OptInt64()

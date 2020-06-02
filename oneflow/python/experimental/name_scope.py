@@ -9,6 +9,18 @@ from contextlib import contextmanager
 @oneflow_export("name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
 def name_scope(name):
+    r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
+    Usage::
+
+        with oneflow.name_scope("scope1"):
+            ...
+            with oneflow.name_scope("scope12"):
+                ...
+
+    Args:
+        name: Name of this name scope
+
+    """
     assert isinstance(name, str)
     name_scope_stack_push(name)
     try:
