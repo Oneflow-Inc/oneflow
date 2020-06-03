@@ -226,7 +226,7 @@ class AutoMixedPrecision final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 
  private:
   void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
@@ -245,7 +245,7 @@ class AutoMixedPrecision final : public OpGraphPass {
   const AMPList& clear_list_;
 };
 
-void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -273,6 +273,7 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder)
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
   InsertCastOp(op_graph, white_set, job_builder);
+  return Maybe<void>::Ok();
 }
 
 void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {
