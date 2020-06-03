@@ -21,7 +21,7 @@ void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) con
     auto* cast_node = op_node->SoleInEdge()->src_node();
     if (cast_node->out_edges().size() != 1) { return; }
     auto cast_op_conf = cast_node->op().op_conf();
-    if (!(cast_op_conf.has_user_conf() && cast_op_conf.user_conf().op_type_name() == "Cast")) {
+    if (!(cast_op_conf.has_user_conf() && cast_op_conf.user_conf().op_type_name() == "cast")) {
       return;
     }
     const auto cast_conf = cast_op_conf.user_conf();
@@ -43,7 +43,8 @@ void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) con
     // replace cast op input with parallel_cast op output
     {
       auto new_cast_op_conf = cast_op_conf;
-      const std::string parallel_cast_output = parallel_cast_op_conf.parallel_cast_conf().out();
+      const std::string parallel_cast_output =
+          parallel_cast_op_conf.name() + "/" + parallel_cast_op_conf.parallel_cast_conf().out();
       const std::string cast_input = cast_conf.input().at("in").s(0);
       ReplaceInputLbnInOpCustomizedConf(new_cast_op_conf.mutable_user_conf(), "in_0", cast_input,
                                         parallel_cast_output);
