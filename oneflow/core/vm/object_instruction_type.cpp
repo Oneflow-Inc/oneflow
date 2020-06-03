@@ -89,22 +89,22 @@ class NewObjectInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<NewObjectInstructionType>("NewObject"));
 
-class BroadcastReferenceInstructionType final : public InstructionType {
+class BroadcastObjectReferenceInstructionType final : public InstructionType {
  public:
-  BroadcastReferenceInstructionType() = default;
-  ~BroadcastReferenceInstructionType() override = default;
+  BroadcastObjectReferenceInstructionType() = default;
+  ~BroadcastObjectReferenceInstructionType() override = default;
 
   using stream_type = ControlStreamType;
 
   // clang-format off
-  FLAT_MSG_VIEW_BEGIN(BroadcastReferenceInstruction);
+  FLAT_MSG_VIEW_BEGIN(BroadcastObjectReferenceInstruction);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, new_object);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, sole_mirrored_object);
-  FLAT_MSG_VIEW_END(BroadcastReferenceInstruction);
+  FLAT_MSG_VIEW_END(BroadcastObjectReferenceInstruction);
   // clang-format on
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    FlatMsgView<BroadcastReferenceInstruction> args(instr_msg->operand());
+    FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
     {
       int64_t object_id = IdUtil::GetTypeId(args->sole_mirrored_object());
@@ -118,7 +118,7 @@ class BroadcastReferenceInstructionType final : public InstructionType {
     Run<&IdUtil::GetTypeId>(vm, instr_msg, *sole_rw_mutexed_object, args.Get());
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    FlatMsgView<BroadcastReferenceInstruction> args(instr_msg->operand());
+    FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
     {
       int64_t object_id = IdUtil::GetValueId(args->sole_mirrored_object());
@@ -138,7 +138,7 @@ class BroadcastReferenceInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg,
            const RwMutexedObject& sole_rw_mutexed_object,
-           const BroadcastReferenceInstruction& args) const {
+           const BroadcastObjectReferenceInstruction& args) const {
     std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
     const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
@@ -158,7 +158,8 @@ class BroadcastReferenceInstructionType final : public InstructionType {
         });
   }
 };
-COMMAND(RegisterInstructionType<BroadcastReferenceInstructionType>("BroadcastReference"));
+COMMAND(
+    RegisterInstructionType<BroadcastObjectReferenceInstructionType>("BroadcastObjectReference"));
 
 class ReplaceMirroredInstructionType final : public InstructionType {
  public:
