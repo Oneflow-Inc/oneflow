@@ -9,16 +9,16 @@ class HalfBoxingPass final : public OpGraphPass {
  public:
   HalfBoxingPass() = default;
   ~HalfBoxingPass() override = default;
-  bool IsEnabled() const override { return GlobalJobDesc().use_boxing_v2(); }
+  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
   void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  op_graph.ForEachNode([&job_builder](OpNode* op_node) {
-    // find cast_fp16_to_fp32 -> parallel_cast pattern
-    const OperatorConf& parallel_cast_op_conf = op_node->op().op_conf();
+  op_graph.ForEachNode([&job_builder](OpNode* parallel_cast_node) {
+    // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
+    const OperatorConf& parallel_cast_op_conf = parallel_cast_node->op().op_conf();
     if (!parallel_cast_op_conf.has_parallel_cast_conf()) { return; }
-    auto* cast_node = op_node->SoleInEdge()->src_node();
+    auto* cast_node = parallel_cast_node->SoleInEdge()->src_node();
     if (cast_node->out_edges().size() != 1) { return; }
     auto cast_op_conf = cast_node->op().op_conf();
     if (!(cast_op_conf.has_user_conf() && cast_op_conf.user_conf().op_type_name() == "cast")) {
@@ -26,8 +26,10 @@ void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) con
     }
     const auto cast_conf = cast_op_conf.user_conf();
     const auto cast_in_lbi = cast_node->SoleInEdge()->lbis().front();
-    if (!(cast_node->LogicalBlobDesc4Lbi(cast_in_lbi).data_type() == DataType::kFloat16
-          && cast_conf.attr().at("dtype").at_data_type() == DataType::kFloat)) {
+    const auto cast_in_dtype = cast_node->LogicalBlobDesc4Lbi(cast_in_lbi).data_type();
+    const auto cast_out_dtype = cast_conf.attr().at("dtype").at_data_type();
+    if (!(cast_in_dtype == DataType::kFloat16
+          && (cast_out_dtype == DataType::kFloat || cast_out_dtype == DataType::kDouble))) {
       return;
     }
 
@@ -53,20 +55,18 @@ void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) con
 
     // update all parallel_cast op consumers
     const std::string cast_output = cast_conf.output().at("out").s(0);
-    for (OpEdge* edge : op_node->out_edges()) {
-      OpNode* dst_node = edge->dst_node();
+    for (OpEdge* edge : parallel_cast_node->out_edges()) {
+      CHECK_EQ(1, edge->lbis().size());
       LogicalBlobId cur_lbi = edge->lbis().front();
       const auto lbn = GenLogicalBlobName(cur_lbi);
       CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
       const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
 
+      OpNode* dst_node = edge->dst_node();
       OperatorConf dst_op_conf = dst_node->op().op_conf();
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      // if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
-      // dst_ibn)) {
       ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, cast_output);
-      // }
       job_builder->MutOpsOnlyOnce({dst_op_conf});
     }
   });
