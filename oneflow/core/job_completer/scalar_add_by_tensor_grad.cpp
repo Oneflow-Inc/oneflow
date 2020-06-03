@@ -17,9 +17,7 @@ void GenerateBackwardOpConf(
     reduce_sum_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_sum_conf->set_out("out");
     int64_t num_axes = LogicalBlobDesc4BnInOp("out").shape().NumAxes();
-    FOR_RANGE(int64_t, i, 0, num_axes) {
-      reduce_sum_conf->add_axis(i);
-    }
+    FOR_RANGE(int64_t, i, 0, num_axes) { reduce_sum_conf->add_axis(i); }
     op_confs->push_back(reduce_sum_op);
     DiffLbi4BnInOp("scalar")->set_op_name(reduce_sum_op.name());
     DiffLbi4BnInOp("scalar")->set_blob_name(reduce_sum_conf->out());
