@@ -11,11 +11,11 @@ class SequentializeNcclTupleBroadcastReducePass final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void SequentializeNcclTupleBroadcastReducePass::Apply(const OpGraph& op_graph,
-                                                      JobBuilder* builder) const {
+Maybe<void> SequentializeNcclTupleBroadcastReducePass::Apply(const OpGraph& op_graph,
+                                                             JobBuilder* builder) const {
   std::vector<OperatorConf> broadcast_ops;
   std::vector<OperatorConf> reduce_ops;
   op_graph.ForEachNode([&](const OpNode* node) {
@@ -50,6 +50,7 @@ void SequentializeNcclTupleBroadcastReducePass::Apply(const OpGraph& op_graph,
   }
   builder->MutOpsOnlyOnce(broadcast_ops);
   builder->MutOpsOnlyOnce(reduce_ops);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("SequentializeNcclTupleBroadcastReducePass",

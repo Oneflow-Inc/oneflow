@@ -13,11 +13,11 @@ class AutoTrainStep final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
 };
 
-void AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
-  if (job->job_conf().train_conf().has_train_step_lbn()) { return; }
+Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
+  if (job->job_conf().train_conf().has_train_step_lbn()) { return Maybe<void>::Ok(); }
   OperatorConf variable_op_conf{};
   const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
   variable_op_conf.set_name(train_step_name);
@@ -53,6 +53,7 @@ void AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   job_builder.AddOps(GenParallelConfOfCpuZeroOnMaster(),
                      {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);
