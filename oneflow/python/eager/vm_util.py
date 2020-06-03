@@ -338,6 +338,12 @@ class InstructionsBuilder(object):
         object_cache.SetObject4BlobName(blob_name, blob_object)
         return blob_object
 
+    def _BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
+        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
+        for _, dev_ids in device_ids.item(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
+        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
+        return object_util.Object(object_id, parallel_desc_sym)
+
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
         self._InitStringSymbol(symbol_id, string)
@@ -407,6 +413,16 @@ class InstructionsBuilder(object):
         instruction.instr_type_name = "NewObject"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
+        self.instruction_list_.instruction.append(instruction)
+        return object_id
+
+    def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
+        object_id = self.id_generator_.NewObjectId()
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "NewObject"
+        instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
+        instruction.operand.append(_Int64Operand(object_id))
+        instruction.operand.append(_Int64Operand(sole_mirrored_object.object_id))
         self.instruction_list_.instruction.append(instruction)
         return object_id
 

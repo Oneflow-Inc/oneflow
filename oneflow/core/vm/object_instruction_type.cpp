@@ -89,6 +89,78 @@ class NewObjectInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<NewObjectInstructionType>("NewObject"));
 
+class BroadcastObjectReferenceInstructionType final : public InstructionType {
+ public:
+  BroadcastObjectReferenceInstructionType() = default;
+  ~BroadcastObjectReferenceInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  // clang-format off
+  FLAT_MSG_VIEW_BEGIN(BroadcastObjectReferenceInstruction);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, new_object);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, sole_mirrored_object);
+  FLAT_MSG_VIEW_END(BroadcastObjectReferenceInstruction);
+  // clang-format on
+
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
+    const RwMutexedObject* sole_rw_mutexed_object = nullptr;
+    {
+      int64_t object_id = IdUtil::GetTypeId(args->sole_mirrored_object());
+      auto* logical_object = vm->mut_id2logical_object()->FindPtr(object_id);
+      CHECK_NOTNULL(logical_object);
+      auto* map = logical_object->mut_global_device_id2type_mirrored_object();
+      CHECK_EQ(map->size(), 1);
+      sole_rw_mutexed_object = &map->Begin()->rw_mutexed_object();
+      CHECK_NOTNULL(sole_rw_mutexed_object);
+    }
+    Run<&IdUtil::GetTypeId>(vm, instr_msg, *sole_rw_mutexed_object, args.Get());
+  }
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+    FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
+    const RwMutexedObject* sole_rw_mutexed_object = nullptr;
+    {
+      int64_t object_id = IdUtil::GetValueId(args->sole_mirrored_object());
+      auto* logical_object = vm->mut_id2logical_object()->FindPtr(object_id);
+      CHECK_NOTNULL(logical_object);
+      auto* map = logical_object->mut_global_device_id2mirrored_object();
+      CHECK_EQ(map->size(), 1);
+      sole_rw_mutexed_object = &map->Begin()->rw_mutexed_object();
+      CHECK_NOTNULL(sole_rw_mutexed_object);
+    }
+    Run<&IdUtil::GetValueId>(vm, instr_msg, *sole_rw_mutexed_object, args.Get());
+  }
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+
+ private:
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg,
+           const RwMutexedObject& sole_rw_mutexed_object,
+           const BroadcastObjectReferenceInstruction& args) const {
+    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
+    CHECK(static_cast<bool>(parallel_desc));
+    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
+    int64_t new_object = GetLogicalObjectId(args.new_object());
+    auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
+                                                               new_object, parallel_desc);
+    CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+    auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
+    ForEachMachineIdAndDeviceIdInRange(
+        *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+          int64_t global_device_id =
+              vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+          auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
+              vm->mut_allocator(), logical_object.Mutable(), global_device_id);
+          mirrored_object->reset_rw_mutexed_object(sole_rw_mutexed_object);
+          CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+        });
+  }
+};
+COMMAND(
+    RegisterInstructionType<BroadcastObjectReferenceInstructionType>("BroadcastObjectReference"));
+
 class ReplaceMirroredInstructionType final : public InstructionType {
  public:
   ReplaceMirroredInstructionType() = default;

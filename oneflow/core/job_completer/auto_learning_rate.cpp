@@ -14,10 +14,10 @@ class AutoLearningRate final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
 };
 
-void AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
+Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
@@ -70,6 +70,7 @@ void AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
           train_conf.primary_lr_lbn());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("AutoLearningRate", AutoLearningRate);

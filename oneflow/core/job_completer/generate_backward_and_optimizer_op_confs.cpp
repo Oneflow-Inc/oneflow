@@ -76,7 +76,7 @@ class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
   GenerateBackwardAndOptimizerOpConfs() = default;
   ~GenerateBackwardAndOptimizerOpConfs() override = default;
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
@@ -92,8 +92,8 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
-void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
-                                                JobBuilder* job_builder) const {
+Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
+                                                       JobBuilder* job_builder) const {
   TeePersistentLogStream::Create("PreGenerateBackwardAndOptimizerOpConfs.prototxt")
       ->Write(job_builder->job().DebugString());
   LogicalBlobId total_loss_instance_num;
@@ -115,6 +115,7 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   UpdateOpSbpSignatureHint(op_graph, job_builder);
   TeePersistentLogStream::Create("PostGenerateBackwardAndOptimizerOpConfs.prototxt")
       ->Write(job_builder->job().DebugString());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);
