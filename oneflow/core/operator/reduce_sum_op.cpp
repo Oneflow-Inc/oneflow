@@ -25,6 +25,7 @@ Maybe<void> ReduceSumOp::InferBlobDescs(
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
+  out_blob->set_data_type(in_blob->data_type());
   const AxisVector axis_vec = {conf.axis().begin(), conf.axis().end()};
   const Shape& reduced_shape = CreateReducedShape(in_blob->shape(), axis_vec);
   if (conf.keep_dims()) {
