@@ -31,7 +31,6 @@ class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    std::cerr << "ModelInit" << std::endl;
     const ModelInitOpConf& conf = this->op_conf().model_init_conf();
     const int64_t num_var = conf.out_size();
     HashMap<std::string, std::unique_ptr<SnapshotReader>> path2snapshot_reader;
