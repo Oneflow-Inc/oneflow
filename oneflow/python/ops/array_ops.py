@@ -767,14 +767,13 @@ def broadcast_like(x, like, broadcast_axes=None, name=None):
             "The length of broadcast_axes must be greater than 0 and less than or equal to number of axes of like shape"
         )
 
-    return (
+    op = (
         flow.user_op_builder(name)
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt32")
+        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt64")
         .Output("y")
         .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
     )
+    return op.InferAndTryRun().SoleOutputBlob()
