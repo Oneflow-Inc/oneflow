@@ -3,6 +3,7 @@
 
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 namespace eager {
@@ -37,6 +38,9 @@ class DeprecatedStatelessCallOpKernelInstructionType : public vm::InstructionTyp
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
+
+  virtual std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
+                                                        const int64_t device_id) const;
 
  protected:
   DeprecatedStatelessCallOpKernelInstructionType() = default;

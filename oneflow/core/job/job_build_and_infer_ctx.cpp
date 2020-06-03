@@ -306,7 +306,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
-                                                                   int32_t parallel_num) const {
+                                                                       int32_t parallel_num) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
     const auto& iter = mirrored_lbi2sub_lbis().find(lbi);
@@ -323,8 +323,8 @@ Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Ope
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
-                                                                   int32_t parallel_num) const {
+Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
+    const Operator& op, int32_t parallel_num) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
     int32_t ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();

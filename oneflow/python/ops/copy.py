@@ -7,6 +7,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.framework.placement_context as placement_ctx
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -25,9 +26,7 @@ def lazy_copy(x, name=None):
 def eager_copy(x, name=None):
     op_conf, lbi = _CopyOpConfAndLbi(x, name=name)
     compile_context.CurJobAddMirroredOp(op_conf)
-    def CallCopy(builder):
-        builder.DeprecatedStatelessCall(op_conf, const_arg_bns=['in'], mut_arg_bns=['out'])
-    vm_util.LogicalRun(CallCopy)
+    vm_util.LogicalRun(vm_util.MakeFunctionCopyInstructionBuilder(x.blob_object, op_conf))
     return remote_blob_util.EagerLogicalBlob(lbi)
 
 def _CopyOpConfAndLbi(x, name = None):
