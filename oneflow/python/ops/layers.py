@@ -109,7 +109,7 @@ def conv2d(
     kernel_size=1,
     strides=1,
     padding="VALID",
-    data_format="NCHW",
+    data_format="NHWC",
     dilation_rate=1,
     groups=1,
     activation=None,
@@ -131,7 +131,7 @@ def conv2d(
         kernel_size = tuple(kernel_size)
 
     assert isinstance(groups, int)
-    assert groups > 0    
+    assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
     if data_format.upper() == "NCHW":
