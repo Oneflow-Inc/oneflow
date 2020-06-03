@@ -772,7 +772,7 @@ def broadcast_like(x, like, broadcast_axes=None, name=None):
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt64")
+        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt32")
         .Output("y")
         .Build()
     )
