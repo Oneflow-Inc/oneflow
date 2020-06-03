@@ -450,7 +450,8 @@ Maybe<void> GenerateBackwardOpConfWrapperStruct::Call(
   } else if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << PbMessage2TxtString(op.op_conf());
+    UNIMPLEMENTED_THEN_RETURN() << "\nNo gradient function found\n"
+                                << PbMessage2TxtString(op.op_conf());
   }
   return Maybe<void>::Ok();
 }
@@ -492,7 +493,10 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<OpBlobArg, LogicalBlobId> in_oba2in_diff_lbi;
   HashMap<OpBlobArg, LogicalBlobId> out_oba2clone_bw_add_out_lbi;
-  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
+  std::list<OpNode*> topo_nodes;
+  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode,
+                           [&](OpNode* op_node) { topo_nodes.push_back(op_node); });
+  for (OpNode* op_node : topo_nodes) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
       const auto& input_bns = op_node->op().input_bns();
@@ -518,7 +522,7 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
     std::vector<OperatorConf> ops;
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
-  });
+  }
   OpBlobArgPairs fw_bw_oba_pairs;
   CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
                    *job_builder, &fw_bw_oba_pairs);
