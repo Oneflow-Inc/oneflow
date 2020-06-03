@@ -6,7 +6,8 @@ namespace {
 
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_scalar_sub_by_tensor_conf());
   if (DiffLbi4BnInOp("in") != nullptr) { *DiffLbi4BnInOp("in") = *DiffLbi4BnInOp("out"); }
   if (DiffLbi4BnInOp("scalar") != nullptr) {
@@ -15,6 +16,8 @@ void GenerateBackwardOpConf(
     ReduceSumOpConf* reduce_sum_conf = reduce_sum_op.mutable_reduce_sum_conf();
     reduce_sum_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_sum_conf->set_out("out");
+    int64_t num_axes = LogicalBlobDesc4BnInOp("out").shape().NumAxes();
+    FOR_RANGE(int64_t, i, 0, num_axes) { reduce_sum_conf->add_axis(i); }
     op_confs->push_back(reduce_sum_op);
     OperatorConf scalar_mul_op;
     scalar_mul_op.set_name(op.op_name() + "_grad_scalar_mul");
