@@ -7,8 +7,8 @@
 
 namespace oneflow {
 
-void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
-              HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
+Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -19,8 +19,8 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
-void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                              const std::function<LogicalBlobId*(const std::string&)>&);
+Maybe<void> GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
+                                     const std::function<LogicalBlobId*(const std::string&)>&);
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);
 
 class GenerateBackwardOpConfWrapperStruct final {
@@ -33,9 +33,9 @@ class GenerateBackwardOpConfWrapperStruct final {
   GenerateBackwardOpConfWrapperStruct(const NaiveFunc& f)
       : naive_func_(std::make_unique<NaiveFunc>(f)) {}
   GenerateBackwardOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(const Operator&, std::vector<OperatorConf>*,
-            const std::function<LogicalBlobId*(const std::string&)>&,
-            const std::function<const BlobDesc&(const std::string&)>&) const;
+  Maybe<void> Call(const Operator&, std::vector<OperatorConf>*,
+                   const std::function<LogicalBlobId*(const std::string&)>&,
+                   const std::function<const BlobDesc&(const std::string&)>&) const;
 
  private:
   const std::unique_ptr<const NaiveFunc> naive_func_;

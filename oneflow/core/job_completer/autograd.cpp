@@ -3,6 +3,7 @@
 #include "oneflow/core/job_completer/clone_grad.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -440,7 +441,7 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
 }
 
-void GenerateBackwardOpConfWrapperStruct::Call(
+Maybe<void> GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
@@ -449,21 +450,22 @@ void GenerateBackwardOpConfWrapperStruct::Call(
   } else if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << PbMessage2TxtString(op.op_conf());
   }
+  return Maybe<void>::Ok();
 }
 
-void GenerateBackwardOpConfIf(
+Maybe<void> GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
   obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case()));
-  obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
+  return obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
-void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
-              HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
+Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
@@ -522,6 +524,7 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                    *job_builder, &fw_bw_oba_pairs);
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
+  return Maybe<void>::Ok();
 }
 
 void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
