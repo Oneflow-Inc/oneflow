@@ -163,7 +163,7 @@ class UserOpConfBuilder(object):
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
     def Build(self):
-        assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
+        assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
         return self.user_op_
 

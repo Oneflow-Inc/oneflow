@@ -1,6 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -50,6 +49,34 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   job_->mutable_job_conf()->CopyFrom(job_conf);
   CHECK_ISNULL(Global<JobDesc>::Get());
   Global<JobDesc>::New(job_conf, job_id_);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return FunctionPass(pass_name)(mut_job());
+  };
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
+    JUST(DoPass("CompleteOfrecordDecoder"));
+    JUST(DoPass("SetDefaultVariableConf"));
+    JUST(DoPass("AutoMixedPrecision"));
+    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
+    JUST(DoPass("NonDistributedOptimizerPass"));
+    JUST(DoPass("AutoTrainStep"));
+    JUST(DoPass("AutoLearningRate"));
+    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
+    JUST(DoPass("SequentializeNcclTupleBroadcastReducePass"));
+    JUST(DoPass("AddAllReduceGroupPass"));
+    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
+    JUST(DoPass("SequentializeAllReduceGroupPass"));
+    JUST(DoPass("PruneParallelCastOpsPass"));
+    JUST(DoPass("DumpVariableInfoPass"));
+  }
+  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
   return Maybe<void>::Ok();
 }
 
@@ -736,38 +763,14 @@ ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelD
   return parallel_desc.parallel_conf();
 }
 
-Maybe<void> LazyJobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
-  if (GlobalJobDesc().Bool("__is_user_function__")) {
-    DoPass("CompleteOfrecordDecoder");
-    DoPass("SetDefaultVariableConf");
-    DoPass("AutoMixedPrecision");
-    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
-    DoPass("NonDistributedOptimizerPass");
-    DoPass("AutoTrainStep");
-    DoPass("AutoLearningRate");
-    DoPass("GenerateBackwardAndOptimizerOpConfs");
-    DoPass("IndexedSlicesOptimizerRewritePass");
-    DoPass("SequentializeNcclTupleBroadcastReducePass");
-    DoPass("AddAllReduceGroupPass");
-    DoPass("AddLbiDiffWatcherOpConfs");
-    DoPass("SequentializeAllReduceGroupPass");
-    DoPass("PruneParallelCastOpsPass");
-    DoPass("DumpVariableInfoPass");
-  }
-  DoPass("DumpTimeShapeAndBlobParallelConfPass");
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(mut_job()); };
-  DoPass("GenerateBackwardAndOptimizerOpConfs");
+  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return FunctionPass(pass_name)(mut_job());
+  };
+  JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
   return Maybe<void>::Ok();
 }
 
