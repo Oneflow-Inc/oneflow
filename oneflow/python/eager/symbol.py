@@ -19,6 +19,10 @@ class ParallelDescSymbol(Symbol):
         self.device_tag_ = device_tag
         self.machine_id2device_id_list_ = placement_ctx.MakeMachineId2DeviceIdList(parallel_conf)
 
+    def __eq__(lhs, rhs):
+        return (lhs.device_tag_ == rhs.device_tag_
+                and lhs.machine_id2device_id_list_ == rhs.machine_id2device_id_list_)
+
     @property
     def parallel_conf(self): return self.data
 

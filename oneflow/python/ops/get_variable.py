@@ -4,6 +4,7 @@ import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -13,6 +14,7 @@ import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
 import os
 
@@ -88,6 +90,7 @@ def get_eager_variable(
         )
         op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
         var_blob = _CreateEagerVariableBlob(op_conf, parallel_conf)
+        _InitVariableBlob(op_conf, var_blob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     assert var_blob.shape == shape
     assert var_blob.dtype == dtype
@@ -201,4 +204,44 @@ def _CreateEagerVariableBlob(op_conf, parallel_conf):
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
+    return remote_blob_util.EagerLogicalBlob(lbi)
+
+def _InitVariableBlob(var_op_conf, var_blob):
+    with oneflow.fixed_placement("cpu", "0:0"):
+        source_tick = _SourceTick()
+        value = _ModelInit(source_tick, var_op_conf)
+        oneflow.system.assign(var_blob, value)
+        
+def _ModelInit(source_tick, var_op_conf):
+    op_conf, lbi = _GetModelInitAndLbi(source_tick, var_op_conf)
+    compile_context.CurJobAddMirroredOp(op_conf)
+    def BuildModeInitInstruction(builder):
+        builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out_0'])
+    vm_util.LogicalRun(BuildModeInitInstruction)
+    return remote_blob_util.EagerLogicalBlob(lbi)
+
+def _GetModelInitAndLbi(source_tick, var_op_conf):
+    variable_op_conf = op_conf_util.VariableOpConf()
+    variable_op_conf.CopyFrom(var_op_conf.variable_conf)
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr("ModelInit_")
+    op_conf.model_init_conf.tick = source_tick.unique_name
+    op_conf.model_init_conf.out.append("out_0")
+    op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
+    op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = op_conf.model_init_conf.out[0]
+    return op_conf, lbi
+
+def _SourceTick():
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr("SourceTick_")
+    op_conf.source_tick_conf.out = "out"
+    compile_context.CurJobAddMirroredOp(op_conf)
+    vm_util.LogicalRun(
+            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = op_conf.source_tick_conf.out
     return remote_blob_util.EagerLogicalBlob(lbi)

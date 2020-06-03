@@ -282,7 +282,6 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
   const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
     const auto& parallel_desc = instruction->parallel_desc();
     CHECK(static_cast<bool>(parallel_desc));
-    DeviceType device_type = parallel_desc->device_type();
     if (rw_mutexed_object->has_object()) {
       CHECK(rw_mutexed_object->Has<BlobObject>());
     } else {

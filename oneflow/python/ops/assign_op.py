@@ -27,7 +27,7 @@ def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _AssignOpConf(ref, value, name=name)
-    compile_context.CurJobAddMirroredOp(op_conf, ref.parallel_conf)
+    # no backward for assign
     vm_util.LogicalRun(vm_util.MakeFunctionAssignInstructionBuilder(
                 ref.blob_object, value.blob_object, op_conf))
     return ref
