@@ -1,7 +1,6 @@
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
-import oneflow.python.framework.runtime_mode as rt_mode
 
 from collections import OrderedDict
 from test_util import GenArgDict
