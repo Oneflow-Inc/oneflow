@@ -44,6 +44,7 @@ def CurJobAddConsistentOp(op_conf, parallel_conf=None):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddMirroredOp(op_conf, parallel_conf=None):
+    assert not hob.consistent_view_enabled()
     op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 
