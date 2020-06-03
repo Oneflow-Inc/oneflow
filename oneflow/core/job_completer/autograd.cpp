@@ -520,7 +520,7 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
     GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
                               &out_oba2clone_bw_add_out_lbi);
     std::vector<OperatorConf> ops;
-    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
+    JUST(GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   }
   OpBlobArgPairs fw_bw_oba_pairs;
