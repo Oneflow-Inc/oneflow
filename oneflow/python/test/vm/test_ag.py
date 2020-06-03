@@ -1,0 +1,43 @@
+import oneflow as flow
+import os
+
+
+sgd = flow.optimizer.SGD()
+flow.register_optimizer("sgd", sgd)
+flow.env.init()
+flow.config.gpu_device_num(1)
+enable_eager = os.getenv("e") == "1"
+is_train = os.getenv("t") == "1"
+
+print("running train", is_train)
+flow.enable_eager_execution(enable_eager)
+
+cfg = flow.FunctionConfig()
+if is_train:
+    cfg.train.primary_lr(0.00001)
+    cfg.train.model_update_conf(dict(naive_conf={}))
+    @flow.function(cfg)
+    def universal_train():
+        eager_execution_enabled = flow.eager_execution_enabled()
+        print("eager_execution_enabled", eager_execution_enabled) # False
+        v = flow.get_variable("v", shape=(10,), dtype=flow.float32, initializer=flow.random_uniform_initializer(), trainable=True)
+        x = flow.constant(-1, shape=(10,), dtype=flow.float) + v
+        y = flow.math.relu(x) + 1
+        flow.losses.add_loss(y)
+    universal_train()
+else:
+    @flow.function(cfg)
+    def universal_infer():
+        eager_execution_enabled = flow.eager_execution_enabled()
+        print("eager_execution_enabled", eager_execution_enabled) # False
+        v = flow.get_variable("v", shape=(10,), dtype=flow.float32, initializer=flow.random_uniform_initializer())
+        x = flow.constant(-1, shape=(10,), dtype=flow.float) + v
+        y = flow.math.relu(x) + 1
+
+    universal_infer()
+
+# def eager_func():
+#     x = flow.constant(-1, shape=(10,), dtype=flow.float)
+#     y = flow.math.relu(x) + 1
+#     print(y.numpy())
+# eager_func()
