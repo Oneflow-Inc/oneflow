@@ -22,6 +22,7 @@ class JobBuildAndInferCtxMgr {
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
+  Maybe<std::string> GetCurrentJobNameEvenClosed() const;
   void CloseCurrentJobBuildAndInferCtx();
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 

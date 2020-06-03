@@ -24,7 +24,7 @@ def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
     y = flow.math.relu(x, name="relu2020") + 1
     print(a)
 
-def lr_lbn_from_train_conf(train_conf):
+def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
         return train_conf.primary_lr_lbn
     elif var_op_conf.variable_conf.model_name == "bias":
@@ -49,7 +49,7 @@ class SGD(oneflow_internal.OptimizerBase):
                 sess = session_context.GetDefaultSession()
                 var = sess.TryGetVariableBlobOfJobFromStash(job_name, var_op_conf.name)
                 var_diff = remote_blob_util.RemoteBlob(diff_lbi)
-                lr_lbn = lr_lbn_from_train_conf(train_conf)
+                lr_lbn = lr_lbn_from_train_conf(var_op_conf, train_conf)
                 print(lr_lbn)
                 # build_sgd(var, var_diff, var_op_conf, parallel_conf, train_conf)
         except Exception:

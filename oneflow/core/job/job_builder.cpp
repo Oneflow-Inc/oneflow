@@ -1,8 +1,26 @@
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
+  if (*Global<bool, EagerExecutionOption>::Get()) {
+    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
+}
+
+Maybe<JobBuildAndInferCtx*> GetCurInferCtxClosed() {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobNameEvenClosed()));
+}
+
+}  // namespace
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement) {
@@ -76,6 +94,18 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
     placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
     CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
               .second);
+    if (job().job_conf().has_train_conf()) {
+      auto* mgr = CHECK_JUST(GlobalJobBuildAndInferCtxMgr());
+      LOG(ERROR) << *CHECK_JUST(mgr->GetCurrentJobNameEvenClosed()) << " // " << op_conf.name();
+      const bool sync_with_infer_ctx = op_conf.has_user_conf() || op_conf.has_constant_like_conf()
+                                       || op_conf.has_distribute_clone_conf()
+                                       || op_conf.has_distribute_split_conf();
+      if (sync_with_infer_ctx) {
+        std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
+        LOG(ERROR) << *CHECK_JUST(mgr->GetCurrentJobNameEvenClosed()) << " // " << op->op_name();
+        CHECK_JUST(GetCurInferCtxClosed())->GenOpProducedEmptyLogicalBlobDesc(op.get());
+      }
+    }
   }
 }
 

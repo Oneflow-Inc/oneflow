@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/clone_grad.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -139,15 +140,20 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf scalar_mul_op_conf{};
-    scalar_mul_op_conf.set_name("System-ModelDiffScale-ScalarMul_" + NewUniqueId());
-    ScalarMulOpConf* scalar_mul_conf = scalar_mul_op_conf.mutable_scalar_mul_conf();
-    scalar_mul_conf->set_float_operand(scale_factor);
-    scalar_mul_conf->set_in(GenLogicalBlobName(diff_lbi));
-    scalar_mul_conf->set_out("out");
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op_conf});
-    diff_lbi.set_op_name(scalar_mul_op_conf.name());
-    diff_lbi.set_blob_name(scalar_mul_conf->out());
+    user_op::UserOpConfWrapperBuilder builder("System-ModelDiffScale-ScalarMul-" + NewUniqueId());
+    user_op::UserOpConfWrapper scalar_mul_op =
+        builder.Op("scalar_mul")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr("has_float_operand", true)
+            .Attr("has_int_operand", false)
+            .Attr("float_operand", static_cast<double>(scale_factor))
+            .Attr("int_operand", static_cast<int64_t>(scale_factor))
+            .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    const oneflow::LogicalBlobId& down_scale_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
+    diff_lbi.set_op_name(down_scale_lbi.op_name());
+    diff_lbi.set_blob_name(down_scale_lbi.blob_name());
   }
 }
 
@@ -589,15 +595,20 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf down_scale_mul_op;
-    down_scale_mul_op.set_name("System-ModelDiffScale-ScalarMul-" + NewUniqueId());
-    ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
-    conf->set_in(GenLogicalBlobName(diff_lbi));
-    conf->set_out("out");
-    conf->set_float_operand(down_scale_factor);
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {down_scale_mul_op});
-    diff_lbi.set_op_name(down_scale_mul_op.name());
-    diff_lbi.set_blob_name(conf->out());
+    user_op::UserOpConfWrapperBuilder builder("System-ModelDiffScale-ScalarMul-" + NewUniqueId());
+    user_op::UserOpConfWrapper scalar_mul_op =
+        builder.Op("scalar_mul")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr("has_float_operand", true)
+            .Attr("has_int_operand", false)
+            .Attr("float_operand", static_cast<double>(down_scale_factor))
+            .Attr("int_operand", static_cast<int64_t>(down_scale_factor))
+            .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    const oneflow::LogicalBlobId& down_scale_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
+    diff_lbi.set_op_name(down_scale_lbi.op_name());
+    diff_lbi.set_blob_name(down_scale_lbi.blob_name());
   }
 }
 

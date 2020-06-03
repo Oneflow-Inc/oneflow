@@ -94,6 +94,8 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
 
 void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
                                                 JobBuilder* job_builder) const {
+  TeePersistentLogStream::Create("PreGenerateBackwardAndOptimizerOpConfs.prototxt")
+      ->Write(job_builder->job().DebugString());
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
@@ -111,6 +113,8 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
+  TeePersistentLogStream::Create("PostGenerateBackwardAndOptimizerOpConfs.prototxt")
+      ->Write(job_builder->job().DebugString());
 }
 
 REGISTER_FUNCTION_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);

@@ -47,6 +47,7 @@ class JobBuildAndInferCtx {
   Maybe<OptInt64> MirroredBlobGetSplitAxisFromProducerView(const std::string& lbn_with_hint) const;
   Maybe<const ParallelDesc*> MirroredBlobGetParallelDescFromProducerView(
       const std::string& lbn_with_hint) const;
+  Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
@@ -86,7 +87,6 @@ class JobBuildAndInferCtx {
                                const SbpSignature& sbp_signature) const;
   Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
                                     SbpSignature*);
-  Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
