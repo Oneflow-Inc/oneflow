@@ -10,7 +10,7 @@ HashMap<std::string, OptimizerBase*>* MutOptimizerRegistry() {
 
 }  // namespace
 
-OptimizerBase* OptimizerRegistry::Lookup(std::string name) {
+OptimizerBase* OptimizerRegistry::Lookup(const std::string& name) {
   if (MutOptimizerRegistry()->empty()) { LOG(FATAL) << "no optimizer registered"; }
   const auto it = MutOptimizerRegistry()->find(name);
   if (it == MutOptimizerRegistry()->end()) {
@@ -22,6 +22,19 @@ OptimizerBase* OptimizerRegistry::Lookup(std::string name) {
     LOG(FATAL) << "optimizer " << name << " not found, all: " << all_registered_name;
   }
   return it->second;
+}
+
+Maybe<void> OptimizerRegistry::LookupAndBuild(const std::string& name, const VariableOp& var_op,
+                                              const ParallelConf& parallel_conf,
+                                              const LogicalBlobId& diff_lbi_of_var_out,
+                                              const ::oneflow::TrainConf& train_conf) {
+  const std::string var_op_conf_txt = PbMessage2TxtString(var_op.op_conf());
+  const std::string parallel_conf_txt = PbMessage2TxtString(parallel_conf);
+  const std::string diff_lbi_of_var_out_txt = PbMessage2TxtString(diff_lbi_of_var_out);
+  const std::string train_conf_txt = PbMessage2TxtString(train_conf);
+  OptimizerRegistry::Lookup("sgd")->Build(var_op_conf_txt, parallel_conf_txt,
+                                          diff_lbi_of_var_out_txt, train_conf_txt);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> OptimizerRegistry::Register(std::string name, OptimizerBase* optimizer) {

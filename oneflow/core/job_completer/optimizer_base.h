@@ -10,7 +10,11 @@ class OptimizerBase {
   OptimizerBase() = default;
   virtual ~OptimizerBase() = default;
 
-  virtual void Build(const std::string& handler_uuid, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+  virtual void Build(const std::string& var_op_conf_txt, const std::string& parallel_conf_txt,
+                     const std::string& diff_lbi_of_var_out_txt,
+                     const std::string& train_conf_txt) const {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace oneflow

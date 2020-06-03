@@ -15,7 +15,8 @@ void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& par
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   if (train_conf.model_update_conf().has_naive_conf()) {
-    OptimizerRegistry::Lookup("sgd")->Build("", 1);
+    OptimizerRegistry::LookupAndBuild("sgd", var_op, parallel_conf, diff_lbi_of_var_out,
+                                      job_builder->job().job_conf().train_conf());
     return;
   }
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
