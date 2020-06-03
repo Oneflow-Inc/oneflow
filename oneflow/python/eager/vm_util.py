@@ -16,6 +16,7 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
+import re
 import oneflow
 
 from contextlib import contextmanager
@@ -289,7 +290,7 @@ class InstructionsBuilder(object):
         input_triples = []
         for ibn in ibns:
             ibn_sym = self.GetSymbol4String(ibn)
-            in_object = get_blob_object4blob_name(getattr(deprecated_op_conf, ibn))
+            in_object = get_blob_object4blob_name(_GetOpConfBlobNameAttr(deprecated_op_conf, ibn))
             input_triples.append((ibn_sym, 0, in_object))
         return input_triples
 
@@ -309,7 +310,7 @@ class InstructionsBuilder(object):
         output_triples = []
         for bn_in_op in bns_in_op:
             obn_sym = self.GetSymbol4String(bn_in_op)
-            blob_name = getattr(deprecated_op_conf, bn_in_op)
+            blob_name = _GetOpConfBlobNameAttr(deprecated_op_conf, bn_in_op)
             if blob_name.find("/") > 0:
                 out_object = object_cache.GetObject4BlobName(blob_name)
             else:
@@ -538,7 +539,7 @@ def _SetAllMirroredOperand(operand, val):
 
 def _FindOrCreateDelegateBlobObject(builder, lbn, op_parallel_desc_symbol):
     x_blob_object = object_cache.GetObject4BlobName(lbn)
-    if x_blob_object.parallel_desc_symbol is op_parallel_desc_symbol: return x_blob_object
+    if x_blob_object.parallel_desc_symbol == op_parallel_desc_symbol: return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
     def Fetch(x_blob_object, op_parallel_desc_symbol):
         return _FetchDelegateBlobObject(builder, lbn, x_blob_object, op_parallel_desc_symbol)
@@ -549,12 +550,12 @@ def _FindOrCreateDelegateBlobObject(builder, lbn, op_parallel_desc_symbol):
 def _FetchDelegateBlobObject(builder, x_lbn, x_blob_object, op_parallel_desc_symbol):
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
     op_device_ids = op_parallel_desc_symbol.machine_id2device_id_list
-    prompt = "boxing is not supported yet."
+    prompt = "\nboxing is not supported yet."
     assert blob_device_ids == op_device_ids, "%s blob_device_ids: %s\nop_device_ids: %s"%(
             prompt, blob_device_ids, op_device_ids)
     blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     op_device_tag = op_parallel_desc_symbol.device_tag
-    assert blob_device_tag != op_device_tag, "blob_device_tag: %s\nop_device_tag: %s"%(
+    assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
             blob_device_tag, op_device_tag)
     op_conf, lbi = _MakeCopyHdOpConfAndRetLbi(x_lbn)
     MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf)(builder)
@@ -573,3 +574,16 @@ def _MakeCopyHdOpConfAndRetLbi(x_lbn):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return op_conf, lbi
+
+
+def _GetOpConfBlobNameAttr(pb_message, field):
+    if hasattr(pb_message, field): return getattr(pb_message, field);
+    m = re.search("_(\d+)$", field)
+    assert m is not None
+    blob_name = field[0:-len(m.group(0))]
+    index = int(m.group(0)[1:])
+    assert hasattr(pb_message, blob_name), (pb_message, blob_name)
+    repeated_field = getattr(pb_message, blob_name)
+    assert index >= 0
+    assert index < len(repeated_field)
+    return repeated_field[index]
