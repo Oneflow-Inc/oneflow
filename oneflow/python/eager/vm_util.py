@@ -46,17 +46,17 @@ def MakeFunctionAssignInstructionBuilder(ref_blob_object, value_blob_object, op_
     ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
     value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
     if ref_device_tag == value_device_tag:
-        return lambda builder: builder.DeprecatedStatelessCall(op_conf,
+        return lambda builder: builder.SystemStatelessCall(op_conf,
                 parallel_conf=ref_parallel_conf, device_tag=ref_device_tag,
                 const_arg_bns=["value"], mut_arg_bns=["ref"])
     if ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.DeprecatedCudaD2HStatelessCall(op_conf, value_parallel_conf,
+        return lambda builder: builder.SystemCudaD2HStatelessCall(op_conf, value_parallel_conf,
                 const_arg_bns=["value"], mut_arg_bns=["ref"])
     if ref_device_tag == "gpu" and value_device_tag == "cpu":
         def Build(builder):
             with builder.CudaHostPinBlob(value_blob_object):
-                builder.DeprecatedCudaH2DStatelessCall(op_conf, ref_parallel_conf,
+                builder.SystemCudaH2DStatelessCall(op_conf, ref_parallel_conf,
                         const_arg_bns=["value"], mut_arg_bns=["ref"])
         return Build
     raise NotImplementedError("invalid device found. ref_device_tag: %s, value_device_tag: %s"
@@ -93,28 +93,28 @@ class InstructionsBuilder(object):
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
-    def DeprecatedStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
+    def SystemStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
                                 const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
         placement_scope = oneflow.placement.current_scope()
         if parallel_conf is None: parallel_conf = placement_scope.default_parallel_conf
         if device_tag is None: device_tag = placement_scope.default_device_tag
         def GetDelegateBlobObject(lbn, op_parallel_desc_symbol):
             return _FindOrCreateDelegateBlobObject(self, lbn, op_parallel_desc_symbol)
-        return self._DeprecatedStatelessCall("compute", op_conf, parallel_conf, device_tag,
+        return self._SystemStatelessCall("compute", op_conf, parallel_conf, device_tag,
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
                 get_delegate_blob_object=GetDelegateBlobObject)
 
-    def DeprecatedCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
+    def SystemCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
                                        const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
-        return self._DeprecatedStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
+        return self._SystemStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
 
-    def DeprecatedCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
+    def SystemCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
                                        const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
-        return self._DeprecatedStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
+        return self._SystemStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
 
-    def _DeprecatedStatelessCall(self, stream_tag, op_conf, op_parallel_conf, op_device_tag,
+    def _SystemStatelessCall(self, stream_tag, op_conf, op_parallel_conf, op_device_tag,
                                  const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
                                  get_delegate_blob_object=_DefaultGetterDelegateBlobObject):
         assert isinstance(const_arg_bns, (list, tuple))
@@ -126,17 +126,17 @@ class InstructionsBuilder(object):
         blob_parallel_desc_sym = self.GetParallelDescSymbol(
                 placement_scope.default_parallel_conf, placement_scope.default_device_tag)
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._DeprecatedGetOpConfSymbol(op_conf)
+        op_conf_sym = self._SystemGetOpConfSymbol(op_conf)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(opkernel_parallel_desc_sym)
         def GetBlobObject4BlobName(blob_name):
             return get_delegate_blob_object(blob_name, opkernel_parallel_desc_sym)
-        input_triples = self._DeprecatedGetInputTriples(op_conf, const_arg_bns,
+        input_triples = self._SystemGetInputTriples(op_conf, const_arg_bns,
                 get_blob_object4blob_name=GetBlobObject4BlobName)
-        output_triples = self._DeprecatedGetOutputTriples(
+        output_triples = self._SystemGetOutputTriples(
                 op_conf, mut_arg_bns, blob_parallel_desc_sym)
-        mut2_output_triples = self._DeprecatedGetMut2OutputTriples(
+        mut2_output_triples = self._SystemGetMut2OutputTriples(
                 op_conf, mut2_arg_bns, blob_parallel_desc_sym)
-        return self._StatelessCallOpKernel("%s.DeprecatedStatelessCallOpKernel" % stream_tag,
+        return self._StatelessCallOpKernel("%s.SystemStatelessCallOpKernel" % stream_tag,
                 opkernel_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
@@ -242,7 +242,7 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _DeprecatedGetOpConfSymbol(self, op_conf):
+    def _SystemGetOpConfSymbol(self, op_conf):
         new_op_conf = op_conf_util.OperatorConf()
         new_op_conf.CopyFrom(op_conf)
         serialized_op_conf = new_op_conf.SerializeToString()
@@ -262,15 +262,15 @@ class InstructionsBuilder(object):
                 input_triples.append((ibn_sym, i, in_object))
         return input_triples
 
-    def _DeprecatedGetInputTriples(self, op_conf, ibns,
+    def _SystemGetInputTriples(self, op_conf, ibns,
                                    get_blob_object4blob_name=object_cache.GetObject4BlobName):
         field = op_conf.WhichOneof('op_type')
         assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+        system_op_conf = getattr(op_conf, field)
         input_triples = []
         for ibn in ibns:
             ibn_sym = self.GetSymbol4String(ibn)
-            in_object = get_blob_object4blob_name(_GetOpConfBlobNameAttr(deprecated_op_conf, ibn))
+            in_object = get_blob_object4blob_name(_GetOpConfBlobNameAttr(system_op_conf, ibn))
             input_triples.append((ibn_sym, 0, in_object))
         return input_triples
 
@@ -283,14 +283,14 @@ class InstructionsBuilder(object):
                 output_triples.append((obn_sym, i, out_object))
         return output_triples
 
-    def _DeprecatedGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+    def _SystemGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
         field = op_conf.WhichOneof('op_type')
         assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+        system_op_conf = getattr(op_conf, field)
         output_triples = []
         for bn_in_op in bns_in_op:
             obn_sym = self.GetSymbol4String(bn_in_op)
-            blob_name = _GetOpConfBlobNameAttr(deprecated_op_conf, bn_in_op)
+            blob_name = _GetOpConfBlobNameAttr(system_op_conf, bn_in_op)
             if blob_name.find("/") > 0:
                 out_object = object_cache.GetObject4BlobName(blob_name)
             else:
@@ -304,10 +304,10 @@ class InstructionsBuilder(object):
         # TODO(lixinqi)
         return mut2_output_triples
 
-    def _DeprecatedGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+    def _SystemGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
         field = op_conf.WhichOneof('op_type')
         assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+        system_op_conf = getattr(op_conf, field)
         mut2_output_triples = []
         # TODO(lixinqi)
         return mut2_output_triples

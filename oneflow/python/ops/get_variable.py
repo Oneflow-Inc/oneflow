@@ -200,7 +200,7 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
     vm_util.LogicalRun(
-            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out']))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
@@ -216,7 +216,7 @@ def _ModelInit(source_tick, var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(source_tick, var_op_conf)
     compile_context.CurJobAddMirroredOp(op_conf)
     def BuildModeInitInstruction(builder):
-        builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out_0'])
+        builder.SystemStatelessCall(op_conf, mut_arg_bns=['out_0'])
     vm_util.LogicalRun(BuildModeInitInstruction)
     return remote_blob_util.EagerLogicalBlob(lbi)
 
@@ -240,7 +240,7 @@ def _SourceTick():
     op_conf.source_tick_conf.out = "out"
     compile_context.CurJobAddMirroredOp(op_conf)
     vm_util.LogicalRun(
-            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out']))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.source_tick_conf.out

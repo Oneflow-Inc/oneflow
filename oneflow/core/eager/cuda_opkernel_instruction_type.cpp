@@ -40,39 +40,39 @@ class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKer
 COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
     "gpu.compute.StatelessCallOpKernel"));
 
-class CudaDeprecatedStatelessCallOpKernelInstructionType final
-    : public DeprecatedStatelessCallOpKernelInstructionType {
+class CudaSystemStatelessCallOpKernelInstructionType final
+    : public SystemStatelessCallOpKernelInstructionType {
  public:
-  CudaDeprecatedStatelessCallOpKernelInstructionType() = default;
-  ~CudaDeprecatedStatelessCallOpKernelInstructionType() override = default;
+  CudaSystemStatelessCallOpKernelInstructionType() = default;
+  ~CudaSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CudaDeprecatedStatelessCallOpKernelInstructionType>(
-    "gpu.compute.DeprecatedStatelessCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaSystemStatelessCallOpKernelInstructionType>(
+    "gpu.compute.SystemStatelessCallOpKernel"));
 
-class CudaCopyH2DDeprecatedStatelessCallOpKernelInstructionType final
-    : public DeprecatedStatelessCallOpKernelInstructionType {
+class CudaCopyH2DSystemStatelessCallOpKernelInstructionType final
+    : public SystemStatelessCallOpKernelInstructionType {
  public:
-  CudaCopyH2DDeprecatedStatelessCallOpKernelInstructionType() = default;
-  ~CudaCopyH2DDeprecatedStatelessCallOpKernelInstructionType() override = default;
+  CudaCopyH2DSystemStatelessCallOpKernelInstructionType() = default;
+  ~CudaCopyH2DSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CudaCopyH2DDeprecatedStatelessCallOpKernelInstructionType>(
-    "gpu.copy_h2d.DeprecatedStatelessCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaCopyH2DSystemStatelessCallOpKernelInstructionType>(
+    "gpu.copy_h2d.SystemStatelessCallOpKernel"));
 
-class CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType final
-    : public DeprecatedStatelessCallOpKernelInstructionType {
+class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
+    : public SystemStatelessCallOpKernelInstructionType {
  public:
-  CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType() = default;
-  ~CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType() override = default;
+  CudaCopyD2HSystemStatelessCallOpKernelInstructionType() = default;
+  ~CudaCopyD2HSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
 
@@ -86,8 +86,8 @@ class CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType final
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CudaCopyD2HDeprecatedStatelessCallOpKernelInstructionType>(
-    "gpu.copy_d2h.DeprecatedStatelessCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaCopyD2HSystemStatelessCallOpKernelInstructionType>(
+    "gpu.copy_d2h.SystemStatelessCallOpKernel"));
 
 class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
  public:

@@ -31,16 +31,16 @@ def _BuildCopyInstruction(builder, x_blob_object, op_conf):
     current_device_tag = oneflow.placement.current_scope().default_device_tag
     x_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     if current_device_tag == x_device_tag:
-        builder.DeprecatedStatelessCall(op_conf,
+        builder.SystemStatelessCall(op_conf,
                 const_arg_bns=["in"], mut_arg_bns=["out"])
     elif current_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
-        builder.DeprecatedCudaD2HStatelessCall(op_conf, x_parallel_conf,
+        builder.SystemCudaD2HStatelessCall(op_conf, x_parallel_conf,
                 const_arg_bns=["in"], mut_arg_bns=["out"])
     elif current_device_tag == "gpu" and x_device_tag == "cpu":
         out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         with builder.CudaHostPinBlob(x_blob_object):
-            builder.DeprecatedCudaH2DStatelessCall(op_conf, out_parallel_conf,
+            builder.SystemCudaH2DStatelessCall(op_conf, out_parallel_conf,
                     const_arg_bns=["in"], mut_arg_bns=["out"])
     else:
         raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"

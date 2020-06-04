@@ -40,7 +40,7 @@ void OpKernelObject::NewPartialInitializedKernel(
   kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
 }
 
-void DeprecatedOpKernelObject::ResetKernel(
+void SystemOpKernelObject::ResetKernel(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   ParallelContext parallel_ctx;
@@ -53,7 +53,7 @@ void DeprecatedOpKernelObject::ResetKernel(
   ResetKernel(*op, BlobDesc4BnInOp, &parallel_ctx, op_ctx.get());
 }
 
-void DeprecatedOpKernelObject::InferBlobDescs(
+void SystemOpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx) {
   SbpSignature sbp_signature;
@@ -66,7 +66,7 @@ void DeprecatedOpKernelObject::InferBlobDescs(
                                  [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
 }
 
-void DeprecatedOpKernelObject::ResetKernel(
+void SystemOpKernelObject::ResetKernel(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, OpContext* op_ctx) {
   KernelConf kernel_conf;

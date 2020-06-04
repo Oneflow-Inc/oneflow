@@ -34,7 +34,7 @@ class StatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
-class DeprecatedStatelessCallOpKernelInstructionType : public vm::InstructionType {
+class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
@@ -43,8 +43,8 @@ class DeprecatedStatelessCallOpKernelInstructionType : public vm::InstructionTyp
                                                         const int64_t device_id) const;
 
  protected:
-  DeprecatedStatelessCallOpKernelInstructionType() = default;
-  virtual ~DeprecatedStatelessCallOpKernelInstructionType() = default;
+  SystemStatelessCallOpKernelInstructionType() = default;
+  virtual ~SystemStatelessCallOpKernelInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;
