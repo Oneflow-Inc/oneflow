@@ -22,15 +22,17 @@ import oneflow
 from contextlib import contextmanager
 
 def PhysicalRun(build):
-    return _Run(build, vm_id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction)
+    return _Run(build, vm_id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction,
+                _ReleasePhysicalBlobObject)
 
 def LogicalRun(build):
-    return _Run(build, vm_id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction)
+    return _Run(build, vm_id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction,
+                _ReleaseLogicalBlobObject)
 
-def _Run(build, id_generator, run_api):
+def _Run(build, id_generator, run_api, release_blob_object):
     instruction_list = instr_util.InstructionListProto()
     eager_symbol_list = eager_symbol_util.EagerSymbolList()
-    build(InstructionsBuilder(id_generator, instruction_list, eager_symbol_list))
+    build(InstructionsBuilder(id_generator, release_blob_object, instruction_list, eager_symbol_list))
     run_api(instruction_list, eager_symbol_list)
 
 def MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf):
@@ -87,12 +89,13 @@ def _DefaultGetterDelegateBlobObject(blob_name, parallel_desc_symbol):
     return object_cache.GetObject4BlobName(blob_name)
 
 class InstructionsBuilder(object):
-    def __init__(self, id_generator, instruction_list, eager_symbol_list):
+    def __init__(self, id_generator, release_blob_object, instruction_list, eager_symbol_list):
+        self.id_generator_ = id_generator
+        self.release_blob_object_ = release_blob_object
         assert isinstance(instruction_list, instr_util.InstructionListProto)
         assert isinstance(eager_symbol_list, eager_symbol_util.EagerSymbolList)
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
-        self.id_generator_ = id_generator
 
     def StatelessCall(self, op_conf):
         return self._StatelessCall("compute", op_conf)
@@ -334,7 +337,8 @@ class InstructionsBuilder(object):
 
     def _NewBlobObject(self, blob_name, parallel_desc_sym):
         object_id = self._NewObjectId(parallel_desc_sym)
-        blob_object = object_util.Object(object_id, parallel_desc_sym)
+        blob_object = object_util.BlobObject(object_id, parallel_desc_sym,
+                                             self.release_blob_object_)
         object_cache.SetObject4BlobName(blob_name, blob_object)
         return blob_object
 
@@ -342,7 +346,7 @@ class InstructionsBuilder(object):
         device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
         for _, dev_ids in device_ids.item(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
         object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
-        return object_util.Object(object_id, parallel_desc_sym)
+        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -559,9 +563,7 @@ def _FindOrCreateDelegateBlobObject(builder, lbn, op_parallel_desc_symbol):
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
     def Fetch(x_blob_object, op_parallel_desc_symbol):
         return _FetchDelegateBlobObject(builder, lbn, x_blob_object, op_parallel_desc_symbol)
-    def Release(blob_object):
-        LogicalRun(lambda builder: builder.DeleteBlob(blob_object))
-    return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch, Release)
+    return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch)
 
 def _FetchDelegateBlobObject(builder, x_lbn, x_blob_object, op_parallel_desc_symbol):
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
@@ -603,3 +605,9 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     assert index >= 0
     assert index < len(repeated_field)
     return repeated_field[index]
+
+def _ReleaseLogicalBlobObject(blob_object):
+    LogicalRun(lambda builder: builder.DeleteBlob(blob_object))
+
+def _ReleasePhysicalBlobObject(blob_object):
+    PhysicalRun(lambda builder: builder.DeleteBlob(blob_object))

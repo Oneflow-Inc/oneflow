@@ -47,7 +47,6 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
-        vm_util.PhysicalRun(lambda builder: builder.DeleteBlob(self.blob_object_))
         object_cache.ClearObject4BlobName(self.unique_name)
 
 

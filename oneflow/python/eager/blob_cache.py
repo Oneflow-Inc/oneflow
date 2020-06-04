@@ -17,7 +17,7 @@ class BlobCache(object):
         self.blob_object_ = blob_object
         self.header_cache_ = None
         self.body_cache_ = None
-        self.delegate_blob_cache_ = {}
+        self.delegate_blob_object_ = {}
         self.numpy_mirrored_list_ = None
 
     @property
@@ -31,26 +31,14 @@ class BlobCache(object):
         if self.body_cache_ is None: self.body_cache_ = fetch(self.blob_object_)
         return self.body_cache_
 
-    def GetCachedDelegateBlobObject(self, parallel_desc_symbol, fetch, release):
-        if id(parallel_desc_symbol) not in self.delegate_blob_cache_:
+    def GetCachedDelegateBlobObject(self, parallel_desc_symbol, fetch):
+        if id(parallel_desc_symbol) not in self.delegate_blob_object_:
             delegate_blob_object = fetch(self.blob_object, parallel_desc_symbol)
-            self.delegate_blob_cache_[id(parallel_desc_symbol)] = RAIIBlobObject(
-                    delegate_blob_object, release)
-        return self.delegate_blob_cache_[id(parallel_desc_symbol)].blob_object
+            self.delegate_blob_object_[id(parallel_desc_symbol)] = delegate_blob_object
+        return self.delegate_blob_object_[id(parallel_desc_symbol)]
 
     def GetCachedNumpyMirroredList(self, fetch):
         if self.numpy_mirrored_list_ is None: self.numpy_mirrored_list_ = fetch(self.blob_object_)
         return self.numpy_mirrored_list_
-
-class RAIIBlobObject(object):
-    def __init__(self, blob_object, release):
-        self.blob_object_ = blob_object
-        self.release_ = release
-
-    @property
-    def blob_object(self): return self.blob_object_
-
-    def __del__(self):
-        self.release_(self.blob_object_)
 
 object_id2blob_cache = {}
