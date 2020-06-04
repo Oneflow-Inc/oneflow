@@ -92,7 +92,6 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
         || op_conf.has_partial_tick_conf() || op_conf.has_partial_tick_conf()
         || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
     if (job().job_conf().has_train_conf() && ignore_in_infer_ctx == false) {
-      LOG(ERROR) << "sync bw op: " << op_conf.name();
       auto mut_op_conf = op_conf;
       ParallelDesc parallel_desc(parallel_conf);
       mut_op_conf.set_device_type(parallel_desc.device_type());

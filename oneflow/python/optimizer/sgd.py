@@ -20,8 +20,6 @@ def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
         rt_mode.GLOBAL_MODE, rt_mode.CurrentMode()
     )
     flow.assign(var, var - var_diff * lr)
-    # x = flow.constant(-1, shape=(1,2), dtype=flow.float32)
-    # y = flow.math.relu(x, name="relu2020") + 1
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
@@ -38,7 +36,6 @@ class SGD(oneflow_internal.OptimizerBase):
     def Build(self, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
         try:
             with rt_mode.ModeScope(rt_mode.GLOBAL_MODE):
-                print(var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt)
                 var_op_conf = text_format.Parse(var_op_conf_txt, op_conf_util.OperatorConf())
                 parallel_conf = text_format.Parse(parallel_conf_txt, placment_util.ParallelConf())
                 diff_lbi = text_format.Parse(diff_lbi_of_var_out_txt, logical_blob_id_util.LogicalBlobId())
