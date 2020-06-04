@@ -205,6 +205,7 @@ void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
 
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
                                         Instruction* dst_instruction) {
+  CHECK_NE(src_instruction, dst_instruction);
   auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
                                                      src_instruction, dst_instruction);
   bool src_inserted = src_instruction->mut_out_edges()->Insert(edge.Mutable()).second;
@@ -274,14 +275,16 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
       if (rw_mutexed_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
-        if (!first->is_const_operand()) {
+        if (!first->is_const_operand() && first->mut_instruction() != instruction) {
           ConnectInstruction(first->mut_instruction(), instruction);
         }
       } else {
         auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == rw_mutexed_object_access) { break; }
-          ConnectInstruction(access->mut_instruction(), instruction);
+          if (access->mut_instruction() != instruction) {
+            ConnectInstruction(access->mut_instruction(), instruction);
+          }
           access_list->Erase(access);
         }
       }

@@ -19,5 +19,4 @@ class BlobObject(Object):
         self.release_ = release
 
     def __del__(self):
-        pass
         self.release_(self)

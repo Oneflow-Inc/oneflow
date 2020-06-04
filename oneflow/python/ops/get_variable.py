@@ -214,7 +214,11 @@ def _InitVariableBlob(var_op_conf, var_blob):
         _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
         
 def _Assign(var_blob_object, value_blob_object):
-    vm_util.LogicalRun(lambda builder: boxing_util.Assign(builder, var_blob_object, value_blob_object))
+    def BuildAssignInstruction(builder):
+        tmp_blob_object = boxing_util.OneToManyBroadcastBlobReference(
+                builder, value_blob_object, var_blob_object.parallel_desc_symbol)
+        boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
+    vm_util.LogicalRun(BuildAssignInstruction)
 
 def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
@@ -229,7 +233,7 @@ def _GetModelInitAndLbi(var_op_conf):
     variable_op_conf = op_conf_util.VariableOpConf()
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("ModelInit_")
+    op_conf.name = "model_init"
     op_conf.model_init_conf.tick = "undefined-source_tick/out"
     op_conf.model_init_conf.out.append("out_0")
     op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)

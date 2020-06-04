@@ -9,6 +9,7 @@ import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_cache as symbol_cache
@@ -31,10 +32,13 @@ def LogicalRun(build):
                 _ReleaseLogicalBlobObject)
 
 def _Run(build, id_generator, run_api, release_blob_object):
-    instruction_list = instr_util.InstructionListProto()
-    eager_symbol_list = eager_symbol_util.EagerSymbolList()
-    build(InstructionsBuilder(id_generator, release_blob_object, instruction_list, eager_symbol_list))
+    instruction_list = session_ctx.GetDefaultSession().instruction_list
+    eager_symbol_list = session_ctx.GetDefaultSession().eager_symbol_list
+    build(InstructionsBuilder(id_generator, release_blob_object,
+                              instruction_list, eager_symbol_list))
     run_api(instruction_list, eager_symbol_list)
+    instruction_list.ClearField("instruction")
+    eager_symbol_list.ClearField("eager_symbol")
 
 
 def _DefaultBlobObject4Ibn(ibn):
@@ -196,6 +200,12 @@ class InstructionsBuilder(object):
         finally:
             self._CudaHostUnregisterBlob(blob_object)
 
+    def BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
+        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
+        for _, dev_ids in device_ids.items(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
+        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
+        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
+
     def _CudaHostRegisterBlob(self, blob_object):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "CudaHostRegisterBlob"
@@ -305,12 +315,6 @@ class InstructionsBuilder(object):
         object_id = self._NewObjectId(parallel_desc_sym)
         return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
 
-    def _BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
-        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
-        for _, dev_ids in device_ids.item(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
-        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
-        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
-
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
         self._InitStringSymbol(symbol_id, string)
@@ -386,7 +390,7 @@ class InstructionsBuilder(object):
     def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "NewObject"
+        instruction.instr_type_name = "BroadcastObjectReference"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
         instruction.operand.append(_Int64Operand(sole_mirrored_object.object_id))
@@ -537,7 +541,7 @@ def _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
     op_device_tag = op_parallel_desc_symbol.device_tag
     assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
             blob_device_tag, op_device_tag)
-    return boxing_util.BuildCopHdInstruction(builder, x_blob_object)
+    return boxing_util.BuildCopyHdInstruction(builder, x_blob_object)
 
 def _GetOpConfBlobNameAttr(pb_message, field):
     if hasattr(pb_message, field): return getattr(pb_message, field);

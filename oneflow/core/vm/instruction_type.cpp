@@ -18,7 +18,7 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
   const auto& map = *InstrTypeId4InstructionName();
   const auto& iter = map.find(name);
-  CHECK(iter != map.end());
+  CHECK(iter != map.end()) << "instruction type name: " << name;
   return iter->second;
 }
 
