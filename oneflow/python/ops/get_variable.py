@@ -199,12 +199,14 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
+    bn_in_op2blob_object = {}
     vm_util.LogicalRun(
-            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out']))
+            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out'],
+                bn_in_op2blob_object=bn_in_op2blob_object))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
-    return remote_blob_util.EagerLogicalBlob(lbi)
+    return remote_blob_util.EagerLogicalBlob(lbi, blob_object=bn_in_op2blob_object['out'])
 
 def _InitVariableBlob(var_op_conf, var_blob):
     with oneflow.fixed_placement("cpu", "0:0"):
@@ -215,10 +217,12 @@ def _InitVariableBlob(var_op_conf, var_blob):
 def _ModelInit(source_tick, var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(source_tick, var_op_conf)
     compile_context.CurJobAddMirroredOp(op_conf)
+    bn_in_op2blob_object = {}
     def BuildModeInitInstruction(builder):
-        builder.SystemStatelessCall(op_conf, mut_arg_bns=['out_0'])
+        builder.SystemStatelessCall(op_conf, mut_arg_bns=['out_0'],
+                bn_in_op2blob_object=bn_in_op2blob_object)
     vm_util.LogicalRun(BuildModeInitInstruction)
-    return remote_blob_util.EagerLogicalBlob(lbi)
+    return remote_blob_util.EagerLogicalBlob(lbi, blob_object=bn_in_op2blob_object['out_0'])
 
 def _GetModelInitAndLbi(source_tick, var_op_conf):
     variable_op_conf = op_conf_util.VariableOpConf()
@@ -239,9 +243,11 @@ def _SourceTick():
     op_conf.name = id_util.UniqueStr("SourceTick_")
     op_conf.source_tick_conf.out = "out"
     compile_context.CurJobAddMirroredOp(op_conf)
+    bn_in_op2blob_object = {}
     vm_util.LogicalRun(
-            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out']))
+            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out'],
+                bn_in_op2blob_object=bn_in_op2blob_object))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.source_tick_conf.out
-    return remote_blob_util.EagerLogicalBlob(lbi)
+    return remote_blob_util.EagerLogicalBlob(lbi, blob_object=bn_in_op2blob_object['out'])

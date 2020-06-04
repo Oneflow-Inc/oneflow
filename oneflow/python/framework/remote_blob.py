@@ -176,9 +176,13 @@ class LazyMirroredBlob(MirroredBlob):
                 self.job_name_, self.lbn_)
 
 class EagerMirroredBlob(MirroredBlob):
-    def __init__(self, lbi, **kw):
+    def __init__(self, lbi, blob_object = None, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
-        self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
+        if blob_object is None:
+            self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
+        else:
+            object_cache.SetObject4BlobName(self.unique_name, blob_object)
+            self.blob_object_ = blob_object
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         self.shape_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
@@ -201,10 +205,15 @@ class EagerMirroredBlob(MirroredBlob):
         assert not self.is_tensor_list
         blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
         box = [[]]
-        def UnpackLogicalBlobNameToPhysicalBlobNames(builder):
-            box[0] = builder.UnpackLogicalBlobNameToPhysicalBlobNames(self.unique_name)
+        def UnpackLogicalBlobToPhysicalBlobs(builder):
+            physical_objects = builder.UnpackLogicalBlobToPhysicalBlobs(self.blob_object_)
+            for i in range(len(physical_objects)):
+                name = "%s/%d"%(self.unique_name, i)
+                box[0].append(name)
+                if not object_cache.HasObject4BlobName(name):
+                    object_cache.SetObject4BlobName(name, physical_objects[i])
         def Fetch(blob_object):
-            vm_util.LogicalRun(UnpackLogicalBlobNameToPhysicalBlobNames)
+            vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
             sub_blob_names = box[0]
             return [eager_blob_util.EagerPhysicalBlob(name).numpy() for name in  sub_blob_names]
         return blob_cache.GetCachedNumpyMirroredList(Fetch)
