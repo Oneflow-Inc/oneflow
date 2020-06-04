@@ -7,7 +7,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
@@ -25,16 +25,28 @@ def get_variable(
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
+    r"""Create a variable or retrieve an existing one.
+
+    Args:
+        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by defauilt
+        shape: Shape of the variable. `None` by defauilt
+        dtype: Data type of the variable. `None` by defauilt
+        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
+        trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
+        model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
+        random_seed: Random seed for random initializers. `None` by defauilt
+
+    """
     assert isinstance(name, str)
     assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
 
-    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_context.GetDefaultSession()
     var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
-        assert var_blob.static_shape == shape
+        assert var_blob.shape == shape
         assert var_blob.dtype == dtype
     else:
         op_conf = _GenerateVariableOpConf(

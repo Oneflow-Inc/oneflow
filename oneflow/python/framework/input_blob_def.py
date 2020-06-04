@@ -7,7 +7,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
@@ -33,9 +33,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
         self.split_axis_ = split_axis
-
-    @property
-    def static_shape(self): return self.shape_
 
     @property
     def shape(self): return self.shape_
@@ -101,6 +98,21 @@ class ArgBlobDef(blob_desc.BlobDesc):
 
 @oneflow_export('FixedTensorDef')
 class FixedTensorDef(ArgBlobDef):
+    """`FixedTensorDef` is a placeholder for numpy input of a OneFlow function. 
+    A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
+    For instance::
+        
+        @oneflow.function
+        def train(
+            image_blob=oneflow.FixedTensorDef(
+                shape=(2, 255, 255, 3), dtype=flow.float32
+            )
+        ):
+            # your network
+        
+        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
+        
+    """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0,
                  split_axis='same_with_batch_axis', name=None):
         if type(batch_axis) is int:
@@ -128,6 +140,24 @@ class FixedTensorDef(ArgBlobDef):
         
 @oneflow_export('MirroredTensorDef')
 class MirroredTensorDef(ArgBlobDef):
+    """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
+    A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
+    For instance::
+        
+        @oneflow.function
+        def train(
+            image_blob=oneflow.MirroredTensorDef(
+                shape=(2, 255, 255, 3), dtype=flow.float32
+            )
+        ):
+            # your network
+        
+        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
+        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
+        train([input1])
+        train([input2])
+
+    """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
         assert type(shape) is tuple
         assert type(batch_axis) is int
@@ -144,7 +174,7 @@ class MirroredTensorDef(ArgBlobDef):
     def is_tensor_list(self): return False
 
     def AddAndInferOp(self, op_conf):
-        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        _AddAndInferMirroredOp(self.unique_name, op_conf, self.sub_consistent_blob_list_)
         
     def _CheckNdarray(self, ndarray_list):
         assert isinstance(ndarray_list, (list, tuple))
@@ -162,6 +192,24 @@ class MirroredTensorDef(ArgBlobDef):
             
 @oneflow_export('MirroredTensorListDef')
 class MirroredTensorListDef(ArgBlobDef):
+    """`MirroredTensorListDef` is a placeholder for numpy input of a OneFlow function. 
+    A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
+    For instance::
+        
+        @oneflow.function
+        def train(
+            image_blob=oneflow.MirroredTensorListDef(
+                shape=(2, 255, 255, 3), dtype=flow.float32
+            )
+        ):
+            # your network
+        
+        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
+        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
+        train([[input1]])
+        train([[input2]])
+
+    """
     def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
         assert type(shape) is tuple
         assert type(batch_axis) is int
@@ -178,7 +226,7 @@ class MirroredTensorListDef(ArgBlobDef):
     def is_tensor_list(self): return True
 
     def AddAndInferOp(self, op_conf):
-        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        _AddAndInferMirroredOp(self.unique_name, op_conf, self.sub_consistent_blob_list_)
         
     def _CheckNdarray(self, ndarray_lists):
         assert isinstance(ndarray_lists, (list, tuple))
@@ -200,10 +248,10 @@ class MirroredTensorListDef(ArgBlobDef):
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
-    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
-    num_sub_lbi = g_func_ctx.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
     for i in range(num_sub_lbi):
-        sub_lbi = g_func_ctx.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
+        sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
         sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
 
 def _MakePushNdarrayCallback(ndarray):

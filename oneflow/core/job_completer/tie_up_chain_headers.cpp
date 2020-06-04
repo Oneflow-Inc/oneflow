@@ -98,7 +98,7 @@ class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass 
     return GlobalJobDesc().IsTrain() && GlobalJobDesc().Bool("enable_pseudo_chain_merge");
   }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override {
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override {
     auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
     auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
                                       std::vector<OpNode*>* source_nodes,
@@ -126,6 +126,7 @@ class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass 
       AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
                                 *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
     });
+    return Maybe<void>::Ok();
   }
 };
 

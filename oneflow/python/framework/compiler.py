@@ -4,7 +4,7 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.lib.core.pb_util as pb_util
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -15,24 +15,21 @@ from oneflow.python.lib.core.box import Box
 
 from contextlib import contextmanager
 
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.g_func_ctx as g_func_ctx
-
 def Compile(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
-        dev_ids = placement_util.GetDefaultMachineDeviceIds(config_proto.resource)
-        placement_scope = placement_util.DevicePriorPlacementScope(*dev_ids)
+        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(config_proto.resource)
+        placement_scope = placement_util.GetDevicePriorPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
 
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
-        g_func_ctx.CurJobBuildAndInferCtx_SetJobConf(job_conf)
+        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         _CompileJob(function_desc)
-        g_func_ctx.CurJobBuildAndInferCtx_Complete()
+        c_api_util.CurJobBuildAndInferCtx_Complete()
 
 def _CompileJob(function_desc):
     func = function_desc.job_func
@@ -44,9 +41,9 @@ def _CompileJob(function_desc):
 
 @contextmanager
 def _JobBuildAndInferCtx(job_name):
-    g_func_ctx.JobBuildAndInferCtx_Open(job_name)
+    c_api_util.JobBuildAndInferCtx_Open(job_name)
     yield
-    g_func_ctx.JobBuildAndInferCtx_Close()
+    c_api_util.JobBuildAndInferCtx_Close()
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__

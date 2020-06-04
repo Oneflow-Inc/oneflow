@@ -130,6 +130,7 @@ func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)

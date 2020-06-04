@@ -13,6 +13,9 @@ import oneflow.python.lib.core.pb_util as pb_util
 
 @oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
+    """OneFlow function's configurations.
+        
+    """
     def __init__(self):
         self.function_desc = FunctionDesc()
 
@@ -42,6 +45,18 @@ class FunctionConfig(object):
 
 @oneflow_export('function')
 def oneflow_function(function_config = FunctionConfig()):
+    r"""Creates a callable OneFlow function from a Python function.
+    For instance::
+
+        @oneflow.function(flow.FunctionConfig())
+        def train():
+            # your model
+
+    Args:
+        function_config: a `FunctionConfig` object
+    Returns:
+        a callable which is called to execute the compiled function
+    """
     assert isinstance(function_config, FunctionConfig)
     def Decorator(job_func):
         sess = session_ctx.GetDefaultSession()

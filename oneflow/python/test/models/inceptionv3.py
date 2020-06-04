@@ -15,7 +15,7 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
 class DLNetSpec(object):
-  def __init__(self):
+  def __init__(self, enable_auto_mixed_precision):
     self.batch_size = 8
     self.data_part_num = 32
     self.eval_dir = _DATA_DIR
@@ -25,6 +25,7 @@ class DLNetSpec(object):
     self.num_nodes = 1
     self.gpu_num_per_node = 1
     self.iter_num = 10
+    self.enable_auto_mixed_precision = enable_auto_mixed_precision
 
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
@@ -76,7 +77,7 @@ def _conv2d_layer(
         kernel_size = (kernel_size, kernel_size)
     else:
         kernel_size = tuple(kernel_size)
-    weight_shape = (filters, input.static_shape[1]) + kernel_size
+    weight_shape = (filters, input.shape[1]) + kernel_size
     weight = flow.get_variable(
         name + "-weight",
         shape=weight_shape,
@@ -590,6 +591,7 @@ def main(args):
   func_config.default_data_type(flow.float)
   func_config.train.primary_lr(0.0001)
   func_config.train.model_update_conf(dict(naive_conf={}))
+  func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
   @flow.function(func_config)
   def TrainNet():
       (images, labels) = _data_load_layer(args, args.train_dir)

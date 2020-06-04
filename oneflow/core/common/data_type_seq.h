@@ -38,4 +38,8 @@
 #define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 #endif
 
+#define IMAGE_DATA_TYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
+
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_SEQ_H_

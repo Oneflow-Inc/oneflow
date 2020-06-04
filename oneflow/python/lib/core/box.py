@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('Box')
 class Box(object):
     def __init__(self, *arg):
         assert len(arg) <= 1

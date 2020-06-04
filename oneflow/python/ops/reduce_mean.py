@@ -23,9 +23,9 @@ def reduce_mean(input_blob, axis=None, keepdims=False, name=None):
             axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
         reduce_count = 1
         if len(axes) == 0:
-            for dim in input_blob.static_shape:
+            for dim in input_blob.shape:
                 reduce_count *= dim
         else:
             for i in axes:
-                reduce_count *= input_blob.static_shape[i]
+                reduce_count *= input_blob.shape[i]
         return flow.math.multiply(reduce_sum, 1.0 / reduce_count)

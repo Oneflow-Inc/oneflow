@@ -7,12 +7,14 @@ import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.job_instance as job_instance_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
@@ -64,13 +66,15 @@ class Session(object):
     @property
     def job_name2name_scope_stack(self): return self.job_name2name_scope_stack_
 
+    def AnyGlobalFunctionDefined(self): return len(self.job_name2function_desc_) > 0
+
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto
 
     def GetFunctionDesc(self, job_name): return self.job_name2function_desc_[job_name]
 
     def UpdateFunctionFlagName2DefaultVal(self):
-        items = g_func_ctx.GetFunctionConfigDef().flag_name2flag_def.items()
+        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
         self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
 
     def TryInit(self):
@@ -81,11 +85,11 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         if not c_api_util.IsEnvInited(): oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto_)
-        g_func_ctx.InitGlobalSession(self.config_proto_)
+        c_api_util.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
             compiler.Compile(func_desc, self.config_proto_)
-        g_func_ctx.StartGlobalSession()
-        self.inter_user_job_info_ = g_func_ctx.GetInterUserJobInfo()
+        c_api_util.StartGlobalSession()
+        self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
         return self
 
@@ -95,8 +99,8 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
-        g_func_ctx.StopGlobalSession()
-        g_func_ctx.DestroyGlobalSession()
+        c_api_util.StopGlobalSession()
+        c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
 
     def AddJob(self, function_desc):
@@ -129,7 +133,7 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         self._IncRunningJobCnt()
         job_instance.AddPostFinishCallback(lambda _: self._DecRunningJobCnt())
-        g_func_ctx.LaunchJob(job_instance)
+        c_api_util.LaunchJob(job_instance)
 
     def AsyncPush(self, op_name, push_data_cb):
         assert self.status_ is SessionStatus.RUNNING
@@ -172,13 +176,32 @@ class Session(object):
         self.cond_var_.notify()
         self.cond_var_.release()
 
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_eager_execution(val = True):
+    return c_api_util.EnableEagerExecution(val)
+
+@oneflow_export("enable_eager_execution")
+def api_enable_eager_execution(val = True):
+    return enable_if.unique(enable_eager_execution)(val)
+
+@oneflow_export("eager_execution_enabled")
+def api_eager_execution_enabled():
+    return c_api_util.EagerExecutionEnabled()
+
 @oneflow_export("clear_default_session")
 def clear_default_session():
+    r"""Clear the default session. All compiled OneFlow functions will be deleted.
+
+    """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
+    c_api_util.EnableEagerExecution(False)
 
 @oneflow_export("sync_default_session")
 def sync_default_session():
+    r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
+
+    """
     session_ctx.GetDefaultSession().Sync()
 
 def _TryCompleteConfigProto(config_proto):

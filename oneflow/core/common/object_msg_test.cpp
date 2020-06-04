@@ -7,17 +7,17 @@ namespace oneflow {
 namespace test {
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjectMsgFoo)
+OBJECT_MSG_BEGIN(ObjectMsgFoo)
   OBJECT_MSG_DEFINE_OPTIONAL(int8_t, x);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, foo);
   OBJECT_MSG_DEFINE_OPTIONAL(int16_t, bar);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, foobar);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::string, is_deleted);
+  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
 
  public:
   void __Delete__();
 
-END_OBJECT_MSG(ObjectMsgFoo)
+OBJECT_MSG_END(ObjectMsgFoo)
 // clang-format on
 
 void ObjectMsgFoo::__Delete__() {
@@ -42,15 +42,15 @@ TEST(OBJECT_MSG, __delete__) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjectMsgBar)
+OBJECT_MSG_BEGIN(ObjectMsgBar)
   OBJECT_MSG_DEFINE_OPTIONAL(ObjectMsgFoo, foo);
-  OBJECT_MSG_DEFINE_RAW_PTR(std::string, is_deleted);
+  OBJECT_MSG_DEFINE_PTR(std::string, is_deleted);
 
  public:
   void __Delete__(){
     if (mutable_is_deleted()) { *mutable_is_deleted() = "bar_deleted"; }
   }
-END_OBJECT_MSG(ObjectMsgBar)
+OBJECT_MSG_END(ObjectMsgBar)
 // clang-format on
 
 TEST(OBJECT_MSG, nested_objects) {
@@ -77,19 +77,19 @@ TEST(OBJECT_MSG, nested_delete) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestScalarOneof)
+OBJECT_MSG_BEGIN(TestScalarOneof)
   OBJECT_MSG_DEFINE_ONEOF(type,
       OBJECT_MSG_ONEOF_FIELD(int32_t, x)
       OBJECT_MSG_ONEOF_FIELD(int64_t, foo));
-END_OBJECT_MSG(TestScalarOneof)
+OBJECT_MSG_END(TestScalarOneof)
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestPtrOneof)
+OBJECT_MSG_BEGIN(TestPtrOneof)
   OBJECT_MSG_DEFINE_ONEOF(type,
       OBJECT_MSG_ONEOF_FIELD(ObjectMsgFoo, foo)
       OBJECT_MSG_ONEOF_FIELD(int32_t, int_field));
-END_OBJECT_MSG(TestPtrOneof)
+OBJECT_MSG_END(TestPtrOneof)
 // clang-format on
 
 TEST(OBJECT_MSG, oneof_get) {
@@ -195,17 +195,17 @@ TEST(OBJECT_MSG, oneof_set) {
 };
 
 // clang-format off
-BEGIN_FLAT_MSG(FlatMsgDemo)
+FLAT_MSG_BEGIN(FlatMsgDemo)
   FLAT_MSG_DEFINE_ONEOF(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, int32_field)
       FLAT_MSG_ONEOF_FIELD(float, float_field));
-END_FLAT_MSG(FlatMsgDemo)
+FLAT_MSG_END(FlatMsgDemo)
 // clang-format on
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjectMsgContainerDemo)
+OBJECT_MSG_BEGIN(ObjectMsgContainerDemo)
   OBJECT_MSG_DEFINE_FLAT_MSG(FlatMsgDemo, flat_field);
-END_OBJECT_MSG(ObjectMsgContainerDemo)
+OBJECT_MSG_END(ObjectMsgContainerDemo)
 // clang-format on
 
 TEST(OBJECT_MSG, flat_msg_field) {

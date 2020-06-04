@@ -227,7 +227,7 @@ struct Log1pFunctor<float> {
 template<>
 struct LogSigmoidFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
-    return MATH_FUNC_F(log, (1.0f / (1.0f + MATH_FUNC_F(exp, -x))));
+    return -MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, -x)));
   }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
@@ -511,7 +511,7 @@ struct Log1pFunctor<double> {
 template<>
 struct LogSigmoidFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
-    return MATH_FUNC_D(log, (1.0 / (1.0 + MATH_FUNC_D(exp, -x))));
+    return -MATH_FUNC_D(log, (1.0 + MATH_FUNC_D(exp, -x)));
   }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
@@ -818,7 +818,7 @@ struct Log1pFunctor<half> {
 template<>
 struct LogSigmoidFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
-    return hlog(hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x)))));
+    return __hneg(hlog(__hadd(GetOneVal<half>(), hexp(__hneg(x)))));
   }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {

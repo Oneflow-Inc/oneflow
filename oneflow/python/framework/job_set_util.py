@@ -6,6 +6,13 @@ import oneflow.python.framework.compiler as compiler
 
 @oneflow_export('inter_job_reuse_mem_strategy')
 def inter_job_reuse_mem_strategy(strategy_str, job_set = None, **kwargs):
+    r"""Set memory sharing strategy for job set.
+
+    Args:
+        strategy_str: An optional `string` from: `mem_sharing_priority`, `parallelism_priority` 
+        or `custom_parallelism`. 
+        job_set: A `JobSet` object. If None, set default job set.
+    """
     assert type(strategy_str) is str
     if job_set == None: job_set = _default_job_set
     if strategy_str == "reuse_mem_priority":

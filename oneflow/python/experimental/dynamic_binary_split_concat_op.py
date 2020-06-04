@@ -26,8 +26,8 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     for i in range(out_num):
         obns.append("out_" + str(i))
 
-    setattr(op_conf.dynamic_binary_split_conf, "in", x.logical_blob_name)
-    # op_conf.dynamic_binary_split_conf.in = x.logical_blob_name
+    setattr(op_conf.dynamic_binary_split_conf, "in", x.unique_name)
+    # op_conf.dynamic_binary_split_conf.in = x.unique_name
     op_conf.dynamic_binary_split_conf.out[:] = obns
     op_conf.dynamic_binary_split_conf.base_shift = base_shift
 
@@ -50,7 +50,7 @@ def dynamic_binary_concat(input_blob_list, source_blob, source_sbp="S:0", name=N
 
     in_lbns = []
     for in_blob in input_blob_list:
-        in_lbns.append(in_blob.logical_blob_name)
+        in_lbns.append(in_blob.unique_name)
 
     getattr(op_conf.dynamic_binary_concat_conf, "in").extend(in_lbns)
     # op_conf.dynamic_binary_concat_conf.in[:] = in_lbns
