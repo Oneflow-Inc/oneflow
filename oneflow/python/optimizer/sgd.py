@@ -21,8 +21,7 @@ def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
     )
     flow.assign(var, var - var_diff * lr)
     # x = flow.constant(-1, shape=(1,2), dtype=flow.float32)
-    y = flow.math.relu(x, name="relu2020") + 1
-    print(a)
+    # y = flow.math.relu(x, name="relu2020") + 1
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
@@ -50,8 +49,12 @@ class SGD(oneflow_internal.OptimizerBase):
                 var = sess.TryGetVariableBlobOfJobFromStash(job_name, var_op_conf.name)
                 var_diff = remote_blob_util.RemoteBlob(diff_lbi)
                 lr_lbn = lr_lbn_from_train_conf(var_op_conf, train_conf)
-                print(lr_lbn)
-                # build_sgd(var, var_diff, var_op_conf, parallel_conf, train_conf)
+                [op_name, blob_name] = lr_lbn.split("/")
+                lr_lbi = logical_blob_id_util.LogicalBlobId()
+                lr_lbi.op_name = op_name
+                lr_lbi.blob_name = blob_name
+                lr = remote_blob_util.RemoteBlob(lr_lbi)
+                build_sgd(var, var_diff, lr, var_op_conf, parallel_conf)
         except Exception:
             traceback.print_exc()
 

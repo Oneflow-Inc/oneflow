@@ -373,8 +373,10 @@ void OpNode::InitLbi2SbpParallel() {
 
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
-  ForEachNode(
-      [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
+  ForEachNode([&](OpNode* node) {
+    CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second)
+        << "op_name: " << node->op().op_name();
+  });
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
@@ -428,6 +430,8 @@ void OpGraph::InitEdges() {
     for (const auto& pair : producer_op_name2lbis) {
       std::shared_ptr<std::vector<LogicalBlobId>> lbis(
           new std::vector<LogicalBlobId>({pair.second.begin(), pair.second.end()}));
+      CHECK(producer_op_name2lbi2obn.find(pair.first) != producer_op_name2lbi2obn.end())
+          << "producer_op_name: " << pair.first;
       const auto& lbi2obn = producer_op_name2lbi2obn.at(pair.first);
       OpNode* producer = lbi2producer.at(lbis->at(0));
       Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);

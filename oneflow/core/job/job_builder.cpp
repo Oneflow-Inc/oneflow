@@ -28,7 +28,8 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   for (const auto& placement_group : placement.placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       const ParallelConf* parallel_conf = &placement_group.parallel_conf();
-      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second)
+          << "op_name: " << op_name;
     }
   }
   return [op_name2parallel_conf](const std::string& op_name) {
@@ -84,27 +85,27 @@ const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
                         const std::vector<OperatorConf>& op_confs) {
   if (op_confs.empty()) { return; }
-  auto* placemnt_group = job_->mutable_placement()->add_placement_group();
-  *placemnt_group->mutable_parallel_conf() = parallel_conf;
   for (const auto& op_conf : op_confs) {
     CHECK(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
-    OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
-    *mut_op_conf = op_conf;
-    CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
-    placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
-    CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
-              .second);
-    if (job().job_conf().has_train_conf()) {
-      auto* mgr = CHECK_JUST(GlobalJobBuildAndInferCtxMgr());
-      LOG(ERROR) << *CHECK_JUST(mgr->GetCurrentJobNameEvenClosed()) << " // " << op_conf.name();
-      const bool sync_with_infer_ctx = op_conf.has_user_conf() || op_conf.has_constant_like_conf()
-                                       || op_conf.has_distribute_clone_conf()
-                                       || op_conf.has_distribute_split_conf();
-      if (sync_with_infer_ctx) {
-        std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
-        LOG(ERROR) << *CHECK_JUST(mgr->GetCurrentJobNameEvenClosed()) << " // " << op->op_name();
-        CHECK_JUST(GetCurInferCtxClosed())->GenOpProducedEmptyLogicalBlobDesc(op.get());
-      }
+    const bool ignore_in_infer_ctx =
+        op_conf.has_tick_conf() || op_conf.has_acc_tick_conf() || op_conf.has_device_tick_conf()
+        || op_conf.has_partial_tick_conf() || op_conf.has_partial_tick_conf()
+        || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
+    if (job().job_conf().has_train_conf() && ignore_in_infer_ctx == false) {
+      LOG(ERROR) << "sync bw op: " << op_conf.name();
+      auto mut_op_conf = op_conf;
+      ParallelDesc parallel_desc(parallel_conf);
+      mut_op_conf.set_device_type(parallel_desc.device_type());
+      CHECK_JUST(GetCurInferCtxClosed())->AddAndInferOp(mut_op_conf, parallel_conf);
+    } else {
+      auto* placemnt_group = job_->mutable_placement()->add_placement_group();
+      *placemnt_group->mutable_parallel_conf() = parallel_conf;
+      OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
+      *mut_op_conf = op_conf;
+      CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+      placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
+      CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
+                .second);
     }
   }
 }
