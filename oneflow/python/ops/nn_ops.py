@@ -252,7 +252,7 @@ def tf_conv2d(
                                 (padding_left[1], padding_right[1])],
                                 name=name + '_pad' if name is not None else None)
             padding = "VALID"
-    assert(isinstance(kernel_size_list, tuple))
+    assert isinstance(kernel_size_list, (list, tuple))
     assert isinstance(groups, int)
     assert groups > 0
     if groups > 1:
