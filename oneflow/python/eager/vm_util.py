@@ -16,6 +16,7 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
+import oneflow.python.eager.boxing_util as boxing_util
 import re
 import oneflow
 
@@ -34,30 +35,6 @@ def _Run(build, id_generator, run_api, release_blob_object):
     eager_symbol_list = eager_symbol_util.EagerSymbolList()
     build(InstructionsBuilder(id_generator, release_blob_object, instruction_list, eager_symbol_list))
     run_api(instruction_list, eager_symbol_list)
-
-def MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf):
-    current_devices = oneflow.placement.current_scope().machine_id2device_id_list
-    x_devices = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    assert current_devices == x_devices,\
-            "\ncurrent_devices: %s\nx_devices: %s" %(current_devices, x_devices)
-    current_device_tag = oneflow.placement.current_scope().default_device_tag
-    x_device_tag = x_blob_object.parallel_desc_symbol.device_tag
-    if current_device_tag == x_device_tag:
-        return lambda builder: builder.DeprecatedStatelessCall(op_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "cpu" and x_device_tag == "gpu":
-        x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.DeprecatedCudaD2HStatelessCall(op_conf, x_parallel_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "gpu" and x_device_tag == "cpu":
-        out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        def Build(builder):
-            with builder.CudaHostPinBlob(x_blob_object):
-                builder.DeprecatedCudaH2DStatelessCall(op_conf, out_parallel_conf,
-                        const_arg_bns=["in"], mut_arg_bns=["out"])
-        return Build
-    raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"
-                              %(current_device_tag, x_device_tag))
 
 def MakeFunctionAssignInstructionBuilder(ref_blob_object, value_blob_object, op_conf):
     blob_cache_util.TryDisableBlobCache(ref_blob_object)
@@ -575,24 +552,10 @@ def _FetchDelegateBlobObject(builder, x_lbn, x_blob_object, op_parallel_desc_sym
     op_device_tag = op_parallel_desc_symbol.device_tag
     assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
             blob_device_tag, op_device_tag)
-    op_conf, lbi = _MakeCopyHdOpConfAndRetLbi(x_lbn)
-    MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf)(builder)
-    out_lbn = "%s/%s"%(lbi.op_name, lbi.blob_name)
+    out_lbn = boxing_util.BuildCopHdInstruction(builder, x_lbn, x_blob_object)
     out_blob_object = object_cache.GetObject4BlobName(out_lbn)
     object_cache.ClearObject4BlobName(out_lbn)
     return out_blob_object
-
-def _MakeCopyHdOpConfAndRetLbi(x_lbn):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Copy_")
-    op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
-    setattr(op_conf.copy_conf, "in", x_lbn)
-    op_conf.copy_conf.out = "out"
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return op_conf, lbi
-
 
 def _GetOpConfBlobNameAttr(pb_message, field):
     if hasattr(pb_message, field): return getattr(pb_message, field);
