@@ -7,6 +7,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.placement_context as placement_ctx
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -28,8 +29,8 @@ def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
 def eager_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _AssignOpConf(ref, value, name=name)
     # no backward for assign
-    vm_util.LogicalRun(vm_util.MakeFunctionAssignInstructionBuilder(
-                ref.blob_object, value.blob_object, op_conf))
+    vm_util.LogicalRun(lambda builder:
+            boxing_util.BuildAssignInstruction(builder, ref.blob_object, value.blob_object, op_conf))
     return ref
 
 def _AssignOpConf(ref, value, name = None):

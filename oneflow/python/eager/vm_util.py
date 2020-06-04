@@ -36,34 +36,6 @@ def _Run(build, id_generator, run_api, release_blob_object):
     build(InstructionsBuilder(id_generator, release_blob_object, instruction_list, eager_symbol_list))
     run_api(instruction_list, eager_symbol_list)
 
-def MakeFunctionAssignInstructionBuilder(ref_blob_object, value_blob_object, op_conf):
-    blob_cache_util.TryDisableBlobCache(ref_blob_object)
-    ref_parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
-    ref_devices = ref_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    value_devices = value_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    assert ref_devices == value_devices,\
-            "\nref_devices: %s\nvalue_devices: %s" %(ref_devices, value_devices)
-    ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
-    value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
-    bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
-    if ref_device_tag == value_device_tag:
-        return lambda builder: builder.SystemStatelessCall(op_conf,
-                parallel_conf=ref_parallel_conf, device_tag=ref_device_tag,
-                const_arg_bns=["value"], mut_arg_bns=["ref"], bn_in_op2blob_object=bn_in_op2blob_object)
-    if ref_device_tag == "cpu" and value_device_tag == "gpu":
-        value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.SystemCudaD2HStatelessCall(op_conf, value_parallel_conf,
-                const_arg_bns=["value"], mut_arg_bns=["ref"], bn_in_op2blob_object=bn_in_op2blob_object)
-    if ref_device_tag == "gpu" and value_device_tag == "cpu":
-        def Build(builder):
-            with builder.CudaHostPinBlob(value_blob_object):
-                builder.SystemCudaH2DStatelessCall(op_conf, ref_parallel_conf,
-                        const_arg_bns=["value"], mut_arg_bns=["ref"],
-                        bn_in_op2blob_object=bn_in_op2blob_object)
-        return Build
-    raise NotImplementedError("invalid device found. ref_device_tag: %s, value_device_tag: %s"
-                              %(ref_device_tag, value_device_tag))
-
 
 def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
