@@ -1,9 +1,6 @@
 import oneflow as flow
 import os
 
-
-sgd = flow.optimizer.SGD()
-flow.register_optimizer("sgd", sgd)
 flow.env.init()
 flow.config.gpu_device_num(1)
 enable_eager = os.getenv("e") == "1"

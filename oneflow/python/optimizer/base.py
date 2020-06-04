@@ -6,7 +6,6 @@ from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferE
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.runtime_mode as rt_mode
-import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -14,12 +13,7 @@ from oneflow.core.job.job_pb2 import TrainConf
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.remote_blob as remote_blob_util
-
-def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
-    assert hob.in_global_mode(), "must build optimizer in {}, current mode: {}".format(
-        rt_mode.GLOBAL_MODE, rt_mode.CurrentMode()
-    )
-    flow.assign(var, var - var_diff * lr)
+import functools
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
@@ -28,13 +22,15 @@ def lr_lbn_from_train_conf(var_op_conf, train_conf):
         return train_conf.secondary_lr_lbn
     else:
         return train_conf.primary_lr_lbn 
-@oneflow_export("optimizer.SGD")
-class SGD(oneflow_internal.OptimizerBase):
+
+class Base(oneflow_internal.OptimizerBase):
     def __init__(self):
+        self.build_func_ = None
         oneflow_internal.OptimizerBase.__init__(self)
 
-    def Build(self, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
+    def Build(self, optimizer_name, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
         try:
+            assert self.build_func_ is not None
             with rt_mode.ModeScope(rt_mode.GLOBAL_MODE):
                 var_op_conf = text_format.Parse(var_op_conf_txt, op_conf_util.OperatorConf())
                 parallel_conf = text_format.Parse(parallel_conf_txt, placment_util.ParallelConf())
@@ -51,14 +47,21 @@ class SGD(oneflow_internal.OptimizerBase):
                 lr_lbi.op_name = op_name
                 lr_lbi.blob_name = blob_name
                 lr = remote_blob_util.RemoteBlob(lr_lbi)
-                build_sgd(var, var_diff, lr, var_op_conf, parallel_conf)
+                self.build_func_.__call__(var, var_diff, lr, var_op_conf, parallel_conf)
         except Exception:
             traceback.print_exc()
 
-
 @oneflow_export("register_optimizer")
-def register_optimizer(name, optimizer):
-    error_str = oneflow_internal.RegisterOptimizer(name, optimizer)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+def register_optimizer(name):
+    def decorator_(func):
+        optimizer = Base()
+        optimizer.build_func_ = func
+        error_str = oneflow_internal.RegisterOptimizer(name, optimizer)
+        error = text_format.Parse(error_str, error_util.ErrorProto())
+        if error.HasField("error_type"):
+            raise JobBuildAndInferError(error)
+    return decorator_
+
+@register_optimizer("sgd")
+def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
+    flow.assign(var, var - var_diff * lr)
