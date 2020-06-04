@@ -445,10 +445,10 @@ Maybe<void> GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
-  if (func_) {
-    (*func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-  } else if (naive_func_) {
+  if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
+  } else if (maybe_func_) {
+    JUST((*maybe_func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
   } else {
     UNIMPLEMENTED_THEN_RETURN() << "\nNo gradient function found\n"
                                 << PbMessage2TxtString(op.op_conf());
@@ -513,6 +513,7 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
       } else {
         LOG(FATAL) << "diff lbi for bn in op not found, bn: " << op_name << "/" << bn;
       }
+      return nullptr;
     };
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));

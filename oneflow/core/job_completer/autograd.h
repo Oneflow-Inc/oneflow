@@ -27,19 +27,21 @@ class GenerateBackwardOpConfWrapperStruct final {
  public:
   using NaiveFunc = std::function<void(const Operator&, std::vector<OperatorConf>*,
                                        const std::function<LogicalBlobId*(const std::string&)>&)>;
-  using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
-                                  const std::function<LogicalBlobId*(const std::string&)>&,
-                                  const std::function<const BlobDesc&(const std::string&)>&)>;
+  using MaybeFunc =
+      std::function<Maybe<void>(const Operator&, std::vector<OperatorConf>*,
+                                const std::function<LogicalBlobId*(const std::string&)>&,
+                                const std::function<const BlobDesc&(const std::string&)>&)>;
   GenerateBackwardOpConfWrapperStruct(const NaiveFunc& f)
       : naive_func_(std::make_unique<NaiveFunc>(f)) {}
-  GenerateBackwardOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
+  GenerateBackwardOpConfWrapperStruct(const MaybeFunc& f)
+      : maybe_func_(std::make_unique<MaybeFunc>(f)) {}
   Maybe<void> Call(const Operator&, std::vector<OperatorConf>*,
                    const std::function<LogicalBlobId*(const std::string&)>&,
                    const std::function<const BlobDesc&(const std::string&)>&) const;
 
  private:
   const std::unique_ptr<const NaiveFunc> naive_func_;
-  const std::unique_ptr<const Func> func_;
+  const std::unique_ptr<const MaybeFunc> maybe_func_;
 };
 
 #define REGISTER_OP_GRAD(op_type_case, gen_grad_func)                       \
