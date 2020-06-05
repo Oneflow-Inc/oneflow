@@ -15,6 +15,7 @@ import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import functools
 import oneflow as flow
+import ctypes
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
@@ -57,6 +58,8 @@ def register_optimizer(name):
     def decorator_(func):
         optimizer = Base()
         optimizer.build_func_ = func
+        pyobj = ctypes.py_object(optimizer)
+        ctypes.pythonapi.Py_IncRef(pyobj)
         error_str = oneflow_internal.RegisterOptimizer(name, optimizer)
         error = text_format.Parse(error_str, error_util.ErrorProto())
         if error.HasField("error_type"):
