@@ -461,7 +461,10 @@ Maybe<void> GenerateBackwardOpConfIf(
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
-  obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case()));
+  auto* ptr = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
+  CHECK_NOTNULL_OR_RETURN(ptr) << "no gradient function found for op_type_case "
+                               << op.op_conf().op_type_case();
+  obj.reset(ptr);
   return obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
