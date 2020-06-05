@@ -5,9 +5,9 @@ flow.env.init()
 flow.config.gpu_device_num(1)
 enable_eager = os.getenv("e") == "1"
 is_train = os.getenv("t") == "1"
-use_legacy_optimizer = os.getenv("ONEFLOW_USE_LEGACY_OPTIMIZER") == "1"
+optimizer_v2 = os.getenv("ONEFLOW_OPTIMIZER_V2") == "1"
 print("running train", is_train)
-print("use legacy optimizer", use_legacy_optimizer)
+print("optimizer v2", optimizer_v2)
 flow.enable_eager_execution(enable_eager)
 
 cfg = flow.FunctionConfig()
