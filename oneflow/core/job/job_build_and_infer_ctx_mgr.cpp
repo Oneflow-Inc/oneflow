@@ -38,10 +38,6 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
   return cur_job_name_;
 }
 
-Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobNameEvenClosed() const {
-  return cur_job_name_;
-}
-
 Maybe<void> JobBuildAndInferCtxMgr::AddLbiAndDiffWatcherUuidPair(
     const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const {
   auto* job_name2pairs =

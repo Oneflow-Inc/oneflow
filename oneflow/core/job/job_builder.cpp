@@ -16,9 +16,14 @@ Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   }
 }
 
-Maybe<JobBuildAndInferCtx*> GetCurInferCtxEvenClosed() {
+Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobNameEvenClosed()));
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
+}
+
+bool has_cur_job() {
+  auto* mgr = CHECK_JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->has_cur_job();
 }
 
 }  // namespace
@@ -92,11 +97,11 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
         || op_conf.has_partial_tick_conf() || op_conf.has_partial_tick_conf()
         || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
     if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr && job().job_conf().has_train_conf()
-        && ignore_in_infer_ctx == false) {
+        && has_cur_job() && ignore_in_infer_ctx == false) {
       auto op_conf_fixed = op_conf;
       ParallelDesc parallel_desc(parallel_conf);
       op_conf_fixed.set_device_type(parallel_desc.device_type());
-      CHECK_JUST(GetCurInferCtxEvenClosed())->AddAndInferOp(op_conf_fixed, parallel_conf);
+      CHECK_JUST(GetCurInferCtx())->AddAndInferOp(op_conf_fixed, parallel_conf);
     } else {
       auto* placemnt_group = job_->mutable_placement()->add_placement_group();
       *placemnt_group->mutable_parallel_conf() = parallel_conf;
