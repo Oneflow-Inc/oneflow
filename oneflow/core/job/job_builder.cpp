@@ -97,12 +97,6 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
       ParallelDesc parallel_desc(parallel_conf);
       op_conf_fixed.set_device_type(parallel_desc.device_type());
       CHECK_JUST(GetCurInferCtxEvenClosed())->AddAndInferOp(op_conf_fixed, parallel_conf);
-      FOR_RANGE(int64_t, i, 0, job_->net().op_size()) {
-        OperatorConf* mut_op_conf = job_->mutable_net()->mutable_op(i);
-        if (mut_op_conf->name() == op_conf.name()) {
-          CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
-        }
-      }
     } else {
       auto* placemnt_group = job_->mutable_placement()->add_placement_group();
       *placemnt_group->mutable_parallel_conf() = parallel_conf;
