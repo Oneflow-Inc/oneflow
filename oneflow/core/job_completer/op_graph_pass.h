@@ -27,6 +27,7 @@ class OpGraphPass {
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
     UNIMPLEMENTED();
+    return Maybe<void>::Ok();
   }
 };
 
