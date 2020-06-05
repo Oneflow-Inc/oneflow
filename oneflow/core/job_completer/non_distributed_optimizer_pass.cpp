@@ -48,10 +48,10 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
       return false;
     }
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) const {
+Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) const {
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2model_size;
@@ -148,6 +148,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       builder->MutOpsOnlyOnce({cur_var_conf});
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("NonDistributedOptimizerPass", NonDistributedOptimizerPass);

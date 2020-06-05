@@ -260,10 +260,10 @@ class AddAllReduceGroupPass final : public OpGraphPass {
       return false;
     }
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void AddAllReduceGroupPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> AddAllReduceGroupPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
@@ -305,6 +305,7 @@ void AddAllReduceGroupPass::Apply(const OpGraph& op_graph, JobBuilder* job_build
                                lbi2order_in_graph.at(lbi_group.at(0)), GetLastTouchedOpName);
         }
       });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
