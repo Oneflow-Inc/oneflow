@@ -26,8 +26,9 @@ if is_train:
     if enable_eager:
         universal_train()
     else:
-        ret = universal_train().get()
-        print(ret.ndarray())
+        ret = universal_train()
+        # print(type(ret))
+        # print(ret.get().ndarray())
 else:
     @flow.function(cfg)
     def universal_infer():
@@ -38,9 +39,3 @@ else:
         y = flow.math.relu(x) + 1
 
     universal_infer()
-
-# def eager_func():
-#     x = flow.constant(-1, shape=(10,), dtype=flow.float)
-#     y = flow.math.relu(x) + 1
-#     print(y.numpy())
-# eager_func()

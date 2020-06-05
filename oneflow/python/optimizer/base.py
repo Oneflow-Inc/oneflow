@@ -14,6 +14,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import functools
+import oneflow as flow
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     if var_op_conf.variable_conf.model_name == "weight":
