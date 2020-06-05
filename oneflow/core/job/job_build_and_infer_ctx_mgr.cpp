@@ -33,7 +33,12 @@ Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
   CHECK_OR_RETURN(has_cur_job_) << JobBuildAndInferError::kNoJobBuildAndInferCtx
-                                << "current has not job name";
+                                << "current JobBuildAndInferCtx was closed, job name: "
+                                << cur_job_name_;
+  return cur_job_name_;
+}
+
+Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobNameEvenClosed() const {
   return cur_job_name_;
 }
 

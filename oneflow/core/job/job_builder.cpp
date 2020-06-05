@@ -1,8 +1,27 @@
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
+  if (*Global<bool, EagerExecutionOption>::Get()) {
+    // return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+    TODO() << "return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());";
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
+}
+
+Maybe<JobBuildAndInferCtx*> GetCurInferCtxEvenClosed() {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobNameEvenClosed()));
+}
+
+}  // namespace
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement) {
@@ -10,7 +29,8 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   for (const auto& placement_group : placement.placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       const ParallelConf* parallel_conf = &placement_group.parallel_conf();
-      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second)
+          << "op_name: " << op_name;
     }
   }
   return [op_name2parallel_conf](const std::string& op_name) {
@@ -69,13 +89,26 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
   auto* placemnt_group = job_->mutable_placement()->add_placement_group();
   *placemnt_group->mutable_parallel_conf() = parallel_conf;
   for (const auto& op_conf : op_confs) {
-    CHECK(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
-    OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
-    *mut_op_conf = op_conf;
-    CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
-    placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
-    CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
-              .second);
+    const bool ignore_in_infer_ctx =
+        op_conf.has_tick_conf() || op_conf.has_acc_tick_conf() || op_conf.has_device_tick_conf()
+        || op_conf.has_partial_tick_conf() || op_conf.has_partial_tick_conf()
+        || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
+    if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr && job().job_conf().has_train_conf()
+        && ignore_in_infer_ctx == false) {
+      auto mut_op_conf = op_conf;
+      ParallelDesc parallel_desc(parallel_conf);
+      mut_op_conf.set_device_type(parallel_desc.device_type());
+      CHECK_JUST(GetCurInferCtxEvenClosed())->AddAndInferOp(mut_op_conf, parallel_conf);
+    } else {
+      auto* placemnt_group = job_->mutable_placement()->add_placement_group();
+      *placemnt_group->mutable_parallel_conf() = parallel_conf;
+      OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
+      *mut_op_conf = op_conf;
+      CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+      placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
+      CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
+                .second);
+    }
   }
 }
 

@@ -373,8 +373,10 @@ void OpNode::InitLbi2SbpParallel() {
 
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
-  ForEachNode(
-      [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
+  ForEachNode([&](OpNode* node) {
+    CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second)
+        << "op_name: " << node->op().op_name();
+  });
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();

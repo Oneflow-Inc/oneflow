@@ -21,6 +21,7 @@
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/job_completer/optimizer_registry.h"
 
 namespace oneflow {
 
@@ -171,6 +172,10 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
 Maybe<long long> CurrentMachineId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return Global<MachineCtx>::Get()->this_machine_id();
+}
+
+Maybe<void> RegisterOptimizer(std::string name, OptimizerBase* optimizer) {
+  return OptimizerRegistry::Register(name, optimizer);
 }
 
 }  // namespace oneflow
