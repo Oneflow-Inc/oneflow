@@ -9,6 +9,7 @@ import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_cache as symbol_cache
@@ -16,83 +17,42 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
+import oneflow.python.eager.boxing_util as boxing_util
 import re
 import oneflow
 
 from contextlib import contextmanager
 
 def PhysicalRun(build):
-    return _Run(build, vm_id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction)
+    return _Run(build, vm_id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction,
+                _ReleasePhysicalBlobObject)
 
 def LogicalRun(build):
-    return _Run(build, vm_id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction)
+    return _Run(build, vm_id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction,
+                _ReleaseLogicalBlobObject)
 
-def _Run(build, id_generator, run_api):
-    instruction_list = instr_util.InstructionListProto()
-    eager_symbol_list = eager_symbol_util.EagerSymbolList()
-    build(InstructionsBuilder(id_generator, instruction_list, eager_symbol_list))
+def _Run(build, id_generator, run_api, release_blob_object):
+    instruction_list = session_ctx.GetDefaultSession().instruction_list
+    eager_symbol_list = session_ctx.GetDefaultSession().eager_symbol_list
+    build(InstructionsBuilder(id_generator, release_blob_object,
+                              instruction_list, eager_symbol_list))
     run_api(instruction_list, eager_symbol_list)
+    instruction_list.ClearField("instruction")
+    eager_symbol_list.ClearField("eager_symbol")
 
-def MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf):
-    current_devices = oneflow.placement.current_scope().machine_id2device_id_list
-    x_devices = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    assert current_devices == x_devices,\
-            "\ncurrent_devices: %s\nx_devices: %s" %(current_devices, x_devices)
-    current_device_tag = oneflow.placement.current_scope().default_device_tag
-    x_device_tag = x_blob_object.parallel_desc_symbol.device_tag
-    if current_device_tag == x_device_tag:
-        return lambda builder: builder.DeprecatedStatelessCall(op_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "cpu" and x_device_tag == "gpu":
-        x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.DeprecatedCudaD2HStatelessCall(op_conf, x_parallel_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"])
-    if current_device_tag == "gpu" and x_device_tag == "cpu":
-        out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        def Build(builder):
-            with builder.CudaHostPinBlob(x_blob_object):
-                builder.DeprecatedCudaH2DStatelessCall(op_conf, out_parallel_conf,
-                        const_arg_bns=["in"], mut_arg_bns=["out"])
-        return Build
-    raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"
-                              %(current_device_tag, x_device_tag))
 
-def MakeFunctionAssignInstructionBuilder(ref_blob_object, value_blob_object, op_conf):
-    blob_cache_util.TryDisableBlobCache(ref_blob_object)
-    ref_parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
-    ref_devices = ref_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    value_devices = value_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    assert ref_devices == value_devices,\
-            "\nref_devices: %s\nvalue_devices: %s" %(ref_devices, value_devices)
-    ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
-    value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
-    if ref_device_tag == value_device_tag:
-        return lambda builder: builder.DeprecatedStatelessCall(op_conf,
-                parallel_conf=ref_parallel_conf, device_tag=ref_device_tag,
-                const_arg_bns=["value"], mut_arg_bns=["ref"])
-    if ref_device_tag == "cpu" and value_device_tag == "gpu":
-        value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        return lambda builder: builder.DeprecatedCudaD2HStatelessCall(op_conf, value_parallel_conf,
-                const_arg_bns=["value"], mut_arg_bns=["ref"])
-    if ref_device_tag == "gpu" and value_device_tag == "cpu":
-        def Build(builder):
-            with builder.CudaHostPinBlob(value_blob_object):
-                builder.DeprecatedCudaH2DStatelessCall(op_conf, ref_parallel_conf,
-                        const_arg_bns=["value"], mut_arg_bns=["ref"])
-        return Build
-    raise NotImplementedError("invalid device found. ref_device_tag: %s, value_device_tag: %s"
-                              %(ref_device_tag, value_device_tag))
+def _DefaultBlobObject4Ibn(ibn):
+    raise NotImplementedError
 
-def _DefaultGetterDelegateBlobObject(blob_name, parallel_desc_symbol):
-    return object_cache.GetObject4BlobName(blob_name)
 
 class InstructionsBuilder(object):
-    def __init__(self, id_generator, instruction_list, eager_symbol_list):
+    def __init__(self, id_generator, release_blob_object, instruction_list, eager_symbol_list):
+        self.id_generator_ = id_generator
+        self.release_blob_object_ = release_blob_object
         assert isinstance(instruction_list, instr_util.InstructionListProto)
         assert isinstance(eager_symbol_list, eager_symbol_util.EagerSymbolList)
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
-        self.id_generator_ = id_generator
 
     def StatelessCall(self, op_conf):
         return self._StatelessCall("compute", op_conf)
@@ -113,30 +73,40 @@ class InstructionsBuilder(object):
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
 
-    def DeprecatedStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
-                                const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
+    def SystemStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
+                                const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
+                                bn_in_op2blob_object={}):
+        system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
         placement_scope = oneflow.placement.current_scope()
         if parallel_conf is None: parallel_conf = placement_scope.default_parallel_conf
         if device_tag is None: device_tag = placement_scope.default_device_tag
-        def GetDelegateBlobObject(lbn, op_parallel_desc_symbol):
-            return _FindOrCreateDelegateBlobObject(self, lbn, op_parallel_desc_symbol)
-        return self._DeprecatedStatelessCall("compute", op_conf, parallel_conf, device_tag,
+        def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
+            return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
+        self._SystemStatelessCall("compute", op_conf, parallel_conf, device_tag,
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
-                get_delegate_blob_object=GetDelegateBlobObject)
+                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDelegateBlobObject)
 
-    def DeprecatedCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
-                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
-        return self._DeprecatedStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
-                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
+    def SystemCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
+                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
+                                       bn_in_op2blob_object={}):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
+        self._SystemStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
+                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
+                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDirectBlobObject)
 
-    def DeprecatedCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
-                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[]):
-        return self._DeprecatedStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
-                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns)
+    def SystemCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
+                                       const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
+                                       bn_in_op2blob_object={}):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
+        self._SystemStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
+                const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
+                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDirectBlobObject)
 
-    def _DeprecatedStatelessCall(self, stream_tag, op_conf, op_parallel_conf, op_device_tag,
+    def _SystemStatelessCall(self, stream_tag, op_conf, op_parallel_conf, op_device_tag,
                                  const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
-                                 get_delegate_blob_object=_DefaultGetterDelegateBlobObject):
+                                 bn_in_op2blob_object={}, get_delegate_blob_object=None):
+        def BlobObject4Ibn(ibn): return bn_in_op2blob_object[ibn]
+        assert callable(get_delegate_blob_object)
         assert isinstance(const_arg_bns, (list, tuple))
         assert isinstance(mut_arg_bns, (list, tuple))
         assert isinstance(mut2_arg_bns, (list, tuple))
@@ -146,19 +116,21 @@ class InstructionsBuilder(object):
         blob_parallel_desc_sym = self.GetParallelDescSymbol(
                 placement_scope.default_parallel_conf, placement_scope.default_device_tag)
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._DeprecatedGetOpConfSymbol(op_conf)
+        op_conf_sym = self._SystemGetOpConfSymbol(op_conf)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(opkernel_parallel_desc_sym)
-        def GetBlobObject4BlobName(blob_name):
-            return get_delegate_blob_object(blob_name, opkernel_parallel_desc_sym)
-        input_triples = self._DeprecatedGetInputTriples(op_conf, const_arg_bns,
-                get_blob_object4blob_name=GetBlobObject4BlobName)
-        output_triples = self._DeprecatedGetOutputTriples(
-                op_conf, mut_arg_bns, blob_parallel_desc_sym)
-        mut2_output_triples = self._DeprecatedGetMut2OutputTriples(
-                op_conf, mut2_arg_bns, blob_parallel_desc_sym)
-        return self._StatelessCallOpKernel("%s.DeprecatedStatelessCallOpKernel" % stream_tag,
+        def DelegateBlobObject4Ibn(ibn):
+            return get_delegate_blob_object(BlobObject4Ibn(ibn), opkernel_parallel_desc_sym)
+        input_triples = self._SystemGetInputTriples(op_conf, const_arg_bns,
+                blob_object4ibn=DelegateBlobObject4Ibn)
+        output_triples = self._SystemGetOutputTriples(
+                op_conf, mut_arg_bns, blob_parallel_desc_sym, blob_object4ibn=BlobObject4Ibn)
+        mut2_output_triples = self._SystemGetMut2OutputTriples(
+                op_conf, mut2_arg_bns, blob_parallel_desc_sym, blob_object4ibn=BlobObject4Ibn)
+        self._StatelessCallOpKernel("%s.SystemStatelessCallOpKernel" % stream_tag,
                 opkernel_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 input_triples, output_triples, mut2_output_triples)
+        bn_in_op2blob_object.update(self._SystemGetObn2BlobObject(op_conf, output_triples))
+        bn_in_op2blob_object.update(self._SystemGetObn2BlobObject(op_conf, mut2_output_triples))
 
     def DeleteBlob(self, blob_object):
         self._TryClearObject(blob_object)
@@ -170,8 +142,7 @@ class InstructionsBuilder(object):
     def WatchBlobBody(self, blob_object, callback):
         return self._WatchBlob("WatchBlobBody", blob_object, callback)
 
-    def UnpackLogicalBlobNameToPhysicalBlobNames(self, blob_name):
-        blob_object = object_cache.GetObject4BlobName(blob_name)
+    def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
         parallel_desc_symbol = blob_object.parallel_desc_symbol
         parallel_conf = parallel_desc_symbol.parallel_conf
         device_tag = parallel_desc_symbol.device_tag
@@ -180,18 +151,14 @@ class InstructionsBuilder(object):
             parallel_conf = placement_pb_util.ParallelConf()
             parallel_conf.device_name.append("%d:%s:%d" % (machine_id, device_tag, device_id))
             parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
-            physical_blob_name = "%s/%d/%d" % (blob_name, machine_id, device_id)
-            pyhsical_blob_object = self._NewBlobObject(physical_blob_name, parallel_desc_sym)
-            return physical_blob_name, pyhsical_blob_object
-        physical_blob_names = []
+            pyhsical_blob_object = self._NewBlobObject(parallel_desc_sym)
+            return pyhsical_blob_object
         physical_blob_objects = []
         for machine_id, device_ids in machine_id2device_ids.items():
             for device_id in device_ids: 
-                physical_blob_name, pyhsical_blob_object = GetPhysicalBlob(machine_id, device_id)
-                physical_blob_names.append(physical_blob_name)
-                physical_blob_objects.append(pyhsical_blob_object)
+                physical_blob_objects.append(GetPhysicalBlob(machine_id, device_id))
         self._ReplaceMirrored(parallel_desc_symbol, physical_blob_objects, [blob_object])
-        return physical_blob_names
+        return physical_blob_objects
 
     def GetSymbol4String(self, string):
         if symbol_cache.HasSymbol4String(string): return symbol_cache.GetSymbol4String(string)
@@ -233,6 +200,12 @@ class InstructionsBuilder(object):
         finally:
             self._CudaHostUnregisterBlob(blob_object)
 
+    def BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
+        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
+        for _, dev_ids in device_ids.items(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
+        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
+        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
+
     def _CudaHostRegisterBlob(self, blob_object):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "CudaHostRegisterBlob"
@@ -262,7 +235,7 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _DeprecatedGetOpConfSymbol(self, op_conf):
+    def _SystemGetOpConfSymbol(self, op_conf):
         new_op_conf = op_conf_util.OperatorConf()
         new_op_conf.CopyFrom(op_conf)
         serialized_op_conf = new_op_conf.SerializeToString()
@@ -278,19 +251,18 @@ class InstructionsBuilder(object):
         for ibn, lbns in op_conf.user_conf.input.items():
             ibn_sym = self.GetSymbol4String(ibn)
             for i in range(len(lbns.s)):
-                in_object = _FindOrCreateDelegateBlobObject(self, lbns.s[i], parallel_desc_sym)
+                x_blob_object = object_cache.GetObject4BlobName(lbns.s[i])
+                in_object = _FindOrCreateDelegateBlobObject(self, x_blob_object, parallel_desc_sym)
                 input_triples.append((ibn_sym, i, in_object))
         return input_triples
 
-    def _DeprecatedGetInputTriples(self, op_conf, ibns,
-                                   get_blob_object4blob_name=object_cache.GetObject4BlobName):
-        field = op_conf.WhichOneof('op_type')
-        assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+    def _SystemGetInputTriples(self, op_conf, ibns, blob_object4ibn=None):
+        assert callable(blob_object4ibn)
+        system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
         input_triples = []
         for ibn in ibns:
             ibn_sym = self.GetSymbol4String(ibn)
-            in_object = get_blob_object4blob_name(_GetOpConfBlobNameAttr(deprecated_op_conf, ibn))
+            in_object = blob_object4ibn(ibn)
             input_triples.append((ibn_sym, 0, in_object))
         return input_triples
 
@@ -299,50 +271,49 @@ class InstructionsBuilder(object):
         for obn, lbns in op_conf.user_conf.output.items():
             obn_sym = self.GetSymbol4String(obn)
             for i in range(len(lbns.s)):
-                out_object = self._NewBlobObject(lbns.s[i], parallel_desc_sym)
+                out_object = self._NewBlobObject(parallel_desc_sym)
+                object_cache.SetObject4BlobName(lbns.s[i], out_object)
                 output_triples.append((obn_sym, i, out_object))
         return output_triples
 
-    def _DeprecatedGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+    def _SystemGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym, blob_object4ibn=None):
+        assert callable(blob_object4ibn)
         field = op_conf.WhichOneof('op_type')
         assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+        system_op_conf = getattr(op_conf, field)
         output_triples = []
         for bn_in_op in bns_in_op:
             obn_sym = self.GetSymbol4String(bn_in_op)
-            blob_name = _GetOpConfBlobNameAttr(deprecated_op_conf, bn_in_op)
-            if blob_name.find("/") > 0:
-                out_object = object_cache.GetObject4BlobName(blob_name)
+            if _GetOpConfBlobNameAttr(system_op_conf, bn_in_op).find("/") >= 0:
+                out_object = blob_object4ibn(bn_in_op)
             else:
-                blob_name = "%s/%s"%(op_conf.name, blob_name)
-                out_object = self._NewBlobObject(blob_name, parallel_desc_sym)
+                out_object = self._NewBlobObject(parallel_desc_sym)
             output_triples.append((obn_sym, 0, out_object))
         return output_triples
+
+    def _SystemGetObn2BlobObject(self, op_conf, output_triples):
+        system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
+        obn2blob_object = {}
+        for obn_symbol, _, blob_object in output_triples: obn2blob_object[obn_symbol.data] = blob_object
+        return obn2blob_object
 
     def _GetMut2OutputTriples(self, op_conf, parallel_desc_sym):
         mut2_output_triples = []
         # TODO(lixinqi)
         return mut2_output_triples
 
-    def _DeprecatedGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym):
+    def _SystemGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym, blob_object4ibn=None):
         field = op_conf.WhichOneof('op_type')
         assert field is not None
-        deprecated_op_conf = getattr(op_conf, field)
+        system_op_conf = getattr(op_conf, field)
         mut2_output_triples = []
+        if len(mut2_output_triples) != 0: raise NotImplementedError("mut2 output not supported")
         # TODO(lixinqi)
         return mut2_output_triples
 
-    def _NewBlobObject(self, blob_name, parallel_desc_sym):
+    def _NewBlobObject(self, parallel_desc_sym):
         object_id = self._NewObjectId(parallel_desc_sym)
-        blob_object = object_util.Object(object_id, parallel_desc_sym)
-        object_cache.SetObject4BlobName(blob_name, blob_object)
-        return blob_object
-
-    def _BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
-        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
-        for _, dev_ids in device_ids.item(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
-        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
-        return object_util.Object(object_id, parallel_desc_sym)
+        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -419,7 +390,7 @@ class InstructionsBuilder(object):
     def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "NewObject"
+        instruction.instr_type_name = "BroadcastObjectReference"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
         instruction.operand.append(_Int64Operand(sole_mirrored_object.object_id))
@@ -553,17 +524,14 @@ def _SetAllMirroredOperand(operand, val):
     operand.all_mirrored_object.SetInParent()
 
 
-def _FindOrCreateDelegateBlobObject(builder, lbn, op_parallel_desc_symbol):
-    x_blob_object = object_cache.GetObject4BlobName(lbn)
+def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
     if x_blob_object.parallel_desc_symbol == op_parallel_desc_symbol: return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
     def Fetch(x_blob_object, op_parallel_desc_symbol):
-        return _FetchDelegateBlobObject(builder, lbn, x_blob_object, op_parallel_desc_symbol)
-    def Release(blob_object):
-        LogicalRun(lambda builder: builder.DeleteBlob(blob_object))
-    return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch, Release)
+        return _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol)
+    return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch)
 
-def _FetchDelegateBlobObject(builder, x_lbn, x_blob_object, op_parallel_desc_symbol):
+def _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
     op_device_ids = op_parallel_desc_symbol.machine_id2device_id_list
     prompt = "\nboxing is not supported yet."
@@ -573,24 +541,7 @@ def _FetchDelegateBlobObject(builder, x_lbn, x_blob_object, op_parallel_desc_sym
     op_device_tag = op_parallel_desc_symbol.device_tag
     assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
             blob_device_tag, op_device_tag)
-    op_conf, lbi = _MakeCopyHdOpConfAndRetLbi(x_lbn)
-    MakeFunctionCopyInstructionBuilder(x_blob_object, op_conf)(builder)
-    out_lbn = "%s/%s"%(lbi.op_name, lbi.blob_name)
-    out_blob_object = object_cache.GetObject4BlobName(out_lbn)
-    object_cache.ClearObject4BlobName(out_lbn)
-    return out_blob_object
-
-def _MakeCopyHdOpConfAndRetLbi(x_lbn):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Copy_")
-    op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
-    setattr(op_conf.copy_conf, "in", x_lbn)
-    op_conf.copy_conf.out = "out"
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return op_conf, lbi
-
+    return boxing_util.BuildCopyHdInstruction(builder, x_blob_object)
 
 def _GetOpConfBlobNameAttr(pb_message, field):
     if hasattr(pb_message, field): return getattr(pb_message, field);
@@ -603,3 +554,10 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     assert index >= 0
     assert index < len(repeated_field)
     return repeated_field[index]
+
+def _ReleaseLogicalBlobObject(blob_object):
+    LogicalRun(lambda builder: builder.DeleteBlob(blob_object))
+
+def _ReleasePhysicalBlobObject(blob_object):
+    PhysicalRun(lambda builder: builder.DeleteBlob(blob_object))
+

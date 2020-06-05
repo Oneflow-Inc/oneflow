@@ -13,3 +13,10 @@ class Object(object):
     @property
     def parallel_desc_symbol(self): return self.parallel_desc_symbol_
 
+class BlobObject(Object):
+    def __init__(self, object_id, parallel_desc_symbol, release):
+        Object.__init__(self, object_id, parallel_desc_symbol)
+        self.release_ = release
+
+    def __del__(self):
+        self.release_(self)

@@ -98,7 +98,6 @@ OBJECT_MSG_BEGIN(LogicalObject);
 
   // links
   OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2type_mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on

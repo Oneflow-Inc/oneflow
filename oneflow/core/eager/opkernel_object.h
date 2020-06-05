@@ -66,14 +66,14 @@ class OpKernelObject : public vm::Object {
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
 };
 
-class DeprecatedOpKernelObject : public vm::Object {
+class SystemOpKernelObject : public vm::Object {
  public:
-  DeprecatedOpKernelObject(const DeprecatedOpKernelObject&) = delete;
-  DeprecatedOpKernelObject(DeprecatedOpKernelObject&&) = delete;
-  DeprecatedOpKernelObject(const OperatorConf& op_conf,
-                           const std::shared_ptr<const JobDesc>& job_desc, DeviceType device_type)
+  SystemOpKernelObject(const SystemOpKernelObject&) = delete;
+  SystemOpKernelObject(SystemOpKernelObject&&) = delete;
+  SystemOpKernelObject(const OperatorConf& op_conf, const std::shared_ptr<const JobDesc>& job_desc,
+                       DeviceType device_type)
       : op_conf_(op_conf), job_desc_(job_desc), device_type_(device_type), kernel_(nullptr) {}
-  ~DeprecatedOpKernelObject() override = default;
+  ~SystemOpKernelObject() override = default;
 
   const JobDesc& job_desc() const { return *job_desc_; }
 

@@ -202,7 +202,7 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
 
 template<typename T>
 std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
-    vm::Instruction* instruction, const T& args, DeprecatedOpKernelObject* opkernel_obj) {
+    vm::Instruction* instruction, const T& args, SystemOpKernelObject* opkernel_obj) {
   const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
     HashSet<const BlobDesc*> out_blob_descs;
@@ -256,7 +256,7 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
 
 template<typename T>
 std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(
-    vm::Instruction* instruction, const T& args, DeprecatedOpKernelObject* opkernel_obj) {
+    vm::Instruction* instruction, const T& args, SystemOpKernelObject* opkernel_obj) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
   ForEachObnAndBlobObject(instruction, args,
                           [&](const std::string& bn_in_op, int64_t, BlobObject* blob_object) {
@@ -342,7 +342,7 @@ void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, c
   opkernel_obj->kernel().Infer(MakeBlob4BnInOp(instruction, args, opkernel_obj));
 }
 
-void OpKernelInfer(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* instruction,
+void OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                    const StatelessCallOpKernelInstrOperand& args,
                    const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
   {
@@ -354,7 +354,7 @@ void OpKernelInfer(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* inst
       instruction, args,
       [](const std::string&, int64_t, BlobObject* blob_object) { blob_object->mutable_blob(); });
   const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
-  opkernel_obj->kernel().DeprecatedForwardHeader(KernelCtx(), Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
 }
 
 template<typename T>
@@ -377,7 +377,7 @@ void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
   opkernel_obj->reset_opkernel_state(new_state);
 }
 
-void OpKernelCompute(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* instruction,
+void OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                      const StatelessCallOpKernelInstrOperand& args) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   ForEachObnAndBlobObject(instruction, args,
@@ -387,7 +387,7 @@ void OpKernelCompute(DeprecatedOpKernelObject* opkernel_obj, vm::Instruction* in
   KernelCtx kernel_ctx;
   kernel_ctx.device_ctx = device_ctx;
   const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
-  opkernel_obj->kernel().DeprecatedForwardDataContent(kernel_ctx, Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardDataContent(kernel_ctx, Blob4BnInOp);
 }
 
 template<typename T>
@@ -399,7 +399,7 @@ T* GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
       instruction->mut_operand_type(args.op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
   vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
   CHECK(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
-        || rw_mutexed_object->Has<DeprecatedOpKernelObject>());
+        || rw_mutexed_object->Has<SystemOpKernelObject>());
   const auto& parallel_desc = instruction->parallel_desc();
   CHECK(static_cast<bool>(parallel_desc));
   CHECK_EQ(device_type, parallel_desc->device_type());
@@ -440,25 +440,24 @@ void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction)
   OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 
-std::shared_ptr<MemoryCase> DeprecatedStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
+std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
     const DeviceType device_type, const int64_t device_id) const {
   return MakeMemCase(device_type, device_id);
 }
 
-void DeprecatedStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
-  auto* opkernel =
-      GetSharedOpKernel<DeprecatedOpKernelObject>(instruction, device_type, args.Get());
+  auto* opkernel = GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args.Get());
   const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
   OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type);
 }
 
-void DeprecatedStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
-      instruction->mut_operand_type(args->shared_opkernel())->Mut<DeprecatedOpKernelObject>();
+      instruction->mut_operand_type(args->shared_opkernel())->Mut<SystemOpKernelObject>();
   OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 

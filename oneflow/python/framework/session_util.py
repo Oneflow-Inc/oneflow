@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
+import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.session_context as session_ctx
@@ -38,6 +40,8 @@ class Session(object):
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
+        self.instruction_list_ = instr_util.InstructionListProto()
+        self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
 
     @property
     def status(self): return self.status_
@@ -70,6 +74,12 @@ class Session(object):
 
     @property
     def job_name2name_scope_stack(self): return self.job_name2name_scope_stack_
+
+    @property
+    def instruction_list(self): return self.instruction_list_
+
+    @property
+    def eager_symbol_list(self): return self.eager_symbol_list_
 
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_: return self.job_name2function_desc_[job_name]

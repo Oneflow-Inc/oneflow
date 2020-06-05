@@ -40,12 +40,12 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
-  void DeprecatedForwardHeader(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  void SystemForwardHeader(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     ForwardHeader(ctx, BnInOp2Blob);
   }
-  void DeprecatedForwardDataContent(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  void SystemForwardDataContent(const KernelCtx& ctx,
+                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
 

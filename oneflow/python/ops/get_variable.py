@@ -12,6 +12,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -199,33 +200,41 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
+    bn_in_op2blob_object = {}
     vm_util.LogicalRun(
-            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
+            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out'],
+                bn_in_op2blob_object=bn_in_op2blob_object))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
-    return remote_blob_util.EagerLogicalBlob(lbi)
+    return remote_blob_util.EagerLogicalBlob(lbi, blob_object=bn_in_op2blob_object['out'])
 
 def _InitVariableBlob(var_op_conf, var_blob):
     with oneflow.fixed_placement("cpu", "0:0"):
-        source_tick = _SourceTick()
-        value = _ModelInit(source_tick, var_op_conf)
-        oneflow.system.assign(var_blob, value)
+        _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
         
-def _ModelInit(source_tick, var_op_conf):
-    op_conf, lbi = _GetModelInitAndLbi(source_tick, var_op_conf)
-    compile_context.CurJobAddMirroredOp(op_conf)
-    def BuildModeInitInstruction(builder):
-        builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out_0'])
-    vm_util.LogicalRun(BuildModeInitInstruction)
-    return remote_blob_util.EagerLogicalBlob(lbi)
+def _Assign(var_blob_object, value_blob_object):
+    def BuildAssignInstruction(builder):
+        tmp_blob_object = boxing_util.OneToManyBroadcastBlobReference(
+                builder, value_blob_object, var_blob_object.parallel_desc_symbol)
+        boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
+    vm_util.LogicalRun(BuildAssignInstruction)
 
-def _GetModelInitAndLbi(source_tick, var_op_conf):
+def _ModelInit(var_op_conf):
+    op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
+    bn_in_op2blob_object = {}
+    def BuildModeInitInstruction(builder):
+        builder.SystemStatelessCall(op_conf, mut_arg_bns=['out_0'],
+                bn_in_op2blob_object=bn_in_op2blob_object)
+    vm_util.LogicalRun(BuildModeInitInstruction)
+    return bn_in_op2blob_object['out_0']
+
+def _GetModelInitAndLbi(var_op_conf):
     variable_op_conf = op_conf_util.VariableOpConf()
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("ModelInit_")
-    op_conf.model_init_conf.tick = source_tick.unique_name
+    op_conf.name = "model_init"
+    op_conf.model_init_conf.tick = "undefined-source_tick/out"
     op_conf.model_init_conf.out.append("out_0")
     op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
     op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)
@@ -233,15 +242,3 @@ def _GetModelInitAndLbi(source_tick, var_op_conf):
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.model_init_conf.out[0]
     return op_conf, lbi
-
-def _SourceTick():
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("SourceTick_")
-    op_conf.source_tick_conf.out = "out"
-    compile_context.CurJobAddMirroredOp(op_conf)
-    vm_util.LogicalRun(
-            lambda builder: builder.DeprecatedStatelessCall(op_conf, mut_arg_bns=['out']))
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = op_conf.source_tick_conf.out
-    return remote_blob_util.EagerLogicalBlob(lbi)
