@@ -153,7 +153,7 @@ def add_padding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                 node.set_attr("auto_pad", "SAME_LOWER")
             else:
                 for i in range(spatial):
-                    pad = (output_shape[i + 2] - 1) * strides[i] + dilations[i] * kernel_shape[i] - input_shape[i + 2]
+                    pad = (output_shape[i + 2] - 1) * strides[i] + dilations[i] * (kernel_shape[i] - 1) + 1 - input_shape[i + 2]
                     pad = max(pad, 0)
                     # pads[i] = pad // 2
                     # pads[i + spatial] = pad - pad // 2
@@ -208,6 +208,8 @@ class ConvOp:
         #                       @AttrType.INTS kernel_shape, @AttrType.INTS pads, @AttrType.INTS strides)
         node.type = "Conv"
         kernel_shape = conv_kernel_shape(ctx, node, 1, spatial=2)
+        node.set_attr('group', node.get_attr_value('groups', 1))
+        node.set_attr('dilations', node.get_attr_value('dilation_rate', [1, 1]))
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
         add_padding(ctx, node, kernel_shape, strides, dilations=dilations, spatial=2)
