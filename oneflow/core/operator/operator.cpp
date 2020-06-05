@@ -476,7 +476,7 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
   size_t pos = lbn.find('/');
-  CHECK_NE(pos, std::string::npos) << lbn;
+  CHECK_NE(pos, std::string::npos) << "lbn: " << lbn;
   lbi.set_op_name(lbn.substr(0, pos));
   std::string blob_name_with_hit = lbn.substr(pos + 1);
   size_t vbar_pos = blob_name_with_hit.rfind('|');
