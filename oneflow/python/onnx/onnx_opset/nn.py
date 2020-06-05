@@ -36,8 +36,8 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
     """Convert input and kernel from tensorflow to onnx. This maybe require to
         to insert transpose ops for input, kernel and output unless they are constants
         and we can transpose the constant.
-        We transpose inputs if they are in NHWC. We always transpose the kernel from
-        HWNC to NCHW. Outputs are transposed if the format is NHWC.
+        We transpose inputs and the kernel if the input is in NHWC
+        Outputs are transposed if the format is NHWC.
         Some convolutions like depthwise_conv2d require a reshape of the kernel.
         Args:
             ctx: the parent graph
@@ -70,7 +70,7 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
                     new_shape = spatial_map(shape, constants.NHWC_TO_NCHW)
                     ctx.set_shape(transpose.output[0], new_shape)
 
-    # kernel must to be transposed
+    # kernel need to be transposed if the data format is nhwc
     if with_kernel:
         # some onnx conv ops require the reshape the kernel (ie. depthwise_conv2d)
         if new_kernel_shape:
@@ -90,25 +90,26 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
                 reshape.skip_conversion = True
             ctx.set_shape(reshape.output[0], new_kernel_shape)
 
-        # parent = node.inputs[1]
-        # need_transpose = True
-        # if node.inputs[1].is_const():
-        #     # kernel is const - transpose the const if we are the only consumer of const
-        #     consumers = ctx.find_output_consumers(node.input[1])
-        #     if len(consumers) == 1:
-        #         val = parent.get_tensor_value(as_list=False)
-        #         import pdb;pdb.set_trace()
-        #         val = val.transpose(constants.HWCN_TO_NCHW)
-        #         parent.set_tensor_value(val)
-        #         need_transpose = False
-        #
-        # if need_transpose:
-        #     input_name = node.input[1]
-        #     transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
-        #     transpose.set_attr("perm", constants.HWCN_TO_NCHW)
-        #     transpose.skip_conversion = True
-        #     new_shape = spatial_map(ctx.get_shape(input_name), constants.HWCN_TO_NCHW)
-        #     ctx.set_shape(transpose.output[0], new_shape)
+        if node.is_nhwc():
+            parent = node.inputs[1]
+            need_transpose = True
+            if node.inputs[1].is_const():
+                # kernel is const - transpose the const if we are the only consumer of const
+                consumers = ctx.find_output_consumers(node.input[1])
+                if len(consumers) == 1:
+                    val = parent.get_tensor_value(as_list=False)
+                    import pdb;pdb.set_trace()
+                    val = val.transpose(constants.NHWC_TO_NCHW)
+                    parent.set_tensor_value(val)
+                    need_transpose = False
+
+            if need_transpose:
+                input_name = node.input[1]
+                transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
+                transpose.set_attr("perm", constants.NHWC_TO_NCHW)
+                transpose.skip_conversion = True
+                new_shape = spatial_map(ctx.get_shape(input_name), constants.NHWC_TO_NCHW)
+                ctx.set_shape(transpose.output[0], new_shape)
 
     # transpose outputs if needed
     if node.is_nhwc():
@@ -149,13 +150,15 @@ def add_padding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                     "node %s has unknown dim for pads calculation, fallback to auto_pad: "
                     "input_shape=%s, output_shape=%s",
                     node.name, input_shape, output_shape)
-                node.set_attr("auto_pad", "SAME_UPPER")
+                node.set_attr("auto_pad", "SAME_LOWER")
             else:
                 for i in range(spatial):
                     pad = (output_shape[i + 2] - 1) * strides[i] + dilations[i] * kernel_shape[i] - input_shape[i + 2]
                     pad = max(pad, 0)
-                    pads[i] = pad // 2
-                    pads[i + spatial] = pad - pad // 2
+                    # pads[i] = pad // 2
+                    # pads[i + spatial] = pad - pad // 2
+                    pads[i + spatial] = pad // 2
+                    pads[i] = pad - pad // 2
                 node.set_attr("pads", pads)
 
         elif padding == 'valid':
@@ -330,7 +333,7 @@ class DepthwiseConv2d:
 
 
 @tf_op(["avg_pool_2d", "AvgPool3D"], onnx_op="AveragePool")
-@tf_op(["MaxPool", "MaxPoolV2"], onnx_op="MaxPool")
+@tf_op(["max_pool_2d"], onnx_op="MaxPool")
 class PoolOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -495,7 +498,7 @@ class Pad:
             ctx.copy_shape(node.name, cast_back_node.output[0])
 
 
-@tf_op(["FusedBatchNorm", "FusedBatchNormV2", "FusedBatchNormV3"])
+@tf_op(['normalization'], flow_inputs=['x', 'gamma', 'beta', 'moving_mean', 'moving_variance'])
 class BatchNorm:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -507,6 +510,8 @@ class BatchNorm:
         # output: y, mean, var, savedmean, savedvar,
         # detach unused outputs. While we could let the unused outputs dangle,
         # some runtimes like pytorch/caffe2 do complain about it.
+        if node.get_attr_value('training') or node.get_attr_value('trainable'):
+            raise NotImplementedError("We only support inference mode ONNX BatchNormalization now")
         consumers = [ctx.find_output_consumers(output_name) for output_name in node.output[1:]]
         if not any(consumers):
             new_output = [node.output[0]]

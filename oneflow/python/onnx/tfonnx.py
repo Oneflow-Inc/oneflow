@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import collections
 import sys
 import traceback
+import itertools
 
 import numpy as np
 from onnx import helper, onnx_pb
@@ -19,6 +20,7 @@ import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
 
+import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 import oneflow.python.onnx.custom_opsets  # pylint: disable=unused-import
@@ -26,10 +28,13 @@ from oneflow.python.onnx.graph import Graph
 from oneflow.python.onnx.rewriter import *  # pylint: disable=wildcard-import
 from oneflow.python.onnx.shape_inference import infer_shape
 from oneflow.python.onnx.utils import port_name
-from . import constants, logging, schemas, utils, handler
+from . import constants, logging, schemas, utils, handler, optimizer
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_ctx
+import os
+import os.path
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +88,7 @@ def tflist_to_onnx(node_list, shape_override):
     def get_inputs(node):
         conf_type = node.WhichOneof("op_type")
         if conf_type == 'user_conf':
-            assert all([len(x.s) == 1 for x in node.user_conf.input.values()])
-            return [x.s[0] for x in node.user_conf.input.values()]
+            return list(itertools.chain(*[x.s for x in node.user_conf.input.values()]))
         else:
             conf = getattr(node, conf_type)
             if hasattr(conf, "in"):
@@ -171,7 +175,6 @@ def tflist_to_onnx(node_list, shape_override):
                 input_names = get_inputs(node)
                 output_names = get_outputs(node)
                 update_input_maps(node)
-                print(op_type, input_names, output_names, attr)
                 onnx_node = helper.make_node(op_type, input_names, output_names, name=node.name, **attr)
                 onnx_nodes.append(onnx_node)
             except Exception as ex:
@@ -528,17 +531,26 @@ def run_rewriters(g, funcs, continue_on_error):
 
 
 @oneflow_export("onnx.export")
-def export(job_obj, model_save_dir, continue_on_error=False, verbose=False, target=None,
+def export(job_obj, continue_on_error=False, verbose=False, target=None,
                      opset=None, custom_op_handlers=None, custom_rewriter=None,
                      extra_opset=None, shape_override=None, inputs_as_nchw=None,
                      input_names=None, output_names=None):
+    assert os.getenv("ENABLE_USER_OP") == 'True'
+    session_ctx.GetDefaultSession().TryInit()
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
-    print("job name: " + job_name)
     for job in job_set.job:
         if job.job_conf.job_name == job_name:
-            onnx_graph = process_tf_graph(job, model_save_dir)
-            model_proto = onnx_graph.make_model("test")
+            import tempfile
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                check_point = oneflow.train.CheckPoint()
+                check_point.save(tmpdirname)
+                # TODO: a more elegant way?
+                while not os.path.exists(os.path.join(tmpdirname, 'snapshot_done')):
+                    pass
+                onnx_graph = process_tf_graph(job, tmpdirname)
+                onnx_graph = optimizer.optimize_graph(onnx_graph)
+                model_proto = onnx_graph.make_model("test")
             return model_proto
     return None
 

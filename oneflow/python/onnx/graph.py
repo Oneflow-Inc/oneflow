@@ -142,6 +142,9 @@ class Node(object):
 
     def is_nhwc(self):
         """Return True if node is in NHWC format."""
+        if self.type == 'BatchNormalization':
+            axis = self.get_attr_value('axis')
+            return axis == -1 or axis == len(self.output_shapes[0]) - 1
         return self.data_format in ["NHWC", 'channels_last']
 
     def is_const(self):
@@ -807,10 +810,14 @@ class Graph(object):
 
     def get_saved_tensor(self, node):
         #TODO(daquexian): node.output[0] is "node_name/output_name", so pathjoin is not cross-platform
-        path = pathjoin(self._model_save_dir, node.output[0])
         tensor_name = node.output[0]
-        tensor_value = np.fromfile(path, dtype=utils.map_onnx_to_numpy_type(self.get_dtype(tensor_name))).reshape(self.get_shape(tensor_name))
-        return tensor_value
+        if self._model_save_dir is not None:
+            path = pathjoin(self._model_save_dir, node.output[0])
+            tensor_value = np.fromfile(path, dtype=utils.map_onnx_to_numpy_type(self.get_dtype(tensor_name))).reshape(self.get_shape(tensor_name))
+            return tensor_value
+        else:
+            shape = self.get_shape(tensor_name)
+            return np.ones(shape, dtype=utils.map_onnx_to_numpy_type(self.get_dtype(tensor_name)))
 
     def get_shape(self, name):
         """Get shape for node."""
@@ -1159,6 +1166,11 @@ class Graph(object):
             for i, input_name in enumerate(node.input):
                 if input_name == old_input:
                     node.input[i] = new_input
+                    if node.name in node.graph._input_maps:
+                        for k, v in node.graph._input_maps[node.name].items():
+                            assert len(v) == 1
+                            if v[0] == old_input:
+                                node.graph._input_maps[node.name][k] = [new_input]
 
             # modify references in sub graphs
             body_graphs = node.get_body_graphs()
@@ -1174,6 +1186,11 @@ class Graph(object):
         for i, input_name in enumerate(node.input):
             if input_name == old_input:
                 node.input[i] = new_input
+                if node.name in node.graph._input_maps:
+                    for k, v in node.graph._input_maps[node.name].items():
+                        assert len(v) == 1
+                        if v[0] == old_input:
+                            node.graph._input_maps[node.name][k] = [new_input]
                 is_replaced = True
         return is_replaced
 

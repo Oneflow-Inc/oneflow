@@ -22,9 +22,41 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring
 
+@tf_op(["broadcast_add"], onnx_op='Add')
+@tf_op(["scalar_add_by_tensor"], onnx_op='Add')
 @tf_op(["Add", "AddV2", "Div", "Mul", "Sub"])
 class BroadcastOp(common.BroadcastOp):
     pass
+
+
+@tf_op('add_n', onnx_op='Add')
+class AddN:
+    @classmethod
+    def version_6(cls, ctx, node, **kwargs):
+        top_node = node
+        for i in range(2, len(node.input)):
+            top_node = ctx.insert_new_node_on_input(top_node, 'Add', node.input[i-1:i+1])
+        node.input = node.input[:2]
+
+
+@tf_op('bias_add', onnx_op='Add', flow_inputs=['a', 'b'])
+class BiasAdd(common.BroadcastOp):
+    @classmethod
+    def version_6(cls, ctx, node, **kwargs):
+        axis = node.get_attr_value('axis')
+        unsqueeze_axes = []
+        x_rank = len(ctx.get_shape(node.input[0]))
+        for i in range(x_rank):
+            if axis != i:
+                unsqueeze_axes.append(i)
+        unsqueeze_shape = [1] * x_rank
+        assert len(ctx.get_shape(node.input[1])) == 1
+        unsqueeze_shape[axis] = ctx.get_shape(node.input[1])[0]
+        unsqueeze_dtype = ctx.get_dtype(node.input[1])
+        ctx.insert_new_node_on_input(node, 'Unsqueeze', node.input[1], axes=unsqueeze_axes)
+        ctx.set_shape(node.input[1], unsqueeze_shape)
+        ctx.set_dtype(node.input[1], unsqueeze_dtype)
+        super().version_6(ctx, node, **kwargs)
 
 
 @tf_op(["RealDiv", "TruncateDiv"], onnx_op="Div")
@@ -41,7 +73,7 @@ class DirectOpSinceOpset1:
 
 @tf_op(["Abs", "Ceil", "Elu", "Exp", "Floor", "Log", "Neg", "Sigmoid", "Sqrt",
         "Tanh", "Reciprocal"])
-@tf_op('relu', onnx_op='Relu')
+@tf_op('relu')
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -179,7 +211,7 @@ class ClipByValueOp:
             ctx.set_shape(new_node.output[0], shapes[0])
 
 
-@tf_op("Softmax")
+@tf_op("softmax")
 class Softmax:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

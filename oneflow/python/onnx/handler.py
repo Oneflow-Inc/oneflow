@@ -30,6 +30,8 @@ class tf_op:
         :param kwargs: Dictionary that are passed to the handler. A key 'onnx_op' will change the operator name.
         """
         if not isinstance(name, list):
+            if 'onnx_op' not in kwargs:
+                kwargs['onnx_op'] = name[0].upper() + name[1:]
             name = [name]
         self.name = name
         self.domain = domain

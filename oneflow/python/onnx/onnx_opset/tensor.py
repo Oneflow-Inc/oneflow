@@ -119,7 +119,7 @@ class Identity:
             ctx.remove_node(node.name)
 
 
-@tf_op("reshape", onnx_op='Reshape')
+@tf_op("reshape")
 class Reshape:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

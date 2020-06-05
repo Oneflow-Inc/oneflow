@@ -2,6 +2,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import onnxruntime as ort
+import onnx
+from util import convert_to_onnx_and_check
 
 _MODEL_LOAD = "/home/dev/files/of_model/"
 
@@ -112,7 +114,8 @@ def alexnet(images, labels, trainable=True):
 
   return fc3
 
-def main():
+
+def test_alexnet(test_case):
   func_config = flow.FunctionConfig()
   func_config.default_data_type(flow.float)
   @flow.function(func_config)
@@ -123,18 +126,5 @@ def main():
   check_point = flow.train.CheckPoint()
   check_point.load(_MODEL_LOAD)
 
-  onnx_proto = flow.onnx.export(alexnet_eval_job, _MODEL_LOAD)
-
-  ipt = np.random.uniform(low=-10, high=10,
-                        size=(1,227,227,3)).astype(np.float32)
-
-  sess = ort.InferenceSession(onnx_proto.SerializeToString())
-  onnx_res = sess.run([], {'Input_1/out': ipt})
-  oneflow_res = alexnet_eval_job(ipt).get().ndarray()
-  print(onnx_res)
-  print(oneflow_res)
-  assert np.allclose(onnx_res, oneflow_res, rtol=1e-5, atol=1e-5)
-
-if __name__ == "__main__":
-  main()
+  convert_to_onnx_and_check(alexnet_eval_job, model=True)
 

@@ -73,8 +73,6 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             nodes_group = unprocessed_node
 
     def _have_equal_attr(self, node_1, node_2, graph):
-        if node_1.attr == node_2.attr:
-            return True
         # above check guarantees consts here are able to be merged
         if node_1.is_const() and node_2.is_const():
             # get_tensor_value is costly so that we check their shape first
@@ -87,6 +85,9 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             const_2 = node_2.get_tensor_value(as_list=False)
             if const_1.dtype == const_2.dtype and \
                     np.array_equal(const_1, const_2):
+                return True
+        else:
+            if node_1.attr == node_2.attr:
                 return True
         return False
 
