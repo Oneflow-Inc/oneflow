@@ -429,7 +429,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                            \
       .SetCreateFn<ConvCpuKernel<dtype, ndims>>()                                           \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        return ctx.device_type() == DeviceType::kGPU                                        \
+        return ctx.device_type() == DeviceType::kCPU                                        \
                && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()                      \
                       == GetDataType<dtype>::value;                                         \
       })                                                                                    \
@@ -511,7 +511,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                           \
       .SetCreateFn<ConvDataGradCpuKernel<dtype>>()                                         \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
-        return ctx.device_type() == DeviceType::kGPU                                       \
+        return ctx.device_type() == DeviceType::kCPU                                       \
                && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type()                     \
                       == GetDataType<dtype>::value;                                        \
       })                                                                                   \
@@ -580,7 +580,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                                \
       .SetCreateFn<ConvFilterGradCpuKernel<dtype>>()                                            \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        return ctx.device_type() == DeviceType::kGPU                                            \
+        return ctx.device_type() == DeviceType::kCPU                                            \
                && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type()                          \
                       == GetDataType<dtype>::value;                                             \
       })                                                                                        \
@@ -650,7 +650,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                               \
       .SetCreateFn<ConvBiasGradCpuKernel<dtype>>()                                             \
       .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                             \
-        return ctx.device_type() == DeviceType::kGPU                                           \
+        return ctx.device_type() == DeviceType::kCPU                                           \
                && ctx.TensorDesc4ArgNameAndIndex("dy", 0)->data_type()                         \
                       == GetDataType<dtype>::value;                                            \
       })                                                                                       \
