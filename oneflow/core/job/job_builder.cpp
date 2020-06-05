@@ -93,10 +93,16 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
         || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
     if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr && job().job_conf().has_train_conf()
         && ignore_in_infer_ctx == false) {
-      auto mut_op_conf = op_conf;
+      auto op_conf_fixed = op_conf;
       ParallelDesc parallel_desc(parallel_conf);
-      mut_op_conf.set_device_type(parallel_desc.device_type());
-      CHECK_JUST(GetCurInferCtxEvenClosed())->AddAndInferOp(mut_op_conf, parallel_conf);
+      op_conf_fixed.set_device_type(parallel_desc.device_type());
+      CHECK_JUST(GetCurInferCtxEvenClosed())->AddAndInferOp(op_conf_fixed, parallel_conf);
+      FOR_RANGE(int64_t, i, 0, job_->net().op_size()) {
+        OperatorConf* mut_op_conf = job_->mutable_net()->mutable_op(i);
+        if (mut_op_conf->name() == op_conf.name()) {
+          CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+        }
+      }
     } else {
       auto* placemnt_group = job_->mutable_placement()->add_placement_group();
       *placemnt_group->mutable_parallel_conf() = parallel_conf;
@@ -223,7 +229,9 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
 
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
-    DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
+    auto it = op_name2parallel_conf_.find(pair.first);
+    CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
+    DeviceType device_type = ParallelDesc(*it->second).device_type();
     std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
     Handler(*op);
   }
