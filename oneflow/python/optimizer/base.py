@@ -28,7 +28,7 @@ class Base(oneflow_internal.OptimizerBase):
         self.build_func_ = None
         oneflow_internal.OptimizerBase.__init__(self)
 
-    def Build(self, optimizer_name, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
+    def Build(self, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
         try:
             assert self.build_func_ is not None
             with rt_mode.ModeScope(rt_mode.GLOBAL_MODE):

@@ -21,6 +21,7 @@ OptimizerBase* OptimizerRegistry::Lookup(const std::string& name) {
     }
     LOG(FATAL) << "optimizer " << name << " not found, all: " << all_registered_name;
   }
+  CHECK(it->second != nullptr);
   return it->second;
 }
 
@@ -32,8 +33,8 @@ Maybe<void> OptimizerRegistry::LookupAndBuild(const std::string& name, const Var
   const std::string parallel_conf_txt = PbMessage2TxtString(parallel_conf);
   const std::string diff_lbi_of_var_out_txt = PbMessage2TxtString(diff_lbi_of_var_out);
   const std::string train_conf_txt = PbMessage2TxtString(train_conf);
-  OptimizerRegistry::Lookup("sgd")->Build(var_op_conf_txt, parallel_conf_txt,
-                                          diff_lbi_of_var_out_txt, train_conf_txt);
+  OptimizerRegistry::Lookup(name)->Build(var_op_conf_txt, parallel_conf_txt,
+                                         diff_lbi_of_var_out_txt, train_conf_txt);
   return Maybe<void>::Ok();
 }
 

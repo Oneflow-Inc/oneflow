@@ -21,7 +21,13 @@ if is_train:
         x = flow.constant(-1, shape=(10,), dtype=flow.float) + v
         y = flow.math.relu(x) + 1
         flow.losses.add_loss(y)
-    universal_train()
+        if enable_eager == False:
+            return y
+    if enable_eager:
+        universal_train()
+    else:
+        ret = universal_train().get()
+        print(ret.ndarray())
 else:
     @flow.function(cfg)
     def universal_infer():
