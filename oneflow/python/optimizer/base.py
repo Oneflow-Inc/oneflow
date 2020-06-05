@@ -13,7 +13,6 @@ from oneflow.core.job.job_pb2 import TrainConf
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.remote_blob as remote_blob_util
-import functools
 import oneflow as flow
 import ctypes
 
