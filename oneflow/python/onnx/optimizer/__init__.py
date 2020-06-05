@@ -19,7 +19,8 @@ from .. import logging
 
 # optimizer sequence need to be considered carefully
 _optimizers = OrderedDict([
-    ("optimize_transpose", TransposeOptimizer),
+    # FIXME(daquexian): transpose optimizer fails test_conv.test_conv2d_k3s1_nhwc_valid test
+    # ("optimize_transpose", TransposeOptimizer),
     ("fold_constants", ConstFoldOptimizer),
     ("loop_optimizer", LoopOptimizer),
     # merge_duplication should be used after optimize_transpose
