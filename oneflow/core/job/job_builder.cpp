@@ -86,8 +86,6 @@ const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
                         const std::vector<OperatorConf>& op_confs) {
   if (op_confs.empty()) { return; }
-  auto* placemnt_group = job_->mutable_placement()->add_placement_group();
-  *placemnt_group->mutable_parallel_conf() = parallel_conf;
   for (const auto& op_conf : op_confs) {
     const bool ignore_in_infer_ctx =
         op_conf.has_tick_conf() || op_conf.has_acc_tick_conf() || op_conf.has_device_tick_conf()
