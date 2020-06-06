@@ -65,6 +65,7 @@ class RealDiv(common.BroadcastOp):
 
 
 @tf_op(["LeakyRelu", "LogSoftmax", "Softplus", "Softsign"])
+@tf_op('leaky_relu', onnx_op='LeakyRelu')
 class DirectOpSinceOpset1:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -170,45 +171,50 @@ class MinMaxOp:
         make_min_or_max_op(ctx, node.type, node.input, node.output, shapes, dtypes)
 
 
-@tf_op("ClipByValue")
-class ClipByValueOp:
+class ClipOps:
+    @classmethod
+    def version_1(cls, ctx, node, min_val=None, max_val=None, **kwargs):
+        # relu6 = min(max(features, 0), 6)
+        # relu6 = min(max(features, 0), 6)
+        node.type = "Clip"
+        if min_val is not None:
+            node.set_attr("min", float(min_val))
+        if max_val is not None:
+            node.set_attr("max", float(max_val))
+
+    @classmethod
+    def version_11(cls, ctx, node, min_val=None, max_val=None, **kwargs):
+        # add min and max as inputs
+        node.type = "Clip"
+        onnx_dtype = ctx.get_dtype(node.input[0])
+        np_dtype = utils.ONNX_TO_NUMPY_DTYPE[onnx_dtype]
+        if min_val is not None:
+            clip_min = ctx.make_const(utils.make_name("{}_min".format(node.name)), np.array(min_val, dtype=np_dtype))
+            node.input.append(clip_min.output[0])
+        else:
+            node.input.append('')
+        if max_val is not None:
+            clip_max = ctx.make_const(utils.make_name("{}_max".format(node.name)), np.array(max_val, dtype=np_dtype))
+            node.input.append(clip_max.output[0])
+        else:
+            node.input.append('')
+
+
+@tf_op(["clip_by_scalar", "clip_by_scalar_min", "clip_by_scalar_max"])
+class ClipByValueOp(ClipOps):
     # in tf-1.8 there was a ClipByValue op which in later versions was replaced by max(min(x, a), b)
     # To support models generated with tf-1.8 rewrite the tf ClipByValue op to max(min(x, a), b)
     @classmethod
-    def version_8(cls, ctx, node, **kwargs):
-        supported = [onnx_pb.TensorProto.FLOAT16, onnx_pb.TensorProto.FLOAT, onnx_pb.TensorProto.DOUBLE]
-        # fetch those upfront since they are not accessible once we remove 'node'
-        shapes = node.output_shapes
-        dtypes = node.output_dtypes
-        input_dtype = node.inputs[0].output_dtypes[0]
-        name = node.name
-        min_node = node.inputs[1]
-        if min_node.output_dtypes[0] not in supported:
-            # cast min if needed
-            min_node = ctx.insert_new_node_on_input(node, "Cast", min_node.output[0], to=onnx_pb.TensorProto.FLOAT)
-        max_node = node.inputs[2]
-        if max_node.output_dtypes[0] not in supported:
-            # cast max if needed
-            max_node = ctx.insert_new_node_on_input(node, "Cast", max_node.output[0], to=onnx_pb.TensorProto.FLOAT)
-        ctx.remove_node(name)
-        new_node = ctx.make_node("Max", [node.input[0], min_node.output[0]], outputs=[node.output[0]],
-                                 shapes=shapes, dtypes=dtypes)
-        if input_dtype not in supported:
-            # cast the data tensor if needed
-            ctx.insert_new_node_on_input(new_node, "Cast", new_node.input[0], to=onnx_pb.TensorProto.FLOAT)
+    def version_1(cls, ctx, node, **kwargs):
+        min_val = node.get_attr_value('floating_min', None) or node.get_attr_value('integral_min', None)
+        max_val = node.get_attr_value('floating_max', None) or node.get_attr_value('integral_max', None)
+        super().version_1(ctx, node, min_val, max_val)
 
-        new_node = ctx.insert_new_node_on_output("Min", new_node.output[0], name=utils.make_name(name))
-        new_node.input.append(max_node.output[0])
-        # copy shape and type
-        ctx.set_dtype(new_node.output[0], dtypes[0])
-        ctx.set_shape(new_node.output[0], shapes[0])
-        if dtypes[0] not in supported:
-            # cast output if needed
-            new_node = ctx.insert_new_node_on_output("Cast", new_node.output[0],
-                                                     name=utils.make_name(name), to=dtypes[0])
-            # copy shape and type
-            ctx.set_dtype(new_node.output[0], dtypes[0])
-            ctx.set_shape(new_node.output[0], shapes[0])
+    @classmethod
+    def version_11(cls, ctx, node, **kwargs):
+        min_val = node.get_attr_value('floating_min', None) or node.get_attr_value('integral_min', None)
+        max_val = node.get_attr_value('floating_max', None) or node.get_attr_value('integral_max', None)
+        super().version_11(ctx, node, min_val, max_val)
 
 
 @tf_op("softmax")
@@ -234,25 +240,17 @@ class Square:
 
 
 @tf_op("Relu6")
-class Relu6:
+class Relu6(ClipOps):
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         # relu6 = min(max(features, 0), 6)
         # relu6 = min(max(features, 0), 6)
-        node.type = "Clip"
-        node.set_attr("min", 0.0)
-        node.set_attr("max", 6.0)
+        super().version_1(ctx, node, min_val=0.0, max_val=6.0)
 
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
         # add min and max as inputs
-        node.type = "Clip"
-        onnx_dtype = ctx.get_dtype(node.input[0])
-        np_dtype = utils.ONNX_TO_NUMPY_DTYPE[onnx_dtype]
-        clip_min = ctx.make_const(utils.make_name("{}_min".format(node.name)), np.array(0.0, dtype=np_dtype))
-        clip_max = ctx.make_const(utils.make_name("{}_max".format(node.name)), np.array(6.0, dtype=np_dtype))
-        node.input.append(clip_min.output[0])
-        node.input.append(clip_max.output[0])
+        super().version_11(ctx, node, min_val=0.0, max_val=6.0)
 
 
 @tf_op("Rsqrt")
