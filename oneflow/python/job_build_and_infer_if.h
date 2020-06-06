@@ -167,6 +167,13 @@ bool JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_name,
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
+bool JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp(const std::string& job_name,
+                                                          const std::string& lbn,
+                                                          std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 std::string JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
                                                          const std::string& lbn,
                                                          std::string* error_str) {

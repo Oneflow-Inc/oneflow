@@ -196,6 +196,12 @@ Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_
   return ctx->MirroredBlobIsTensorList(lbn);
 }
 
+Maybe<bool> JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp(const std::string& job_name,
+                                                                 const std::string& lbn) {
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return ctx->MirroredBlobConsumedByGradientOp(lbn);
+}
+
 Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
                                                                 const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));

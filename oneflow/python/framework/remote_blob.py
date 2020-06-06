@@ -12,6 +12,7 @@ import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.gradient_util as gradient_util
 
 import oneflow
 
@@ -198,6 +199,11 @@ class EagerMirroredBlob(MirroredBlob):
         self.parallel_conf_ = (
                 c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
                     self.job_name_, self.lbn_))
+        ConsumedByGradientOp = c_api_util.JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp
+        if (ConsumedByGradientOp(self.job_name_, self.lbn_)
+                and not gradient_util.HasFwBlobObject4BlobUniqueName(self.unique_name)):
+            gradient_util.SetFwBlobObject4BlobUniqueName(self.unique_name, self.blob_object_)
+            
     @property
     def blob_object(self): return self.blob_object_
 
