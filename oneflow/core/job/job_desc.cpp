@@ -75,6 +75,7 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 
 void JobDesc::Init() {
 #ifndef WITH_RDMA
+  CHECK_NOTNULL((Global<ResourceDesc, ForSession>::Get()));
   CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
       << "Please compile ONEFLOW with RDMA";
 #endif
