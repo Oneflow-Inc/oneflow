@@ -67,4 +67,6 @@ def register_optimizer(name):
 
 @register_optimizer("sgd")
 def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
+    if var_diff.dtype != lr.dtype:
+        lr = flow.cast(lr, dtype=var_diff.dtype)
     flow.assign(var, var - var_diff * lr)
