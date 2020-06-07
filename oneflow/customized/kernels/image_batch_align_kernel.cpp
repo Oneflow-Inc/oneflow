@@ -93,6 +93,8 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     mut_shape_view->Set(0, num_images);
     mut_shape_view->Set(1, max_height);
     mut_shape_view->Set(2, max_width);
+    LOG(INFO) << "ImageBatchAlignKernel::InferShape (" << num_images << ", " << max_height << ", "
+              << max_width << ", 3)";
     // TODO(wenxiao): need to check static shape can hold dynamic shape
     // Tensor should add Capacity method
   }
