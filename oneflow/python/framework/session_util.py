@@ -208,7 +208,8 @@ class Session(object):
             yield
         finally:
             self.eager_global_function_desc_stack_.pop(0)
-            assert len(self.eager_unique_name2bw_used_blob_object_) == 0
+            assert len(self.eager_unique_name2bw_used_blob_object_) == 0, (
+                    self.eager_unique_name2bw_used_blob_object_.keys())
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

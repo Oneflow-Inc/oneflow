@@ -156,6 +156,8 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   Maybe<void> Complete() override;
+
+  Job fw_job_;
 };
 
 }  // namespace oneflow

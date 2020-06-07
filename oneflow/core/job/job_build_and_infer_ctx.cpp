@@ -783,10 +783,13 @@ ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelD
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
+  fw_job_ = *mut_job();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return FunctionPass(pass_name)(mut_job());
   };
+  JUST(DoPass("AutoTrainStep"));
+  JUST(DoPass("AutoLearningRate"));
   JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
   return Maybe<void>::Ok();
 }
