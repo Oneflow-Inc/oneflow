@@ -42,6 +42,7 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
+        self.eager_unique_name2bw_used_blob_object_ = {}
 
     @property
     def status(self): return self.status_
@@ -80,6 +81,10 @@ class Session(object):
 
     @property
     def eager_symbol_list(self): return self.eager_symbol_list_
+
+    @property
+    def eager_unique_name2bw_used_blob_object(self):
+        return self.eager_unique_name2bw_used_blob_object_
 
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_: return self.job_name2function_desc_[job_name]
@@ -197,11 +202,13 @@ class Session(object):
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
+        assert len(self.eager_unique_name2bw_used_blob_object_) == 0
         self.eager_global_function_desc_stack_.insert(0, function_desc)
         try:
             yield
         finally:
             self.eager_global_function_desc_stack_.pop(0)
+            assert len(self.eager_unique_name2bw_used_blob_object_) == 0
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

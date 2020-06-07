@@ -201,8 +201,8 @@ class EagerMirroredBlob(MirroredBlob):
                     self.job_name_, self.lbn_))
         ConsumedByGradientOp = c_api_util.JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp
         if (ConsumedByGradientOp(self.job_name_, self.lbn_)
-                and not gradient_util.HasFwBlobObject4BlobUniqueName(self.unique_name)):
-            gradient_util.SetFwBlobObject4BlobUniqueName(self.unique_name, self.blob_object_)
+                and not gradient_util.HasBwUsedBlobObject4UniqueName(self.unique_name)):
+            gradient_util.SetBwUsedBlobObject4UniqueName(self.unique_name, self.blob_object_)
             
     @property
     def blob_object(self): return self.blob_object_
