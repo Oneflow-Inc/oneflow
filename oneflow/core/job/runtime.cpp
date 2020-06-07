@@ -5,6 +5,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -91,9 +92,9 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (Global<ResourceDesc>::Get()->use_rdma()) {
+    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else

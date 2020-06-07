@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
@@ -51,8 +52,8 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
 }
 
 Maybe<std::string> CurrentResource() {
-  CHECK_NOTNULL_OR_RETURN(Global<ResourceDesc>::Get());
-  return PbMessage2TxtString(Global<ResourceDesc>::Get()->resource());
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
+  return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
 }
 
 Maybe<void> InitEnv(const std::string& env_proto_str) {
@@ -110,7 +111,7 @@ Maybe<void> StartGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }

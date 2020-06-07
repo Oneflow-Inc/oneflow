@@ -4,6 +4,7 @@
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
@@ -444,7 +445,7 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
-  size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
+  size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   return ThreadLocalCachedCall(cache_size, Infer, args->params);
 }
 

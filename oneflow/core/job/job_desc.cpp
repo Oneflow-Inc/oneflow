@@ -1,6 +1,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
@@ -74,8 +75,9 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 
 void JobDesc::Init() {
 #ifndef WITH_RDMA
-  CHECK_NOTNULL(Global<ResourceDesc>::Get());
-  CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+  CHECK_NOTNULL(Global<ResourceDesc, ForSession>::Get());
+  CHECK_EQ(Global<ResourceDesc, ForSession>::Get()->use_rdma(), false)
+      << "Please compile ONEFLOW with RDMA";
 #endif
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
@@ -91,7 +93,7 @@ void JobDesc::Init() {
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
   job_conf_.mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
 #ifndef WITH_CUDA
-  CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
+  CHECK_EQ(Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(), 0);
 #endif
   CheckFunctionConfig(job_conf_);
 }

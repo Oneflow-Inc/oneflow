@@ -1,3 +1,4 @@
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -15,10 +16,10 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
   resource.set_machine_num(1);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
-  Global<ResourceDesc>::New(resource);
+  Global<ResourceDesc, ForSession>::New(resource);
 }
 
-TestResourceDescScope::~TestResourceDescScope() { Global<ResourceDesc>::Delete(); }
+TestResourceDescScope::~TestResourceDescScope() { Global<ResourceDesc, ForSession>::Delete(); }
 
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {
   HashMap<std::string, int64_t> map{{"cpu", device_num}, {"gpu", device_num}};

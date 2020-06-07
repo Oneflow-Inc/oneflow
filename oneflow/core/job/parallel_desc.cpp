@@ -1,4 +1,5 @@
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -91,7 +92,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT_OR_RETURN(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
+        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
@@ -193,7 +194,7 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
     parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
   }
   return parallel_conf;
