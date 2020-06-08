@@ -6,6 +6,24 @@ namespace oneflow {
 
 namespace {
 
+class OpConfCache {
+  std::map<std::string, OperatorConf> _op_confs_to_update;
+
+ public:
+  OperatorConf GetLatest(const OperatorConf& op_conf) {
+    if (_op_confs_to_update.find(op_conf.name()) != _op_confs_to_update.end()) {
+      return _op_confs_to_update[op_conf.name()];
+    }
+    return op_conf;
+  }
+  void Put(const OperatorConf& op_conf) { _op_confs_to_update[op_conf.name()] = op_conf; }
+  std::vector<OperatorConf> op_confs() {
+    std::vector<OperatorConf> ret;
+    for (const auto& x : _op_confs_to_update) { ret.push_back(x.second); }
+    return ret;
+  }
+};
+
 class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
  public:
   DoParallelCastBeforeWideningTypeCast() = default;
@@ -18,14 +36,15 @@ class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
 
 Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
                                                         JobBuilder* job_builder) const {
-  std::vector<OperatorConf> op_confs_to_update;
-  op_graph.ForEachNode([&op_confs_to_update](OpNode* parallel_cast_node) {
+  OpConfCache op_conf_cache;
+  op_graph.ForEachNode([&op_conf_cache](OpNode* parallel_cast_node) {
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
-    const OperatorConf& parallel_cast_op_conf = parallel_cast_node->op().op_conf();
+    const OperatorConf& parallel_cast_op_conf =
+        op_conf_cache.GetLatest(parallel_cast_node->op().op_conf());
     if (!parallel_cast_op_conf.has_parallel_cast_conf()) { return; }
     auto* cast_node = parallel_cast_node->SoleInEdge()->src_node();
     if (cast_node->out_edges().size() != 1) { return; }
-    auto cast_op_conf = cast_node->op().op_conf();
+    auto cast_op_conf = op_conf_cache.GetLatest(cast_node->op().op_conf());
     if (!(cast_op_conf.has_user_conf() && cast_op_conf.user_conf().op_type_name() == "cast")) {
       return;
     }
@@ -45,7 +64,8 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       const std::string parallel_cast_input = parallel_cast_op_conf.parallel_cast_conf().in();
       ReplaceInputLbnInOpCustomizedConf(new_parallel_cast_op_conf.mutable_parallel_cast_conf(),
                                         "in", parallel_cast_input, cast_input);
-      op_confs_to_update.push_back(new_parallel_cast_op_conf);
+
+      op_conf_cache.Put(new_parallel_cast_op_conf);
     }
     // replace cast op input with parallel_cast op output
     {
@@ -55,7 +75,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       const std::string cast_input = cast_conf_wrapper.input("in", 0);
       ReplaceInputLbnInOpCustomizedConf(new_cast_op_conf.mutable_user_conf(), "in_0", cast_input,
                                         parallel_cast_output);
-      op_confs_to_update.push_back(new_cast_op_conf);
+      op_conf_cache.Put(new_cast_op_conf);
     }
 
     // update all parallel_cast op consumers
@@ -68,14 +88,14 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
 
       OpNode* dst_node = edge->dst_node();
-      OperatorConf dst_op_conf = dst_node->op().op_conf();
+      OperatorConf dst_op_conf = op_conf_cache.GetLatest(dst_node->op().op_conf());
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, cast_output);
-      op_confs_to_update.push_back(dst_op_conf);
+      op_conf_cache.Put(dst_op_conf);
     }
   });
-  job_builder->MutOpsOnlyOnce(op_confs_to_update);
+  job_builder->MutOpsOnlyOnce(op_conf_cache.op_confs());
   return Maybe<void>::Ok();
 }
 
