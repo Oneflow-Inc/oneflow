@@ -221,9 +221,6 @@ func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 # func_config.all_reduce_group_num(128)
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
-if args.enable_auto_mixed_precision:
-    func_config.enable_auto_mixed_precision()
-
 
 @flow.function(func_config)
 def PretrainJob():
