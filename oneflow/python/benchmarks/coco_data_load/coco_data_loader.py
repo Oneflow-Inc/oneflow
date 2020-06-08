@@ -97,27 +97,26 @@ def _make_data_load_fn():
     return data_load_fn
 
 
-def _benchmark():
+def _benchmark(iter_num):
     flow.env.init()
     data_loader = _make_data_load_fn()
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
-    for i in range(100):
-        data_loader().get()
-        # image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+    for i in range(iter_num):
+        # data_loader().get()
+        image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+        # print("==== iter {} ====".format(i))
+        # print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
+        # print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
+        # print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
+        # print("gt_label:\n", gt_label.ndarray_lists()[0])
+        # print("gt_mask:\n", gt_mask.ndarray_lists()[0])
         cur = time.perf_counter()
         s[i] = cur - timestamp
         timestamp = cur
-    print(s[10:].mean())
-
-    # image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
-    # print("=" * 80)
-    # print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
-    # print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
-    # print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-    # print("gt_label:\n", gt_label.ndarray_lists()[0])
-    # print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+    print("mean of time elapsed of {} iter (dropped 10 first iter): {}".format(iter_num, s[10:].mean()))
+    s.to_csv("coco_data_benchmark.csv", header=True)
 
 
 if __name__ == "__main__":
-    _benchmark()
+    _benchmark(100)

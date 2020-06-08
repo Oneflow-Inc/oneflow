@@ -385,7 +385,7 @@ def api_coco_reader(
         random_seed = random.randrange(sys.maxsize)
 
     op = (
-        flow.user_op_builder(name)
+        flow.consistent_user_op_builder(name)
         .Op("COCOReader")
         .Output("image")
         .Output("image_id")
