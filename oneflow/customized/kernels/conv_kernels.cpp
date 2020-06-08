@@ -377,7 +377,6 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     CHECK_NOTNULL(conv_state);
-    LOG(WARNING) << "ConvCpuKernel start";
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
       conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
                                ShapeView(conv_state->weight_5d_shape_),
@@ -417,7 +416,6 @@ class ConvCpuKernel final : public user_op::OpKernel {
             GetImgMutDptr<T>(out, i));
       }
     }
-    LOG(WARNING) << "ConvCpuKernel done";
   }
 };
 
