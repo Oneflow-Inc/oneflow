@@ -375,13 +375,6 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
-    auto DimRangeCount = [](const std::vector<int32_t>& vec, int begin, int end) -> int {
-      if (begin >= end) { return 0; }
-      int cnt = 1;
-      for (int i = begin; i < end; ++i) { cnt *= vec.at(i); }
-      return cnt;
-    };
-
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     CHECK_NOTNULL(conv_state);
     LOG(WARNING) << "ConvCpuKernel start";
