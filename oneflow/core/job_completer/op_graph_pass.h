@@ -12,20 +12,23 @@ class OpGraphPass {
   OpGraphPass() = default;
   virtual ~OpGraphPass() = default;
 
-  void operator()(Job* job) const {
-    if (IsEnabled() == false) { return; }
-    Apply(job);
+  Maybe<void> operator()(Job* job) const {
+    if (IsEnabled() == false) { return Maybe<void>::Ok(); }
+    return Apply(job);
   }
   virtual bool IsEnabled() const { return true; }
-  virtual void Apply(Job* job) const {
+  virtual Maybe<void> Apply(Job* job) const {
     const OpGraph op_graph(*job);
-    Apply(op_graph, job);
+    return Apply(op_graph, job);
   }
-  virtual void Apply(const OpGraph& op_graph, Job* job) const {
+  virtual Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
     JobBuilder job_builder(job);
-    Apply(op_graph, &job_builder);
+    return Apply(op_graph, &job_builder);
   }
-  virtual void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const { UNIMPLEMENTED(); }
+  virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+    UNIMPLEMENTED();
+    return Maybe<void>::Ok();
+  }
 };
 
 #define REGISTER_FUNCTION_PASS(pass_name, pass_type) \

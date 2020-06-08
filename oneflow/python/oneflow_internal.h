@@ -88,6 +88,12 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                       std::string* error_str) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
 long CurrentMachineId(std::string* error_str) {
   return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }

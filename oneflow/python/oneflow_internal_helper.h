@@ -19,6 +19,7 @@
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -167,6 +168,12 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
       << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
+Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
 Maybe<long long> CurrentMachineId() {
