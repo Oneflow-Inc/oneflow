@@ -1,6 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -40,10 +39,6 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), 
   has_job_conf_ = false;
 }
 
-Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
-  return CheckAndCompleteUserOpConfImpl(op_conf);
-}
-
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   CHECK_OR_RETURN(!is_job_conf_frozen_) << JobBuildAndInferError::kJobConfFrozen;
   CHECK_OR_RETURN(!has_job_conf_) << JobBuildAndInferError::kJobConfRepeatedSet;
@@ -61,25 +56,27 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id_);
-  auto DoPass = [&](const std::string& pass_name) { FunctionPass(pass_name)(job_); };
+  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return FunctionPass(pass_name)(job_);
+  };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    DoPass("CompleteOfrecordDecoder");
-    DoPass("SetDefaultVariableConf");
-    DoPass("AutoMixedPrecision");
-    DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps");
-    DoPass("NonDistributedOptimizerPass");
-    DoPass("AutoTrainStep");
-    DoPass("AutoLearningRate");
-    DoPass("GenerateBackwardAndOptimizerOpConfs");
-    DoPass("IndexedSlicesOptimizerRewritePass");
-    DoPass("HalfBoxingPass");
-    DoPass("AddAllReduceGroupPass");
-    DoPass("AddLbiDiffWatcherOpConfs");
-    DoPass("SequentializeAllReduceGroupPass");
-    DoPass("PruneParallelCastOpsPass");
-    DoPass("DumpVariableInfoPass");
+    JUST(DoPass("CompleteOfrecordDecoder"));
+    JUST(DoPass("SetDefaultVariableConf"));
+    JUST(DoPass("AutoMixedPrecision"));
+    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
+    JUST(DoPass("NonDistributedOptimizerPass"));
+    JUST(DoPass("AutoTrainStep"));
+    JUST(DoPass("AutoLearningRate"));
+    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
+    JUST(DoPass("HalfBoxingPass"));
+    JUST(DoPass("AddAllReduceGroupPass"));
+    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
+    JUST(DoPass("SequentializeAllReduceGroupPass"));
+    JUST(DoPass("PruneParallelCastOpsPass"));
+    JUST(DoPass("DumpVariableInfoPass"));
   }
-  DoPass("DumpTimeShapeAndBlobParallelConfPass");
+  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
   return Maybe<void>::Ok();
 }
 
