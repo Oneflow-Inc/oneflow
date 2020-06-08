@@ -16,7 +16,8 @@ class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
+                                                        JobBuilder* job_builder) const {
   std::vector<OperatorConf> op_confs_to_update;
   op_graph.ForEachNode([&op_confs_to_update](OpNode* parallel_cast_node) {
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
@@ -80,6 +81,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("DoParallelCastBeforeWideningTypeCast", DoParallelCastBeforeWideningTypeCast);
+REGISTER_FUNCTION_PASS("DoParallelCastBeforeWideningTypeCast",
+                       DoParallelCastBeforeWideningTypeCast);
 
 }  // namespace oneflow
