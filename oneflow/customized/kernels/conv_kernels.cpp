@@ -318,7 +318,8 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
     DimVector ret_vec(shape.dim_vec());
-    ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ret_vec.size(), 1);
+    int32_t ndims = ret_vec.size() - 2;
+    ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
   state->in_5d_shape_ =
