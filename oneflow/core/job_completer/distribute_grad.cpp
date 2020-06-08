@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf4Concat(
+Maybe<void> GenerateBackwardOpConf4Concat(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -25,9 +25,10 @@ void GenerateBackwardOpConf4Concat(
     }
   }
   op_confs->push_back(split_op);
+  return Maybe<void>::Ok();
 }
 
-void GenerateBackwardOpConf4Split(
+Maybe<void> GenerateBackwardOpConf4Split(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -53,9 +54,10 @@ void GenerateBackwardOpConf4Split(
     DiffLbi4BnInOp("in")->set_blob_name("out");
     op_confs->push_back(concat_op);
   }
+  return Maybe<void>::Ok();
 }
 
-void GenerateBackwardOpConf4Clone(
+Maybe<void> GenerateBackwardOpConf4Clone(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -80,9 +82,10 @@ void GenerateBackwardOpConf4Clone(
     DiffLbi4BnInOp("in")->set_blob_name("out");
     op_confs->push_back(partial_op);
   }
+  return Maybe<void>::Ok();
 }
 
-void GenerateBackwardOpConf4Add(
+Maybe<void> GenerateBackwardOpConf4Add(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -102,6 +105,7 @@ void GenerateBackwardOpConf4Add(
     }
   }
   op_confs->push_back(broadcast_op);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
