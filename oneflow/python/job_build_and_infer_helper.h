@@ -56,13 +56,6 @@ Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->C
 
 Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() { return JUST(GetCurInferCtx())->HasJobConf(); }
 
-Maybe<std::string> CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(
-    const std::string& op_conf_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  return PbMessage2TxtString(*JUST(JUST(GetCurInferCtx())->CheckAndCompleteUserOpConf(op_conf)));
-}
-
 Maybe<void> CurJobBuildAndInferCtx_AddAndInferOp(const std::string& op_conf_str,
                                                  const std::string& parallel_conf_str) {
   OperatorConf op_conf;

@@ -18,7 +18,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "bias_add",      "multiply",      "sigmoid",       "tanh",
                               "sqrt",          "scalar_mul",    "scalar_add",    "broadcast_add",
                               "broadcast_sub", "broadcast_mul", "broadcast_div", "layer_norm",
-                              "dropout",       "softmax",       "gelu"};
+                              "dropout",       "softmax",       "gelu",          "normalization"};
   return gray_list;
 }
 
