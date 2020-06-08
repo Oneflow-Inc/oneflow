@@ -67,6 +67,12 @@ def register_optimizer(name):
 
 @register_optimizer("sgd")
 def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):
-    if var_diff.dtype != lr.dtype:
-        lr = flow.cast(lr, dtype=var_diff.dtype)
-    flow.assign(var, var - var_diff * lr)
+    assert len(parallel_conf.device_name) == 1
+    splits = parallel_conf.device_name[0].split(":")
+    assert len(splits) == 3
+    device_tag = splits[1]
+    machine_device_ids = ":".join([splits[0], splits[2]])
+    with flow.fixed_placement(device_tag, machine_device_ids):
+        if var_diff.dtype != lr.dtype:
+            lr = flow.cast(lr, dtype=var_diff.dtype)
+        flow.assign(var, var - var_diff * lr)
