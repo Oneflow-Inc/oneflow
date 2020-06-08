@@ -345,7 +345,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operato
     }
     CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
-        << "is not equals to op' parallel_num";
+        << " is not equals to op' parallel_num";
   }
   return Maybe<void>::Ok();
 }
