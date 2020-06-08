@@ -141,6 +141,9 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
   }
   const int32_t groups = GetValFromPbMessage<int32_t>(conv_conf, "groups");
   if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
+  if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    CudaCheck(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
+  }
 }
 
 CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
@@ -167,6 +170,9 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
   }
   const int32_t groups = conv_conf.attr<int32_t>("groups");
   if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
+  if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    CudaCheck(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
+  }
 }
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
@@ -337,7 +343,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -349,7 +355,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
@@ -372,7 +378,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -384,7 +390,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
@@ -408,7 +414,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -420,7 +426,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
