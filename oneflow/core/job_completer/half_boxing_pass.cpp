@@ -10,10 +10,10 @@ class HalfBoxingPass final : public OpGraphPass {
   HalfBoxingPass() = default;
   ~HalfBoxingPass() override = default;
   bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   op_graph.ForEachNode([&job_builder](OpNode* parallel_cast_node) {
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
     const OperatorConf& parallel_cast_op_conf = parallel_cast_node->op().op_conf();
@@ -70,6 +70,7 @@ void HalfBoxingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) con
       job_builder->MutOpsOnlyOnce({dst_op_conf});
     }
   });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
