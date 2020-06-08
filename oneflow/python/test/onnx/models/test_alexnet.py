@@ -5,8 +5,6 @@ import onnxruntime as ort
 import onnx
 from util import convert_to_onnx_and_check
 
-_MODEL_LOAD = "/home/dev/files/of_model/"
-
 def _conv2d_layer(
     name,
     input,
@@ -68,9 +66,7 @@ def alexnet(images, labels, trainable=True):
   pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
   def _get_initializer():
-    kernel_initializer = op_conf_util.InitializerConf()
-    kernel_initializer.truncated_normal_conf.std = 0.816496580927726
-    return kernel_initializer
+    return flow.random_uniform_initializer()
 
   if len(pool5.shape) > 2:
     pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
@@ -120,11 +116,10 @@ def test_alexnet(test_case):
   func_config.default_data_type(flow.float)
   @flow.function(func_config)
   def alexnet_eval_job(x=flow.FixedTensorDef((1,227,227,3))):
-    with flow.distribute.consistent_strategy():
-      return alexnet(x, None, False)
+    return alexnet(x, None, False)
 
   check_point = flow.train.CheckPoint()
-  check_point.load(_MODEL_LOAD)
+  check_point.init()
 
   convert_to_onnx_and_check(alexnet_eval_job, model=True)
 

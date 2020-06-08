@@ -151,7 +151,7 @@ def resnet50(images, trainable=True, need_transpose=False):
             use_bias=True,
             kernel_initializer=flow.variance_scaling_initializer(2, 'fan_in', 'random_normal'),
             #kernel_initializer=flow.xavier_uniform_initializer(),
-            bias_initializer=flow.zeros_initializer(),
+            bias_initializer=flow.random_uniform_initializer(),
             kernel_regularizer=flow.regularizers.l2(1.0/32768),
             trainable=trainable,
             name="fc1001",
