@@ -216,6 +216,12 @@ class TransposeOptimizer(GraphOptimizerBase):
                 utils.make_sure(len(n.output) == 1, "only expect single output")
                 self._g.replace_all_inputs(self._g.get_nodes(), n.output[0], n_input)
                 self._g.remove_node(n.name)
+            
+            shape = self._g.get_shape(node.output[0])
+            if shape:
+                # only nhwc transpose can reach here
+                new_shape = [shape[i] for i in NHWC_TO_NCHW]
+                self._g.set_shape(node.output[0], new_shape)
             return True
 
         self.logger.debug("input transpose does not have single consumer, skipping...")
