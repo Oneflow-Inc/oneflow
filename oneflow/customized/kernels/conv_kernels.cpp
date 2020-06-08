@@ -301,7 +301,7 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
                                                                 const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
-  std::shared_ptr<ConvOpKernelState<T>> state = new ConvOpKernelState<T>();
+  std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
   if (data_format == "channels_first") {
     state->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
@@ -383,6 +383,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     CHECK_NOTNULL(conv_state);
+    LOG(WARNING) << "ConvCpuKernel start";
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
       conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
                                ShapeView(conv_state->weight_5d_shape_),
@@ -422,6 +423,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
             GetImgMutDptr<T>(out, i));
       }
     }
+    LOG(WARNING) << "ConvCpuKernel done";
   }
 };
 
