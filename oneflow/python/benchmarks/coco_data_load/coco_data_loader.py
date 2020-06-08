@@ -1,5 +1,7 @@
 import oneflow as flow
 import math
+import pandas as pd
+import time
 
 
 class COCODataLoadConfig(object):
@@ -98,13 +100,23 @@ def _make_data_load_fn():
 def _benchmark():
     flow.env.init()
     data_loader = _make_data_load_fn()
-    image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
-    print("=" * 80)
-    print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
-    print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
-    print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-    print("gt_label:\n", gt_label.ndarray_lists()[0])
-    print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+    s = pd.Series([], name="time_elapsed", dtype="float32")
+    timestamp = time.perf_counter()
+    for i in range(100):
+        data_loader().get()
+        # image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+        cur = time.perf_counter()
+        s[i] = cur - timestamp
+        timestamp = cur
+    print(s[10:].mean())
+
+    # image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+    # print("=" * 80)
+    # print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
+    # print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
+    # print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
+    # print("gt_label:\n", gt_label.ndarray_lists()[0])
+    # print("gt_mask:\n", gt_mask.ndarray_lists()[0])
 
 
 if __name__ == "__main__":
