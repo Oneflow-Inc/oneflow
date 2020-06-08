@@ -15,18 +15,18 @@ import numpy as np
 from onnx import onnx_pb, helper
 
 from oneflow.python.onnx import utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 
 logger = logging.getLogger(__name__)
 
 
 # pylint: disable=unused-argument,missing-docstring
 
-@tf_op("Min", onnx_op="ReduceMin")
-@tf_op("Max", onnx_op="ReduceMax")
-@tf_op("Mean", onnx_op="ReduceMean")
-@tf_op("Sum", onnx_op="ReduceSum")
-@tf_op("Prod", onnx_op="ReduceProd")
+@flow_op("Min", onnx_op="ReduceMin")
+@flow_op("Max", onnx_op="ReduceMax")
+@flow_op("Mean", onnx_op="ReduceMean")
+@flow_op("Sum", onnx_op="ReduceSum")
+@flow_op("Prod", onnx_op="ReduceProd")
 class ReduceOpBase:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -55,7 +55,7 @@ class ReduceOpBase:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op(["ArgMax", "ArgMin"])
+@flow_op(["ArgMax", "ArgMin"])
 class ArgMax:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -90,7 +90,7 @@ class ArgMax:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op(["All", "Any"])
+@flow_op(["All", "Any"])
 class AllAny:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -119,7 +119,7 @@ class AllAny:
                       name=node.name, outputs=node.output, shapes=shapes, dtypes=dtypes)
 
 
-@tf_op("AddN")
+@flow_op("AddN")
 class AddN():
     @classmethod
     def version_6(cls, ctx, node, **kwargs):

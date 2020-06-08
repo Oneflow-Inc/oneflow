@@ -13,7 +13,7 @@ import logging
 
 from onnx import TensorProto
 from oneflow.python.onnx import utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common
 
 
@@ -34,20 +34,20 @@ def _add_cast_to_inputs(graph, node, supported_dtypes, target_dtype):
             graph.set_dtype(inp_cast.output[0], target_dtype)
 
 
-@tf_op("LogicalNot", onnx_op="Not")
+@flow_op("LogicalNot", onnx_op="Not")
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("LogicalAnd", onnx_op="And")
-@tf_op("LogicalOr", onnx_op="Or")
+@flow_op("LogicalAnd", onnx_op="And")
+@flow_op("LogicalOr", onnx_op="Or")
 class BroadcastOp(common.BroadcastOp):
     pass
 
 
-@tf_op(["Equal", "NotEqual"])
+@flow_op(["Equal", "NotEqual"])
 class Equal:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -91,7 +91,7 @@ class Equal:
             ctx.copy_dtype(output_name, not_node.output[0])
 
 
-@tf_op(["Greater", "Less"])
+@flow_op(["Greater", "Less"])
 class GreaterLess:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -111,8 +111,8 @@ class GreaterLess:
         _add_cast_to_inputs(ctx, node, supported_dtypes, target_dtype)
 
 
-@tf_op("GreaterEqual", onnx_op="Less")
-@tf_op("LessEqual", onnx_op="Greater")
+@flow_op("GreaterEqual", onnx_op="Less")
+@flow_op("LessEqual", onnx_op="Greater")
 class GreaterLessEqual:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):

@@ -11,14 +11,14 @@ from __future__ import unicode_literals
 
 import logging
 
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 
 
 logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring
 
-@tf_op(["CheckNumerics", "StopGradient"])
+@flow_op(["CheckNumerics", "StopGradient"])
 class MoveToIdent:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -34,21 +34,21 @@ class MoveToIdent:
             ctx.remove_node(node.name)
 
 
-@tf_op(['input', 'variable'])
+@flow_op(['input', 'variable'])
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op(["distribute_split"])
+@flow_op(["distribute_split"])
 class BoxingOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         node.type = "Identity"
 
 
-@tf_op("NoOp")
+@flow_op("NoOp")
 class NukeNode:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

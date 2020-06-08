@@ -7,7 +7,7 @@ import numpy as np
 from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
 from oneflow.python.onnx import constants, utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import controlflow
 from oneflow.python.onnx.onnx_opset.nn import conv_convert_inputs, conv_dims_attr
 
@@ -29,7 +29,7 @@ def _make_range_non_const(ctx, start, limit, delta, output, scope_name, shape, d
                   domain=constants.MICROSOFT_DOMAIN)
 
 
-@tf_op("Range", domain=constants.MICROSOFT_DOMAIN)
+@flow_op("Range", domain=constants.MICROSOFT_DOMAIN)
 class Range:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -42,7 +42,7 @@ class Range:
         make_range(ctx, node.input[0], node.input[1], node.input[2], node.output[0], node.name, shape, dtype)
 
 
-@tf_op("Conv2DBackpropInput", domain=constants.MICROSOFT_DOMAIN, onnx_op="ConvTransposeWithDynamicPads")
+@flow_op("Conv2DBackpropInput", domain=constants.MICROSOFT_DOMAIN, onnx_op="ConvTransposeWithDynamicPads")
 class ConvTransposeWithDynamicPads:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

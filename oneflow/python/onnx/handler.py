@@ -16,7 +16,7 @@ from oneflow.python.onnx import constants
 # pylint: disable=unused-argument,missing-docstring,invalid-name
 
 
-class tf_op:
+class flow_op:
     """Class to implement the decorator to register handlers that map tf to onnx."""
 
     _OPSETS = collections.OrderedDict()
@@ -38,10 +38,10 @@ class tf_op:
         self.kwargs = kwargs
 
     def __call__(self, func):
-        opset = tf_op._OPSETS.get(self.domain)
+        opset = flow_op._OPSETS.get(self.domain)
         if not opset:
             opset = []
-            tf_op._OPSETS[self.domain] = opset
+            flow_op._OPSETS[self.domain] = opset
         for k, v in inspect.getmembers(func, inspect.ismethod):
             if k.startswith("version_"):
                 version = int(k.replace("version_", ""))
@@ -59,10 +59,10 @@ class tf_op:
         :param version: The domain the operator belongs to, defaults to onnx.
         :param version: The version of the handler.
         """
-        opset = tf_op._OPSETS.get(self.domain)
+        opset = flow_op._OPSETS.get(self.domain)
         if not opset:
             opset = []
-            tf_op._OPSETS[self.domain] = opset
+            flow_op._OPSETS[self.domain] = opset
             while version >= len(opset):
                 opset.append({})
             opset_dict = opset[version]
@@ -70,7 +70,7 @@ class tf_op:
 
     @staticmethod
     def get_opsets():
-        return tf_op._OPSETS
+        return flow_op._OPSETS
 
     @staticmethod
     def create_mapping(max_onnx_opset_version, extra_opsets):
@@ -84,14 +84,14 @@ class tf_op:
             for extra_opset in extra_opsets:
                 mapping[extra_opset.domain] = extra_opset.version
         ops_mapping = {}
-        for domain, opsets in tf_op.get_opsets().items():
+        for domain, opsets in flow_op.get_opsets().items():
             for target_opset, op_map in enumerate(opsets):
                 m = mapping.get(domain)
                 if m:
                     if target_opset <= m and op_map:
                         ops_mapping.update(op_map)
 
-        tf_op._MAPPING = ops_mapping
+        flow_op._MAPPING = ops_mapping
         return ops_mapping
 
     @staticmethod
@@ -103,7 +103,7 @@ class tf_op:
 
         :param name: The operator name.
         """
-        map_info = tf_op._MAPPING.get(name)
+        map_info = flow_op._MAPPING.get(name)
         if map_info is None:
             return None
         return map_info

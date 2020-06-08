@@ -15,7 +15,7 @@ import numpy as np
 
 from onnx.onnx_pb import TensorProto
 from oneflow.python.onnx import utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.utils import make_sure
 
 logger = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ def make_range(ctx, start, limit, delta, output, scope_name, shape, dtype):
         make_range_non_const(ctx, start, limit, delta, output, scope_name, shape, dtype)
 
 
-@tf_op(["If", "Loop", "Scan"])
+@flow_op(["If", "Loop", "Scan"])
 class PassThroughOp:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -247,7 +247,7 @@ class PassThroughOp:
         pass
 
 
-@tf_op("Range")
+@flow_op("Range")
 class Range:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -267,7 +267,7 @@ class Range:
         pass
 
 
-@tf_op("Select")
+@flow_op("Select")
 class Select:
     @classmethod
     def version_8(cls, ctx, node, **kwargs):
@@ -352,7 +352,7 @@ class Select:
             ctx.replace_input(node, node.input[0], reshape.output[0])
 
 
-@tf_op("Where")
+@flow_op("Where")
 class Where:
     @classmethod
     def version_9(cls, ctx, node, **kwargs):

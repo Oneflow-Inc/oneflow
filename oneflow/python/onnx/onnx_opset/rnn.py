@@ -13,14 +13,14 @@ import logging
 
 import numpy as np
 from oneflow.python.onnx import utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 
 logger = logging.getLogger(__name__)
 
 
 # pylint: disable=unused-argument,missing-docstring
 
-@tf_op("LSTMBlockCell")
+@flow_op("LSTMBlockCell")
 class LSTMBlockCell:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

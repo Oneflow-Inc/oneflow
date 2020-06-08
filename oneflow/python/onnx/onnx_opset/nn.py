@@ -16,7 +16,7 @@ from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
 from oneflow.python.onnx import constants, utils
 from oneflow.python.onnx.graph_builder import GraphBuilder
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common, controlflow, tensor
 
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ def conv_kernel_shape(ctx, node, input_idx, spatial=2):
     return kernel_shape
 
 
-@tf_op(["Conv1D", "Conv2D", "Conv3D", "conv2d"], flow_inputs=['in', 'weight'])
+@flow_op(["Conv1D", "Conv2D", "Conv3D", "conv2d"], flow_inputs=['in', 'weight'])
 class ConvOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -221,7 +221,7 @@ class ConvOp:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("Conv2DBackpropInput")
+@flow_op("Conv2DBackpropInput")
 class ConvTranspose:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -295,7 +295,7 @@ class ConvTranspose:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op(["DepthwiseConv2d", "DepthwiseConv2dNative"])
+@flow_op(["DepthwiseConv2d", "DepthwiseConv2dNative"])
 class DepthwiseConv2d:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -334,8 +334,8 @@ class DepthwiseConv2d:
         conv_convert_inputs(ctx, node, with_kernel=True, new_kernel_shape=new_kernel_shape)
 
 
-@tf_op(["avg_pool_2d", "AvgPool3D"], onnx_op="AveragePool")
-@tf_op(["max_pool_2d"], onnx_op="MaxPool")
+@flow_op(["avg_pool_2d", "AvgPool3D"], onnx_op="AveragePool")
+@flow_op(["max_pool_2d"], onnx_op="MaxPool")
 class PoolOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -373,7 +373,7 @@ class PoolOp:
         conv_convert_inputs(ctx, node, with_kernel=False)
 
 
-@tf_op(["MaxPoolWithArgmax"], onnx_op="MaxPool")
+@flow_op(["MaxPoolWithArgmax"], onnx_op="MaxPool")
 class MaxPoolWithArgmaxOp:
     @classmethod
     def version_8(cls, ctx, node, **kwargs):
@@ -396,7 +396,7 @@ class MaxPoolWithArgmaxOp:
         conv_convert_inputs(ctx, node, with_kernel=False, input_indices=[0], output_indices=[0, 1])
 
 
-@tf_op(["BiasAdd", "BiasAddV1"])
+@flow_op(["BiasAdd", "BiasAddV1"])
 class BiasAdd:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -430,7 +430,7 @@ class BiasAdd:
                 ctx.set_shape(reshape_node.output[0], new_broadcast_shape)
 
 
-@tf_op(["Pad", "PadV2", "MirrorPad"], onnx_op="Pad")
+@flow_op(["Pad", "PadV2", "MirrorPad"], onnx_op="Pad")
 class Pad:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -500,7 +500,7 @@ class Pad:
             ctx.copy_shape(node.name, cast_back_node.output[0])
 
 
-@tf_op(['normalization'], flow_inputs=['x', 'gamma', 'beta', 'moving_mean', 'moving_variance'])
+@flow_op(['normalization'], flow_inputs=['x', 'gamma', 'beta', 'moving_mean', 'moving_variance'])
 class BatchNorm:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -546,7 +546,7 @@ class BatchNorm:
         cls.version_6(ctx, node, **kwargs)
 
 
-@tf_op(["SpaceToDepth"])
+@flow_op(["SpaceToDepth"])
 class SpaceToDepth:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -555,7 +555,7 @@ class SpaceToDepth:
         conv_convert_inputs(ctx, node, with_kernel=False)
 
 
-@tf_op(["DepthToSpace"])
+@flow_op(["DepthToSpace"])
 class DepthToSpace:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -569,7 +569,7 @@ class DepthToSpace:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op(["CropAndResize"])
+@flow_op(["CropAndResize"])
 class CropAndResize:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
@@ -634,7 +634,7 @@ class CropAndResize:
         inner_loop.set_body_graph_as_attr("body", g)
 
 
-@tf_op(["ResizeBilinear", "ResizeNearestNeighbor"])
+@flow_op(["ResizeBilinear", "ResizeNearestNeighbor"])
 class Resize:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -718,7 +718,7 @@ class Resize:
                       name=node.name, outputs=node.output, shapes=shapes, dtypes=dtypes)
 
 
-@tf_op("MatrixBandPart")
+@flow_op("MatrixBandPart")
 class MatrixBandPart:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -862,7 +862,7 @@ def sparse_softmax_cross_entropy_with_logits_op_by_gathernd(ctx, node, **kwargs)
                   attr={"axes": [1]}, shapes=[shapes[0]], dtypes=[dtypes[0]])
 
 
-@tf_op("SoftmaxCrossEntropyWithLogits")
+@flow_op("SoftmaxCrossEntropyWithLogits")
 class SoftmaxCrossEntropyWithLogits:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -903,7 +903,7 @@ def _make_sparse_softmax_cross_entropy_with_logits(ctx, label, logit, tf_ori_nod
                         outputs=[tf_ori_node.output[0]], shapes=[shapes[0]], dtypes=[dtypes[0]])
 
 
-@tf_op("SparseSoftmaxCrossEntropyWithLogits")
+@flow_op("SparseSoftmaxCrossEntropyWithLogits")
 class SparseSoftmaxCrossEntropyWithLogits:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):

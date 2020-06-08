@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from onnx import onnx_pb
 from oneflow.python.onnx import constants, utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common
 
 logger = logging.getLogger(__name__)
@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring
 
-@tf_op(["broadcast_add"], onnx_op='Add')
-@tf_op(["scalar_add_by_tensor"], onnx_op='Add')
-@tf_op(["Add", "AddV2", "Div", "Mul", "Sub"])
+@flow_op(["broadcast_add"], onnx_op='Add')
+@flow_op(["scalar_add_by_tensor"], onnx_op='Add')
+@flow_op(["Add", "AddV2", "Div", "Mul", "Sub"])
 class BroadcastOp(common.BroadcastOp):
     pass
 
 
-@tf_op('add_n', onnx_op='Add')
+@flow_op('add_n', onnx_op='Add')
 class AddN:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -39,7 +39,7 @@ class AddN:
         node.input = node.input[:2]
 
 
-@tf_op('bias_add', onnx_op='Add', flow_inputs=['a', 'b'])
+@flow_op('bias_add', onnx_op='Add', flow_inputs=['a', 'b'])
 class BiasAdd(common.BroadcastOp):
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -59,22 +59,22 @@ class BiasAdd(common.BroadcastOp):
         super().version_6(ctx, node, **kwargs)
 
 
-@tf_op(["RealDiv", "TruncateDiv"], onnx_op="Div")
+@flow_op(["RealDiv", "TruncateDiv"], onnx_op="Div")
 class RealDiv(common.BroadcastOp):
     pass
 
 
-@tf_op(["LeakyRelu", "LogSoftmax", "Softplus", "Softsign"])
-@tf_op('leaky_relu', onnx_op='LeakyRelu')
+@flow_op(["LeakyRelu", "LogSoftmax", "Softplus", "Softsign"])
+@flow_op('leaky_relu', onnx_op='LeakyRelu')
 class DirectOpSinceOpset1:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op(["Abs", "Ceil", "Elu", "Exp", "Floor", "Log", "Neg", "Sigmoid", "Sqrt",
+@flow_op(["Abs", "Ceil", "Elu", "Exp", "Floor", "Log", "Neg", "Sigmoid", "Sqrt",
         "Tanh", "Reciprocal"])
-@tf_op('relu')
+@flow_op('relu')
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -85,14 +85,14 @@ class DirectOp:
         pass
 
 
-@tf_op(["Acos", "Asin", "Atan", "Cos", "Sin", "Tan"])
+@flow_op(["Acos", "Asin", "Atan", "Cos", "Sin", "Tan"])
 class TrigOpSinceOpset7:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op(["Acosh", "Asinh", "Atanh", "Cosh", "Sinh"])
+@flow_op(["Acosh", "Asinh", "Atanh", "Cosh", "Sinh"])
 class TrigOpSinceOpset9:
     @classmethod
     def version_9(cls, ctx, node, **kwargs):
@@ -160,8 +160,8 @@ def make_min_or_max_op(ctx, op_type, inputs, outputs,
             node.input[i] = add_node.output[0]
 
 
-@tf_op("Minimum", onnx_op="Min")
-@tf_op("Maximum", onnx_op="Max")
+@flow_op("Minimum", onnx_op="Min")
+@flow_op("Maximum", onnx_op="Max")
 class MinMaxOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -200,7 +200,7 @@ class ClipOps:
             node.input.append('')
 
 
-@tf_op(["clip_by_scalar", "clip_by_scalar_min", "clip_by_scalar_max"])
+@flow_op(["clip_by_scalar", "clip_by_scalar_min", "clip_by_scalar_max"])
 class ClipByValueOp(ClipOps):
     # in tf-1.8 there was a ClipByValue op which in later versions was replaced by max(min(x, a), b)
     # To support models generated with tf-1.8 rewrite the tf ClipByValue op to max(min(x, a), b)
@@ -217,7 +217,7 @@ class ClipByValueOp(ClipOps):
         super().version_11(ctx, node, min_val, max_val)
 
 
-@tf_op("softmax")
+@flow_op("softmax")
 class Softmax:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -231,7 +231,7 @@ class Softmax:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("Square")
+@flow_op("Square")
 class Square:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -239,7 +239,7 @@ class Square:
         node.input.append(node.input[0])
 
 
-@tf_op("Relu6")
+@flow_op("Relu6")
 class Relu6(ClipOps):
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -253,7 +253,7 @@ class Relu6(ClipOps):
         super().version_11(ctx, node, min_val=0.0, max_val=6.0)
 
 
-@tf_op("Rsqrt")
+@flow_op("Rsqrt")
 class Rsqrt:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -263,7 +263,7 @@ class Rsqrt:
         ctx.copy_shape(node.output[0], reciprocal.output[0])
 
 
-@tf_op("SquaredDifference")
+@flow_op("SquaredDifference")
 class SquaredDifference:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -273,7 +273,7 @@ class SquaredDifference:
         mul.input.append(node.output[0])
 
 
-@tf_op("Sign")
+@flow_op("Sign")
 class Sign:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -309,7 +309,7 @@ class Sign:
             raise ValueError("dtype " + str(node_dtype) + " is not supported in onnx for now")
 
 
-@tf_op("Pow")
+@flow_op("Pow")
 class Pow:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -331,7 +331,7 @@ class Pow:
         pass
 
 
-@tf_op("LRN")
+@flow_op("LRN")
 class LRN:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -355,7 +355,7 @@ class LRN:
                                       name=op_name, shapes=shapes, dtypes=dtypes)
 
 
-@tf_op(["matmul", "BatchMatMul", "BatchMatMulV2"], flow_inputs=['a', 'b'])
+@flow_op(["matmul", "BatchMatMul", "BatchMatMulV2"], flow_inputs=['a', 'b'])
 class MatMul:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -402,7 +402,7 @@ class MatMul:
                 raise ValueError(node.type + " attribute " + i + " is not supported")
 
 
-@tf_op("Erf")
+@flow_op("Erf")
 class Erf:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -487,7 +487,7 @@ class Erf:
         pass
 
 
-@tf_op("FloorDiv")
+@flow_op("FloorDiv")
 class FloorDiv:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -502,7 +502,7 @@ class FloorDiv:
             ctx.copy_shape(node.output[0], floor_res.output[0])
 
 
-@tf_op("FloorMod")
+@flow_op("FloorMod")
 class FloorMod:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -521,35 +521,35 @@ class FloorMod:
                       name=node.name, outputs=node.output, shapes=shapes, dtypes=dtypes)
 
 
-@tf_op("Selu")
+@flow_op("Selu")
 class Selu:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("Cumsum", onnx_op="CumSum")
+@flow_op("Cumsum", onnx_op="CumSum")
 class CumSum:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("Round")
+@flow_op("Round")
 class Round:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("MatrixDeterminant", onnx_op="Det")
+@flow_op("MatrixDeterminant", onnx_op="Det")
 class Det:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op(["LeftShift", "RightShift"])
+@flow_op(["LeftShift", "RightShift"])
 class BitShift:
 
     @classmethod

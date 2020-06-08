@@ -98,7 +98,7 @@ def create_onnx_random_uniform_op(g, tmax, tmin, ru_op, output, to_delete):
             zero = g.make_const(utils.make_name("zero"), np.zeros((), dtype=np.float32))
             fill_node = g.make_node("Fill", inputs=[shape_node.output[0], zero.name],
                                     shapes=[shape], dtypes=[dtype])
-            func, _ = handler.tf_op.find_effective_op("Fill")
+            func, _ = handler.flow_op.find_effective_op("Fill")
             func(g, fill_node)
             # and use RandomUniformLike to create the random tensor
             new_node = g.make_node("RandomUniformLike", inputs=[fill_node.output[0]], name=op_name,

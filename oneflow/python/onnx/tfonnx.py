@@ -467,7 +467,7 @@ def transpose_inputs(ctx, inputs_as_nchw):
     ctx.reset_nodes(ops)
 
 
-def tf_optimize(inputs, outputs, graph_def, fold_constant=None):
+def flow_optimize(inputs, outputs, graph_def, fold_constant=None):
     """Optimize tensorflow graph for inference."""
     transforms = []
     if fold_constant:
@@ -618,13 +618,13 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
     g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes, target, opset, extra_opset, output_names, input_maps=input_maps)
 
     # create ops mapping for the desired opsets
-    ops_mapping = handler.tf_op.create_mapping(g.opset, g.extra_opset)
+    ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
 
     # apply custom ops on top of the assembled opset. We can either complement the opset
     # or override existing ops with a custom op.
     if custom_op_handlers is not None:
         # below is a bit tricky since there are a few api's:
-        # 1. the future way we want custom ops to be registered with the @tf_op decorator. THose handlers will be
+        # 1. the future way we want custom ops to be registered with the @flow_op decorator. THose handlers will be
         #     registered via the decorator on load of the module ... nothing is required here.
         # 2. the old custom op api: a dictionary of {name: (func, args[])
         #     We deal with this by using a compat_handler that wraps to old handler with a new style handler.
@@ -646,7 +646,7 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
                 kwargs["onnx_op"] = onnx_op
                 args = args[1:]
             kwargs["args"] = args
-            new_handler = handler.tf_op(k,
+            new_handler = handler.flow_op(k,
                                         domain=constants.TENSORFLOW_OPSET.domain,
                                         kwargs=kwargs)
             new_handler.register_compat_handler(compat_handler, 1)

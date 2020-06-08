@@ -14,7 +14,7 @@ import sys
 
 import tensorflow as tf
 
-from oneflow.python.onnx.tfonnx import process_tf_graph, tf_optimize
+from oneflow.python.onnx.tfonnx import process_tf_graph, flow_optimize
 from oneflow.python.onnx import constants, loader, logging, utils, optimizer
 
 
@@ -128,7 +128,7 @@ def main():
         logger.info("outputs: %s", outputs)
 
     # todo: consider to enable const folding by default?
-    graph_def = tf_optimize(inputs, outputs, graph_def, args.fold_const)
+    graph_def = flow_optimize(inputs, outputs, graph_def, args.fold_const)
 
     with tf.Graph().as_default() as tf_graph:
         tf.import_graph_def(graph_def, name='')

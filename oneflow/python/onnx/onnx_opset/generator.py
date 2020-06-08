@@ -14,28 +14,28 @@ import logging
 import numpy as np
 from onnx import onnx_pb, numpy_helper
 from oneflow.python.onnx import utils
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 
 logger = logging.getLogger(__name__)
 
 
 # pylint: disable=unused-argument,missing-docstring
 
-@tf_op(["Const", "ConstV2"])
+@flow_op(["Const", "ConstV2"])
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op(["RandomNormal", "RandomUniform", "RandomNormalLike", "RandomUniformLike"])
+@flow_op(["RandomNormal", "RandomUniform", "RandomNormalLike", "RandomUniformLike"])
 class PassThroughOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("Fill")
+@flow_op("Fill")
 class Fill:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -112,7 +112,7 @@ class Fill:
             ctx.insert_new_node_on_input(node, "Cast", node.input[1], to=onnx_pb.TensorProto.INT64)
 
 
-@tf_op("Multinomial")
+@flow_op("Multinomial")
 class Multinomial:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -131,7 +131,7 @@ class Multinomial:
         ctx.remove_input(node, node.input[1])
 
 
-@tf_op("ZerosLike")
+@flow_op("ZerosLike")
 class ZerosLike:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

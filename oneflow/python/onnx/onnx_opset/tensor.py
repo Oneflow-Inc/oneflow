@@ -20,7 +20,7 @@ from onnx.onnx_pb import TensorProto
 import oneflow.python.onnx
 from oneflow.python.onnx import constants, utils
 from oneflow.python.onnx.graph_builder import GraphBuilder
-from oneflow.python.onnx.handler import tf_op
+from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import nn, math
 
 logger = logging.getLogger(__name__)
@@ -61,14 +61,14 @@ def _wrap_concat_with_cast(ctx, node):
             ctx.copy_shape(output_name, output_cast.output[0])
 
 
-@tf_op("Size")
+@flow_op("Size")
 class Size:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("Flatten")
+@flow_op("Flatten")
 class Flatten:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -85,7 +85,7 @@ class Flatten:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("Dropout")
+@flow_op("Dropout")
 class Dropout:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -104,7 +104,7 @@ class Dropout:
         pass
 
 
-@tf_op("Identity")
+@flow_op("Identity")
 class Identity:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -119,7 +119,7 @@ class Identity:
             ctx.remove_node(node.name)
 
 
-@tf_op("reshape")
+@flow_op("reshape")
 class Reshape:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -162,7 +162,7 @@ class Reshape:
             ctx.copy_shape(node.output[0], output_cast.output[0])
 
 
-@tf_op("Squeeze")
+@flow_op("Squeeze")
 class Squeeze:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -196,7 +196,7 @@ class Squeeze:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("transpose", onnx_op='Transpose')
+@flow_op("transpose", onnx_op='Transpose')
 class Transpose:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -216,7 +216,7 @@ class Transpose:
             pass
 
 
-@tf_op("Concat")
+@flow_op("Concat")
 class Concat:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -242,7 +242,7 @@ class Concat:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("ConcatV2")
+@flow_op("ConcatV2")
 class ConcatV2:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -275,7 +275,7 @@ class ConcatV2:
             return
 
 
-@tf_op("Slice")
+@flow_op("Slice")
 class Slice:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -330,7 +330,7 @@ class Slice:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("Gather")
+@flow_op("Gather")
 class Gather:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -342,7 +342,7 @@ class Gather:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("GatherV2")
+@flow_op("GatherV2")
 class GatherV2:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -480,7 +480,7 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
                   dtypes=dtypes)
 
 
-@tf_op("GatherNd", onnx_op="GatherND")
+@flow_op("GatherNd", onnx_op="GatherND")
 class GatherND:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -507,7 +507,7 @@ class GatherND:
             ctx.set_dtype(inp_cast.output[0], target_dtype)
 
 
-@tf_op("ScatterNd", onnx_op="ScatterND")
+@flow_op("ScatterNd", onnx_op="ScatterND")
 class ScatterND:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
@@ -531,7 +531,7 @@ class ScatterND:
         node.input = [node.input[2], node.input[0], node.input[1]]
 
 
-@tf_op("Split")
+@flow_op("Split")
 class Split:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -551,7 +551,7 @@ class Split:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("SplitV")
+@flow_op("SplitV")
 class SplitV:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -570,7 +570,7 @@ class SplitV:
         cls.version_1(ctx, node, **kwargs)
 
 
-@tf_op("ExpandDims")
+@flow_op("ExpandDims")
 class ExpandDims:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -617,7 +617,7 @@ class ExpandDims:
         raise ValueError("non-const dim is not supported")
 
 
-@tf_op("StridedSlice")
+@flow_op("StridedSlice")
 class StridedSlice:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -905,7 +905,7 @@ class StridedSlice:
             ctx.copy_shape(node.output[0], squeeze_node.output[0])
 
 
-@tf_op("Cast")
+@flow_op("Cast")
 class Cast:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -924,7 +924,7 @@ class Cast:
         pass
 
 
-@tf_op("TopKV2", onnx_op="TopK")
+@flow_op("TopKV2", onnx_op="TopK")
 class TopKV2:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -970,7 +970,7 @@ class TopKV2:
         cls.version_10(ctx, node, **kwargs)
 
 
-@tf_op("Tile")
+@flow_op("Tile")
 class Tile:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -978,7 +978,7 @@ class Tile:
         _convert_shapenode_to_int64(ctx, node, 1)
 
 
-@tf_op("Pack")
+@flow_op("Pack")
 class Pack:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1008,7 +1008,7 @@ class Pack:
         ctx.replace_all_inputs(ctx.get_nodes(), node.output[0], concat.output[0])
 
 
-@tf_op("Unpack")
+@flow_op("Unpack")
 class Unpack:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1029,7 +1029,7 @@ class Unpack:
             ctx.copy_dtype(n, squeeze_node.output[0])
 
 
-@tf_op("OneHot")
+@flow_op("OneHot")
 class OneHot:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1121,7 +1121,7 @@ class OneHot:
         cls.version_9(ctx, node, **kwargs)
 
 
-@tf_op("Shape")
+@flow_op("Shape")
 class Shape:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1137,14 +1137,14 @@ class Shape:
         ctx.copy_shape(node.output[0], output_cast.output[0])
 
 
-@tf_op("IsNan", onnx_op="IsNaN")
+@flow_op("IsNan", onnx_op="IsNaN")
 class IsNan:
     @classmethod
     def version_9(cls, ctx, node, **kwargs):
         pass
 
 
-@tf_op("BatchToSpaceND", onnx_op="DepthToSpace")
+@flow_op("BatchToSpaceND", onnx_op="DepthToSpace")
 class BatchToSpace:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1267,7 +1267,7 @@ class BatchToSpace:
                           name=node.name, outputs=node.output)
 
 
-@tf_op("SpaceToBatchND", onnx_op="SpaceToDepth")
+@flow_op("SpaceToBatchND", onnx_op="SpaceToDepth")
 class SpaceToBatch:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -1373,7 +1373,7 @@ class SpaceToBatch:
                           outputs=node.output)
 
 
-@tf_op("IsInf", onnx_op="IsInf")
+@flow_op("IsInf", onnx_op="IsInf")
 class IsInf:
     @classmethod
     def version_10(cls, ctx, node, **kwargs):
@@ -1383,7 +1383,7 @@ class IsInf:
             raise ValueError("dtype " + str(node_dtype) + " is not supported in onnx for now")
 
 
-@tf_op(["NonMaxSuppressionV2", "NonMaxSuppressionV3"], onnx_op="NonMaxSuppression")
+@flow_op(["NonMaxSuppressionV2", "NonMaxSuppressionV3"], onnx_op="NonMaxSuppression")
 class NonMaxSuppression:
     @classmethod
     def version_10(cls, ctx, node, **kwargs):
@@ -1414,7 +1414,7 @@ class NonMaxSuppression:
         cls.version_10(ctx, node, **kwargs)
 
 
-@tf_op("ReverseSequence")
+@flow_op("ReverseSequence")
 class ReverseSequence:
     @classmethod
     def version_8(cls, ctx, node, **kwargs):
@@ -1508,7 +1508,7 @@ class ReverseSequence:
             ctx.insert_new_node_on_input(node, "Cast", node.input[1], to=target_dtype)
 
 
-@tf_op("ReverseV2")
+@flow_op("ReverseV2")
 class ReverseV2:
     @classmethod
     def version_10(cls, ctx, node, **kwargs):
@@ -1662,7 +1662,7 @@ class ReverseV2:
                 )
 
 
-@tf_op("Unique", onnx_op="Unique")
+@flow_op("Unique", onnx_op="Unique")
 class Unique:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
