@@ -69,6 +69,7 @@ Maybe<void> JobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
+    JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddAllReduceGroupPass"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("SequentializeAllReduceGroupPass"));
