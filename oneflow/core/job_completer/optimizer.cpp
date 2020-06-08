@@ -14,16 +14,15 @@ void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
-  if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr) {
-    if (train_conf.model_update_conf().has_naive_conf()) {
-      OptimizerRegistry::LookupAndBuild("sgd", var_op, parallel_conf, diff_lbi_of_var_out,
-                                        job_builder->job().job_conf().train_conf());
-      return;
-    }
+  if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr
+      && train_conf.model_update_conf().has_naive_conf()) {
+    OptimizerRegistry::LookupAndBuild("sgd", var_op, parallel_conf, diff_lbi_of_var_out,
+                                      train_conf);
+  } else {
+    auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
+    auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
+    obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
   }
-  auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
-  auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
 void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
