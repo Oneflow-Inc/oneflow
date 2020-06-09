@@ -10,6 +10,7 @@ import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from google.protobuf import text_format
 import oneflow.oneflow_internal as oneflow_internal
@@ -122,29 +123,23 @@ def CheckAndCompleteUserOpConf(op_conf_proto):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
-def CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto):
-    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
-    add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferOp
-    error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
 def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
-    error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
-    error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     lbn = str(lbn)
