@@ -17,12 +17,16 @@ import oneflow as flow
 import ctypes
 
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
+    lr_lbn = None
     if var_op_conf.variable_conf.model_name == "weight":
-        return train_conf.primary_lr_lbn
+        lr_lbn = train_conf.primary_lr_lbn
     elif var_op_conf.variable_conf.model_name == "bias":
-        return train_conf.secondary_lr_lbn
+        lr_lbn = train_conf.secondary_lr_lbn
     else:
-        return train_conf.primary_lr_lbn 
+        lr_lbn = train_conf.primary_lr_lbn
+    assert lr_lbn is not None
+    assert lr_lbn != ""
+    return lr_lbn
 
 class Base(oneflow_internal.OptimizerBase):
     def __init__(self):
