@@ -18,7 +18,7 @@ MICROSOFT_DOMAIN = "com.microsoft"
 PREFERRED_OPSET = 8
 
 # Default opset for custom ops
-TENSORFLOW_OPSET = helper.make_opsetid("ai.onnx.converters.tensorflow", 1)
+ONEFLOW_OPSET = helper.make_opsetid("ai.onnx.converters.oneflow", 1)
 
 # Target for the generated onnx graph. It possible targets:
 # onnx-1.1 = onnx at v1.1 (winml in rs4 is based on this)
@@ -36,4 +36,4 @@ HWCN_TO_NCHW = [3, 2, 0, 1]
 NCHW_TO_HWCN = [2, 3, 1, 0]
 
 # Environment variables
-ENV_TF2ONNX_DEBUG_MODE = "TF2ONNX_DEBUG_MODE"
+ENV_FLOW2ONNX_DEBUG_MODE = "FLOW2ONNX_DEBUG_MODE"

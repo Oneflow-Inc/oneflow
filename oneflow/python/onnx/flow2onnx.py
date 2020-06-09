@@ -2,7 +2,7 @@
 # Licensed under the MIT license.
 
 """
-oneflow.python.onnx.oneflow.python.onnx - rewrite tensorflow graph to onnx graph
+oneflow.python.onnx.oneflow.python.onnx - rewrite oneflow graph to onnx graph
 """
 
 from __future__ import division
@@ -16,17 +16,12 @@ import itertools
 
 import numpy as np
 from onnx import helper, onnx_pb
-import tensorflow as tf
-from tensorflow.python.framework import graph_util
-from tensorflow.tools.graph_transforms import TransformGraph
 
 import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 import oneflow.python.onnx.custom_opsets  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
-from oneflow.python.onnx.rewriter import *  # pylint: disable=wildcard-import
-from oneflow.python.onnx.shape_inference import infer_shape
 from oneflow.python.onnx.utils import port_name
 from . import constants, logging, schemas, utils, handler, optimizer
 
@@ -44,17 +39,12 @@ logger = logging.getLogger(__name__)
 # pylint: disable=unused-variable
 
 
-def tflist_to_onnx(node_list, shape_override):
+def flowlist_to_onnx(node_list, shape_override):
     """
-    Convert the tf-node list into an onnx graph with minimal rewrites so
+    Convert the oneflow-node list into an onnx graph with minimal rewrites so
     we can use the onnx graph as intermediate graph.
     """
 
-    # ignore the following attributes
-    ignored_attr = ["unknown_rank", "_class", "Tshape", "use_cudnn_on_gpu", "Index", "Tpaddings",
-                    "TI", "Tparams", "Tindices", "Tlen", "Tdim", "dynamic_size", "Tmultiples",
-                    "Tblock_shape", "Tcrops", "index_type", "Taxis", "U", "maxval",
-                    "Tout", "Tlabels", "Tindex", "element_shape", "Targmax", "T_threshold"]
     # some stats
     op_cnt = collections.Counter()
     attr_cnt = collections.Counter()
@@ -108,17 +98,14 @@ def tflist_to_onnx(node_list, shape_override):
         else:
             op_type = get_op_type(node)
             conf = op_conf(node)
-            if op_type == 'decode_ofrecord':
-                outputs = [x.name for x in conf.blob]
-            else:
-                if hasattr(conf, 'out'):
-                    out = getattr(conf, "out")
-                    if isinstance(out, str):
-                        outputs = [out]
-                    else:
-                        outputs = out
+            if hasattr(conf, 'out'):
+                out = getattr(conf, "out")
+                if isinstance(out, str):
+                    outputs = [out]
                 else:
-                    outputs = []
+                    outputs = out
+            else:
+                outputs = []
             outputs = ["{}/{}".format(node.name, output) for output in outputs]
         return outputs
 
@@ -141,31 +128,7 @@ def tflist_to_onnx(node_list, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = utils.map_tf_dtype(utils.get_tf_node_attr(node, "dtype"))
-            elif a == "T":
-                dtype = utils.get_tf_node_attr(node, "T")
-                if dtype:
-                    if not isinstance(dtype, list):
-                        dtypes[node.name] = utils.map_tf_dtype(dtype)
-            elif a in ["output_type", "output_dtype", "out_type", "Tidx", "out_idx"]:
-                # Tidx is used by Range
-                # out_idx is used by ListDiff
-                attr[a] = utils.map_tf_dtype(utils.get_tf_node_attr(node, a))
-            # elif a == "shape":
-            #     shape = utils.get_tf_shape_attr(node)
-            #     if shape is not None:
-            #         attr[a] = shape
-            elif a == "Tperm":
-                pass
-            elif a == "value":
-                onnx_tensor = utils.tf_to_onnx_tensor(utils.get_tf_node_attr(node, a), name=port_name(node.name))
-                attr[a] = onnx_tensor
-            elif a == "DstT":
-                attr["to"] = utils.map_tf_dtype(utils.get_tf_node_attr(node, "DstT"))
-            elif a == "SrcT":
-                continue
-            elif a in ignored_attr:
-                continue
+                attr[a] = utils.map_flow_dtype(utils.get_flow_node_attr(node, "dtype"))
             else:
                 attr[a] = utils.get_of_node_attr(node, a)
         
@@ -190,23 +153,13 @@ def oneflow_to_onnx(graph, shape_override):
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
         if lbn not in shape_override:
             shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = utils.map_tf_dtype(lbd.body.data_type)
-    return tflist_to_onnx(graph.net.op, shape_override) + (dtypes, shape_override)
-
-
-def tensorflow_to_onnx(graph, shape_override):
-    """
-    Load tensorflow graph and do a conversion.
-    """
-    return tflist_to_onnx(graph.get_operations(), shape_override)
+        dtypes[lbn] = utils.map_flow_dtype(lbd.body.data_type)
+    return flowlist_to_onnx(graph.net.op, shape_override) + (dtypes, shape_override)
 
 
 def rewrite_constant_fold(g, ops):
     """
-    We call tensorflow transform with constant folding but in some cases tensorflow does
-    fold all constants. Since there are a bunch of ops in onnx that use attributes where
-    tensorflow has dynamic inputs, we badly want constant folding to work. For cases where
-    tensorflow missed something, make another pass over the graph and fix want we care about.
+    fold some constants by numpy
     """
     func_map = {
         "Add": np.add,
@@ -301,92 +254,8 @@ def rewrite_constant_fold(g, ops):
     return ops
 
 
-def rewrite_incomplete_type_support(g, ops, impacted_ops):
-    """
-    for ops that have inclomplete type support, insert casts.
-    This is needed for some tensor ops in opset7 and for some ops in winml-rs5.
-    It is not helping performance but better than the model not working at all.
-    """
-    ignored_input_index = {
-        "Tile": [1],  # Tile's second input can only be int64
-        "Where": [0],  # Where's first input is bool
-    }
-    new_ops = []
-    org_ops = list(ops)
-    for op in org_ops:
-        if op.type in impacted_ops:
-            cast_inserted = []
-            output_dtype = None
-            ignored_inputs = ignored_input_index.get(op.type)
-            # insert casts on inputs if the runtime only supports float
-            for i, input_node in enumerate(op.inputs):
-                if ignored_inputs and i in ignored_inputs:
-                    continue
-
-                input_name = op.input[i]
-                dtype = g.get_dtype(input_name)
-                if dtype is None:
-                    logger.warning("adding Cast for op %s (type is %s)' input: %s, dtype should not be None",
-                                   op.name, op.type, input_name)
-
-                if dtype != onnx_pb.TensorProto.FLOAT:
-                    output_dtype = dtype
-                    logger.debug("insert cast for node %s on input %s", op.name, input_name)
-                    if input_node and input_node.type == "Cast" \
-                            and len(g.find_output_consumers(input_node.output[0])) == 1:
-                        input_node.set_attr("to", onnx_pb.TensorProto.FLOAT)
-                        g.set_dtype(input_name, onnx_pb.TensorProto.FLOAT)
-                    else:
-                        cast_node = g.insert_new_node_on_input(op, "Cast", input_name)
-                        cast_node.set_attr("to", onnx_pb.TensorProto.FLOAT)
-                        g.set_dtype(cast_node.output[0], onnx_pb.TensorProto.FLOAT)
-                        g.copy_shape(input_name, cast_node.output[0])
-                        cast_inserted.append(cast_node)
-            if output_dtype:
-                # insert reverse cast if needed
-                for output_name in op.output:
-                    name = utils.make_name(op.name)
-                    logger.debug("insert cast back for node %s on output %s [dtype=%s]", op.name, output_name,
-                                 output_dtype)
-                    output_cast = g.insert_new_node_on_output("Cast", output_name, name=name)
-                    output_cast.set_attr("to", output_dtype)
-                    g.set_dtype(output_cast.output[0], output_dtype)
-                    g.copy_shape(output_name, output_cast.output[0])
-                    cast_inserted.append(output_cast)
-
-            if cast_inserted:
-                new_ops.extend(cast_inserted)
-        new_ops.append(op)
-    return new_ops
-
-
-def rewrite_incomplete_type_support_rs5(g, ops):
-    return rewrite_incomplete_type_support(g, ops, ["Unsqueeze", "Mul", "Concat", "Slice", "Transpose"])
-
-
-def rewrite_incomplete_type_support_rs6(g, ops):
-    impacted_ops = [
-        "Div",
-        "IsNaN",
-        "Max",
-        "Min",
-        "ReduceSum",
-        "Slice",
-        "Split",
-        "Tile",
-        "Transpose",
-        "Where"
-    ]
-    # TODO: logic to insert cast has bug, not all inputs of one node need cast
-    # for example, slice's input "starts" doesn't need it.
-    if g.opset == 10:
-        impacted_ops.remove("Slice")
-
-    return rewrite_incomplete_type_support(g, ops, impacted_ops)
-
-
-def tensorflow_onnx_mapping(g, ops_mapping):
-    logger.verbose("Mapping TF node to ONNX node(s)")
+def oneflow_onnx_mapping(g, ops_mapping):
+    logger.verbose("Mapping Oneflow node to ONNX node(s)")
     mapped_op = collections.Counter()
     unmapped_op = collections.Counter()
     exceptions = []
@@ -403,7 +272,7 @@ def tensorflow_onnx_mapping(g, ops_mapping):
         map_info = ops_mapping.get(op)
         if map_info is None:
             unmapped_op[op] += 1
-            logger.error("Tensorflow op [%s: %s] is not supported", node.name, op)
+            logger.error("oneflow op [%s: %s] is not supported", node.name, op)
             continue
         mapped_op[op] += 1
 
@@ -425,7 +294,7 @@ def tensorflow_onnx_mapping(g, ops_mapping):
                 # we assume only ONNX nodes have subgraph defined in pre-rewriters.
                 # that means, if we create node having subgraphs in this step, the
                 # created subgraphs' nodes won't be mapped.
-                m_ops, unm_ops, body_exceptions = tensorflow_onnx_mapping(b_g, ops_mapping)
+                m_ops, unm_ops, body_exceptions = oneflow_onnx_mapping(b_g, ops_mapping)
                 mapped_op += m_ops
                 unmapped_op += unm_ops
                 # topological_sort on the body in case processing has changed the order
@@ -465,25 +334,6 @@ def transpose_inputs(ctx, inputs_as_nchw):
                 continue
         ops.append(node)
     ctx.reset_nodes(ops)
-
-
-def flow_optimize(inputs, outputs, graph_def, fold_constant=None):
-    """Optimize tensorflow graph for inference."""
-    transforms = []
-    if fold_constant:
-        transforms.extend([
-            "fold_constants(ignore_errors=true)",
-            "remove_attribute(attribute_name=_class)",  # remove node colocation attributes
-        ])
-
-    transforms.extend([
-        "fold_batch_norms",
-        "fold_old_batch_norms",
-    ])
-    needed_names = [utils.node_name(i) for i in inputs] + [utils.node_name(i) for i in outputs]
-    graph_def = graph_util.extract_sub_graph(graph_def, needed_names)
-    graph_def = TransformGraph(graph_def, inputs, outputs, transforms)
-    return graph_def
 
 
 def topological_sort(g, continue_on_error):
@@ -548,20 +398,20 @@ def export(job_obj, continue_on_error=False, verbose=False, target=None,
                 # TODO: a more elegant way?
                 while not os.path.exists(os.path.join(tmpdirname, 'snapshot_done')):
                     pass
-                onnx_graph = process_tf_graph(job, tmpdirname)
+                onnx_graph = process_flow_graph(job, tmpdirname)
                 onnx_graph = optimizer.optimize_graph(onnx_graph)
                 model_proto = onnx_graph.make_model("test")
             return model_proto
     return None
 
 
-def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=False, target=None,
+def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False, verbose=False, target=None,
                      opset=None, custom_op_handlers=None, custom_rewriter=None,
                      extra_opset=None, shape_override=None, inputs_as_nchw=None,
                      input_names=None, output_names=None):
-    """Convert tensorflow graph to onnx graph.
+    """Convert oneflow graph to onnx graph.
         Args:
-            tf_graph: tensorflow graph
+            flow_graph: oneflow graph
             continue_on_error: if an op can't be processed (aka there is no mapping), continue
             verbose: print summary stats (deprecated)
             target: list of workarounds applied to help certain platforms
@@ -569,7 +419,7 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
             custom_op_handlers: dictionary of custom ops handlers
             custom_rewriter: list of custom graph rewriters
             extra_opset: list of extra opset's, for example the opset's used by custom ops
-            shape_override: dict with inputs that override the shapes given by tensorflow
+            shape_override: dict with inputs that override the shapes given by oneflow
             inputs_as_nchw: transpose inputs in list from nchw to nchw
             input_names: list of input node names in graph, input name format as node_name:port_id
             output_names: list of output node names in graph, output name format as node_name:port_id
@@ -578,11 +428,8 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
     """
     # TODO: remove verbose argument in future release
     if verbose:
-        logger.warning("Argument verbose for process_tf_graph is deprecated. Please use --verbose option instead.")
+        logger.warning("Argument verbose for process_flow_graph is deprecated. Please use --verbose option instead.")
     del verbose
-
-    # logger.info("Using tensorflow=%s, onnx=%s, oneflow.python.onnx=%s/%s",
-                # tf.__version__, utils.get_onnx_version(), oneflow.python.onnx.__version__, oneflow.python.onnx.version.git_version[:6])
 
     opset = utils.find_opset(opset)
     logger.info("Using opset <onnx, %s>", opset)
@@ -598,22 +445,7 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
     if target is None:
         target = constants.DEFAULT_TARGET
 
-    onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx(tf_graph, shape_override)
-
-    io_to_check = []
-    if input_names:
-        io_to_check.extend(input_names)
-    if output_names:
-        io_to_check.extend(output_names)
-
-    if io_to_check:
-        # check output existence in case user passed in wrong output ids
-        non_exists = set(io_to_check) - set(output_shapes.keys())
-        if non_exists:
-            logger.error("\nFailed to convert: inputs/outputs specified do not exist, make sure your passed"
-                         "in format: input/output_node_name:port_id. Problematical inputs/outputs are: %s \n",
-                         non_exists)
-            raise ValueError("Inputs/Outputs Not Found")
+    onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx(flow_graph, shape_override)
 
     g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes, target, opset, extra_opset, output_names, input_maps=input_maps)
 
@@ -647,7 +479,7 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
                 args = args[1:]
             kwargs["args"] = args
             new_handler = handler.flow_op(k,
-                                        domain=constants.TENSORFLOW_OPSET.domain,
+                                        domain=constants.oneflow_OPSET.domain,
                                         kwargs=kwargs)
             new_handler.register_compat_handler(compat_handler, 1)
             custom_opset[k] = (compat_handler, kwargs)
@@ -657,15 +489,7 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
         transpose_inputs(g, inputs_as_nchw)
 
     # pre-processing graph rewrites
-    # bi-directional re-writer should be placed after single directional re-writer
-    rewriters = [rewrite_transpose, rewrite_flatten, rewrite_gemm,
-                 rewrite_random_uniform, rewrite_random_uniform_fold_const,
-                 rewrite_random_normal, rewrite_dropout, rewrite_eye,
-                 rewrite_leakyrelu, rewrite_thresholded_relu, rewrite_conv2d_with_pad,
-                 rewrite_single_direction_lstm, rewrite_bi_direction_lstm,
-                 rewrite_single_direction_gru, rewrite_bi_direction_gru,
-                 rewrite_custom_rnn_cell, rewrite_generic_loop, rewrite_cond,
-                 ]
+    rewriters = []
 
     if custom_rewriter is not None:
         rewriters.extend(custom_rewriter)
@@ -676,20 +500,11 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
     g.delete_unused_nodes(output_names)
     topological_sort(g, continue_on_error)
 
-    mapped_op, unmapped_op, exceptions = tensorflow_onnx_mapping(g, ops_mapping)
+    mapped_op, unmapped_op, exceptions = oneflow_onnx_mapping(g, ops_mapping)
     if unmapped_op:
         logger.error("Unsupported ops: %s", unmapped_op)
     if exceptions and not continue_on_error:
         raise exceptions[0]
-
-    # post-processing rewriters
-    late_rewriters = []
-    if constants.TARGET_RS5 in target:
-        late_rewriters.append(rewrite_incomplete_type_support_rs5)
-    if constants.TARGET_RS6 in target:
-        late_rewriters.append(rewrite_incomplete_type_support_rs6)
-    if late_rewriters:
-        run_rewriters(g, late_rewriters, continue_on_error)
 
     # onnx requires topological sorting
     topological_sort(g, continue_on_error)
@@ -698,8 +513,8 @@ def process_tf_graph(tf_graph, model_save_dir, continue_on_error=False, verbose=
 
     logger.verbose(
         "Summay Stats:\n"
-        "\ttensorflow ops: {}\n"
-        "\ttensorflow attr: {}\n"
+        "\toneflow ops: {}\n"
+        "\toneflow attr: {}\n"
         "\tonnx mapped: {}\n"
         "\tonnx unmapped: {}".format(op_cnt, attr_cnt, mapped_op, unmapped_op))
 

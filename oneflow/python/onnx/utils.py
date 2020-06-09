@@ -13,16 +13,9 @@ import os
 import re
 import shutil
 import tempfile
-from distutils.version import LooseVersion
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 import six
 import numpy as np
-import tensorflow as tf
-from tensorflow.core.framework import types_pb2, tensor_pb2
-from tensorflow.python.framework import tensor_util
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from google.protobuf import text_format
 import onnx
@@ -31,9 +24,9 @@ from onnx import helper, onnx_pb, defs, numpy_helper
 from . import constants
 
 #
-#  mapping dtypes from tensorflow to onnx
+#  mapping dtypes from oneflow to onnx
 #
-TF_TO_ONNX_DTYPE = {
+FLOW_TO_ONNX_DTYPE = {
     data_type_pb2.kFloat: onnx_pb.TensorProto.FLOAT,
     data_type_pb2.kDouble: onnx_pb.TensorProto.DOUBLE,
     data_type_pb2.kInt64: onnx_pb.TensorProto.INT64,
@@ -124,67 +117,9 @@ def split_nodename_and_shape(name):
     return inputs, shapes
 
 
-def tf_to_onnx_tensor(tensor, name=""):
-    """Convert tensorflow tensor to onnx tensor."""
-    np_data = get_tf_tensor_data(tensor)
-    if np_data.dtype == np.object:
-        # assume np_data is string, numpy_helper.from_array accepts ndarray,
-        # in which each item is of str while the whole dtype is of object.
-        try:
-            np_data = np_data.astype(np.str).astype(np.object)
-        except: # pylint: disable=bare-except
-            raise RuntimeError("Not support type: {}".format(type(np_data.flat[0])))
-    return numpy_helper.from_array(np_data, name=name)
-
-
-def get_tf_tensor_data(tensor):
-    """Get data from tensor."""
-    make_sure(isinstance(tensor, tensor_pb2.TensorProto), "Require TensorProto")
-    np_data = tensor_util.MakeNdarray(tensor)
-    make_sure(isinstance(np_data, np.ndarray), "{} isn't ndarray".format(np_data))
-    return np_data
-
-
-def get_tf_const_value(op, as_list=True):
-    """
-    If as_list=True, return the array as a (possibly nested) list.
-    Otherwise, return data of type np.ndarray.
-
-    If a tensor is a scalar having value 1,
-        when as_list=False, return np.array(1), type is <class 'numpy.ndarray'>
-        when as_list=True, return 1, type is <class 'int'>.
-    """
-    make_sure(is_tf_const_op(op), "{} isn't a const op".format(op.name))
-    value = get_tf_tensor_data(op.get_attr("value"))
-    if as_list:
-        value = value.tolist()
-    return value
-
-
-def get_tf_shape_attr(node):
-    """Get shape from tensorflow attr "shape"."""
-    dims = None
-    try:
-        shape = get_tf_node_attr(node, "shape")
-        if not shape.unknown_rank:
-            dims = [int(d.size) for d in shape.dim]
-    except:  # pylint: disable=bare-except
-        pass
-    return dims
-
-
-def get_tf_tensor_shape(tensor):
-    shape = []
-    try:
-        shape = tensor.get_shape().as_list()
-    except Exception:  # pylint: disable=broad-except
-        shape = None
-    return shape
-
-
-def map_tf_dtype(dtype):
+def map_flow_dtype(dtype):
     if dtype:
-        dtype = TF_TO_ONNX_DTYPE[dtype]
+        dtype = FLOW_TO_ONNX_DTYPE[dtype]
     return dtype
 
 
@@ -259,7 +194,7 @@ def get_of_node_attr(node, name):
         return getattr(attr_msg, attr_type)
 
 
-def get_tf_node_attr(node, name):
+def get_flow_node_attr(node, name):
     """Parser TF node attribute."""
     if six.PY2:
         # For python2, TF get_attr does not accept unicode
@@ -335,7 +270,7 @@ def construct_graph_from_nodes(parent_g, nodes, outputs, shapes, dtypes):
     return g
 
 
-def tf_name_scope(name):
+def flow_name_scope(name):
     return '/'.join(name.split('/')[:-1])
 
 
@@ -432,8 +367,8 @@ def get_onnx_version():
     return onnx.__version__
 
 
-def get_tf_version():
-    return LooseVersion(tf.__version__)
+def get_flow_version():
+    return 0.0
 
 
 def make_opsetid(domain, version):
@@ -453,7 +388,7 @@ def parse_bool(val):
     return val.lower() in ("yes", "true", "t", "y", "1")
 
 
-_is_debug_mode = parse_bool(os.environ.get(constants.ENV_TF2ONNX_DEBUG_MODE))
+_is_debug_mode = parse_bool(os.environ.get(constants.ENV_FLOW2ONNX_DEBUG_MODE))
 
 
 def is_debug_mode():
@@ -471,26 +406,6 @@ def get_max_value(np_dtype):
 
 def get_min_value(np_dtype):
     return np.iinfo(np_dtype).min
-
-
-def get_url(url, path, max_retries=5):
-    """ Download url and save to path. """
-    retries = Retry(total=max_retries, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retries)
-    session = requests.Session()
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
-    response = session.get(url, allow_redirects=True)
-    if response.status_code not in [200]:
-        response.raise_for_status()
-
-    dir_name = os.path.dirname(path)
-    if dir_name:
-        os.makedirs(dir_name, exist_ok=True)
-
-    with open(path, "wb") as f:
-        f.write(response.content)
 
 
 def have_same_inference_value(g, output_1, output_2):
@@ -535,38 +450,3 @@ def have_same_inference_value(g, output_1, output_2):
             return False
     return True
 
-
-def is_tf_reverse_op(op):
-    return op.type in ("ReverseV2", "ReverseSequence")
-
-
-def is_tf_concat_op(op):
-    return op.type in ("Concat", "ConcatV2", "ConcatV3")
-
-
-def is_tf_tensor_array_gather_op(op):
-    return op.type in ("TensorArrayGatherV2", "TensorArrayGatherV3")
-
-
-def is_tf_tensor_array_write_op(op):
-    return op.type in ("TensorArrayWriteV2", "TensorArrayWriteV3")
-
-
-def is_tf_tensor_array_op(op):
-    return op.type in ("TensorArrayV2", "TensorArrayV3")
-
-
-def is_tf_loopcond_op(op):
-    return op.type == "LoopCond"
-
-
-def is_tf_select_op(op):
-    return op.type == "Select"
-
-
-def is_tf_slice_op(op):
-    return op.type == "Slice"
-
-
-def is_tf_const_op(op):
-    return op.type in ["Const", "ConstV2"]

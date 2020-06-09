@@ -25,7 +25,7 @@ class flow_op:
     def __init__(self, name, domain=constants.ONNX_DOMAIN, **kwargs):
         """Called decorator from decorator.
 
-        :param name: The name of the tensorflow operator.
+        :param name: The name of the oneflow operator.
         :param domain: The domain the operator belongs to, defaults to onnx.
         :param kwargs: Dictionary that are passed to the handler. A key 'onnx_op' will change the operator name.
         """

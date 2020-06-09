@@ -11,8 +11,6 @@ from logging import *  # pylint: disable=wildcard-import, unused-wildcard-import
 import os
 import types
 
-import tensorflow as tf
-
 from . import constants
 
 VERBOSE = 15
@@ -45,7 +43,6 @@ def basicConfig(**kwargs):  # pylint: disable=invalid-name, function-redefined
     # config will make effect only when root.handlers is empty, so add the following statement to make sure it
     _logging.root.handlers = []
     _logging.basicConfig(**kwargs)
-    set_tf_verbosity(_logging.getLogger().getEffectiveLevel())
 
 
 _LOG_LEVELS = [FATAL, ERROR, WARNING, INFO, VERBOSE, DEBUG]
@@ -62,29 +59,6 @@ def get_verbosity_level(verbosity, base_level=INFO):
 def set_level(level):
     """ Set logging level for oneflow.python.onnx package. tf verbosity is updated accordingly. """
     _logging.getLogger(constants.TF2ONNX_PACKAGE_NAME).setLevel(level)
-    set_tf_verbosity(level)
-
-
-def set_tf_verbosity(level):
-    """ Set TF logging verbosity."""
-    # TF log is too verbose, adjust it
-    level = ERROR if level >= INFO else level
-    tf.logging.set_verbosity(level)
-
-    # TF_CPP_MIN_LOG_LEVEL:
-    #   0 = all messages are logged (default behavior)
-    #   1 = INFO messages are not printed
-    #   2 = INFO and WARNING messages are not printed
-    #   3 = INFO, WARNING, and ERROR messages are not printed
-    if level <= INFO:
-        tf_cpp_min_log_level = "0"
-    elif level <= WARNING:
-        tf_cpp_min_log_level = "1"
-    elif level <= ERROR:
-        tf_cpp_min_log_level = "2"
-    else:
-        tf_cpp_min_log_level = "3"
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = tf_cpp_min_log_level
 
 
 @contextmanager

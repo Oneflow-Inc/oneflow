@@ -313,18 +313,7 @@ class Sign:
 class Pow:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
-        if ctx.is_target(constants.TARGET_CAFFE2):
-            # workaround a bug in caffe2 pre Feb2018, pow(a, b) becomes np.exp(np.log(a) * b)
-            node.type = "Log"
-            b = node.input[1]
-            ctx.remove_input(node, node.input[1])
-            op_name = utils.make_name(node.name)
-            mul_op = ctx.insert_new_node_on_output("Mul", node.output[0], name=op_name)
-            mul_op.input.append(b)
-            op_name = utils.make_name(node.name)
-            exp_op = ctx.insert_new_node_on_output("Exp", mul_op.output[0], name=op_name)
-            ctx.copy_shape(node.output[0], exp_op.output[0])
-            BroadcastOp.version_1(ctx, mul_op, **kwargs)
+        pass
 
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
@@ -339,8 +328,7 @@ class LRN:
         # TF: sqr_sum[a, b, c, d] = sum(input[a, b, c, d - depth_radius : d + depth_radius + 1] ** 2)
         #     output = input / (bias + alpha * sqr_sum) ** beta
 
-        # by default, depth_radius is 5 in tensorflow
-        size = node.get_attr_value("depth_radius", 5) * 2 + 1
+        size = node.get_attr_value("depth_radius") * 2 + 1
 
         node.set_attr("size", size)
         node.set_attr("alpha", size * node.get_attr("alpha").f)
@@ -359,8 +347,6 @@ class LRN:
 class MatMul:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
-        # tensorflow allows transpose and conjugated. If found, insert the required transpose.
-        # We could use Gemm as well but tensorflow does not pass bias in matmul.
         node.type = "MatMul"
 
         attrs = ["transpose_a", "transpose_b", "adjoint_a", "adjoint_b", "adj_x", "adj_y"]

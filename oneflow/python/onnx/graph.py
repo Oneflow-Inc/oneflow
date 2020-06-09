@@ -17,7 +17,7 @@ import numpy as np
 from os.path import join as pathjoin
 
 from onnx import helper, numpy_helper, shape_inference, OperatorSetIdProto, AttributeProto, TensorProto, onnx_pb
-from oneflow.python.onnx import utils, __version__
+from oneflow.python.onnx import utils
 from oneflow.python.onnx.utils import make_name, port_name, find_opset
 from oneflow.python.onnx import optimizer
 from oneflow.python.onnx.schemas import get_schema, infer_onnx_shape_dtype
@@ -403,8 +403,8 @@ class Graph(object):
         """Create Graph.
         Args:
             nodes: list of Node()
-            output_shapes: dict of tensorflow output shapes
-            dtypes: dict of tensorflow dtype
+            output_shapes: dict of oneflow output shapes
+            dtypes: dict of oneflow dtype
             input_maps: map (node_name, key) to value_names
         """
         if target is None:
@@ -1004,8 +1004,7 @@ class Graph(object):
         graph = self.make_graph(graph_doc, graph_name)
 
         if "producer_name" not in kwargs:
-            kwargs = {"producer_name": "oneflow.python.onnx",
-                      "producer_version": __version__}
+            kwargs = {"producer_name": "oneflow.python.onnx"}
 
         if "opset_imports" not in kwargs:
             opsets = []
