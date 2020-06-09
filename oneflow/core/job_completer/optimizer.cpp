@@ -18,7 +18,7 @@ void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& par
       && (var_op.op_conf().has_naive_model_update_conf()
           || train_conf.model_update_conf().has_naive_conf())) {
     OptimizerRegistry::LookupAndBuild("sgd", var_op, parallel_conf, diff_lbi_of_var_out,
-                                      train_conf);
+                                      job_builder->job().job_conf().train_conf());
   } else {
     auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
     auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
