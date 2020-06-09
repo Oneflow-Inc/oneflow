@@ -57,8 +57,8 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
           MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == parallel_cast_out_lbi) {
-          ReplaceStrValInPbFdOrPbRpf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
-                                     GenLogicalBlobName(parallel_cast_in_lbi));
+          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
+                                            GenLogicalBlobName(parallel_cast_in_lbi));
         }
       }
     }
