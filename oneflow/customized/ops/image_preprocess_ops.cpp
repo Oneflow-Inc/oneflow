@@ -8,11 +8,11 @@ REGISTER_USER_OP("image_resize")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0})
-    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)
+    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")          /*not use*/
+    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0}) /*not use*/
+    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)                    /*not use*/
     .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
@@ -33,6 +33,7 @@ REGISTER_USER_OP("image_resize")
         *out_tensor->mut_data_type() = DataType::kUInt8;
         *out_tensor->mut_shape() = Shape({batch_size, resize_y, resize_x, c});
       } else {
+        CHECK_OR_RETURN(ctx->Attr<int64_t>("resize_shorter") != 0);
         *out_tensor->mut_data_type() = DataType::kTensorBuffer;
         *out_tensor->mut_shape() = Shape({batch_size});
       }
@@ -59,7 +60,8 @@ REGISTER_USER_OP("crop_mirror_normalize")
     .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
     .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
     .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
-    .Attr<std::vector<float>>("crop", UserOpAttrType::kAtListFloat, {0.0, 0.0})
+    .Attr<int64_t>("crop_h", UserOpAttrType::kAtInt64, 0)
+    .Attr<int64_t>("crop_w", UserOpAttrType::kAtInt64, 0)
     .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
     .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
@@ -74,10 +76,8 @@ REGISTER_USER_OP("crop_mirror_normalize")
       }
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t N = in_tensor->shape().At(0);
-      std::vector<float> crop = ctx->Attr<std::vector<float>>("crop");
-      CHECK_EQ_OR_RETURN(crop.size(), 2);
-      int64_t H = static_cast<int64_t>(crop.at(0));
-      int64_t W = static_cast<int64_t>(crop.at(1));
+      int64_t H = ctx->Attr<int64_t>("crop_h");
+      int64_t W = ctx->Attr<int64_t>("crop_w");
       std::string color_space = ctx->Attr<std::string>("color_space");
       int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
       if (in_tensor->data_type() == DataType::kUInt8) {
@@ -87,20 +87,21 @@ REGISTER_USER_OP("crop_mirror_normalize")
           H = in_tensor->shape().At(1);
           W = in_tensor->shape().At(2);
         }
-        std::string output_layout = ctx->Attr<std::string>("output_layout");
-        if (output_layout == "NCHW") {
-          *out_tensor->mut_shape() = Shape({N, C, H, W});
-        } else if (output_layout == "NHWC") {
-          *out_tensor->mut_shape() = Shape({N, H, W, C});
-        } else {
-          return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
-        }
       } else if (in_tensor->data_type() == DataType::kTensorBuffer) {
+        CHECK_OR_RETURN(H != 0 && W != 0);
         CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1);
-        *out_tensor->mut_shape() = Shape({N});
       } else {
         return Error::CheckFailed()
                << "input Dtype: " << in_tensor->data_type() << " is not supported";
+      }
+
+      std::string output_layout = ctx->Attr<std::string>("output_layout");
+      if (output_layout == "NCHW") {
+        *out_tensor->mut_shape() = Shape({N, C, H, W});
+      } else if (output_layout == "NHWC") {
+        *out_tensor->mut_shape() = Shape({N, H, W, C});
+      } else {
+        return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
       }
       DataType output_dtype = static_cast<DataType>(ctx->Attr<int32_t>("output_dtype"));
       CHECK_EQ_OR_RETURN(output_dtype,

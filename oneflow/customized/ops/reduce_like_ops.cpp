@@ -39,9 +39,19 @@ REGISTER_USER_OP("reduce_sum_like")
               .Broadcast(user_op::OpArg("like", 0))
               .PartialSum(user_op::OpArg("y", 0))
               .Build();
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), i)
+              .PartialSum(user_op::OpArg("like", 0))
+              .PartialSum(user_op::OpArg("y", 0))
+              .Build();
         } else {
           ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
         }
+        ctx->NewBuilder()
+            .Broadcast(user_op::OpArg("x", 0))
+            .PartialSum(user_op::OpArg("like", 0))
+            .Broadcast(user_op::OpArg("y", 0))
+            .Build();
       }
       return Maybe<void>::Ok();
     })

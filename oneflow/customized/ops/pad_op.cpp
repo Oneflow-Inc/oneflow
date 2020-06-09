@@ -31,8 +31,8 @@ REGISTER_USER_OP("pad")
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (padding_before[i] == 0 && padding_after[i] == 0) {
           ctx->NewBuilder()
-              .Split(user_op::OpArg("dx", 0), i)
-              .Split(user_op::OpArg("dy", 0), i)
+              .Split(user_op::OpArg("x", 0), i)
+              .Split(user_op::OpArg("y", 0), i)
               .Build();
         }
       }

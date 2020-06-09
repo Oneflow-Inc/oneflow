@@ -15,8 +15,6 @@
 import os
 import sys
 import oneflow
-# sys.path.insert(0, os.path.abspath('../build/python_scripts/'))
-
 
 # -- Project information -----------------------------------------------------
 
