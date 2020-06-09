@@ -50,3 +50,15 @@ def test_matmul_ta_tb(test_case):
         return flow.matmul(a, b, transpose_a=True, transpose_b=True)
     convert_to_onnx_and_check(matmul)
 
+
+def test_batch_matmul(test_case):
+    @flow.function(func_config)
+    def matmul():
+        a = flow.get_variable(name='a', shape=(4, 2, 3),
+                               dtype=flow.float, initializer=flow.random_uniform_initializer())
+        b = flow.get_variable(name='b', shape=(4, 3, 4),
+                               dtype=flow.float, initializer=flow.random_uniform_initializer())
+        return flow.matmul(a, b)
+    convert_to_onnx_and_check(matmul)
+
+

@@ -25,7 +25,7 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, model=False):
                                    dtype=flow.float, initializer=flow.random_uniform_initializer())
         check_point = flow.train.CheckPoint()
         check_point.init()
-    onnx_proto = flow.onnx.export(job_func)
+    onnx_proto = flow.onnx.export(job_func, opset=11)
     onnx.save(onnx_proto, '/tmp/model.onnx')
     # add_features_to_output(onnx_proto)
     sess = ort.InferenceSession(onnx_proto.SerializeToString())

@@ -2,4 +2,4 @@
 # Licensed under the MIT license.
 """oneflow.python.onnx.onnx_opset module"""
 
-from . import common, controlflow, generator, logical, math, misc, nn, reduction, rnn, tensor, traditionalml
+from . import common, controlflow, logical, math, misc, nn, reduction, tensor

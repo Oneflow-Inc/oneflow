@@ -34,7 +34,7 @@ FLOW_TO_ONNX_DTYPE = {
     data_type_pb2.kInt8: onnx_pb.TensorProto.INT8,
     data_type_pb2.kUInt8: onnx_pb.TensorProto.UINT8,
     data_type_pb2.kFloat16: onnx_pb.TensorProto.FLOAT16,
-    #TODO(daquexian): a tempoary hack
+    # TODO(daquexian): a tempoary hack
     data_type_pb2.kOFRecord: onnx_pb.TensorProto.INT32,
 }
 
@@ -71,6 +71,16 @@ ONNX_DTYPE_NAMES = {
     onnx_pb.TensorProto.STRING: "string",
     onnx_pb.TensorProto.BOOL: "bool"
 }
+
+
+def is_integral_onnx_dtype(dtype):
+    return dtype in [onnx_pb.TensorProto.INT32,
+                     onnx_pb.TensorProto.INT16,
+                     onnx_pb.TensorProto.INT8,
+                     onnx_pb.TensorProto.UINT8,
+                     onnx_pb.TensorProto.UINT16,
+                     onnx_pb.TensorProto.INT64,
+                     ]
 
 
 class TensorValueInfo(object):
@@ -111,7 +121,8 @@ def split_nodename_and_shape(name):
     for i in range(1, len(splits), 3):
         inputs.append(splits[i])
         if splits[i + 1] is not None:
-            shapes[splits[i]] = [int(n) for n in splits[i + 1][1:-1].split(",")]
+            shapes[splits[i]] = [int(n)
+                                 for n in splits[i + 1][1:-1].split(",")]
     if not shapes:
         shapes = None
     return inputs, shapes
@@ -181,25 +192,17 @@ def find_opset(opset):
     return opset
 
 
-def get_of_node_attr(node, name):
+def get_flow_node_attr(node, name):
     assert node.WhichOneof("op_type") == 'user_conf'
     attr_msg = node.user_conf.attr[name]
     attr_type = attr_msg.WhichOneof("value")
-    #TODO(daquexian): a better check
+    # TODO(daquexian): a better check
     if attr_type == 'at_shape':
         return list(getattr(attr_msg, attr_type).dim)
     elif attr_type[:7] == 'at_list':
         return list(getattr(attr_msg, attr_type).val)
     else:
         return getattr(attr_msg, attr_type)
-
-
-def get_flow_node_attr(node, name):
-    """Parser TF node attribute."""
-    if six.PY2:
-        # For python2, TF get_attr does not accept unicode
-        name = str(name)
-    return node.get_attr(name)
 
 
 def save_onnx_model(save_path_root, onnx_file_name, feed_dict, model_proto, include_test_data=False, as_text=False):
@@ -318,7 +321,8 @@ def merge_shapes(shape1, shape2):
 
     make_sure(is_list_or_tuple(shape1), "invalid type for shape1")
     make_sure(is_list_or_tuple(shape2), "invalid type for shape2")
-    make_sure(len(shape1) == len(shape2), "shapes rank mismatch: shape1=%s, shape2=%s", shape1, shape2)
+    make_sure(len(shape1) == len(shape2),
+              "shapes rank mismatch: shape1=%s, shape2=%s", shape1, shape2)
 
     merged = []
     for d1, d2 in zip(shape1, shape2):
@@ -326,7 +330,8 @@ def merge_shapes(shape1, shape2):
         if is_unknown_dimension(d1):
             d = d2
         elif not is_unknown_dimension(d2):
-            make_sure(d1 == d2, "shapes dimension mismatch: shape1=%s, shape2=%s", shape1, shape2)
+            make_sure(
+                d1 == d2, "shapes dimension mismatch: shape1=%s, shape2=%s", shape1, shape2)
         merged.append(d)
     return merged
 
@@ -421,7 +426,8 @@ def have_same_inference_value(g, output_1, output_2):
             return True
         # check body graph
         if node_1.get_body_graphs() or node_2.get_body_graphs():
-            logger.warning("Comparing two nodes containing body graph isn't supported.")
+            logger.warning(
+                "Comparing two nodes containing body graph isn't supported.")
             return False
         # check domain
         if node_1.domain != node_2.domain:
@@ -432,7 +438,7 @@ def have_same_inference_value(g, output_1, output_2):
         # check onnx attributes
         if node_1.attr_onnx.keys() != node_2.attr_onnx.keys():
             return False
-        for name in node_1.attr_onnx.keys(): # pylint: disable=consider-iterating-dictionary
+        for name in node_1.attr_onnx.keys():  # pylint: disable=consider-iterating-dictionary
             if node_1.get_attr_value(name) != node_2.get_attr_value(name):
                 return False
         return True
@@ -449,4 +455,3 @@ def have_same_inference_value(g, output_1, output_2):
         if not have_same_inference_value(g, inp_1, inp_2):
             return False
     return True
-

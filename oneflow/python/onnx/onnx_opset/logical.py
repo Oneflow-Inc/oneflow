@@ -34,23 +34,37 @@ def _add_cast_to_inputs(graph, node, supported_dtypes, target_dtype):
             graph.set_dtype(inp_cast.output[0], target_dtype)
 
 
-@flow_op("LogicalNot", onnx_op="Not")
+def _add_cast_to_output(graph, node):
+    # oneflow logical ops produce int8 tensor while onnx logical ops produce bool tensor
+    output = node.output[0]
+    cast_node = graph.insert_new_node_on_output("Cast", output, utils.make_name('cast'), to=graph.get_dtype(output))
+    graph.copy_shape(output, node.output[0])
+    graph.set_dtype(node.output[0], TensorProto.BOOL)
+
+
+# oneflow doesn't have logical_not and broadcast_logical_or, but
+# it is easy to implement onnx converter in advance
+@flow_op("logical_not", onnx_op="Not")
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
-        pass
+        _add_cast_to_output(ctx, node)
 
 
-@flow_op("LogicalAnd", onnx_op="And")
-@flow_op("LogicalOr", onnx_op="Or")
+@flow_op("broadcast_logical_and", onnx_op="And", flow_inputs=['x', 'y'])
+@flow_op("broadcast_logical_or", onnx_op="Or", flow_inputs=['x', 'y'])
 class BroadcastOp(common.BroadcastOp):
-    pass
+    @classmethod
+    def version_1(cls, ctx, node, **kwargs):
+        _add_cast_to_output(ctx, node)
+        super().version_1(ctx, node, **kwargs)
 
 
-@flow_op(["Equal", "NotEqual"])
+@flow_op(['broadcast_equal', 'broadcast_not_equal'], ["Equal", "NotEqual"], flow_inputs=['x', 'y'])
 class Equal:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
+        _add_cast_to_output(ctx, node)
         need_not = node.type == "NotEqual"
         common.BroadcastOp.version_1(ctx, node, **kwargs)
         if need_not:
@@ -63,6 +77,7 @@ class Equal:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
         # T2 output = Equal(T1, x, T1 y), T1 \in {bool, int32, int64}
+        _add_cast_to_output(ctx, node)
         need_not = node.type == "NotEqual"
         supported_dtypes = [
             TensorProto.BOOL,
@@ -82,6 +97,7 @@ class Equal:
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
         # starting with opset-11, equal supports all types
+        _add_cast_to_output(ctx, node)
         need_not = node.type == "NotEqual"
         if need_not:
             node.type = "Equal"
@@ -91,14 +107,16 @@ class Equal:
             ctx.copy_dtype(output_name, not_node.output[0])
 
 
-@flow_op(["Greater", "Less"])
+@flow_op(['broadcast_greater', 'broadcast_less'], ["Greater", "Less"], flow_inputs=['x', 'y'])
 class GreaterLess:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
+        _add_cast_to_output(ctx, node)
         common.BroadcastOp.version_1(ctx, node, **kwargs)
 
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
+        _add_cast_to_output(ctx, node)
         # T2 output = Greater(T1 x, T1 y), T2=tensor(bool)
         # T2 output = Less(T1 x, T1 y), T2=tensor(bool)
         # Great/Less in opset7 only supports limited types, insert Cast if needed
@@ -111,11 +129,12 @@ class GreaterLess:
         _add_cast_to_inputs(ctx, node, supported_dtypes, target_dtype)
 
 
-@flow_op("GreaterEqual", onnx_op="Less")
-@flow_op("LessEqual", onnx_op="Greater")
+@flow_op("broadcast_greater_equal", onnx_op="Less", flow_inputs=['x', 'y'])
+@flow_op("broadcast_less_equal", onnx_op="Greater", flow_inputs=['x', 'y'])
 class GreaterLessEqual:
     @classmethod
     def version_7(cls, ctx, node, **kwargs):
+        _add_cast_to_output(ctx, node)
         GreaterLess.version_7(ctx, node, **kwargs)
         output_name = node.output[0]
         new_node = ctx.insert_new_node_on_output("Not", output_name, name=utils.make_name(node.name))

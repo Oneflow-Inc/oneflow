@@ -22,8 +22,6 @@ class BroadcastOp:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
         """Elementwise Ops with broadcast flag."""
-        if node.type == "AddV2":
-            node.type = "Add"
         shape0 = ctx.get_shape(node.input[0])
         shape1 = ctx.get_shape(node.input[1])
         if shape0 != shape1:

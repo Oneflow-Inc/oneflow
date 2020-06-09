@@ -22,7 +22,7 @@ class flow_op:
     _OPSETS = collections.OrderedDict()
     _MAPPING = None
 
-    def __init__(self, name, domain=constants.ONNX_DOMAIN, **kwargs):
+    def __init__(self, name, onnx_op=None, domain=constants.ONNX_DOMAIN, **kwargs):
         """Called decorator from decorator.
 
         :param name: The name of the oneflow operator.
@@ -30,10 +30,11 @@ class flow_op:
         :param kwargs: Dictionary that are passed to the handler. A key 'onnx_op' will change the operator name.
         """
         if not isinstance(name, list):
-            if 'onnx_op' not in kwargs:
-                kwargs['onnx_op'] = name[0].upper() + name[1:]
             name = [name]
         self.name = name
+        if not isinstance(onnx_op, list):
+            onnx_op = [onnx_op] * len(name)
+        self.onnx_op = onnx_op
         self.domain = domain
         self.kwargs = kwargs
 
@@ -48,8 +49,8 @@ class flow_op:
                 while version >= len(opset):
                     opset.append({})
                 opset_dict = opset[version]
-                for name in self.name:
-                    opset_dict[name] = (v, self.kwargs)
+                for i, name in enumerate(self.name):
+                    opset_dict[name] = (v, self.onnx_op[i], self.kwargs)
         return func
 
     def register_compat_handler(self, func, version):
@@ -66,7 +67,7 @@ class flow_op:
             while version >= len(opset):
                 opset.append({})
             opset_dict = opset[version]
-            opset_dict[self.name[0]] = (func, self.kwargs)
+            opset_dict[self.name[0]] = (func, self.onnx_op[0], self.kwargs)
 
     @staticmethod
     def get_opsets():
