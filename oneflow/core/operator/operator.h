@@ -40,6 +40,7 @@ class Operator {
   LogicalBlobId* MutBnInOp2Lbi(const std::string& bn_in_op);
 
   // Getters
+  const OpAttribute& op_attribute() const { return op_attribute_; }
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
