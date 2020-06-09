@@ -12,6 +12,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/customized/utils/events_writer.h"
 
 namespace oneflow {
 
@@ -115,6 +116,8 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
+
+  Global<EventsWriter>::New("events");
 }
 
 void Runtime::DeleteAllGlobal() {
@@ -129,6 +132,8 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
+
+  Global<EventsWriter>::Delete();
 }
 
 }  // namespace oneflow
