@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
+#include "oneflow/core/common/maybe.h"
 
 DECLARE_string(log_dir);
 
@@ -60,7 +61,7 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO"
 
-template<typename T>
+template<typename T, typename Kind = void>
 class Global final {
  public:
   static T* Get() { return *GetPPtr(); }
@@ -81,10 +82,23 @@ class Global final {
 
  private:
   static T** GetPPtr() {
+    CheckKind();
     static T* ptr = nullptr;
     return &ptr;
   }
+  static void CheckKind() {
+    if (!std::is_same<Kind, void>::value) {
+      CHECK(Global<T>::Get() == nullptr)
+          << typeid(Global<T>).name() << " are disable for avoiding misuse";
+    }
+  }
 };
+
+template<typename T>
+Maybe<T*> GlobalMaybe() {
+  CHECK_NOTNULL_OR_RETURN(Global<T>::Get()) << " typeid: " << typeid(T).name();
+  return Global<T>::Get();
+}
 
 #define OF_COMMA ,
 
@@ -164,8 +178,8 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-const size_t kCudaAlignSize = 256;
-const size_t kCudaMemAllocAlignSize = 256;
+const size_t kCudaAlignSize = 512;
+const size_t kCudaMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }

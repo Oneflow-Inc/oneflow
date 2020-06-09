@@ -2,12 +2,10 @@ OneFlow Documentation
 ===================================
 .. toctree::
     :maxdepth: 1
-    :caption: OneFlow Tutorial
 
-    tutorials/quick_start
-    tutorials/ofrecord
-    tutorials/alexnet
-    tutorials/models
+    models
+    troubleshooting
+    mandarin
 
 
 .. toctree::
@@ -23,6 +21,7 @@ OneFlow Documentation
     nn
     layers
     data
+    distribute
 
 
 Indices and tables

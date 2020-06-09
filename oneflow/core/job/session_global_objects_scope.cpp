@@ -54,6 +54,7 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  if (Global<ResourceDesc>::Get() != nullptr) { Global<ResourceDesc>::Delete(); }
   DumpVersionInfo();
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
@@ -70,7 +71,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
-    Global<JobBuildAndInferCtxMgr>::New();
+    Global<LazyJobBuildAndInferCtxMgr>::New();
     Global<LbiDiffWatcherInfo>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
@@ -84,7 +85,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
     Global<LbiDiffWatcherInfo>::Delete();
-    Global<JobBuildAndInferCtxMgr>::Delete();
+    Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<JobName2JobId>::Delete();

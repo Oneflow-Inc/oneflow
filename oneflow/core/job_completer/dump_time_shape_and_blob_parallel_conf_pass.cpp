@@ -14,11 +14,12 @@ class DumpTimeShapeAndBlobParallelConfPass final : public OpGraphPass {
 
   bool IsEnabled() const override { return true; }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override {
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override {
     op_graph.DumpOpTimeShape(job);
     op_graph.DumpBatchAxisLbi(job);
     op_graph.DumpLogicalBlobDesc(job);
     op_graph.DumpSbpSignature(job);
+    return Maybe<void>::Ok();
   }
 };
 
