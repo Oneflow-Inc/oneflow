@@ -288,37 +288,18 @@ class Pad:
 
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
-        mode = node.get_attr("mode")
-        if mode:
-            mode = mode.s.decode("utf-8").lower()
-            node.set_attr("mode", mode)
-        if mode not in [None, "constant", "reflect"]:
-            raise ValueError(mode + " pad mode is not supported")
-
-        # pads must be int64.
-        if ctx.get_dtype(node.input[1]) != onnx_pb.TensorProto.INT64:
-            ctx.insert_new_node_on_input(
-                node, "Cast", node.input[1], to=onnx_pb.TensorProto.INT64)
-        ctx.insert_new_node_on_input(node, "Transpose", node.input[1])
-        shape_const = ctx.make_const(utils.make_name(
-            node.name), np.array([-1]).astype(np.int64))
-        ctx.insert_new_node_on_input(
-            node, "Reshape", [node.input[1], shape_const.name])
-
-        origin_dtype = ctx.get_dtype(node.output[0])
-        if origin_dtype not in [TensorProto.FLOAT, TensorProto.DOUBLE,
-                                TensorProto.INT32, TensorProto.INT64]:
-            cast_node = ctx.insert_new_node_on_input(
-                node, "Cast", node.input[0])
-            cast_node.set_attr("to", TensorProto.FLOAT)
-            ctx.set_dtype(cast_node.output[0], TensorProto.FLOAT)
-            ctx.copy_shape(node.name, cast_node.output[0])
-
-            cast_back_node = ctx.insert_new_node_on_output("Cast", node.output[0],
-                                                           name=utils.make_name(node.name) + "_castback")
-            cast_back_node.set_attr("to", origin_dtype)
-            ctx.set_dtype(cast_back_node.output[0], origin_dtype)
-            ctx.copy_shape(node.name, cast_back_node.output[0])
+        node.set_attr('mode', 'constant')
+        padding_before = node.get_attr_value('padding_before')
+        padding_after = node.get_attr_value('padding_after')
+        paddings = np.array(padding_before + padding_after).astype(np.int64)
+        padding_node = ctx.make_const(utils.make_name('const'), paddings)
+        node.input.append(padding_node.output[0])
+        dtype = ctx.get_dtype(node.input[0])
+        const_val = node.get_attr_value('integral_constant_value') if utils.is_integral_onnx_dtype(
+            dtype) else node.get_attr_value('floating_constant_value')
+        const_val = np.array(const_val).astype(utils.map_onnx_to_numpy_type(dtype))
+        const_val_node = ctx.make_const(utils.make_name('const'), const_val)
+        node.input.append(const_val_node.output[0])
 
 
 @flow_op(['normalization'], flow_inputs=['x', 'gamma', 'beta', 'moving_mean', 'moving_variance'])
