@@ -101,7 +101,7 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
       auto op_conf_fixed = op_conf;
       ParallelDesc parallel_desc(parallel_conf);
       op_conf_fixed.set_device_type(parallel_desc.device_type());
-      CHECK_JUST(GetCurInferCtx())->AddAndInferOp(op_conf_fixed, parallel_conf);
+      CHECK_JUST(GetCurInferCtx())->AddAndInferConsistentOp(op_conf_fixed, parallel_conf);
     } else {
       auto* placemnt_group = job_->mutable_placement()->add_placement_group();
       *placemnt_group->mutable_parallel_conf() = parallel_conf;
