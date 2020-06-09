@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_OPERATOR_KEEP_HEADER_ONLY_OP_H_
 #define ONEFLOW_CORE_OPERATOR_KEEP_HEADER_ONLY_OP_H_
 
-#include "oneflow/core/operator/identity_op.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {

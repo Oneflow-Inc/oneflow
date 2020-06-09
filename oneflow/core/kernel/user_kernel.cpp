@@ -271,7 +271,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
       const auto& arg_pair = pair.first;
       std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
-      CHECK_NOTNULL(blob);
+      if (blob == nullptr) { continue; }
       if (*arg_tensor_ptr) {
         *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
       } else {
@@ -319,12 +319,14 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   void UpdateTensorWithCorrBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
-      std::string bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
-      Blob* blob = BnInOp2Blob(bn_in_op);
-      if (blob == nullptr) {
-        pair.second.reset();
+      const auto& arg_pair = pair.first;
+      std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
+      Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
+      if (blob == nullptr) { continue; }
+      if (*arg_tensor_ptr) {
+        *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
       } else {
-        pair.second.reset(new user_op::Tensor(blob));
+        arg_tensor_ptr->reset(new user_op::Tensor(blob));
       }
     }
   }

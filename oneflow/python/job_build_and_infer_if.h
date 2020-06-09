@@ -39,33 +39,20 @@ bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
                                                                                      false);
 }
 
-std::string CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
-                                                              std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(serialized_op_conf)
+std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(
+    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
+    std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf,
+                                                               serialized_parallel_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-void CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_op_conf,
-                                          const std::string& serialized_parallel_conf,
-                                          std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferOp(serialized_op_conf, serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& serialized_op_conf,
-                                                  const std::string& serialized_parallel_conf,
-                                                  std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf,
-                                                               serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
-                                                    const std::string& serialized_parallel_conf,
-                                                    std::string* error_str) {
+std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(
+    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
+    std::string* error_str) {
   return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf,
                                                                  serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
+      .GetDataAndSerializedErrorProto(error_str, "");
 }
 
 void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn, std::string* error_str) {

@@ -13,13 +13,6 @@ def test_config_setter_getter(test_case):
     func_config = flow.FunctionConfig()
     func_config.enable_inplace()
     test_case.assertEqual(func_config.function_desc.enable_inplace, True)
-    test_case.assertEqual(func_config.function_desc.enable_eager_execution, False)
-    func_config.enable_eager_execution(True)
-    test_case.assertEqual(func_config.function_desc.enable_eager_execution, True)
-    func_config.enable_eager_execution(False)
-    test_case.assertEqual(func_config.function_desc.enable_eager_execution, False)
-    func_config.enable_eager_execution()
-    test_case.assertEqual(func_config.function_desc.enable_eager_execution, True)
 
 def test_global_function_desc(test_case):
     func_config = flow.FunctionConfig()

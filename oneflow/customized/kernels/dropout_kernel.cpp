@@ -1,6 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/core/kernel/random_generator.h"
+#include "oneflow/customized/kernels/random_mask_generator.h"
 
 namespace oneflow {
 
@@ -11,13 +11,6 @@ void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, cons
                   T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
-
-void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
-             int8_t* mask) {
-  for (int64_t i = 0; i < n; ++i) { mask[i] = random_tmp[i] > threshold; }
-}
-
-}  // namespace
 
 template<typename T>
 class DropoutKernelCPU final : public user_op::OpKernel {
@@ -89,45 +82,40 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(double)
 
-class RandomMaskLikeKernelCPU final : public user_op::OpKernel {
+template<DeviceType device_type>
+class RandomMaskLikeKernel final : public user_op::OpKernel {
  public:
-  RandomMaskLikeKernelCPU() = default;
-  ~RandomMaskLikeKernelCPU() = default;
+  RandomMaskLikeKernel() = default;
+  ~RandomMaskLikeKernel() = default;
 
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->Attr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>>(
-        seed, ctx->device_ctx());
+    return std::make_shared<OpKernelStateWrapper<RandomMaskGenerator<device_type>>>(seed);
   }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-
     int64_t elem_cnt = like->shape().elem_cnt();
     int8_t* mask = out->mut_dptr<int8_t>();
-    float* random_tmp = tmp_buffer->mut_dptr<float>();
-
-    auto* random_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(state);
-    random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
-
-    GenMask(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), random_tmp, mask);
+    auto* random_mask_generator =
+        dynamic_cast<OpKernelStateWrapper<RandomMaskGenerator<device_type>>*>(state);
+    CHECK_NOTNULL(random_mask_generator);
+    random_mask_generator->Mutable()->Generate(ctx->device_ctx(), elem_cnt,
+                                               ctx->Attr<float>("rate"), mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("random_mask_like")
-    .SetCreateFn<RandomMaskLikeKernelCPU>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kCPU;
-    })
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      const size_t tmp_buffer_bytes = GetCudaAlignedSize(like_shape->elem_cnt() * sizeof(float));
-      return tmp_buffer_bytes;
-    });
+#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
+  REGISTER_USER_KERNEL("random_mask_like")         \
+      .SetCreateFn<RandomMaskLikeKernel<device>>() \
+      .SetIsMatchedPred(                           \
+          [](const user_op::KernelRegContext& ctx) { return ctx.device_type() == device; });
 
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+
+}  // namespace
 }  // namespace oneflow

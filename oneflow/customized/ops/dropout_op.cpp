@@ -60,8 +60,8 @@ REGISTER_USER_OP("dropout_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
+      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+      FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("dy", 0), axis)
             .Split(user_op::OpArg("mask", 0), axis)

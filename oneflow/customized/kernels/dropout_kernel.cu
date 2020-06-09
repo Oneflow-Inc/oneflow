@@ -49,14 +49,6 @@ void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const f
           n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
 }
 
-void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
-             int8_t* mask) {
-  GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, threshold, random_tmp, mask);
-}
-
-}  // namespace
-
 template<typename T>
 class DropoutKernelGPU final : public user_op::OpKernel {
  public:
@@ -129,45 +121,5 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
-class RandomMaskLikeKernelGPU final : public user_op::OpKernel {
- public:
-  RandomMaskLikeKernelGPU() = default;
-  ~RandomMaskLikeKernelGPU() = default;
-
- private:
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->Attr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
-        seed, ctx->device_ctx());
-  }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-
-    int64_t elem_cnt = like->shape().elem_cnt();
-    int8_t* mask = out->mut_dptr<int8_t>();
-    float* random_tmp = tmp_buffer->mut_dptr<float>();
-
-    auto* random_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
-    random_generator->Mutable()->Uniform(elem_cnt, random_tmp);
-
-    GenMask(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), random_tmp, mask);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("random_mask_like")
-    .SetCreateFn<RandomMaskLikeKernelGPU>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU;
-    })
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      const size_t tmp_buffer_bytes = GetCudaAlignedSize(like_shape->elem_cnt() * sizeof(float));
-      return tmp_buffer_bytes;
-    });
-
+}  // namespace
 }  // namespace oneflow
