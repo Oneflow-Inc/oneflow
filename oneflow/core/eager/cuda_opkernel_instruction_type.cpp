@@ -27,18 +27,19 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
 };
 COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("gpu.CallOpKernel"));
 
-class CudaStatelessCallOpKernelInstructionType final : public StatelessCallOpKernelInstructionType {
+class CudaUserStatelessCallOpKernelInstructionType final
+    : public UserStatelessCallOpKernelInstructionType {
  public:
-  CudaStatelessCallOpKernelInstructionType() = default;
-  ~CudaStatelessCallOpKernelInstructionType() override = default;
+  CudaUserStatelessCallOpKernelInstructionType() = default;
+  ~CudaUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CudaStatelessCallOpKernelInstructionType>(
-    "gpu.compute.StatelessCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaUserStatelessCallOpKernelInstructionType>(
+    "gpu.compute.UserStatelessCallOpKernel"));
 
 class CudaSystemStatelessCallOpKernelInstructionType final
     : public SystemStatelessCallOpKernelInstructionType {

@@ -202,9 +202,10 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
     bn_in_op2blob_object = {}
-    vm_util.LogicalRun(
-            lambda builder: builder.SystemStatelessCall(op_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object))
+    def BuildInstruction(builder):
+        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
+        builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+    vm_util.LogicalRun(BuildInstruction)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
@@ -225,7 +226,8 @@ def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
     bn_in_op2blob_object = {}
     def BuildModeInitInstruction(builder):
-        builder.SystemStatelessCall(op_conf, bn_in_op2blob_object=bn_in_op2blob_object)
+        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
+        builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
     vm_util.LogicalRun(BuildModeInitInstruction)
     return bn_in_op2blob_object['out_0']
 

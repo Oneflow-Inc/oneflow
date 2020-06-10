@@ -356,7 +356,7 @@ void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   OpKernelCompute(opkernel_obj, instruction, args.Get());
 }
 
-void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
@@ -365,7 +365,7 @@ void StatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) c
   OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type);
 }
 
-void StatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
       instruction->mut_operand_type(args->shared_opkernel())->Mut<OpKernelObject>();

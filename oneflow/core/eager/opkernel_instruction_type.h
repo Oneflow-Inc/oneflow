@@ -21,14 +21,14 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
-class StatelessCallOpKernelInstructionType : public vm::InstructionType {
+class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  StatelessCallOpKernelInstructionType() = default;
-  virtual ~StatelessCallOpKernelInstructionType() = default;
+  UserStatelessCallOpKernelInstructionType() = default;
+  virtual ~UserStatelessCallOpKernelInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;

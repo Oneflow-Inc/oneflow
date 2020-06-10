@@ -51,16 +51,17 @@ def _BuildCopyInstruction(builder, x_blob_object, op_conf, current_devices, curr
             "\ncurrent_devices: %s\nx_devices: %s" %(current_devices, x_devices)
     x_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     bn_in_op2blob_object = {"in": x_blob_object}
+    op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
     if current_device_tag == x_device_tag:
         bn_in_op2blob_object['out'] = x_blob_object
     elif current_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
-        builder.SystemCudaD2HStatelessCall(op_conf, x_parallel_conf,
+        builder.CudaD2HStatelessCall(op_attribute, x_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif current_device_tag == "gpu" and x_device_tag == "cpu":
         out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         with builder.CudaHostPinBlob(x_blob_object):
-            builder.SystemCudaH2DStatelessCall(op_conf, out_parallel_conf,
+            builder.CudaH2DStatelessCall(op_attribute, out_parallel_conf,
                     bn_in_op2blob_object=bn_in_op2blob_object)
     else:
         raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"
@@ -84,17 +85,18 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
     value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
     bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
+    op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
     if ref_device_tag == value_device_tag:
-        builder.SystemStatelessCall(op_conf,
+        builder.StatelessCall(op_attribute,
                 parallel_conf=ref_parallel_conf, device_tag=ref_device_tag,
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        builder.SystemCudaD2HStatelessCall(op_conf, value_parallel_conf,
+        builder.CudaD2HStatelessCall(op_attribute, value_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with builder.CudaHostPinBlob(value_blob_object):
-            builder.SystemCudaH2DStatelessCall(op_conf, ref_parallel_conf,
+            builder.CudaH2DStatelessCall(op_attribute, ref_parallel_conf,
                     bn_in_op2blob_object=bn_in_op2blob_object)
     else:
         raise NotImplementedError("invalid device found. ref_device_tag: %s, value_device_tag: %s"

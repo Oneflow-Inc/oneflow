@@ -207,7 +207,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   }
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("gpu.compute.StatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(op_conf_id)
@@ -245,7 +245,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     test_source_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("gpu.compute.StatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(test_source_id)
@@ -265,7 +265,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0");
-  list.EmplaceBack(vm::NewInstruction("gpu.compute.StatelessCallOpKernel")
+  list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(ccrelu_id)
@@ -282,7 +282,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "gpu.compute.StatelessCallOpKernel"});
+                          "gpu.compute.UserStatelessCallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {

@@ -25,18 +25,19 @@ class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType 
 };
 COMMAND(vm::RegisterInstructionType<CpuCallOpKernelInstructionType>("cpu.CallOpKernel"));
 
-class CpuStatelessCallOpKernelInstructionType final : public StatelessCallOpKernelInstructionType {
+class CpuUserStatelessCallOpKernelInstructionType final
+    : public UserStatelessCallOpKernelInstructionType {
  public:
-  CpuStatelessCallOpKernelInstructionType() = default;
-  ~CpuStatelessCallOpKernelInstructionType() override = default;
+  CpuUserStatelessCallOpKernelInstructionType() = default;
+  ~CpuUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuStatelessCallOpKernelInstructionType>(
-    "cpu.compute.StatelessCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CpuUserStatelessCallOpKernelInstructionType>(
+    "cpu.compute.UserStatelessCallOpKernel"));
 
 class CpuSystemStatelessCallOpKernelInstructionType final
     : public SystemStatelessCallOpKernelInstructionType {

@@ -54,83 +54,59 @@ class InstructionsBuilder(object):
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
 
-    def StatelessCall(self, op_attribute, bn_in_op2blob_object={}):
+    def StatelessCall(self, op_attribute, op_parallel_conf=None, op_device_tag=None,
+                      bn_in_op2blob_object={}):
+        placement_scope = oneflow.placement.current_scope()
+        if op_parallel_conf is None: op_parallel_conf = placement_scope.default_parallel_conf
+        if op_device_tag is None: op_device_tag = placement_scope.default_device_tag
         def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
             return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
-        self._StatelessCall("compute", op_attribute, bn_in_op2blob_object=bn_in_op2blob_object,
+        self._StatelessCall("compute", op_attribute,
+                op_parallel_conf=op_parallel_conf,
+                op_device_tag=op_device_tag,
+                bn_in_op2blob_object=bn_in_op2blob_object,
                 get_delegate_blob_object=GetDelegateBlobObject)
 
-    def _StatelessCall(self, stream_tag, op_attribute,
+    def CudaD2HStatelessCall(self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
+        self._StatelessCall("copy_d2h", op_attribute,
+                op_parallel_conf=in_parallel_conf,
+                op_device_tag="gpu",
+                bn_in_op2blob_object=bn_in_op2blob_object,
+                get_delegate_blob_object=GetDirectBlobObject)
+
+    def CudaH2DStatelessCall(self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
+        self._StatelessCall("copy_h2d", op_attribute,
+                op_parallel_conf=out_parallel_conf,
+                op_device_tag="gpu",
+                bn_in_op2blob_object=bn_in_op2blob_object,
+                get_delegate_blob_object=GetDirectBlobObject)
+
+    def _StatelessCall(self, stream_tag, op_attribute, op_parallel_conf, op_device_tag,
                        bn_in_op2blob_object={}, get_delegate_blob_object=None):
         assert callable(get_delegate_blob_object)
-        assert op_attribute.op_conf.HasField('user_conf')
-        placement_scope = oneflow.placement.current_scope()
-        parallel_conf = placement_scope.default_parallel_conf
-        device_tag = placement_scope.default_device_tag
-        parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
-        def DelegateBlobObject4Ibn(ibn):
-            return get_delegate_blob_object(bn_in_op2blob_object[ibn], parallel_desc_sym)
-        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
-        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
-        const_operand_blob_objects = self._GetConstOperandBlobObjects(
-                op_attribute, blob_object4ibn=DelegateBlobObject4Ibn)
-        mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
-                op_attribute, parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(
-                op_attribute, parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        self._StatelessCallOpKernel("%s.StatelessCallOpKernel" % stream_tag,
-                parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
-                const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
-
-    def SystemStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
-                            bn_in_op2blob_object={}):
-        system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
-        placement_scope = oneflow.placement.current_scope()
-        if parallel_conf is None: parallel_conf = placement_scope.default_parallel_conf
-        if device_tag is None: device_tag = placement_scope.default_device_tag
-        def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
-            return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
-        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
-        self._SystemStatelessCall("compute", op_attribute, parallel_conf, device_tag,
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDelegateBlobObject)
-
-    def SystemCudaD2HStatelessCall(self, op_conf, in_parallel_conf, bn_in_op2blob_object={}):
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
-        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
-        self._SystemStatelessCall("copy_d2h", op_attribute, in_parallel_conf, "gpu",
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDirectBlobObject)
-
-    def SystemCudaH2DStatelessCall(self, op_conf, out_parallel_conf, bn_in_op2blob_object={}):
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
-        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
-        self._SystemStatelessCall("copy_h2d", op_attribute, out_parallel_conf, "gpu",
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDirectBlobObject)
-
-    def _SystemStatelessCall(self, stream_tag, op_attribute, op_parallel_conf, op_device_tag,
-                                 bn_in_op2blob_object={}, get_delegate_blob_object=None):
-        def BlobObject4Ibn(ibn): return bn_in_op2blob_object[ibn]
-        assert callable(get_delegate_blob_object)
-        opkernel_parallel_desc_sym = self.GetParallelDescSymbol(op_parallel_conf, op_device_tag)
+        op_parallel_desc_sym = self.GetParallelDescSymbol(op_parallel_conf, op_device_tag)
         placement_scope = oneflow.placement.current_scope()
         blob_parallel_desc_sym = self.GetParallelDescSymbol(
                 placement_scope.default_parallel_conf, placement_scope.default_device_tag)
-        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._SystemGetOpConfSymbol(op_attribute.op_conf)
-        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(opkernel_parallel_desc_sym)
         def DelegateBlobObject4Ibn(ibn):
-            return get_delegate_blob_object(BlobObject4Ibn(ibn), opkernel_parallel_desc_sym)
+            return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_parallel_desc_sym)
+        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
+        op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
+        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(op_parallel_desc_sym)
         const_operand_blob_objects = self._GetConstOperandBlobObjects(
                 op_attribute, blob_object4ibn=DelegateBlobObject4Ibn)
+        self._CheckRefInBlobObjectParallelDesc(
+                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
                 op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(
                 op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        self._StatelessCallOpKernel("%s.SystemStatelessCallOpKernel" % stream_tag,
-                opkernel_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
+        is_user_op = op_attribute.op_conf.HasField('user_conf')
+        instruction_prefix = "User" if is_user_op else "System"
+        self._StatelessCallOpKernel("%s.%sStatelessCallOpKernel"%(stream_tag, instruction_prefix),
+                op_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
 
     def DeleteBlob(self, blob_object):
@@ -275,6 +251,13 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object[obn] = out_blob_object
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut1_operand_blob_objects
+
+    def _CheckRefInBlobObjectParallelDesc(self, op_attribute, op_parallel_desc_sym,
+                                          bn_in_op2blob_object={}):
+        for ibn in op_attribute.input_bns:
+            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            ref_blob_object = bn_in_op2blob_object[ibn]
+            assert op_parallel_desc_sym == ref_blob_object.parallel_desc_symbol
 
     def _GetMut2OperandBlobObjects(self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}):
         mut2_operand_blob_objects = []
