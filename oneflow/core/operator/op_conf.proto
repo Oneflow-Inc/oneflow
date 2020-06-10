@@ -1487,7 +1487,7 @@ message AccTickOpConf {
 }
 
 message ModelInitOpConf {
-  required string tick = 1;
+  optional string tick = 1;
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;

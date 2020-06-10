@@ -234,7 +234,6 @@ def _GetModelInitAndLbi(var_op_conf):
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_init"
-    op_conf.model_init_conf.tick = "undefined-source_tick/out"
     op_conf.model_init_conf.out.append("out_0")
     op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
     op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)
