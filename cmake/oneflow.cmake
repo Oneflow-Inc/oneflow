@@ -250,7 +250,7 @@ set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
+        "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
