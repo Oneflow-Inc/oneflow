@@ -542,7 +542,7 @@ void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
     }
   }
   const std::vector<int64_t>& group_ids = job_id2group_ids_.at(current_job_id_);
-  for (; current_group_idx_in_job_ < group_ids.size(); ++current_group_idx_in_job_) {
+  while (true) {
     const int64_t group_id = group_ids.at(current_group_idx_in_job_);
     auto& group_state = group_id2group_state_.at(group_id);
     if (group_state.IsReady()) {
@@ -555,6 +555,7 @@ void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
       }
       group_state.backend->ExecuteGroup(group_state.requests, ranks);
       group_state.ready_request_ids.clear();
+      current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % group_ids.size();
     } else {
       break;
     }
