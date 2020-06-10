@@ -1,7 +1,9 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
-from collections import OrderedDict
+
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -16,7 +18,9 @@ def _np_dtype_to_of_dtype(np_dtype):
         raise NotImplementedError
 
 
-def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_cb=None):
+def _of_clip_by_value(
+    values, min, max, device_type="gpu", dynamic=False, grad_cb=None
+):
     data_type = _np_dtype_to_of_dtype(values.dtype)
 
     if callable(grad_cb):
@@ -50,10 +54,14 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.train.model_update_conf(dict(naive_conf={}))
 
     if dynamic:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(
+            flow.distribute.mirrored_strategy()
+        )
 
         @flow.function(func_config)
-        def clip_fn(values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)):
+        def clip_fn(
+            values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)
+        ):
             return clip(values_def)
 
         check_point = flow.train.CheckPoint()
@@ -61,10 +69,14 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         return clip_fn([values]).get().ndarray_list()[0]
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(
+            flow.distribute.consistent_strategy()
+        )
 
         @flow.function(func_config)
-        def clip_fn(values_def=flow.FixedTensorDef(values.shape, dtype=data_type)):
+        def clip_fn(
+            values_def=flow.FixedTensorDef(values.shape, dtype=data_type)
+        ):
             return clip(values_def)
 
         check_point = flow.train.CheckPoint()
@@ -80,7 +92,10 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
 
     def compare_dy(dy_blob):
         test_case.assertTrue(
-            np.array_equal(dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray())
+            np.array_equal(
+                dy.numpy(),
+                dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray(),
+            )
         )
 
     of_y = _of_clip_by_value(
@@ -95,7 +110,9 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
 
 
 def test_clip_by_value(test_case):
-    values = np.random.randint(low=-100, high=100, size=(8, 512, 4)).astype(np.float32)
+    values = np.random.randint(low=-100, high=100, size=(8, 512, 4)).astype(
+        np.float32
+    )
     np_out = np.clip(values, -50, 50)
 
     arg_dict = OrderedDict()

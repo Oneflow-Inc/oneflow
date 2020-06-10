@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

@@ -1,9 +1,6 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
-
 
 BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]
@@ -58,13 +55,25 @@ def conv2d_affine(input, name, filters, kernel_size, strides, activation=None):
     return output
 
 
-def bottleneck_transformation(input, block_name, filters, filters_inner, strides):
+def bottleneck_transformation(
+    input, block_name, filters, filters_inner, strides
+):
     a = conv2d_affine(
-        input, block_name + "_branch2a", filters_inner, 1, 1, activation="Relu",
+        input,
+        block_name + "_branch2a",
+        filters_inner,
+        1,
+        1,
+        activation="Relu",
     )
 
     b = conv2d_affine(
-        a, block_name + "_branch2b", filters_inner, 3, strides, activation="Relu",
+        a,
+        block_name + "_branch2b",
+        filters_inner,
+        3,
+        strides,
+        activation="Relu",
     )
 
     c = conv2d_affine(b, block_name + "_branch2c", filters, 1, 1)
@@ -87,12 +96,18 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
     return flow.keras.activations.relu(bottleneck + shortcut)
 
 
-def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
+def residual_stage(
+    input, stage_name, counts, filters, filters_inner, stride_init=2
+):
     output = input
     for i in range(counts):
         block_name = "%s_%d" % (stage_name, i)
         output = residual_block(
-            output, block_name, filters, filters_inner, stride_init if i == 0 else 1,
+            output,
+            block_name,
+            filters,
+            filters_inner,
+            stride_init if i == 0 else 1,
         )
 
     return output
@@ -105,7 +120,12 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
     ):
         stage_name = "res%d" % (i + 2)
         output = residual_stage(
-            output, stage_name, counts, filters, filters_inner, 1 if i == 0 else 2,
+            output,
+            stage_name,
+            counts,
+            filters,
+            filters_inner,
+            1 if i == 0 else 2,
         )
         on_stage_end(output)
 
@@ -116,7 +136,12 @@ def resnet_stem(input):
     conv1 = _conv2d("conv1", input, 64, 7, 2)
     conv1_bn = flow.keras.activations.relu(_batch_norm(conv1, "conv1_bn"))
     pool1 = flow.nn.max_pool2d(
-        conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
+        conv1_bn,
+        ksize=3,
+        strides=2,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool1",
     )
     return pool1
 
@@ -129,7 +154,12 @@ def resnet50(images, trainable=True):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(
-            body, ksize=7, strides=1, padding="VALID", data_format="NCHW", name="pool5",
+            body,
+            ksize=7,
+            strides=1,
+            padding="VALID",
+            data_format="NCHW",
+            name="pool5",
         )
 
         fc1001 = flow.layers.dense(

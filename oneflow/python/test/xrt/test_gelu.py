@@ -1,26 +1,30 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(input_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def gelu_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    def gelu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.keras.activations.gelu(x)
+
     return gelu_job
+
 
 def make_xla_job(input_shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_gelu_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    def xla_gelu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.keras.activations.gelu(x)
+
     return xla_gelu_job
 
 
@@ -32,7 +36,9 @@ class TestGelu(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(
+            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
+        )
 
         flow.clear_default_session()
 
@@ -56,5 +62,6 @@ class TestGelu(unittest.TestCase):
         self._test_random_body((2, 10, 2))
         self._test_random_body((2, 5, 2, 2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

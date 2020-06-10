@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
 
-from collections import OrderedDict
 from test_util import GenArgDict
 
 flow_to_np_dtype_dict = {
@@ -27,8 +28,12 @@ def _of_assign_and_relu(value, dtype, device_type):
     flow.config.cpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
-    func_config.default_placement_scope(flow.fixed_placement(device_type, "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_placement_scope(
+        flow.fixed_placement(device_type, "0:0")
+    )
+    func_config.default_distribute_strategy(
+        flow.distribute.consistent_strategy()
+    )
 
     @flow.function(func_config)
     def assign_fn(value_def=flow.FixedTensorDef(value.shape, dtype=dtype)):

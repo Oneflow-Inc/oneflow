@@ -1,9 +1,8 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import argparse
-
 from datetime import datetime
 
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 DATA_DIR = "/dataset/imagenet_original_ofrecord/train"
 MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/resnet50/models/of_model"
@@ -38,7 +37,11 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+    "-r",
+    "--remote_by_hand",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(

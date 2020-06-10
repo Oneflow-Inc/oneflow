@@ -1,18 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import argparse
 import os
 import time
-import random
-import argparse
-from datetime import datetime
 from collections import OrderedDict
+from datetime import datetime
 
 import oneflow as flow
 
-from pretrain import PreTrain
 import benchmark_util
+from pretrain import PreTrain
 
 parser = argparse.ArgumentParser(description="flags for bert")
 
@@ -22,10 +19,16 @@ parser.add_argument("--node_num", type=int, default=1)
 parser.add_argument("--node_list", type=str, default=None)
 
 # train
-parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
-parser.add_argument("--weight_decay_rate", type=float, default=0.01, help="weight decay rate")
+parser.add_argument(
+    "--learning_rate", type=float, default=1e-4, help="Learning rate"
+)
+parser.add_argument(
+    "--weight_decay_rate", type=float, default=0.01, help="weight decay rate"
+)
 parser.add_argument("--batch_size_per_device", type=int, default=24)
-parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
+parser.add_argument(
+    "--iter_num", type=int, default=10, help="total iterations to run"
+)
 parser.add_argument(
     "--skip_iter_num",
     type=int,
@@ -33,14 +36,20 @@ parser.add_argument(
     help="number of skipping iterations for benchmark purpose.",
 )
 parser.add_argument(
-    "--log_every_n_iter", type=int, default=1, help="print loss every n iteration"
+    "--log_every_n_iter",
+    type=int,
+    default=1,
+    help="print loss every n iteration",
 )
 parser.add_argument("--data_dir", type=str, default=None)
 parser.add_argument(
     "--data_part_num", type=int, default=32, help="data part number in dataset"
 )
-parser.add_argument("--enable_auto_mixed_precision", default=False,
-        type=lambda x: (str(x).lower() == 'true'))
+parser.add_argument(
+    "--enable_auto_mixed_precision",
+    default=False,
+    type=lambda x: (str(x).lower() == "true"),
+)
 
 # log and resore/save
 parser.add_argument(
@@ -101,9 +110,12 @@ parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
 parser.add_argument("--hidden_size_per_head", type=int, default=64)
 
 parser.add_argument("--warmup_batches", type=int, default=1000)
-parser.add_argument("--lr_decay_num", type=int, default= 100000)
-parser.add_argument("--lr_decay_num_same_as_iter_num",
-        default=False, type=(lambda x: str(x).lower() == 'true'))
+parser.add_argument("--lr_decay_num", type=int, default=100000)
+parser.add_argument(
+    "--lr_decay_num_same_as_iter_num",
+    default=False,
+    type=(lambda x: str(x).lower() == "true"),
+)
 
 args = parser.parse_args()
 
@@ -118,17 +130,21 @@ def BertDecoder(
     data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq
 ):
     config_ordered_dict = OrderedDict()
-    config_ordered_dict['input_ids'] = seq_length
-    config_ordered_dict['next_sentence_labels'] = 1
-    config_ordered_dict['input_mask'] = seq_length
-    config_ordered_dict['segment_ids'] = seq_length
-    config_ordered_dict['masked_lm_ids'] = max_predictions_per_seq
-    config_ordered_dict['masked_lm_positions'] = max_predictions_per_seq
-    config_ordered_dict['masked_lm_weights'] = max_predictions_per_seq
+    config_ordered_dict["input_ids"] = seq_length
+    config_ordered_dict["next_sentence_labels"] = 1
+    config_ordered_dict["input_mask"] = seq_length
+    config_ordered_dict["segment_ids"] = seq_length
+    config_ordered_dict["masked_lm_ids"] = max_predictions_per_seq
+    config_ordered_dict["masked_lm_positions"] = max_predictions_per_seq
+    config_ordered_dict["masked_lm_weights"] = max_predictions_per_seq
 
     blob_confs = []
     for k, v in config_ordered_dict.items():
-        blob_confs.append(_blob_conf(k, [v], flow.float if k=='masked_lm_weights' else flow.int32))
+        blob_confs.append(
+            _blob_conf(
+                k, [v], flow.float if k == "masked_lm_weights" else flow.int32
+            )
+        )
 
     decoders = flow.data.decode_ofrecord(
         data_dir,
@@ -161,16 +177,22 @@ def BuildPreTrainNet(
     intermediate_size = hidden_size * 4
 
     decoders = BertDecoder(
-        args.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq
+        args.data_dir,
+        batch_size,
+        data_part_num,
+        seq_length,
+        max_predictions_per_seq,
     )
 
-    input_ids = decoders['input_ids']
-    next_sentence_labels = decoders['next_sentence_labels']
-    input_mask = decoders['input_mask']
-    token_type_ids = decoders['segment_ids'] # note: segment_ids = token_type_ids
-    masked_lm_ids = decoders['masked_lm_ids']
-    masked_lm_positions = decoders['masked_lm_positions']
-    masked_lm_weights = decoders['masked_lm_weights']
+    input_ids = decoders["input_ids"]
+    next_sentence_labels = decoders["next_sentence_labels"]
+    input_mask = decoders["input_mask"]
+    token_type_ids = decoders[
+        "segment_ids"
+    ]  # note: segment_ids = token_type_ids
+    masked_lm_ids = decoders["masked_lm_ids"]
+    masked_lm_positions = decoders["masked_lm_positions"]
+    masked_lm_weights = decoders["masked_lm_weights"]
     return PreTrain(
         input_ids,
         input_mask,
@@ -198,16 +220,23 @@ def BuildPreTrainNet(
 _BERT_MODEL_UPDATE_CONF = dict(
     learning_rate_decay=dict(
         polynomial_conf=dict(
-            decay_batches=args.iter_num if args.lr_decay_num_same_as_iter_num else args.lr_decay_num, 
-            end_learning_rate=0.0,)
+            decay_batches=args.iter_num
+            if args.lr_decay_num_same_as_iter_num
+            else args.lr_decay_num,
+            end_learning_rate=0.0,
+        )
     ),
-    warmup_conf=dict(linear_conf=dict(warmup_batches=args.warmup_batches, start_multiplier=0,)),
+    warmup_conf=dict(
+        linear_conf=dict(
+            warmup_batches=args.warmup_batches, start_multiplier=0,
+        )
+    ),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0,)),
     adam_conf=dict(epsilon=1e-6),
     weight_decay_conf=dict(
         weight_decay_rate=args.weight_decay_rate,
-        excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm'])
-    )
+        excludes=dict(pattern=["bias", "LayerNorm", "layer_norm"]),
+    ),
 )
 
 func_config = flow.FunctionConfig()
@@ -221,6 +250,7 @@ func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 # func_config.all_reduce_group_num(128)
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
+
 
 @flow.function(func_config)
 def PretrainJob():
@@ -255,7 +285,11 @@ def main():
     for arg in vars(args):
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
-    print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
+    print(
+        "Time stamp: {}".format(
+            str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+        )
+    )
 
     flow.env.log_dir(args.log_dir)
 

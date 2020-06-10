@@ -1,14 +1,19 @@
-import oneflow as flow
-import numpy as np
-from absl import flags
 import sys
-import copy
+
+import numpy as np
+import oneflow as flow
+from absl import flags
+
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
 flags.DEFINE_string(
-    "model_load_dir", "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12", ""
+    "data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", ""
+)
+flags.DEFINE_string(
+    "model_load_dir",
+    "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12",
+    "",
 )
 flags.DEFINE_string("model_save_dir", "snapshots", "")
 flags.DEFINE_float("lr", 1e-4, "learning rate")
@@ -29,11 +34,17 @@ FLAGS(sys.argv)
 
 
 def _blob_conf(name, shape, dtype=flow.int32):
-    return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
+    return flow.data.BlobConf(
+        name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec()
+    )
 
 
 def BertDecoder(
-    data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20
+    data_dir,
+    batch_size=1,
+    data_part_num=1,
+    seq_length=128,
+    max_predictions_per_seq=20,
 ):
     blob_confs = []
     blob_confs.append(_blob_conf("input_ids", [seq_length]))
@@ -41,10 +52,18 @@ def BertDecoder(
     blob_confs.append(_blob_conf("input_mask", [seq_length]))
     blob_confs.append(_blob_conf("segment_ids", [seq_length]))
     blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
-    blob_confs.append(_blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float))
+    blob_confs.append(
+        _blob_conf("masked_lm_positions", [max_predictions_per_seq])
+    )
+    blob_confs.append(
+        _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
+    )
     return flow.data.decode_ofrecord(
-        data_dir, blob_confs, batch_size=batch_size, name="decode", data_part_num=data_part_num
+        data_dir,
+        blob_confs,
+        batch_size=batch_size,
+        name="decode",
+        data_part_num=data_part_num,
     )
 
 
@@ -66,7 +85,11 @@ def BuildPreTrainNet(
     intermediate_size = hidden_size * 4
 
     decoders = BertDecoder(
-        FLAGS.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq
+        FLAGS.data_dir,
+        batch_size,
+        data_part_num,
+        seq_length,
+        max_predictions_per_seq,
     )
 
     input_ids = decoders[0]
@@ -101,13 +124,20 @@ def BuildPreTrainNet(
 
 
 _BERT_MODEL_UPDATE_CONF = dict(
-    learning_rate_decay=dict(polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)),
-    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
+    learning_rate_decay=dict(
+        polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)
+    ),
+    warmup_conf=dict(
+        linear_conf=dict(warmup_batches=1000, start_multiplier=0)
+    ),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
     weight_decay_conf=dict(
-        weight_decay_rate=FLAGS.weight_decay_rate, excludes=dict(pattern=['bias', 'LayerNorm', 'layer_norm']))
+        weight_decay_rate=FLAGS.weight_decay_rate,
+        excludes=dict(pattern=["bias", "LayerNorm", "layer_norm"]),
+    ),
 )
+
 
 def PretrainJob():
     loss = BuildPreTrainNet(
@@ -126,11 +156,13 @@ def PretrainJob():
     flow.losses.add_loss(loss)
     return loss
 
+
 func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
+
 
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
@@ -141,6 +173,7 @@ def test_1n1c(test_case):
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
+
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
     pretrain_job = flow.function(func_config)(PretrainJob)
@@ -148,6 +181,7 @@ def test_1n4c(test_case):
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
+
 
 @flow.unittest.num_nodes_required(2)
 def test_2n8c(test_case):
@@ -158,17 +192,26 @@ def test_2n8c(test_case):
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
+
 def test_inplace(test_case):
-    test_case.assertTrue(np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)))
+    test_case.assertTrue(
+        np.allclose(
+            GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)
+        )
+    )
+
 
 def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(
+        flow.distribute.consistent_strategy()
+    )
     train_config.train.primary_lr(FLAGS.lr)
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)
+
     @flow.function(train_config)
     def PretrainJob():
         loss = BuildPreTrainNet(

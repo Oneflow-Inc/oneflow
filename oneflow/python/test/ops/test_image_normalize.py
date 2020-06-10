@@ -1,6 +1,6 @@
-import oneflow as flow
-import numpy as np
 import cv2
+import numpy as np
+import oneflow as flow
 
 
 def _of_image_normalize(images, image_shape, std, mean):
@@ -8,11 +8,15 @@ def _of_image_normalize(images, image_shape, std, mean):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(
+        flow.distribute.mirrored_strategy()
+    )
 
     @flow.function(func_config)
     def image_normalize_job(
-        images_def=flow.MirroredTensorListDef(shape=image_shape, dtype=flow.float)
+        images_def=flow.MirroredTensorListDef(
+            shape=image_shape, dtype=flow.float
+        )
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         norm_images = flow.image_normalize(images_buffer, std, mean)
@@ -25,7 +29,9 @@ def _of_image_normalize(images, image_shape, std, mean):
 
 
 def _read_images_by_cv(image_files):
-    images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+    images = [
+        cv2.imread(image_file).astype(np.single) for image_file in image_files
+    ]
     return [np.expand_dims(image, axis=0) for image in images]
 
 
@@ -34,7 +40,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     assert image_static_shape[0] == 1, str(image_static_shape)
     image_static_shape[0] = len(image_shapes)

@@ -1,8 +1,9 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
 import argparse
 import os
+from datetime import datetime
+
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 _DATA_DIR = "/dataset/PNGS/PNG224/of_record_repeated"
 _SINGLE_DATA_DIR = "/dataset/PNGS/PNG224/of_record"
@@ -12,15 +13,21 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 )
 
 parser = argparse.ArgumentParser(
-    description="flags for multi-node and resource")
-parser.add_argument("-g", "--gpu_num_per_node",
-                    type=int, default=1, required=False)
+    description="flags for multi-node and resource"
+)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-s", "--skip_scp_binary", default=False, action="store_true", required=False
+    "-s",
+    "--skip_scp_binary",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument(
     "-c",
@@ -30,16 +37,31 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+    "-r",
+    "--remote_by_hand",
+    default=False,
+    action="store_true",
+    required=False,
 )
-parser.add_argument("-e", "--eval_dir", type=str,
-                    default=_DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str,
-                    default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str,
-                    default=_MODEL_LOAD_DIR, required=False)
 parser.add_argument(
-    "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
+    "-e", "--eval_dir", type=str, default=_DATA_DIR, required=False
+)
+parser.add_argument(
+    "-t", "--train_dir", type=str, default=_DATA_DIR, required=False
+)
+parser.add_argument(
+    "-load",
+    "--model_load_dir",
+    type=str,
+    default=_MODEL_LOAD_DIR,
+    required=False,
+)
+parser.add_argument(
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default=_MODEL_SAVE_DIR,
+    required=False,
 )
 
 args = parser.parse_args()
@@ -93,8 +115,9 @@ def _data_load_layer(data_dir):
         shape=(224, 224, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor(
-            (123.68, 116.78, 103.94))],
+        preprocessors=[
+            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
+        ],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -102,8 +125,11 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=8, data_part_num=32, name="decode"
+        data_dir,
+        (label_blob_conf, image_blob_conf),
+        batch_size=8,
+        data_part_num=32,
+        name="decode",
     )
 
 
@@ -162,7 +188,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc1"
+        name="fc1",
     )
 
     fc7 = flow.layers.dense(
@@ -173,7 +199,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc2"
+        name="fc2",
     )
 
     fc8 = flow.layers.dense(
@@ -183,7 +209,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc_final"
+        name="fc_final",
     )
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -222,17 +248,15 @@ if __name__ == "__main__":
     if args.multinode:
         flow.config.ctrl_port(12138)
         flow.config.machine(
-            [{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
+            [{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}]
+        )
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=False)
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
             elif args.skip_scp_binary:
-                flow.deprecated.init_worker(
-                    scp_binary=False, use_uuid=False)
+                flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
             else:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=True)
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
@@ -243,11 +267,7 @@ if __name__ == "__main__":
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(args.iter_num):
         train_result = TrainNet().get()
-        print(
-            fmt_str.format(
-                i, "train loss:", train_result[-1].mean()
-            )
-        )
+        print(fmt_str.format(i, "train loss:", train_result[-1].mean()))
         if (i + 1) % 10 == 0:
             print(
                 fmt_str.format(

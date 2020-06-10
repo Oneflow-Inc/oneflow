@@ -1,10 +1,7 @@
-import oneflow as flow
 import numpy as np
-from collections import OrderedDict
+import oneflow as flow
 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from test_util import type_name_to_flow_type, type_name_to_np_type
 
 
 def TestDataTypeAttr(input, output_type):
@@ -27,7 +24,9 @@ def RunTest(data_type):
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def TestDataTypeAttrJob(input=flow.FixedTensorDef((10, 10), dtype=flow.float)):
+    def TestDataTypeAttrJob(
+        input=flow.FixedTensorDef((10, 10), dtype=flow.float)
+    ):
         return TestDataTypeAttr(input, type_name_to_flow_type[data_type])
 
     input = np.random.random_sample((10, 10)).astype(np.float32)

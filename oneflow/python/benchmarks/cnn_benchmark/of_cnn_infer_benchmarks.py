@@ -1,19 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import argparse
 import os
 import time
-import argparse
 from datetime import datetime
 
 import oneflow as flow
 
-import data_loader
-import vgg_model
-import resnet_model
 import alexnet_model
+import data_loader
 import inceptionv3_model
+import resnet_model
+import vgg_model
 
 parser = argparse.ArgumentParser(description="flags for cnn benchmark")
 
@@ -30,11 +28,21 @@ parser.add_argument(
 
 # train
 parser.add_argument(
-    "--model", type=str, default="vgg16", required=False, help="vgg16 or resnet50"
+    "--model",
+    type=str,
+    default="vgg16",
+    required=False,
+    help="vgg16 or resnet50",
 )
-parser.add_argument("--batch_size_per_device", type=int, default=8, required=False)
 parser.add_argument(
-    "--iter_num", type=int, default=10, required=False, help="total iterations to run"
+    "--batch_size_per_device", type=int, default=8, required=False
+)
+parser.add_argument(
+    "--iter_num",
+    type=int,
+    default=10,
+    required=False,
+    help="total iterations to run",
 )
 parser.add_argument(
     "--warmup_iter_num",
@@ -44,7 +52,11 @@ parser.add_argument(
     help="total iterations to run",
 )
 parser.add_argument(
-    "--data_dir", type=str, default=None, required=False, help="dataset directory"
+    "--data_dir",
+    type=str,
+    default=None,
+    required=False,
+    help="dataset directory",
 )
 parser.add_argument(
     "--data_part_num",
@@ -144,7 +156,9 @@ def InferenceNet():
         )
     else:
         print("Loading synthetic data.")
-        (labels, images) = data_loader.load_synthetic(args.image_size, batch_size)
+        (labels, images) = data_loader.load_synthetic(
+            args.image_size, batch_size
+        )
 
     logits = model_dict[args.model](images)
     softmax = flow.nn.softmax(logits)
@@ -162,8 +176,12 @@ def main():
     for arg in vars(args):
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
-    print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
-    
+    print(
+        "Time stamp: {}".format(
+            str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+        )
+    )
+
     flow.env.grpc_use_no_signal()
     flow.env.log_dir(args.log_dir)
 
@@ -188,10 +206,12 @@ def main():
     # warmups
     print("Runing warm up for {} iterations.".format(args.warmup_iter_num))
     for step in range(args.warmup_iter_num):
-        predictions = InferenceNet().get()
+        _predictions = InferenceNet().get()
 
     main.total_time = 0.0
-    main.batch_size = args.node_num * args.gpu_num_per_node * args.batch_size_per_device
+    main.batch_size = (
+        args.node_num * args.gpu_num_per_node * args.batch_size_per_device
+    )
     main.start_time = time.time()
 
     def create_callback(step):
@@ -208,9 +228,15 @@ def main():
                     )
                 )
                 if step == args.iter_num - 1:
-                    avg_img_per_sec = main.batch_size * args.iter_num / main.total_time
+                    avg_img_per_sec = (
+                        main.batch_size * args.iter_num / main.total_time
+                    )
                     print("-".ljust(66, "-"))
-                    print("average speed: {:.3f}(images/sec)".format(avg_img_per_sec))
+                    print(
+                        "average speed: {:.3f}(images/sec)".format(
+                            avg_img_per_sec
+                        )
+                    )
                     print("-".ljust(66, "-"))
 
         return callback

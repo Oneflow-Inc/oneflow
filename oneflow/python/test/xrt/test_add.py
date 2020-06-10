@@ -1,39 +1,52 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def add_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                y = flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return add_job
+
 
 def make_xla_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_add_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                    y = flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def xla_add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return xla_add_job
+
 
 def make_trt_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_add_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                    y = flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def trt_add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return trt_add_job
+
 
 class TestAdd(unittest.TestCase):
     def _test_body(self, x, y, dtype=np.float32):
@@ -46,8 +59,12 @@ class TestAdd(unittest.TestCase):
         print("without xla: ", a)
         print("with xla", b)
         print("with tensorrt", c)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
-        self.assertTrue(np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(
+            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
+        )
+        self.assertTrue(
+            np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05)
+        )
         flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, y_shape, dtype=np.float32):
@@ -70,5 +87,6 @@ class TestAdd(unittest.TestCase):
         self._test_random_body((2, 10, 2), (2, 10, 2))
         self._test_random_body((2, 5, 2, 2), (2, 5, 2, 2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

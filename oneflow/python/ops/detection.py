@@ -1,14 +1,13 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
+import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
-
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow as flow
 
 
 @oneflow_export("detection.roi_align")
@@ -195,7 +194,7 @@ def anchor_generate(
         name if name is not None else id_util.UniqueStr("AnchorGenerate_"),
     )
     assert isinstance(aspect_ratios, (list, tuple))
-    if isinstance(anchor_scales, (list, tuple)) == False:
+    if isinstance(anchor_scales, (list, tuple)) is False:
         anchor_scales = [anchor_scales]
     assert isinstance(anchor_scales, (list, tuple))
     setattr(op_conf.anchor_generate_conf, "images", images.unique_name)
@@ -220,9 +219,7 @@ def identify_non_small_boxes(inputs, min_size=0.0, name=None):
         if name is not None
         else id_util.UniqueStr("IdentifyNonSmallBoxes_"),
     )
-    setattr(
-        op_conf.identify_non_small_boxes_conf, "in", inputs.unique_name
-    )
+    setattr(op_conf.identify_non_small_boxes_conf, "in", inputs.unique_name)
     op_conf.identify_non_small_boxes_conf.min_size = min_size
     op_conf.identify_non_small_boxes_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -243,9 +240,7 @@ def identify_outside_anchors(anchors, image_size, tolerance=0.0, name=None):
         else id_util.UniqueStr("IdentifyOutsideAnchors_"),
     )
     op_conf.identify_outside_anchors_conf.anchors = anchors.unique_name
-    op_conf.identify_outside_anchors_conf.image_size = (
-        image_size.unique_name
-    )
+    op_conf.identify_outside_anchors_conf.image_size = image_size.unique_name
     op_conf.identify_outside_anchors_conf.tolerance = tolerance
     op_conf.identify_outside_anchors_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -279,7 +274,9 @@ def extract_piece_slice_id(inputs, name=None):
     setattr(
         op_conf,
         "name",
-        name if name is not None else id_util.UniqueStr("ExtractPieceSliceId_"),
+        name
+        if name is not None
+        else id_util.UniqueStr("ExtractPieceSliceId_"),
     )
     getattr(op_conf.extract_piece_slice_id_conf, "in").extend(
         [i.unique_name for i in inputs]
@@ -309,9 +306,7 @@ def non_maximum_suppression(
         if name is not None
         else id_util.UniqueStr("NonMaximumSuppression_"),
     )
-    setattr(
-        op_conf.non_maximum_suppression_conf, "in", inputs.unique_name
-    )
+    setattr(op_conf.non_maximum_suppression_conf, "in", inputs.unique_name)
     op_conf.non_maximum_suppression_conf.nms_iou_threshold = nms_iou_threshold
     op_conf.non_maximum_suppression_conf.post_nms_top_n = post_nms_top_n
     op_conf.non_maximum_suppression_conf.out = "out"
@@ -320,6 +315,7 @@ def non_maximum_suppression(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("detection.upsample_nearest")
 def upsample_nearest(inputs, scale, data_format, name=None):
@@ -436,9 +432,7 @@ def maskrcnn_split(input, segms, name=None):
         name if name is not None else id_util.UniqueStr("MaskrcnnSplit_"),
     )
     setattr(op_conf.maskrcnn_split_conf, "in", input.unique_name)
-    op_conf.maskrcnn_split_conf.segm[:] = [
-        segm.unique_name for segm in segms
-    ]
+    op_conf.maskrcnn_split_conf.segm[:] = [segm.unique_name for segm in segms]
     op_conf.maskrcnn_split_conf.out[:] = [
         "out_" + str(i) for i in range(len(segms))
     ]

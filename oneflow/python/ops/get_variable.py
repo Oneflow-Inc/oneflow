@@ -1,16 +1,16 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_context
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.experimental.name_scope as name_scope
+import os
+
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.session_context as session_context
 from oneflow.python.oneflow_export import oneflow_export
-
-import os
 
 
 @oneflow_export("get_variable")
@@ -38,7 +38,9 @@ def get_variable(
 
     """
     assert isinstance(name, str)
-    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    assert isinstance(
+        shape, (list, tuple)
+    ), "param shape should be a list or tuple of dimension"
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
@@ -60,7 +62,9 @@ def get_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
+        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(
+            op_conf
+        )
         var_blob = _CreateVariableBlob(op_conf, parallel_conf)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
 
@@ -85,7 +89,9 @@ def _GenerateVariableOpConf(
     if dtype is not None:
         op_conf.variable_conf.data_type = dtype
 
-    root_path = compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    root_path = (
+        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    )
     dir_path = os.path.join(root_path, name)
     file_path = os.path.join(dir_path, "out")
     if root_path and os.path.isfile(file_path):

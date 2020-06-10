@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.common.data_type_pb2 as data_type_conf_util
-from oneflow.python.oneflow_export import oneflow_export
+import functools
+import math
 
 import oneflow as flow
-import math
-import functools
+import oneflow.core.common.data_type_pb2 as data_type_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant_initializer")
@@ -14,7 +14,7 @@ def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
     r"""Initializer that generates blob with constant values.
     
     Args:
-        value: A Python scalar. All elements of the initialized variable 
+        value: A Python scalar. All elements of the initialized variable
         will be set to the corresponding value.
         dtype: Default data type.
     Returns:
@@ -53,7 +53,7 @@ def random_uniform_initializer(
 
     Args:
         minval: A python scalar. Lower bound of the range of random values to generate.
-        maxval: A python scalar. Upper bound of the range of random values to generate. 
+        maxval: A python scalar. Upper bound of the range of random values to generate.
         Defaults to 1 for float types.
         seed: None. Not support yet.
         dtype: Default data type

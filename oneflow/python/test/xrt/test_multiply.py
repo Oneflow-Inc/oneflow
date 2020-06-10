@@ -1,29 +1,38 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def multiply_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                y = flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def multiply_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return flow.math.multiply(x, y)
+
     return multiply_job
+
 
 def make_trt_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_multiply_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                    y = flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def trt_multiply_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return flow.math.multiply(x, y)
+
     return trt_multiply_job
+
 
 class TestMultiply(unittest.TestCase):
     def _test_body(self, x, y, dtype=np.float32):
@@ -33,7 +42,9 @@ class TestMultiply(unittest.TestCase):
         b = f2(x, y).get()
         print("without xla: ", a)
         print("with tensorrt", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(
+            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
+        )
         flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, y_shape, dtype=np.float32):
@@ -56,5 +67,6 @@ class TestMultiply(unittest.TestCase):
         self._test_random_body((2, 10, 2), (2, 10, 2))
         self._test_random_body((2, 5, 2, 2), (2, 5, 2, 2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

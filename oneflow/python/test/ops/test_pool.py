@@ -1,12 +1,12 @@
-import oneflow as flow
-import numpy as np
-from collections import OrderedDict
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
-import tensorflow as tf
 import collections
 import os
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -114,7 +114,9 @@ def _GetSequence(value, n, name):
         return list(value)
     else:
         raise ValueError(
-            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
+            "{} should be of length 1 or {} but was {}".format(
+                name, n, current_n
+            )
         )
 
 
@@ -157,7 +159,9 @@ def test_pool(_):
                 pooling_f = getattr(tf.nn, "max_pool{}d".format(dim))
             else:
                 raise ValueError("pooling_type must be AVG or MAX")
-            y_tf = pooling_f(x_tf, ksize, strides, padding, data_format=data_format)
+            y_tf = pooling_f(
+                x_tf, ksize, strides, padding, data_format=data_format
+            )
 
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 

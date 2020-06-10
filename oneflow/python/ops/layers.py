@@ -1,15 +1,16 @@
 from __future__ import absolute_import
 
+import os
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
-import os
 
 @oneflow_export("layers.dense")
 def dense(
@@ -46,7 +47,7 @@ def dense(
 
     if model_distribute is distribute_util.split(0):
         assert (
-            in_num_axes is 2
+            in_num_axes == 2
         )  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
@@ -131,7 +132,7 @@ def conv2d(
         kernel_size = tuple(kernel_size)
 
     assert isinstance(groups, int)
-    assert groups > 0    
+    assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
     if data_format.upper() == "NCHW":
@@ -142,7 +143,12 @@ def conv2d(
         assert groups == 1
         assert groups <= inputs.shape[3]
         assert inputs.shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.shape[3] // groups)
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            kernel_size[1],
+            inputs.shape[3] // groups,
+        )
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
@@ -159,7 +165,14 @@ def conv2d(
     )
 
     output = flow.nn.conv2d(
-        inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
     )
     if use_bias:
         bias = flow.get_variable(
@@ -207,7 +220,7 @@ def layer_norm(
             .Output("mean")
             .Output("inv_variance")
         )
-        if center == False and scale == False:
+        if (center is False) and (scale is False):
             trainable = False
         param_shape = inputs.shape[begin_params_axis:]
         if center:
@@ -238,12 +251,7 @@ def layer_norm(
         op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
         op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
         op.Attr("epsilon", epsilon, "AttrTypeDouble")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
@@ -253,7 +261,7 @@ def layer_norm(
             else len(inputs.shape) + begin_params_axis
         )
         param_shape = inputs.shape[begin_params_axis:]
-        if len(param_shape) is 0:
+        if len(param_shape) == 0:
             param_shape = (1,)
         if center:
             beta = flow.get_variable(
@@ -284,7 +292,9 @@ def layer_norm(
         setattr(op_conf.layer_norm_conf, "center", center)
         setattr(op_conf.layer_norm_conf, "scale", scale)
         setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
-        setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
+        setattr(
+            op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis
+        )
         setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
         compile_context.CurJobAddOp(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -292,23 +302,20 @@ def layer_norm(
         setattr(out_lbi, "blob_name", "out")
         return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy,
-    x,
-    mean,
-    inv_variance,
-    begin_norm_axis=1,
-    name=None,
+    dy, x, mean, inv_variance, begin_norm_axis=1, name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNormGrad_")
+    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     setattr(op_conf, "name", name)
     setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "mean", mean.unique_name)
-    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name)
+    setattr(
+        op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name
+    )
     setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
     setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
@@ -318,23 +325,29 @@ def layer_norm_grad(
     setattr(out_lbi, "blob_name", "dx")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy,
-    norm,
-    gamma,
-    begin_params_axis=-1,
-    name=None,
+    dy, norm, gamma, begin_params_axis=-1, name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNormParamGrad_")
+    name = (
+        name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
+    )
     setattr(op_conf, "name", name)
     setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.unique_name)
-    setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
-    setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
+    setattr(
+        op_conf.layer_norm_param_grad_conf,
+        "begin_params_axis",
+        begin_params_axis,
+    )
+    setattr(
+        op_conf.layer_norm_param_grad_conf,
+        "normalized_diff",
+        "normalized_diff",
+    )
     setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
     compile_context.CurJobAddOp(op_conf)
@@ -349,9 +362,12 @@ def layer_norm_param_grad(
     setattr(beta_diff_lbi, "blob_name", "beta_diff")
     setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
 
-    return (remote_blob_util.RemoteBlob(normalized_diff_lbi),
-            remote_blob_util.RemoteBlob(beta_diff_lbi),
-            remote_blob_util.RemoteBlob(gamma_diff_lbi))
+    return (
+        remote_blob_util.RemoteBlob(normalized_diff_lbi),
+        remote_blob_util.RemoteBlob(beta_diff_lbi),
+        remote_blob_util.RemoteBlob(gamma_diff_lbi),
+    )
+
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
@@ -376,19 +392,24 @@ def batch_normalization(
 
     """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
-    if axis < 0: axis += len(inputs.shape)
+    if axis < 0:
+        axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
     # Float32 required to avoid precision-loss when using fp16 input/output
-    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+    params_dtype = (
+        flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+    )
 
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
     if not trainable and training:
-        raise ValueError('"training" of normalization cannot be True \
-                when "trainable" is False')
+        raise ValueError(
+            '"training" of normalization cannot be True \
+                when "trainable" is False'
+        )
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         if center:
             beta = flow.get_variable(
                 name=name + "-beta",
@@ -433,7 +454,8 @@ def batch_normalization(
             distribute=distribute_util.broadcast(),
         )
 
-        builder = (flow.user_op_builder(name)
+        builder = (
+            flow.user_op_builder(name)
             .Op("normalization")
             .Input("x", [inputs])
             .Input("moving_mean", [moving_mean])
@@ -445,15 +467,10 @@ def batch_normalization(
             .Attr("epsilon", epsilon, "AttrTypeFloat")
             .Attr("training", training, "AttrTypeBool")
             .Attr("momentum", momentum, "AttrTypeFloat")
-            )
+        )
         if trainable and training:
-            builder = (builder
-                        .Output("mean")
-                        .Output("inv_variance"))
-        return (builder
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0])
+            builder = builder.Output("mean").Output("inv_variance")
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
     else:
         if center:
@@ -519,7 +536,9 @@ def batch_normalization(
             setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
         if trainable:
             if not training:
-                raise ValueError("training == False && trainable == True doesn't work in non-user-op mode")
+                raise ValueError(
+                    "training == False && trainable == True doesn't work in non-user-op mode"
+                )
             setattr(op_conf.normalization_conf, "mean", "mean")
             setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
             setattr(op_conf.normalization_conf, "is_training", training)

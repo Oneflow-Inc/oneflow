@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
 
@@ -42,7 +40,9 @@ def load_synthetic(image_size, batch_size):
     )
 
     image = flow.data.decode_random(
-        shape=(image_size, image_size, 3), dtype=flow.float, batch_size=batch_size
+        shape=(image_size, image_size, 3),
+        dtype=flow.float,
+        batch_size=batch_size,
     )
 
     return label, image

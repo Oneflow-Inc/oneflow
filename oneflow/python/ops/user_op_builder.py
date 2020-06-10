@@ -1,17 +1,17 @@
-import oneflow as flow
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.distribute as distribute
-import oneflow.python.framework.hob as hob
-import oneflow.python.experimental.name_scope as name_scope
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.common.shape_pb2 as shape_util
 import random
 
+import oneflow as flow
+import oneflow.core.common.shape_pb2 as shape_util
+import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.distribute as distribute
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -39,7 +39,9 @@ class UserOp(object):
 
         for output_arg_name in self.output_arg_key_list_:
             assert output_arg_name in self.op_conf_.user_conf.output
-            for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
+            for i in range(
+                len(self.op_conf_.user_conf.output[output_arg_name].s)
+            ):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = "{}_{}".format(output_arg_name, i)
@@ -106,7 +108,9 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
-        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
+            self.user_op_.op_conf_
+        )
         return self.user_op_
 
     def Op(self, op_type_name):
@@ -117,14 +121,18 @@ class UserOpConfBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(
+                input_blob.unique_name
+            )
         return self
 
     def Output(self, output_name, num=1):
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
+            lbn = "{}/{}_{}".format(
+                self.user_op_.op_conf_.name, output_name, i
+            )
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -173,11 +181,15 @@ class UserOpConfBuilder(object):
             attribute.at_list_float.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListDataType":
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
+            assert all(
+                isinstance(x, int) and x in flow.dtypes for x in attr_value
+            )
             attribute.at_list_data_type.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListShape":
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
+            assert all(
+                isinstance(x, tuple) or isinstance(x, list) for x in attr_value
+            )
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
@@ -196,7 +208,9 @@ class UserOpConfBuilder(object):
             if seed is None:
                 seed = -1
         else:
-            raise ValueError("Unknow distirbute strategy when set random seed to user op")
+            raise ValueError(
+                "Unknow distirbute strategy when set random seed to user op"
+            )
 
         return self.Attr("has_seed", (seed is not None), "AttrTypeBool").Attr(
             "seed", seed, "AttrTypeInt64"

@@ -1,9 +1,10 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
 import argparse
 import os
+from datetime import datetime
+
 import numpy
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 _DATA_DIR = "/dataset/PNGS/PNG299/of_record_repeated"
 _EVAL_DIR = _DATA_DIR
@@ -14,29 +15,41 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 )
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
-class DLNetSpec(object):
-  def __init__(self, enable_auto_mixed_precision):
-    self.batch_size = 8
-    self.data_part_num = 32
-    self.eval_dir = _DATA_DIR
-    self.train_dir = _DATA_DIR
-    self.model_save_dir = _MODEL_SAVE_DIR
-    self.model_load_dir = _MODEL_LOAD
-    self.num_nodes = 1
-    self.gpu_num_per_node = 1
-    self.iter_num = 10
-    self.enable_auto_mixed_precision = enable_auto_mixed_precision
 
-parser = argparse.ArgumentParser(description="flags for multi-node and resource")
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+class DLNetSpec(object):
+    def __init__(self, enable_auto_mixed_precision):
+        self.batch_size = 8
+        self.data_part_num = 32
+        self.eval_dir = _DATA_DIR
+        self.train_dir = _DATA_DIR
+        self.model_save_dir = _MODEL_SAVE_DIR
+        self.model_load_dir = _MODEL_LOAD
+        self.num_nodes = 1
+        self.gpu_num_per_node = 1
+        self.iter_num = 10
+        self.enable_auto_mixed_precision = enable_auto_mixed_precision
+
+
+parser = argparse.ArgumentParser(
+    description="flags for multi-node and resource"
+)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
-parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
 parser.add_argument(
-    "-s", "--skip_scp_binary", default=False, action="store_true", required=False
+    "-n", "--node_list", type=str, default=NODE_LIST, required=False
+)
+parser.add_argument(
+    "-s",
+    "--skip_scp_binary",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument(
     "-c",
@@ -46,19 +59,33 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+    "-r",
+    "--remote_by_hand",
+    default=False,
+    action="store_true",
+    required=False,
 )
-parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument(
+    "-e", "--eval_dir", type=str, default=_DATA_DIR, required=False
+)
+parser.add_argument(
+    "-t", "--train_dir", type=str, default=_DATA_DIR, required=False
+)
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False
 )
 parser.add_argument(
-    "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default=_MODEL_SAVE_DIR,
+    required=False,
 )
-parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument(
+    "-dn", "--data_part_num", type=int, default=32, required=False
+)
 
-# TODO: add this interface to oneflow.layers
+
 def _conv2d_layer(
     name,
     input,
@@ -113,7 +140,9 @@ def _data_load_layer(args, data_dir):
         shape=(299, 299, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
+        preprocessors=[
+            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
+        ],
     )
     label_blob_conf = flow.data.BlobConf(
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
@@ -121,8 +150,11 @@ def _data_load_layer(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf),
-        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
+        data_dir,
+        (image_blob_conf, label_blob_conf),
+        batch_size=total_batch_size,
+        data_part_num=args.data_part_num,
+        name="decode",
     )
 
 
@@ -130,11 +162,21 @@ def InceptionA(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch5x5"):
             branch5x5_1 = _conv2d_layer(
-                "conv0", in_blob, filters=48, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=48,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch5x5_2 = _conv2d_layer(
                 "conv1",
@@ -146,7 +188,12 @@ def InceptionA(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -197,11 +244,21 @@ def InceptionB(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3 = _conv2d_layer(
-                "conv0", in_blob, filters=384, kernel_size=3, strides=2, padding="VALID"
+                "conv0",
+                in_blob,
+                filters=384,
+                kernel_size=3,
+                strides=2,
+                padding="VALID",
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -242,7 +299,12 @@ def InceptionC(in_blob, index, filters):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch7x7"):
             branch7x7_1 = _conv2d_layer(
@@ -342,7 +404,12 @@ def InceptionD(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3_2 = _conv2d_layer(
                 "conv1",
@@ -354,7 +421,12 @@ def InceptionD(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch7x7x3"):
             branch7x7x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch7x7x3_2 = _conv2d_layer(
                 "conv1",
@@ -404,11 +476,21 @@ def InceptionE(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=320, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=320,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=384, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=384,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3_2 = _conv2d_layer(
                 "conv1",
@@ -434,7 +516,12 @@ def InceptionE(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=448, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=448,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -490,7 +577,9 @@ def InceptionE(in_blob, index):
         inceptionE_total_bn.append(concat_branch3x3dbl)
         inceptionE_total_bn.append(branch_pool_2)
 
-        concat_total = flow.concat(values=inceptionE_total_bn, axis=1, name="concat")
+        concat_total = flow.concat(
+            values=inceptionE_total_bn, axis=1, name="concat"
+        )
 
     return concat_total
 
@@ -508,7 +597,12 @@ def InceptionV3(images, labels, trainable=True):
         "conv2", conv1, filters=64, kernel_size=3, strides=1, padding="SAME"
     )
     pool1 = flow.nn.max_pool2d(
-        conv2, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1"
+        conv2,
+        ksize=3,
+        strides=2,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool1",
     )
     conv3 = _conv2d_layer(
         "conv3", pool1, filters=80, kernel_size=1, strides=1, padding="VALID"
@@ -517,7 +611,12 @@ def InceptionV3(images, labels, trainable=True):
         "conv4", conv3, filters=192, kernel_size=3, strides=1, padding="VALID"
     )
     pool2 = flow.nn.max_pool2d(
-        conv4, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool2"
+        conv4,
+        ksize=3,
+        strides=2,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool2",
     )
 
     # mixed_0 ~ mixed_2
@@ -543,7 +642,12 @@ def InceptionV3(images, labels, trainable=True):
 
     # pool3
     pool3 = flow.nn.avg_pool2d(
-        mixed_10, ksize=8, strides=1, padding="VALID", data_format="NCHW", name="pool3"
+        mixed_10,
+        ksize=8,
+        strides=1,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool3",
     )
 
     with flow.deprecated.variable_scope("logits"):
@@ -584,67 +688,82 @@ def InceptionV3(images, labels, trainable=True):
 
 
 def main(args):
-  flow.config.machine_num(args.num_nodes)
-  flow.config.gpu_device_num(args.gpu_num_per_node)
-  func_config = flow.FunctionConfig()
-  func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-  func_config.default_data_type(flow.float)
-  func_config.train.primary_lr(0.0001)
-  func_config.train.model_update_conf(dict(naive_conf={}))
-  func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
-  @flow.function(func_config)
-  def TrainNet():
-      (images, labels) = _data_load_layer(args, args.train_dir)
-      loss = InceptionV3(images, labels)
-      flow.losses.add_loss(loss)
-      return loss
-  check_point = flow.train.CheckPoint()
-  if not args.model_load_dir:
-    check_point.init()
-  else:
-    check_point.load(args.model_load_dir)
+    flow.config.machine_num(args.num_nodes)
+    flow.config.gpu_device_num(args.gpu_num_per_node)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(
+        flow.distribute.consistent_strategy()
+    )
+    func_config.default_data_type(flow.float)
+    func_config.train.primary_lr(0.0001)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+    func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-  num_nodes = args.num_nodes
-  print("Traning inceptionv3: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
+    @flow.function(func_config)
+    def TrainNet():
+        (images, labels) = _data_load_layer(args, args.train_dir)
+        loss = InceptionV3(images, labels)
+        flow.losses.add_loss(loss)
+        return loss
 
-  print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-  loss = []
-  for i in range(args.iter_num):
-    train_loss = TrainNet().get().mean()
-    loss.append(train_loss)
+    check_point = flow.train.CheckPoint()
+    if not args.model_load_dir:
+        check_point.init()
+    else:
+        check_point.load(args.model_load_dir)
 
-    fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-    print(fmt_str.format(i, "train loss:", train_loss))
+    num_nodes = args.num_nodes
+    print(
+        "Traning inceptionv3: num_gpu_per_node = {}, num_nodes = {}.".format(
+            args.gpu_num_per_node, num_nodes
+        )
+    )
 
-    if (i + 1) % 100 == 0:
-      check_point.save(_MODEL_SAVE_DIR + str(i))
+    print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
+    loss = []
+    for i in range(args.iter_num):
+        train_loss = TrainNet().get().mean()
+        loss.append(train_loss)
 
-  # save loss to file
-  loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
-  loss_path = "./of_loss/inceptionv3"
-  if not os.path.exists(loss_path): os.makedirs(loss_path)
-  numpy.save(os.path.join(loss_path, loss_file), loss)
+        fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+        print(fmt_str.format(i, "train loss:", train_loss))
+
+        if (i + 1) % 100 == 0:
+            check_point.save(_MODEL_SAVE_DIR + str(i))
+
+    # save loss to file
+    loss_file = "{}n{}c.npy".format(
+        str(num_nodes), str(args.gpu_num_per_node * num_nodes)
+    )
+    loss_path = "./of_loss/inceptionv3"
+    if not os.path.exists(loss_path):
+        os.makedirs(loss_path)
+    numpy.save(os.path.join(loss_path, loss_file), loss)
+
 
 if __name__ == "__main__":
-  args = parser.parse_args()
-  if args.multinode:
-    flow.env.ctrl_port(12138)
-    nodes = []
-    for n in args.node_list.strip().split(","):
-      addr_dict = {}
-      addr_dict["addr"] = n
-      nodes.append(addr_dict)
+    args = parser.parse_args()
+    if args.multinode:
+        flow.env.ctrl_port(12138)
+        nodes = []
+        for n in args.node_list.strip().split(","):
+            addr_dict = {}
+            addr_dict["addr"] = n
+            nodes.append(addr_dict)
 
-    flow.env.machine(nodes)
-    if args.remote_by_hand is False:
-      if args.scp_binary_without_uuid:
-        flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
-      elif args.skip_scp_binary:
-        flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
-      else:
-        flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+        flow.env.machine(nodes)
+        if args.remote_by_hand is False:
+            if args.scp_binary_without_uuid:
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
+            elif args.skip_scp_binary:
+                flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
+            else:
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
-  main(args)
-  if (args.multinode and args.skip_scp_binary is False
-      and args.scp_binary_without_uuid is False):
-    flow.deprecated.delete_worker()
+    main(args)
+    if (
+        args.multinode
+        and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
+        flow.deprecated.delete_worker()

@@ -1,12 +1,14 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
 
+
 class TestScalarOp(unittest.TestCase):
     run_test = False
+
     def _test_body(self, x, scalar, dtype=np.float32):
         if not self.run_test:
             return
@@ -16,7 +18,9 @@ class TestScalarOp(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(
+            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
+        )
 
         flow.clear_default_session()
 
@@ -38,15 +42,18 @@ class TestScalarOp(unittest.TestCase):
         self._test_random_body((2, 10, 2), 2.0)
         self._test_random_body((2, 5, 2, 2), 2.0)
 
+
 class TestScalarAddOp(TestScalarOp):
     run_test = True
+
     def make_job(self, x_shape, scalar, dtype=flow.float32):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def scalar_add_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
+
         return scalar_add_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
@@ -54,19 +61,23 @@ class TestScalarAddOp(TestScalarOp):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_scalar_add_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def xla_scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
+
         return xla_scalar_add_job
+
 
 class TestScalarMulOp(TestScalarOp):
     run_test = True
+
     def make_job(self, x_shape, scalar, dtype=flow.float32):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def scalar_mul_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
+
         return scalar_mul_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
@@ -74,9 +85,11 @@ class TestScalarMulOp(TestScalarOp):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_scalar_mul_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def xla_scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
+
         return xla_scalar_mul_job
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

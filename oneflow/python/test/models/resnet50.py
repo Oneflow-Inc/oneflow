@@ -1,15 +1,19 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import argparse
 import os
-import numpy
 from datetime import datetime
+
+import numpy
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+
 # import hook
 
 # DATA_DIR = "/dataset/PNGS/PNG228/of_record"
 DATA_DIR = "/dataset/PNGS/PNG228/of_record_repeated"
 MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/resnet50/models/of_model"
-MODEL_SAVE = "./output/model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
+MODEL_SAVE = "./output/model_save-{}".format(
+    str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+)
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
 IMAGE_SIZE = 228
@@ -17,32 +21,68 @@ BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]
 BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
+
 class DLNetSpec(object):
-  def __init__(self, enable_auto_mixed_precision):
-    self.batch_size = 8
-    self.data_part_num = 32
-    self.eval_dir = DATA_DIR
-    self.train_dir = DATA_DIR
-    self.model_save_dir = MODEL_SAVE
-    self.model_load_dir = MODEL_LOAD
-    self.num_nodes = 1
-    self.gpu_num_per_node = 1
-    self.iter_num = 10
-    self.enable_auto_mixed_precision = enable_auto_mixed_precision
+    def __init__(self, enable_auto_mixed_precision):
+        self.batch_size = 8
+        self.data_part_num = 32
+        self.eval_dir = DATA_DIR
+        self.train_dir = DATA_DIR
+        self.model_save_dir = MODEL_SAVE
+        self.model_load_dir = MODEL_LOAD
+        self.num_nodes = 1
+        self.gpu_num_per_node = 1
+        self.iter_num = 10
+        self.enable_auto_mixed_precision = enable_auto_mixed_precision
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
-parser.add_argument("-m", "--multinode", default=False, action="store_true", required=False)
-parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
-parser.add_argument("-s", "--skip_scp_binary", default=False, action="store_true", required=False)
-parser.add_argument("-c","--scp_binary_without_uuid",default=False,action="store_true",required=False)
-parser.add_argument("-r", "--remote_by_hand", default=False, action="store_true", required=False)
-parser.add_argument("-e", "--eval_dir", type=str, default=DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str, default=DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default=MODEL_LOAD, required=False)
-parser.add_argument("-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False)
-parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument(
+    "-m", "--multinode", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-n", "--node_list", type=str, default=NODE_LIST, required=False
+)
+parser.add_argument(
+    "-s",
+    "--skip_scp_binary",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-c",
+    "--scp_binary_without_uuid",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-r",
+    "--remote_by_hand",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-e", "--eval_dir", type=str, default=DATA_DIR, required=False
+)
+parser.add_argument(
+    "-t", "--train_dir", type=str, default=DATA_DIR, required=False
+)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default=MODEL_LOAD, required=False
+)
+parser.add_argument(
+    "-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False
+)
+parser.add_argument(
+    "-dn", "--data_part_num", type=int, default=32, required=False
+)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
 g_output = []
@@ -68,8 +108,11 @@ def _data_load(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
+        data_dir,
+        (label_blob_conf, image_blob_conf),
+        batch_size=total_batch_size,
+        data_part_num=args.data_part_num,
+        name="decode",
     )
 
 
@@ -138,10 +181,10 @@ def bottleneck_transformation(
         a,
         block_name + "_branch2b",
         filters_inner,
-        1,  # 1 for test origin 3
+        1,
         strides,
         activation=op_conf_util.kRelu,
-    )
+    )  # 1 for test origin 3
 
     c = conv2d_affine(b, block_name + "_branch2c", filters, 1, 1)
 
@@ -275,11 +318,14 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(
+        flow.distribute.consistent_strategy()
+    )
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
     train_config.train.model_update_conf(dict(naive_conf={}))
     train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
     @flow.function(train_config)
     def TrainNet():
         _set_trainable(True)
@@ -290,6 +336,7 @@ def main(args):
     eval_config = flow.FunctionConfig()
     eval_config.default_data_type(flow.float)
     eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
     @flow.function(eval_config)
     def evaluate():
         with flow.distribute.consistent_strategy():
@@ -321,11 +368,14 @@ def main(args):
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
-        
+
     # save loss to file
-    loss_file = "{}n{}c.npy".format(str(args.num_nodes), str(args.gpu_num_per_node * args.num_nodes))
+    loss_file = "{}n{}c.npy".format(
+        str(args.num_nodes), str(args.gpu_num_per_node * args.num_nodes)
+    )
     loss_path = "./of_loss/resnet50"
-    if not os.path.exists(loss_path): os.makedirs(loss_path)
+    if not os.path.exists(loss_path):
+        os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
 
 
@@ -350,8 +400,15 @@ if __name__ == "__main__":
         else:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
     num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
-    print("Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
+    print(
+        "Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(
+            args.gpu_num_per_node, num_nodes
+        )
+    )
     main(args)
-    if (args.multinode and args.skip_scp_binary is False
-        and args.scp_binary_without_uuid is False):
-      flow.deprecated.delete_worker()
+    if (
+        args.multinode
+        and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
+        flow.deprecated.delete_worker()

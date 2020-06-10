@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 
 def _of_tensor_list_identity(test_case, verbose=False):
@@ -7,7 +7,9 @@ def _of_tensor_list_identity(test_case, verbose=False):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(
+        flow.distribute.mirrored_strategy()
+    )
 
     @flow.function(func_config)
     def job_fn(x_def=flow.MirroredTensorListDef(shape=(2, 5))):
@@ -34,12 +36,18 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(
+        flow.distribute.mirrored_strategy()
+    )
 
     @flow.function(func_config)
-    def job_fn(x_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)):
+    def job_fn(
+        x_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)
+    ):
         x = flow.tensor_list_to_tensor_buffer(x_def)
-        return flow.tensor_buffer_to_tensor_list(x, shape=(5, 4), dtype=flow.float)
+        return flow.tensor_buffer_to_tensor_list(
+            x, shape=(5, 4), dtype=flow.float
+        )
 
     input_1 = np.random.rand(1, 3, 4).astype(np.float32)
     input_2 = np.random.rand(1, 2, 4).astype(np.float32)

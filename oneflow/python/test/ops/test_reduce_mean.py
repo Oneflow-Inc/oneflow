@@ -1,11 +1,11 @@
-import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+
 import test_global_storage
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -27,7 +27,9 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
                 "x",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                initializer=flow.random_uniform_initializer(
+                    minval=-10, maxval=10
+                ),
                 trainable=True,
             )
             loss = flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
@@ -55,7 +57,10 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"),
+        tf_x_diff.numpy(),
+        rtol=1e-5,
+        atol=1e-5,
     )
 
 

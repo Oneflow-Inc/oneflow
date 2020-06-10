@@ -1,18 +1,20 @@
-import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+
 import test_global_storage
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
+def compare_with_tensorflow(
+    device_type, a_shape, b_shape, transpose_a, transpose_b
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -27,14 +29,18 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
                 "a",
                 shape=a_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                initializer=flow.random_uniform_initializer(
+                    minval=-10, maxval=10
+                ),
                 trainable=True,
             )
             b = flow.get_variable(
                 "b",
                 shape=b_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                initializer=flow.random_uniform_initializer(
+                    minval=-10, maxval=10
+                ),
                 trainable=True,
             )
             loss = flow.matmul(a, b, transpose_a, transpose_b)
@@ -62,9 +68,15 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.ndarray() - tf_out.numpy()))
-    assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03)
-    assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(
+        np.abs(of_out.ndarray() - tf_out.numpy())
+    )
+    assert np.allclose(
+        test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03
+    )
+    assert np.allclose(
+        test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03
+    )
 
 
 def filter_args(arg_list):

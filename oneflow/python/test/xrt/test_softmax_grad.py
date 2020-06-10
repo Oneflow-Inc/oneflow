@@ -1,29 +1,38 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def softmax_grad_job(y=flow.FixedTensorDef(shape, dtype=dtype),
-                         dy=flow.FixedTensorDef(shape, dtype=dtype)):
+    def softmax_grad_job(
+        y=flow.FixedTensorDef(shape, dtype=dtype),
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+    ):
         return flow.nn.softmax_grad(y, dy, axis=axis)
+
     return softmax_grad_job
+
 
 def make_xla_job(shape, axis, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_softmax_grad_job(y=flow.FixedTensorDef(shape, dtype=dtype),
-                             dy=flow.FixedTensorDef(shape, dtype=dtype)):
+    def xla_softmax_grad_job(
+        y=flow.FixedTensorDef(shape, dtype=dtype),
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+    ):
         return flow.nn.softmax_grad(y, dy, axis=axis)
+
     return xla_softmax_grad_job
+
 
 class TestSoftmaxGrad(unittest.TestCase):
     def _test_body(self, y, dy, axis, dtype=np.float32):
@@ -34,7 +43,9 @@ class TestSoftmaxGrad(unittest.TestCase):
         print("without xla: ", a)
         print("with xla", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(
+            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
+        )
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, dtype=np.float32):
@@ -59,5 +70,6 @@ class TestSoftmaxGrad(unittest.TestCase):
         self._test_random_body((1, 5, 2), axis=1)
         self._test_random_body((1, 5, 2), axis=2)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,8 @@
+import argparse
+from datetime import datetime
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
-import argparse
 
 _DATA_DIR = "/dataset/PNGS/PNG299/of_record_repeated"
 _EVAL_DIR = _DATA_DIR
@@ -11,14 +12,22 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
 
-parser = argparse.ArgumentParser(description="flags for multi-node and resource")
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser = argparse.ArgumentParser(
+    description="flags for multi-node and resource"
+)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-s", "--skip_scp_binary", default=False, action="store_true", required=False
+    "-s",
+    "--skip_scp_binary",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument(
     "-c",
@@ -28,20 +37,32 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+    "-r",
+    "--remote_by_hand",
+    default=False,
+    action="store_true",
+    required=False,
 )
-parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument(
+    "-e", "--eval_dir", type=str, default=_DATA_DIR, required=False
+)
+parser.add_argument(
+    "-t", "--train_dir", type=str, default=_DATA_DIR, required=False
+)
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False
 )
 parser.add_argument(
-    "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default=_MODEL_SAVE_DIR,
+    required=False,
 )
 
 args = parser.parse_args()
 
-# TODO: add this interface to oneflow.layers
+
 def _conv2d_layer(
     name,
     input,
@@ -96,14 +117,19 @@ def _data_load_layer(data_dir):
         shape=(299, 299, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
+        preprocessors=[
+            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
+        ],
     )
     label_blob_conf = flow.data.BlobConf(
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf),
-        batch_size=args.batch_size, data_part_num=32, name="decode"
+        data_dir,
+        (image_blob_conf, label_blob_conf),
+        batch_size=args.batch_size,
+        data_part_num=32,
+        name="decode",
     )
 
 
@@ -111,11 +137,21 @@ def InceptionA(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch5x5"):
             branch5x5_1 = _conv2d_layer(
-                "conv0", in_blob, filters=48, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=48,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch5x5_2 = _conv2d_layer(
                 "conv1",
@@ -127,7 +163,12 @@ def InceptionA(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -178,11 +219,21 @@ def InceptionB(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3 = _conv2d_layer(
-                "conv0", in_blob, filters=384, kernel_size=3, strides=2, padding="VALID"
+                "conv0",
+                in_blob,
+                filters=384,
+                kernel_size=3,
+                strides=2,
+                padding="VALID",
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=64, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=64,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -223,7 +274,12 @@ def InceptionC(in_blob, index, filters):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch7x7"):
             branch7x7_1 = _conv2d_layer(
@@ -323,7 +379,12 @@ def InceptionD(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3_2 = _conv2d_layer(
                 "conv1",
@@ -335,7 +396,12 @@ def InceptionD(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch7x7x3"):
             branch7x7x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=192,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch7x7x3_2 = _conv2d_layer(
                 "conv1",
@@ -385,11 +451,21 @@ def InceptionE(in_blob, index):
     with flow.deprecated.variable_scope("mixed_{}".format(index)):
         with flow.deprecated.variable_scope("branch1x1"):
             branch1x1 = _conv2d_layer(
-                "conv0", in_blob, filters=320, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=320,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
         with flow.deprecated.variable_scope("branch3x3"):
             branch3x3_1 = _conv2d_layer(
-                "conv0", in_blob, filters=384, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=384,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3_2 = _conv2d_layer(
                 "conv1",
@@ -415,7 +491,12 @@ def InceptionE(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=448, kernel_size=1, strides=1, padding="SAME"
+                "conv0",
+                in_blob,
+                filters=448,
+                kernel_size=1,
+                strides=1,
+                padding="SAME",
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
@@ -471,7 +552,9 @@ def InceptionE(in_blob, index):
         inceptionE_total_bn.append(concat_branch3x3dbl)
         inceptionE_total_bn.append(branch_pool_2)
 
-        concat_total = flow.concat(values=inceptionE_total_bn, axis=1, name="concat")
+        concat_total = flow.concat(
+            values=inceptionE_total_bn, axis=1, name="concat"
+        )
 
     return concat_total
 
@@ -489,7 +572,12 @@ def InceptionV3(images, labels, trainable=True):
         "conv2", conv1, filters=64, kernel_size=3, strides=1, padding="SAME"
     )
     pool1 = flow.nn.max_pool2d(
-        conv2, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1"
+        conv2,
+        ksize=3,
+        strides=2,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool1",
     )
     conv3 = _conv2d_layer(
         "conv3", pool1, filters=80, kernel_size=1, strides=1, padding="VALID"
@@ -498,7 +586,12 @@ def InceptionV3(images, labels, trainable=True):
         "conv4", conv3, filters=192, kernel_size=3, strides=1, padding="VALID"
     )
     pool2 = flow.nn.max_pool2d(
-        conv4, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool2"
+        conv4,
+        ksize=3,
+        strides=2,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool2",
     )
 
     # mixed_0 ~ mixed_2
@@ -524,7 +617,12 @@ def InceptionV3(images, labels, trainable=True):
 
     # pool3
     pool3 = flow.nn.avg_pool2d(
-        mixed_10, ksize=8, strides=1, padding="VALID", data_format="NCHW", name="pool3"
+        mixed_10,
+        ksize=8,
+        strides=1,
+        padding="VALID",
+        data_format="NCHW",
+        name="pool3",
     )
 
     with flow.deprecated.variable_scope("logits"):
