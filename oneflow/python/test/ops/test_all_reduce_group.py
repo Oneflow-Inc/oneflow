@@ -22,7 +22,7 @@ def do_test(test_case, mirrored):
     check_point = flow.train.CheckPoint()
     check_point.init()
     r1 = Foo().get().ndarray()
-    test_case.assertTrue(np.all(r2 == 0.0))
+    test_case.assertTrue(np.all(r1 == 0.0))
     r2 = Foo().get().ndarray()
     test_case.assertTrue(np.all(r2 == -0.5))
 
