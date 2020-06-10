@@ -20,6 +20,7 @@ import oneflow.python.vm.id_util as id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 
@@ -96,7 +97,10 @@ class EagerLogicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
-        vm_util.LogicalRun(lambda builder: builder.StatelessCall(op_attribute))
+        def BuildInstruction(builder):
+            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+        vm_util.LogicalRun(BuildInstruction)
         return self
 
     def MakeRemoteBlob(self, lbi):
@@ -114,7 +118,10 @@ class EagerPhysicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
-        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(op_attribute))
+        def BuildInstruction(builder):
+            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+        vm_util.PhysicalRun(BuildInstruction)
         return self
 
     def MakeRemoteBlob(self, lbi):
@@ -152,7 +159,10 @@ class NonTraceableEagerLogicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
-        vm_util.LogicalRun(lambda builder: builder.StatelessCall(op_attribute))
+        def BuildInstruction(builder):
+            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+        vm_util.LogicalRun(BuildInstruction)
         return self
 
     def MakeRemoteBlob(self, lbi):
