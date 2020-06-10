@@ -14,20 +14,24 @@ __global__ void AddGpu(int64_t n, const half* a, const half* b, half* out) {
 
 template<typename T>
 struct SliceBoxingKernelUtil<DeviceType::kGPU, T> {
-  static void Add(DeviceCtx* ctx, int64_t n, const T* a, const T* b, T* out) {
-    AddGpu<T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, a, b, out);
-  }
+  static void Add(DeviceCtx* ctx, int64_t n, const T* a, const T* b, T* out);
 };
 
+template<typename T>
+void SliceBoxingKernelUtil<DeviceType::kGPU, T>::Add(DeviceCtx* ctx, int64_t n, const T* a,
+                                                     const T* b, T* out) {
+  AddGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, a, b, out);
+}
+
 template<>
-struct SliceBoxingKernelUtil<DeviceType::kGPU, float16> {
-  static void Add(DeviceCtx* ctx, int64_t n, const float16* a, const float16* b, float16* out) {
-    SliceBoxingKernelUtil<DeviceType::kGPU, half>::Add(ctx, n, reinterpret_cast<const half*>(a),
-                                                       reinterpret_cast<const half*>(b),
-                                                       reinterpret_cast<half*>(out));
-  }
-};
+void SliceBoxingKernelUtil<DeviceType::kGPU, float16>::Add(DeviceCtx* ctx, int64_t n,
+                                                           const float16* a, const float16* b,
+                                                           float16* out) {
+  SliceBoxingKernelUtil<DeviceType::kGPU, half>::Add(ctx, n, reinterpret_cast<const half*>(a),
+                                                     reinterpret_cast<const half*>(b),
+                                                     reinterpret_cast<half*>(out));
+}
 
 #define INSTANTIATE_SLICE_BOXING_KERNEL_UTIL_GPU(type_cpp, type_proto) \
   template struct SliceBoxingKernelUtil<DeviceType::kGPU, type_cpp>;
