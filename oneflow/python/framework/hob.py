@@ -1,7 +1,7 @@
 from oneflow.python.lib.core.high_order_bool import HighOrderBool
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.g_func_ctx as g_func_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.c_api_util as c_api_util
 
 def InRuntimeModeHOB(mode):
@@ -18,6 +18,18 @@ def _IsEnvInitialized():
 
 env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
 
+def _AnyGlobalFunctionDefined():
+    assert in_normal_mode()
+    return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
+
+any_global_function_defined = HighOrderBool("Any global function defined",
+                                            _AnyGlobalFunctionDefined)
+
+def _EagerExecutionEnabled():
+    return c_api_util.EagerExecutionEnabled()
+
+eager_execution_enabled = HighOrderBool("Eager execution enabled ", _EagerExecutionEnabled)
+
 def _IsSessionInitialized():
     assert in_normal_mode()
     return session_ctx.GetDefaultSession().is_running
@@ -26,7 +38,12 @@ session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized
 
 def _IsCurrentFunctionTrainable():
     assert in_global_mode()
-    job_name = g_func_ctx.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 is_trainable = HighOrderBool("Current global function is trainable", _IsCurrentFunctionTrainable)
+
+def _InPlacementScope():
+    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
+
+in_placement_scope = HighOrderBool("In a placement scope", _InPlacementScope)

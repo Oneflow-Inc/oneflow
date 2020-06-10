@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-void GenBroadcastToCompatibleWithGradOpConf(
+Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -34,6 +34,7 @@ void GenBroadcastToCompatibleWithGradOpConf(
     DiffLbi4BnInOp("x")->set_op_name(reduce_sum_like_op.name());
     DiffLbi4BnInOp("x")->set_blob_name(conf->y());
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

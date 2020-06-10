@@ -11,11 +11,11 @@ class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
     return GlobalJobDesc().job_conf().has_indexed_slices_optimizer_conf()
            && GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().enable();
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
-                                              JobBuilder* job_builder) const {
+Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
+                                                     JobBuilder* job_builder) const {
   const PbRpf<std::string>& include_op_names =
       GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
   const std::set<std::string> include_op_name_set(
@@ -133,6 +133,7 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     job_builder->DelOps({src_op_conf, dst_op_conf});
     job_builder->AddOps(dst_node->parallel_desc().parallel_conf(), {new_optimizer_op_conf});
   });
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("IndexedSlicesOptimizerRewritePass", IndexedSlicesOptimizerRewritePass);

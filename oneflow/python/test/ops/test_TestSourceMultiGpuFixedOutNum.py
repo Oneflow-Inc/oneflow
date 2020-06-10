@@ -4,7 +4,7 @@ import numpy as np
 def my_test_source(name, out_num):
     return flow.user_op_builder(name).Op("TestSourceMultiGpuFixedOutNum")\
             .Output("out")\
-            .SetAttr("out_num", out_num, "AttrTypeInt64")\
+            .Attr("out_num", out_num, "AttrTypeInt64")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def test_testsource_2_gpu(test_case):

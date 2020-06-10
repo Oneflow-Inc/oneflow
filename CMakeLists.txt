@@ -1,5 +1,5 @@
 # Minimum CMake required
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.14.0)
 
 option(THIRD_PARTY "Build third party or oneflow" OFF)
 
@@ -11,6 +11,7 @@ option(PY3 "" ON)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
+option(BUILD_GIT_VERSION "" ON)
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC ON CACHE BOOL "")

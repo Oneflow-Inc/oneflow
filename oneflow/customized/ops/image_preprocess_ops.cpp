@@ -8,11 +8,11 @@ REGISTER_USER_OP("image_resize")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")
-    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0})
-    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)
+    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")          /*not use*/
+    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
+    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0}) /*not use*/
+    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)                    /*not use*/
     .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
@@ -22,17 +22,18 @@ REGISTER_USER_OP("image_resize")
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       int64_t batch_size = in_tensor->shape().At(0);
-      int64_t resize_x = ctx->GetAttr<int64_t>("resize_x");
-      int64_t resize_y = ctx->GetAttr<int64_t>("resize_y");
+      int64_t resize_x = ctx->Attr<int64_t>("resize_x");
+      int64_t resize_y = ctx->Attr<int64_t>("resize_y");
       if (resize_x != 0 && resize_y != 0) {
         // resize_x -> W
         // resize_y -> H
         // shape = {H, W, c}
-        std::string color_space = ctx->GetAttr<std::string>("color_space");
+        std::string color_space = ctx->Attr<std::string>("color_space");
         int64_t c = ImageUtil::IsColor(color_space) ? 3 : 1;
         *out_tensor->mut_data_type() = DataType::kUInt8;
         *out_tensor->mut_shape() = Shape({batch_size, resize_y, resize_x, c});
       } else {
+        CHECK_OR_RETURN(ctx->Attr<int64_t>("resize_shorter") != 0);
         *out_tensor->mut_data_type() = DataType::kTensorBuffer;
         *out_tensor->mut_shape() = Shape({batch_size});
       }
@@ -59,7 +60,8 @@ REGISTER_USER_OP("crop_mirror_normalize")
     .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
     .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
     .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
-    .Attr<std::vector<float>>("crop", UserOpAttrType::kAtListFloat, {0.0, 0.0})
+    .Attr<int64_t>("crop_h", UserOpAttrType::kAtInt64, 0)
+    .Attr<int64_t>("crop_w", UserOpAttrType::kAtInt64, 0)
     .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
     .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
@@ -74,11 +76,9 @@ REGISTER_USER_OP("crop_mirror_normalize")
       }
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t N = in_tensor->shape().At(0);
-      std::vector<float> crop = ctx->GetAttr<std::vector<float>>("crop");
-      CHECK_EQ_OR_RETURN(crop.size(), 2);
-      int64_t H = static_cast<int64_t>(crop.at(0));
-      int64_t W = static_cast<int64_t>(crop.at(1));
-      std::string color_space = ctx->GetAttr<std::string>("color_space");
+      int64_t H = ctx->Attr<int64_t>("crop_h");
+      int64_t W = ctx->Attr<int64_t>("crop_w");
+      std::string color_space = ctx->Attr<std::string>("color_space");
       int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
       if (in_tensor->data_type() == DataType::kUInt8) {
         CHECK_EQ_OR_RETURN(in_tensor->shape().NumAxes(), 4);  // {N, H, W, C}
@@ -87,27 +87,28 @@ REGISTER_USER_OP("crop_mirror_normalize")
           H = in_tensor->shape().At(1);
           W = in_tensor->shape().At(2);
         }
-        std::string output_layout = ctx->GetAttr<std::string>("output_layout");
-        if (output_layout == "NCHW") {
-          *out_tensor->mut_shape() = Shape({N, C, H, W});
-        } else if (output_layout == "NHWC") {
-          *out_tensor->mut_shape() = Shape({N, H, W, C});
-        } else {
-          return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
-        }
       } else if (in_tensor->data_type() == DataType::kTensorBuffer) {
+        CHECK_OR_RETURN(H != 0 && W != 0);
         CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1);
-        *out_tensor->mut_shape() = Shape({N});
       } else {
         return Error::CheckFailed()
                << "input Dtype: " << in_tensor->data_type() << " is not supported";
       }
-      DataType output_dtype = static_cast<DataType>(ctx->GetAttr<int32_t>("output_dtype"));
+
+      std::string output_layout = ctx->Attr<std::string>("output_layout");
+      if (output_layout == "NCHW") {
+        *out_tensor->mut_shape() = Shape({N, C, H, W});
+      } else if (output_layout == "NHWC") {
+        *out_tensor->mut_shape() = Shape({N, H, W, C});
+      } else {
+        return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
+      }
+      DataType output_dtype = static_cast<DataType>(ctx->Attr<int32_t>("output_dtype"));
       CHECK_EQ_OR_RETURN(output_dtype,
                          DataType::kFloat);  // only support float now; for float16 in future
       *out_tensor->mut_data_type() = output_dtype;
 
-      bool pad_output = ctx->GetAttr<bool>("pad_output");
+      bool pad_output = ctx->Attr<bool>("pad_output");
       CHECK_OR_RETURN(pad_output == false);  // TODO(chengcheng)
 
       return Maybe<void>::Ok();
@@ -130,7 +131,7 @@ REGISTER_USER_OP("coin_flip")
     .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      int64_t batch_size = ctx->GetAttr<int64_t>("batch_size");
+      int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       if (parallel_ctx.parallel_num() > 1 && out_sbp.has_split_parallel()) {

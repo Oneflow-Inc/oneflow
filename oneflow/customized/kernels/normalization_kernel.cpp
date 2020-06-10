@@ -31,15 +31,15 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const bool training = ctx->GetAttr<bool>("training");
+    const bool training = ctx->Attr<bool>("training");
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
     auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
-    const auto axis = ctx->GetAttr<int32_t>("axis");
-    const auto epsilon = ctx->GetAttr<float>("epsilon");
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
@@ -49,19 +49,20 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
                             x->shape().At(axis), x->shape().Count(axis + 1), 1);
     const int64_t param_dim_size = x->shape().At(axis);
+    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamTensor = [&](const user_op::Tensor* tensor) {
       CHECK_EQ(tensor->shape().NumAxes(), 1);
       CHECK_EQ(tensor->shape().At(0), param_dim_size);
-      CHECK_EQ(tensor->data_type(), data_type);
+      CHECK_EQ(tensor->data_type(), param_data_type);
     };
     CheckParamTensor(gamma);
     CheckParamTensor(beta);
     CheckParamTensor(moving_mean);
     CheckParamTensor(moving_variance);
-    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
+    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, param_data_type, 1, param_dim_size, 1, 1);
 
     if (training) {
-      const auto momentum = ctx->GetAttr<float>("momentum");
+      const auto momentum = ctx->Attr<float>("momentum");
       auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
       auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
       CheckParamTensor(mean);
@@ -69,14 +70,13 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
       CudaCheck(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), CudnnBatchNormModeTraining(), CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
-          inv_variance->mut_dptr()));
+          param_desc.Get(), gamma->dptr(), beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(),
+          moving_variance->mut_dptr(), epsilon, mean->mut_dptr(), inv_variance->mut_dptr()));
     } else {
       CudaCheck(cudnnBatchNormalizationForwardInference(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
           CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
-          param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), moving_mean->dptr(),
+          param_desc.Get(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
           moving_variance->dptr(), epsilon));
     }
   }
@@ -111,8 +111,8 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
     auto* beta_diff = ctx->Tensor4ArgNameAndIndex("beta_diff", 0);
     const auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const auto axis = ctx->GetAttr<int32_t>("axis");
-    const auto epsilon = ctx->GetAttr<float>("epsilon");
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
 
     const int64_t param_dim_size = x->shape().At(axis);
     const DataType data_type = x->data_type();
@@ -124,15 +124,16 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
                             x->shape().At(axis), x->shape().Count(axis + 1), 1);
+    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamTensor = [&](const user_op::Tensor* tensor) {
       CHECK_EQ(tensor->shape().NumAxes(), 1);
       CHECK_EQ(tensor->shape().At(0), param_dim_size);
-      CHECK_EQ(tensor->data_type(), data_type);
+      CHECK_EQ(tensor->data_type(), param_data_type);
     };
     CheckParamTensor(gamma);
     CheckParamTensor(gamma_diff);
     CheckParamTensor(beta_diff);
-    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
+    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, param_data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationBackward(
         ctx->device_ctx()->cudnn_handle(), CudnnBatchNormModeTraining(), CudnnSPOnePtr<T>(),
         CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(),
@@ -165,12 +166,14 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
 REGISTER_BN_KERNEL(CPU, float)
 REGISTER_BN_KERNEL(CPU, double)
 
+REGISTER_BN_KERNEL(GPU, float16)
 REGISTER_BN_KERNEL(GPU, float)
 REGISTER_BN_KERNEL(GPU, double)
 
 REGISTER_BN_GRAD_KERNEL(CPU, float)
 REGISTER_BN_GRAD_KERNEL(CPU, double)
 
+REGISTER_BN_GRAD_KERNEL(GPU, float16)
 REGISTER_BN_GRAD_KERNEL(GPU, float)
 REGISTER_BN_GRAD_KERNEL(GPU, double)
 

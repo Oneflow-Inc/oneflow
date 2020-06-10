@@ -4,7 +4,7 @@ import numpy as np
 def my_test_source(name, seed):
     return flow.user_op_builder(name).Op("TestRandomSource")\
             .Output("out")\
-            .SetAttr("seed", seed, "AttrTypeInt64")\
+            .Attr("seed", seed, "AttrTypeInt64")\
             .Build().InferAndTryRun().RemoteBlobList()[0]
 
 def test_testsource(test_case):

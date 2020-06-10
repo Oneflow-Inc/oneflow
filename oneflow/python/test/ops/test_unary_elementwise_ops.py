@@ -371,7 +371,7 @@ def test_log_sigmoid(test_case):
     x = np.random.uniform(low=-5.0, high=5.0, size=(8,)).astype(np.float32)
     y = LogSigmoidJob(x).get().ndarray()
     # print("log_sigmoid y = ", y)
-    test_case.assertTrue(np.allclose(y, np.log(1 / (1 + np.exp(-x))), equal_nan=True))
+    test_case.assertTrue(np.allclose(y, -np.log(1 + np.exp(-x)), equal_nan=True))
 
 def test_negative(test_case):
     func_config = flow.FunctionConfig()

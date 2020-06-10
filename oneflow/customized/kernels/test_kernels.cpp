@@ -257,7 +257,7 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>>(
         seed, ctx->device_ctx());
   }
@@ -288,7 +288,7 @@ class TestDataTypeAttrKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    CHECK_EQ(ctx->GetAttr<DataType>("output_type"),
+    CHECK_EQ(ctx->Attr<DataType>("output_type"),
              ctx->Tensor4ArgNameAndIndex("out", 0)->data_type());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -305,8 +305,8 @@ class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& out_shapes = ctx->GetAttr<std::vector<Shape>>("out_shapes");
-    const auto& out_types = ctx->GetAttr<std::vector<DataType>>("out_types");
+    const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
+    const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       Shape out_shape_i;
       ctx->Tensor4ArgNameAndIndex("out", i)->shape().ToShape(&out_shape_i);

@@ -83,10 +83,10 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     CHECK(record_num > 0);
     OFRecord* records = in_blob->mut_dptr<OFRecord>();
     T* out_dptr = out_blob->mut_dptr<T>();
-    std::string name = ctx->GetAttr<std::string>("name");
+    std::string name = ctx->Attr<std::string>("name");
 
-    bool auto_zero_padding = ctx->GetAttr<bool>("auto_zero_padding");
-    bool dim1_varying_length = ctx->GetAttr<bool>("dim1_varying_length");
+    bool auto_zero_padding = ctx->Attr<bool>("auto_zero_padding");
+    bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
 
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
@@ -133,23 +133,25 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   int H = image.rows;
 
   // random crop
-  CHECK(image.data != nullptr);
-  cv::Mat image_roi;
-  CropWindow crop;
-  random_crop_gen->GenerateCropWindow({H, W}, &crop);
-  const int y = crop.anchor.At(0);
-  const int x = crop.anchor.At(1);
-  const int newH = crop.shape.At(0);
-  const int newW = crop.shape.At(1);
-  CHECK(newW > 0 && newW <= W);
-  CHECK(newH > 0 && newH <= H);
-  cv::Rect roi(x, y, newW, newH);
-  image(roi).copyTo(image_roi);
-  image = image_roi;
-  W = image.cols;
-  H = image.rows;
-  CHECK(W == newW);
-  CHECK(H == newH);
+  if (random_crop_gen != nullptr) {
+    CHECK(image.data != nullptr);
+    cv::Mat image_roi;
+    CropWindow crop;
+    random_crop_gen->GenerateCropWindow({H, W}, &crop);
+    const int y = crop.anchor.At(0);
+    const int x = crop.anchor.At(1);
+    const int newH = crop.shape.At(0);
+    const int newW = crop.shape.At(1);
+    CHECK(newW > 0 && newW <= W);
+    CHECK(newH > 0 && newH <= H);
+    cv::Rect roi(x, y, newW, newH);
+    image(roi).copyTo(image_roi);
+    image = image_roi;
+    W = image.cols;
+    H = image.rows;
+    CHECK(W == newW);
+    CHECK(H == newH);
+  }
 
   // convert color space
   if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
@@ -194,13 +196,12 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int32_t num_attempts = ctx->GetAttr<int32_t>("num_attempts");
+    int32_t num_attempts = ctx->Attr<int32_t>("num_attempts");
     CHECK(num_attempts >= 1);
-    std::vector<float> random_aspect_ratio =
-        ctx->GetAttr<std::vector<float>>("random_aspect_ratio");
+    std::vector<float> random_aspect_ratio = ctx->Attr<std::vector<float>>("random_aspect_ratio");
     CHECK(random_aspect_ratio.size() == 2 && 0 < random_aspect_ratio.at(0)
           && random_aspect_ratio.at(0) <= random_aspect_ratio.at(1));
-    std::vector<float> random_area = ctx->GetAttr<std::vector<float>>("random_area");
+    std::vector<float> random_area = ctx->Attr<std::vector<float>>("random_area");
     CHECK(random_area.size() == 2 && 0 < random_area.at(0)
           && random_area.at(0) <= random_area.at(1));
     const user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -224,15 +225,14 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* crop_window_generators = dynamic_cast<RandCropGens*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
     OFRecord* records = in_blob->mut_dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
-    std::string name = ctx->GetAttr<std::string>("name");
-    std::string color_space = ctx->GetAttr<std::string>("color_space");
+    std::string name = ctx->Attr<std::string>("name");
+    std::string color_space = ctx->Attr<std::string>("color_space");
 
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
@@ -246,6 +246,44 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_decoder_random_crop")
     .SetCreateFn<OFRecordImageDecoderRandomCropKernel>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kOFRecord
+          && out_tensor->data_type() == DataType::kTensorBuffer) {
+        return true;
+      }
+      return false;
+    });
+
+class OFRecordImageDecoderKernel final : public user_op::OpKernel {
+ public:
+  OFRecordImageDecoderKernel() = default;
+  ~OFRecordImageDecoderKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t record_num = out_blob->shape().At(0);
+    CHECK(record_num > 0);
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    OFRecord* records = in_blob->mut_dptr<OFRecord>();
+    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
+    std::string name = ctx->Attr<std::string>("name");
+    std::string color_space = ctx->Attr<std::string>("color_space");
+
+    MultiThreadLoop(record_num, [&](size_t i) {
+      const OFRecord& record = *(records + i);
+      TensorBuffer* buffer = buffers + i;
+      DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, nullptr);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("ofrecord_image_decoder")
+    .SetCreateFn<OFRecordImageDecoderKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
       const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);

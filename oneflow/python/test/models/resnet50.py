@@ -18,7 +18,7 @@ BLOCK_FILTERS = [256, 512, 1024, 2048]
 BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
 class DLNetSpec(object):
-  def __init__(self):
+  def __init__(self, enable_auto_mixed_precision):
     self.batch_size = 8
     self.data_part_num = 32
     self.eval_dir = DATA_DIR
@@ -28,6 +28,7 @@ class DLNetSpec(object):
     self.num_nodes = 1
     self.gpu_num_per_node = 1
     self.iter_num = 10
+    self.enable_auto_mixed_precision = enable_auto_mixed_precision
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
@@ -85,7 +86,7 @@ def _conv2d(
 ):
     weight = flow.get_variable(
         name + "-weight",
-        shape=(filters, input.static_shape[1], kernel_size, kernel_size),
+        shape=(filters, input.shape[1], kernel_size, kernel_size),
         dtype=input.dtype,
         initializer=weight_initializer,
         trainable=g_trainable,
@@ -278,6 +279,7 @@ def main(args):
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
     train_config.train.model_update_conf(dict(naive_conf={}))
+    train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
     @flow.function(train_config)
     def TrainNet():
         _set_trainable(True)
@@ -287,6 +289,7 @@ def main(args):
 
     eval_config = flow.FunctionConfig()
     eval_config.default_data_type(flow.float)
+    eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
     @flow.function(eval_config)
     def evaluate():
         with flow.distribute.consistent_strategy():

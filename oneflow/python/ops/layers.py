@@ -25,7 +25,11 @@ def dense(
     name=None,
     model_distribute=distribute_util.broadcast(),
 ):
-    in_shape = inputs.static_shape
+    r"""
+    Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+
+    """
+    in_shape = inputs.shape
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
 
@@ -47,7 +51,7 @@ def dense(
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
-        shape=(units, inputs.static_shape[1]),
+        shape=(units, inputs.shape[1]),
         dtype=inputs.dtype,
         initializer=(
             kernel_initializer
@@ -131,14 +135,14 @@ def conv2d(
     assert groups <= filters
     assert filters % groups == 0
     if data_format.upper() == "NCHW":
-        assert groups <= inputs.static_shape[1]
-        assert inputs.static_shape[1] % groups == 0
-        weight_shape = (filters, inputs.static_shape[1] // groups) + kernel_size
+        assert groups <= inputs.shape[1]
+        assert inputs.shape[1] % groups == 0
+        weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
     elif data_format.upper() == "NHWC":
         assert groups == 1
-        assert groups <= inputs.static_shape[3]
-        assert inputs.static_shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.static_shape[3] // groups)
+        assert groups <= inputs.shape[3]
+        assert inputs.shape[3] % groups == 0
+        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.shape[3] // groups)
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
@@ -189,6 +193,10 @@ def layer_norm(
     epsilon=1e-5,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+
+    """
     if os.getenv("ENABLE_USER_OP") == "True":
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
@@ -225,11 +233,11 @@ def layer_norm(
             )
             op.Input("gamma", [gamma])
             op.Output("normalized")
-        op.SetAttr("center", center, "AttrTypeBool")
-        op.SetAttr("scale", scale, "AttrTypeBool")
-        op.SetAttr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-        op.SetAttr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-        op.SetAttr("epsilon", epsilon, "AttrTypeDouble")
+        op.Attr("center", center, "AttrTypeBool")
+        op.Attr("scale", scale, "AttrTypeBool")
+        op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
+        op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+        op.Attr("epsilon", epsilon, "AttrTypeDouble")
         return (
             op
             .Build()
@@ -257,7 +265,7 @@ def layer_norm(
                 model_name="beta",
                 distribute=distribute_util.broadcast(),
             )
-            setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
+            setattr(op_conf.layer_norm_conf, "beta", beta.unique_name)
         if scale:
             gamma = flow.get_variable(
                 name="{}-gamma".format(name),
@@ -268,10 +276,10 @@ def layer_norm(
                 model_name="gamma",
                 distribute=distribute_util.broadcast(),
             )
-            setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
+            setattr(op_conf.layer_norm_conf, "gamma", gamma.unique_name)
         setattr(op_conf, "name", name)
         setattr(op_conf, "trainable", trainable)
-        setattr(op_conf.layer_norm_conf, "in", inputs.logical_blob_name)
+        setattr(op_conf.layer_norm_conf, "in", inputs.unique_name)
         setattr(op_conf.layer_norm_conf, "out", "out")
         setattr(op_conf.layer_norm_conf, "center", center)
         setattr(op_conf.layer_norm_conf, "scale", scale)
@@ -297,10 +305,10 @@ def layer_norm_grad(
     name = name if name is not None else id_util.UniqueStr(
         "LayerNormGrad_")
     setattr(op_conf, "name", name)
-    setattr(op_conf.layer_norm_grad_conf, "dy", dy.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "x", x.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "mean", mean.logical_blob_name)
-    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "mean", mean.unique_name)
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
     setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
@@ -322,9 +330,9 @@ def layer_norm_param_grad(
     name = name if name is not None else id_util.UniqueStr(
         "LayerNormParamGrad_")
     setattr(op_conf, "name", name)
-    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.logical_blob_name)
-    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.logical_blob_name)
-    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
     setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
@@ -363,9 +371,15 @@ def batch_normalization(
     training=True,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+
+    """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
+    # Float32 required to avoid precision-loss when using fp16 input/output
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
@@ -375,36 +389,36 @@ def batch_normalization(
                 when "trainable" is False')
 
     if os.getenv("ENABLE_USER_OP") == 'True':
-        if center and trainable:
+        if center:
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
-                initializer=beta_initializer if beta_initializer is not None else flow.zeros_initializer(),
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
 
-        if scale and trainable:
+        if scale:
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
-                initializer=gamma_initializer if gamma_initializer is not None and trainable else flow.ones_initializer(),
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
-                trainable=True,
+                trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            gamma = flow.constant(1, dtype=inputs.dtype, shape=params_shape)
+            gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
 
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
@@ -413,7 +427,7 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
@@ -427,10 +441,10 @@ def batch_normalization(
             .Input("gamma", [gamma])
             .Input("beta", [beta])
             .Output("y")
-            .SetAttr("axis", axis, "AttrTypeInt32")
-            .SetAttr("epsilon", epsilon, "AttrTypeFloat")
-            .SetAttr("training", training, "AttrTypeBool")
-            .SetAttr("momentum", momentum, "AttrTypeFloat")
+            .Attr("axis", axis, "AttrTypeInt32")
+            .Attr("epsilon", epsilon, "AttrTypeFloat")
+            .Attr("training", training, "AttrTypeBool")
+            .Attr("momentum", momentum, "AttrTypeFloat")
             )
         if trainable and training:
             builder = (builder
@@ -446,7 +460,7 @@ def batch_normalization(
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
@@ -457,7 +471,7 @@ def batch_normalization(
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
@@ -467,7 +481,7 @@ def batch_normalization(
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
@@ -476,7 +490,7 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
@@ -484,7 +498,7 @@ def batch_normalization(
 
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
-        setattr(op_conf.normalization_conf, "in", inputs.logical_blob_name)
+        setattr(op_conf.normalization_conf, "in", inputs.unique_name)
         setattr(op_conf.normalization_conf, "out", "out")
         setattr(op_conf.normalization_conf, "axis", axis)
         setattr(op_conf.normalization_conf, "momentum", momentum)
@@ -492,17 +506,17 @@ def batch_normalization(
         setattr(op_conf.normalization_conf, "center", center)
         setattr(op_conf.normalization_conf, "scale", scale)
         setattr(
-            op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
+            op_conf.normalization_conf, "moving_mean", moving_mean.unique_name
         )
         setattr(
             op_conf.normalization_conf,
             "moving_variance",
-            moving_variance.logical_blob_name,
+            moving_variance.unique_name,
         )
         if center:
-            setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
+            setattr(op_conf.normalization_conf, "beta", beta.unique_name)
         if scale:
-            setattr(op_conf.normalization_conf, "gamma", gamma.logical_blob_name)
+            setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
         if trainable:
             if not training:
                 raise ValueError("training == False && trainable == True doesn't work in non-user-op mode")
