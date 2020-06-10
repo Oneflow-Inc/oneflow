@@ -4,6 +4,7 @@ import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -202,7 +203,7 @@ def _CreateEagerVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
     bn_in_op2blob_object = {}
     vm_util.LogicalRun(
-            lambda builder: builder.SystemStatelessCall(op_conf, mut_arg_bns=['out'],
+            lambda builder: builder.SystemStatelessCall(op_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object))
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -224,8 +225,7 @@ def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
     bn_in_op2blob_object = {}
     def BuildModeInitInstruction(builder):
-        builder.SystemStatelessCall(op_conf, mut_arg_bns=['out_0'],
-                bn_in_op2blob_object=bn_in_op2blob_object)
+        builder.SystemStatelessCall(op_conf, bn_in_op2blob_object=bn_in_op2blob_object)
     vm_util.LogicalRun(BuildModeInitInstruction)
     return bn_in_op2blob_object['out_0']
 
@@ -234,6 +234,7 @@ def _GetModelInitAndLbi(var_op_conf):
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_init"
+    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
     op_conf.model_init_conf.out.append("out_0")
     op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
     op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)

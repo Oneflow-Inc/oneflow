@@ -56,13 +56,11 @@ def _BuildCopyInstruction(builder, x_blob_object, op_conf, current_devices, curr
     elif current_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
         builder.SystemCudaD2HStatelessCall(op_conf, x_parallel_conf,
-                const_arg_bns=["in"], mut_arg_bns=["out"],
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif current_device_tag == "gpu" and x_device_tag == "cpu":
         out_parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         with builder.CudaHostPinBlob(x_blob_object):
             builder.SystemCudaH2DStatelessCall(op_conf, out_parallel_conf,
-                    const_arg_bns=["in"], mut_arg_bns=["out"],
                     bn_in_op2blob_object=bn_in_op2blob_object)
     else:
         raise NotImplementedError("invalid device found. current_device_tag: %s, x_device_tag: %s"
@@ -89,17 +87,14 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     if ref_device_tag == value_device_tag:
         builder.SystemStatelessCall(op_conf,
                 parallel_conf=ref_parallel_conf, device_tag=ref_device_tag,
-                const_arg_bns=["value"], mut_arg_bns=["ref"],
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
         builder.SystemCudaD2HStatelessCall(op_conf, value_parallel_conf,
-                const_arg_bns=["value"], mut_arg_bns=["ref"],
                 bn_in_op2blob_object=bn_in_op2blob_object)
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with builder.CudaHostPinBlob(value_blob_object):
             builder.SystemCudaH2DStatelessCall(op_conf, ref_parallel_conf,
-                    const_arg_bns=["value"], mut_arg_bns=["ref"],
                     bn_in_op2blob_object=bn_in_op2blob_object)
     else:
         raise NotImplementedError("invalid device found. ref_device_tag: %s, value_device_tag: %s"
