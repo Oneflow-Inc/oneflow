@@ -131,7 +131,7 @@ std::string CudaDeviceGetCpuMask(int32_t dev_id) {
   std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
   CudaCheck(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()),
                                   dev_id));
-  for (int i = 0; i < pci_bus_id_buf.size(); i++) {
+  for (int i = 0; i < pci_bus_id_buf.size(); ++i) {
     pci_bus_id_buf[i] = ::tolower(pci_bus_id_buf[i]);
   }
   const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
