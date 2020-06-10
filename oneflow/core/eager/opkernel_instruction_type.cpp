@@ -93,20 +93,6 @@ std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int6
 }
 
 template<typename T, typename CallbackT>
-void ForEachIbnAndLogicalObjectId(const vm::Instruction& instruction, const T& args,
-                                  const CallbackT& Callback) {
-  CHECK_EQ(args.ibn_size(), args.input_index_size());
-  CHECK_EQ(args.ibn_size(), args.input_blob_size());
-  FOR_RANGE(int, i, 0, args.ibn_size()) {
-    const std::string& bn_in_op =
-        instruction.operand_type(args.ibn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.input_index(i);
-    int64_t logical_object_id = args.input_blob(i).logical_object_id();
-    Callback(bn_in_op, index, logical_object_id);
-  }
-}
-
-template<typename T, typename CallbackT>
 void ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
                              const CallbackT& Callback) {
   CHECK_EQ(args.ibn_size(), args.input_index_size());
@@ -117,30 +103,7 @@ void ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.input_index(i);
     const auto& blob_object =
         instruction->operand_type(args.input_blob(i)).template Get<BlobObject>();
-    Callback(bn_in_op, index, blob_object);
-  }
-}
-
-template<typename T, typename CallbackT>
-void ForEachObnAndLogicalObjectId(const vm::Instruction& instruction, const T& args,
-                                  const CallbackT& Callback) {
-  CHECK_EQ(args.obn_size(), args.output_index_size());
-  CHECK_EQ(args.obn_size(), args.output_blob_size());
-  FOR_RANGE(int, i, 0, args.obn_size()) {
-    const std::string& bn_in_op =
-        instruction.operand_type(args.obn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.output_index(i);
-    int64_t logical_object_id = args.output_blob(i).logical_object_id();
-    Callback(bn_in_op, index, logical_object_id);
-  }
-  CHECK_EQ(args.mut2_obn_size(), args.mut2_output_index_size());
-  CHECK_EQ(args.mut2_obn_size(), args.mut2_output_blob_size());
-  FOR_RANGE(int, i, 0, args.mut2_obn_size()) {
-    const std::string& bn_in_op =
-        instruction.operand_type(args.mut2_obn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.mut2_output_index(i);
-    int64_t logical_object_id = args.mut2_output_blob(i).logical_object_id();
-    Callback(bn_in_op, index, logical_object_id);
+    Callback(bn_in_op, blob_object);
   }
 }
 
@@ -155,7 +118,7 @@ void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.output_blob(i))->template Mut<BlobObject>();
-    Callback(bn_in_op, index, blob_object);
+    Callback(bn_in_op, blob_object);
   }
   CHECK_EQ(args.mut2_obn_size(), args.mut2_output_index_size());
   CHECK_EQ(args.mut2_obn_size(), args.mut2_output_blob_size());
@@ -165,7 +128,7 @@ void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
     int64_t index = args.mut2_output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.mut2_output_blob(i))->template Mut<BlobObject>();
-    Callback(bn_in_op, index, blob_object);
+    Callback(bn_in_op, blob_object);
   }
 }
 
@@ -175,18 +138,17 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
   const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
     HashSet<const BlobDesc*> out_blob_descs;
-    ForEachObnAndBlobObject(
-        instruction, args, [&](const std::string& bn_in_op, int64_t i, BlobObject* blob_object) {
-          auto* blob_desc = blob_object->mut_blob_desc();
-          CHECK(out_blob_descs.insert(blob_desc).second);
-          CHECK(obn2blob_desc->emplace(GenRepeatedBn(bn_in_op, i), blob_desc).second);
-        });
+    ForEachObnAndBlobObject(instruction, args,
+                            [&](const std::string& bn_in_op, BlobObject* blob_object) {
+                              auto* blob_desc = blob_object->mut_blob_desc();
+                              CHECK(out_blob_descs.insert(blob_desc).second);
+                              CHECK(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
+                            });
   }
   const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
   ForEachIbnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, int64_t i, const BlobObject& blob_object) {
-        CHECK(ibn2blob_desc->emplace(GenRepeatedBn(bn_in_op, i), &blob_object.blob_desc()).second);
+      instruction, args, [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+        CHECK(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
       });
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   BlobDesc* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob_desc();
@@ -207,7 +169,7 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
   {
     HashSet<const BlobDesc*> out_blob_descs;
     ForEachObnAndBlobObject(instruction, args,
-                            [&](const std::string& bn_in_op, int64_t, BlobObject* blob_object) {
+                            [&](const std::string& bn_in_op, BlobObject* blob_object) {
                               auto* blob_desc = blob_object->mut_blob_desc();
                               CHECK(out_blob_descs.insert(blob_desc).second);
                               CHECK(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
@@ -215,7 +177,7 @@ std::function<BlobDesc*(const std::string& bn_in_op)> MakeBlobDesc4BnInOp(
   }
   const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
   ForEachIbnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, int64_t, const BlobObject& blob_object) {
+      instruction, args, [&](const std::string& bn_in_op, const BlobObject& blob_object) {
         CHECK(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
       });
   return [obn2blob_desc, ibn2blob_desc](const std::string& bn_in_op) -> BlobDesc* {
@@ -232,16 +194,15 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(vm::Instructio
                                                                   const T& args,
                                                                   OpKernelObject* opkernel_obj) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
-  ForEachObnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, int64_t i, BlobObject* blob_object) {
-        CHECK(obn2blob->emplace(GenRepeatedBn(bn_in_op, i), blob_object->mut_blob()).second);
-      });
+  ForEachObnAndBlobObject(instruction, args,
+                          [&](const std::string& bn_in_op, BlobObject* blob_object) {
+                            CHECK(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
+                          });
   const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  ForEachIbnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, int64_t i, const BlobObject& blob_object) {
-        CHECK(ibn2blob->emplace(GenRepeatedBn(bn_in_op, i), &blob_object.blob()).second);
-      });
+  ForEachIbnAndBlobObject(instruction, args,
+                          [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+                            CHECK(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
+                          });
   const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
   Blob* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob();
   return [obn2blob, ibn2blob, tmp_bn, tmp](const std::string& bn_in_op) -> Blob* {
@@ -259,12 +220,12 @@ std::function<Blob*(const std::string& bn_in_op)> MakeBlob4BnInOp(
     vm::Instruction* instruction, const T& args, SystemOpKernelObject* opkernel_obj) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
   ForEachObnAndBlobObject(instruction, args,
-                          [&](const std::string& bn_in_op, int64_t, BlobObject* blob_object) {
+                          [&](const std::string& bn_in_op, BlobObject* blob_object) {
                             CHECK(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
                           });
   const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
   ForEachIbnAndBlobObject(instruction, args,
-                          [&](const std::string& bn_in_op, int64_t, const BlobObject& blob_object) {
+                          [&](const std::string& bn_in_op, const BlobObject& blob_object) {
                             CHECK(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
                           });
   return [obn2blob, ibn2blob](const std::string& bn_in_op) -> Blob* {
@@ -296,25 +257,6 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
   }
 }
 
-template<typename T>
-void UpdateUserOpConfInputAndOutput(const vm::Instruction& instruction, UserOpConf* user_op_conf,
-                                    const std::string& op_name, const T& args) {
-  user_op_conf->clear_input();
-  ForEachIbnAndLogicalObjectId(instruction, args,
-                               [&](const std::string& ibn, int64_t i, int64_t logical_object_id) {
-                                 auto* str_list = &(*user_op_conf->mutable_input())[ibn];
-                                 CHECK_EQ(str_list->s_size(), i);
-                                 str_list->add_s(op_name + "/" + GenRepeatedBn(ibn, i));
-                               });
-  user_op_conf->clear_output();
-  ForEachObnAndLogicalObjectId(instruction, args,
-                               [&](const std::string& obn, int64_t i, int64_t logical_object_id) {
-                                 auto* str_list = &(*user_op_conf->mutable_output())[obn];
-                                 CHECK_EQ(str_list->s_size(), i);
-                                 str_list->add_s(op_name + "/" + GenRepeatedBn(obn, i));
-                               });
-}
-
 void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_type,
                               int64_t device_id, DataType default_data_type) {
   const auto& mem_case = MakeMemCase(device_type, device_id);
@@ -330,12 +272,10 @@ void OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, c
     int64_t device_id = instruction->stream().device_id();
     ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
-  UpdateUserOpConfInputAndOutput(*instruction, opkernel_obj->mut_user_op_conf(),
-                                 opkernel_obj->op_name(), args);
   opkernel_obj->ResetOpAndKernel(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj));
-  ForEachObnAndBlobObject(
-      instruction, args,
-      [](const std::string&, int64_t, BlobObject* blob_object) { blob_object->mutable_blob(); });
+  ForEachObnAndBlobObject(instruction, args, [](const std::string&, BlobObject* blob_object) {
+    blob_object->mutable_blob();
+  });
   if (opkernel_obj->tmp_buffer_blob_object().blob_desc().shape().elem_cnt() > 0) {
     opkernel_obj->mut_tmp_buffer_blob_object()->mutable_blob();
   }
@@ -350,9 +290,9 @@ void OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruct
     InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
   }
   opkernel_obj->ResetKernel(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj));
-  ForEachObnAndBlobObject(
-      instruction, args,
-      [](const std::string&, int64_t, BlobObject* blob_object) { blob_object->mutable_blob(); });
+  ForEachObnAndBlobObject(instruction, args, [](const std::string&, BlobObject* blob_object) {
+    blob_object->mutable_blob();
+  });
   const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);
   opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
 }
@@ -360,10 +300,9 @@ void OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruct
 template<typename T>
 void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  ForEachObnAndBlobObject(instruction, args,
-                          [&](const std::string&, int64_t, BlobObject* blob_object) {
-                            blob_object->TryAllocateBlobBodyMemory(device_ctx);
-                          });
+  ForEachObnAndBlobObject(instruction, args, [&](const std::string&, BlobObject* blob_object) {
+    blob_object->TryAllocateBlobBodyMemory(device_ctx);
+  });
   if (opkernel_obj->mut_tmp_buffer_blob_object()->blob_desc().shape().elem_cnt() > 0) {
     opkernel_obj->mut_tmp_buffer_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
@@ -380,10 +319,9 @@ void OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
 void OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                      const StatelessCallOpKernelInstrOperand& args) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  ForEachObnAndBlobObject(instruction, args,
-                          [&](const std::string&, int64_t, BlobObject* blob_object) {
-                            blob_object->TryAllocateBlobBodyMemory(device_ctx);
-                          });
+  ForEachObnAndBlobObject(instruction, args, [&](const std::string&, BlobObject* blob_object) {
+    blob_object->TryAllocateBlobBodyMemory(device_ctx);
+  });
   KernelCtx kernel_ctx;
   kernel_ctx.device_ctx = device_ctx;
   const auto& Blob4BnInOp = MakeBlob4BnInOp(instruction, args, opkernel_obj);

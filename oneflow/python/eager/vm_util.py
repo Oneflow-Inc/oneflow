@@ -225,8 +225,10 @@ class InstructionsBuilder(object):
         new_op_conf.CopyFrom(op_conf)
         # drop unique name to achieve a higher cache hit rate
         new_op_conf.name = new_op_conf.user_conf.op_type_name
-        new_op_conf.user_conf.ClearField("input")
-        new_op_conf.user_conf.ClearField("output")
+        for ibn, lbns in new_op_conf.user_conf.input.items():
+            for i in range(len(lbns.s)): lbns.s[i] = "%s/%s_%d"%(new_op_conf.name, ibn, i)
+        for obn, lbns in new_op_conf.user_conf.output.items():
+            for i in range(len(lbns.s)): lbns.s[i] = "%s/%s_%d"%(new_op_conf.name, obn, i)
         serialized_op_conf = new_op_conf.SerializeToString()
         if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
             return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
@@ -248,12 +250,13 @@ class InstructionsBuilder(object):
 
     def _GetInputTriples(self, op_conf, parallel_desc_sym):
         input_triples = []
-        for ibn, lbns in op_conf.user_conf.input.items():
-            ibn_sym = self.GetSymbol4String(ibn)
+        for ibn_prefix, lbns in op_conf.user_conf.input.items():
             for i in range(len(lbns.s)):
+                ibn = "%s_%d"%(ibn_prefix, i)
+                ibn_sym = self.GetSymbol4String(ibn)
                 x_blob_object = object_cache.GetObject4BlobName(lbns.s[i])
                 in_object = _FindOrCreateDelegateBlobObject(self, x_blob_object, parallel_desc_sym)
-                input_triples.append((ibn_sym, i, in_object))
+                input_triples.append((ibn_sym, 0, in_object))
         return input_triples
 
     def _SystemGetInputTriples(self, op_conf, ibns, blob_object4ibn=None):
@@ -268,12 +271,13 @@ class InstructionsBuilder(object):
 
     def _GetOutputTriples(self, op_conf, parallel_desc_sym):
         output_triples = []
-        for obn, lbns in op_conf.user_conf.output.items():
-            obn_sym = self.GetSymbol4String(obn)
+        for obn_prefix, lbns in op_conf.user_conf.output.items():
             for i in range(len(lbns.s)):
+                obn = "%s_%d" %(obn_prefix, i)
+                obn_sym = self.GetSymbol4String(obn)
                 out_object = self._NewBlobObject(parallel_desc_sym)
                 object_cache.SetObject4BlobName(lbns.s[i], out_object)
-                output_triples.append((obn_sym, i, out_object))
+                output_triples.append((obn_sym, 0, out_object))
         return output_triples
 
     def _SystemGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym, blob_object4ibn=None):
