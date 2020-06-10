@@ -1,3 +1,4 @@
+# __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
