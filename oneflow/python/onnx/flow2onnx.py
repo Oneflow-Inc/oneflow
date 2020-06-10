@@ -20,7 +20,6 @@ from onnx import helper, onnx_pb
 import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
-import oneflow.python.onnx.custom_opsets  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
 from oneflow.python.onnx.utils import port_name
 from . import constants, logging, schemas, utils, handler, optimizer

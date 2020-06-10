@@ -12,7 +12,6 @@ TF2ONNX_PACKAGE_NAME = __name__.split('.')[0]
 # Built-in supported domains
 ONNX_DOMAIN = ""
 AI_ONNX_ML_DOMAIN = "ai.onnx.ml"
-MICROSOFT_DOMAIN = "com.microsoft"
 
 # Default opset version for onnx domain
 PREFERRED_OPSET = 8
