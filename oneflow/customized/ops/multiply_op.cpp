@@ -9,7 +9,9 @@ REGISTER_USER_OP("multiply")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      CHECK_OR_RETURN(*x == *y);
+      CHECK_OR_RETURN(x->shape() == y->shape());
+      CHECK_OR_RETURN(x->data_type() == y->data_type());
+      CHECK_OR_RETURN(x->is_tensor_list() == y->is_tensor_list());
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *x;
       return Maybe<void>::Ok();
     })
