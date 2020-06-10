@@ -10,7 +10,8 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   for (const auto& placement_group : placement.placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       const ParallelConf* parallel_conf = &placement_group.parallel_conf();
-      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second)
+          << "op_name: " << op_name;
     }
   }
   return [op_name2parallel_conf](const std::string& op_name) {
@@ -192,7 +193,9 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
 
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
-    DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
+    auto it = op_name2parallel_conf_.find(pair.first);
+    CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
+    DeviceType device_type = ParallelDesc(*it->second).device_type();
     std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
     Handler(*op);
   }
