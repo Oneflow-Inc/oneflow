@@ -6,24 +6,24 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def generate_binary_op_test(flow_op):
+def generate_binary_op_test(flow_op, *args, **kwargs):
     @flow.function(func_config)
     def job1():
         x = flow.get_variable(name='x1', shape=(2, 3, 4),
                               dtype=flow.float, initializer=flow.random_uniform_initializer(-10, 10))
         y = flow.get_variable(name='y1', shape=(1, 3, 1),
                               dtype=flow.float, initializer=flow.random_uniform_initializer(-10, 10))
-        return flow_op(x, y)
+        return flow_op(x, y, *args, **kwargs)
 
     convert_to_onnx_and_check(job1)
 
 
-def generate_unary_op_test(flow_op, min_val=-10, max_val=10):
+def generate_unary_op_test(flow_op, *args, min_val=-10, max_val=10, **kwargs):
     @flow.function(func_config)
     def job1():
         x = flow.get_variable(name='x1', shape=(2, 3, 4),
                               dtype=flow.float, initializer=flow.random_uniform_initializer(min_val, max_val))
-        return flow_op(x)
+        return flow_op(x, *args, **kwargs)
 
     convert_to_onnx_and_check(job1)
 
@@ -53,27 +53,27 @@ def test_ceil(test_case):
 
 
 def test_acos(test_case):
-    generate_unary_op_test(flow.math.acos, -1, 1)
+    generate_unary_op_test(flow.math.acos, min_val=-1, max_val=1)
 
 
 def test_asin(test_case):
-    generate_unary_op_test(flow.math.asin, -1, 1)
+    generate_unary_op_test(flow.math.asin, min_val=-1, max_val=1)
 
 
 def test_atan(test_case):
-    generate_unary_op_test(flow.math.atan, -1, 1)
+    generate_unary_op_test(flow.math.atan, min_val=-1, max_val=1)
 
 
 def test_acosh(test_case):
-    generate_unary_op_test(flow.math.acosh, 1, 100)
+    generate_unary_op_test(flow.math.acosh, min_val=1, max_val=100)
 
 
 def test_asinh(test_case):
-    generate_unary_op_test(flow.math.asinh, -1, 1)
+    generate_unary_op_test(flow.math.asinh, min_val=-1, max_val=1)
 
 
 def test_atanh(test_case):
-    generate_unary_op_test(flow.math.atanh, -1, 1)
+    generate_unary_op_test(flow.math.atanh, min_val=-1, max_val=1)
 
 
 def test_sin(test_case):
@@ -109,7 +109,7 @@ def test_erf(test_case):
 
 
 def test_log(test_case):
-    generate_unary_op_test(flow.math.log, 0, 100)
+    generate_unary_op_test(flow.math.log, min_val=0, max_val=100)
 
 
 def test_floor(test_case):
@@ -125,7 +125,7 @@ def test_round(test_case):
 
 
 def test_rsqrt(test_case):
-    generate_unary_op_test(flow.math.rsqrt, 0, 100)
+    generate_unary_op_test(flow.math.rsqrt, min_val=0, max_val=100)
 
 
 def test_sigmoid_v2(test_case):
@@ -149,7 +149,7 @@ def test_sigmoid(test_case):
 
 
 def test_sqrt(test_case):
-    generate_unary_op_test(flow.math.sqrt, 0, 100)
+    generate_unary_op_test(flow.math.sqrt, min_val=0, max_val=100)
 
 
 def test_sqaure(test_case):
@@ -193,12 +193,21 @@ def test_squared_difference(test_case):
 
 
 def test_cast(test_case):
-    @flow.function(func_config)
-    def job1():
-        x = flow.get_variable(name='x1', shape=(2, 3, 4),
-                              dtype=flow.float, initializer=flow.random_uniform_initializer(-10, 10))
-        return flow.cast(x, flow.int32)
+    generate_unary_op_test(flow.cast, dtype=flow.int32)
 
-    convert_to_onnx_and_check(job1)
 
+def test_scalar_mul_int(test_cast):
+    generate_unary_op_test(flow.math.multiply, 5)
+
+
+def test_scalar_mul_float(test_cast):
+    generate_unary_op_test(flow.math.multiply, 5.1)
+
+
+def test_scalar_add_int(test_cast):
+    generate_unary_op_test(flow.math.add, 5)
+
+
+def test_scalar_add_float(test_cast):
+    generate_unary_op_test(flow.math.add, 5.1)
 

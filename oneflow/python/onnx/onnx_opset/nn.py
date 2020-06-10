@@ -15,9 +15,7 @@ import numpy as np
 from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
 from oneflow.python.onnx import constants, utils
-from oneflow.python.onnx.graph_builder import GraphBuilder
 from oneflow.python.onnx.handler import flow_op
-from oneflow.python.onnx.onnx_opset import common, controlflow, tensor
 
 logger = logging.getLogger(__name__)
 

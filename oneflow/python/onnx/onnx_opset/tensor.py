@@ -169,18 +169,6 @@ class Concat:
         cls.version_1(ctx, node, **kwargs)
 
 
-@flow_op('batch_gather', "Gather")
-class Gather:
-    @classmethod
-    def version_1(cls, ctx, node, **kwargs):
-        node.type = "Gather"
-
-    @classmethod
-    def version_11(cls, ctx, node, **kwargs):
-        # no change
-        cls.version_1(ctx, node, **kwargs)
-
-
 def _make_gathernd_inner_loop(ctx, params, index, dtype):
     """create the inner loop for GatherNd."""
     # gather_cur = params
@@ -303,7 +291,7 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
                   dtypes=dtypes)
 
 
-@flow_op("gather_nd", onnx_op="GatherND")
+@flow_op("gather_nd", onnx_op="GatherND", flow_inputs=['params', 'indices'])
 class GatherND:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -349,3 +337,9 @@ class Cast:
     def version_9(cls, ctx, node, **kwargs):
         cls.version_6(ctx, node, **kwargs)
 
+
+@flow_op('identity', 'Identity')
+class Identity:
+    @classmethod
+    def version_1(cls, ctx, node, **kwargs):
+        pass

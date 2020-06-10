@@ -30,6 +30,17 @@ class BroadcastOp(common.BroadcastOp):
     pass
 
 
+@flow_op('scalar_mul', 'Mul')
+@flow_op('scalar_add', 'Add')
+class ScalarBinaryOp:
+    @classmethod
+    def version_6(cls, ctx, node, **kwargs):
+        scalar_val = node.get_attr_value('int_operand') if node.get_attr_value('has_int_operand') else node.get_attr_value('float_operand')
+        np_dtype = utils.map_onnx_to_numpy_type(ctx.get_dtype(node.input[0]))
+        scalar_node = ctx.make_const(utils.make_name('scalar'), np.array([scalar_val]).astype(np_dtype))
+        node.input.append(scalar_node.output[0])
+
+
 @flow_op('add_n', onnx_op='Sum')
 class AddN:
     @classmethod
