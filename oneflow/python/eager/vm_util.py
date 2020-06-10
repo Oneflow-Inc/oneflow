@@ -54,21 +54,24 @@ class InstructionsBuilder(object):
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
 
-    def StatelessCall(self, op_conf):
-        return self._StatelessCall("compute", op_conf)
+    def StatelessCall(self, op_attribute):
+        return self._StatelessCall("compute", op_attribute)
 
-    def _StatelessCall(self, stream_tag, op_conf):
-        assert op_conf.HasField('user_conf')
+    def _StatelessCall(self, stream_tag, op_attribute):
+        assert op_attribute.op_conf.HasField('user_conf')
         placement_scope = oneflow.placement.current_scope()
         parallel_conf = placement_scope.default_parallel_conf
         device_tag = placement_scope.default_device_tag
         parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._GetOpConfSymbol(op_conf)
+        op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
-        const_operand_blob_objects = self._GetConstOperandBlobObjects(op_conf, parallel_desc_sym)
-        mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(op_conf, parallel_desc_sym)
-        mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(op_conf, parallel_desc_sym)
+        const_operand_blob_objects = self._GetConstOperandBlobObjects(
+                op_attribute, parallel_desc_sym)
+        mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
+                op_attribute, parallel_desc_sym)
+        mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(
+                op_attribute, parallel_desc_sym)
         return self._StatelessCallOpKernel("%s.StatelessCallOpKernel" % stream_tag,
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
                 const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
@@ -253,15 +256,15 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _GetConstOperandBlobObjects(self, op_conf, parallel_desc_sym):
+    def _GetConstOperandBlobObjects(self, op_attribute, parallel_desc_sym):
         const_operand_blob_objects = []
-        for ibn_prefix, lbns in op_conf.user_conf.input.items():
-            for i in range(len(lbns.s)):
-                ibn = "%s_%d"%(ibn_prefix, i)
-                ibn_sym = self.GetSymbol4String(ibn)
-                x_blob_object = object_cache.GetObject4BlobName(lbns.s[i])
-                in_object = _FindOrCreateDelegateBlobObject(self, x_blob_object, parallel_desc_sym)
-                const_operand_blob_objects.append((ibn_sym, in_object))
+        for ibn in op_attribute.input_bns:
+            if op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            ibn_sym = self.GetSymbol4String(ibn)
+            lbi = op_attribute.bn_in_op2lbi[ibn]
+            x_blob_object = object_cache.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
+            in_object = _FindOrCreateDelegateBlobObject(self, x_blob_object, parallel_desc_sym)
+            const_operand_blob_objects.append((ibn_sym, in_object))
         return const_operand_blob_objects
 
     def _SystemGetConstOperandBlobObjects(self, op_conf, ibns, blob_object4ibn=None):
@@ -274,15 +277,22 @@ class InstructionsBuilder(object):
             const_operand_blob_objects.append((ibn_sym, in_object))
         return const_operand_blob_objects
 
-    def _GetMut1OperandBlobObjects(self, op_conf, parallel_desc_sym):
+    def _GetMut1OperandBlobObjects(self, op_attribute, parallel_desc_sym):
         mut1_operand_blob_objects = []
-        for obn_prefix, lbns in op_conf.user_conf.output.items():
-            for i in range(len(lbns.s)):
-                obn = "%s_%d" %(obn_prefix, i)
-                obn_sym = self.GetSymbol4String(obn)
-                out_object = self._NewBlobObject(parallel_desc_sym)
-                object_cache.SetObject4BlobName(lbns.s[i], out_object)
-                mut1_operand_blob_objects.append((obn_sym, out_object))
+        for ibn in op_attribute.input_bns:
+            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            ibn_sym = self.GetSymbol4String(ibn)
+            lbi = op_attribute.bn_in_op2lbi[ibn]
+            ref_blob_object = object_cache.GetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name))
+            mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
+        for obn in op_attribute.output_bns:
+            if not op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute:
+                continue
+            obn_sym = self.GetSymbol4String(obn)
+            out_blob_object = self._NewBlobObject(parallel_desc_sym)
+            lbi = op_attribute.bn_in_op2lbi[obn]
+            object_cache.SetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name), out_blob_object)
+            mut1_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut1_operand_blob_objects
 
     def _SystemGetMut1OperandBlobObjects(self, op_conf, bns_in_op, parallel_desc_sym,
@@ -309,9 +319,15 @@ class InstructionsBuilder(object):
             obn2blob_object[obn_symbol.data] = blob_object
         return obn2blob_object
 
-    def _GetMut2OperandBlobObjects(self, op_conf, parallel_desc_sym):
+    def _GetMut2OperandBlobObjects(self, op_attribute, parallel_desc_sym):
         mut2_operand_blob_objects = []
-        # TODO(lixinqi)
+        for obn in op_attribute.output_bns:
+            if op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute: continue
+            obn_sym = self.GetSymbol4String(obn)
+            out_blob_object = self._NewBlobObject(parallel_desc_sym)
+            lbi = op_attribute.bn_in_op2lbi[obn]
+            object_cache.SetObject4BlobName("%s/%s"%(lbi.op_name, lbi.blob_name), out_blob_object)
+            mut2_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut2_operand_blob_objects
 
     def _SystemGetMut2OperandBlobObjects(self, op_conf, bns_in_op, parallel_desc_sym,

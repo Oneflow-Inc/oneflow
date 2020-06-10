@@ -95,8 +95,8 @@ class EagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddOp(self.op_conf_)
-        vm_util.LogicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        op_attribute = compile_context.CurJobAddOp(self.op_conf_)
+        vm_util.LogicalRun(lambda builder: builder.StatelessCall(op_attribute))
         return self
 
     def MakeRemoteBlob(self, lbi):
@@ -113,7 +113,8 @@ class EagerPhysicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+        vm_util.PhysicalRun(lambda builder: builder.StatelessCall(op_attribute))
         return self
 
     def MakeRemoteBlob(self, lbi):
@@ -150,7 +151,8 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        vm_util.LogicalRun(lambda builder: builder.StatelessCall(self.op_conf_))
+        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+        vm_util.LogicalRun(lambda builder: builder.StatelessCall(op_attribute))
         return self
 
     def MakeRemoteBlob(self, lbi):

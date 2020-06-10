@@ -49,6 +49,7 @@ void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
 template<>
 void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
   ctx->NewBuilder().Split(ctx->inputs(), axis).PartialSum(ctx->outputs()).Build();
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
 }
 
 template<template<typename> class binary_func>

@@ -22,7 +22,9 @@ struct CudnnConvArgsAndAlgo final {
              y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
              job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
              job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-             job_desc.job_conf().cudnn_conv_enable_pseudo_half()) {
+             job_desc.job_conf().cudnn_conv_enable_pseudo_half()
+                 || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                     && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
                                    const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
@@ -59,7 +61,9 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                        user_op_conf.attr<std::string>("data_format"), workspace_size,
                        job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
                        job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-                       job_desc.job_conf().cudnn_conv_enable_pseudo_half());
+                       job_desc.job_conf().cudnn_conv_enable_pseudo_half()
+                           || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                               && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
     PerfT algo_perf;
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));

@@ -181,6 +181,13 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
+Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
+  return PbMessage2TxtString(op->op_attribute());
+}
+
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
                                   const std::string& eager_symbol_list_str) {
   return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);
