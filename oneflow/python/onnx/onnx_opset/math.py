@@ -30,15 +30,11 @@ class BroadcastOp(common.BroadcastOp):
     pass
 
 
-@flow_op('add_n', onnx_op='Add')
+@flow_op('add_n', onnx_op='Sum')
 class AddN:
     @classmethod
-    def version_6(cls, ctx, node, **kwargs):
-        top_node = node
-        for i in range(2, len(node.input)):
-            top_node = ctx.insert_new_node_on_input(
-                top_node, 'Add', node.input[i-1:i+1])
-        node.input = node.input[:2]
+    def version_1(cls, ctx, node, **kwargs):
+        pass
 
 
 @flow_op('bias_add', onnx_op='Add', flow_inputs=['a', 'b'])
