@@ -66,12 +66,12 @@ class InstructionsBuilder(object):
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._GetOpConfSymbol(op_conf)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
-        input_triples = self._GetInputTriples(op_conf, parallel_desc_sym)
-        output_triples = self._GetOutputTriples(op_conf, parallel_desc_sym)
-        mut2_output_triples = self._GetMut2OutputTriples(op_conf, parallel_desc_sym)
+        const_operand_blob_objects = self._GetConstOperandBlobObjects(op_conf, parallel_desc_sym)
+        mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(op_conf, parallel_desc_sym)
+        mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(op_conf, parallel_desc_sym)
         return self._StatelessCallOpKernel("%s.StatelessCallOpKernel" % stream_tag,
                 parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
-                input_triples, output_triples, mut2_output_triples)
+                const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
 
     def SystemStatelessCall(self, op_conf, parallel_conf = None, device_tag = None,
                                 const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
@@ -84,7 +84,8 @@ class InstructionsBuilder(object):
             return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
         self._SystemStatelessCall("compute", op_conf, parallel_conf, device_tag,
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
-                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDelegateBlobObject)
+                bn_in_op2blob_object=bn_in_op2blob_object,
+                get_delegate_blob_object=GetDelegateBlobObject)
 
     def SystemCudaD2HStatelessCall(self, op_conf, in_parallel_conf,
                                        const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
@@ -92,7 +93,8 @@ class InstructionsBuilder(object):
         def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
         self._SystemStatelessCall("copy_d2h", op_conf, in_parallel_conf, "gpu",
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
-                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDirectBlobObject)
+                bn_in_op2blob_object=bn_in_op2blob_object,
+                get_delegate_blob_object=GetDirectBlobObject)
 
     def SystemCudaH2DStatelessCall(self, op_conf, out_parallel_conf,
                                        const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
@@ -100,7 +102,8 @@ class InstructionsBuilder(object):
         def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
         self._SystemStatelessCall("copy_h2d", op_conf, out_parallel_conf, "gpu",
                 const_arg_bns=const_arg_bns, mut_arg_bns=mut_arg_bns, mut2_arg_bns=mut2_arg_bns,
-                bn_in_op2blob_object=bn_in_op2blob_object, get_delegate_blob_object=GetDirectBlobObject)
+                bn_in_op2blob_object=bn_in_op2blob_object,
+                get_delegate_blob_object=GetDirectBlobObject)
 
     def _SystemStatelessCall(self, stream_tag, op_conf, op_parallel_conf, op_device_tag,
                                  const_arg_bns=[], mut_arg_bns=[], mut2_arg_bns=[],
@@ -120,17 +123,19 @@ class InstructionsBuilder(object):
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(opkernel_parallel_desc_sym)
         def DelegateBlobObject4Ibn(ibn):
             return get_delegate_blob_object(BlobObject4Ibn(ibn), opkernel_parallel_desc_sym)
-        input_triples = self._SystemGetInputTriples(op_conf, const_arg_bns,
+        const_operand_blob_objects = self._SystemGetConstOperandBlobObjects(op_conf, const_arg_bns,
                 blob_object4ibn=DelegateBlobObject4Ibn)
-        output_triples = self._SystemGetOutputTriples(
+        mut1_operand_blob_objects = self._SystemGetMut1OperandBlobObjects(
                 op_conf, mut_arg_bns, blob_parallel_desc_sym, blob_object4ibn=BlobObject4Ibn)
-        mut2_output_triples = self._SystemGetMut2OutputTriples(
+        mut2_operand_blob_objects = self._SystemGetMut2OperandBlobObjects(
                 op_conf, mut2_arg_bns, blob_parallel_desc_sym, blob_object4ibn=BlobObject4Ibn)
         self._StatelessCallOpKernel("%s.SystemStatelessCallOpKernel" % stream_tag,
                 opkernel_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
-                input_triples, output_triples, mut2_output_triples)
-        bn_in_op2blob_object.update(self._SystemGetObn2BlobObject(op_conf, output_triples))
-        bn_in_op2blob_object.update(self._SystemGetObn2BlobObject(op_conf, mut2_output_triples))
+                const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
+        bn_in_op2blob_object.update(
+                self._SystemGetObn2BlobObject(op_conf, mut1_operand_blob_objects))
+        bn_in_op2blob_object.update(
+                self._SystemGetObn2BlobObject(op_conf, mut2_operand_blob_objects))
 
     def DeleteBlob(self, blob_object):
         self._TryClearObject(blob_object)
@@ -248,72 +253,77 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _GetInputTriples(self, op_conf, parallel_desc_sym):
-        input_triples = []
+    def _GetConstOperandBlobObjects(self, op_conf, parallel_desc_sym):
+        const_operand_blob_objects = []
         for ibn_prefix, lbns in op_conf.user_conf.input.items():
             for i in range(len(lbns.s)):
                 ibn = "%s_%d"%(ibn_prefix, i)
                 ibn_sym = self.GetSymbol4String(ibn)
                 x_blob_object = object_cache.GetObject4BlobName(lbns.s[i])
                 in_object = _FindOrCreateDelegateBlobObject(self, x_blob_object, parallel_desc_sym)
-                input_triples.append((ibn_sym, 0, in_object))
-        return input_triples
+                const_operand_blob_objects.append((ibn_sym, in_object))
+        return const_operand_blob_objects
 
-    def _SystemGetInputTriples(self, op_conf, ibns, blob_object4ibn=None):
+    def _SystemGetConstOperandBlobObjects(self, op_conf, ibns, blob_object4ibn=None):
         assert callable(blob_object4ibn)
         system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
-        input_triples = []
+        const_operand_blob_objects = []
         for ibn in ibns:
             ibn_sym = self.GetSymbol4String(ibn)
             in_object = blob_object4ibn(ibn)
-            input_triples.append((ibn_sym, 0, in_object))
-        return input_triples
+            const_operand_blob_objects.append((ibn_sym, in_object))
+        return const_operand_blob_objects
 
-    def _GetOutputTriples(self, op_conf, parallel_desc_sym):
-        output_triples = []
+    def _GetMut1OperandBlobObjects(self, op_conf, parallel_desc_sym):
+        mut1_operand_blob_objects = []
         for obn_prefix, lbns in op_conf.user_conf.output.items():
             for i in range(len(lbns.s)):
                 obn = "%s_%d" %(obn_prefix, i)
                 obn_sym = self.GetSymbol4String(obn)
                 out_object = self._NewBlobObject(parallel_desc_sym)
                 object_cache.SetObject4BlobName(lbns.s[i], out_object)
-                output_triples.append((obn_sym, 0, out_object))
-        return output_triples
+                mut1_operand_blob_objects.append((obn_sym, out_object))
+        return mut1_operand_blob_objects
 
-    def _SystemGetOutputTriples(self, op_conf, bns_in_op, parallel_desc_sym, blob_object4ibn=None):
+    def _SystemGetMut1OperandBlobObjects(self, op_conf, bns_in_op, parallel_desc_sym,
+            blob_object4ibn=None):
         assert callable(blob_object4ibn)
         field = op_conf.WhichOneof('op_type')
         assert field is not None
         system_op_conf = getattr(op_conf, field)
-        output_triples = []
+        mut1_operand_blob_objects = []
         for bn_in_op in bns_in_op:
             obn_sym = self.GetSymbol4String(bn_in_op)
             if _GetOpConfBlobNameAttr(system_op_conf, bn_in_op).find("/") >= 0:
                 out_object = blob_object4ibn(bn_in_op)
             else:
                 out_object = self._NewBlobObject(parallel_desc_sym)
-            output_triples.append((obn_sym, 0, out_object))
-        return output_triples
+            mut1_operand_blob_objects.append((obn_sym, out_object))
+        return mut1_operand_blob_objects
 
-    def _SystemGetObn2BlobObject(self, op_conf, output_triples):
+    def _SystemGetObn2BlobObject(self, op_conf, mut1_operand_blob_objects):
         system_op_conf = getattr(op_conf, op_conf.WhichOneof('op_type'))
         obn2blob_object = {}
-        for obn_symbol, _, blob_object in output_triples: obn2blob_object[obn_symbol.data] = blob_object
+        for obn_symbol, blob_object in mut1_operand_blob_objects:
+            if obn_symbol.data in obn2blob_object: continue
+            obn2blob_object[obn_symbol.data] = blob_object
         return obn2blob_object
 
-    def _GetMut2OutputTriples(self, op_conf, parallel_desc_sym):
-        mut2_output_triples = []
+    def _GetMut2OperandBlobObjects(self, op_conf, parallel_desc_sym):
+        mut2_operand_blob_objects = []
         # TODO(lixinqi)
-        return mut2_output_triples
+        return mut2_operand_blob_objects
 
-    def _SystemGetMut2OutputTriples(self, op_conf, bns_in_op, parallel_desc_sym, blob_object4ibn=None):
+    def _SystemGetMut2OperandBlobObjects(self, op_conf, bns_in_op, parallel_desc_sym,
+                                        blob_object4ibn=None):
         field = op_conf.WhichOneof('op_type')
         assert field is not None
         system_op_conf = getattr(op_conf, field)
-        mut2_output_triples = []
-        if len(mut2_output_triples) != 0: raise NotImplementedError("mut2 output not supported")
+        mut2_operand_blob_objects = []
+        if len(mut2_operand_blob_objects) != 0:
+            raise NotImplementedError("mut2 output not supported")
         # TODO(lixinqi)
-        return mut2_output_triples
+        return mut2_operand_blob_objects
 
     def _NewBlobObject(self, parallel_desc_sym):
         object_id = self._NewObjectId(parallel_desc_sym)
@@ -343,8 +353,8 @@ class InstructionsBuilder(object):
         return self._NewObjectId(parallel_desc_sym)
 
     def _StatelessCallOpKernel(self, instr_name, parallel_desc_sym, job_conf_sym, op_conf_sym,
-                               shared_opkernel_obj, input_triples, output_triples,
-                               mut2_output_triples):
+                               shared_opkernel_obj, const_operand_blob_objects,
+                               mut1_operand_blob_objects, mut2_operand_blob_objects):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "%s.%s" % (parallel_desc_sym.device_tag, instr_name)
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
@@ -352,25 +362,19 @@ class InstructionsBuilder(object):
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
-        for ibn_sym, _, _ in input_triples:
+        for ibn_sym, _ in const_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
-        for _, index, _ in input_triples:
-            instruction.operand.append(_Int64Operand(index))
-        for _, _, blob_object in input_triples:
+        for _, blob_object in const_operand_blob_objects:
             instruction.operand.append(_ConstOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, _, _ in output_triples:
+        for obn_sym, _ in mut1_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
-        for _, index, _ in output_triples:
-            instruction.operand.append(_Int64Operand(index))
-        for _, _, blob_object in output_triples:
+        for _, blob_object in mut1_operand_blob_objects:
             instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
-        for obn_sym, _, _ in mut2_output_triples:
+        for obn_sym, _ in mut2_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
-        for _, index, _ in mut2_output_triples:
-            instruction.operand.append(_Int64Operand(index))
-        for _, _, blob_object in mut2_output_triples:
+        for _, blob_object in mut2_operand_blob_objects:
             instruction.operand.append(_Mut2Operand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 

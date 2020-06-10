@@ -24,17 +24,14 @@ FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, input_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, input_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, obn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, output_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, output_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_mut2_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut2_obn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, mut2_output_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, mut2_output_blob);
 FLAT_MSG_VIEW_END(CallOpKernelInstrOperand);
 
@@ -45,17 +42,14 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, input_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, input_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, obn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, output_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, output_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_mut2_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut2_obn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, mut2_output_index);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, mut2_output_blob);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
 // clang-format on

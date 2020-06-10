@@ -95,12 +95,10 @@ std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int6
 template<typename T, typename CallbackT>
 void ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
                              const CallbackT& Callback) {
-  CHECK_EQ(args.ibn_size(), args.input_index_size());
   CHECK_EQ(args.ibn_size(), args.input_blob_size());
   FOR_RANGE(int, i, 0, args.ibn_size()) {
     const std::string& bn_in_op =
         instruction->operand_type(args.ibn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.input_index(i);
     const auto& blob_object =
         instruction->operand_type(args.input_blob(i)).template Get<BlobObject>();
     Callback(bn_in_op, blob_object);
@@ -110,22 +108,18 @@ void ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
 template<typename T, typename CallbackT>
 void ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
                              const CallbackT& Callback) {
-  CHECK_EQ(args.obn_size(), args.output_index_size());
   CHECK_EQ(args.obn_size(), args.output_blob_size());
   FOR_RANGE(int, i, 0, args.obn_size()) {
     const std::string& bn_in_op =
         instruction->operand_type(args.obn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.output_blob(i))->template Mut<BlobObject>();
     Callback(bn_in_op, blob_object);
   }
-  CHECK_EQ(args.mut2_obn_size(), args.mut2_output_index_size());
   CHECK_EQ(args.mut2_obn_size(), args.mut2_output_blob_size());
   FOR_RANGE(int, i, 0, args.mut2_obn_size()) {
     const std::string& bn_in_op =
         instruction->operand_type(args.mut2_obn(i)).template Get<vm::StringObject>().str();
-    int64_t index = args.mut2_output_index(i);
     auto* blob_object =
         instruction->mut_operand_type(args.mut2_output_blob(i))->template Mut<BlobObject>();
     Callback(bn_in_op, blob_object);
