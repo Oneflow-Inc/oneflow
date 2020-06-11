@@ -1,6 +1,7 @@
-#!/bin/bash -e
-
+#!/bin/bash
 # Run this script at project root by "./ci/linter_py.sh" before you commit
+
+set -e
 
 vergte() {
   [ "$2" = "$(echo -e "$1\\n$2" | sort -V | head -n1)" ]
@@ -27,27 +28,30 @@ vergte "$ISORT_VERSION" "$ISORT_TARGET_VERSION" || {
 	exit 1
 }
 
-set -v
-file_or_directory="."
-python_dir="oneflow/python"
-
-if [ "$*" ];
-then
-    file_or_directory="$*";
+if [ "$*" ]; then
+    current_path_or_file="$*";
 else
     current_path=$(readlink -f "$(dirname "$0")");
     cd $current_path
-    cd ..
-    cd $python_dir
+    cd ../oneflow/python
+    current_path_or_file=$(cd "$(dirname $0)";pwd)
 fi
 
 echo "Running isort ..."
-isort -rc --atomic "$file_or_directory"
+isort -rc --atomic $current_path_or_file
 
 echo "Running black ..."
-black -l 79 "$file_or_directory"
+black -l 79 $current_path_or_file
 
 echo "Running flake8 ..."
-flake8 --ignore=E231,E731,E203,E741,W503,E501,W293,W605 "$file_or_directory"
 
-command -v arc > /dev/null && arc lint
+flake8 --ignore=E231,E731,E203,E741,W503,W293,W605,E501 --format="%(path)s:%(row)d:%(col)d  |  %(code)s  |  %(text)s" $current_path_or_file
+
+
+if [[ "$?" == 0 ]]; then
+  echo "Ok!"
+  exit 0
+else
+  echo "Check failed！"
+  exit 1
+fi

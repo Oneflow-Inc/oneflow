@@ -206,7 +206,7 @@ def main():
     # warmups
     print("Runing warm up for {} iterations.".format(args.warmup_iter_num))
     for step in range(args.warmup_iter_num):
-        _predictions = InferenceNet().get()
+        InferenceNet().get()
 
     main.total_time = 0.0
     main.batch_size = (
