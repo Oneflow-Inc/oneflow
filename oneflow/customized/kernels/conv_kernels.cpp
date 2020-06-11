@@ -376,6 +376,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     CHECK_NOTNULL(conv_state);
+    bool is_bias_mul_inited = false;
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
       conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
                                ShapeView(conv_state->weight_5d_shape_),
@@ -400,8 +401,9 @@ class ConvCpuKernel final : public user_op::OpKernel {
         int64_t num_of_bias_mul = tmp_buffer->shape().elem_cnt() - num_of_col_buf;
         CHECK_GT(num_of_bias_mul, 0);
         T* bias_mul_dptr = col_buf_dptr + num_of_col_buf * sizeof(T);
-        if (bias_mul_dptr[0] != static_cast<T>(1)) {
+        if (!is_bias_mul_inited) {
           InitBiasMulBuf(bias_mul_dptr, num_of_bias_mul);
+          is_bias_mul_inited = true;
         }
 
         // channels first:  out += bias * bias_mul
