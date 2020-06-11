@@ -277,7 +277,6 @@ def set_concurrency_width(func_desc, value):
 
 @oneflow_function_config('train.optimizer')
 def set_optimizer(func_desc, value):
-    print("optimizer v2: {}".format(value))
     func_desc.job_config_proto.train_conf.optimizer = value
 
 @oneflow_function_config('train.model_update_conf')
