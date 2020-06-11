@@ -22,6 +22,7 @@ message TrainConf {
 
   required float primary_lr = 101;
   optional float secondary_lr = 102;
+  optional string optimizer = 103;
 }
 
 message PredictConf {

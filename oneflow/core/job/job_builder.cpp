@@ -96,7 +96,7 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
         op_conf.has_tick_conf() || op_conf.has_acc_tick_conf() || op_conf.has_device_tick_conf()
         || op_conf.has_partial_tick_conf() || op_conf.has_partial_tick_conf()
         || op_conf.has_sink_tick_conf() || op_conf.has_source_tick_conf();
-    if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr && job().job_conf().has_train_conf()
+    if (job().job_conf().has_train_conf() && job().job_conf().train_conf().has_optimizer()
         && has_cur_job() && ignore_in_infer_ctx == false) {
       auto op_conf_fixed = op_conf;
       ParallelDesc parallel_desc(parallel_conf);

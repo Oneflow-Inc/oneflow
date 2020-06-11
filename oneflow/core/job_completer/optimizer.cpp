@@ -14,10 +14,11 @@ void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
-  if (std::getenv("ONEFLOW_OPTIMIZER_V2") != nullptr
+  if (job_builder->job().job_conf().train_conf().has_optimizer()
       && (var_op.op_conf().has_naive_model_update_conf()
           || train_conf.model_update_conf().has_naive_conf())) {
-    OptimizerRegistry::LookupAndBuild("sgd", var_op, parallel_conf, diff_lbi_of_var_out,
+    OptimizerRegistry::LookupAndBuild(job_builder->job().job_conf().train_conf().optimizer(),
+                                      var_op, parallel_conf, diff_lbi_of_var_out,
                                       job_builder->job().job_conf().train_conf());
   } else {
     auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();

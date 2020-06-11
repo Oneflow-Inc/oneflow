@@ -10,6 +10,7 @@ from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.lib.core.pb_util as pb_util
+import os
 
 @oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
@@ -274,11 +275,19 @@ def set_enable_keep_header_only(func_desc, value = True):
 def set_concurrency_width(func_desc, value):
     func_desc.job_config_proto.concurrency_width = value
 
+@oneflow_function_config('train.optimizer')
+def set_optimizer(func_desc, value):
+    print("optimizer v2: {}".format(value))
+    func_desc.job_config_proto.train_conf.optimizer = value
+
 @oneflow_function_config('train.model_update_conf')
 def set_model_update_conf(func_desc, value):
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
+    if os.getenv("ENABLE_USER_OP") == 'True':
+        if "naive_conf" in value:
+            set_optimizer(func_desc, "sgd")
 
 @oneflow_function_config('indexed_slices_optimizer_conf')
 def set_indexed_slices_optimizer_conf(func_desc, value):
