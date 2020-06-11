@@ -4,11 +4,11 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+Maybe<void> GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
-  CHECK(op.op_conf().has_scalar_mul_by_tensor_conf());
+  CHECK_OR_RETURN(op.op_conf().has_scalar_mul_by_tensor_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf scalar_mul_by_tensor_grad_op;
     scalar_mul_by_tensor_grad_op.set_name(op.op_name() + "_grad");
@@ -40,6 +40,7 @@ void GenerateBackwardOpConf(
     DiffLbi4BnInOp("scalar")->set_op_name(reduce_sum_op.name());
     DiffLbi4BnInOp("scalar")->set_blob_name(reduce_sum_conf->out());
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
