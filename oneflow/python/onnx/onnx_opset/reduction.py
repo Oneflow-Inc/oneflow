@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from onnx import onnx_pb, helper
 
-from oneflow.python.onnx import utils
+from oneflow.python.onnx import util
 from oneflow.python.onnx.handler import flow_op
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class ArgMax:
         if ctx.get_dtype(node.output[0]) == onnx_pb.TensorProto.INT32:
             # current node will return int64 after conversion, which differs from previous dtype got from tf
             ctx.set_dtype(node.output[0], onnx_pb.TensorProto.INT64)
-            op_name = utils.make_name("Cast")
+            op_name = util.make_name("Cast")
             cast_node = ctx.insert_new_node_on_output("Cast", node.output[0], name=op_name,
                                                       to=onnx_pb.TensorProto.INT32)
             ctx.set_dtype(cast_node.output[0], onnx_pb.TensorProto.INT32)

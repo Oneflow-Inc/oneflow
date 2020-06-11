@@ -5,7 +5,7 @@
    some op in loop's body graph can be moved out to the loop
 """
 
-from oneflow.python.onnx.utils import make_name, make_sure
+from oneflow.python.onnx.util import make_name, make_sure
 from .optimizer_base import GraphOptimizerBase
 
 

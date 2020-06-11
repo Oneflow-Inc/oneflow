@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 import copy
 
-from .. import logging, utils
+from .. import logging, util
 
 
 class GraphOptimizerBase(object):
@@ -24,7 +24,7 @@ class GraphOptimizerBase(object):
 
     @property
     def is_debug_mode(self):
-        return utils.is_debug_mode()
+        return util.is_debug_mode()
 
     @property
     def graph_been_opt(self):

@@ -18,7 +18,7 @@ from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
 
 import oneflow.python.onnx
-from oneflow.python.onnx import constants, utils
+from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.graph_builder import GraphBuilder
 from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import nn, math
@@ -54,7 +54,7 @@ def _wrap_concat_with_cast(ctx, node):
         next_nodes = ctx.find_output_consumers(node.output[0])
         # cast output back to dtype unless the next op is a cast
         if next_nodes[0].type != "Cast":
-            op_name = utils.make_name(node.name)
+            op_name = util.make_name(node.name)
             output_cast = ctx.insert_new_node_on_output("Cast", output_name, name=op_name)
             output_cast.set_attr("to", dtype)
             ctx.set_dtype(output_cast.output[0], dtype)
@@ -83,7 +83,7 @@ class Reshape:
         need_casting = dtype in [onnx_pb.TensorProto.INT32,
                                  onnx_pb.TensorProto.INT16,
                                  onnx_pb.TensorProto.INT64]
-        shape_node = ctx.make_const(utils.make_name("shape"), np.array(node.get_attr_value('shape')))
+        shape_node = ctx.make_const(util.make_name("shape"), np.array(node.get_attr_value('shape')))
         node.input = node.input + [shape_node.name]
         if ctx.opset >= 8 or not need_casting:
             # onnx reshape can handle the type - done
@@ -97,7 +97,7 @@ class Reshape:
         # if the next node is already a cast we don't need to insert another one
         next_nodes = ctx.find_output_consumers(node.output[0])
         if len(next_nodes) != 1 or next_nodes[0].type != "Cast":
-            op_name = utils.make_name(node.name)
+            op_name = util.make_name(node.name)
             output_cast = ctx.insert_new_node_on_output("Cast", node.output[0], name=op_name)
             output_cast.set_attr("to", dtype)
             ctx.set_dtype(output_cast.output[0], dtype)
@@ -115,7 +115,7 @@ class Squeeze:
         neg_axis = any([val < 0 for val in axis])
         if neg_axis:
             shape = ctx.get_shape(node.input[0])
-            utils.make_sure(shape is not None, "squeeze input shape cannot be None")
+            util.make_sure(shape is not None, "squeeze input shape cannot be None")
             shape_len = len(shape)
             axis = [a + shape_len if a < 0 else a for a in axis]
         node.set_attr("axes", axis)
@@ -140,7 +140,7 @@ class Transpose:
                 ctx.remove_input(node, node.input[1])
                 node.set_attr("perm", dims)
             else:
-                utils.make_sure(False, "perm can't be dynamic in ONNX")
+                util.make_sure(False, "perm can't be dynamic in ONNX")
         else:
             # graph rewrite moved perm to attribute
             pass
@@ -174,14 +174,14 @@ def _make_gathernd_inner_loop(ctx, params, index, dtype):
     # gather_cur = params
     # for (int i = 0; i < size(index); i++)
     #   gather_res = gather(gather_cur, index[i])
-    scope_name = utils.make_name("gathernd_inner_loop")
+    scope_name = util.make_name("gathernd_inner_loop")
     trip_node = ctx.make_node("Size", [index.output[0]])
-    cond_const = ctx.make_const(utils.make_name("cond"), np.ones((), dtype=np.bool))
-    trip_name = utils.make_name("i")
-    cond_name = utils.make_name("cond")
-    cond_out_name = utils.make_name("cond_out")
-    cur_name = utils.make_name("gather_cur")
-    result_name = utils.make_name("res")
+    cond_const = ctx.make_const(util.make_name("cond"), np.ones((), dtype=np.bool))
+    trip_name = util.make_name("i")
+    cond_name = util.make_name("cond")
+    cond_out_name = util.make_name("cond_out")
+    cur_name = util.make_name("gather_cur")
+    result_name = util.make_name("res")
 
     # body graph creation
     g = ctx.create_new_graph_with_same_config()
@@ -209,7 +209,7 @@ def _make_gathernd_inner_loop(ctx, params, index, dtype):
 def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dtypes):
     """make GatherNd op."""
     # Tparams output = GatherNd(Tparams params, Tidx indices)
-    scope_name = utils.make_name(scope_name)
+    scope_name = util.make_name(scope_name)
     # reshape indices into [sum(indices[:-1]), indices[-1]]
     indices_shape = ctx.make_node("Shape", [indices], dtypes=[TensorProto.INT64])
     indices_size = ctx.make_node("Size", [indices])
@@ -227,17 +227,17 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
 
     # outter loop for each index
     # for (int i=0; i<outter_shape; i++) inner_loop(params, flatten_indices[i])
-    cond_const = ctx.make_const(utils.make_name("cond"), np.ones((), dtype=np.bool))
-    dummy_const = ctx.make_const(utils.make_name("dummy"), np.ones((), dtype=np.int64))
+    cond_const = ctx.make_const(util.make_name("cond"), np.ones((), dtype=np.bool))
+    dummy_const = ctx.make_const(util.make_name("dummy"), np.ones((), dtype=np.int64))
 
     # body graph creation
     g = ctx.create_new_graph_with_same_config()
-    trip_name = utils.make_name("i")
-    cond_name = utils.make_name("cond")
-    cond_out_name = utils.make_name("cond_out")
-    dummy_name = utils.make_name("dummy")
-    dummy_out_name = utils.make_name("dummy_out")
-    result_name = utils.make_name("res")
+    trip_name = util.make_name("i")
+    cond_name = util.make_name("cond")
+    cond_out_name = util.make_name("cond_out")
+    dummy_name = util.make_name("dummy")
+    dummy_out_name = util.make_name("dummy_out")
+    result_name = util.make_name("res")
 
     g.add_graph_input(trip_name, TensorProto.INT64, [1])
     g.add_graph_input(cond_name, TensorProto.BOOL, [])
@@ -266,7 +266,7 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
     # output shape of gathernd: indices.shape[:-1] + gathernd_output.shape[1:]
     inner_loop_shape = ctx.make_node("Shape", [gathernd_loop.output[1]], dtypes=[TensorProto.INT64])
     # workaround in case gathernd_loop is 1-dimensional
-    one_const = ctx.make_const(utils.make_name("one"), np.array([1], dtype=np.int64))
+    one_const = ctx.make_const(util.make_name("one"), np.array([1], dtype=np.int64))
     inner_loop_shape_ = ctx.make_node("Concat",
                                       [inner_loop_shape.output[0], one_const.output[0]],
                                       attr={"axis": 0},
@@ -301,7 +301,7 @@ class GatherND:
         output = node.output[0]
         # same as the attr Tparams
         t_params = ctx.get_dtype(params)
-        utils.make_sure(t_params, "Dtype of {} is None".format(indices))
+        util.make_sure(t_params, "Dtype of {} is None".format(indices))
         shapes = node.output_shapes
         dtypes = node.output_dtypes
         ctx.remove_node(node.name)
@@ -325,7 +325,7 @@ class Cast:
         # DstT y = Cast(SrcT x, @type SrcT, @type DstT)
         # T2 output = Cast(T1 input, @STRING to)
         dst = node.get_attr("dtype")
-        dst = oneflow.python.onnx.utils.ONNX_DTYPE_NAMES[dst]
+        dst = oneflow.python.onnx.util.ONNX_DTYPE_NAMES[dst]
         node.set_attr("to", dst)
 
     @classmethod

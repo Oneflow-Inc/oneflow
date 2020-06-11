@@ -6,7 +6,7 @@
    for example, input of transpose node is const then we can do transpose statically instead of at runtime
 """
 
-from .. import utils
+from .. import util
 from .optimizer_base import GraphOptimizerBase
 
 # pylint: disable=logging-not-lazy,unused-argument,missing-docstring
@@ -48,7 +48,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
     @staticmethod
     def _should_skip(node):
         # only support onnx official op for now, op in other domain is not supported for now
-        if not utils.is_onnx_domain(node.domain):
+        if not util.is_onnx_domain(node.domain):
             return True
 
         if node.is_const() or node.is_graph_input():
@@ -85,10 +85,10 @@ class ConstFoldOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _replace_node_with_const(node, graph, vals):
-        utils.make_sure(len(node.output) == len(vals), "length of node outputs and const vals should be same")
+        util.make_sure(len(node.output) == len(vals), "length of node outputs and const vals should be same")
         for old_input, val in zip(node.output, vals):
-            const_node = graph.make_const(utils.make_name("const_fold_opt"), val)
-            graph.set_dtype(const_node.output[0], utils.map_numpy_to_onnx_dtype(val.dtype))
+            const_node = graph.make_const(util.make_name("const_fold_opt"), val)
+            graph.set_dtype(const_node.output[0], util.map_numpy_to_onnx_dtype(val.dtype))
             graph.set_shape(const_node.output[0], val.shape)
             graph.replace_all_inputs(graph.get_nodes(), old_input, const_node.output[0])
         graph.remove_node(node.name)
@@ -97,7 +97,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
     @_register_func("Cast")
     def _fold_cast(node, graph):
         const_val = node.inputs[0].get_tensor_value(as_list=False)
-        np_dtype = utils.ONNX_TO_NUMPY_DTYPE[node.get_attr("to").i]
+        np_dtype = util.ONNX_TO_NUMPY_DTYPE[node.get_attr("to").i]
         const_val_after_cast = const_val.astype(np_dtype)
         return [const_val_after_cast]
 
@@ -118,7 +118,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         """
         const_val = node.inputs[0].get_tensor_value(as_list=False)
         axes = list(node.get_attr("axes").ints)
-        utils.make_sure(all(axis >= 0 for axis in axes), "onnx spec says it only supports positive axis")
+        util.make_sure(all(axis >= 0 for axis in axes), "onnx spec says it only supports positive axis")
         shape_in = const_val.shape
         dims_out = len(shape_in) + len(axes)
         # calculate the shape of output accroding to onnx Unsqueeze's spec

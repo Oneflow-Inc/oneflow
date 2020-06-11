@@ -21,7 +21,7 @@ import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
-from . import constants, logging, schemas, utils, handler, optimizer
+from . import constants, logging, schemas, util, handler, optimizer
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
@@ -112,10 +112,10 @@ def flowlist_to_onnx(node_list, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = utils.map_flow_dtype(
-                    utils.get_flow_node_attr(node, "dtype"))
+                attr[a] = util.map_flow_dtype(
+                    util.get_flow_node_attr(node, "dtype"))
             else:
-                attr[a] = utils.get_flow_node_attr(node, a)
+                attr[a] = util.get_flow_node_attr(node, a)
 
         try:
             op_type = get_op_type(node)
@@ -138,7 +138,7 @@ def oneflow_to_onnx(graph, shape_override):
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
         if lbn not in shape_override:
             shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = utils.map_flow_dtype(lbd.body.data_type)
+        dtypes[lbn] = util.map_flow_dtype(lbd.body.data_type)
     return flowlist_to_onnx(graph.net.op, shape_override) + (dtypes, shape_override)
 
 
@@ -196,7 +196,7 @@ def transpose_inputs(ctx, inputs_as_nchw):
                     ops.append(node)
                     continue
                 # insert transpose
-                op_name = utils.make_name(node.name)
+                op_name = util.make_name(node.name)
                 transpose = ctx.insert_new_node_on_output(
                     "Transpose", output_name, name=op_name)
                 transpose.set_attr("perm", constants.NCHW_TO_NHWC)
@@ -240,7 +240,7 @@ def run_rewriters(g, funcs, continue_on_error):
             else:
                 raise ex
 
-        if utils.is_debug_mode():
+        if util.is_debug_mode():
             broken_outputs = g.check_integrity()
             if broken_outputs:
                 logging.error(
@@ -295,12 +295,12 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
             onnx graph
     """
 
-    opset = utils.find_opset(opset)
+    opset = util.find_opset(opset)
     logger.info("Using opset <onnx, %s>", opset)
     if opset > schemas.get_max_supported_opset_version():
         logger.warning("Currently installed onnx package %s is too low to support opset %s, "
                        "please upgrade onnx package to avoid potential conversion issue.",
-                       utils.get_onnx_version(), opset)
+                       util.get_onnx_version(), opset)
 
     if shape_override is None:
         shape_override = {}

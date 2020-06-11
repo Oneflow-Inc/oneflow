@@ -9,7 +9,7 @@ from collections import defaultdict
 import numpy as np
 import onnx
 from oneflow.python.onnx.constants import NCHW_TO_NHWC, NHWC_TO_NCHW
-from .. import utils
+from .. import util
 from .optimizer_base import GraphOptimizerBase
 
 
@@ -82,14 +82,14 @@ class TransposeOptimizer(GraphOptimizerBase):
                     new_shape = [input_shape[0], input_shape[3], input_shape[1], input_shape[2]]
                 else:
                     new_shape = [input_shape[0], input_shape[2], input_shape[3], input_shape[1]]
-                return graph.make_const(utils.make_name("new_shape"), np.array(new_shape, dtype=np.int64)).output[0]
+                return graph.make_const(util.make_name("new_shape"), np.array(new_shape, dtype=np.int64)).output[0]
 
             # reshape requires tha output shape can only contain one -1, if not some extra op needed.
             input_shape = graph.make_node("Shape", [op.input[0]]).output[0]
             if is_nchw_transpose(op):
-                indice = graph.make_const(utils.make_name("indice"), np.array(NHWC_TO_NCHW)).output[0]
+                indice = graph.make_const(util.make_name("indice"), np.array(NHWC_TO_NCHW)).output[0]
             else:
-                indice = graph.make_const(utils.make_name("indice"), np.array(NCHW_TO_NHWC)).output[0]
+                indice = graph.make_const(util.make_name("indice"), np.array(NCHW_TO_NHWC)).output[0]
 
             return graph.make_node("Gather", [input_shape, indice]).output[0]
 
@@ -202,18 +202,18 @@ class TransposeOptimizer(GraphOptimizerBase):
             input_transposes = set(node.inputs)
             for n in input_transposes:
                 n_input = n.input[0]
-                utils.make_sure(len(n.output) == 1, "only expect single output")
+                util.make_sure(len(n.output) == 1, "only expect single output")
                 self._g.replace_all_inputs(self._g.get_nodes(), n.output[0], n_input)
                 self._g.remove_node(n.name)
 
-            utils.make_sure(len(node.output) == 1, "only expect single output")
+            util.make_sure(len(node.output) == 1, "only expect single output")
             # currently we assume node only has 1 output, for cases where it is more than 1 for example Split
             # we need consider the fact that Split's multiple output will not always has data in NCHW/NHWC,
             # it might be a different shape.
             output_transposes = self._g.find_output_consumers(node.output[0])
             for n in output_transposes:
                 n_input = n.input[0]
-                utils.make_sure(len(n.output) == 1, "only expect single output")
+                util.make_sure(len(n.output) == 1, "only expect single output")
                 self._g.replace_all_inputs(self._g.get_nodes(), n.output[0], n_input)
                 self._g.remove_node(n.name)
             
@@ -345,7 +345,7 @@ class TransposeOptimizer(GraphOptimizerBase):
             # if rank of n is not 4, then we need to insert a reshape op before inserting a transpose
             # for example shape of n is [x, y], then output shape of reshape will be [1, 1, x, y]
             if shape is None:
-                const_4 = self._g.make_const(utils.make_name("const_4"), np.array([4], np.int64)).output[0]
+                const_4 = self._g.make_const(util.make_name("const_4"), np.array([4], np.int64)).output[0]
                 tensor_1 = onnx.helper.make_tensor("value", onnx.TensorProto.INT64, [1], [1])
                 shape_node = self._g.make_node("Shape", [input_id]).output[0]
                 rank_node = self._g.make_node("Shape", [shape_node]).output[0]
@@ -360,7 +360,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                 shape_4d = shape_after_expand(shape)
                 if shape_4d is None:
                     return False
-                const = self._g.make_const(utils.make_name("reshape_shape"), np.array(shape_4d, np.int64)).output[0]
+                const = self._g.make_const(util.make_name("reshape_shape"), np.array(shape_4d, np.int64)).output[0]
                 reshape = self._g.make_node("Reshape", [input_id, const]).output[0]
                 input_of_new_trans = reshape
 
@@ -403,7 +403,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                 conv_inputs = [t_p.input[0], t_p.input[1], node.input[1]]
                 conv_node = self._g.make_node(t_p.type, conv_inputs, attr=t_p.attr_onnx)
                 ops = self._g.get_nodes()
-                trans.input[0] = utils.port_name(conv_node.name)
+                trans.input[0] = util.port_name(conv_node.name)
                 self._g.replace_all_inputs(ops, node.output[0], trans.output[0])
                 self._g.remove_node(t_p.name)
                 self._g.remove_node(node.name)
@@ -581,7 +581,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                         node.inputs[3].set_tensor_value(new_axes)
                     else:
                         new_axes_const = self._g.make_const(
-                            utils.make_name(node.inputs[3].name), new_axes
+                            util.make_name(node.inputs[3].name), new_axes
                         )
                         self._g.replace_input(node, node.input[3], new_axes_const.output[0])
                     return self._switch_transpose_and_node(node, trans)
@@ -600,7 +600,7 @@ class TransposeOptimizer(GraphOptimizerBase):
         self._g.remove_node(trans.name)
         self._g.remove_node(node.name)
         shape_node = self._g.make_node("Shape", [trans.input[0]])
-        const_node = self._g.make_const(utils.make_name("Const"), np.array(trans.get_attr("perm").ints))
+        const_node = self._g.make_const(util.make_name("Const"), np.array(trans.get_attr("perm").ints))
         gather_node = self._g.make_node("Gather", [shape_node.output[0], const_node.output[0]], outputs=node.output)
         self._g.set_shape(gather_node.output[0], output_shape)
         self._g.set_dtype(gather_node.output[0], output_dtype)

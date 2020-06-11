@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
-from oneflow.python.onnx import constants, utils
+from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.handler import flow_op
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
                 reshape.skip_conversion = True
             else:
                 # new reshape takes new shape as input[1]
-                shape_name = utils.make_name(node.name)
+                shape_name = util.make_name(node.name)
                 ctx.make_const(shape_name, np.array(
                     new_kernel_shape, dtype=np.int64))
                 input_name = node.input[1]
@@ -120,7 +120,7 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
         for idx in output_indices:
             output_name = node.output[idx]
             output_shape = ctx.get_shape(node.output[idx])
-            op_name = utils.make_name(node.name)
+            op_name = util.make_name(node.name)
             transpose = ctx.insert_new_node_on_output(
                 "Transpose", output_name, name=op_name)
             transpose.set_attr("perm", constants.NCHW_TO_NHWC)
@@ -280,7 +280,7 @@ class Pad:
         paddings = padding_before + padding_after
         node.set_attr('pads', paddings)
         node.set_attr('mode', 'constant')
-        const_val = node.get_attr_value('integral_constant_value') if utils.is_integral_onnx_dtype(
+        const_val = node.get_attr_value('integral_constant_value') if util.is_integral_onnx_dtype(
             ctx.get_dtype(node.input[0])) else node.get_attr_value('floating_constant_value')
         node.set_attr('value', const_val)
 
@@ -290,13 +290,13 @@ class Pad:
         padding_before = node.get_attr_value('padding_before')
         padding_after = node.get_attr_value('padding_after')
         paddings = np.array(padding_before + padding_after).astype(np.int64)
-        padding_node = ctx.make_const(utils.make_name('const'), paddings)
+        padding_node = ctx.make_const(util.make_name('const'), paddings)
         node.input.append(padding_node.output[0])
         dtype = ctx.get_dtype(node.input[0])
-        const_val = node.get_attr_value('integral_constant_value') if utils.is_integral_onnx_dtype(
+        const_val = node.get_attr_value('integral_constant_value') if util.is_integral_onnx_dtype(
             dtype) else node.get_attr_value('floating_constant_value')
-        const_val = np.array(const_val).astype(utils.map_onnx_to_numpy_type(dtype))
-        const_val_node = ctx.make_const(utils.make_name('const'), const_val)
+        const_val = np.array(const_val).astype(util.map_onnx_to_numpy_type(dtype))
+        const_val_node = ctx.make_const(util.make_name('const'), const_val)
         node.input.append(const_val_node.output[0])
 
 
@@ -326,19 +326,19 @@ class BatchNorm:
         scale_shape = ctx.get_shape(node.input[1])
         mean_shape = ctx.get_shape(node.input[3])
         var_shape = ctx.get_shape(node.input[4])
-        val_type = utils.map_onnx_to_numpy_type(ctx.get_dtype(node.input[1]))
+        val_type = util.map_onnx_to_numpy_type(ctx.get_dtype(node.input[1]))
 
         if mean_shape != scale_shape:
             new_mean_value = np.array(np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
                                       dtype=val_type)
-            new_mean_node_name = utils.make_name(node.name)
+            new_mean_node_name = util.make_name(node.name)
             ctx.make_const(new_mean_node_name, new_mean_value)
             node.input[3] = new_mean_node_name
 
         if var_shape != scale_shape:
             new_var_value = np.array(np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
                                      dtype=val_type)
-            new_val_node_name = utils.make_name(node.name)
+            new_val_node_name = util.make_name(node.name)
             ctx.make_const(new_val_node_name, new_var_value)
             node.input[4] = new_val_node_name
 

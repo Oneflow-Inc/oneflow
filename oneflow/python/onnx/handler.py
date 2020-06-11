@@ -53,7 +53,6 @@ class flow_op:
                 for i, name in enumerate(self.name):
                     opset_dict[name] = (v, self.onnx_op[i], self.kwargs)
                     flow_op.name_set.add(name)
-        print(len(flow_op.name_set))
         return func
 
     def register_compat_handler(self, func, version):

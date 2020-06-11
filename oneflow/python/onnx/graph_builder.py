@@ -6,7 +6,7 @@ oneflow.python.onnx.graph_helper - class to help building graph, such as helping
 """
 
 import numpy as np
-from oneflow.python.onnx import utils, logging
+from oneflow.python.onnx import util, logging
 
 
 # pylint: disable=missing-docstring
@@ -71,16 +71,16 @@ class GraphBuilder(object):
         for ind, val in enumerate(inputs):
             if val is None:
                 # empty string means no connection in ONNX
-                inputs[ind] = utils.ONNX_EMPTY_INPUT
+                inputs[ind] = util.ONNX_EMPTY_INPUT
         # remove tailing ""
-        while inputs[-1] == utils.ONNX_EMPTY_INPUT:
+        while inputs[-1] == util.ONNX_EMPTY_INPUT:
             inputs = inputs[:-1]
 
         if self.graph.opset >= 10:
             dtype = self.graph.get_dtype(inputs[1])
             for input_data in inputs[1:]:
-                if input_data != utils.ONNX_EMPTY_INPUT:
-                    utils.make_sure(dtype == self.graph.get_dtype(
+                if input_data != util.ONNX_EMPTY_INPUT:
+                    util.make_sure(dtype == self.graph.get_dtype(
                         input_data), "dtype should be same")
 
         return self.graph.make_node(op_type="Slice", inputs=inputs, attr=attr, name=name,
@@ -91,15 +91,15 @@ class GraphBuilder(object):
         if is_optional and tensor is None:
             return None
 
-        utils.make_sure(tensor is not None,
+        util.make_sure(tensor is not None,
                         "input is required so it couldn't be None")
 
         res = tensor
         if isinstance(tensor, list):
-            res = self.graph.make_const(utils.make_name(
+            res = self.graph.make_const(util.make_name(
                 "const_slice"), np.array(tensor, dtype)).output[0]
 
-        utils.make_sure(isinstance(res, str),
+        util.make_sure(isinstance(res, str),
                         "input is a dynamic input, so a str is needed")
 
         return res
@@ -108,7 +108,7 @@ class GraphBuilder(object):
         if is_optional and tensor is None:
             return None
 
-        utils.make_sure(tensor is not None,
+        util.make_sure(tensor is not None,
                         "input is required so it couldn't be None")
 
         res = tensor
@@ -116,7 +116,7 @@ class GraphBuilder(object):
             const_node = self.graph.get_node_by_output(tensor)
             res = const_node.get_tensor_value(as_list=True)
 
-        utils.make_sure(isinstance(res, list),
+        util.make_sure(isinstance(res, list),
                         "input is an attr, so a list is needed")
 
         return res

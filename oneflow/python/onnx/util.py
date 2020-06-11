@@ -2,7 +2,7 @@
 # Licensed under the MIT license.
 
 """
-oneflow.python.onnx.utils - misc utilities for oneflow.python.onnx
+oneflow.python.onnx.util - misc utilities for oneflow.python.onnx
 """
 
 from __future__ import division

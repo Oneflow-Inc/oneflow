@@ -15,7 +15,7 @@ from collections import defaultdict, OrderedDict
 from onnx import defs, helper, TensorProto, OperatorSetIdProto, shape_inference
 
 from . import constants
-from . import utils
+from . import util
 
 logger = logging.getLogger(__name__)
 
@@ -144,9 +144,9 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
     inputs = []
     outputs = []
     for inp, shape, dtype in zip(node.input, input_shapes, input_dtypes):
-        inputs.append(utils.make_onnx_inputs_outputs(inp, dtype, shape))
+        inputs.append(util.make_onnx_inputs_outputs(inp, dtype, shape))
     for output in node.output:
-        outputs.append(utils.make_onnx_inputs_outputs(output, TensorProto.UNDEFINED, None))
+        outputs.append(util.make_onnx_inputs_outputs(output, TensorProto.UNDEFINED, None))
     graph_proto = helper.make_graph([build_onnx_op(node)], "infer-graph", inputs, outputs, initializer=initializers)
     imp = OperatorSetIdProto()
     imp.version = opset_version
@@ -173,7 +173,7 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
         # 0 in shapes of onnx means unknown which is -1 in our convertor
         if tensor_type.HasField("shape"):
             shapes[output.name] = [
-                dim.dim_value if dim.dim_value != 0 else utils.ONNX_UNKNOWN_DIMENSION for dim in tensor_type.shape.dim
+                dim.dim_value if dim.dim_value != 0 else util.ONNX_UNKNOWN_DIMENSION for dim in tensor_type.shape.dim
             ]
         else:
             shapes[output.name] = None

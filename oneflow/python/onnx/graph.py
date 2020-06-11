@@ -17,8 +17,8 @@ import numpy as np
 from os.path import join as pathjoin
 
 from onnx import helper, numpy_helper, shape_inference, OperatorSetIdProto, AttributeProto, TensorProto, onnx_pb
-from oneflow.python.onnx import utils
-from oneflow.python.onnx.utils import make_name, port_name, find_opset
+from oneflow.python.onnx import util
+from oneflow.python.onnx.util import make_name, port_name, find_opset
 from oneflow.python.onnx import optimizer
 from oneflow.python.onnx.schemas import get_schema, infer_onnx_shape_dtype
 from oneflow.python.onnx import constants
@@ -74,7 +74,7 @@ class Node(object):
 
         self._output = val
         for o in self._output:
-            utils.make_sure(o not in self.graph._output_to_node_name,
+            util.make_sure(o not in self.graph._output_to_node_name,
                             "output %s already in output mapping", o)
             self.graph._output_to_node_name[o] = self.name
 
@@ -208,7 +208,7 @@ class Node(object):
     def get_attr_int(self, name):
         """Get attribute value as int."""
         attr_int = self.get_attr_value(name)
-        utils.make_sure(
+        util.make_sure(
             attr_int is not None and isinstance(attr_int, int),
             "attribute %s is None", name
         )
@@ -217,7 +217,7 @@ class Node(object):
     def get_attr_str(self, name, encoding="utf-8"):
         """Get attribute value as string."""
         attr_str = self.get_attr_value(name)
-        utils.make_sure(
+        util.make_sure(
             attr_str is not None and isinstance(attr_str, bytes),
             "attribute %s is None", name
         )
@@ -377,7 +377,7 @@ class Node(object):
         return list(outer_scope_node_input_ids)
 
     def _graph_check(self):
-        utils.make_sure(self.graph is not None, "Node %s not belonging any graph",
+        util.make_sure(self.graph is not None, "Node %s not belonging any graph",
                         self.name)
 
     def maybe_cast_input(self, supported, type_map):
@@ -431,7 +431,7 @@ class Graph(object):
         self._opset = find_opset(opset)
 
         if extra_opset is not None:
-            utils.make_sure(isinstance(extra_opset, list),
+            util.make_sure(isinstance(extra_opset, list),
                             "invalid extra_opset")
         self._extra_opset = extra_opset
 
@@ -453,7 +453,7 @@ class Graph(object):
         for o in self.outputs:
             n = self.get_node_by_output_in_current_graph(o)
             new_output_name = port_name(
-                n.name + "_" + utils.make_name("raw_output_"))
+                n.name + "_" + util.make_name("raw_output_"))
             n_shapes = n.output_shapes
             n_dtypes = n.output_dtypes
             body_graphs = n.graph.contained_graphs.pop(n.name, None)
@@ -505,13 +505,13 @@ class Graph(object):
         if raw:
             onnx_tensor = numpy_helper.from_array(np_val, name)
         else:
-            onnx_tensor = helper.make_tensor(name, utils.map_numpy_to_onnx_dtype(np_val.dtype),
+            onnx_tensor = helper.make_tensor(name, util.map_numpy_to_onnx_dtype(np_val.dtype),
                                              np_val.shape, np_val, raw=False)
         dtype = onnx_tensor.data_type
         node = self.make_node("Const", [], outputs=[name], name=name, attr={"value": onnx_tensor},
                               skip_conversion=skip_conversion, dtypes=[dtype], infer_shape_dtype=False)
         self.set_shape(name, np_val.shape)
-        self.set_dtype(name, utils.map_numpy_to_onnx_dtype(np_val.dtype))
+        self.set_dtype(name, util.map_numpy_to_onnx_dtype(np_val.dtype))
         return node
 
     def make_node(self, op_type, inputs, attr=None, output_count=1, outputs=None, skip_conversion=True,
@@ -526,7 +526,7 @@ class Graph(object):
             dtypes = []
 
         if name is None:
-            name = utils.make_name(op_type)
+            name = util.make_name(op_type)
 
         if op_name_scope:
             name = "_".join([op_name_scope, name])
@@ -546,11 +546,11 @@ class Graph(object):
                 raw_attr[a] = v
 
         n = self.get_node_by_name(name)
-        utils.make_sure(
+        util.make_sure(
             n is None, "name %s already exists in node: \n%s", name, n)
         for o in outputs:
             n = self.get_node_by_output_in_current_graph(o)
-            utils.make_sure(
+            util.make_sure(
                 n is None, "output tensor named %s already exists in node: \n%s", o, n)
 
         onnx_node = helper.make_node(
@@ -565,13 +565,13 @@ class Graph(object):
             _ = [node.set_attr_onnx(a) for a in onnx_attrs]
 
         if shapes:
-            utils.make_sure(len(shapes) == output_count,
+            util.make_sure(len(shapes) == output_count,
                             "output shape count %s not equal to output count %s", len(shapes), output_count)
             for i in range(output_count):
                 self.set_shape(node.output[i], shapes[i])
 
         if dtypes:
-            utils.make_sure(len(dtypes) == output_count,
+            util.make_sure(len(dtypes) == output_count,
                             "output dtypes count %s not equal to output count %s", len(dtypes), output_count)
             for i in range(output_count):
                 self.set_dtype(node.output[i], dtypes[i])
@@ -585,7 +585,7 @@ class Graph(object):
 
     def remove_node(self, node_name):
         """Remove node in current graph."""
-        utils.make_sure(node_name in self._nodes_by_name,
+        util.make_sure(node_name in self._nodes_by_name,
                         "node %s not in current graph, cannot remove", node_name)
         node = self.get_node_by_name(node_name)
         del self._nodes_by_name[node_name]
@@ -646,7 +646,7 @@ class Graph(object):
     def is_empty_input(self, name):
         # in ONNX, operation may have optional input and an empty string may be used
         # in the place of an actual argument's name to indicate a missing argument
-        return name == utils.ONNX_EMPTY_INPUT
+        return name == util.ONNX_EMPTY_INPUT
 
     def check_integrity(self):
         """
@@ -667,7 +667,7 @@ class Graph(object):
         if node.is_const() or node.is_graph_input():
             return
         # NOTE: only support onnx node for now
-        if not utils.is_onnx_domain(node.domain):
+        if not util.is_onnx_domain(node.domain):
             return
 
         logger.debug("Infer shape and dtype for [%s]", node.name)
@@ -716,7 +716,7 @@ class Graph(object):
                     "Inferred shape for [%s, type: %s] is None, SKIP", node.name, node.type)
             else:
                 existing_shape = self.get_shape(output)
-                if existing_shape is not None and not utils.are_shapes_equal(existing_shape, shape):
+                if existing_shape is not None and not util.are_shapes_equal(existing_shape, shape):
                     if override:
                         logger.warning(
                             "Override shape of %s from %s to %s", output, existing_shape, shape)
@@ -800,7 +800,7 @@ class Graph(object):
 
     def add_graph_output(self, name, dtype=None, shape=None):
         """Add node output as graph's output."""
-        utils.make_sure(name in self._output_to_node_name,
+        util.make_sure(name in self._output_to_node_name,
                         "output %s not exist in the graph", name)
 
         if dtype is None:
@@ -810,9 +810,9 @@ class Graph(object):
             shape = self.get_shape(name)
 
         if name not in self.outputs:
-            utils.make_sure(shape is not None,
+            util.make_sure(shape is not None,
                             "shape for output %s should not be None", name)
-            utils.make_sure(dtype is not None,
+            util.make_sure(dtype is not None,
                             "dtype for output %s should not be None", name)
             self.outputs.append(name)
             self.set_shape(name, shape)
@@ -840,16 +840,16 @@ class Graph(object):
         tensor_name = node.output[0]
         if self._model_save_dir is not None:
             path = pathjoin(self._model_save_dir, node.output[0])
-            tensor_value = np.fromfile(path, dtype=utils.map_onnx_to_numpy_type(
+            tensor_value = np.fromfile(path, dtype=util.map_onnx_to_numpy_type(
                 self.get_dtype(tensor_name))).reshape(self.get_shape(tensor_name))
             return tensor_value
         else:
             shape = self.get_shape(tensor_name)
-            return np.ones(shape, dtype=utils.map_onnx_to_numpy_type(self.get_dtype(tensor_name)))
+            return np.ones(shape, dtype=util.map_onnx_to_numpy_type(self.get_dtype(tensor_name)))
 
     def get_shape(self, name):
         """Get shape for node."""
-        utils.make_sure(isinstance(name, six.text_type),
+        util.make_sure(isinstance(name, six.text_type),
                         "get_shape name is invalid type: %s", name)
         node = self.get_node_by_output(name, search_in_parent_graphs=True)
         shape = node.graph._output_shapes.get(name) if node else None
@@ -858,11 +858,11 @@ class Graph(object):
                 if v is None:
                     # pylint: disable=unsupported-assignment-operation
                     shape[i] = -1
-            # hack to allow utils.ONNX_UNKNOWN_DIMENSION to override batchsize if needed.
+            # hack to allow util.ONNX_UNKNOWN_DIMENSION to override batchsize if needed.
             # default is -1.
             if shape[0] == -1:
                 # pylint: disable=unsupported-assignment-operation
-                shape[0] = utils.ONNX_UNKNOWN_DIMENSION
+                shape[0] = util.ONNX_UNKNOWN_DIMENSION
             return shape
         return shape
 
@@ -873,7 +873,7 @@ class Graph(object):
         if isinstance(val, tuple):
             val = list(val)
         node = self.get_node_by_output(name, search_in_parent_graphs=True)
-        utils.make_sure(node is not None,
+        util.make_sure(node is not None,
                         "cannot find node by output id %s", name)
         node.graph._output_shapes[name] = val
 
@@ -915,7 +915,7 @@ class Graph(object):
             all_input = list(filter(lambda a: a != '', all_input))
             for inp in sorted(all_input):
                 j = self.get_node_by_output(inp)
-                utils.make_sure(
+                util.make_sure(
                     j is not None, "Cannot find node with output {}".format(inp))
                 if self.parent_graph and j.name not in op_name_to_index:
                     # there might be some outer-scoped inputs for an inner Graph.
@@ -985,9 +985,9 @@ class Graph(object):
         placeholder_default_const_ops = []
         for op in placeholder_ops:
             if op.type == "PlaceholderWithDefault":
-                utils.make_sure(
+                util.make_sure(
                     op.inputs[0] is not None, "Cannot find node with output {}".format(op.input[0]))
-                utils.make_sure(op.inputs[0].is_const(),
+                util.make_sure(op.inputs[0].is_const(),
                                 "non-const default value for PlaceholderWithDefault is not supported.")
                 # copy the tensor value, set its name to current node's output, add as initializer
                 value = op.inputs[0].get_tensor_value(as_list=False)
@@ -1063,12 +1063,12 @@ class Graph(object):
             dtype = self.get_dtype(name)
             shape = self.get_shape(name)
 
-            utils.make_sure(dtype is not None,
+            util.make_sure(dtype is not None,
                             "missing output dtype for " + name)
-            utils.make_sure(shape is not None,
+            util.make_sure(shape is not None,
                             "missing output shape for " + name)
 
-            v = utils.make_onnx_inputs_outputs(name, dtype, shape)
+            v = util.make_onnx_inputs_outputs(name, dtype, shape)
             tensor_value_infos.append(v)
         return tensor_value_infos
 
@@ -1142,7 +1142,7 @@ class Graph(object):
             node that was inserted
         """
         if name is None:
-            name = utils.make_name(node.name)
+            name = util.make_name(node.name)
         new_output = port_name(name)
         if not isinstance(input_name, list):
             input_name = [input_name]
@@ -1166,9 +1166,9 @@ class Graph(object):
         Returns:
             node that was inserted
         """
-        utils.make_sure(isinstance(output_name, six.text_type), "output_name's type is not expected: %s",
+        util.make_sure(isinstance(output_name, six.text_type), "output_name's type is not expected: %s",
                         type(output_name))
-        utils.make_sure(isinstance(op_type, six.text_type), "op_type's type is not expected: %s",
+        util.make_sure(isinstance(op_type, six.text_type), "op_type's type is not expected: %s",
                         type(op_type))
 
         new_output = port_name(name)
@@ -1413,7 +1413,7 @@ class GraphUtil(object):
             else:
                 extra_opset.append(opset)
 
-        utils.make_sure(opset_version is not None,
+        util.make_sure(opset_version is not None,
                         "opset version is not specified for onnx domain")
         main_graph = GraphUtil.create_graph_from_onnx_graph(
             graph_proto, opset_version, extra_opset)
@@ -1442,7 +1442,7 @@ class GraphUtil(object):
 
             # some pytorch model had empty names - make one up
             if not n.name:
-                n.name = utils.make_name("was_empty")
+                n.name = util.make_name("was_empty")
             nodes_to_append.append(n)
 
         output_names = []

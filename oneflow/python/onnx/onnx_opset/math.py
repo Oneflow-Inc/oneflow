@@ -13,7 +13,7 @@ import logging
 
 import numpy as np
 from onnx import onnx_pb
-from oneflow.python.onnx import constants, utils
+from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common
 
@@ -36,8 +36,8 @@ class ScalarBinaryOp:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
         scalar_val = node.get_attr_value('int_operand') if node.get_attr_value('has_int_operand') else node.get_attr_value('float_operand')
-        np_dtype = utils.map_onnx_to_numpy_type(ctx.get_dtype(node.input[0]))
-        scalar_node = ctx.make_const(utils.make_name('scalar'), np.array([scalar_val]).astype(np_dtype))
+        np_dtype = util.map_onnx_to_numpy_type(ctx.get_dtype(node.input[0]))
+        scalar_node = ctx.make_const(util.make_name('scalar'), np.array([scalar_val]).astype(np_dtype))
         node.input.append(scalar_node.output[0])
 
 
@@ -115,7 +115,7 @@ def make_min_or_max_op(ctx, op_type, inputs, outputs,
     cast_inputs = []
     for inp in inputs:
         dtype = ctx.get_dtype(inp)
-        utils.make_sure(dtype is not None, "dtype of {} is None".format(inp))
+        util.make_sure(dtype is not None, "dtype of {} is None".format(inp))
         if dtype not in supported_dtypes:
             cast_inp = ctx.make_node("Cast", [inp], attr={"to": target_dtype})
             cast_inputs.append(cast_inp.output[0])
@@ -129,7 +129,7 @@ def make_min_or_max_op(ctx, op_type, inputs, outputs,
         if output_dtypes is not None:
             origin_dtype = output_dtypes[0]
         ctx.set_dtype(node.output[0], target_dtype)
-        cast_name = utils.make_name(node.name)
+        cast_name = util.make_name(node.name)
         cast_node = ctx.insert_new_node_on_output(
             "Cast", node.output[0], name=cast_name, to=origin_dtype)
         ctx.set_dtype(cast_node.output[0], origin_dtype)
@@ -192,15 +192,15 @@ class ClipOps:
         # add min and max as inputs
         node.type = "Clip"
         onnx_dtype = ctx.get_dtype(node.input[0])
-        np_dtype = utils.ONNX_TO_NUMPY_DTYPE[onnx_dtype]
+        np_dtype = util.ONNX_TO_NUMPY_DTYPE[onnx_dtype]
         if min_val is not None:
-            clip_min = ctx.make_const(utils.make_name(
+            clip_min = ctx.make_const(util.make_name(
                 "{}_min".format(node.name)), np.array(min_val, dtype=np_dtype))
             node.input.append(clip_min.output[0])
         else:
             node.input.append('')
         if max_val is not None:
-            clip_max = ctx.make_const(utils.make_name(
+            clip_max = ctx.make_const(util.make_name(
                 "{}_max".format(node.name)), np.array(max_val, dtype=np_dtype))
             node.input.append(clip_max.output[0])
         else:
@@ -255,7 +255,7 @@ class Rsqrt:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         node.type = "Sqrt"
-        op_name = utils.make_name(node.name)
+        op_name = util.make_name(node.name)
         reciprocal = ctx.insert_new_node_on_output(
             "Reciprocal", node.output[0], name=op_name)
         ctx.copy_shape(node.output[0], reciprocal.output[0])
@@ -266,7 +266,7 @@ class SquaredDifference:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         node.type = "Sub"
-        op_name = utils.make_name(node.name)
+        op_name = util.make_name(node.name)
         mul = ctx.insert_new_node_on_output(
             "Mul", node.output[0], name=op_name)
         mul.input.append(node.output[0])
@@ -279,11 +279,11 @@ class Sign:
         """Sign op."""
         # T sign = Sign(T Input)
         node_dtype = ctx.get_dtype(node.output[0])
-        utils.make_sure(node_dtype, "Dtype of {} is None".format(node.name))
+        util.make_sure(node_dtype, "Dtype of {} is None".format(node.name))
         if node_dtype in [onnx_pb.TensorProto.COMPLEX64, onnx_pb.TensorProto.COMPLEX128]:
             raise ValueError("dtype " + str(node_dtype) +
                              " is not supported in onnx for now")
-        zero_name = utils.make_name("{}_zero".format(node.name))
+        zero_name = util.make_name("{}_zero".format(node.name))
         ctx.make_const(zero_name, np.array(0, dtype=np.float32))
         if node_dtype not in [onnx_pb.TensorProto.FLOAT16, onnx_pb.TensorProto.FLOAT, onnx_pb.TensorProto.DOUBLE]:
             cast_node_0 = ctx.make_node("Cast", [node.input[0]], {
@@ -309,7 +309,7 @@ class Sign:
     @classmethod
     def version_9(cls, ctx, node, **kwargs):
         node_dtype = ctx.get_dtype(node.output[0])
-        utils.make_sure(node_dtype, "dtype of {} is None".format(node.name))
+        util.make_sure(node_dtype, "dtype of {} is None".format(node.name))
         if node_dtype in [onnx_pb.TensorProto.BOOL, onnx_pb.TensorProto.COMPLEX64, onnx_pb.TensorProto.COMPLEX128]:
             raise ValueError("dtype " + str(node_dtype) +
                              " is not supported in onnx for now")
