@@ -33,6 +33,11 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
       .Broadcast(user_op::OpArg("like", 0))
       .PartialSum(user_op::OpArg("y", 0))
       .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("like", 0))
+      .Broadcast(user_op::OpArg("y", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
