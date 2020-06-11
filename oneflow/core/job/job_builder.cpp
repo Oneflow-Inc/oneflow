@@ -9,7 +9,6 @@ namespace {
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   if (*Global<bool, EagerExecutionOption>::Get()) {
-    // return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
     TODO() << "return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());";
   } else {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
