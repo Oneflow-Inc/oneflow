@@ -1,5 +1,10 @@
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import os
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -7,6 +12,7 @@ from oneflow.python.oneflow_export import oneflow_export
 def _check_name(name, unique_name):
     if name is None:
         return id_util.UniqueStr(unique_name)
+    assert isinstance(name, str), name
     return name
 
 
@@ -18,6 +24,11 @@ def _check_axis(axis, shape):
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
+    for x in axis:
+        if x < 0:
+            x += len(shape)
+        assert x >= 0 and x < len(shape), "Invalid axis {}".format(axis)
+
     return axis
 
 
@@ -32,6 +43,51 @@ def _do_reduce(x, name, op_type_name, keepdims, axis):
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("math.reduce_sum")
+def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
+    r"""Sum of elements across dimensions of a `Blob`.
+
+    Analogous to `tf.math.reduce_sum <https://www.tensorflow.org/api_docs/python/tf/math/reduce_sum>`_
+
+    Args:
+        input_tensor: A `Blob`.
+        axis: Dimensions to reduce. By default, all dimensions will be reduced.
+        keepdims: If true, every reduced dimension with a length of 1 will be kept.
+        name: A name for the operator (optional).
+    Returns:
+        A `Blob`.
+    """
+    name = _check_name(name, "ReduceSum_")
+
+    axis = _check_axis(axis, input_tensor.shape)
+    if len(axis) == 0:
+        return input_tensor
+
+    if os.getenv("ENABLE_USER_OP") == "True":
+        op = (
+            flow.user_op_builder(name)
+            .Op("reduce_sum")
+            .Input("input_tensor", [input_tensor])
+            .Output("output_tensor")
+            .Attr("axis", axis, "AttrTypeListInt32")
+            .Attr("keepdims", keepdims, "AttrTypeBool")
+            .Build()
+        )
+        return op.InferAndTryRun().SoleOutputBlob()
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.reduce_sum_conf, "in", input_tensor.unique_name)
+        setattr(op_conf.reduce_sum_conf, "out", "out")
+        op_conf.reduce_sum_conf.axis[:] = list(axis)
+        setattr(op_conf.reduce_sum_conf, "keep_dims", keepdims)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("math.reduce_any")
