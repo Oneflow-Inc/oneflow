@@ -1,3 +1,4 @@
+import os
 from collections import OrderedDict
 
 import numpy as np
@@ -146,8 +147,9 @@ def compare_with_tensorflow(
         atol=1e-5,
     )
 
+
 def test_cpu1(test_case):
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") != "True":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -158,8 +160,9 @@ def test_cpu1(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_cpu2(test_case):
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") != "True":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -170,8 +173,9 @@ def test_cpu2(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_cpu3(test_case):
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") != "True":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -181,6 +185,7 @@ def test_cpu3(test_case):
     arg_dict["groups"] = [1]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_conv1(test_case):
     arg_dict = OrderedDict()
