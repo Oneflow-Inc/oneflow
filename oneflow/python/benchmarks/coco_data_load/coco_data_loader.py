@@ -8,6 +8,8 @@ class COCODataLoadConfig(object):
     def __init__(self):
         self.annotation_file = "/dataset/mscoco_2017/annotations/instances_train2017.json"
         self.image_dir = "/dataset/mscoco_2017/train2017"
+        # self.annotation_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+        # self.image_dir = "/dataset/mscoco_2017/val2017"
         self.shuffle_after_epoch = True
         self.stride_partition = False
         self.batch_size = 2
@@ -86,7 +88,7 @@ def _make_data_load_fn():
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     cfg = COCODataLoadConfig()
 
@@ -97,7 +99,7 @@ def _make_data_load_fn():
     return data_load_fn
 
 
-def _benchmark(iter_num):
+def _benchmark(iter_num, drop_first_iters, verbose=False):
     flow.env.init()
     data_loader = _make_data_load_fn()
     s = pd.Series([], name="time_elapsed", dtype="float32")
@@ -105,18 +107,25 @@ def _benchmark(iter_num):
     for i in range(iter_num):
         # data_loader().get()
         image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
-        # print("==== iter {} ====".format(i))
-        # print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
-        # print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
-        # print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-        # print("gt_label:\n", gt_label.ndarray_lists()[0])
-        # print("gt_mask:\n", gt_mask.ndarray_lists()[0])
         cur = time.perf_counter()
         s[i] = cur - timestamp
         timestamp = cur
-    print("mean of time elapsed of {} iter (dropped 10 first iter): {}".format(iter_num, s[10:].mean()))
+
+        if verbose:
+            print("==== iter {} ====".format(i))
+            print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
+            print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
+            print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
+            print("gt_label:\n", gt_label.ndarray_lists()[0])
+            print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+
+    print(
+        "mean of time elapsed of {} iters (dropped {} first iters): {}".format(
+            iter_num, drop_first_iters, s[drop_first_iters:].mean()
+        )
+    )
     s.to_csv("coco_data_benchmark.csv", header=True)
 
 
 if __name__ == "__main__":
-    _benchmark(100)
+    _benchmark(500, 10)
