@@ -54,42 +54,46 @@ class InstructionsBuilder(object):
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
 
-    def StatelessCall(self, op_attribute, op_parallel_conf=None, op_device_tag=None,
-                      bn_in_op2blob_object={}):
-        placement_scope = oneflow.placement.current_scope()
-        if op_parallel_conf is None: op_parallel_conf = placement_scope.default_parallel_conf
-        if op_device_tag is None: op_device_tag = placement_scope.default_device_tag
+    def StatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
+        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        self._CheckRefInBlobObjectParallelDesc(
+                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
             return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
         self._StatelessCall("compute", op_attribute,
-                op_parallel_conf=op_parallel_conf,
-                op_device_tag=op_device_tag,
+                op_parallel_desc_sym=op_parallel_desc_sym,
+                blob_parallel_desc_sym=op_parallel_desc_sym,
                 bn_in_op2blob_object=bn_in_op2blob_object,
                 get_delegate_blob_object=GetDelegateBlobObject)
 
     def CudaD2HStatelessCall(self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}):
+        op_parallel_desc_sym = self.GetParallelDescSymbol(in_parallel_conf)
+        blob_parallel_desc_sym = boxing_util.TryReplaceDeviceTag(self, op_parallel_desc_sym, "cpu")
+        self._CheckRefInBlobObjectParallelDesc(
+                op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
         self._StatelessCall("copy_d2h", op_attribute,
-                op_parallel_conf=in_parallel_conf,
-                op_device_tag="gpu",
+                op_parallel_desc_sym=op_parallel_desc_sym,
+                blob_parallel_desc_sym=blob_parallel_desc_sym,
                 bn_in_op2blob_object=bn_in_op2blob_object,
                 get_delegate_blob_object=GetDirectBlobObject)
 
     def CudaH2DStatelessCall(self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}):
+        op_parallel_desc_sym = self.GetParallelDescSymbol(out_parallel_conf)
+        self._CheckRefInBlobObjectParallelDesc(
+                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
         self._StatelessCall("copy_h2d", op_attribute,
-                op_parallel_conf=out_parallel_conf,
-                op_device_tag="gpu",
+                op_parallel_desc_sym=op_parallel_desc_sym,
+                blob_parallel_desc_sym=op_parallel_desc_sym,
                 bn_in_op2blob_object=bn_in_op2blob_object,
                 get_delegate_blob_object=GetDirectBlobObject)
 
-    def _StatelessCall(self, stream_tag, op_attribute, op_parallel_conf, op_device_tag,
+    def _StatelessCall(self, stream_tag, op_attribute,
+                       op_parallel_desc_sym=None, blob_parallel_desc_sym=None,
                        bn_in_op2blob_object={}, get_delegate_blob_object=None):
         assert callable(get_delegate_blob_object)
-        op_parallel_desc_sym = self.GetParallelDescSymbol(op_parallel_conf, op_device_tag)
-        placement_scope = oneflow.placement.current_scope()
-        blob_parallel_desc_sym = self.GetParallelDescSymbol(
-                placement_scope.default_parallel_conf, placement_scope.default_device_tag)
+        assert op_parallel_desc_sym is not None 
         def DelegateBlobObject4Ibn(ibn):
             return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_parallel_desc_sym)
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
@@ -97,8 +101,6 @@ class InstructionsBuilder(object):
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(op_parallel_desc_sym)
         const_operand_blob_objects = self._GetConstOperandBlobObjects(
                 op_attribute, blob_object4ibn=DelegateBlobObject4Ibn)
-        self._CheckRefInBlobObjectParallelDesc(
-                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
                 op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
         mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(
@@ -122,12 +124,12 @@ class InstructionsBuilder(object):
     def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
         parallel_desc_symbol = blob_object.parallel_desc_symbol
         parallel_conf = parallel_desc_symbol.parallel_conf
-        device_tag = parallel_desc_symbol.device_tag
+        _, device_tag, _ = parallel_conf.device_name[0].split(":")
         machine_id2device_ids = placement_ctx.MakeMachineId2DeviceIdList(parallel_conf)
         def GetPhysicalBlob(machine_id, device_id):
             parallel_conf = placement_pb_util.ParallelConf()
             parallel_conf.device_name.append("%d:%s:%d" % (machine_id, device_tag, device_id))
-            parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf, device_tag)
+            parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
             pyhsical_blob_object = self._NewBlobObject(parallel_desc_sym)
             return pyhsical_blob_object
         physical_blob_objects = []
@@ -152,7 +154,8 @@ class InstructionsBuilder(object):
         symbol_cache.SetSymbol4JobConf(job_conf, symbol)
         return symbol
 
-    def GetParallelDescSymbol(self, parallel_conf, device_tag):
+    def GetParallelDescSymbol(self, parallel_conf):
+        _, device_tag, _ = parallel_conf.device_name[0].split(":")
         serialized_parallel_conf = parallel_conf.SerializeToString()
         if symbol_cache.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
             return symbol_cache.GetSymbol4SerializedParallelConf(serialized_parallel_conf)
@@ -485,7 +488,7 @@ def _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
     op_device_tag = op_parallel_desc_symbol.device_tag
     assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
             blob_device_tag, op_device_tag)
-    return boxing_util.BuildCopyHdInstruction(builder, x_blob_object)
+    return boxing_util.BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
 
 def _GetOpConfBlobNameAttr(pb_message, field):
     if hasattr(pb_message, field): return getattr(pb_message, field);

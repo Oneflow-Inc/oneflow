@@ -204,7 +204,9 @@ def _CreateEagerVariableBlob(op_conf, parallel_conf):
     bn_in_op2blob_object = {}
     def BuildInstruction(builder):
         op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
-        builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        builder.StatelessCall(op_attribute, parallel_conf,
+                bn_in_op2blob_object=bn_in_op2blob_object)
     vm_util.LogicalRun(BuildInstruction)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -227,7 +229,9 @@ def _ModelInit(var_op_conf):
     bn_in_op2blob_object = {}
     def BuildModeInitInstruction(builder):
         op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
-        builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        builder.StatelessCall(op_attribute, parallel_conf,
+                bn_in_op2blob_object=bn_in_op2blob_object)
     vm_util.LogicalRun(BuildModeInitInstruction)
     return bn_in_op2blob_object['out_0']
 

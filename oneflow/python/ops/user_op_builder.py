@@ -1,4 +1,3 @@
-import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
@@ -10,7 +9,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
-import oneflow as flow
+import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
@@ -99,7 +98,9 @@ class EagerLogicalUserOp(UserOp):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
         def BuildInstruction(builder):
             with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
-                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+                builder.StatelessCall(op_attribute, parallel_conf,
+                        bn_in_op2blob_object=bn_in_op2blob_object)
         vm_util.LogicalRun(BuildInstruction)
         return self
 
@@ -120,7 +121,9 @@ class EagerPhysicalUserOp(UserOp):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
         def BuildInstruction(builder):
             with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
-                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+                builder.StatelessCall(op_attribute, parallel_conf,
+                        bn_in_op2blob_object=bn_in_op2blob_object)
         vm_util.PhysicalRun(BuildInstruction)
         return self
 
@@ -161,7 +164,9 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
         def BuildInstruction(builder):
             with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
-                builder.StatelessCall(op_attribute, bn_in_op2blob_object=bn_in_op2blob_object)
+                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+                builder.StatelessCall(op_attribute, parallel_conf,
+                        bn_in_op2blob_object=bn_in_op2blob_object)
         vm_util.LogicalRun(BuildInstruction)
         return self
 
@@ -227,7 +232,7 @@ class UserOpConfBuilder(object):
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == "AttrTypeDataType":
-            assert isinstance(attr_value, int) and attr_value in flow.dtypes
+            assert isinstance(attr_value, int) and attr_value in oneflow.dtypes
             attribute.at_data_type = attr_value
         elif attr_type == "AttrTypeListInt32":
             assert isinstance(attr_value, (tuple, list))
@@ -243,7 +248,7 @@ class UserOpConfBuilder(object):
             attribute.at_list_float.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListDataType":
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
+            assert all(isinstance(x, int) and x in oneflow.dtypes for x in attr_value)
             attribute.at_list_data_type.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListShape":
             assert isinstance(attr_value, (tuple, list))
