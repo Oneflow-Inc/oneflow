@@ -7,6 +7,7 @@ cp -r oneflow/python/benchmarks /benchmarks
 cd /benchmarks
 
 export ENABLE_USER_OP=True
+ENABLE_OPTIMIZER_V2=True
 python3 cnn_benchmark/of_cnn_benchmarks.py \
     --gpu_num_per_node=1 \
     --model="vgg16" \
