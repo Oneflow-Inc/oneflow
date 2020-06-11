@@ -18,13 +18,12 @@ class JobBuildAndInferCtx {
   JobBuildAndInferCtx(Job* job, int64_t job_id);
   virtual ~JobBuildAndInferCtx() = default;
 
-  Maybe<OperatorConf> CheckAndCompleteUserOpConf(const OperatorConf& op_conf);
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
   Maybe<void> Complete();
-  Maybe<void> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
-  Maybe<void> AddAndInferConsistentOp(const OperatorConf& op_conf,
-                                      const ParallelConf& parallel_conf);
-  Maybe<void> AddAndInferMirroredOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
+  Maybe<const OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf,
+                                                   const ParallelConf& parallel_conf);
+  Maybe<const OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf,
+                                                 const ParallelConf& parallel_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
 
   bool HasJobConf() const;

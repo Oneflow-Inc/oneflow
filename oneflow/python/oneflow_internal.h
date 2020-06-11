@@ -17,12 +17,12 @@ std::string CurrentResource(std::string* error_str) {
 
 void EnableEagerExecution(bool enable_eager_execution) {
   using namespace oneflow;
-  return Global<EagerExecutionOption>::Get()->set_enable_eager_execution(enable_eager_execution);
+  *Global<bool, EagerExecutionOption>::Get() = enable_eager_execution;
 }
 
 bool EagerExecutionEnabled() {
   using namespace oneflow;
-  return Global<EagerExecutionOption>::Get()->enable_eager_execution();
+  return *Global<bool, EagerExecutionOption>::Get();
 }
 
 bool IsEnvInited() {
@@ -82,6 +82,16 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                       std::string* error_str) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+long CurrentMachineId(std::string* error_str) {
+  return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {

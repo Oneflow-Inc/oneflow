@@ -61,7 +61,7 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO"
 
-template<typename T>
+template<typename T, typename Kind = void>
 class Global final {
  public:
   static T* Get() { return *GetPPtr(); }
@@ -82,8 +82,15 @@ class Global final {
 
  private:
   static T** GetPPtr() {
+    CheckKind();
     static T* ptr = nullptr;
     return &ptr;
+  }
+  static void CheckKind() {
+    if (!std::is_same<Kind, void>::value) {
+      CHECK(Global<T>::Get() == nullptr)
+          << typeid(Global<T>).name() << " are disable for avoiding misuse";
+    }
   }
 };
 
@@ -171,8 +178,8 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-const size_t kCudaAlignSize = 256;
-const size_t kCudaMemAllocAlignSize = 256;
+const size_t kCudaAlignSize = 512;
+const size_t kCudaMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }

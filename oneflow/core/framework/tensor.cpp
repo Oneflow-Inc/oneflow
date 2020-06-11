@@ -14,6 +14,7 @@ Tensor::Tensor(Blob* blob) {
     mut_shape_.reset();
   }
   data_type_ = blob->data_type();
+  mem_case_ = &(blob->mem_case());
 }
 
 void Tensor::CopyWithoutData(const Tensor& rhs) {
@@ -25,6 +26,7 @@ void Tensor::CopyWithoutData(const Tensor& rhs) {
     mut_shape_.reset();
   }
   data_type_ = rhs.data_type_;
+  mem_case_ = rhs.mem_case_;
 }
 
 Tensor& Tensor::operator=(Tensor&& rhs) {
@@ -32,6 +34,7 @@ Tensor& Tensor::operator=(Tensor&& rhs) {
   shape_ = rhs.shape_;
   mut_shape_ = std::move(rhs.mut_shape_);
   data_type_ = rhs.data_type_;
+  mem_case_ = rhs.mem_case_;
   return *this;
 }
 

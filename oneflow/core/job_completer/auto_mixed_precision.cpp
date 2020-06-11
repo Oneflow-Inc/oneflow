@@ -45,6 +45,22 @@ void VerifyAMPList(const AMPList& amp_list) {
   }
 }
 
+using OpArg = std::pair<std::string, int32_t>;
+using NoCastRegistry = std::multimap<std::string, OpArg>;
+
+NoCastRegistry* GetNoCastRegistry() {
+  static NoCastRegistry s_registry;
+  return &s_registry;
+}
+
+bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
+  auto range = GetNoCastRegistry()->equal_range(op_type);
+  for (auto it = range.first; it != range.second; ++it) {
+    if (it->second == op_arg) { return true; }
+  }
+  return false;
+}
+
 void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
                            std::function<bool(OpNode*)> IsCurNodeStartNode,
                            std::function<bool(OpNode*)> IsCurNodeSatisfied,
@@ -78,9 +94,11 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
     for (const std::string& obn : node->op().output_bns()) {
       LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
       // TODO(niuchong): this ain't right for fw-bw-opgraph, but right for fw-opgraph
-      if (node->BatchAxis4Lbi(lbi).has_value() == false) { return; }
+      if (node->BatchAxis4Lbi(lbi).has_value()) {
+        INSERT_CHECK(allowed_set->insert(node));
+        return;
+      }
     }
-    INSERT_CHECK(allowed_set->insert(node));
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
@@ -143,20 +161,15 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     OpNode* src_node = pair.second.front()->src_node();
 
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
-    std::string cast_op_name = ReplaceSlashToDash4Lbn(lbn) + cast_suffix;
-    {
-      DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
-      auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
-                         .Op("cast")
-                         .Input("in", lbn)
-                         .Output("out")
-                         .Attr<DataType>("dtype", cast_data_type)
-                         .Build();
-      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
-                          std::vector<OperatorConf>{cast_op.op_conf()});
-      LOG(INFO) << "Insert CastOp: " << cast_op_name << " between " << lbn;
-    }
+    DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
+    auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
+                       .Op("cast")
+                       .Input("in", lbn)
+                       .Output("out")
+                       .Attr<DataType>("dtype", cast_data_type)
+                       .Build();
 
+    bool cast_is_consumed = false;
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
@@ -164,6 +177,14 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
       const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+
+      if (dst_node->op().op_conf().has_user_conf()) {
+        const std::string& op_type = dst_node->op().op_conf().user_conf().op_type_name();
+        const auto& op_arg = GenUnRepeatedBn(dst_ibn);
+        if (FindInNoCastRegisry(op_type, op_arg)) { continue; }
+      }
+
+      cast_is_consumed = true;
 
       const std::string& dst_op_name = dst_node->op().op_name();
       if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
@@ -173,11 +194,17 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      std::string new_lbn = cast_op_name + "/out_0";
+      std::string new_lbn = cast_op.op_name() + "/out_0";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
         ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
       }
+    }
+
+    if (cast_is_consumed) {
+      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+                          std::vector<OperatorConf>{cast_op.op_conf()});
+      LOG(INFO) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
     }
   }
 
@@ -199,7 +226,7 @@ class AutoMixedPrecision final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 
  private:
   void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
@@ -218,7 +245,7 @@ class AutoMixedPrecision final : public OpGraphPass {
   const AMPList& clear_list_;
 };
 
-void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -246,6 +273,7 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder)
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
   InsertCastOp(op_graph, white_set, job_builder);
+  return Maybe<void>::Ok();
 }
 
 void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {
@@ -333,6 +361,30 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
 }
 
 REGISTER_FUNCTION_PASS("AutoMixedPrecision", AutoMixedPrecision);
+
+}  // namespace
+
+namespace {
+
+struct NoCastRegistrar final {
+  NoCastRegistrar(const std::string& op_type, OpArg&& op_arg) {
+    auto* registry = GetNoCastRegistry();
+    registry->emplace(std::make_pair(op_type, std::move(op_arg)));
+  }
+  ~NoCastRegistrar() = default;
+};
+
+#define REGISTER_NO_CAST_REGISTRY(op_type, input_arg_name, idx)       \
+  static NoCastRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(op_type, \
+                                                             std::make_pair(input_arg_name, idx));
+
+// For Example:
+// REGISTER_NO_CAST_REGISTRY("matmul", "b", 0);
+
+REGISTER_NO_CAST_REGISTRY("normalization", "moving_mean", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "moving_variance", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "gamma", 0)
+REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
 
 }  // namespace
 

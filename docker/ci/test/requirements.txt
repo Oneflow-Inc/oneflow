@@ -2,3 +2,4 @@ pycocotools
 opencv-python
 sphinx
 recommonmark
+pillow
