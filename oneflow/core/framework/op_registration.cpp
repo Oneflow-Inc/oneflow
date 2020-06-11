@@ -98,6 +98,11 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
   return *this;
 }
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SupportCpuOnly() {
+  wrapper_.reg_val.cpu_only_supported = true;
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
