@@ -297,7 +297,4 @@ def test_mobilenetv2(test_case):
     def mobilenetv2(x=flow.FixedTensorDef((1, 224, 224, 3))):
         return Mobilenet(x)
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
-    convert_to_onnx_and_check(mobilenetv2, model=True)
+    convert_to_onnx_and_check(mobilenetv2)

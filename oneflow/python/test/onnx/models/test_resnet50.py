@@ -170,8 +170,5 @@ def test_resnet50(test_case):
         predictions = flow.nn.softmax(logits)
         return predictions
 
+    convert_to_onnx_and_check(InferenceNet)
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
-    convert_to_onnx_and_check(InferenceNet, model=True)

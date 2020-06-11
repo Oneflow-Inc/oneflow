@@ -118,8 +118,5 @@ def test_alexnet(test_case):
   def alexnet_eval_job(x=flow.FixedTensorDef((1,227,227,3))):
     return alexnet(x, None, False)
 
-  check_point = flow.train.CheckPoint()
-  check_point.init()
-
-  convert_to_onnx_and_check(alexnet_eval_job, model=True)
+  convert_to_onnx_and_check(alexnet_eval_job)
 

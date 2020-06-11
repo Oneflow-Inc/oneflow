@@ -21,6 +21,7 @@ class flow_op:
 
     _OPSETS = collections.OrderedDict()
     _MAPPING = None
+    name_set = set()
 
     def __init__(self, name, onnx_op=None, domain=constants.ONNX_DOMAIN, **kwargs):
         """Called decorator from decorator.
@@ -51,6 +52,8 @@ class flow_op:
                 opset_dict = opset[version]
                 for i, name in enumerate(self.name):
                     opset_dict[name] = (v, self.onnx_op[i], self.kwargs)
+                    flow_op.name_set.add(name)
+        print(len(flow_op.name_set))
         return func
 
     def register_compat_handler(self, func, version):

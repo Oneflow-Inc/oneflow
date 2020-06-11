@@ -21,7 +21,6 @@ import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
-from oneflow.python.onnx.utils import port_name
 from . import constants, logging, schemas, utils, handler, optimizer
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -31,11 +30,6 @@ import os
 import os.path
 
 logger = logging.getLogger(__name__)
-
-
-# pylint: disable=useless-return,broad-except,logging-not-lazy,unused-argument,missing-docstring
-# FIXME:
-# pylint: disable=unused-variable
 
 
 def flowlist_to_onnx(node_list, shape_override):
@@ -56,26 +50,24 @@ def flowlist_to_onnx(node_list, shape_override):
     ops = node_list
 
     def is_user_op(node):
-        op_type = node.WhichOneof("op_type")[:-5]
-        return op_type == 'user'
+        return node.WhichOneof("op_type") == 'user_conf'
 
-    def op_conf(node):
+    def get_op_conf(node):
         conf_type = node.WhichOneof("op_type")
         conf = getattr(node, conf_type)
         return conf
 
     def get_op_type(node):
-        op_type = node.WhichOneof("op_type")[:-5]
-        if op_type == 'user':
-            op_type = node.user_conf.op_type_name
-        return op_type
+        if is_user_op(node):
+            return node.user_conf.op_type_name
+        return node.WhichOneof("op_type")[:-5]
 
     def get_inputs(node):
-        conf_type = node.WhichOneof("op_type")
-        if conf_type == 'user_conf':
+        if is_user_op(node):
             return list(itertools.chain(*[x.s for x in node.user_conf.input.values()]))
         else:
-            conf = getattr(node, conf_type)
+            conf = get_op_conf(node)
+            # it cannot cover all legacy op but it's enough
             if hasattr(conf, "in"):
                 op_in = getattr(conf, "in")
                 if isinstance(op_in, str):
@@ -90,8 +82,8 @@ def flowlist_to_onnx(node_list, shape_override):
             assert all([len(x.s) == 1 for x in node.user_conf.output.values()])
             outputs = [x.s[0] for x in node.user_conf.output.values()]
         else:
-            op_type = get_op_type(node)
-            conf = op_conf(node)
+            conf = get_op_conf(node)
+            # it cannot cover all legacy op but it's enough
             if hasattr(conf, 'out'):
                 out = getattr(conf, "out")
                 if isinstance(out, str):
@@ -104,6 +96,7 @@ def flowlist_to_onnx(node_list, shape_override):
         return outputs
 
     def update_input_maps(node):
+        # keep track of the pair of ibn and lbn to ensure the correct input order in onnx model (see `flow_inputs`)
         input_maps[node.name] = {}
         ipts = node.user_conf.input
         for key in ipts:
@@ -112,7 +105,6 @@ def flowlist_to_onnx(node_list, shape_override):
     # minimal conversion of attributes
     for node in ops:
         attr = {}
-        takeit = True
 
         op_cnt[get_op_type(node)] += 1
 
@@ -125,18 +117,17 @@ def flowlist_to_onnx(node_list, shape_override):
             else:
                 attr[a] = utils.get_flow_node_attr(node, a)
 
-        if takeit:
-            try:
-                op_type = get_op_type(node)
-                input_names = get_inputs(node)
-                output_names = get_outputs(node)
-                update_input_maps(node)
-                onnx_node = helper.make_node(
-                    op_type, input_names, output_names, name=node.name, **attr)
-                onnx_nodes.append(onnx_node)
-            except Exception as ex:
-                logger.error("pass1 convert failed for %s, ex=%s", node, ex)
-                raise
+        try:
+            op_type = get_op_type(node)
+            input_names = get_inputs(node)
+            output_names = get_outputs(node)
+            update_input_maps(node)
+            onnx_node = helper.make_node(
+                op_type, input_names, output_names, name=node.name, **attr)
+            onnx_nodes.append(onnx_node)
+        except Exception as ex:
+            logger.error("pass1 convert failed for %s, ex=%s", node, ex)
+            raise
 
     return onnx_nodes, op_cnt, attr_cnt, input_maps
 
@@ -149,111 +140,6 @@ def oneflow_to_onnx(graph, shape_override):
             shape_override[lbn] = list(lbd.body.shape.dim)
         dtypes[lbn] = utils.map_flow_dtype(lbd.body.data_type)
     return flowlist_to_onnx(graph.net.op, shape_override) + (dtypes, shape_override)
-
-
-def rewrite_constant_fold(g, ops):
-    """
-    fold some constants by numpy
-    """
-    func_map = {
-        "Add": np.add,
-        "GreaterEqual": np.greater_equal,
-        "Cast": np.cast,
-        "ConcatV2": np.concatenate,
-        "Less": np.less,
-        "ListDiff": np.setdiff1d,
-        "Mul": np.multiply,
-        "Pack": np.stack,
-        "Range": np.arange,
-        "Sqrt": np.sqrt,
-        "Sub": np.subtract,
-    }
-    ref_cnt_per_node = {}
-    for idx, op in enumerate(ops):
-        for op_input in op.inputs:
-            if op_input.name not in ref_cnt_per_node:
-                ref_cnt_per_node[op_input.name] = 0
-            ref_cnt_per_node[op_input.name] += 1
-
-    # pylint: disable=too-many-nested-blocks
-    keep_looking = True
-    while keep_looking:
-        keep_looking = False
-        for idx, op in enumerate(ops):
-            func = func_map.get(op.type)
-            if func is None:
-                continue
-            try:
-                inputs = []
-                for node in op.inputs:
-                    if not node.is_const():
-                        break
-                    inputs.append(node.get_tensor_value(as_list=False))
-
-                logger.debug("op name %s, %s, %s", op.name,
-                             len(op.input), len(inputs))
-                if inputs and len(op.input) == len(inputs):
-                    logger.info("folding node type=%s, name=%s" %
-                                (op.type, op.name))
-                    if op.type == "Cast":
-                        dst = op.get_attr_int("to")
-                        np_type = oneflow.python.onnx.utils.map_onnx_to_numpy_type(
-                            dst)
-                        val = np.cast[np_type](*inputs)
-                    elif op.type == "ConcatV2":
-                        axis = inputs[-1]
-                        values = inputs[:-1]
-                        val = func(tuple(values), axis)
-                    elif op.type == "ListDiff":
-                        out_type = op.get_attr_int("out_idx")
-                        np_type = oneflow.python.onnx.utils.map_onnx_to_numpy_type(
-                            out_type)
-                        val = func(*inputs)
-                        val = val.astype(np_type)
-                    elif op.type in ["Pack"]:
-                        # handle ops that need input array and axis
-                        axis = op.get_attr_int("axis")
-                        val = func(inputs, axis=axis)
-                    elif op.type == "Range":
-                        dtype = op.get_attr_int("Tidx")
-                        np_type = oneflow.python.onnx.utils.map_onnx_to_numpy_type(
-                            dtype)
-                        val = func(*inputs, dtype=np_type)
-                    else:
-                        val = func(*inputs)
-
-                    new_node_name = utils.make_name(op.name)
-                    new_output_name = new_node_name
-                    old_output_name = op.output[0]
-                    old_node_name = op.name
-                    logger.debug(
-                        "create const node [%s] replacing [%s]", new_node_name, old_node_name)
-                    ops[idx] = g.make_const(new_node_name, val)
-                    ref_cnt_per_node[new_node_name] = ref_cnt_per_node[old_node_name]
-
-                    logger.debug(
-                        "replace old output [%s] with new output [%s]", old_output_name, new_output_name)
-                    # need to re-write the consumers input name to use the const name
-                    consumers = g.find_output_consumers(old_output_name)
-                    if consumers:
-                        for consumer in consumers:
-                            g.replace_input(
-                                consumer, old_output_name, new_output_name)
-                    for node in op.inputs:
-                        ref_cnt_per_node[node.name] -= 1
-                        if ref_cnt_per_node[node.name] == 0:
-                            g.remove_node(node.name)
-                    # keep looking until there is nothing we can fold.
-                    # We keep the graph in topological order so if we folded,
-                    # the result might help a following op.
-                    keep_looking = True
-            except Exception as ex:
-                tb = traceback.format_exc()  # pylint: disable=bare-except
-                logger.info("exception: %s, details: %s", ex, tb)
-                # ignore errors
-
-        # pylint: enable=too-many-nested-blocks
-    return ops
 
 
 def oneflow_onnx_mapping(g, ops_mapping):
@@ -286,25 +172,6 @@ def oneflow_onnx_mapping(g, ops_mapping):
             if flow_inputs:
                 for i, ipt in enumerate(flow_inputs):
                     node.input[i] = g.get_inputs(node, ipt)[0]
-        body_graphs = node.get_body_graphs()
-        if body_graphs:
-            for attr, b_g in body_graphs.items():
-                logger.debug(
-                    "start handling subgraph of %s's attribute %s", node.name, attr)
-                b_g.topological_sort(b_g.get_nodes())
-                # we assume only ONNX nodes have subgraph defined in pre-rewriters.
-                # that means, if we create node having subgraphs in this step, the
-                # created subgraphs' nodes won't be mapped.
-                m_ops, unm_ops, body_exceptions = oneflow_onnx_mapping(
-                    b_g, ops_mapping)
-                mapped_op += m_ops
-                unmapped_op += unm_ops
-                # topological_sort on the body in case processing has changed the order
-                b_g.topological_sort(b_g.get_nodes())
-                exceptions.extend(body_exceptions)
-                logger.debug(
-                    "finish handling subgraph of %s's attribute %s", node.name, attr)
-
         try:
             func(g, node, **kwargs)
             node.skip_conversion = True
@@ -388,8 +255,8 @@ def run_rewriters(g, funcs, continue_on_error):
 
 
 @oneflow_export("onnx.export")
-def export(job_obj, continue_on_error=False, verbose=False, target=None,
-           opset=None, custom_op_handlers=None, custom_rewriter=None,
+def export(job_obj, model_save_dir, continue_on_error=False, target=None,
+           opset=None, custom_rewriter=None,
            extra_opset=None, shape_override=None, inputs_as_nchw=None,
            input_names=None, output_names=None):
     assert os.getenv("ENABLE_USER_OP") == 'True'
@@ -398,52 +265,35 @@ def export(job_obj, continue_on_error=False, verbose=False, target=None,
     job_name = job_obj.__name__
     for job in job_set.job:
         if job.job_conf.job_name == job_name:
-            import tempfile
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                check_point = oneflow.train.CheckPoint()
-                check_point.save(tmpdirname)
-                # TODO: a more elegant way?
-                while not os.path.exists(os.path.join(tmpdirname, 'snapshot_done')):
-                    pass
-                onnx_graph = process_flow_graph(
-                    job, tmpdirname, continue_on_error=continue_on_error,
-                    verbose=verbose, target=target,
-                    opset=opset, custom_op_handlers=custom_op_handlers,
-                    custom_rewriter=custom_rewriter, extra_opset=extra_opset,
-                    shape_override=shape_override, inputs_as_nchw=inputs_as_nchw,
-                    input_names=input_names, output_names=output_names)
-                onnx_graph = optimizer.optimize_graph(onnx_graph)
-                model_proto = onnx_graph.make_model("test")
+            onnx_graph = process_flow_graph(
+                job, model_save_dir, continue_on_error=continue_on_error,
+                opset=opset, custom_rewriter=custom_rewriter, extra_opset=extra_opset,
+                shape_override=shape_override, inputs_as_nchw=inputs_as_nchw,
+                input_names=input_names, output_names=output_names)
+            onnx_graph = optimizer.optimize_graph(onnx_graph)
+            model_proto = onnx_graph.make_model(job_name)
             return model_proto
     return None
 
 
-def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False, verbose=False, target=None,
-                       opset=None, custom_op_handlers=None, custom_rewriter=None,
+def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
+                       opset=None, custom_rewriter=None,
                        extra_opset=None, shape_override=None, inputs_as_nchw=None,
                        input_names=None, output_names=None):
     """Convert oneflow graph to onnx graph.
         Args:
             flow_graph: oneflow graph
             continue_on_error: if an op can't be processed (aka there is no mapping), continue
-            verbose: print summary stats (deprecated)
-            target: list of workarounds applied to help certain platforms
-            opset: the opset to be used (int, default is latest)
-            custom_op_handlers: dictionary of custom ops handlers
+            opset: the opset to be used (int, default is 8)
             custom_rewriter: list of custom graph rewriters
             extra_opset: list of extra opset's, for example the opset's used by custom ops
             shape_override: dict with inputs that override the shapes given by oneflow
             inputs_as_nchw: transpose inputs in list from nchw to nchw
-            input_names: list of input node names in graph, input name format as node_name:port_id
-            output_names: list of output node names in graph, output name format as node_name:port_id
+            input_names: list of input node names in graph
+            output_names: list of output node names in graph
         Return:
             onnx graph
     """
-    # TODO: remove verbose argument in future release
-    if verbose:
-        logger.warning(
-            "Argument verbose for process_flow_graph is deprecated. Please use --verbose option instead.")
-    del verbose
 
     opset = utils.find_opset(opset)
     logger.info("Using opset <onnx, %s>", opset)
@@ -456,8 +306,7 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False, verb
         shape_override = {}
     if inputs_as_nchw is None:
         inputs_as_nchw = []
-    if target is None:
-        target = constants.DEFAULT_TARGET
+    target = constants.DEFAULT_TARGET
 
     onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx(
         flow_graph, shape_override)
@@ -468,43 +317,12 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False, verb
     # create ops mapping for the desired opsets
     ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
 
-    # apply custom ops on top of the assembled opset. We can either complement the opset
-    # or override existing ops with a custom op.
-    if custom_op_handlers is not None:
-        # below is a bit tricky since there are a few api's:
-        # 1. the future way we want custom ops to be registered with the @flow_op decorator. THose handlers will be
-        #     registered via the decorator on load of the module ... nothing is required here.
-        # 2. the old custom op api: a dictionary of {name: (func, args[])
-        #     We deal with this by using a compat_handler that wraps to old handler with a new style handler.
-        #     This is tempoary to give people give to move to the new api and after oneflow.python.onnx-1.5 we want to remove this
-        custom_opset = {}
-        for k, v in custom_op_handlers.items():
-            # FIXME: remove this after oneflow.python.onnx-1.5
-            def compat_handler(ctx, node, **kwargs):
-                # wrap old handler
-                name = node.name
-                args = kwargs["args"]
-                func = kwargs["func"]
-                return func(ctx, node, name, args)
-
-            args = v[1]
-            kwargs = {"func": v[0]}
-            onnx_op = None
-            if args:
-                onnx_op = args[0]
-                args = args[1:]
-            kwargs["args"] = args
-            new_handler = handler.flow_op(k,
-                                          domain=constants.oneflow_OPSET.domain,
-                                          kwargs=kwargs)
-            new_handler.register_compat_handler(compat_handler, 1)
-            custom_opset[k] = (compat_handler, onnx_op, kwargs)
-        ops_mapping.update(custom_opset)
-
     if inputs_as_nchw:
         transpose_inputs(g, inputs_as_nchw)
 
     # pre-processing graph rewrites
+    # in general rewriter is for the case that multiple oneflow nodes map to a single onnx node
+    # currently we have not meet this case so there is no active rewriter, but users can still add their own custom rewriter
     rewriters = []
 
     if custom_rewriter is not None:
