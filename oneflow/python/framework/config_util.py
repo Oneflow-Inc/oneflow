@@ -76,6 +76,16 @@ def max_mdsave_worker_num(val):
     assert type(val) is int
     sess.config_proto.resource.max_mdsave_worker_num = val
 
+@oneflow_export('config.enable_numa_aware_cuda_malloc_host')
+def api_numa_aware_cuda_malloc_host(val = True):
+    return enable_if.unique(enable_numa_aware_cuda_malloc_host, do_nothing)(val)
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_numa_aware_cuda_malloc_host(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_numa_aware_cuda_malloc_host = val
+
 @oneflow_export('config.compute_thread_pool_size')
 def api_compute_thread_pool_size(val):
     return enable_if.unique(compute_thread_pool_size, do_nothing)(val)

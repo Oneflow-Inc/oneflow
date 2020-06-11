@@ -152,9 +152,9 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
-        << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
-        << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
-        << lbi.blob_name() << "\" not infer blob desc";
+        << JobBuildAndInferError::kLogicalBlobNameNotExist
+        << "infer blob desc not found, when infer op_name: \"" << op->op_name()
+        << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \"" << lbi.blob_name();
     const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
@@ -345,7 +345,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operato
     }
     CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
-        << "is not equals to op' parallel_num";
+        << " is not equals to op' parallel_num";
   }
   return Maybe<void>::Ok();
 }
