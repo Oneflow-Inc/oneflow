@@ -32,12 +32,6 @@ int CvFlipCode(FlipCode flip_code) {
   }
 }
 
-void CopyTensorBuffer(const TensorBuffer& src, TensorBuffer* dst) {
-  if (dst == &src) { return; }
-  dst->Resize(src.shape(), src.data_type());
-  memcpy(dst->mut_data(), src.data(), dst->nbytes());
-}
-
 void FlipImage(TensorBuffer* image_buffer, FlipCode flip_code) {
   cv::Mat image_mat = GenCvMat4ImageBuffer(*image_buffer);
   cv::flip(image_mat, image_mat, CvFlipCode(flip_code));
@@ -223,7 +217,7 @@ class ImageFlipKernel final : public user_op::OpKernel {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(in_buffer, out_buffer);
+      in_buffer.CopyTo(out_buffer);
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
@@ -254,7 +248,7 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
       CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(bbox_buffer, out_bbox_buffer);
+      bbox_buffer.CopyTo(out_bbox_buffer);
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -286,7 +280,7 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
       CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(bbox_buffer, out_bbox_buffer);
+      bbox_buffer.CopyTo(out_bbox_buffer);
       float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
       SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_h, scale_w);
@@ -318,7 +312,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
       CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
       CHECK_EQ(polygons_buffer.shape().At(1), 2);
       TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(polygons_buffer, out_polygons_buffer);
+      polygons_buffer.CopyTo(out_polygons_buffer);
       int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -350,7 +344,7 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
       CHECK_EQ(poly_buffer.shape().NumAxes(), 2);
       CHECK_EQ(poly_buffer.shape().At(1), 2);
       TensorBuffer* out_poly_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(poly_buffer, out_poly_buffer);
+      poly_buffer.CopyTo(out_poly_buffer);
       float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
       SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_h,
@@ -378,7 +372,7 @@ class ImageNormalize final : public user_op::OpKernel {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      CopyTensorBuffer(in_buffer, out_buffer);
+      in_buffer.CopyTo(out_buffer);
       SwitchImageNormalizeByChannel(SwitchCase(out_buffer->data_type()), out_buffer, std_vec,
                                     mean_vec);
     });

@@ -93,6 +93,12 @@ class TensorBuffer {
     }
   }
 
+  void CopyTo(TensorBuffer* dst) const {
+    if (dst == this) { return; }
+    dst->Resize(shape(), data_type());
+    memcpy(dst->mut_data(), data(), nbytes());
+  }
+
  private:
   // TODO(chengcheng)
   static double growth_factor_;
