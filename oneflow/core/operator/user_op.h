@@ -21,6 +21,8 @@ class UserOp final : public Operator {
                                 const ParallelContext*, const SbpSignature* sbp_signature,
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
 
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
+
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;

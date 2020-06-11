@@ -198,19 +198,11 @@ class InstructionsBuilder(object):
         self.instruction_list_.instruction.append(instruction)
 
     def _GetOpConfSymbol(self, op_conf):
-        new_op_conf = op_conf_util.OperatorConf()
-        new_op_conf.CopyFrom(op_conf)
-        # drop unique name to achieve a higher cache hit rate
-        new_op_conf.name = new_op_conf.user_conf.op_type_name
-        for ibn, lbns in new_op_conf.user_conf.input.items():
-            for i in range(len(lbns.s)): lbns.s[i] = "%s/%s_%d"%(new_op_conf.name, ibn, i)
-        for obn, lbns in new_op_conf.user_conf.output.items():
-            for i in range(len(lbns.s)): lbns.s[i] = "%s/%s_%d"%(new_op_conf.name, obn, i)
-        serialized_op_conf = new_op_conf.SerializeToString()
+        serialized_op_conf = op_conf.SerializeToString()
         if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
             return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
-        symbol_id = self._NewSymbolId4OpConf(new_op_conf)
-        symbol = symbol_util.Symbol(symbol_id, new_op_conf)
+        symbol_id = self._NewSymbolId4OpConf(op_conf)
+        symbol = symbol_util.Symbol(symbol_id, op_conf)
         symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 

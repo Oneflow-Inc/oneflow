@@ -185,7 +185,7 @@ Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
-  return PbMessage2TxtString(op->op_attribute());
+  return PbMessage2TxtString(*op->GetOpAttributeWithoutOpNameAndLbn());
 }
 
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,

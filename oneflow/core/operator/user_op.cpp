@@ -435,6 +435,23 @@ Maybe<void> UserOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("undefined-op-name");
+  UserOpConf* user_op_conf = op_conf.mutable_user_conf();
+  for (auto& pair : *user_op_conf->mutable_input()) {
+    for (auto& str : *pair.second.mutable_s()) { str = "undefined-op-name/undefined-ibn"; }
+  }
+  for (auto& pair : *user_op_conf->mutable_output()) {
+    std::string prefix = "undefined-op-name/";
+    prefix += pair.first;
+    prefix += "_";
+    int i = 0;
+    for (auto& str : *pair.second.mutable_s()) { str = prefix + std::to_string(i++); }
+  }
+  return SymbolOf(op_conf);
+}
+
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,

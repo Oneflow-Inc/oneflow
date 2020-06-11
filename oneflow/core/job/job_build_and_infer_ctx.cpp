@@ -531,7 +531,7 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
 
-  return op->op_attribute();
+  return op->GetOpAttributeWithoutOpNameAndLbn();
 }
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
