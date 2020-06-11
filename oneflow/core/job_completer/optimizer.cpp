@@ -13,12 +13,12 @@ void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
 
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
-  const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   if (job_builder->job().job_conf().train_conf().has_optimizer()) {
     OptimizerRegistry::LookupAndBuild(job_builder->job().job_conf().train_conf().optimizer(),
                                       var_op, parallel_conf, diff_lbi_of_var_out,
                                       job_builder->job().job_conf().train_conf());
   } else {
+    const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
     auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
     auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
     obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
