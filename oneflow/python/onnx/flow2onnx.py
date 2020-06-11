@@ -257,10 +257,8 @@ def run_rewriters(g, funcs, continue_on_error):
 @oneflow_export("onnx.export")
 def export(job_obj, model_save_dir, continue_on_error=False, target=None,
            opset=None, custom_rewriter=None,
-           extra_opset=None, shape_override=None, inputs_as_nchw=None,
-           input_names=None, output_names=None):
+           extra_opset=None, shape_override=None, inputs_as_nchw=None):
     assert os.getenv("ENABLE_USER_OP") == 'True'
-    session_ctx.GetDefaultSession().TryInit()
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
     for job in job_set.job:
@@ -268,8 +266,7 @@ def export(job_obj, model_save_dir, continue_on_error=False, target=None,
             onnx_graph = process_flow_graph(
                 job, model_save_dir, continue_on_error=continue_on_error,
                 opset=opset, custom_rewriter=custom_rewriter, extra_opset=extra_opset,
-                shape_override=shape_override, inputs_as_nchw=inputs_as_nchw,
-                input_names=input_names, output_names=output_names)
+                shape_override=shape_override, inputs_as_nchw=inputs_as_nchw)
             onnx_graph = optimizer.optimize_graph(onnx_graph)
             model_proto = onnx_graph.make_model(job_name)
             return model_proto
@@ -278,8 +275,7 @@ def export(job_obj, model_save_dir, continue_on_error=False, target=None,
 
 def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
                        opset=None, custom_rewriter=None,
-                       extra_opset=None, shape_override=None, inputs_as_nchw=None,
-                       input_names=None, output_names=None):
+                       extra_opset=None, shape_override=None, inputs_as_nchw=None):
     """Convert oneflow graph to onnx graph.
         Args:
             flow_graph: oneflow graph
@@ -289,8 +285,6 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
             extra_opset: list of extra opset's, for example the opset's used by custom ops
             shape_override: dict with inputs that override the shapes given by oneflow
             inputs_as_nchw: transpose inputs in list from nchw to nchw
-            input_names: list of input node names in graph
-            output_names: list of output node names in graph
         Return:
             onnx graph
     """
@@ -312,7 +306,7 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
         flow_graph, shape_override)
 
     g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes,
-              target, opset, extra_opset, output_names, input_maps=input_maps)
+              target, opset, extra_opset, input_maps=input_maps)
 
     # create ops mapping for the desired opsets
     ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
@@ -331,7 +325,6 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
     run_rewriters(g, rewriters, continue_on_error)
 
     # some nodes may already copied into inner Graph, so remove them from main Graph.
-    g.delete_unused_nodes(output_names)
     topological_sort(g, continue_on_error)
 
     mapped_op, unmapped_op, exceptions = oneflow_onnx_mapping(g, ops_mapping)

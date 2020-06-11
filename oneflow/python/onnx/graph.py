@@ -408,7 +408,7 @@ class Graph(object):
     """"Class that provides graph manipulation and matching."""
 
     def __init__(self, nodes, model_save_dir, output_shapes=None, dtypes=None, target=None, opset=None, extra_opset=None,
-                 output_names=None, input_maps=None):
+                 input_maps=None):
         """Create Graph.
         Args:
             nodes: list of Node()
@@ -436,7 +436,7 @@ class Graph(object):
         self._extra_opset = extra_opset
 
         self._order_sensitive_inputs = []
-        self.outputs = output_names if output_names is not None else []
+        self.outputs = []
         self._input_maps = input_maps if input_maps is not None else {}
 
         self.parent_graph = None
