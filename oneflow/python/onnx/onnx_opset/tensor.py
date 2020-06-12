@@ -153,7 +153,7 @@ class Concat:
         # old concat op has axis as input[0]
         axis_val = node.get_attr_value('axis')
 
-        if axis_val < 0:  # onnxruntime does not support -1 axis, but TF supports.
+        if axis_val < 0:
             input_shape = ctx.get_shape(node.input[0])
             axis_val = len(input_shape) + axis_val
         node.set_attr("axis", axis_val)

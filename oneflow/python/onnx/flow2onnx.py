@@ -133,7 +133,12 @@ def flowlist_to_onnx(node_list, shape_override):
     return onnx_nodes, op_cnt, attr_cnt, input_maps
 
 
-def oneflow_to_onnx(graph, shape_override):
+def oneflow_to_onnx_naive(graph, shape_override):
+    """
+    Convert node from oneflow format to onnx format.
+    The input/output/attr of each node are kept here and will be converted in other
+    following functions.
+    """
     dtypes = {}
     for lbn in graph.helper.lbn2logical_blob_desc:
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
@@ -223,42 +228,9 @@ def topological_sort(g, continue_on_error):
             pass
 
 
-def run_rewriters(g, funcs, continue_on_error):
-    """Rewrite the original graph and body graphs of nodes"""
-    # NOTE(wayuanho):
-    # 1. we don't sort graph here, rewriter is expected to do it on its own.
-    # 2. the graph here may have circles, current topological_sort cannot handle it.
-    for func in funcs:
-        try:
-            ops = func(g, g.get_nodes())
-            g.reset_nodes(ops)
-        except Exception as ex:
-            type_, value_, traceback_ = sys.exc_info()
-            logger.error("rewriter %s: exception %s", func, ex)
-            ex_ext = traceback.format_exception(type_, value_, traceback_)
-            if continue_on_error:
-                logger.info(ex_ext)
-            else:
-                raise ex
-
-        if util.is_debug_mode():
-            broken_outputs = g.check_integrity()
-            if broken_outputs:
-                logging.error(
-                    "After rewriter %s, graph breaks at outputs %s",
-                    func.__name__, broken_outputs
-                )
-
-    if g.contained_graphs:
-        for dict_val in g.contained_graphs.values():
-            for attr_name, b_g in dict_val.items():
-                run_rewriters(b_g, funcs, attr_name)
-
-
 @oneflow_export("onnx.export")
 def export(job_obj, model_save_dir, continue_on_error=False, target=None,
-           opset=None, custom_rewriter=None,
-           extra_opset=None, shape_override=None, inputs_as_nchw=None):
+           opset=None, extra_opset=None, shape_override=None, inputs_as_nchw=None):
     assert os.getenv("ENABLE_USER_OP") == 'True'
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
@@ -266,7 +238,7 @@ def export(job_obj, model_save_dir, continue_on_error=False, target=None,
         if job.job_conf.job_name == job_name:
             onnx_graph = process_flow_graph(
                 job, model_save_dir, continue_on_error=continue_on_error,
-                opset=opset, custom_rewriter=custom_rewriter, extra_opset=extra_opset,
+                opset=opset, extra_opset=extra_opset,
                 shape_override=shape_override, inputs_as_nchw=inputs_as_nchw)
             onnx_graph = optimizer.optimize_graph(onnx_graph)
             model_proto = onnx_graph.make_model(job_name)
@@ -275,19 +247,17 @@ def export(job_obj, model_save_dir, continue_on_error=False, target=None,
 
 
 def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
-                       opset=None, custom_rewriter=None,
-                       extra_opset=None, shape_override=None, inputs_as_nchw=None):
+                       opset=None, extra_opset=None, shape_override=None, inputs_as_nchw=None):
     """Convert oneflow graph to onnx graph.
         Args:
             flow_graph: oneflow graph
             continue_on_error: if an op can't be processed (aka there is no mapping), continue
             opset: the opset to be used (int, default is 8)
-            custom_rewriter: list of custom graph rewriters
             extra_opset: list of extra opset's, for example the opset's used by custom ops
             shape_override: dict with inputs that override the shapes given by oneflow
             inputs_as_nchw: transpose inputs in list from nchw to nchw
         Return:
-            onnx graph
+            the onnx model_proto object
     """
 
     opset = util.find_opset(opset)
@@ -303,7 +273,7 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
         inputs_as_nchw = []
     target = constants.DEFAULT_TARGET
 
-    onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx(
+    onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx_naive(
         flow_graph, shape_override)
 
     g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes,
@@ -314,16 +284,6 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
 
     if inputs_as_nchw:
         transpose_inputs(g, inputs_as_nchw)
-
-    # pre-processing graph rewrites
-    # in general rewriter is for the case that multiple oneflow nodes map to a single onnx node
-    # currently we have not meet this case so there is no active rewriter, but users can still add their own custom rewriter
-    rewriters = []
-
-    if custom_rewriter is not None:
-        rewriters.extend(custom_rewriter)
-
-    run_rewriters(g, rewriters, continue_on_error)
 
     # some nodes may already copied into inner Graph, so remove them from main Graph.
     topological_sort(g, continue_on_error)

@@ -7,8 +7,6 @@ common constants
 
 from onnx import helper
 
-TF2ONNX_PACKAGE_NAME = __name__.split('.')[0]
-
 # Built-in supported domains
 ONNX_DOMAIN = ""
 AI_ONNX_ML_DOMAIN = "ai.onnx.ml"

@@ -662,7 +662,7 @@ class Graph(object):
 
     def update_node_shape_dtype(self, node, override=False):
         """Try the best to infer shapes and dtypes for outputs of the node,
-        by default, we respect TF shapes and dtypes.
+        by default, we respect oneflow shapes and dtypes.
         """
         if node.is_const() or node.is_graph_input():
             return

@@ -125,9 +125,9 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
                 "Transpose", output_name, name=op_name)
             transpose.set_attr("perm", constants.NCHW_TO_NHWC)
             transpose.skip_conversion = True
-            # set TF NHWC shape to transpose node output
+            # set NHWC shape to transpose node output
             ctx.set_shape(transpose.output[0], output_shape)
-            # Transpose TF NHWC shape back to NCHW shape for current ONNX conv node output
+            # Transpose NHWC shape back to NCHW shape for current ONNX conv node output
             ctx.set_shape(output_name, spatial_map(
                 output_shape, constants.NHWC_TO_NCHW))
         node.data_format = "NCHW"
@@ -254,20 +254,19 @@ class PoolOp:
         # T Y = MaxPool(T X, @AttrType.STRING auto_pad, @AttrType.INTS kernel_shape, @AttrType.INTS pads,
         #               @AttrType.INTS strides)
         # above seems wrong - input[1] is ksize, input[2] is strides
-        # stride and ksize in tf is not always NHWC, so watch out when converting into onnx's NCHW
         if len(node.input) < 3:
-            kernel_shape_tf = node.get_attr("pool_size").ints
-            strides_tf = node.get_attr("strides").ints
+            kernel_shape_flow = node.get_attr("pool_size").ints
+            strides_flow = node.get_attr("strides").ints
         else:
-            kernel_shape_tf = node.inputs[1].get_tensor_value()
-            strides_tf = node.inputs[2].get_tensor_value()
+            kernel_shape_flow = node.inputs[1].get_tensor_value()
+            strides_flow = node.inputs[2].get_tensor_value()
             ctx.remove_input(node, node.input[2])
             ctx.remove_input(node, node.input[1])
 
-        node.set_attr("kernel_shape", kernel_shape_tf)
-        node.set_attr("strides", strides_tf)
+        node.set_attr("kernel_shape", kernel_shape_flow)
+        node.set_attr("strides", strides_flow)
         conv_dims_attr(node, "dilations")
-        add_padding(ctx, node, kernel_shape_tf, strides_tf)
+        add_padding(ctx, node, kernel_shape_flow, strides_flow)
         conv_convert_inputs(ctx, node, with_kernel=False)
 
 
@@ -305,8 +304,8 @@ class BatchNorm:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
         node.type = "BatchNormalization"
-        # tf inputs: x, scale, bias, mean, variance
-        # tf outputs: y, batch_mean, batch_var
+        # flow inputs: x, gamma, beta, moving_mean, moving_variance
+        # flow outputs: y, mean, inv_variance
         # a: data_format, epsilon, is_training
         # onnx inputs: X, scale, B, mean, variance, attributes: epsilon, momentum=0.9, spatial : 1
         # output: y, mean, var, savedmean, savedvar,

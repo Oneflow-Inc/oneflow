@@ -209,8 +209,6 @@ class ClipOps:
 
 @flow_op(["clip_by_scalar", "clip_by_scalar_min", "clip_by_scalar_max"], onnx_op='Clip')
 class ClipByValueOp(ClipOps):
-    # in tf-1.8 there was a ClipByValue op which in later versions was replaced by max(min(x, a), b)
-    # To support models generated with tf-1.8 rewrite the tf ClipByValue op to max(min(x, a), b)
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         min_val = node.get_attr_value(

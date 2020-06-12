@@ -278,7 +278,7 @@ def flow_name_scope(name):
 
 
 def get_temp_directory():
-    return os.environ.get("TF2ONNX_TEMP_DIRECTORY", tempfile.mkdtemp())
+    return os.environ.get("FLOW2ONNX_TEMP_DIRECTORY", tempfile.mkdtemp())
 
 
 def delete_directory(path):

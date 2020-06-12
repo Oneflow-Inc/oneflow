@@ -17,7 +17,7 @@ from oneflow.python.onnx import constants
 
 
 class flow_op:
-    """Class to implement the decorator to register handlers that map tf to onnx."""
+    """Class to implement the decorator to register handlers that map oneflow to onnx."""
 
     _OPSETS = collections.OrderedDict()
     _MAPPING = None

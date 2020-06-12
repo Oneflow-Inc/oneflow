@@ -63,10 +63,9 @@ class ArgMax:
         dim_count = len(input_shape) if input_shape else 0
         axis = dim_count - 1
 
-        # TF ArgMin/ArgMax may return int32 or int64
         # Onnx ArgMin/ArgMax only supports int64 output, add cast if needed
         if ctx.get_dtype(node.output[0]) == onnx_pb.TensorProto.INT32:
-            # current node will return int64 after conversion, which differs from previous dtype got from tf
+            # current node will return int64 after conversion, which differs from previous dtype got from oneflow
             ctx.set_dtype(node.output[0], onnx_pb.TensorProto.INT64)
             op_name = util.make_name("Cast")
             cast_node = ctx.insert_new_node_on_output("Cast", node.output[0], name=op_name,
