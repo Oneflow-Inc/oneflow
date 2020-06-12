@@ -25,7 +25,7 @@ class DirectOp:
         pass
 
 
-@flow_op(["distribute_split"], 'Identity')
+@flow_op(["distribute_split", "distribute_concat", "distribute_clone", "distribute_add"], 'Identity')
 class BoxingOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
