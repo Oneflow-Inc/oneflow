@@ -61,9 +61,6 @@ def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    print(of_out.ndarray())
-    print('---------------------')
-    print(tf_out.numpy())
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
@@ -74,9 +71,7 @@ def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
 def test_sparse_softmax_cross_entropy_with_logits(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    # arg_dict["device_type"] = ["cpu"]
-    # arg_dict["data_type"] = ["double", "float32"]
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["data_type"] = ["double", "float32"]
     arg_dict["num_classes"] = [1000]
     arg_dict["batch_size"] = [64]
     for arg in GenArgList(arg_dict):
