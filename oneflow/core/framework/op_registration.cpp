@@ -93,8 +93,8 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::AllOutputsConstant() {
-  wrapper_.reg_val.op_def.set_all_outputs_constant(true);
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetOutputBufferNum(int32_t num) {
+  wrapper_.reg_val.same_output_regst_num = num;
   return *this;
 }
 

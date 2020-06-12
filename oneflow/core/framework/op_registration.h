@@ -40,7 +40,8 @@ struct OpRegistrationVal {
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
-  bool cpu_only_supported;
+  bool cpu_only_supported = false;
+  int32_t same_output_regst_num = -1;
 };
 
 struct OpRegistryWrapper final {
@@ -68,7 +69,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistryWrapperBuilder& SupportCpuOnly();
-  OpRegistryWrapperBuilder& AllOutputsConstant();
+  OpRegistryWrapperBuilder& SetOutputBufferNum(int32_t num);
 
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>

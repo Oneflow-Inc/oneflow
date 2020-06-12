@@ -6,8 +6,9 @@ namespace oneflow {
 namespace {
 
 bool IsConstantOpConf(const OperatorConf& op_conf) {
-  return op_conf.has_constant_conf()
-         || (op_conf.has_user_conf() && op_conf.user_conf().all_outputs_constant());
+  if (op_conf.has_constant_conf()) return true;
+  if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "constant") { return true; }
+  return false;
 }
 
 bool IsSourceNode(const Operator& op) {
