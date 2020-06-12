@@ -15,7 +15,7 @@ from .merge_duplicated_nodes_optimizer import MergeDuplicatedNodesOptimizer
 from .transpose_optimizer import TransposeOptimizer
 from .loop_optimizer import LoopOptimizer
 from .back_to_back_optimizer import BackToBackOptimizer
-from .. import logging
+import logging
 
 # optimizer sequence need to be considered carefully
 _optimizers = OrderedDict([
@@ -47,7 +47,7 @@ def optimize_graph(graph):
         continue_flag = False
         for name, factory in opts.items():
             try:
-                logger.verbose("Apply %s", name)
+                logger.debug("Apply %s", name)
                 current = copy.deepcopy(graph)
                 opt = factory()
                 graph = opt.optimize(current) or graph

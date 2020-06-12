@@ -6,7 +6,8 @@ oneflow.python.onnx.graph_helper - class to help building graph, such as helping
 """
 
 import numpy as np
-from oneflow.python.onnx import util, logging
+import logging
+from oneflow.python.onnx import util
 
 
 # pylint: disable=missing-docstring

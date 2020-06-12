@@ -13,6 +13,7 @@ import collections
 import sys
 import traceback
 import itertools
+import logging
 
 import numpy as np
 from onnx import helper, onnx_pb
@@ -21,7 +22,7 @@ import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
-from . import constants, logging, schemas, util, handler, optimizer
+from . import constants, schemas, util, handler, optimizer
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
@@ -143,7 +144,7 @@ def oneflow_to_onnx(graph, shape_override):
 
 
 def oneflow_onnx_mapping(g, ops_mapping):
-    logger.verbose("Mapping Oneflow node to ONNX node(s)")
+    logger.debug("Mapping Oneflow node to ONNX node(s)")
     mapped_op = collections.Counter()
     unmapped_op = collections.Counter()
     exceptions = []
@@ -338,7 +339,7 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
 
     g.update_proto()
 
-    logger.verbose(
+    logger.debug(
         "Summay Stats:\n"
         "\toneflow ops: {}\n"
         "\toneflow attr: {}\n"
