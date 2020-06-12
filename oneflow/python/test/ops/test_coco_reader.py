@@ -36,7 +36,7 @@ def _make_coco_data_load_fn(
 
     @flow.function(func_config)
     def coco_load_fn():
-        with flow.fixed_placement("cpu", "0:0-{}".format(nthread - 1)):
+        with flow.device_prior_placement("cpu", "0:0-{}".format(nthread - 1)):
             (
                 image,
                 image_id,
@@ -62,7 +62,9 @@ def _make_coco_data_load_fn(
             )
             bbox_list = flow.tensor_buffer_to_tensor_list(gt_bbox, shape=(128, 4), dtype=flow.float)
             label_list = flow.tensor_buffer_to_tensor_list(gt_label, shape=(128,), dtype=flow.int32)
-            segm_list = flow.tensor_buffer_to_tensor_list(gt_segm, shape=(1024, 2), dtype=flow.float)
+            segm_list = flow.tensor_buffer_to_tensor_list(
+                gt_segm, shape=(1024, 2), dtype=flow.float
+            )
             segm_index_list = flow.tensor_buffer_to_tensor_list(
                 gt_segm_index, shape=(1024, 3), dtype=flow.int32
             )

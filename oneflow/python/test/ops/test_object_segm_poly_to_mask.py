@@ -145,8 +145,6 @@ def _of_poly_to_mask_pipline(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def poly_to_mask_job(

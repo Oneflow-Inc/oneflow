@@ -15,19 +15,19 @@ def DataLoaderJob():
     seed = 0
     rgb_mean = [123.68, 116.779, 103.939]
     rgb_std = [58.393, 57.12, 57.375]
-    with flow.fixed_placement("cpu", "0:0"):
-        ofrecord = flow.data.ofrecord_loader(data_dir, batch_size=batch_size)
-        image = flow.data.OFRecordImageDecoderRandomCrop(ofrecord, "encoded", seed=seed, color_space="RGB")
-        label = flow.data.OFRecordRawDecoder(ofrecord, "class/label", shape=(), dtype=flow.int32)
-        rsz = flow.image.Resize(image, resize_x=224, resize_y=224, color_space="RGB")
-        print(rsz.shape)
-        print(label.shape)
 
-        rng = flow.random.CoinFlip(batch_size=batch_size, seed=seed)
-        normal = flow.image.CropMirrorNormalize(rsz, mirror_blob=rng, color_space="RGB",
-                mean=rgb_mean, std=rgb_std, output_dtype = flow.float)
-        print(normal.shape)
-        return rsz, normal, label, rng
+    ofrecord = flow.data.ofrecord_loader(data_dir, batch_size=batch_size)
+    image = flow.data.OFRecordImageDecoderRandomCrop(ofrecord, "encoded", seed=seed, color_space="RGB")
+    label = flow.data.OFRecordRawDecoder(ofrecord, "class/label", shape=(), dtype=flow.int32)
+    rsz = flow.image.Resize(image, resize_x=224, resize_y=224, color_space="RGB")
+    print(rsz.shape)
+    print(label.shape)
+
+    rng = flow.random.CoinFlip(batch_size=batch_size, seed=seed)
+    normal = flow.image.CropMirrorNormalize(rsz, mirror_blob=rng, color_space="RGB",
+            mean=rgb_mean, std=rgb_std, output_dtype = flow.float)
+    print(normal.shape)
+    return rsz, normal, label, rng
 
 @flow.function(func_config)
 def DataLoaderEvalJob():
@@ -35,16 +35,16 @@ def DataLoaderEvalJob():
     seed = 0
     rgb_mean = [123.68, 116.779, 103.939]
     rgb_std = [58.393, 57.12, 57.375]
-    with flow.fixed_placement("cpu", "0:0"):
-        ofrecord = flow.data.ofrecord_loader(data_dir, batch_size=batch_size, part_name_suffix_length=5, data_part_num=1, shuffle=False)
-        image = flow.data.OFRecordImageDecoder(ofrecord, "encoded", color_space="RGB")
-        label = flow.data.OFRecordRawDecoder(ofrecord, "class/label", shape=(), dtype=flow.int32)
-        rsz = flow.image.Resize(image, resize_shorter=256, color_space="RGB")
 
-        normal = flow.image.CropMirrorNormalize(rsz, color_space="RGB",
-                crop_h = 224, crop_w = 224, crop_pos_y = 0.5, crop_pos_x = 0.5,
-                mean=rgb_mean, std=rgb_std, output_dtype = flow.float)
-        return normal, label
+    ofrecord = flow.data.ofrecord_loader(data_dir, batch_size=batch_size, part_name_suffix_length=5, data_part_num=1, shuffle=False)
+    image = flow.data.OFRecordImageDecoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.OFRecordRawDecoder(ofrecord, "class/label", shape=(), dtype=flow.int32)
+    rsz = flow.image.Resize(image, resize_shorter=256, color_space="RGB")
+
+    normal = flow.image.CropMirrorNormalize(rsz, color_space="RGB",
+            crop_h = 224, crop_w = 224, crop_pos_y = 0.5, crop_pos_x = 0.5,
+            mean=rgb_mean, std=rgb_std, output_dtype = flow.float)
+    return normal, label
 
 
 rsz, normal, label, rng= DataLoaderJob().get()
@@ -60,4 +60,3 @@ print("normalized image output: ", normal)
 print("label: ", label)
 print("mirror:", rng)
 np.save('output/oneflow_train_data_1.npy', normal.ndarray())
-
