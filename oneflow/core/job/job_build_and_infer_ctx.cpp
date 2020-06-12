@@ -410,7 +410,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
   } else {
     OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to mirrored blob";
   }
-  CHECK_JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
+  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
   return mirrored_lbi;
 }
 

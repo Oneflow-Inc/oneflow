@@ -200,10 +200,9 @@ def _CreateVariableBlob(op_conf, parallel_conf):
     return remote_blob_util.RemoteBlob(lbi)
 
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
-    compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
+    op_attribute = compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
     bn_in_op2blob_object = {}
     def BuildInstruction(builder):
-        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         builder.StatelessCall(op_attribute, parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object)
