@@ -138,7 +138,7 @@ def make_min_or_max_op(ctx, op_type, inputs, outputs,
     ctx.make_node("Identity", actual_outputs, outputs=outputs,
                   shapes=output_shapes, dtypes=output_dtypes)
 
-    # tensorflow minimum/maximum does support broadcast, onnx < opset 8 does not.
+    # onnx < opset 8 does not support broadcasting
     # handle this by doing something like:
     # y = min(x1, add(x2, sub(x1, x1))), where x1, x2 are the inputs and x2 is a scalar
     # this will create a tensor of zeros of the shape of x1, adds x2 to it (which broadcasts) and use that for min.
