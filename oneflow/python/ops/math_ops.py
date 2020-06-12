@@ -55,9 +55,7 @@ def add_n(inputs, name=None):
     if os.getenv("ENABLE_USER_OP") != "True":
         op_conf = op_conf_util.OperatorConf()
         setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("AddN_"),
+            op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
         )
         assert len(inputs) > 1
         for blob in inputs:
@@ -139,10 +137,7 @@ def scalar_add(x, operand, name=None):
         name = id_util.UniqueStr("ScalarAdd_")
     if os.getenv("ENABLE_USER_OP") == "True":
         builder = (
-            flow.user_op_builder(name)
-            .Op("scalar_add")
-            .Input("in", [x])
-            .Output("out")
+            flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
         )
         if isinstance(operand, int):
             builder = (
@@ -177,9 +172,7 @@ def scalar_add(x, operand, name=None):
 def scalar_add_by_tensor(x, scalar, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
-            flow.user_op_builder(
-                name or id_util.UniqueStr("ScalarAddByTensor_")
-            )
+            flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
             .Op("scalar_add_by_tensor")
             .Input("x", [x])
             .Input("scalar", [scalar])
@@ -279,9 +272,7 @@ def broadcast_sub(x, y, name=None):
 def scalar_sub_by_tensor(x, scalar, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
-            flow.user_op_builder(
-                name or id_util.UniqueStr("ScalarSubByTensor_")
-            )
+            flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
             .Op("scalar_sub_by_tensor")
             .Input("x", [x])
             .Input("scalar", [scalar])
@@ -359,10 +350,7 @@ def scalar_mul(x, operand, name=None):
         name = id_util.UniqueStr("ScalarMul_")
     if os.getenv("ENABLE_USER_OP") == "True":
         builder = (
-            flow.user_op_builder(name)
-            .Op("scalar_mul")
-            .Input("in", [x])
-            .Output("out")
+            flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
         )
         if isinstance(operand, int):
             builder = (
@@ -398,9 +386,7 @@ def scalar_mul(x, operand, name=None):
 def scalar_mul_by_tensor(x, scalar, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
-            flow.user_op_builder(
-                name or id_util.UniqueStr("ScalarMulByTensor_")
-            )
+            flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
             .Op("scalar_mul_by_tensor")
             .Input("x", [x])
             .Input("scalar", [scalar])
@@ -447,9 +433,7 @@ def broadcast_div(x, y, name=None):
 def scalar_div_by_tensor(x, scalar, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
-            flow.user_op_builder(
-                name or id_util.UniqueStr("ScalarDivByTensor_")
-            )
+            flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
             .Op("scalar_div_by_tensor")
             .Input("x", [x])
             .Input("scalar", [scalar])
@@ -505,9 +489,7 @@ def tanh(x, name=None):
     if os.getenv("ENABLE_USER_OP") != "True":
         op_conf = op_conf_util.OperatorConf()
         setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("TanH_"),
+            op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_"),
         )
         setattr(op_conf.tanh_conf, "in", x.unique_name)
         setattr(op_conf.tanh_conf, "out", "out")
@@ -518,9 +500,7 @@ def tanh(x, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("TanH_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
         .Op("tanh")
         .Input("in", [x])
         .Output("out")
@@ -554,9 +534,7 @@ def gelu(x, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("Gelu_"),
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_"),
         )
         setattr(op_conf.gelu_conf, "in", x.unique_name)
         setattr(op_conf.gelu_conf, "out", "out")
@@ -579,9 +557,7 @@ def relu(x, name=None):
     if os.getenv("ENABLE_USER_OP") != "True":
         op_conf = op_conf_util.OperatorConf()
         setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("Relu_"),
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_"),
         )
         setattr(op_conf.relu_conf, "in", x.unique_name)
         setattr(op_conf.relu_conf, "out", "out")
@@ -592,9 +568,7 @@ def relu(x, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Relu_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
         .Op("relu")
         .Input("in", [x])
         .Output("out")
@@ -607,7 +581,7 @@ def relu(x, name=None):
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
     r"""Computes sigmoid of `x` element-wise.
-    
+
     Args:
         x: Input `Blob`.
     Returns:
@@ -646,9 +620,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
             flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("UnsortedSegmentSum_")
+                name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
             )
             .Op("unsorted_segment_sum")
             .Input("data", [data])
@@ -663,9 +635,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = (
-            name
-            if name is not None
-            else id_util.UniqueStr("UnsortedSegmentSum_")
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
         )
         op_conf.unsorted_segment_sum_conf.data = data.unique_name
         op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.unique_name
@@ -705,9 +675,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
         op_conf.unsorted_segment_sum_like_conf.data = data.unique_name
-        op_conf.unsorted_segment_sum_like_conf.segment_ids = (
-            segment_ids.unique_name
-        )
+        op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.unique_name
         op_conf.unsorted_segment_sum_like_conf.like = like.unique_name
         op_conf.unsorted_segment_sum_like_conf.axis = axis
         op_conf.unsorted_segment_sum_like_conf.out = "out"
@@ -719,9 +687,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export(
-    "math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum"
-)
+@oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
 def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
@@ -742,14 +708,10 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = (
-            name
-            if name is not None
-            else id_util.UniqueStr("UnsortedBatchSegmentSum_")
+            name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
         )
         op_conf.unsorted_batch_segment_sum_conf.data = data.unique_name
-        op_conf.unsorted_batch_segment_sum_conf.segment_ids = (
-            segment_ids.unique_name
-        )
+        op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.unique_name
         op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
         op_conf.unsorted_batch_segment_sum_conf.out = "out"
 
@@ -802,9 +764,7 @@ def cast(x, dtype, name=None):
 def naive_logical_and(lhs, rhs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("LogicalAnd_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_"),
     )
     setattr(op_conf.logical_and_conf, "lhs", lhs.unique_name)
     setattr(op_conf.logical_and_conf, "rhs", rhs.unique_name)
@@ -904,9 +864,7 @@ def greater(x, y, name=None):
     setattr(
         op_conf,
         "name",
-        name
-        if name is not None
-        else id_util.UniqueStr("BroadcastGreaterThan_"),
+        name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
     )
     op_conf.broadcast_greater_than_conf.a = x.unique_name
     op_conf.broadcast_greater_than_conf.b = y.unique_name
@@ -926,9 +884,7 @@ def greater_equal(x, y, name=None):
     setattr(
         op_conf,
         "name",
-        name
-        if name is not None
-        else id_util.UniqueStr("BroadcastGreaterEqual_"),
+        name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
     )
     op_conf.broadcast_greater_equal_conf.a = x.unique_name
     op_conf.broadcast_greater_equal_conf.b = y.unique_name
@@ -948,9 +904,7 @@ def logical_and(x, y, name=None):
     setattr(
         op_conf,
         "name",
-        name
-        if name is not None
-        else id_util.UniqueStr("BroadcastLogicalAnd_"),
+        name if name is not None else id_util.UniqueStr("BroadcastLogicalAnd_"),
     )
     op_conf.broadcast_logical_and_conf.a = x.unique_name
     op_conf.broadcast_logical_and_conf.b = y.unique_name
@@ -1029,9 +983,7 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("TopK_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
@@ -1046,9 +998,7 @@ def top_k(input, k=1, sorted=True, name=None):
 @oneflow_export("math.argmax")
 def argmax(input, name=None):
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("ArgMax_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
         .Input("in", [input])
         .Output("out")
@@ -1058,9 +1008,7 @@ def argmax(input, name=None):
     )
 
 
-@oneflow_export(
-    "math.broadcast_to_compatible_with", "broadcast_to_compatible_with"
-)
+@oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(x, compatible, name=None):
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -1112,9 +1060,7 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
             .Attr("integral_max", int(max_value), "AttrTypeInt64")
         )
     else:
-        raise ValueError(
-            "min_value and max_value cannot be None at the same time"
-        )
+        raise ValueError("min_value and max_value cannot be None at the same time")
 
     return (
         op_builder.Input("x", [values])
@@ -1153,6 +1099,4 @@ def squared_difference(x, y, name=None):
     if name is not None:
         name_subtract = name + "_subtract"
         name_square = name + "_square"
-    return flow.math.square(
-        flow.math.subtract(x, y, name_subtract), name_square
-    )
+    return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)

@@ -34,8 +34,7 @@ def OFRecordRawDecoder(
 
 
 @oneflow_export(
-    "data.OFRecordImageDecoderRandomCrop",
-    "data.ofrecord_image_decoder_random_crop",
+    "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop",
 )
 def OFRecordImageDecoderRandomCrop(
     input_blob,
@@ -129,9 +128,7 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op = (
-        flow.user_op_builder(name)
-        .Op("crop_mirror_normalize")
-        .Input("in", [input_blob])
+        flow.user_op_builder(name).Op("crop_mirror_normalize").Input("in", [input_blob])
     )
     if mirror_blob is not None:
         op = op.Input("mirror", [mirror_blob])

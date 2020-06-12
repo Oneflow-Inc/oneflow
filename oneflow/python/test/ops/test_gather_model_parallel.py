@@ -2,8 +2,8 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList
 
 
@@ -25,9 +25,7 @@ def _test_gather_model_parallel_fw(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def gather_model_parallel_fw_job(
@@ -39,9 +37,7 @@ def _test_gather_model_parallel_fw(
             indices = indices.with_distribute(flow.distribute.broadcast())
             return flow.gather(params=params, indices=indices, axis=axis)
 
-    params_arr, indices_arr, out_arr = _gen_test_data(
-        params_shape, indices_shape, axis
-    )
+    params_arr, indices_arr, out_arr = _gen_test_data(params_shape, indices_shape, axis)
     out = gather_model_parallel_fw_job(params_arr, indices_arr).get().ndarray()
     if axis == split_axis:
         test_case.assertTrue(np.allclose(out, out_arr))

@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList
 
 
@@ -41,22 +41,16 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
             return flow.argwhere(x_blob, dtype=out_data_type)
 
     if dynamic is True:
-        func_config.default_distribute_strategy(
-            flow.distribute.mirrored_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
         @flow.function(func_config)
-        def argwhere_fn(
-            x_def=flow.MirroredTensorDef(x.shape, dtype=data_type)
-        ):
+        def argwhere_fn(x_def=flow.MirroredTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
         return argwhere_fn([x]).get().ndarray_list()[0]
 
     else:
-        func_config.default_distribute_strategy(
-            flow.distribute.consistent_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
         @flow.function(func_config)
         def argwhere_fn(x_def=flow.FixedTensorDef(x.shape, dtype=data_type)):
@@ -66,13 +60,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
 
 
 def _compare_with_np(
-    test_case,
-    shape,
-    value_dtype,
-    index_dtype,
-    device_type,
-    dynamic,
-    verbose=False,
+    test_case, shape, value_dtype, index_dtype, device_type, dynamic, verbose=False,
 ):
     x = _random_input(shape, value_dtype)
     y = np.argwhere(x)

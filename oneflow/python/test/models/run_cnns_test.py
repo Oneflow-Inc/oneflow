@@ -11,15 +11,11 @@ class TestNodeMixin(Test1NodeMixin, Test2NodeMixin):
     pass
 
 
-class TestAlexNet(
-    TestNodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase
-):
+class TestAlexNet(TestNodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase):
     pass
 
 
-class TestResNet50(
-    TestNodeMixin, cnns_tests.TestResNet50Mixin, absltest.TestCase
-):
+class TestResNet50(TestNodeMixin, cnns_tests.TestResNet50Mixin, absltest.TestCase):
     pass
 
 

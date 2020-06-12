@@ -11,9 +11,7 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
-        return flow.math.not_equal(
-            x, flow.constant_scalar(value=0.0, dtype=x.dtype)
-        )
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
     return _get_remote_blob(x, name, "reduce_any", keepdims, axis)
 
 
@@ -43,9 +41,7 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
     if axis is None:
         axis = []
     elif isinstance(axis, list) and len(axis) == 0:
-        return flow.math.not_equal(
-            x, flow.constant_scalar(value=0.0, dtype=x.dtype)
-        )
+        return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
     return _get_remote_blob(x, name, "reduce_all", keepdims, axis)
 
 
@@ -65,9 +61,7 @@ def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_std")
 def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
-    return flow.math.sqrt(
-        flow.math.reduce_variance(input_tensor, axis, keepdims)
-    )
+    return flow.math.sqrt(flow.math.reduce_variance(input_tensor, axis, keepdims))
 
 
 @oneflow_export("math.reduce_variance")

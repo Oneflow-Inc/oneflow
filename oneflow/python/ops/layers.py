@@ -35,9 +35,7 @@ def dense(
     assert in_num_axes >= 2
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = (
-        flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
-    )
+    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
 
     assert (
         model_distribute is distribute_util.auto()
@@ -46,9 +44,7 @@ def dense(
     )
 
     if model_distribute is distribute_util.split(0):
-        assert (
-            in_num_axes == 2
-        )  # model distribute is hard for reshape split dim 1
+        assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -67,10 +63,7 @@ def dense(
     weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
-        a=inputs,
-        b=weight,
-        transpose_b=True,
-        name="{}_matmul".format(name_prefix),
+        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix),
     )
     if use_bias:
         bias = flow.get_variable(
@@ -88,17 +81,13 @@ def dense(
             distribute=model_distribute,
         )
         bias = bias.with_distribute(model_distribute)
-        out = flow.nn.bias_add(
-            out, bias, name="{}_bias_add".format(name_prefix)
-        )
+        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = (
         activation(out, name="{}_activation".format(name_prefix))
         if activation is not None
         else out
     )
-    out = (
-        flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
-    )
+    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
 
     return out
 
@@ -292,9 +281,7 @@ def layer_norm(
         setattr(op_conf.layer_norm_conf, "center", center)
         setattr(op_conf.layer_norm_conf, "scale", scale)
         setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
-        setattr(
-            op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis
-        )
+        setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
         setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
         compile_context.CurJobAddOp(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -313,9 +300,7 @@ def layer_norm_grad(
     setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "mean", mean.unique_name)
-    setattr(
-        op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name
-    )
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
     setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
@@ -331,22 +316,16 @@ def layer_norm_param_grad(
     dy, norm, gamma, begin_params_axis=-1, name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = (
-        name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
-    )
+    name = name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
     setattr(op_conf, "name", name)
     setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.unique_name)
     setattr(
-        op_conf.layer_norm_param_grad_conf,
-        "begin_params_axis",
-        begin_params_axis,
+        op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis,
     )
     setattr(
-        op_conf.layer_norm_param_grad_conf,
-        "normalized_diff",
-        "normalized_diff",
+        op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff",
     )
     setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
@@ -396,9 +375,7 @@ def batch_normalization(
         axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
     # Float32 required to avoid precision-loss when using fp16 input/output
-    params_dtype = (
-        flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
-    )
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
@@ -522,13 +499,9 @@ def batch_normalization(
         setattr(op_conf.normalization_conf, "epsilon", epsilon)
         setattr(op_conf.normalization_conf, "center", center)
         setattr(op_conf.normalization_conf, "scale", scale)
+        setattr(op_conf.normalization_conf, "moving_mean", moving_mean.unique_name)
         setattr(
-            op_conf.normalization_conf, "moving_mean", moving_mean.unique_name
-        )
-        setattr(
-            op_conf.normalization_conf,
-            "moving_variance",
-            moving_variance.unique_name,
+            op_conf.normalization_conf, "moving_variance", moving_variance.unique_name,
         )
         if center:
             setattr(op_conf.normalization_conf, "beta", beta.unique_name)

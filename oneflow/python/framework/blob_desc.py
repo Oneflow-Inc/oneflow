@@ -8,9 +8,7 @@ import oneflow.python.lib.core.traceinfo as traceinfo
 
 
 class BlobDesc(object):
-    def __init__(
-        self, lbi, distribute=distribute_util.auto(), disable_boxing=None
-    ):
+    def __init__(self, lbi, distribute=distribute_util.auto(), disable_boxing=None):
         self.lbi_ = lbi
         self.lbn_ = lbi.op_name + "/" + lbi.blob_name
         self.distribute_ = distribute

@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
 
@@ -28,9 +28,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
                 "x",
                 shape=x_shape,
                 dtype=dtype,
-                initializer=flow.random_uniform_initializer(
-                    minval=1, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=1, maxval=10),
                 trainable=True,
             )
             of_out = flow.nn.dropout(x, rate=rate, seed=seed)
@@ -57,9 +55,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     x = test_global_storage.Get("x")
     x_diff = test_global_storage.Get("x_diff")
     out_scale = of_out[np.where(of_out != 0)] / x[np.where(of_out != 0)]
-    diff_scale = (
-        x_diff[np.where(of_out != 0)] / out_diff[np.where(of_out != 0)]
-    )
+    diff_scale = x_diff[np.where(of_out != 0)] / out_diff[np.where(of_out != 0)]
     assert np.allclose(out_scale, 1.0 / (1.0 - rate), atol=1e-5)
     assert np.allclose(diff_scale, 1.0 / (1.0 - rate), atol=1e-5)
 

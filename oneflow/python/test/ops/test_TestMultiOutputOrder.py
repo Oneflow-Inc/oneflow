@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -18,9 +19,7 @@ def TestMultiOutputOrder(x, name):
 def GenerateTest(test_case, shape):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def TestMultiOutputOrderJob(x=flow.FixedTensorDef(shape)):

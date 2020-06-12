@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -10,9 +11,7 @@ def _check(test_case, x, y, value, dtype=None):
 def _run_test(test_case, x, value, dtype=None, device="gpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ConstantLikeJob(x=flow.FixedTensorDef(x.shape)):

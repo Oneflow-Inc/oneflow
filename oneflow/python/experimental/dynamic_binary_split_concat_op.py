@@ -37,9 +37,7 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
 
 
 @oneflow_export("experimental.dynamic_binary_concat")
-def dynamic_binary_concat(
-    input_blob_list, source_blob, source_sbp="S:0", name=None
-):
+def dynamic_binary_concat(input_blob_list, source_blob, source_sbp="S:0", name=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("DynamicBinaryConcat_")
@@ -54,13 +52,9 @@ def dynamic_binary_concat(
     # op_conf.dynamic_binary_concat_conf.in[:] = in_lbns
     op_conf.dynamic_binary_concat_conf.out = "out"
     op_conf.dynamic_binary_concat_conf.out_data_type = source_blob.dtype
-    op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(
-        list(source_blob.shape)
-    )
+    op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(list(source_blob.shape))
     if source_blob.batch_axis is not None:
-        op_conf.dynamic_binary_concat_conf.out_batch_axis.value = (
-            source_blob.batch_axis
-        )
+        op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis
     else:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.SetInParent()
     if "S" in source_sbp:

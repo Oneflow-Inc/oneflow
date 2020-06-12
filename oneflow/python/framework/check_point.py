@@ -4,6 +4,7 @@ import datetime
 import os
 
 import numpy as np
+
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
@@ -62,9 +63,7 @@ def _MakeModelInitJobFunc():
 
 def _MakeModelLoadJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(
-            np.frombuffer(path.encode("ascii"), dtype=np.int8)
-        )
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -79,9 +78,7 @@ def _MakeModelLoadJobFunc(path):
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(
-            np.frombuffer(path.encode("ascii"), dtype=np.int8)
-        )
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -116,16 +113,10 @@ class SimpleCheckPointManager(object):
         def is_snapshot(name):
             if not name.startswith(self._prefix):
                 return False
-            snapshot_done = os.path.join(
-                self._GetSnapshotPath(name), "snapshot_done"
-            )
-            return os.path.exists(snapshot_done) and os.path.isfile(
-                snapshot_done
-            )
+            snapshot_done = os.path.join(self._GetSnapshotPath(name), "snapshot_done")
+            return os.path.exists(snapshot_done) and os.path.isfile(snapshot_done)
 
-        return sorted(
-            [f for f in os.listdir(self._root_path) if is_snapshot(f)]
-        )
+        return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
 
     def latest_checkpoint(self):
         names = self.list_checkpoints()
@@ -146,9 +137,7 @@ class SimpleCheckPointManager(object):
         self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
 
     def _NextSnapshotName(self):
-        return self._prefix + datetime.datetime.now().strftime(
-            "%Y%m%d_%H%M%S_%f"
-        )
+        return self._prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
     def _GetSnapshotPath(self, name):
         return os.path.join(self._root_path, name)

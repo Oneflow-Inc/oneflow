@@ -2,23 +2,16 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
-from test_util import (
-    Args,
-    GenArgDict,
-    type_name_to_flow_type,
-    type_name_to_np_type,
-)
+from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
 
 
 def test_no_watch_scope_consistent(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
@@ -42,9 +35,7 @@ def TODO_test_no_watch_scope(test_case):
 def test_train_consistent(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0.001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -74,9 +65,7 @@ def TODO_test_train(test_case):
 
 def test_watch_scope(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0.001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -104,23 +93,21 @@ def CompareNnBnWithTensorFlow(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    x = np.random.uniform(
-        low=input_minval, high=input_maxval, size=input_shape
-    ).astype(np.float32)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(
+        np.float32
+    )
     param_shape = input_shape[axis]
     mean = np.random.uniform(
         low=input_minval, high=input_maxval, size=param_shape
     ).astype(np.float32)
-    variance = np.random.uniform(
-        low=0, high=input_maxval, size=param_shape
-    ).astype(np.float32)
+    variance = np.random.uniform(low=0, high=input_maxval, size=param_shape).astype(
+        np.float32
+    )
     offset = np.random.uniform(
         low=input_minval, high=input_maxval, size=param_shape
     ).astype(np.float32)
@@ -152,9 +139,7 @@ def CompareNnBnWithTensorFlow(
             )
             y = flow.cast(y, flow.float32)
             flow.losses.add_loss(y)
-            flow.watch_diff(
-                x_full_precision, test_global_storage.Setter("x_diff")
-            )
+            flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
             return y
 
     check_point = flow.train.CheckPoint()
@@ -174,9 +159,7 @@ def CompareNnBnWithTensorFlow(
             offset = tf.Variable(offset.reshape(tf_params_shape))
             scale = tf.Variable(scale.reshape(tf_params_shape))
             y = tf.cast(
-                tf.nn.batch_normalization(
-                    x, mean, variance, offset, scale, epsilon
-                ),
+                tf.nn.batch_normalization(x, mean, variance, offset, scale, epsilon),
                 tf.float32,
             )
         x_diff = tape.gradient(y, x)
@@ -184,9 +167,7 @@ def CompareNnBnWithTensorFlow(
 
     tf_y, tf_x_diff = TensorFlowNnBn(x, mean, variance, offset, scale)
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(
-        of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
-    )
+    assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
 def RunTensorFlowBn(x, tf_args, training, trainable):
@@ -194,9 +175,7 @@ def RunTensorFlowBn(x, tf_args, training, trainable):
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
-        tf_op = tf.keras.layers.BatchNormalization(
-            *tf_args, trainable=trainable
-        )
+        tf_op = tf.keras.layers.BatchNormalization(*tf_args, trainable=trainable)
         y = tf_op(x, training=training)
     if trainable:
         x_diff = tape.gradient(y, x)
@@ -210,9 +189,7 @@ def RunOneflowLayerBn(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     if data_type == "float16":
         func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
@@ -247,9 +224,7 @@ def RunOneflowLayerBn(
             if trainable:
                 flow.losses.add_loss(y)
 
-                flow.watch_diff(
-                    x_full_precision, test_global_storage.Setter("x_diff")
-                )
+                flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
 
             return y
 
@@ -282,9 +257,7 @@ def CompareFp16WithFp32(
     else:
         flow_args = op_args.flow_args
 
-    x = np.random.uniform(
-        low=input_minval, high=input_maxval, size=input_shape
-    )
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
     if trainable:
         y_fp16, x_diff_fp16 = RunOneflowLayerBn(
             device_type,
@@ -303,9 +276,7 @@ def CompareFp16WithFp32(
             trainable=trainable,
         )
         assert np.allclose(y_fp16, y_fp32, rtol=y_rtol, atol=y_atol)
-        assert np.allclose(
-            x_diff_fp16, x_diff_fp32, rtol=x_diff_rtol, atol=x_diff_atol
-        )
+        assert np.allclose(x_diff_fp16, x_diff_fp32, rtol=x_diff_rtol, atol=x_diff_atol)
     else:
         y_fp16 = RunOneflowLayerBn(
             device_type,
@@ -348,9 +319,7 @@ def CompareBnWithTensorFlow(
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
-    x = np.random.uniform(
-        low=input_minval, high=input_maxval, size=input_shape
-    )
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
     if trainable:
         of_y, of_x_diff = RunOneflowLayerBn(
             device_type,
@@ -364,9 +333,7 @@ def CompareBnWithTensorFlow(
             x, tf_args, training=training, trainable=trainable
         )
         assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-        assert np.allclose(
-            of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
-        )
+        assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
     else:
         of_y = RunOneflowLayerBn(
             device_type,
@@ -376,9 +343,7 @@ def CompareBnWithTensorFlow(
             training=training,
             trainable=trainable,
         )
-        tf_y = RunTensorFlowBn(
-            x, tf_args, training=training, trainable=trainable
-        )
+        tf_y = RunTensorFlowBn(x, tf_args, training=training, trainable=trainable)
         assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
 
 

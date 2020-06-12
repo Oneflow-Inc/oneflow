@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 func_config = flow.FunctionConfig()
@@ -28,12 +29,7 @@ def _run_test(test_case, x, dtype, device):
 
     y, idx, count, num_unique = UniqueWithCountsJob(x).get()
     _check_unique(
-        test_case,
-        x,
-        y.ndarray(),
-        idx.ndarray(),
-        count.ndarray(),
-        num_unique.ndarray(),
+        test_case, x, y.ndarray(), idx.ndarray(), count.ndarray(), num_unique.ndarray(),
     )
 
 

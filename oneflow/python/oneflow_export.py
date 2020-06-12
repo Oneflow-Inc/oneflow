@@ -30,15 +30,11 @@ class OneflowApi(object):
     def __init__(self, api_name=""):
         self.api_name_ = api_name
         self.conditional_functions_ = []
-        self.default_func_ = _MakeDefaultFunction(
-            api_name, self.conditional_functions_
-        )
+        self.default_func_ = _MakeDefaultFunction(api_name, self.conditional_functions_)
         self.sub_api_ = {}
 
     def __call__(self, *args, **kwargs):
-        matched_func = enable_if_util.GetMatchedFunction(
-            self.conditional_functions_
-        )
+        matched_func = enable_if_util.GetMatchedFunction(self.conditional_functions_)
         if matched_func is None:
             matched_func = self.default_func_
         return matched_func(*args, **kwargs)

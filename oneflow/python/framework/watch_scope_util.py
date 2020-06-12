@@ -19,9 +19,7 @@ class WatchScope(object):
         self.watched_blob_lbn = set()
         self.blob_watcher_ = blob_watcher
         if diff_blob_watcher is not None:
-            assert isinstance(diff_blob_watcher, dict) or callable(
-                diff_blob_watcher
-            )
+            assert isinstance(diff_blob_watcher, dict) or callable(diff_blob_watcher)
         self.diff_blob_watcher_ = diff_blob_watcher
 
     def WatchOnce(self, blob_def):
@@ -33,8 +31,7 @@ class WatchScope(object):
             )
         if self.diff_blob_watcher_ is not None:
             oneflow.watch_diff(
-                blob_def,
-                _MakeBlobWatchCallback(self.diff_blob_watcher_, blob_def),
+                blob_def, _MakeBlobWatchCallback(self.diff_blob_watcher_, blob_def),
             )
         self.watched_blob_lbn.add(blob_def.unique_name)
 
@@ -42,9 +39,7 @@ class WatchScope(object):
 @oneflow_export("watch_scope")
 @contextmanager
 def watch_scope(blob_watcher=None, diff_blob_watcher=None):
-    watch_scope_context.WatchScopeStackPush(
-        WatchScope(blob_watcher, diff_blob_watcher)
-    )
+    watch_scope_context.WatchScopeStackPush(WatchScope(blob_watcher, diff_blob_watcher))
     yield
     watch_scope_context.WatchScopeStackPop()
 

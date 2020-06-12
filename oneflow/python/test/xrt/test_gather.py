@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -15,9 +16,7 @@ class TestGather(unittest.TestCase):
         b = f2(x, indices).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def make_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
@@ -33,9 +32,7 @@ class TestGather(unittest.TestCase):
 
         return gather_job
 
-    def make_xla_job(
-        self, input_shape, indices_shape, axis, dtype=flow.float32
-    ):
+    def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
@@ -89,9 +86,7 @@ class TestBatchGather(TestGather):
 
         return batch_gather_job
 
-    def make_xla_job(
-        self, input_shape, indices_shape, axis, dtype=flow.float32
-    ):
+    def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
@@ -108,17 +103,13 @@ class TestBatchGather(TestGather):
         # batch_dims should be Dims(indices) - 1 and batch_dims > 0
         self._test_ones_body((2, 3, 2), [[0], [1]], 1)
         self._test_ones_body((2, 3, 2), [[0, 1], [1, 0]], 1)
-        self._test_ones_body(
-            (2, 3, 2, 2), [[[0], [0], [0]], [[1], [1], [1]]], 2
-        )
+        self._test_ones_body((2, 3, 2, 2), [[[0], [0], [0]], [[1], [1], [1]]], 2)
 
     def test_random_input(self):
         # batch_dims should be Dims(indices) - 1 and batch_dims > 0
         self._test_random_body((2, 3, 2), [[0], [1]], 1)
         self._test_random_body((2, 3, 2), [[0, 1], [1, 2]], 1)
-        self._test_random_body(
-            (2, 3, 2, 2), [[[0], [0], [0]], [[1], [1], [1]]], 2
-        )
+        self._test_random_body((2, 3, 2, 2), [[[0], [0], [0]], [[1], [1], [1]]], 2)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import Args, GenArgDict
 
@@ -21,8 +21,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
 
     @flow.function(func_config)
     def FlowJob(
-        value=flow.FixedTensorDef(value.shape),
-        bias=flow.FixedTensorDef(bias.shape),
+        value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             value += flow.get_variable(
@@ -82,23 +81,17 @@ def CompareBiasAddWithTensorFlow(
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
     x = [
-        np.random.uniform(
-            low=input_minval, high=input_maxval, size=input_shape
-        ).astype(np.float32)
+        np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(
+            np.float32
+        )
         for input_shape in input_shapes
     ]
-    of_y, of_x_diff1, of_x_diff2 = RunOneflowBiasAdd(
-        device_type, *x, flow_args
-    )
+    of_y, of_x_diff1, of_x_diff2 = RunOneflowBiasAdd(device_type, *x, flow_args)
     tf_y, tf_x_diff1, tf_x_diff2 = RunTensorFlowBiasAdd(*x, tf_args)
 
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(
-        of_x_diff1, tf_x_diff1, rtol=x_diff_rtol, atol=x_diff_atol
-    )
-    assert np.allclose(
-        of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol
-    )
+    assert np.allclose(of_x_diff1, tf_x_diff1, rtol=x_diff_rtol, atol=x_diff_atol)
+    assert np.allclose(of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
 def test_bias_add_nchw(test_case):

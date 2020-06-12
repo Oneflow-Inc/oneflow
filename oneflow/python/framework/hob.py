@@ -48,9 +48,7 @@ def _IsSessionInitialized():
     return session_ctx.GetDefaultSession().is_running
 
 
-session_initialized = HighOrderBool(
-    "Session initialized", _IsSessionInitialized
-)
+session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized)
 
 
 def _IsCurrentFunctionTrainable():

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -12,9 +12,7 @@ for gpu in gpus:
 
 
 def _random_input(cond_shape, x_shape, y_shape):
-    condition = np.random.randint(low=0, high=2, size=cond_shape).astype(
-        np.int32
-    )
+    condition = np.random.randint(low=0, high=2, size=cond_shape).astype(np.int32)
     x = np.random.standard_normal(x_shape).astype(np.float32)
     y = np.random.standard_normal(y_shape).astype(np.float32)
     return condition, x, y
@@ -67,15 +65,11 @@ def _of_where(
                 return flow.where(condition, x, y)
 
     if dynamic:
-        func_config.default_distribute_strategy(
-            flow.distribute.mirrored_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
         @flow.function(func_config)
         def where_fn(
-            condition_def=flow.MirroredTensorDef(
-                condition.shape, dtype=flow.int32
-            ),
+            condition_def=flow.MirroredTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.MirroredTensorDef(x.shape, dtype=flow.float),
             y_def=flow.MirroredTensorDef(y.shape, dtype=flow.float),
         ):
@@ -86,15 +80,11 @@ def _of_where(
         return where_fn([condition], [x], [y]).get().ndarray_list()[0]
 
     else:
-        func_config.default_distribute_strategy(
-            flow.distribute.consistent_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
         @flow.function(func_config)
         def where_fn(
-            condition_def=flow.FixedTensorDef(
-                condition.shape, dtype=flow.int32
-            ),
+            condition_def=flow.FixedTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.FixedTensorDef(x.shape, dtype=flow.float),
             y_def=flow.FixedTensorDef(y.shape, dtype=flow.float),
         ):
@@ -105,9 +95,7 @@ def _of_where(
         return where_fn(condition, x, y).get().ndarray()
 
 
-def _compare_with_np(
-    test_case, cond_shape, x_shape, y_shape, device_type, dynamic
-):
+def _compare_with_np(test_case, cond_shape, x_shape, y_shape, device_type, dynamic):
     condition, x, y = _random_input(cond_shape, x_shape, y_shape)
     z = np.where(condition, x, y)
     of_z = _of_where(condition, x, y, device_type, dynamic)
@@ -115,13 +103,7 @@ def _compare_with_np(
 
 
 def _compare_with_tf(
-    test_case,
-    cond_shape,
-    x_shape,
-    y_shape,
-    device_type,
-    dynamic,
-    verbose=False,
+    test_case, cond_shape, x_shape, y_shape, device_type, dynamic, verbose=False,
 ):
     condition, x, y = _random_input(cond_shape, x_shape, y_shape)
 
@@ -140,16 +122,12 @@ def _compare_with_tf(
             print("tf_dz_dx:", dz_dx.numpy())
             print(
                 "of_dz_dx:",
-                dz_dx_blob.ndarray_list()[0]
-                if dynamic
-                else dz_dx_blob.ndarray(),
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
             )
         test_case.assertTrue(
             np.array_equal(
                 dz_dx.numpy(),
-                dz_dx_blob.ndarray_list()[0]
-                if dynamic
-                else dz_dx_blob.ndarray(),
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
             )
         )
 
@@ -159,16 +137,12 @@ def _compare_with_tf(
             print("tf_dz_dy:", dz_dy.numpy())
             print(
                 "of_dz_dy:",
-                dz_dy_blob.ndarray_list()[0]
-                if dynamic
-                else dz_dy_blob.ndarray(),
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
             )
         test_case.assertTrue(
             np.array_equal(
                 dz_dy.numpy(),
-                dz_dy_blob.ndarray_list()[0]
-                if dynamic
-                else dz_dy_blob.ndarray(),
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
             )
         )
 
@@ -184,25 +158,17 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     func_config.default_data_type(flow.float)
 
     if input_shape is None:
-        func_config.default_distribute_strategy(
-            flow.distribute.consistent_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
         @flow.function(func_config)
-        def where_fn(
-            input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)
-        ):
+        def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
-        func_config.default_distribute_strategy(
-            flow.distribute.mirrored_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
         @flow.function(func_config)
-        def where_fn(
-            input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)
-        ):
+        def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
             return flow.where(input_def)
 
     return where_fn([input]).get().ndarray_list()[0]

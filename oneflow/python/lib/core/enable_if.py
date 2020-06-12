@@ -46,9 +46,7 @@ def MakeDefaultFunction(default, conditional_functions):
     def get_failed_info(customized_prompt=None):
         failed_info = "no avaliable function found.\n"
         for bf, func, location in conditional_functions:
-            prompt = (
-                location if customized_prompt is None else customized_prompt
-            )
+            prompt = location if customized_prompt is None else customized_prompt
             failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (
                 prompt,
                 bf.debug_str(),

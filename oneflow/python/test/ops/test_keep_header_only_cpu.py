@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 func_config = flow.FunctionConfig()
@@ -13,6 +14,4 @@ def test_keep_header_only_cpu(test_case):
             x = flow.identity(x)
             return flow.math.reduced_shape_elem_cnt(x)
 
-    test_case.assertTrue(
-        job(np.zeros((2, 3, 4), np.float32)).get().item() == 2 * 3 * 4
-    )
+    test_case.assertTrue(job(np.zeros((2, 3, 4), np.float32)).get().item() == 2 * 3 * 4)

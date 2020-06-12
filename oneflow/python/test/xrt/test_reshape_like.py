@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -57,18 +58,14 @@ class TestReshapeLike(unittest.TestCase):
         print("without xla: ", a)
         print("with xla: ", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
         f3 = make_trt_job(x.shape, like.shape, dtype=flow.float32)
         c = f3(x, like).get()
         print("with tensorrt: ", c)
         self.assertTrue(a.shape == c.shape)
-        self.assertTrue(
-            np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, like_shape, dtype=np.float32):

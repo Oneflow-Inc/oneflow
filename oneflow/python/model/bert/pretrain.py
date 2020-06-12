@@ -1,7 +1,6 @@
+import bert as bert_util
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-
-import bert as bert_util
 
 
 def PreTrain(
@@ -73,12 +72,8 @@ def PreTrain(
 
 def PooledOutput(sequence_output, hidden_size, initializer_range):
     with flow.deprecated.variable_scope("bert-pooler"):
-        first_token_tensor = flow.slice(
-            sequence_output, [None, 0, 0], [None, 1, -1]
-        )
-        first_token_tensor = flow.reshape(
-            first_token_tensor, [-1, hidden_size]
-        )
+        first_token_tensor = flow.slice(sequence_output, [None, 0, 0], [None, 1, -1])
+        first_token_tensor = flow.reshape(first_token_tensor, [-1, hidden_size])
         pooled_output = bert_util._FullyConnected(
             first_token_tensor,
             input_size=hidden_size,
@@ -105,17 +100,13 @@ def _AddMaskedLanguageModelLoss(
 ):
 
     with flow.deprecated.variable_scope("other"):
-        sum_label_weight_blob = flow.math.reduce_sum(
-            label_weight_blob, axis=[-1]
-        )
+        sum_label_weight_blob = flow.math.reduce_sum(label_weight_blob, axis=[-1])
         ones = sum_label_weight_blob * 0.0 + 1.0
         sum_label_weight_blob = flow.math.reduce_sum(sum_label_weight_blob)
         batch_size = flow.math.reduce_sum(ones)
         sum_label_weight_blob = sum_label_weight_blob / batch_size
     with flow.deprecated.variable_scope("cls-predictions"):
-        input_blob = _GatherIndexes(
-            input_blob, positions_blob, seq_length, hidden_size
-        )
+        input_blob = _GatherIndexes(input_blob, positions_blob, seq_length, hidden_size)
         with flow.deprecated.variable_scope("transform"):
             if callable(hidden_act):
                 act_fn = op_conf_util.kNone
@@ -126,9 +117,7 @@ def _AddMaskedLanguageModelLoss(
                 input_size=hidden_size,
                 units=hidden_size,
                 activation=act_fn,
-                weight_initializer=bert_util.CreateInitializer(
-                    initializer_range
-                ),
+                weight_initializer=bert_util.CreateInitializer(initializer_range),
                 name="dense",
             )
             if callable(hidden_act):
@@ -140,17 +129,13 @@ def _AddMaskedLanguageModelLoss(
             dtype=input_blob.dtype,
             initializer=flow.constant_initializer(1.0),
         )
-        logit_blob = flow.matmul(
-            input_blob, output_weights_blob, transpose_b=True
-        )
+        logit_blob = flow.matmul(input_blob, output_weights_blob, transpose_b=True)
         logit_blob = flow.nn.bias_add(logit_blob, output_bias)
         label_id_blob = flow.reshape(label_id_blob, [-1])
         pre_example_loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logit_blob, labels=label_id_blob
         )
-        pre_example_loss = flow.reshape(
-            pre_example_loss, [-1, max_predictions_per_seq]
-        )
+        pre_example_loss = flow.reshape(pre_example_loss, [-1, max_predictions_per_seq])
         numerator = pre_example_loss * label_weight_blob
         with flow.deprecated.variable_scope("loss"):
             numerator = flow.math.reduce_sum(numerator, axis=[-1])
@@ -167,9 +152,7 @@ def _GatherIndexes(sequence_blob, positions_blob, seq_length, hidden_size):
     return output
 
 
-def _AddNextSentenceOutput(
-    input_blob, label_blob, hidden_size, initializer_range
-):
+def _AddNextSentenceOutput(input_blob, label_blob, hidden_size, initializer_range):
     with flow.deprecated.variable_scope("cls-seq_relationship"):
         output_weight_blob = flow.get_variable(
             name="output_weights",
@@ -183,9 +166,7 @@ def _AddNextSentenceOutput(
             dtype=input_blob.dtype,
             initializer=flow.constant_initializer(0.0),
         )
-        logit_blob = flow.matmul(
-            input_blob, output_weight_blob, transpose_b=True
-        )
+        logit_blob = flow.matmul(input_blob, output_weight_blob, transpose_b=True)
         logit_blob = flow.nn.bias_add(logit_blob, output_bias_blob)
         pre_example_loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logit_blob, labels=label_blob

@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -10,9 +11,7 @@ def MakeFuncConfig(enable_inplace):
 
 def test_loss_inplace(test_case):
     def IdentityLoss(name):
-        w = flow.get_variable(
-            name, (10,), initializer=flow.constant_initializer(100)
-        )
+        w = flow.get_variable(name, (10,), initializer=flow.constant_initializer(100))
         y = flow.math.reduce_sum(w)
         flow.losses.add_loss(y)
         return y
@@ -23,17 +22,13 @@ def test_loss_inplace(test_case):
 def test_inplace_variable(test_case):
     @flow.function(MakeFuncConfig(True))
     def InplaceVariable():
-        w = flow.get_variable(
-            "w", (10,), initializer=flow.constant_initializer(1)
-        )
+        w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
         y = flow.math.relu(w)
         return y
 
     flow.train.CheckPoint().init()
     test_case.assertTrue(
-        np.allclose(
-            InplaceVariable().get().ndarray(), np.ones((10,), np.float32)
-        )
+        np.allclose(InplaceVariable().get().ndarray(), np.ones((10,), np.float32))
     )
 
 
@@ -68,9 +63,7 @@ def test_reentrant_lock_check_failed(test_case):
 def test_const_inplace_variable(test_case):
     @flow.function(MakeFuncConfig(True))
     def InplaceVariable():
-        w = flow.get_variable(
-            "w", (2, 5), initializer=flow.constant_initializer(1)
-        )
+        w = flow.get_variable("w", (2, 5), initializer=flow.constant_initializer(1))
         y = flow.reshape(w, (10,))
         return y
 
@@ -102,6 +95,4 @@ def TrainCompare(test_case, func):
     disable_inplace_losses = np.array(
         [DisableInplace().get().tolist() for _ in range(num_iter)]
     )
-    test_case.assertTrue(
-        np.allclose(enable_inplace_losses, disable_inplace_losses)
-    )
+    test_case.assertTrue(np.allclose(enable_inplace_losses, disable_inplace_losses))

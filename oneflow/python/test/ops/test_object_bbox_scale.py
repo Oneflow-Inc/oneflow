@@ -3,6 +3,7 @@ import random
 
 import cv2
 import numpy as np
+
 import oneflow as flow
 
 
@@ -31,15 +32,11 @@ def _random_sample_images(anno_file, image_dir, batch_size):
         if len(anno_ids) == 0:
             continue
 
-        image_files.append(
-            os.path.join(image_dir, coco.imgs[rand_img_id]["file_name"])
-        )
+        image_files.append(os.path.join(image_dir, coco.imgs[rand_img_id]["file_name"]))
         image_ids.append(rand_img_id)
 
     assert len(image_files) == len(image_ids)
-    images = [
-        cv2.imread(image_file).astype(np.single) for image_file in image_files
-    ]
+    images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     bbox_list = _get_images_bbox_list(coco, image_ids)
     return images, bbox_list
 
@@ -49,13 +46,10 @@ def _get_images_bbox_list(coco, image_ids):
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
         anno_ids = list(
-            filter(
-                lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, anno_ids
-            )
+            filter(lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, anno_ids)
         )
         bbox_array = np.array(
-            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids],
-            dtype=np.single,
+            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single,
         )
         bbox_list.append(bbox_array)
     return bbox_list
@@ -95,18 +89,14 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def target_resize_bbox_scale_job(
         image_def=flow.MirroredTensorListDef(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        bbox_def=flow.MirroredTensorListDef(
-            shape=tuple(bbox_shape), dtype=flow.float
-        ),
+        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(

@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -45,9 +46,7 @@ def mirrored_tensor_def_test(test_case, func_config):
 
 def test_fixed_TestReshape(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     fixed_tensor_def_test(test_case, func_config)
 
 

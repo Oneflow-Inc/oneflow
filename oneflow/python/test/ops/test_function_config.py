@@ -7,12 +7,8 @@ def test_default_placement_scope(test_case):
 
     @flow.function(func_config)
     def Foo():
-        test_case.assertEqual(
-            "cpu", flow.placement.current_scope().default_device_tag
-        )
-        return flow.get_variable(
-            "w", (10,), initializer=flow.constant_initializer(1)
-        )
+        test_case.assertEqual("cpu", flow.placement.current_scope().default_device_tag)
+        return flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
 
     Foo().get()
 
@@ -29,11 +25,7 @@ def test_global_function_desc(test_case):
 
     @flow.function(func_config)
     def Foo():
-        test_case.assertEqual(
-            flow.current_global_function_desc().IsTrainable(), False
-        )
-        return flow.get_variable(
-            "w", (10,), initializer=flow.constant_initializer(1)
-        )
+        test_case.assertEqual(flow.current_global_function_desc().IsTrainable(), False)
+        return flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
 
     Foo().get()

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -27,18 +27,14 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
                 "x",
                 shape=x_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=0, maxval=100
-                ),
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
             y = flow.get_variable(
                 "y",
                 shape=(1,),
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=0, maxval=100
-                ),
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
             if case == "add":
@@ -82,16 +78,10 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"),
-        tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
     assert np.allclose(
-        test_global_storage.Get("y_diff"),
-        tf_y_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
 
 

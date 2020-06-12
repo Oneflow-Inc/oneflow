@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -10,9 +11,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def broadcast_to_compatible_with_fn(
@@ -48,9 +47,7 @@ def _of_broadcast_to_compatible_with_dynamic(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def broadcast_to_compatible_with_fn(
@@ -62,9 +59,7 @@ def _of_broadcast_to_compatible_with_dynamic(
             x_def, [flow.identity(a_def), flow.identity(b_def)]
         )
 
-    return (
-        broadcast_to_compatible_with_fn([x], [a], [b]).get().ndarray_list()[0]
-    )
+    return broadcast_to_compatible_with_fn([x], [a], [b]).get().ndarray_list()[0]
 
 
 def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
@@ -74,9 +69,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -155,9 +148,7 @@ def test_broadcast_to_compatible_with_grad(test_case):
         dx = np.ones([7, 5, 4], dtype=np.float32).sum(axis=1).reshape(x.shape)
         test_case.assertTrue(np.array_equal(dx, dx_blob.ndarray()))
 
-    ret = _of_broadcast_to_compatible_with_grad(
-        x, compatible_shape, compare_dy
-    )
+    ret = _of_broadcast_to_compatible_with_grad(x, compatible_shape, compare_dy)
     exp_ret = np.broadcast_to(x, [7, 5, 4])
     test_case.assertTrue(np.array_equal(exp_ret, ret))
 

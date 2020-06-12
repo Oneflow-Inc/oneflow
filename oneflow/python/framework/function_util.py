@@ -15,20 +15,16 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("FunctionConfig", "function_config")
 class FunctionConfig(object):
     """OneFlow function's configurations.
-        
+
     """
 
     def __init__(self):
         self.function_desc = FunctionDesc()
 
     def __getattr__(self, attr_name):
-        name2default = (
-            session_ctx.GetDefaultSession().function_flag_name2default_val
-        )
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
-        flag_name2flag_value = (
-            self.function_desc.job_config_proto.flag_name2flag_value
-        )
+        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
 
         def FunctionConfigSetter(attr_value=None):
@@ -81,9 +77,7 @@ def oneflow_function(function_config=FunctionConfig()):
         for x in dir(job_func):
             if x.startswith("__oneflow_"):
                 setattr(Func, x, getattr(job_func, x))
-        sess.AddJob(
-            _CloneFunctionDesc(function_config.function_desc, job_func)
-        )
+        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         return Func
 
     return Decorator
@@ -93,9 +87,7 @@ def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
     new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
     _TryCompleteDefaultJobConfigProto(new_func_desc.job_config_proto)
-    new_func_desc.function_attribute = copy.deepcopy(
-        func_desc.function_attribute
-    )
+    new_func_desc.function_attribute = copy.deepcopy(func_desc.function_attribute)
     return new_func_desc
 
 
@@ -115,20 +107,14 @@ def oneflow_function_config(*field_paths):
                 assert field != "function_desc"
                 assert re.match("^[_\w]+[_\w\d]*$", field)
                 if (cls, field) not in _class_property2return_obj_class:
-                    class_name = ".".join(
-                        ["function_config"] + fields[: index + 1]
-                    )
+                    class_name = ".".join(["function_config"] + fields[: index + 1])
 
                     def Init(self, function_desc):
                         self.function_desc = function_desc
 
-                    config_class = type(
-                        class_name, (object,), dict(__init__=Init)
-                    )
+                    config_class = type(class_name, (object,), dict(__init__=Init))
                     setattr(
-                        cls,
-                        field,
-                        _MakeInnerJobConfigClassProperty(config_class),
+                        cls, field, _MakeInnerJobConfigClassProperty(config_class),
                     )
                     _class_property2return_obj_class[cls, field] = config_class
                 cls = _class_property2return_obj_class[cls, field]
@@ -146,9 +132,7 @@ def _MakeInnerJobConfigClassProperty(return_obj_class):
 
 
 def _MakeLeafJobConfigCall(method):
-    return lambda self, *argv, **kwarg: method(
-        self.function_desc, *argv, **kwarg
-    )
+    return lambda self, *argv, **kwarg: method(self.function_desc, *argv, **kwarg)
 
 
 def _RunJob(session, job_func, *args):
@@ -171,9 +155,7 @@ def set_default_initializer_conf(func_desc, value):
 @oneflow_function_config("exp_run_conf")
 def set_exp_run_conf(func_desc, value):
     assert type(func_desc, value) is dict
-    pb_util.PythonDict2PbMessage(
-        value, func_desc.job_config_proto.exp_run_conf
-    )
+    pb_util.PythonDict2PbMessage(value, func_desc.job_config_proto.exp_run_conf)
 
 
 @oneflow_function_config("use_memory_allocation_algorithm_v2")
@@ -183,32 +165,24 @@ def set_use_memory_allocation_algorithm_v2(func_desc, value):
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.has")
 def static_mem_alloc_policy_white_list_has_policy(func_desc, policy):
-    return getattr(
-        func_desc.job_config_proto.memory_allocation_algorithm_conf, policy
-    )
+    return getattr(func_desc.job_config_proto.memory_allocation_algorithm_conf, policy)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.add")
 def static_mem_alloc_policy_white_list_add_policy(func_desc, policy):
     setattr(
-        func_desc.job_config_proto.memory_allocation_algorithm_conf,
-        policy,
-        True,
+        func_desc.job_config_proto.memory_allocation_algorithm_conf, policy, True,
     )
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.remove")
 def static_mem_alloc_policy_white_list_remove_policy(func_desc, policy):
     setattr(
-        func_desc.job_config_proto.memory_allocation_algorithm_conf,
-        policy,
-        False,
+        func_desc.job_config_proto.memory_allocation_algorithm_conf, policy, False,
     )
 
 
-@oneflow_function_config(
-    "static_mem_alloc_policy_white_list.policy_mem_size_first"
-)
+@oneflow_function_config("static_mem_alloc_policy_white_list.policy_mem_size_first")
 def policy_mem_size_first(func_desc):
     return "use_mem_size_first_algo"
 
@@ -346,9 +320,7 @@ def set_prune_parallel_cast_ops(func_desc, value=True):
 
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
-    func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = (
-        value
-    )
+    func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
 
 
 @oneflow_function_config(

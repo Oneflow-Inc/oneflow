@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -11,9 +11,7 @@ from test_util import GenArgList
 def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     input_shape, output_shape, padding, strides, kernel_size = params_case
     assert data_format in ["NCHW", "NHWC"]
-    out_channels = (
-        output_shape[1] if data_format == "NCHW" else output_shape[3]
-    )
+    out_channels = output_shape[1] if data_format == "NCHW" else output_shape[3]
     in_channels = input_shape[1] if data_format == "NCHW" else input_shape[3]
     assert device_type in ["gpu"]
 
@@ -30,39 +28,23 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
                 "x",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             if data_format == "NCHW":
                 weight = flow.get_variable(
                     "weight",
-                    shape=(
-                        in_channels,
-                        out_channels,
-                        kernel_size,
-                        kernel_size,
-                    ),
+                    shape=(in_channels, out_channels, kernel_size, kernel_size,),
                     dtype=flow.float,
-                    initializer=flow.random_uniform_initializer(
-                        minval=-10, maxval=10
-                    ),
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                     trainable=True,
                 )
             else:
                 weight = flow.get_variable(
                     "weight",
-                    shape=(
-                        in_channels,
-                        kernel_size,
-                        kernel_size,
-                        out_channels,
-                    ),
+                    shape=(in_channels, kernel_size, kernel_size, out_channels,),
                     dtype=flow.float,
-                    initializer=flow.random_uniform_initializer(
-                        minval=-10, maxval=10
-                    ),
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                     trainable=True,
                 )
             loss = flow.nn.conv2d_transpose(
@@ -99,9 +81,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
                 output_shape[3],
                 output_shape[1],
             )
-            w = tf.Variable(
-                test_global_storage.Get("weight").transpose(2, 3, 1, 0)
-            )
+            w = tf.Variable(test_global_storage.Get("weight").transpose(2, 3, 1, 0))
             tf_out = tf.nn.conv2d_transpose(
                 x,
                 w,
@@ -136,9 +116,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     else:
         with tf.GradientTape(persistent=True) as tape:
             x = tf.Variable(test_global_storage.Get("x"))
-            w = tf.Variable(
-                test_global_storage.Get("weight").transpose(1, 2, 3, 0)
-            )
+            w = tf.Variable(test_global_storage.Get("weight").transpose(1, 2, 3, 0))
             tf_out = tf.nn.conv2d_transpose(
                 x,
                 w,
@@ -151,14 +129,9 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         tf_x_diff = tape.gradient(tf_out, x, loss_diff)
         tf_weight_diff = tape.gradient(tf_out, w, loss_diff)
 
+        assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-4, atol=1e-4)
         assert np.allclose(
-            of_out.ndarray(), tf_out.numpy(), rtol=1e-4, atol=1e-4
-        )
-        assert np.allclose(
-            test_global_storage.Get("x_diff"),
-            tf_x_diff.numpy(),
-            rtol=1e-4,
-            atol=1e-4,
+            test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-4, atol=1e-4,
         )
         assert np.allclose(
             test_global_storage.Get("weight_diff").transpose(1, 2, 3, 0),

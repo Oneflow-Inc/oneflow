@@ -1,15 +1,13 @@
 import sys
 
 import numpy as np
-import oneflow as flow
 from absl import flags
 
+import oneflow as flow
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string(
-    "data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", ""
-)
+flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
 flags.DEFINE_string(
     "model_load_dir",
     "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12",
@@ -40,11 +38,7 @@ def _blob_conf(name, shape, dtype=flow.int32):
 
 
 def BertDecoder(
-    data_dir,
-    batch_size=1,
-    data_part_num=1,
-    seq_length=128,
-    max_predictions_per_seq=20,
+    data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20,
 ):
     blob_confs = []
     blob_confs.append(_blob_conf("input_ids", [seq_length]))
@@ -52,9 +46,7 @@ def BertDecoder(
     blob_confs.append(_blob_conf("input_mask", [seq_length]))
     blob_confs.append(_blob_conf("segment_ids", [seq_length]))
     blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(
-        _blob_conf("masked_lm_positions", [max_predictions_per_seq])
-    )
+    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
     blob_confs.append(
         _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
     )
@@ -85,11 +77,7 @@ def BuildPreTrainNet(
     intermediate_size = hidden_size * 4
 
     decoders = BertDecoder(
-        FLAGS.data_dir,
-        batch_size,
-        data_part_num,
-        seq_length,
-        max_predictions_per_seq,
+        FLAGS.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq,
     )
 
     input_ids = decoders[0]
@@ -127,9 +115,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
     learning_rate_decay=dict(
         polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)
     ),
-    warmup_conf=dict(
-        linear_conf=dict(warmup_batches=1000, start_multiplier=0)
-    ),
+    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
     weight_decay_conf=dict(
@@ -195,9 +181,7 @@ def test_2n8c(test_case):
 
 def test_inplace(test_case):
     test_case.assertTrue(
-        np.allclose(
-            GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)
-        )
+        np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False))
     )
 
 
@@ -205,9 +189,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     train_config.train.primary_lr(FLAGS.lr)
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)

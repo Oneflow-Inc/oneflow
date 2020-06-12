@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -24,9 +25,7 @@ def make_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         weight=flow.FixedTensorDef(w_shape, dtype=dtype),
     ):
-        return flow.nn.conv2d(
-            x, weight, strides, padding, data_format, dilation_rate
-        )
+        return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
 
     return conv2d_job
 
@@ -49,9 +48,7 @@ def make_trt_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         weight=flow.FixedTensorDef(w_shape, dtype=dtype),
     ):
-        return flow.nn.conv2d(
-            x, weight, strides, padding, data_format, dilation_rate
-        )
+        return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
 
     return trt_conv2d_job
 
@@ -101,9 +98,7 @@ class TestConv2d(unittest.TestCase):
         print("without xla: ", a)
         print("with tensorrt: ", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(
@@ -119,9 +114,7 @@ class TestConv2d(unittest.TestCase):
     ):
         assert len(shape) == 4
         x = np.ones(shape, dtype=dtype)
-        w_shape = self.make_filter_shape(
-            shape, filters, kernel_size, data_format
-        )
+        w_shape = self.make_filter_shape(shape, filters, kernel_size, data_format)
         weight = np.random.random(w_shape).astype(dtype)
 
         self._test_body(
@@ -147,9 +140,7 @@ class TestConv2d(unittest.TestCase):
     ):
         assert len(shape) == 4
         x = np.random.random(shape).astype(dtype)
-        w_shape = self.make_filter_shape(
-            shape, filters, kernel_size, data_format
-        )
+        w_shape = self.make_filter_shape(shape, filters, kernel_size, data_format)
         weight = np.random.random(w_shape).astype(dtype)
 
         self._test_body(

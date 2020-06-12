@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import numpy as np
+
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
@@ -50,15 +51,11 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
     if mirrored_blob.is_tensor_list:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList
-        return LocalMirroredTensorList(
-            [x.ndarray_lists()[0] for x in local_blob_list]
-        )
+        return LocalMirroredTensorList([x.ndarray_lists()[0] for x in local_blob_list])
     if mirrored_blob.is_dynamic:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensor
-        return LocalMirroredTensor(
-            [x.ndarray_list()[0] for x in local_blob_list]
-        )
+        return LocalMirroredTensor([x.ndarray_list()[0] for x in local_blob_list])
     for local_blob in local_blob_list:
         assert type(local_blob) is LocalFixedTensor
         batch_axis = mirrored_blob.batch_axis
@@ -91,9 +88,7 @@ non_override_field = set(
 
 def MakeBlobMethod(field_name):
     def ConvertOtherArgs(args):
-        return [
-            x.ndarray() if isinstance(x, LocalFixedTensor) else x for x in args
-        ]
+        return [x.ndarray() if isinstance(x, LocalFixedTensor) else x for x in args]
 
     return lambda self, *args: getattr(self.ndarray(), field_name)(
         *ConvertOtherArgs(args)

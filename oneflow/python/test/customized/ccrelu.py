@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 flow.config.gpu_device_num(1)

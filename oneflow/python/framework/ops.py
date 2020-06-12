@@ -14,9 +14,7 @@ from oneflow.python.oneflow_export import oneflow_export
 def repeat(input, repeat_num, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Repeat_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Repeat_"),
     )
     setattr(op_conf.repeat_conf, "in", input.unique_name)
     op_conf.repeat_conf.out = "out"
@@ -32,9 +30,7 @@ def repeat(input, repeat_num, name=None):
 def acc(one, max_acc_num, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Acc_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Acc_"),
     )
     op_conf.acc_conf.one = one.unique_name
     op_conf.acc_conf.acc = "acc"
@@ -50,9 +46,7 @@ def acc(one, max_acc_num, name=None):
 def unpack(input, unpack_num, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Unpack_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Unpack_"),
     )
     setattr(op_conf.unpack_conf, "in", input.unique_name)
     op_conf.unpack_conf.out = "out"
@@ -68,9 +62,7 @@ def unpack(input, unpack_num, name=None):
 def pack(input, pack_num, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Pack_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Pack_"),
     )
     setattr(op_conf.pack_conf, "in", input.unique_name)
     op_conf.pack_conf.out = "out"
@@ -104,9 +96,7 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         return split_axis
 
     if distribute is not None:
-        op_conf.parallel_cast_conf.split_axis.CopyFrom(
-            to_split_axis(distribute)
-        )
+        op_conf.parallel_cast_conf.split_axis.CopyFrom(to_split_axis(distribute))
     if gradient_distribute is not None:
         op_conf.parallel_cast_conf.gradient_split_axis.CopyFrom(
             to_split_axis(gradient_distribute)

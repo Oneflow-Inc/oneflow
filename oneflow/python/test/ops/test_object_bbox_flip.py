@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+
 import oneflow as flow
 
 
@@ -11,23 +12,15 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def object_bbox_flip_job(
-        bbox_def=flow.MirroredTensorListDef(
-            shape=tuple(bbox_shape), dtype=flow.float
-        ),
-        image_size_def=flow.MirroredTensorDef(
-            shape=image_size.shape, dtype=flow.int32
-        ),
+        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
+        image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),
     ):
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
-        flip_bbox = flow.object_bbox_flip(
-            bbox_buffer, image_size_def, flip_code
-        )
+        flip_bbox = flow.object_bbox_flip(bbox_buffer, image_size_def, flip_code)
         return flow.tensor_buffer_to_tensor_list(
             flip_bbox, shape=bbox_shape[1:], dtype=flow.float
         )
@@ -67,8 +60,7 @@ def _compare_bbox_flip(
         if len(anno_ids) == 0:
             continue
         bbox_array = np.array(
-            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids],
-            dtype=np.single,
+            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single,
         )
         bbox_list.append(bbox_array)
         image_size_list.append(
@@ -78,9 +70,7 @@ def _compare_bbox_flip(
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
     of_bbox_list = _of_object_bbox_flip(bbox_list, image_size_array, flip_code)
-    for of_bbox, bbox, image_size in zip(
-        of_bbox_list, bbox_list, image_size_list
-    ):
+    for of_bbox, bbox, image_size in zip(of_bbox_list, bbox_list, image_size_list):
         h, w = image_size
         if flip_code == 1:
             xmin = bbox[:, 0].copy()
@@ -100,8 +90,5 @@ def _compare_bbox_flip(
 
 def test_object_bbox_flip(test_case):
     _compare_bbox_flip(
-        test_case,
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        4,
-        1,
+        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1,
     )

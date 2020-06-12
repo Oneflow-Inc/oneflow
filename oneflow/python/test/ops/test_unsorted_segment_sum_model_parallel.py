@@ -2,8 +2,8 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList
 
 
@@ -16,9 +16,7 @@ def _gen_test_data(out_shape, segment_ids_shape, axis):
 
     out = np.zeros(shape=out_shape, dtype=np.float32)
     if axis != 0:
-        ref_perm = (
-            [axis] + list(range(0, axis)) + list(range(axis + 1, out.ndim))
-        )
+        ref_perm = [axis] + list(range(0, axis)) + list(range(axis + 1, out.ndim))
         out = np.transpose(out, ref_perm)
         data_perm = (
             list(range(axis, axis + segment_ids.ndim))
@@ -31,9 +29,7 @@ def _gen_test_data(out_shape, segment_ids_shape, axis):
     for idx, i in np.ndenumerate(segment_ids):
         out[i] += data_copy[idx]
     if axis != 0:
-        ref_perm = (
-            list(range(1, axis + 1)) + [0] + list(range(axis + 1, out.ndim))
-        )
+        ref_perm = list(range(1, axis + 1)) + [0] + list(range(axis + 1, out.ndim))
         out = np.transpose(out, ref_perm)
 
     return data, segment_ids, out
@@ -46,9 +42,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     data_arr, segment_ids_arr, out_arr = _gen_test_data(
         out_shape, segment_ids_shape, axis
@@ -57,9 +51,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     @flow.function(func_config)
     def unsorted_segment_sum_job(
         data=flow.FixedTensorDef(data_arr.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(
-            segment_ids_arr.shape, dtype=flow.int32
-        ),
+        segment_ids=flow.FixedTensorDef(segment_ids_arr.shape, dtype=flow.int32),
         like=flow.FixedTensorDef(out_arr.shape, dtype=flow.float),
     ):
         with flow.fixed_placement(device_type, "0:0-3"):
@@ -69,13 +61,9 @@ def _test_unsorted_segment_sum_model_parallel_fw(
                 data = data.with_distribute(flow.distribute.broadcast())
             else:
                 data = data.with_distribute(
-                    flow.distribute.split(
-                        split_axis + len(segment_ids.shape) - 1
-                    )
+                    flow.distribute.split(split_axis + len(segment_ids.shape) - 1)
                 )
-            segment_ids = segment_ids.with_distribute(
-                flow.distribute.broadcast()
-            )
+            segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
             like = like.with_distribute(flow.distribute.split(split_axis))
             if split_axis == axis:
                 out0 = like
@@ -91,9 +79,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
             )
             return out0, out1
 
-    out0, out1 = unsorted_segment_sum_job(
-        data_arr, segment_ids_arr, out_arr
-    ).get()
+    out0, out1 = unsorted_segment_sum_job(data_arr, segment_ids_arr, out_arr).get()
     test_case.assertTrue(np.allclose(out0.ndarray(), out_arr))
     test_case.assertTrue(np.allclose(out1.ndarray(), out_arr))
 

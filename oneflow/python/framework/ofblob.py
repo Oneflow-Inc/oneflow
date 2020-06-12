@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from functools import reduce
 
 import numpy as np
+
 import oneflow.oneflow_internal as oneflow_api
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 
@@ -59,9 +60,7 @@ class OfBlob(object):
             is_new_slice_start_mask,
         ) = self._CopyToNdarrayListAndIsNewSliceStartMask()
         tensor_lists = []
-        for tensor, is_new_slice_start in zip(
-            tensor_list, is_new_slice_start_mask
-        ):
+        for tensor, is_new_slice_start in zip(tensor_list, is_new_slice_start_mask):
             if is_new_slice_start:
                 tensor_lists.append([])
             tensor_lists[-1].append(tensor)
@@ -77,9 +76,7 @@ class OfBlob(object):
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while not oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_):
             shape_tensor = np.ndarray(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CurTensorCopyShapeTo(
-                self.of_blob_ptr_, shape_tensor
-            )
+            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
             shape = tuple(shape_tensor.tolist())
             tensor = np.ndarray(
                 shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype)
@@ -92,9 +89,7 @@ class OfBlob(object):
         )
         # generate is_new_slice_start_mask
         is_new_slice_start_mask = [False] * len(tensor_list)
-        num_slices = oneflow_api.OfBlob_NumOfTensorListSlices(
-            self.of_blob_ptr_
-        )
+        num_slices = oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)
         for x in range(num_slices):
             tensor_list_start = oneflow_api.OfBlob_TensorIndex4SliceId(
                 self.of_blob_ptr_, x
@@ -141,6 +136,4 @@ class OfBlob(object):
             self.of_blob_ptr_
         )
         num_slices = reduce(lambda a, b: a + b, is_new_slice_start_mask, 0)
-        assert num_slices == oneflow_api.OfBlob_NumOfTensorListSlices(
-            self.of_blob_ptr_
-        )
+        assert num_slices == oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)

@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 func_config = flow.FunctionConfig()
@@ -84,8 +85,6 @@ def GenerateTest(test_case, shape, num_inputs):
     def AddJob(xs=[flow.FixedTensorDef(shape)] * num_inputs):
         return flow.math.add_n(xs)
 
-    inputs = [
-        np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)
-    ]
+    inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
     r = AddJob(inputs).get().ndarray()
     test_case.assertTrue(np.allclose(r, sum(inputs)))

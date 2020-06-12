@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -9,9 +10,7 @@ config = flow.function_config()
 class TestPooling(unittest.TestCase):
     run_test = False
 
-    def _test_body(
-        self, x, ksize, strides, padding, data_format, dtype=np.float32
-    ):
+    def _test_body(self, x, ksize, strides, padding, data_format, dtype=np.float32):
         if not self.run_test:
             return
         f1 = self.make_job(
@@ -25,9 +24,7 @@ class TestPooling(unittest.TestCase):
         print("without trt: ", a)
         print("with tensorrt", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(

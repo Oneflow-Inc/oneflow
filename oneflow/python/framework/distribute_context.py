@@ -8,9 +8,7 @@ class DistributeStrategy(object):
 
 
 def PushMirroredStrategyEnabled(val):
-    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.append(
-        val
-    )
+    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.append(val)
 
 
 def IsMirroredStrategyEnabled():

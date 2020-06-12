@@ -15,9 +15,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("gather")
-def gather(
-    params, indices, validate_indices=None, axis=None, batch_dims=0, name=None
-):
+def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
     r"""Gather slices from params axis axis according to indices.
 
     Analogous to `tf.gather <https://www.tensorflow.org/api_docs/python/tf/gather>`_
@@ -53,9 +51,7 @@ def gather(
             if os.getenv("ENABLE_USER_OP") == "True":
                 return (
                     flow.user_op_builder(
-                        name
-                        if name is not None
-                        else id_util.UniqueStr("BatchGather_")
+                        name if name is not None else id_util.UniqueStr("BatchGather_")
                     )
                     .Op("batch_gather")
                     .Input("in", [params])
@@ -183,9 +179,7 @@ def reshape(x, shape, name=None):
             setattr(
                 op_conf,
                 "name",
-                name
-                if name is not None
-                else id_util.UniqueStr("DynamicReshape_"),
+                name if name is not None else id_util.UniqueStr("DynamicReshape_"),
             )
             setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
             op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
@@ -367,9 +361,7 @@ def slice(x, begin, size, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Slice_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"),
     )
     setattr(op_conf.slice_conf, "in", x.unique_name)
     setattr(op_conf.slice_conf, "out", "out")
@@ -399,10 +391,7 @@ def slice_v2(x, slice_tup_list, name=None):
         raise ValueError('param "name" must be a string')
 
     ndims = len(x.shape)
-    if (
-        not isinstance(slice_tup_list, (list, tuple))
-        or len(slice_tup_list) > ndims
-    ):
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
         raise ValueError(
             'param "slice_tup_list" must be a list or tuple whose length should be '
             "less than or equal to number of dimensions of x"
@@ -464,7 +453,7 @@ def concat(values, axis, name=None):
         values: a `list` of `Blob`
         axis: a `int`
         name: name of this operator. `None` by default
-    
+
     Returns:
         A `Blob`
     """
@@ -490,16 +479,12 @@ def concat(values, axis, name=None):
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("Concat_"),
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_"),
         )
         op_conf.concat_conf.out = "out"
         if not isinstance(values, (list, tuple)):
             values = [values]
-        getattr(op_conf.concat_conf, "in").extend(
-            [v.unique_name for v in values]
-        )
+        getattr(op_conf.concat_conf, "in").extend([v.unique_name for v in values])
         op_conf.concat_conf.axis = axis
         compile_context.CurJobAddOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -633,9 +618,7 @@ def where(condition, x=None, y=None, name=None):
             .RemoteBlobList()[0]
         )
     else:
-        raise ValueError(
-            "it is not supported when exactly one of x or y is non-None"
-        )
+        raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
 @oneflow_export("piece_slice")
@@ -643,14 +626,10 @@ def piece_slice(inputs, output_size, name=None):
     assert inputs.shape[0] == output_size
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("PieceSlice_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_"),
     )
     setattr(op_conf.piece_slice_conf, "in", inputs.unique_name)
-    op_conf.piece_slice_conf.out.extend(
-        ["out_" + str(i) for i in range(output_size)]
-    )
+    op_conf.piece_slice_conf.out.extend(["out_" + str(i) for i in range(output_size)])
     compile_context.CurJobAddOp(op_conf)
     ret = []
     for i in range(output_size):
@@ -665,9 +644,7 @@ def piece_slice(inputs, output_size, name=None):
 def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ElemCnt_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ElemCnt_"),
     )
     op_conf.shape_elem_cnt_conf.x = inputs.unique_name
 
@@ -713,9 +690,7 @@ def stack(inputs, axis, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend(
-        [input.unique_name for input in inputs]
-    )
+    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
     setattr(op_conf.stack_conf, "axis", axis)
     setattr(op_conf.stack_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -755,9 +730,7 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
         flow.user_op_builder(
             name
             if name is not None
-            else id_util.UniqueStr(
-                value.op_name + "_random_batch_permutation_indices"
-            )
+            else id_util.UniqueStr(value.op_name + "_random_batch_permutation_indices")
         )
         .Op("generate_random_batch_permutation_indices")
         .Input("x", [value])
@@ -767,18 +740,14 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
         op.Attr("seed", seed, "AttrTypeInt64")
     else:
         op.Attr(
-            "seed",
-            random.randint(-(2 ** 63) + 1, 2 ** 63 - 1),
-            "AttrTypeInt64",
+            "seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64",
         )
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("random.shuffle")
 def shuffle(value, seed=None, name=None):
-    return flow.gather(
-        value, generate_random_batch_permutation_indices(value, seed)
-    )
+    return flow.gather(value, generate_random_batch_permutation_indices(value, seed))
 
 
 @oneflow_export("identity")
@@ -788,7 +757,7 @@ def identity(x, name=None):
     Args:
         input: a `Blob`
         name: name of this operator. `None` by default
-    
+
     Returns:
         A `Blob`
     """

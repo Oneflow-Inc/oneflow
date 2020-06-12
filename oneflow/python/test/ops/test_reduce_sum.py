@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -35,9 +35,7 @@ def compare_with_tensorflow(
     #    print(of_out.ndarray())
     #    print("diff: ")
     #    print(of_out.ndarray() - tf_out.numpy())
-    assert np.allclose(
-        of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol
-    ), (
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol), (
         of_out.ndarray(),
         tf_out.numpy(),
     )
@@ -86,9 +84,7 @@ def test_scalar(test_case):
 def test_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import (
     Args,
     CompareOpWithTensorFlow,
@@ -76,8 +76,7 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     check_point = flow.train.CheckPoint()
     check_point.init()
     test_element_wise_mul_job(
-        np.random.rand(*shape).astype(np_type),
-        np.random.rand(*shape).astype(np_type),
+        np.random.rand(*shape).astype(np_type), np.random.rand(*shape).astype(np_type),
     ).get()
     test_case.assertTrue(
         np.allclose(

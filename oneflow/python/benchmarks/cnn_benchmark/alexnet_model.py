@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
-
 from model_util import conv2d_layer
 
 
@@ -10,12 +9,7 @@ def alexnet(images, trainable=True):
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
 
     conv1 = conv2d_layer(
-        "conv1",
-        transposed,
-        filters=64,
-        kernel_size=11,
-        strides=4,
-        padding="VALID",
+        "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID",
     )
 
     pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")

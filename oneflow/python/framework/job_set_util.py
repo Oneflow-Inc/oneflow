@@ -18,14 +18,10 @@ def inter_job_reuse_mem_strategy(strategy_str, job_set=None, **kwargs):
         job_set = _default_job_set
     if strategy_str == "reuse_mem_priority":
         job_set.inter_job_reuse_mem_strategy.reuse_mem_priority.SetInParent()
-        assert job_set.inter_job_reuse_mem_strategy.HasField(
-            "reuse_mem_priority"
-        )
+        assert job_set.inter_job_reuse_mem_strategy.HasField("reuse_mem_priority")
     elif strategy_str == "parallelism_priority":
         job_set.inter_job_reuse_mem_strategy.parallelism_priority.SetInParent()
-        assert job_set.inter_job_reuse_mem_strategy.HasField(
-            "parallelism_priority"
-        )
+        assert job_set.inter_job_reuse_mem_strategy.HasField("parallelism_priority")
     elif strategy_str == "custom_parallelism":
         assert kwargs["job_name_groups"] is not None
         for job_name_group in kwargs["job_name_groups"]:

@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
+
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_util
-
 from test_util import GenArgList
 
 

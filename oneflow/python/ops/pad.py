@@ -22,17 +22,13 @@ def pad(x, paddings, constant_value=0, name=None):
     else:
         raise ValueError("paddings must be a tuple or a list.")
     return (
-        oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Pad_")
-        )
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
         .Op("pad")
         .Input("x", [x])
         .Output("y")
         .Attr("padding_before", padding_before, "AttrTypeListInt64")
         .Attr("padding_after", padding_after, "AttrTypeListInt64")
-        .Attr(
-            "floating_constant_value", float(constant_value), "AttrTypeDouble"
-        )
+        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
         .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .InferAndTryRun()
@@ -65,9 +61,7 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .Output("dx")
         .Attr("padding_before", padding_before, "AttrTypeListInt64")
         .Attr("padding_after", padding_after, "AttrTypeListInt64")
-        .Attr(
-            "floating_constant_value", float(constant_value), "AttrTypeDouble"
-        )
+        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
         .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
         .Build()
         .InferAndTryRun()

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -38,9 +38,7 @@ def grouped_convolution2D(
     return outputs
 
 
-def compare_with_tensorflow(
-    device_type, x_shape, filters, kernel_size, groups
-):
+def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -55,9 +53,7 @@ def compare_with_tensorflow(
                 "x",
                 shape=x_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=0, maxval=100
-                ),
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
             loss = flow.layers.conv2d(
@@ -85,9 +81,7 @@ def compare_with_tensorflow(
                 "conv2d_weight",
                 shape=weight_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=0, maxval=100
-                ),
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
             )
             flow.losses.add_loss(loss)
 
@@ -115,11 +109,7 @@ def compare_with_tensorflow(
                 test_global_storage.Get("weight").transpose(2, 3, 1, 0)
             )
             tf_out = tf.nn.conv2d(
-                x,
-                weight,
-                strides=[1, 1, 1, 1],
-                padding="VALID",
-                data_format="NHWC",
+                x, weight, strides=[1, 1, 1, 1], padding="VALID", data_format="NHWC",
             )
         else:
             weight = tf.Variable(
@@ -134,10 +124,7 @@ def compare_with_tensorflow(
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(
-        of_out.ndarray().transpose(0, 2, 3, 1),
-        tf_out.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5,
     )
     of_x_diff_arr = test_global_storage.Get("x_diff").transpose(0, 2, 3, 1)
     tf_x_diff_arr = tf_x_diff.numpy()

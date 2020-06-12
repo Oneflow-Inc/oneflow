@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -12,22 +12,12 @@ for gpu in gpus:
 
 
 def _check(test_case, x, y, depth, on_value, off_value, axis):
-    out = tf.one_hot(
-        x, depth=depth, axis=axis, on_value=on_value, off_value=off_value
-    )
+    out = tf.one_hot(x, depth=depth, axis=axis, on_value=on_value, off_value=off_value)
     test_case.assertTrue(np.array_equal(out.numpy(), y))
 
 
 def _run_test(
-    test_case,
-    device_type,
-    x_shape,
-    depth,
-    dtype,
-    out_dtype,
-    on_value,
-    off_value,
-    axis,
+    test_case, device_type, x_shape, depth, dtype, out_dtype, on_value, off_value, axis,
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -47,9 +37,7 @@ def _run_test(
                 dtype=type_name_to_flow_type[out_dtype],
             )
 
-    x = np.random.randint(0, depth, x_shape).astype(
-        type_name_to_np_type[dtype]
-    )
+    x = np.random.randint(0, depth, x_shape).astype(type_name_to_np_type[dtype])
     y = one_hot_job(x).get()
     _check(test_case, x, y.ndarray(), depth, on_value, off_value, axis)
 

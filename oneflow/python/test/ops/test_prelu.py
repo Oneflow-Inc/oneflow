@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -36,9 +36,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.function(func_config)
-    def PreluJob(
-        x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])
-    ):
+    def PreluJob(x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])):
         with flow.fixed_placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
@@ -62,9 +60,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
                 "prelu-alpha",
                 shape=tuple(alpha_shape),
                 dtype=type_name_to_flow_type[dtype],
-                initializer=flow.random_uniform_initializer(
-                    minval=0.1, maxval=0.9
-                ),
+                initializer=flow.random_uniform_initializer(minval=0.1, maxval=0.9),
             )
             flow.losses.add_loss(loss)
 

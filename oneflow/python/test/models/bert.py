@@ -26,10 +26,7 @@ class BertBackbone(object):
 
         with flow.deprecated.variable_scope("bert"):
             with flow.deprecated.variable_scope("embeddings"):
-                (
-                    self.embedding_output_,
-                    self.embedding_table_,
-                ) = _EmbeddingLookup(
+                (self.embedding_output_, self.embedding_table_,) = _EmbeddingLookup(
                     input_ids_blob=input_ids_blob,
                     vocab_size=vocab_size,
                     embedding_size=hidden_size,
@@ -135,17 +132,13 @@ def _TransformerModel(
                         attention_output_blob,
                         input_size=num_attention_heads * attention_head_size,
                         units=hidden_size,
-                        weight_initializer=CreateInitializer(
-                            initializer_range
-                        ),
+                        weight_initializer=CreateInitializer(initializer_range),
                         name="dense",
                     )
                     attention_output_blob = _Dropout(
                         attention_output_blob, hidden_dropout_prob
                     )
-                    attention_output_blob = (
-                        attention_output_blob + layer_input_blob
-                    )
+                    attention_output_blob = attention_output_blob + layer_input_blob
                     attention_output_blob = _LayerNorm(
                         attention_output_blob, hidden_size
                     )
@@ -174,9 +167,7 @@ def _TransformerModel(
                     weight_initializer=CreateInitializer(initializer_range),
                     name="dense",
                 )
-                layer_output_blob = _Dropout(
-                    layer_output_blob, hidden_dropout_prob
-                )
+                layer_output_blob = _Dropout(layer_output_blob, hidden_dropout_prob)
                 layer_output_blob = layer_output_blob + attention_output_blob
                 layer_output_blob = _LayerNorm(layer_output_blob, hidden_size)
                 prev_output_blob = layer_output_blob
@@ -217,12 +208,8 @@ def _AttentionLayer(
         output_blob = flow.transpose(output_blob, perm=[0, 2, 1, 3])
         return output_blob
 
-    from_blob_2d = flow.reshape(
-        from_blob, [-1, num_attention_heads * size_per_head]
-    )
-    to_blob_2d = flow.reshape(
-        to_blob, [-1, num_attention_heads * size_per_head]
-    )
+    from_blob_2d = flow.reshape(from_blob, [-1, num_attention_heads * size_per_head])
+    to_blob_2d = flow.reshape(to_blob, [-1, num_attention_heads * size_per_head])
 
     query_blob = _FullyConnected(
         from_blob_2d,
@@ -265,9 +252,7 @@ def _AttentionLayer(
 
     attention_scores_blob = attention_scores_blob + addr_blob
     attention_probs_blob = flow.nn.softmax(attention_scores_blob)
-    attention_probs_blob = _Dropout(
-        attention_probs_blob, attention_probs_dropout_prob
-    )
+    attention_probs_blob = _Dropout(attention_probs_blob, attention_probs_dropout_prob)
 
     value_blob = flow.reshape(
         value_blob, [-1, to_seq_length, num_attention_heads, size_per_head]
@@ -282,19 +267,13 @@ def _AttentionLayer(
         )
     else:
         context_blob = flow.reshape(
-            context_blob,
-            [-1, from_seq_length, num_attention_heads * size_per_head],
+            context_blob, [-1, from_seq_length, num_attention_heads * size_per_head],
         )
     return context_blob
 
 
 def _FullyConnected(
-    input_blob,
-    input_size,
-    units,
-    activation=None,
-    name=None,
-    weight_initializer=None,
+    input_blob, input_size, units, activation=None, name=None, weight_initializer=None,
 ):
     weight_blob = flow.get_variable(
         name=name + "-weight",
@@ -327,14 +306,10 @@ def _LayerNorm(input_blob, hidden_size):
     )
 
 
-def _CreateAttentionMaskFromInputMask(
-    to_mask_blob, from_seq_length, to_seq_length
-):
+def _CreateAttentionMaskFromInputMask(to_mask_blob, from_seq_length, to_seq_length):
     output = flow.cast(to_mask_blob, dtype=flow.float)
     output = flow.reshape(output, [-1, 1, to_seq_length])
-    zeros = flow.constant(
-        0.0, dtype=flow.float, shape=[from_seq_length, to_seq_length]
-    )
+    zeros = flow.constant(0.0, dtype=flow.float, shape=[from_seq_length, to_seq_length])
     attention_mask_blob = zeros + output
     attention_mask_blob = flow.reshape(
         attention_mask_blob, [-1, 1, from_seq_length, to_seq_length]
@@ -407,9 +382,7 @@ def _EmbeddingLookup(
         dtype=flow.float,
         initializer=CreateInitializer(initializer_range),
     )
-    output = flow.gather(
-        params=embedding_table, indices=input_ids_blob, axis=0
-    )
+    output = flow.gather(params=embedding_table, indices=input_ids_blob, axis=0)
     return output, embedding_table
 
 

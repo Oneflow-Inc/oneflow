@@ -11,9 +11,7 @@ def categorical_ordinal_encode(
 ):
     assert hash_precomputed is True
     return (
-        flow.user_op_builder(
-            name or id_util.UniqueStr("CategoricalOrdinalEncode_")
-        )
+        flow.user_op_builder(name or id_util.UniqueStr("CategoricalOrdinalEncode_"))
         .Op("CategoricalOrdinalEncode")
         .Input("in", [input_tensor])
         .Input("table", [table])
@@ -32,9 +30,7 @@ def categorical_ordinal_encoder(
 ):
     assert hash_precomputed is True
     name_prefix = (
-        name
-        if name is not None
-        else id_util.UniqueStr("CategoricalOrdinalEncoder_")
+        name if name is not None else id_util.UniqueStr("CategoricalOrdinalEncoder_")
     )
     dtype = input_tensor.dtype
     table = flow.get_variable(

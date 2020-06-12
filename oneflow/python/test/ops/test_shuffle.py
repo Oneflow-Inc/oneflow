@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -25,9 +25,7 @@ def test_shuffle(_):
 
         @flow.function(flow.FunctionConfig())
         def TestJob(
-            x=flow.FixedTensorDef(
-                x_shape, dtype=type_name_to_flow_type[data_type]
-            )
+            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             with flow.fixed_placement(device_type, "0:0"):
                 return flow.random.shuffle(x)
@@ -47,9 +45,7 @@ def test_shuffle(_):
 
         @flow.function(flow.FunctionConfig())
         def TestJob1(
-            x=flow.FixedTensorDef(
-                x_shape, dtype=type_name_to_flow_type[data_type]
-            )
+            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             with flow.fixed_placement(device_type, "0:0"):
                 return flow.random.generate_random_batch_permutation_indices(x)

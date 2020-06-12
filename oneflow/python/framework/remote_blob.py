@@ -124,21 +124,15 @@ class ConsistentBlob(BlobDef):
 
     @property
     def shape(self):
-        return c_api_util.JobBuildAndInferCtx_GetStaticShape(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_GetDataType(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
 
     @property
     def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.lbn_)
 
     @property
     def split_axis(self):
@@ -148,21 +142,15 @@ class ConsistentBlob(BlobDef):
 
     @property
     def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_IsDynamic(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn_)
 
     @property
     def disable_boxing(self):
-        return c_api_util.JobBuildAndInferCtx_DisableBoxing(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_DisableBoxing(self.job_name_, self.lbn_)
 
     @property
     def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_IsTensorList(
-            self.job_name_, self.lbn_
-        )
+        return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.lbn_)
 
     @property
     def parallel_conf(self):
@@ -184,9 +172,7 @@ class MirroredBlob(BlobDef):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
                 self.job_name_, lbn, i
             )
-            consistent_blob = ConsistentBlob(
-                sub_lbi, auto_watched_within_scope=False
-            )
+            consistent_blob = ConsistentBlob(sub_lbi, auto_watched_within_scope=False)
             self.sub_consistent_blob_list_.append(consistent_blob)
         watch_scope_util.TryWatchOnce(self)
 

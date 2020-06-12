@@ -19,10 +19,7 @@ def CurJobAddOp(op_conf, parallel_conf=None):
     # TODO: tsai: remove this debug code when transition ends
     import os
 
-    if (
-        os.getenv("ENABLE_USER_OP") == "True"
-        and op_conf.HasField("user_conf") is False
-    ):
+    if os.getenv("ENABLE_USER_OP") == "True" and op_conf.HasField("user_conf") is False:
         op_type = op_conf.WhichOneof("op_type")
         if op_type not in logged_op_confs and op_type != "return_conf":
             print("non-user op added: {}".format(op_type))
@@ -49,9 +46,7 @@ def CurJobAddMirroredOp(op_conf, parallel_conf=None):
 def GetOpConfAndParallelConf(op_conf, parallel_conf=None):
     name_scope.PrependOpNamePrefixIfNeed(op_conf)
     if not op_conf.HasField("device_type"):
-        op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
-            op_conf
-        )
+        op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     if parallel_conf is None:
         parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
     return op_conf, parallel_conf

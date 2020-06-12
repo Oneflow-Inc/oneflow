@@ -5,11 +5,10 @@ import os
 import time
 from datetime import datetime
 
-import oneflow as flow
-
 import alexnet_model
 import benchmark_util
 import data_loader
+import oneflow as flow
 import resnet_model
 import vgg_model
 
@@ -28,24 +27,12 @@ parser.add_argument(
 
 # train
 parser.add_argument(
-    "--model",
-    type=str,
-    default="vgg16",
-    required=False,
-    help="vgg16 or resnet50",
+    "--model", type=str, default="vgg16", required=False, help="vgg16 or resnet50",
 )
+parser.add_argument("--batch_size_per_device", type=int, default=8, required=False)
+parser.add_argument("--learning_rate", type=float, default=1e-4, required=False)
 parser.add_argument(
-    "--batch_size_per_device", type=int, default=8, required=False
-)
-parser.add_argument(
-    "--learning_rate", type=float, default=1e-4, required=False
-)
-parser.add_argument(
-    "--optimizer",
-    type=str,
-    default="sgd",
-    required=False,
-    help="sgd, adam, momentum",
+    "--optimizer", type=str, default="sgd", required=False, help="sgd, adam, momentum",
 )
 parser.add_argument(
     "--weight_l2",
@@ -55,11 +42,7 @@ parser.add_argument(
     help="weight decay parameter",
 )
 parser.add_argument(
-    "--iter_num",
-    type=int,
-    default=10,
-    required=False,
-    help="total iterations to run",
+    "--iter_num", type=int, default=10, required=False, help="total iterations to run",
 )
 parser.add_argument(
     "--skip_iter_num",
@@ -69,11 +52,7 @@ parser.add_argument(
     help="number of skipping iterations for benchmark purpose.",
 )
 parser.add_argument(
-    "--data_dir",
-    type=str,
-    default=None,
-    required=False,
-    help="dataset directory",
+    "--data_dir", type=str, default=None, required=False, help="dataset directory",
 )
 parser.add_argument(
     "--data_part_num",
@@ -155,10 +134,7 @@ optimizer_dict = {
     "momentum-decay": {
         "momentum_conf": {"beta": 0.9},
         "learning_rate_decay": {
-            "polynomial_conf": {
-                "decay_batches": 300000,
-                "end_learning_rate": 0.0001,
-            },
+            "polynomial_conf": {"decay_batches": 300000, "end_learning_rate": 0.0001,},
         },
     },
 }
@@ -195,9 +171,7 @@ def TrainNet():
         )
     else:
         print("Loading synthetic data.")
-        (labels, images) = data_loader.load_synthetic(
-            args.image_size, batch_size
-        )
+        (labels, images) = data_loader.load_synthetic(args.image_size, batch_size)
 
     logits = model_dict[args.model](images)
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -219,11 +193,7 @@ def main():
     for arg in vars(args):
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
-    print(
-        "Time stamp: {}".format(
-            str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
-        )
-    )
+    print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
     flow.env.grpc_use_no_signal()
     flow.env.log_dir(args.log_dir)
 

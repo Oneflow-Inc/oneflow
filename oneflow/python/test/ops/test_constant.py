@@ -1,18 +1,16 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def compare_with_tensorflow(
-    test_case, device_type, value, shape, rtol=1e-5, atol=1e-5
-):
+def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, atol=1e-5):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
@@ -24,9 +22,7 @@ def compare_with_tensorflow(
 
     numpy0 = ConstantJob().get().ndarray()
     of_out = ConstantJob().get()
-    test_case.assertTrue(
-        np.allclose(of_out.ndarray(), numpy0, rtol=rtol, atol=atol)
-    )
+    test_case.assertTrue(np.allclose(of_out.ndarray(), numpy0, rtol=rtol, atol=atol))
     tf_out = tf.constant(value, dtype=float, shape=shape)
     test_case.assertTrue(
         np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)

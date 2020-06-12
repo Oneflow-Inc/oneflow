@@ -1,14 +1,13 @@
 import numpy as np
-import oneflow as flow
 from scipy.special import erf, erfc, gammaln
+
+import oneflow as flow
 
 
 def test_abs(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AbsJob(a=flow.FixedTensorDef((5, 2))):
@@ -38,9 +37,7 @@ def test_1n2c_mirror_dynamic_abs(test_case):
 def test_acos(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AcosJob(a=flow.FixedTensorDef((5, 2))):
@@ -55,9 +52,7 @@ def test_acos_consistent_1n2c(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AcosJob(a=flow.FixedTensorDef((5, 2))):
@@ -72,9 +67,7 @@ def test_acos_cpu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AcosJob(a=flow.FixedTensorDef((5, 2))):
@@ -88,9 +81,7 @@ def test_acos_cpu(test_case):
 def test_acos_double(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AcosJob(a=flow.FixedTensorDef((5, 2), dtype=flow.double)):
@@ -120,18 +111,14 @@ def test_1n2c_mirror_dynamic_acos(test_case):
 def test_acosh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AcoshJob(a=flow.FixedTensorDef((7,))):
         return flow.math.acosh(a)
 
     # x = np.random.rand(7,).astype(np.float32)
-    x = np.array(
-        [-2, -0.5, 1, 1.2, 200, 10000, float("inf")], dtype=np.float32
-    )
+    x = np.array([-2, -0.5, 1, 1.2, 200, 10000, float("inf")], dtype=np.float32)
     y = AcoshJob(x).get().ndarray()
     # input: [-2, -0.5, 1, 1.2, 200, 10000, float("inf")]
     # output: [nan nan 0. 0.62236255 5.9914584 9.903487 inf]
@@ -145,9 +132,7 @@ def test_acosh(test_case):
 def test_asin(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AsinJob(a=flow.FixedTensorDef((2,))):
@@ -166,17 +151,14 @@ def test_asin(test_case):
 def test_asinh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AsinhJob(a=flow.FixedTensorDef((8,))):
         return flow.math.asinh(a)
 
     x = np.array(
-        [-float("inf"), -2, -0.5, 1, 1.2, 200, 10000, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -2, -0.5, 1, 1.2, 200, 10000, float("inf")], dtype=np.float32,
     )
     y = AsinhJob(x).get().ndarray()
     # output: [-inf -1.4436355 -0.4812118 0.8813736 1.0159732 5.991471 9.903487 inf]
@@ -191,9 +173,7 @@ def test_asinh(test_case):
 def test_atan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AtanJob(a=flow.FixedTensorDef((2,))):
@@ -206,9 +186,7 @@ def test_atan(test_case):
     # print("atan y = ", y)
 
     pi = 3.14159265357
-    x = np.random.uniform(low=-pi / 2, high=pi / 2, size=(2,)).astype(
-        np.float32
-    )
+    x = np.random.uniform(low=-pi / 2, high=pi / 2, size=(2,)).astype(np.float32)
     y = AtanJob(x).get().ndarray()
     test_case.assertTrue(np.allclose(y, np.arctan(x), equal_nan=True))
 
@@ -216,17 +194,14 @@ def test_atan(test_case):
 def test_atanh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def AtanhJob(a=flow.FixedTensorDef((8,))):
         return flow.math.atanh(a)
 
     x = np.array(
-        [-float("inf"), -1, -0.5, 1, 0, 0.5, 10, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -1, -0.5, 1, 0, 0.5, 10, float("inf")], dtype=np.float32,
     )
     y = AtanhJob(x).get().ndarray()
     # output: [nan -inf -0.54930615 inf  0. 0.54930615 nan nan]
@@ -241,9 +216,7 @@ def test_atanh(test_case):
 def test_ceil(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def CeilJob(a=flow.FixedTensorDef((8,))):
@@ -257,17 +230,14 @@ def test_ceil(test_case):
 def test_cos(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def CosJob(a=flow.FixedTensorDef((8,))):
         return flow.math.cos(a)
 
     x = np.array(
-        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf")], dtype=np.float32,
     )
     y = CosJob(x).get().ndarray()
     # output: [nan -0.91113025 0.87758255 0.5403023 0.36235774 0.48718765 -0.95215535 nan]
@@ -282,17 +252,14 @@ def test_cos(test_case):
 def test_cosh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def CoshJob(a=flow.FixedTensorDef((8,))):
         return flow.math.cosh(a)
 
     x = np.array(
-        [-float("inf"), -9, -0.5, 1, 1.2, 2, 10, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -9, -0.5, 1, 1.2, 2, 10, float("inf")], dtype=np.float32,
     )
     y = CoshJob(x).get().ndarray()
     # output: [inf 4.0515420e+03 1.1276259e+00 1.5430807e+00 1.8106556e+00 3.7621956e+00 1.1013233e+04 inf]
@@ -307,9 +274,7 @@ def test_cosh(test_case):
 def test_erf(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ErfJob(a=flow.FixedTensorDef((8,))):
@@ -323,9 +288,7 @@ def test_erf(test_case):
 def test_erfc(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ErfcJob(a=flow.FixedTensorDef((8,))):
@@ -339,9 +302,7 @@ def test_erfc(test_case):
 def test_exp(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ExpJob(a=flow.FixedTensorDef((8,))):
@@ -355,9 +316,7 @@ def test_exp(test_case):
 def test_expm1(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Expm1Job(a=flow.FixedTensorDef((8,))):
@@ -371,9 +330,7 @@ def test_expm1(test_case):
 def test_floor(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def FloorJob(a=flow.FixedTensorDef((8,))):
@@ -387,9 +344,7 @@ def test_floor(test_case):
 def test_lgamma(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def LgammaJob(a=flow.FixedTensorDef((6,))):
@@ -405,9 +360,7 @@ def test_lgamma(test_case):
 def test_log(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def LogJob(a=flow.FixedTensorDef((4,))):
@@ -423,9 +376,7 @@ def test_log(test_case):
 def test_log1p(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Log1pJob(a=flow.FixedTensorDef((4,))):
@@ -441,9 +392,7 @@ def test_log1p(test_case):
 def test_log_sigmoid(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def LogSigmoidJob(a=flow.FixedTensorDef((8,))):
@@ -452,17 +401,13 @@ def test_log_sigmoid(test_case):
     x = np.random.uniform(low=-5.0, high=5.0, size=(8,)).astype(np.float32)
     y = LogSigmoidJob(x).get().ndarray()
     # print("log_sigmoid y = ", y)
-    test_case.assertTrue(
-        np.allclose(y, -np.log(1 + np.exp(-x)), equal_nan=True)
-    )
+    test_case.assertTrue(np.allclose(y, -np.log(1 + np.exp(-x)), equal_nan=True))
 
 
 def test_negative(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def NegativeJob(a=flow.FixedTensorDef((8,))):
@@ -476,9 +421,7 @@ def test_negative(test_case):
 def test_reciprocal(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ReciprocalJob(a=flow.FixedTensorDef((8,))):
@@ -492,9 +435,7 @@ def test_reciprocal(test_case):
 def test_reciprocal_no_nan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ReciprocalNoNanJob(a=flow.FixedTensorDef((4,))):
@@ -510,9 +451,7 @@ def test_reciprocal_no_nan(test_case):
 def test_rint(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def RintJob(a=flow.FixedTensorDef((8,))):
@@ -526,21 +465,16 @@ def test_rint(test_case):
 def test_rint_special_value(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def RintJob(a=flow.FixedTensorDef((9,))):
         return flow.math.rint(a)
 
     x = np.array(
-        [0.5000001, -1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.5, 3.5],
-        dtype=np.float32,
+        [0.5000001, -1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.5, 3.5], dtype=np.float32,
     )
-    out = np.array(
-        [1.0, -2.0, -2.0, -0.0, 0.0, 2.0, 2.0, 2.0, 4.0], dtype=np.float32
-    )
+    out = np.array([1.0, -2.0, -2.0, -0.0, 0.0, 2.0, 2.0, 2.0, 4.0], dtype=np.float32)
     y = RintJob(x).get().ndarray()
     test_case.assertTrue(np.allclose(y, out, equal_nan=True))
 
@@ -548,9 +482,7 @@ def test_rint_special_value(test_case):
 def test_round(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def RoundJob(a=flow.FixedTensorDef((8,))):
@@ -564,9 +496,7 @@ def test_round(test_case):
 def test_round_special_value(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def RoundJob(a=flow.FixedTensorDef((5,))):
@@ -581,9 +511,7 @@ def test_round_special_value(test_case):
 def test_rsqrt(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def RsqrtJob(a=flow.FixedTensorDef((8,))):
@@ -597,9 +525,7 @@ def test_rsqrt(test_case):
 def test_sigmoid_v2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SigmoidJob(a=flow.FixedTensorDef((8,))):
@@ -607,17 +533,13 @@ def test_sigmoid_v2(test_case):
 
     x = np.random.uniform(low=-2.0, high=2.0, size=(8,)).astype(np.float32)
     y = SigmoidJob(x).get().ndarray()
-    test_case.assertTrue(
-        np.allclose(y, 1.0 / (1.0 + np.exp(-x)), equal_nan=True)
-    )
+    test_case.assertTrue(np.allclose(y, 1.0 / (1.0 + np.exp(-x)), equal_nan=True))
 
 
 def test_sign(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SignJob(a=flow.FixedTensorDef((8,))):
@@ -631,9 +553,7 @@ def test_sign(test_case):
 def test_sign_double(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SignJob(a=flow.FixedTensorDef((8,), dtype=flow.double)):
@@ -648,9 +568,7 @@ def test_sign_double_consistent_1n2c(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SignJob(a=flow.FixedTensorDef((8,), dtype=flow.double)):
@@ -664,17 +582,14 @@ def test_sign_double_consistent_1n2c(test_case):
 def test_sin(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SinJob(a=flow.FixedTensorDef((8,))):
         return flow.math.sin(a)
 
     x = np.array(
-        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10, float("inf")], dtype=np.float32,
     )
     y = SinJob(x).get().ndarray()
     # output: [nan -0.4121185 -0.47942555 0.84147096 0.9320391 -0.87329733 -0.54402107 nan]
@@ -688,9 +603,7 @@ def test_sin(test_case):
 def test_softplus(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SoftplusJob(a=flow.FixedTensorDef((8,))):
@@ -704,9 +617,7 @@ def test_softplus(test_case):
 def test_sqrt(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SqrtJob(a=flow.FixedTensorDef((8,))):
@@ -720,9 +631,7 @@ def test_sqrt(test_case):
 def test_square(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def SquareJob(a=flow.FixedTensorDef((8,))):
@@ -736,17 +645,14 @@ def test_square(test_case):
 def test_tan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def TanJob(a=flow.FixedTensorDef((8,))):
         return flow.math.tan(a)
 
     x = np.array(
-        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf")],
-        dtype=np.float32,
+        [-float("inf"), -9, -0.5, 1, 1.2, 200, 10000, float("inf")], dtype=np.float32,
     )
     y = TanJob(x).get().ndarray()
     # output: [nan 0.45231566 -0.5463025 1.5574077 2.572152 -1.7925274 0.32097113 nan]
@@ -760,9 +666,7 @@ def test_tan(test_case):
 def test_tanh_v2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def TanhJob(a=flow.FixedTensorDef((8,))):

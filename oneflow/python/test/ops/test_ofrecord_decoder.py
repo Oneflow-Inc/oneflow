@@ -5,9 +5,10 @@ import struct
 import tempfile
 
 import numpy as np
+import six
+
 import oneflow as flow
 import oneflow.core.record.record_pb2 as ofrecord
-import six
 
 tmp = tempfile.mkdtemp()
 
@@ -91,30 +92,19 @@ def gen_ofrecord(num_examples, length, batch_size):
     with open(os.path.join(get_temp_dir(), "part-0"), "wb") as f:
         int32_data, int64_data, float_data, bytes_data = [], [], [], []
         for i in range(num_examples):
-            (
-                example,
-                int32_list,
-                int64_list,
-                float_list,
-                bytes_list,
-            ) = gen_example(length)
-            l = example.ByteSize()
-            f.write(struct.pack("q", l))
+            (example, int32_list, int64_list, float_list, bytes_list,) = gen_example(
+                length
+            )
+            f.write(struct.pack("q", example.ByteSize()))
             f.write(example.SerializeToString())
 
             int32_data.append(int32_list)
             int64_data.append(int64_list)
             float_data.append(float_list)
             bytes_data.append(bytes_list)
-        int32_np = np.array(int32_data, dtype=np.int32).reshape(
-            -1, batch_size, length
-        )
-        int64_np = np.array(int64_data, dtype=np.int64).reshape(
-            -1, batch_size, length
-        )
-        float_np = np.array(float_data, dtype=np.float).reshape(
-            -1, batch_size, length
-        )
+        int32_np = np.array(int32_data, dtype=np.int32).reshape(-1, batch_size, length)
+        int64_np = np.array(int64_data, dtype=np.int64).reshape(-1, batch_size, length)
+        float_np = np.array(float_data, dtype=np.float).reshape(-1, batch_size, length)
         double_np = np.array(float_data, dtype=np.double).reshape(
             -1, batch_size, length
         )
@@ -133,10 +123,7 @@ def decoder(data_dir, length, batch_size=1, data_part_num=1):
     blob_confs.append(_blob_conf("double", [length], dtype=flow.double))
     blob_confs.append(
         _blob_conf(
-            "bytes",
-            [1, length],
-            dtype=flow.int8,
-            codec=flow.data.BytesListCodec(),
+            "bytes", [1, length], dtype=flow.int8, codec=flow.data.BytesListCodec(),
         )
     )
 
@@ -180,12 +167,8 @@ def test_ofrecord_decoder(test_case):
         test_case.assertTrue(np.array_equal(d["int32"].ndarray(), int32_np[i]))
         test_case.assertTrue(np.array_equal(d["int64"].ndarray(), int64_np[i]))
         # test_case.assertTrue(np.array_equal(d['float'].ndarray(), float_np[i]))
-        assert np.allclose(
-            d["float"].ndarray(), float_np[i], rtol=1e-5, atol=1e-5
-        )
-        test_case.assertTrue(
-            np.array_equal(d["double"].ndarray(), double_np[i])
-        )
+        assert np.allclose(d["float"].ndarray(), float_np[i], rtol=1e-5, atol=1e-5)
+        test_case.assertTrue(np.array_equal(d["double"].ndarray(), double_np[i]))
         for j, int8_list in enumerate(d["bytes"]):
             # print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert (

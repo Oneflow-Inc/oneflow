@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
-import oneflow as flow
 from PIL import Image
+
+import oneflow as flow
 
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):
@@ -9,9 +10,7 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def image_target_resize_job(
@@ -47,9 +46,7 @@ def _read_images_by_pil(image_files):
 
 
 def _read_images_by_cv(image_files):
-    images = [
-        cv2.imread(image_file).astype(np.single) for image_file in image_files
-    ]
+    images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
 
@@ -72,10 +69,7 @@ def _target_resize_by_cv(images, target_size, max_size):
     for image in images:
         squeeze_image = image.squeeze()
         w, h = _get_target_resize_size(
-            squeeze_image.shape[1],
-            squeeze_image.shape[0],
-            target_size,
-            max_size,
+            squeeze_image.shape[1], squeeze_image.shape[0], target_size, max_size,
         )
         resized_images.append(cv2.resize(squeeze_image, (w, h)))
 

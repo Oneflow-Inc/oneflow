@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -24,9 +24,7 @@ def compare_with_tensorflow(device_type, input_shape, shape):
                 "in",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5
-                ),
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
             )
 
@@ -53,10 +51,7 @@ def compare_with_tensorflow(device_type, input_shape, shape):
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"),
-        tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
 
 

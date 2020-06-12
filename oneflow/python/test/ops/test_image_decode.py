@@ -1,6 +1,7 @@
 import numpy as np
-import oneflow as flow
 from PIL import Image
+
+import oneflow as flow
 
 
 def _of_image_decode(images):
@@ -14,15 +15,11 @@ def _of_image_decode(images):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def image_decode_job(
-        images_def=flow.MirroredTensorListDef(
-            shape=static_shape, dtype=flow.int8
-        )
+        images_def=flow.MirroredTensorListDef(shape=static_shape, dtype=flow.int8)
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         decoded_images_buffer = flow.image_decode(images_buffer)
@@ -31,8 +28,7 @@ def _of_image_decode(images):
         )
 
     images_np_arr = [
-        np.frombuffer(bys, dtype=np.byte).reshape(1, -1)
-        for bys in images_bytes
+        np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
     ]
     decoded_images = image_decode_job([images_np_arr]).get().ndarray_lists()
     return decoded_images[0]
@@ -60,13 +56,9 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
         diff_abs_values = diff[diff_index]
 
         if print_debug_info:
+            print("of_decoded_image:\n", of_decoded_image, of_decoded_image.shape)
             print(
-                "of_decoded_image:\n", of_decoded_image, of_decoded_image.shape
-            )
-            print(
-                "pil_decoded_image:\n",
-                pil_decoded_image,
-                pil_decoded_image.shape,
+                "pil_decoded_image:\n", pil_decoded_image, pil_decoded_image.shape,
             )
             print("diff_index:\n", diff_index)
             print("diff_abs_values:\n", diff_abs_values)

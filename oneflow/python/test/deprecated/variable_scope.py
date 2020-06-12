@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -22,9 +23,7 @@ def variable_scope_test_job_1(a=flow.FixedTensorDef((1, 3, 6, 6))):
                 initializer=flow.random_uniform_initializer(),
                 trainable=True,
             )
-            fc = flow.matmul(
-                flow.reshape(conv, (conv.shape[0], -1)), fcw, name="fc"
-            )
+            fc = flow.matmul(flow.reshape(conv, (conv.shape[0], -1)), fcw, name="fc")
             fcb = flow.get_variable(
                 "fc_bias",
                 shape=(10,),

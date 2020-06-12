@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -38,9 +38,7 @@ def RunTest(out_shapes, out_types):
         )
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
-    outputs = [
-        x.ndarray() for x in TestListDataTypeAndListShapeAttrJob(input).get()
-    ]
+    outputs = [x.ndarray() for x in TestListDataTypeAndListShapeAttrJob(input).get()]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]
         assert outputs[i].dtype == type_name_to_np_type[out_types[i]]

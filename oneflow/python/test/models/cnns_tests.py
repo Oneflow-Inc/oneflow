@@ -3,14 +3,13 @@ import os
 import sys
 
 import numpy
-import oneflow
 from absl import flags
+
+import oneflow
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string(
-    "python_bin", "python3", "python binary program name or filepath."
-)
+flags.DEFINE_string("python_bin", "python3", "python binary program name or filepath.")
 flags.DEFINE_boolean(
     "enable_auto_mixed_precision",
     False,
@@ -52,9 +51,7 @@ class TestNetMixin:
             )
         else:
             os.system(
-                "{} {}.py -g {}".format(
-                    FLAGS.python_bin, self.net, num_gpu_per_node
-                )
+                "{} {}.py -g {}".format(FLAGS.python_bin, self.net, num_gpu_per_node)
             )
 
     def load_tf_loss(self):
@@ -82,26 +79,18 @@ class TestNetMixin:
         for i in range(self.num_iter):
             fmt_str = "{:>6}  {:>12.6f}  {:>12.6f}"
             print(
-                fmt_str.format(
-                    i, loss_dict["tensorflow"][i], loss_dict["oneflow"][i]
-                )
+                fmt_str.format(i, loss_dict["tensorflow"][i], loss_dict["oneflow"][i])
             )
         if FLAGS.enable_auto_mixed_precision:
             tolerance = self.assert_tolerance_4_mixed_precision()
             rtol = tolerance["rtol"]
             atol = tolerance["atol"]
             print(
-                "assert tolerance for mixed_precision are: rtol",
-                rtol,
-                ", atol",
-                atol,
+                "assert tolerance for mixed_precision are: rtol", rtol, ", atol", atol,
             )
             self.assertTrue(
                 numpy.allclose(
-                    loss_dict["tensorflow"],
-                    loss_dict["oneflow"],
-                    rtol=rtol,
-                    atol=atol,
+                    loss_dict["tensorflow"], loss_dict["oneflow"], rtol=rtol, atol=atol,
                 )
             )
         else:

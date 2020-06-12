@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 flow.config.gpu_device_num(2)
@@ -57,7 +58,5 @@ for i in range(10):
     print(x)
 print("-------- disable all reduce group --------")
 for i in range(10):
-    x = DisableAllReduceGroupUpdateVariable(
-        np.ones((2, 10), dtype=np.float32)
-    ).get()
+    x = DisableAllReduceGroupUpdateVariable(np.ones((2, 10), dtype=np.float32)).get()
     print(x)

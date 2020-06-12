@@ -85,9 +85,7 @@ class Session(object):
 
     def UpdateFunctionFlagName2DefaultVal(self):
         items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
-        self.function_flag_name2default_val_ = {
-            k: v.default_val for k, v in items
-        }
+        self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
 
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN:
@@ -121,9 +119,7 @@ class Session(object):
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
         assert isinstance(function_desc, FunctionDesc)
-        self.job_name2function_desc_[
-            function_desc.job_func.__name__
-        ] = function_desc
+        self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -159,9 +155,7 @@ class Session(object):
             op_name
         ]
         self.LaunchJob(
-            job_instance_util.MakePushJobInstance(
-                push_job_name, op_name, push_data_cb
-            )
+            job_instance_util.MakePushJobInstance(push_job_name, op_name, push_data_cb)
         )
 
     def AsyncPull(self, op_name, pull_data_cb):
@@ -170,9 +164,7 @@ class Session(object):
             op_name
         ]
         self.LaunchJob(
-            job_instance_util.MakePullJobInstance(
-                pull_job_name, op_name, pull_data_cb
-            )
+            job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb)
         )
 
     def HasAnyCallbackAfterFunctionReturn(self):
@@ -242,9 +234,7 @@ def sync_default_session():
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        config_proto.resource.machine_num = len(
-            env_util.default_env_proto.machine
-        )
+        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
 
 
 def _GetDefaultConfigProto():

@@ -20,12 +20,7 @@ elif sys.version_info >= (3, 0):
         signature = inspect.signature(func)
         return tuple(
             [
-                (
-                    k,
-                    v.default
-                    if v.default is not inspect.Parameter.empty
-                    else None,
-                )
+                (k, v.default if v.default is not inspect.Parameter.empty else None,)
                 for k, v in signature.parameters.items()
             ]
         )

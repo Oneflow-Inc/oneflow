@@ -1,6 +1,7 @@
 import sys
 
 import numpy as np
+
 import oneflow as flow
 
 func_config = flow.FunctionConfig()
@@ -16,9 +17,9 @@ def test_categorical_ordinal_encoder_gpu(test_case):
     check_point = flow.train.CheckPoint()
     check_point.init()
 
-    tokens = np.random.randint(
-        -sys.maxsize, sys.maxsize, size=[200000]
-    ).astype(np.int64)
+    tokens = np.random.randint(-sys.maxsize, sys.maxsize, size=[200000]).astype(
+        np.int64
+    )
 
     k_set = set()
     v_set = set()

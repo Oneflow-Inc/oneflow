@@ -39,9 +39,7 @@ class UserOp(object):
 
         for output_arg_name in self.output_arg_key_list_:
             assert output_arg_name in self.op_conf_.user_conf.output
-            for i in range(
-                len(self.op_conf_.user_conf.output[output_arg_name].s)
-            ):
+            for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = "{}_{}".format(output_arg_name, i)
@@ -130,9 +128,7 @@ class UserOpConfBuilder(object):
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = "{}/{}_{}".format(
-                self.user_op_.op_conf_.name, output_name, i
-            )
+            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -181,15 +177,11 @@ class UserOpConfBuilder(object):
             attribute.at_list_float.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListDataType":
             assert isinstance(attr_value, (tuple, list))
-            assert all(
-                isinstance(x, int) and x in flow.dtypes for x in attr_value
-            )
+            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
             attribute.at_list_data_type.val[:] = list(attr_value)
         elif attr_type == "AttrTypeListShape":
             assert isinstance(attr_value, (tuple, list))
-            assert all(
-                isinstance(x, tuple) or isinstance(x, list) for x in attr_value
-            )
+            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])

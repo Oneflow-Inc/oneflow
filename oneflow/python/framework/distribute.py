@@ -63,9 +63,7 @@ def ConsistentStrategyEnabled():
 @oneflow_export("distribute.split")
 def split(axis):
     assert type(axis) is int
-    assert (
-        str(axis) in _axis_str2split_axis_obj
-    ), "not a valid split. expected: [0, 11)"
+    assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
     return _axis_str2split_axis_obj[str(axis)]
 
 

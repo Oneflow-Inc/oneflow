@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -28,9 +28,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
         with flow.fixed_placement(device_type, "0:0"):
             return flow.math.argmax(input)
 
-    input = (np.random.random(in_shape) * 100).astype(
-        type_name_to_np_type[data_type]
-    )
+    input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = ArgMaxJob([input]).get().ndarray_list()[0]
     # TensorFlow

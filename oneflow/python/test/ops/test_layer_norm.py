@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -12,13 +12,7 @@ for gpu in gpus:
 
 
 def test_layer_norm(_):
-    confs = [
-        {
-            "x_shape": (4, 5, 2, 6),
-            "begin_norm_axis": -1,
-            "begin_params_axis": -1,
-        }
-    ]
+    confs = [{"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1,}]
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["confs"] = confs
@@ -29,15 +23,7 @@ def test_layer_norm(_):
     arg_dict["epsilon"] = [0.0, 1e-10]
 
     for case in GenArgList(arg_dict):
-        (
-            device_type,
-            confs,
-            data_type,
-            trainable,
-            center,
-            scale,
-            epsilon,
-        ) = case
+        (device_type, confs, data_type, trainable, center, scale, epsilon,) = case
         x_shape = confs["x_shape"]
         begin_norm_axis = confs["begin_norm_axis"]
         begin_params_axis = confs["begin_params_axis"]
@@ -66,9 +52,7 @@ def test_layer_norm(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
-            assert np.allclose(
-                dx_tf.numpy(), b.ndarray(), rtol=1e-5, atol=1e-5
-            ), (
+            assert np.allclose(dx_tf.numpy(), b.ndarray(), rtol=1e-5, atol=1e-5), (
                 case,
                 dx_tf.numpy(),
                 b.ndarray(),

@@ -14,9 +14,7 @@ class FunctionAttribute(object):
 
 
 class FunctionDesc(object):
-    def __init__(
-        self, job_func=None, job_config_proto=None, function_attribute=None
-    ):
+    def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):
         if job_config_proto is None:
             job_config_proto = job_util.JobConfigProto()
         if function_attribute is None:
@@ -43,9 +41,7 @@ class FunctionDesc(object):
     def __getattr__(self, attr_name):
         assert attr_name != "flag_name2flag_value"
         flag_name2flag_value = self.job_config_proto.flag_name2flag_value
-        name2default = (
-            session_ctx.GetDefaultSession().function_flag_name2default_val
-        )
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
             assert self.job_config_proto.HasField(attr_name)
             return getattr(self.job_config_proto, attr_name)

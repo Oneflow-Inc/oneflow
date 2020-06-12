@@ -90,9 +90,7 @@ def max_mdsave_worker_num(val):
 
 @oneflow_export("config.enable_numa_aware_cuda_malloc_host")
 def api_numa_aware_cuda_malloc_host(val=True):
-    return enable_if.unique(enable_numa_aware_cuda_malloc_host, do_nothing)(
-        val
-    )
+    return enable_if.unique(enable_numa_aware_cuda_malloc_host, do_nothing)(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -200,9 +198,7 @@ def enable_debug_mode(val):
 
 @oneflow_export("config.save_downloaded_file_to_local_fs")
 def api_save_downloaded_file_to_local_fs(val=True):
-    return enable_if.unique(save_downloaded_file_to_local_fs, do_nothing)(
-        val=True
-    )
+    return enable_if.unique(save_downloaded_file_to_local_fs, do_nothing)(val=True)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)

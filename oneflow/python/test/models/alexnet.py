@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import numpy
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
@@ -29,26 +30,16 @@ class DLNetSpec(object):
         self.enable_auto_mixed_precision = enable_auto_mixed_precision
 
 
-parser = argparse.ArgumentParser(
-    description="flags for multi-node and resource"
-)
+parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-nn", "--num_nodes", type=str, default=1, required=False)
-parser.add_argument(
-    "-g", "--gpu_num_per_node", type=int, default=1, required=False
-)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
+parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
 parser.add_argument(
-    "-n", "--node_list", type=str, default=NODE_LIST, required=False
-)
-parser.add_argument(
-    "-s",
-    "--skip_scp_binary",
-    default=False,
-    action="store_true",
-    required=False,
+    "-s", "--skip_scp_binary", default=False, action="store_true", required=False,
 )
 parser.add_argument(
     "-c",
@@ -58,31 +49,17 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-r",
-    "--remote_by_hand",
-    default=False,
-    action="store_true",
-    required=False,
+    "-r", "--remote_by_hand", default=False, action="store_true", required=False,
 )
-parser.add_argument(
-    "-e", "--eval_dir", type=str, default=_DATA_DIR, required=False
-)
-parser.add_argument(
-    "-t", "--train_dir", type=str, default=_DATA_DIR, required=False
-)
+parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False
 )
 parser.add_argument(
-    "-save",
-    "--model_save_dir",
-    type=str,
-    default=_MODEL_SAVE_DIR,
-    required=False,
+    "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False,
 )
-parser.add_argument(
-    "-dn", "--data_part_num", type=int, default=32, required=False
-)
+parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
 
@@ -136,9 +113,7 @@ def _data_load_layer(args, data_dir):
         shape=(227, 227, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[
-            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
-        ],
+        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -239,9 +214,7 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0.00001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -311,9 +284,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    args.num_nodes = (
-        len(args.node_list.strip().split(",")) if args.multinode else 1
-    )
+    args.num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
     flow.env.ctrl_port(9788)
     if args.multinode:
         flow.env.ctrl_port(12138)

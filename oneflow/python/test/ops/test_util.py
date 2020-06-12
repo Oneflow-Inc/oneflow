@@ -3,9 +3,9 @@ from collections import OrderedDict
 from collections.abc import Iterable
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 
 
@@ -95,16 +95,14 @@ def CompareOpWithTensorFlow(
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
-    x = np.random.uniform(
-        low=input_minval, high=input_maxval, size=input_shape
-    ).astype(np.float32)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(
+        np.float32
+    )
     of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, x, flow_args)
     tf_y, tf_x_diff = RunTensorFlowOp(tf_op, x, tf_args)
 
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(
-        of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
-    )
+    assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
 type_name_to_flow_type = {

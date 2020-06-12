@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -41,9 +41,7 @@ def _gen_segment_ids(out_shape, num_segments, segment_ids_shape):
 
 def _gen_data(out_shape, num_segments, segment_ids_shape):
     axis = len(segment_ids_shape) - 1
-    data_shape = (
-        out_shape[0:axis] + (segment_ids_shape[axis],) + out_shape[axis + 1 :]
-    )
+    data_shape = out_shape[0:axis] + (segment_ids_shape[axis],) + out_shape[axis + 1 :]
     return np.random.rand(*data_shape).astype(np.float32)
 
 

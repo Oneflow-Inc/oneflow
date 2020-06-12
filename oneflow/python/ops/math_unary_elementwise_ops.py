@@ -152,9 +152,7 @@ def rsqrt(x, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Rsqrt_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"),
     )
     setattr(op_conf.rsqrt_conf, "in", x.unique_name)
     setattr(op_conf.rsqrt_conf, "out", "out")
@@ -197,9 +195,7 @@ def sqrt(x, name=None):
 
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Sqrt_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"),
     )
     setattr(op_conf.sqrt_conf, "in", x.unique_name)
     setattr(op_conf.sqrt_conf, "out", "out")
@@ -216,9 +212,7 @@ def square(x, name=None):
         return build_unary_elemwise_math_op("square", x, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("square_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("square_"),
     )
     setattr(op_conf.square_conf, "in", x.unique_name)
     setattr(op_conf.square_conf, "out", "out")

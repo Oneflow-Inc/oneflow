@@ -67,15 +67,10 @@ class CNNSpeedometer:
                     avg_elapse_time_per_iter = (
                         self.watch.split() / loss_print_every_n_iter
                     )
-                    samples_per_sec = (
-                        total_batch_size / avg_elapse_time_per_iter
-                    )
+                    samples_per_sec = total_batch_size / avg_elapse_time_per_iter
                     print(
                         "iter {}, loss: {:.3f}, speed: {:.3f}(sec/batch), {:.3f}(images/sec)".format(
-                            train_step,
-                            loss,
-                            avg_elapse_time_per_iter,
-                            samples_per_sec,
+                            train_step, loss, avg_elapse_time_per_iter, samples_per_sec,
                         )
                     )
                     self.throughoutput_list.append(samples_per_sec)
@@ -83,15 +78,12 @@ class CNNSpeedometer:
                 if (train_step + 1) == iter_num:
                     self.watch.stop()
                     totoal_duration = self.watch.duration()
-                    avg_samples_per_sec = (
-                        total_batch_size * iter_num / totoal_duration
-                    )
+                    avg_samples_per_sec = total_batch_size * iter_num / totoal_duration
 
                     print("-".ljust(66, "-"))
                     print(
                         "average speed: {:.3f}(images/sec), new_cal_method: {:.3f}(images/sec)".format(
-                            avg_samples_per_sec,
-                            np.mean(self.throughoutput_list),
+                            avg_samples_per_sec, np.mean(self.throughoutput_list),
                         )
                     )
                     print("-".ljust(66, "-"))

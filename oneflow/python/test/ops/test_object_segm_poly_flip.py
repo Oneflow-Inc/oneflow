@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+
 import oneflow as flow
 
 
@@ -11,18 +12,12 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def object_segm_poly_flip_job(
-        poly_def=flow.MirroredTensorListDef(
-            shape=tuple(poly_shape), dtype=flow.float
-        ),
-        image_size_def=flow.MirroredTensorDef(
-            shape=image_size.shape, dtype=flow.int32
-        ),
+        poly_def=flow.MirroredTensorListDef(shape=tuple(poly_shape), dtype=flow.float),
+        image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),
     ):
         poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
         flip_poly = flow.object_segmentation_polygon_flip(
@@ -33,9 +28,7 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
         )
 
     input_poly_list = [np.expand_dims(bbox, axis=0) for bbox in poly_list]
-    poly_tensor = object_segm_poly_flip_job(
-        [input_poly_list], [image_size]
-    ).get()
+    poly_tensor = object_segm_poly_flip_job([input_poly_list], [image_size]).get()
     return poly_tensor.ndarray_lists()[0]
 
 
@@ -109,8 +102,5 @@ def _compare_segm_poly_flip(
 
 def test_object_segm_poly_flip(test_case):
     _compare_segm_poly_flip(
-        test_case,
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        4,
-        1,
+        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1,
     )

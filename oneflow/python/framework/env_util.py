@@ -154,10 +154,7 @@ def do_nothing(*args, **kwargs):
 
 
 def CompleteEnvProto(env_proto):
-    if (
-        len(env_proto.machine) == 1
-        and env_proto.HasField("ctrl_port") is False
-    ):
+    if len(env_proto.machine) == 1 and env_proto.HasField("ctrl_port") is False:
         env_proto.ctrl_port = _FindFreePort()
 
 

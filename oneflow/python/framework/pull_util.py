@@ -34,9 +34,7 @@ class FutureRemoteBlobs(object):
             assert self.finished_cnt_ <= pullers_cnt
             if self.finished_cnt_ == pullers_cnt:
                 callback(
-                    self._TrySyncAndGetResultNdarray(
-                        self.out_remote_blob_pullers_
-                    )
+                    self._TrySyncAndGetResultNdarray(self.out_remote_blob_pullers_)
                 )
 
         try:
@@ -95,9 +93,7 @@ class FutureRemoteBlobs(object):
 
     def _GetPullersCnt(self):
         cnt = 0
-        for _ in self._FlatConsistentBlobPullers(
-            self.out_remote_blob_pullers_
-        ):
+        for _ in self._FlatConsistentBlobPullers(self.out_remote_blob_pullers_):
             cnt += 1
         return cnt
 
@@ -121,16 +117,13 @@ class FutureRemoteBlobs(object):
             return _ConsistentBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, remote_blob_util.MirroredBlob):
             return _MirroredBlobPuller(out_remote_blobs, self.session_)
-        if isinstance(out_remote_blobs, list) or isinstance(
-            out_remote_blobs, tuple
-        ):
+        if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(
                 self._MakeRemoteBlobPullers(x) for x in out_remote_blobs
             )
         if isinstance(out_remote_blobs, dict):
             return {
-                k: self._MakeRemoteBlobPullers(v)
-                for k, v in out_remote_blobs.items()
+                k: self._MakeRemoteBlobPullers(v) for k, v in out_remote_blobs.items()
             }
         raise NotImplementedError
 

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -47,9 +47,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
                 "x",
                 shape=shape,
                 dtype=data_type,
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             loss = of_activation_map[activation_type](x)
@@ -76,9 +74,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     rtol = 1e-3 if activation_type == "gelu" else 1e-5
     atol = 1e-3 if activation_type == "gelu" else 1e-5
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol, atol)
-    assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol
-    )
+    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
 
 
 def test_activations(test_case):

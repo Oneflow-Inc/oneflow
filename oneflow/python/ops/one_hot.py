@@ -6,9 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("one_hot")
-def one_hot(
-    indices, depth, on_value=1, off_value=0, axis=-1, dtype=None, name=None
-):
+def one_hot(indices, depth, on_value=1, off_value=0, axis=-1, dtype=None, name=None):
     out_ndims = len(indices.shape) + 1
     if axis < 0:
         axis += out_ndims
@@ -17,9 +15,7 @@ def one_hot(
         % (-out_ndims, out_ndims, axis)
     )
     out = (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("OneHot_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
         .Op("one_hot")
         .Input("indices", [indices])
         .Attr("depth", int(depth), "AttrTypeInt64")

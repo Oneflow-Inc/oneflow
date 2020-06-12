@@ -9,9 +9,7 @@ from oneflow.python.oneflow_export import oneflow_export
 def sort(input, direction="ASCENDING", name=None):
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Sort_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
         .Op("sort")
         .Input("in", [input])
         .Output("out")

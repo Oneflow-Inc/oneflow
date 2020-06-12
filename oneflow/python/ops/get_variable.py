@@ -62,9 +62,7 @@ def get_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(
-            op_conf
-        )
+        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
         var_blob = _CreateVariableBlob(op_conf, parallel_conf)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
 

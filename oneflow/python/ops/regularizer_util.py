@@ -13,10 +13,10 @@ def l1_l2_regularizer(l1=0.01, l2=0.01):
 
 
 @oneflow_export("regularizers.l1")
-def l1_regularizer(l=0.01):
-    return l1_l2_regularizer(l1=l, l2=0.0)
+def l1_regularizer(lr=0.01):
+    return l1_l2_regularizer(l1=lr, l2=0.0)
 
 
 @oneflow_export("regularizers.l2")
-def l2_regularizer(l=0.01):
-    return l1_l2_regularizer(l1=0.0, l2=l)
+def l2_regularizer(lr=0.01):
+    return l1_l2_regularizer(l1=0.0, l2=lr)

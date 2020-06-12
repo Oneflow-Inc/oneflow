@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -43,18 +44,14 @@ def make_xla_job(shape, mean_shape, norm_axis, dtype=flow.float32):
 
 
 class TestLayerNormGrad(unittest.TestCase):
-    def _test_body(
-        self, dy, x, mean, inv_variance, norm_axis, dtype=np.float32
-    ):
+    def _test_body(self, dy, x, mean, inv_variance, norm_axis, dtype=np.float32):
         f1 = make_job(x.shape, mean.shape, norm_axis, dtype=flow.float32)
         f2 = make_xla_job(x.shape, mean.shape, norm_axis, dtype=flow.float32)
         a = f1(dy, x, mean, inv_variance).get()
         b = f2(dy, x, mean, inv_variance).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, norm_axis=-1, dtype=np.float32):

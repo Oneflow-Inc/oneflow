@@ -7,6 +7,7 @@ import uuid
 from tempfile import NamedTemporaryFile
 
 import google.protobuf.text_format as pbtxt
+
 import oneflow.python.framework.env_util as env_util
 from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
@@ -30,9 +31,7 @@ def init_worker(scp_binary=True, use_uuid=True):
     global _temp_run_dir
     if use_uuid:
         assert scp_binary is True
-        _temp_run_dir = (
-            os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
-        )
+        _temp_run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
     else:
         _temp_run_dir = os.getenv("HOME") + "/oneflow_temp/no_uuid"
     run_dir = _temp_run_dir
@@ -84,9 +83,7 @@ def _SendBinaryAndConfig2Worker(
             + run_dir
             + "/oneflow_worker"
         )
-    _SystemCall(
-        "scp " + env_proto_path + remote_file_prefix + run_dir + "/env.proto"
-    )
+    _SystemCall("scp " + env_proto_path + remote_file_prefix + run_dir + "/env.proto")
     oneflow_cmd = (
         '"cd '
         + run_dir

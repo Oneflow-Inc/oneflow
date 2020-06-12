@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import numpy as np
+
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 
 char = data_type_pb2.kChar

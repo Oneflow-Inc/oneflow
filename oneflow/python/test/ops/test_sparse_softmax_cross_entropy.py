@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -33,9 +33,7 @@ def compare_with_tensorflow(
                 "x",
                 shape=(batch_size, num_classes),
                 dtype=type_name_to_flow_type[data_type],
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -70,10 +68,7 @@ def compare_with_tensorflow(
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"),
-        tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
     flow.clear_default_session()
 

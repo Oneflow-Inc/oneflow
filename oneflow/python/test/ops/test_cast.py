@@ -1,16 +1,14 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def cast_forward_compare_with_tensorflow(
-    test_cast, device_type, input_shape, dtype
-):
+def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -72,10 +70,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"),
-        tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
 
 

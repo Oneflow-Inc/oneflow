@@ -15,10 +15,7 @@ from oneflow.python.oneflow_export import oneflow_export
 class ImagePreprocessor(object):
     def __init__(self, preprocessor):
         assert isinstance(preprocessor, str)
-        if (
-            preprocessor.lower() != "bgr2rgb"
-            and preprocessor.lower() != "mirror"
-        ):
+        if preprocessor.lower() != "bgr2rgb" and preprocessor.lower() != "mirror":
             raise ValueError('preprocessor must be "bgr2rgb" or "mirror".')
 
         self.preprocessor = preprocessor
@@ -65,9 +62,7 @@ class ImageCodec(object):
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
-        proto.jpeg.preprocess.extend(
-            [p.to_proto() for p in self.image_preprocessors]
-        )
+        proto.jpeg.preprocess.extend([p.to_proto() for p in self.image_preprocessors])
         return proto
 
 
@@ -101,10 +96,7 @@ class BytesListCodec(object):
 @oneflow_export("data.NormByChannelPreprocessor")
 class NormByChannelPreprocessor(object):
     def __init__(
-        self,
-        mean_values,
-        std_values=(1.0, 1.0, 1.0),
-        data_format="channels_last",
+        self, mean_values, std_values=(1.0, 1.0, 1.0), data_format="channels_last",
     ):
         assert isinstance(mean_values, (list, tuple))
         assert isinstance(std_values, (list, tuple))
@@ -174,13 +166,9 @@ def decode_ofrecord(
     op_conf.decode_ofrecord_conf.data_part_num = data_part_num
     op_conf.decode_ofrecord_conf.batch_size = batch_size
     op_conf.decode_ofrecord_conf.part_name_prefix = part_name_prefix
-    op_conf.decode_ofrecord_conf.part_name_suffix_length = (
-        part_name_suffix_length
-    )
+    op_conf.decode_ofrecord_conf.part_name_suffix_length = part_name_suffix_length
     if shuffle is True:
-        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = (
-            buffer_size
-        )
+        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = buffer_size
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -215,13 +203,9 @@ def ofrecord_loader(
     op_conf.record_load_conf.batch_size = batch_size
     op_conf.record_load_conf.part_name_prefix = part_name_prefix
     if part_name_suffix_length is not -1:
-        op_conf.record_load_conf.part_name_suffix_length = (
-            part_name_suffix_length
-        )
+        op_conf.record_load_conf.part_name_suffix_length = part_name_suffix_length
     if shuffle:
-        op_conf.record_load_conf.random_shuffle_conf.buffer_size = (
-            shuffle_buffer_size
-        )
+        op_conf.record_load_conf.random_shuffle_conf.buffer_size = shuffle_buffer_size
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = name
     lbi.blob_name = "out"
@@ -256,9 +240,7 @@ def ofrecord_reader(
         .Attr("random_shuffle", random_shuffle, "AttrTypeBool")
         .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")
         .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")
-        .Attr(
-            "part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32"
-        )
+        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -266,9 +248,7 @@ def ofrecord_reader(
 
 
 @oneflow_export("data.decode_random")
-def decode_random(
-    shape, dtype, batch_size=1, initializer=None, tick=None, name=None
-):
+def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=None):
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -341,9 +321,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
 
 
 @oneflow_export("image_decode")
-def image_decode(
-    images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None
-):
+def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
     # TODO: check color_space valiad
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")

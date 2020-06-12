@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -43,9 +44,7 @@ class TestSoftmaxGrad(unittest.TestCase):
         print("without xla: ", a)
         print("with xla", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, dtype=np.float32):

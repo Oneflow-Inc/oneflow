@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
 
@@ -27,18 +27,14 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
                 "x",
                 shape=x_shape,
                 dtype=type_name_to_flow_type[dtype],
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             y = flow.get_variable(
                 "y",
                 shape=y_shape,
                 dtype=type_name_to_flow_type[dtype],
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             loss = flow.concat([x, y], axis)

@@ -4,13 +4,10 @@ import time
 from datetime import datetime
 
 import oneflow as flow
-
 from pretrain import PreTrain  # , Eval
 
 _DATA_DIR = "/dataset/bert/of_wiki_seq_len_128"
-_MODEL_LOAD = (
-    "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
-)
+_MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
@@ -23,21 +20,14 @@ parser.add_argument("--node_num", type=int, default=1)
 parser.add_argument("--node_list", type=str, default=NODE_LIST)
 
 # train
-parser.add_argument(
-    "--learning_rate", type=float, default=1e-4, help="Learning rate"
-)
+parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
 parser.add_argument(
     "--weight_decay_rate", type=float, default=0.01, help="weight decay rate"
 )
 parser.add_argument("--batch_size_per_device", type=int, default=24)
+parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
 parser.add_argument(
-    "--iter_num", type=int, default=10, help="total iterations to run"
-)
-parser.add_argument(
-    "--log_every_n_iter",
-    type=int,
-    default=1,
-    help="print loss every n iteration",
+    "--log_every_n_iter", type=int, default=1, help="print loss every n iteration",
 )
 parser.add_argument("--data_dir", type=str, default=_DATA_DIR)
 parser.add_argument(
@@ -68,11 +58,7 @@ def _blob_conf(name, shape, dtype=flow.int32):
 
 
 def BertDecoder(
-    data_dir,
-    batch_size=1,
-    data_part_num=1,
-    seq_length=128,
-    max_predictions_per_seq=20,
+    data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20,
 ):
     blob_confs = []
     blob_confs.append(_blob_conf("input_ids", [seq_length]))
@@ -80,9 +66,7 @@ def BertDecoder(
     blob_confs.append(_blob_conf("input_mask", [seq_length]))
     blob_confs.append(_blob_conf("segment_ids", [seq_length]))
     blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(
-        _blob_conf("masked_lm_positions", [max_predictions_per_seq])
-    )
+    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
     blob_confs.append(
         _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
     )
@@ -113,11 +97,7 @@ def BuildPreTrainNet(
     intermediate_size = hidden_size * 4
 
     decoders = BertDecoder(
-        args.data_dir,
-        batch_size,
-        data_part_num,
-        seq_length,
-        max_predictions_per_seq,
+        args.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq,
     )
 
     input_ids = decoders[0]
@@ -155,9 +135,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
     learning_rate_decay=dict(
         polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0,)
     ),
-    warmup_conf=dict(
-        linear_conf=dict(warmup_batches=1000, start_multiplier=0,)
-    ),
+    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0,)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0,)),
     adam_conf=dict(epsilon=1e-6),
     weight_decay_conf=dict(
@@ -197,9 +175,7 @@ cur_step = 0
 
 def AsyncGetCallback(result):
     global cur_step
-    print(
-        "{:>12}  {:>.10f}  {:.2f}".format(cur_step, result.mean(), time.time())
-    )
+    print("{:>12}  {:>.10f}  {:.2f}".format(cur_step, result.mean(), time.time()))
     cur_step += 1
 
 

@@ -69,9 +69,7 @@ class BERTSpeedometer:
                     avg_elapse_time_per_iter = (
                         self.watch.split() / loss_print_every_n_iter
                     )
-                    sentences_per_sec = (
-                        total_batch_size / avg_elapse_time_per_iter
-                    )
+                    sentences_per_sec = total_batch_size / avg_elapse_time_per_iter
                     print(
                         "iter {}, total_loss: {:.3f}, mlm_loss: {:.3f}, nsp_loss: {:.3f}, speed: {:.3f}(sec/batch), {:.3f}(sentences/sec)".format(
                             train_step,
@@ -94,8 +92,7 @@ class BERTSpeedometer:
                     print("-".ljust(66, "-"))
                     print(
                         "average speed: {:.3f}(sentences/sec), new_cal_method: {:.3f}(sentences/sec)".format(
-                            avg_sentences_per_sec,
-                            np.mean(self.throughoutput_list),
+                            avg_sentences_per_sec, np.mean(self.throughoutput_list),
                         )
                     )
                     print("-".ljust(66, "-"))

@@ -1,14 +1,13 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
 
 
-def make_job(
-    a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32
-):
+def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
@@ -22,9 +21,7 @@ def make_job(
     return matmul_job
 
 
-def make_xla_job(
-    a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32
-):
+def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
@@ -52,9 +49,7 @@ class TestMatmul(unittest.TestCase):
         y = f2(a, b).get()
         print("without xla: ", x)
         print("with xla: ", y)
-        self.assertTrue(
-            np.allclose(x.ndarray(), y.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(x.ndarray(), y.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):

@@ -46,9 +46,7 @@ class PlacementScope(object):
         )
 
     def GetDeviceType4OpConf(self, op_conf):
-        return device_util.DeviceType4DeviceTag(
-            self.GetDeviceTag4OpConf(op_conf)
-        )
+        return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
 
     def GetDeviceTag4OpConf(self, op_conf):
         raise NotImplementedError
@@ -91,9 +89,7 @@ class DevicePriorPlacementScope(PlacementScope):
 
 
 def PlacementScopeStackPush(placement_policy):
-    session_ctx.GetDefaultSession().placement_scope_stack.insert(
-        0, placement_policy
-    )
+    session_ctx.GetDefaultSession().placement_scope_stack.insert(0, placement_policy)
 
 
 def PlacementScopeStackPop():
@@ -129,10 +125,9 @@ def _MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, collections.Sized)
     device_names = []
     for machine_device_id in machine_device_ids:
-        assert isinstance(machine_device_id, str), (
-            "type of machine_device_id (%s) is not string"
-            % type(machine_device_id)
-        )
+        assert isinstance(
+            machine_device_id, str
+        ), "type of machine_device_id (%s) is not string" % type(machine_device_id)
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
             "machine_device_id: %s is not valid" % machine_device_id
         )
@@ -151,8 +146,7 @@ def MakeMachineId2DeviceIdList(parallel_conf):
             parallel_conf
         )
         _parallel_conf_str2ofrecord[parallel_conf_str] = {
-            int(k): list(v.int32_list.value)
-            for k, v in ofrecord.feature.items()
+            int(k): list(v.int32_list.value) for k, v in ofrecord.feature.items()
         }
     return _parallel_conf_str2ofrecord[parallel_conf_str]
 

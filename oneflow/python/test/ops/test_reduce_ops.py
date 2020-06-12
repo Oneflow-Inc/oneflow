@@ -1,10 +1,10 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import tensorflow as tf
 
+import oneflow as flow
+import oneflow.core.common.data_type_pb2 as data_type_util
 from test_util import GenArgList
 
 
@@ -17,9 +17,7 @@ def compare_reduce_any_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceAnyJob(
-        x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceAnyJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_any(x, axis=axis, keepdims=keepdims)
 
@@ -74,9 +72,7 @@ def test_reduce_any_scalar(test_case):
 def test_reduce_any_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
@@ -96,9 +92,7 @@ def compare_reduce_prod_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceProdJob(
-        x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceProdJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_prod(x, axis=axis, keepdims=keepdims)
 
@@ -153,9 +147,7 @@ def test_reduce_prod_scalar(test_case):
 def test_reduce_prod_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
@@ -175,9 +167,7 @@ def compare_reduce_min_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceMinJob(
-        x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceMinJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
 
@@ -232,9 +222,7 @@ def test_reduce_min_scalar(test_case):
 def test_reduce_min_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
@@ -254,9 +242,7 @@ def compare_reduce_all_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceAllJob(
-        x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceAllJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_all(x, axis=axis, keepdims=keepdims)
 
@@ -311,9 +297,7 @@ def test_reduce_all_scalar(test_case):
 def test_reduce_all_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
@@ -333,9 +317,7 @@ def compare_reduce_sum_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.function(func_config)
-    def ReduceSumJob(
-        x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceSumJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -390,9 +372,7 @@ def test_reduce_sum_scalar(test_case):
 def test_reduce_sum_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):

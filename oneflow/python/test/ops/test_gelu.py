@@ -2,9 +2,9 @@ import math
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgDict, RunOneflowOp
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -27,9 +27,7 @@ def test_gelu(test_case):
     arg_dict["flow_op"] = [flow.math.gelu]
     arg_dict["flow_args"] = [[]]
     arg_dict["x"] = [
-        np.random.uniform(low=-100, high=100, size=(10, 20, 30, 40)).astype(
-            np.float32
-        )
+        np.random.uniform(low=-100, high=100, size=(10, 20, 30, 40)).astype(np.float32)
     ]
     for arg in GenArgDict(arg_dict):
         of_y, of_x_diff = RunOneflowOp(**arg)

@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 flow.config.gpu_device_num(1)
@@ -24,9 +25,7 @@ def DataLoaderJob():
         label = flow.data.OFRecordRawDecoder(
             ofrecord, "class/label", shape=(), dtype=flow.int32
         )
-        rsz = flow.image.Resize(
-            image, resize_x=224, resize_y=224, color_space="RGB"
-        )
+        rsz = flow.image.Resize(image, resize_x=224, resize_y=224, color_space="RGB")
         print(rsz.shape)
         print(label.shape)
 
@@ -56,9 +55,7 @@ def DataLoaderEvalJob():
             data_part_num=1,
             shuffle=False,
         )
-        image = flow.data.OFRecordImageDecoder(
-            ofrecord, "encoded", color_space="RGB"
-        )
+        image = flow.data.OFRecordImageDecoder(ofrecord, "encoded", color_space="RGB")
         label = flow.data.OFRecordRawDecoder(
             ofrecord, "class/label", shape=(), dtype=flow.int32
         )

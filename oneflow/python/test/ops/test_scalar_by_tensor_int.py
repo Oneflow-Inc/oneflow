@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -21,9 +22,7 @@ def _check(test_case, x, y, out, case):
 def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def ScalarByTensorJob(
@@ -68,49 +67,37 @@ def test_scalar_add_by_tensor_cpu_double(test_case):
 
 
 def test_scalar_add_by_tensor_gpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "add", flow.int8, "gpu")
 
 
 def test_scalar_add_by_tensor_cpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "add", flow.int8, "cpu")
 
 
 def test_scalar_add_by_tensor_gpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "add", flow.int32, "gpu")
 
 
 def test_scalar_add_by_tensor_cpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "add", flow.int32, "cpu")
 
 
 def test_scalar_add_by_tensor_gpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "add", flow.int64, "gpu")
 
 
 def test_scalar_add_by_tensor_cpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "add", flow.int64, "cpu")
 
@@ -140,49 +127,37 @@ def test_scalar_sub_by_tensor_cpu_double(test_case):
 
 
 def test_scalar_sub_by_tensor_gpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "sub", flow.int8, "gpu")
 
 
 def test_scalar_sub_by_tensor_cpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "sub", flow.int8, "cpu")
 
 
 def test_scalar_sub_by_tensor_gpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "sub", flow.int32, "gpu")
 
 
 def test_scalar_sub_by_tensor_cpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "sub", flow.int32, "cpu")
 
 
 def test_scalar_sub_by_tensor_gpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "sub", flow.int64, "gpu")
 
 
 def test_scalar_sub_by_tensor_cpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "sub", flow.int64, "cpu")
 
@@ -212,49 +187,37 @@ def test_scalar_mul_by_tensor_cpu_double(test_case):
 
 
 def test_scalar_mul_by_tensor_gpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "mul", flow.int8, "gpu")
 
 
 def test_scalar_mul_by_tensor_cpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "mul", flow.int8, "cpu")
 
 
 def test_scalar_mul_by_tensor_gpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "mul", flow.int32, "gpu")
 
 
 def test_scalar_mul_by_tensor_cpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "mul", flow.int32, "cpu")
 
 
 def test_scalar_mul_by_tensor_gpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "mul", flow.int64, "gpu")
 
 
 def test_scalar_mul_by_tensor_cpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "mul", flow.int64, "cpu")
 
@@ -284,48 +247,36 @@ def test_scalar_div_by_tensor_cpu_double(test_case):
 
 
 def test_scalar_div_by_tensor_gpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "div", flow.int8, "gpu")
 
 
 def test_scalar_div_by_tensor_cpu_int8(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int8)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int8)
     _run_test(test_case, x, y, "div", flow.int8, "cpu")
 
 
 def test_scalar_div_by_tensor_gpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "div", flow.int32, "gpu")
 
 
 def test_scalar_div_by_tensor_cpu_int32(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int32)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int32)
     _run_test(test_case, x, y, "div", flow.int32, "cpu")
 
 
 def test_scalar_div_by_tensor_gpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "div", flow.int64, "gpu")
 
 
 def test_scalar_div_by_tensor_cpu_int64(test_case):
-    x = np.random.randint(
-        low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64
-    )
+    x = np.random.randint(low=1, high=10, size=(10, 3, 32, 1024), dtype=np.int64)
     y = np.random.randint(low=1, high=10, size=(1,), dtype=np.int64)
     _run_test(test_case, x, y, "div", flow.int64, "cpu")

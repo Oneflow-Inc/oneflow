@@ -8,9 +8,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.watcher as watcher_util
-from oneflow.core.job.lbi_diff_watcher_info_pb2 import (
-    LbiAndDiffWatcherUuidPair,
-)
+from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -57,9 +55,7 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
         lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
         lbi_and_uuid.watcher_uuid = handler_uuid
-        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
-            lbi_and_uuid
-        )
+        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif type(blob_watched) is MirroredBlob:
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
@@ -91,9 +87,7 @@ def _MakeSubConsistentBlobHandlers(blob_watched, handler):
         blob_watched, handler
     )
     return [
-        _WrapperHandler4ParallelIdAndLocalBlob(
-            i, handler4parallel_id_and_local_blob
-        )
+        _WrapperHandler4ParallelIdAndLocalBlob(i, handler4parallel_id_and_local_blob)
         for i in range(len(blob_watched.sub_consistent_blob_list))
     ]
 

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -85,16 +85,14 @@ def compare_with_tensorflow_grad(
     assert device_type in ["gpu", "cpu"]
 
     np_type = type_name_to_np_type[data_type]
-    x = np.random.uniform(
-        low=input_minval, high=input_maxval, size=x_shape
-    ).astype(np_type)
-    y = np.random.uniform(
-        low=input_minval, high=input_maxval, size=y_shape
-    ).astype(np_type)
-
-    of_out, of_x_diff, of_y_diff, = RunOneflowOp(
-        device_type, flow_op, x, y, data_type
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=x_shape).astype(
+        np_type
     )
+    y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
+        np_type
+    )
+
+    of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
@@ -132,19 +130,19 @@ def compare_with_tensorflow(
 
     np_type = type_name_to_np_type[data_type]
     if np_type in (np.int8, np.int32, np.int64):
-        x = np.random.randint(
-            low=input_minval, high=input_maxval, size=x_shape
-        ).astype(np_type)
-        y = np.random.randint(
-            low=input_minval, high=input_maxval, size=y_shape
-        ).astype(np_type)
+        x = np.random.randint(low=input_minval, high=input_maxval, size=x_shape).astype(
+            np_type
+        )
+        y = np.random.randint(low=input_minval, high=input_maxval, size=y_shape).astype(
+            np_type
+        )
     else:
-        x = np.random.uniform(
-            low=input_minval, high=input_maxval, size=x_shape
-        ).astype(np_type)
-        y = np.random.uniform(
-            low=input_minval, high=input_maxval, size=y_shape
-        ).astype(np_type)
+        x = np.random.uniform(low=input_minval, high=input_maxval, size=x_shape).astype(
+            np_type
+        )
+        y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
+            np_type
+        )
     if isinstance(flow_op, (type(flow.math.divide), type(flow.math.mod))):
         y[np.where(y == 0)] += 1
 

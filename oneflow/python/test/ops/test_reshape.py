@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

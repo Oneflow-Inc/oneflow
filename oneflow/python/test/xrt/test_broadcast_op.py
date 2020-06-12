@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -18,9 +19,7 @@ class TestBroadcastOp(unittest.TestCase):
         b = f2(x, y).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(
-            np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05)
-        )
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
 
         flow.clear_default_session()
 

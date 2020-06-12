@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -28,18 +28,14 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
         with flow.fixed_placement(device_type, "0:0"):
             return flow.math.top_k(input, k, sorted)
 
-    input = (np.random.random(in_shape) * 100).astype(
-        type_name_to_np_type[data_type]
-    )
+    input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = TopKJob([input]).get().ndarray_list()[0]
     # TensorFlow
     if k <= in_shape[-1]:
         _, tf_out = tf.math.top_k(input, k, sorted)
     else:
-        tf_out = tf.argsort(
-            input, axis=-1, direction="DESCENDING", stable=True
-        )
+        tf_out = tf.argsort(input, axis=-1, direction="DESCENDING", stable=True)
 
     assert np.array_equal(of_out, tf_out.numpy())
 

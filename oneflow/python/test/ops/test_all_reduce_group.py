@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList
 
 
@@ -14,19 +14,13 @@ def do_test(test_case, mirrored):
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     if mirrored:
-        func_config.default_distribute_strategy(
-            flow.distribute.mirrored_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
     else:
-        func_config.default_distribute_strategy(
-            flow.distribute.consistent_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo():
-        w = flow.get_variable(
-            "w", (10,), initializer=flow.constant_initializer(1)
-        )
+        w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
         flow.losses.add_loss(w)
         return w
 

@@ -3,3 +3,6 @@ opencv-python
 sphinx
 recommonmark
 pillow
+isort
+black
+flake8

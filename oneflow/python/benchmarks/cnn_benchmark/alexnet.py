@@ -14,34 +14,18 @@ import argparse
 import oneflow as flow
 
 DATA_DIR = "/dataset/imagenet_1k/oneflow/30/train"
-parser = argparse.ArgumentParser(
-    description="flags for multi-node and resource"
-)
+parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
-parser.add_argument(
-    "-g", "--gpu_num_per_node", type=int, default=1, required=False
-)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
+parser.add_argument("-n", "--node_list", type=str, default=None, required=False)
+parser.add_argument("-e", "--eval_dir", type=str, default=DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str, default=DATA_DIR, required=False)
+parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
 parser.add_argument(
-    "-n", "--node_list", type=str, default=None, required=False
-)
-parser.add_argument(
-    "-e", "--eval_dir", type=str, default=DATA_DIR, required=False
-)
-parser.add_argument(
-    "-t", "--train_dir", type=str, default=DATA_DIR, required=False
-)
-parser.add_argument(
-    "-load", "--model_load_dir", type=str, default="", required=False
-)
-parser.add_argument(
-    "-save",
-    "--model_save_dir",
-    type=str,
-    default="./checkpoints",
-    required=False,
+    "-save", "--model_save_dir", type=str, default="./checkpoints", required=False,
 )
 args = parser.parse_args()
 
@@ -52,12 +36,8 @@ def _data_load_layer(data_dir):
         "encoded",
         shape=(227, 227, 3),
         dtype=flow.float,
-        codec=flow.data.ImageCodec(
-            [flow.data.ImageResizePreprocessor(227, 227)]
-        ),
-        preprocessors=[
-            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
-        ],
+        codec=flow.data.ImageCodec([flow.data.ImageResizePreprocessor(227, 227)]),
+        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
     # load label from dataset
@@ -124,12 +104,7 @@ def alexnet(images, labels):
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
 
     conv1 = _conv2d_layer(
-        "conv1",
-        transposed,
-        filters=64,
-        kernel_size=11,
-        strides=4,
-        padding="VALID",
+        "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID",
     )
 
     pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")

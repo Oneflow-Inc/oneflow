@@ -1,8 +1,9 @@
 import os
 
-import oneflow as flow
 from absl import app
 from absl.testing import absltest
+
+import oneflow as flow
 
 flow.unittest.register_test_cases(
     scope=globals(),

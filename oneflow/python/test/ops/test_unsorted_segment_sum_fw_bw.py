@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -26,13 +26,9 @@ def _make_unsorted_segment_sum_fn(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(
-            flow.distribute.mirrored_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
     else:
-        func_config.default_distribute_strategy(
-            flow.distribute.consistent_strategy()
-        )
+        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -57,9 +53,7 @@ def _make_unsorted_segment_sum_fn(
         @flow.function(func_config)
         def unsorted_segment_sum_fn(
             data_def=flow.MirroredTensorDef(data.shape, dtype=flow.float),
-            segment_ids_def=flow.MirroredTensorDef(
-                segment_ids.shape, dtype=flow.int32
-            ),
+            segment_ids_def=flow.MirroredTensorDef(segment_ids.shape, dtype=flow.int32),
         ):
             return do_unsorted_segment_sum(data_def, segment_ids_def)
 
@@ -68,9 +62,7 @@ def _make_unsorted_segment_sum_fn(
         @flow.function(func_config)
         def unsorted_segment_sum_fn(
             data_def=flow.FixedTensorDef(data.shape, dtype=flow.float),
-            segment_ids_def=flow.FixedTensorDef(
-                segment_ids.shape, dtype=flow.int32
-            ),
+            segment_ids_def=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
         ):
             return do_unsorted_segment_sum(data_def, segment_ids_def)
 
@@ -111,29 +103,17 @@ def _compare_unsorted_segment_sum_with_tf(
     else:
 
         def compare_dy(data_grad):
-            test_case.assertTrue(
-                np.array_equal(dy.numpy(), data_grad.ndarray())
-            )
+            test_case.assertTrue(np.array_equal(dy.numpy(), data_grad.ndarray()))
 
     unsorted_segment_sum_fn = _make_unsorted_segment_sum_fn(
-        data,
-        segment_ids,
-        axis,
-        num_segments,
-        device_type,
-        mirrored,
-        compare_dy,
+        data, segment_ids, axis, num_segments, device_type, mirrored, compare_dy,
     )
 
     check_point = flow.train.CheckPoint()
     check_point.init()
 
     if mirrored:
-        of_y = (
-            unsorted_segment_sum_fn([data], [segment_ids])
-            .get()
-            .ndarray_list()[0]
-        )
+        of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().ndarray_list()[0]
     else:
         of_y = unsorted_segment_sum_fn(data, segment_ids).get().ndarray()
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))

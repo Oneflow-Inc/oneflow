@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+
 import oneflow as flow
 
 config = flow.function_config()
@@ -43,9 +44,7 @@ def make_xla_job(shape, gamma_shape, params_axis, dtype=flow.float32):
 class TestLayerNormParamGrad(unittest.TestCase):
     def _test_body(self, dy, norm, gamma, params_axis, dtype=np.float32):
         f1 = make_job(dy.shape, gamma.shape, params_axis, dtype=flow.float32)
-        f2 = make_xla_job(
-            dy.shape, gamma.shape, params_axis, dtype=flow.float32
-        )
+        f2 = make_xla_job(dy.shape, gamma.shape, params_axis, dtype=flow.float32)
         (d_norm1, d_beta1, d_gamma1) = f1(dy, norm, gamma).get()
         (d_norm2, d_beta2, d_gamma2) = f2(dy, norm, gamma).get()
 
@@ -64,19 +63,13 @@ class TestLayerNormParamGrad(unittest.TestCase):
         self.assertTrue(d_gamma1.shape, d_gamma2.shape)
 
         self.assertTrue(
-            np.allclose(
-                d_norm1.ndarray(), d_norm2.ndarray(), rtol=1e-03, atol=1e-05
-            )
+            np.allclose(d_norm1.ndarray(), d_norm2.ndarray(), rtol=1e-03, atol=1e-05)
         )
         self.assertTrue(
-            np.allclose(
-                d_beta1.ndarray(), d_beta2.ndarray(), rtol=1e-03, atol=1e-05
-            )
+            np.allclose(d_beta1.ndarray(), d_beta2.ndarray(), rtol=1e-03, atol=1e-05)
         )
         self.assertTrue(
-            np.allclose(
-                d_gamma1.ndarray(), d_gamma2.ndarray(), rtol=1e-03, atol=1e-05
-            )
+            np.allclose(d_gamma1.ndarray(), d_gamma2.ndarray(), rtol=1e-03, atol=1e-05)
         )
 
         flow.clear_default_session()

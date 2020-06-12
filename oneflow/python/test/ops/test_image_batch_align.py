@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+
 import oneflow as flow
 
 
@@ -8,15 +9,11 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
     def image_batch_align_job(
-        images_def=flow.MirroredTensorListDef(
-            shape=input_shape, dtype=flow.float
-        )
+        images_def=flow.MirroredTensorListDef(shape=input_shape, dtype=flow.float)
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         image = flow.image_batch_align(
@@ -32,9 +29,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
 
 
 def _read_images_by_cv(image_files):
-    images = [
-        cv2.imread(image_file).astype(np.single) for image_file in image_files
-    ]
+    images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
 
@@ -76,9 +71,7 @@ def _compare_image_batch_align(
     image_tensor = _of_image_batch_align(
         images, tuple(image_shape), tuple(aligned_image_shape), alignment
     )
-    test_case.assertTrue(
-        np.array_equal(aligned_image_shape, image_tensor.shape)
-    )
+    test_case.assertTrue(np.array_equal(aligned_image_shape, image_tensor.shape))
 
     empty_image_array = np.zeros(aligned_image_shape, np.single)
     for empty_image, image in zip(empty_image_array, images):

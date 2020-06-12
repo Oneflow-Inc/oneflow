@@ -20,9 +20,7 @@ def reduce_mean(input_blob, axis=None, keepdims=False, name=None):
         if axis is None:
             axes = []
         else:
-            axes = (
-                list(axis) if isinstance(axis, collections.Sized) else [axis]
-            )
+            axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
         reduce_count = 1
         if len(axes) == 0:
             for dim in input_blob.shape:

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 
+import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
 
@@ -26,9 +26,7 @@ def compare_reduce_sum_with_tensorflow(
                 "in",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5
-                ),
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
             )
             loss = flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
@@ -52,10 +50,7 @@ def compare_reduce_sum_with_tensorflow(
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        test_global_storage.Get("x_diff"),
-        tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5,
     )
 
 
@@ -102,9 +97,7 @@ def test_reduce_sum_scalar(test_case):
 def test_reduce_sum_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(
-        flow.distribute.consistent_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
     @flow.function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):

@@ -36,9 +36,7 @@ def prelu(
         distribute=model_distribute,
     )
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("PRelu_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("PRelu_"))
         .Op("prelu")
         .Input("x", [inputs])
         .Input("alpha", [alpha])

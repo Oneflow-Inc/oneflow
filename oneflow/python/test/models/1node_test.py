@@ -1,23 +1,19 @@
 import os
 
-import oneflow as flow
 from absl import app
 from absl.testing import absltest
 
 import cnns_tests
 import env_1node
+import oneflow as flow
 from test_1node_mixin import Test1NodeMixin
 
 
-class TestAlexNet(
-    Test1NodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase
-):
+class TestAlexNet(Test1NodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase):
     pass
 
 
-class TestResNet50(
-    Test1NodeMixin, cnns_tests.TestResNet50Mixin, absltest.TestCase
-):
+class TestResNet50(Test1NodeMixin, cnns_tests.TestResNet50Mixin, absltest.TestCase):
     pass
 
 

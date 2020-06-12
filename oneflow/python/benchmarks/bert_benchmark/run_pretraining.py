@@ -6,9 +6,8 @@ import time
 from collections import OrderedDict
 from datetime import datetime
 
-import oneflow as flow
-
 import benchmark_util
+import oneflow as flow
 from pretrain import PreTrain
 
 parser = argparse.ArgumentParser(description="flags for bert")
@@ -19,16 +18,12 @@ parser.add_argument("--node_num", type=int, default=1)
 parser.add_argument("--node_list", type=str, default=None)
 
 # train
-parser.add_argument(
-    "--learning_rate", type=float, default=1e-4, help="Learning rate"
-)
+parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
 parser.add_argument(
     "--weight_decay_rate", type=float, default=0.01, help="weight decay rate"
 )
 parser.add_argument("--batch_size_per_device", type=int, default=24)
-parser.add_argument(
-    "--iter_num", type=int, default=10, help="total iterations to run"
-)
+parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
 parser.add_argument(
     "--skip_iter_num",
     type=int,
@@ -36,10 +31,7 @@ parser.add_argument(
     help="number of skipping iterations for benchmark purpose.",
 )
 parser.add_argument(
-    "--log_every_n_iter",
-    type=int,
-    default=1,
-    help="print loss every n iteration",
+    "--log_every_n_iter", type=int, default=1, help="print loss every n iteration",
 )
 parser.add_argument("--data_dir", type=str, default=None)
 parser.add_argument(
@@ -141,9 +133,7 @@ def BertDecoder(
     blob_confs = []
     for k, v in config_ordered_dict.items():
         blob_confs.append(
-            _blob_conf(
-                k, [v], flow.float if k == "masked_lm_weights" else flow.int32
-            )
+            _blob_conf(k, [v], flow.float if k == "masked_lm_weights" else flow.int32)
         )
 
     decoders = flow.data.decode_ofrecord(
@@ -177,19 +167,13 @@ def BuildPreTrainNet(
     intermediate_size = hidden_size * 4
 
     decoders = BertDecoder(
-        args.data_dir,
-        batch_size,
-        data_part_num,
-        seq_length,
-        max_predictions_per_seq,
+        args.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq,
     )
 
     input_ids = decoders["input_ids"]
     next_sentence_labels = decoders["next_sentence_labels"]
     input_mask = decoders["input_mask"]
-    token_type_ids = decoders[
-        "segment_ids"
-    ]  # note: segment_ids = token_type_ids
+    token_type_ids = decoders["segment_ids"]  # note: segment_ids = token_type_ids
     masked_lm_ids = decoders["masked_lm_ids"]
     masked_lm_positions = decoders["masked_lm_positions"]
     masked_lm_weights = decoders["masked_lm_weights"]
@@ -227,9 +211,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
         )
     ),
     warmup_conf=dict(
-        linear_conf=dict(
-            warmup_batches=args.warmup_batches, start_multiplier=0,
-        )
+        linear_conf=dict(warmup_batches=args.warmup_batches, start_multiplier=0,)
     ),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0,)),
     adam_conf=dict(epsilon=1e-6),
@@ -285,11 +267,7 @@ def main():
     for arg in vars(args):
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
-    print(
-        "Time stamp: {}".format(
-            str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
-        )
-    )
+    print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
 
     flow.env.log_dir(args.log_dir)
 

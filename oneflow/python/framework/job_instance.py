@@ -70,12 +70,8 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
         oneflow_internal.ForeignJobInstance.__init__(self)
         self.thisown = 0
         self.job_name_ = str(job_name)
-        self.sole_input_op_name_in_user_job_ = str(
-            sole_input_op_name_in_user_job
-        )
-        self.sole_output_op_name_in_user_job_ = str(
-            sole_output_op_name_in_user_job
-        )
+        self.sole_input_op_name_in_user_job_ = str(sole_input_op_name_in_user_job)
+        self.sole_output_op_name_in_user_job_ = str(sole_output_op_name_in_user_job)
         self.push_cb_ = push_cb
         self.pull_cb_ = pull_cb
         self.finish_cb_ = finish_cb

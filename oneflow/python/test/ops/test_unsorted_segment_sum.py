@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
@@ -14,9 +14,7 @@ def _check(test_case, data, segment_ids, out_shape, axis, out):
     test_case.assertEqual(out.shape, out_shape)
     ref = np.zeros_like(out)
     if axis != 0:
-        ref_perm = (
-            [axis] + list(range(0, axis)) + list(range(axis + 1, ref.ndim))
-        )
+        ref_perm = [axis] + list(range(0, axis)) + list(range(axis + 1, ref.ndim))
         ref = np.transpose(ref, ref_perm)
         data_perm = (
             list(range(axis, axis + segment_ids.ndim))
@@ -27,17 +25,15 @@ def _check(test_case, data, segment_ids, out_shape, axis, out):
     for idx, i in np.ndenumerate(segment_ids):
         ref[i] += data[idx]
     if axis != 0:
-        ref_perm = (
-            list(range(1, axis + 1)) + [0] + list(range(axis + 1, ref.ndim))
-        )
+        ref_perm = list(range(1, axis + 1)) + [0] + list(range(axis + 1, ref.ndim))
         ref = np.transpose(ref, ref_perm)
     test_case.assertTrue(np.allclose(ref, out))
 
 
 def _gen_segment_ids(out_shape, axis, segment_ids_shape):
-    return np.random.randint(
-        0, out_shape[axis], tuple(segment_ids_shape)
-    ).astype(np.int32)
+    return np.random.randint(0, out_shape[axis], tuple(segment_ids_shape)).astype(
+        np.int32
+    )
 
 
 def _gen_data(out_shape, axis, segment_ids_shape):

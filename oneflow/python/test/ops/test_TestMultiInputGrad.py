@@ -1,6 +1,6 @@
 import numpy as np
-import oneflow as flow
 
+import oneflow as flow
 import test_global_storage
 
 
@@ -20,9 +20,7 @@ def TestMultiInput(x1, x2):
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(
-        flow.distribute.mirrored_strategy()
-    )
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -38,18 +36,14 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
                 "x1",
                 shape=shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             x2 = flow.get_variable(
                 "x2",
                 shape=shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=-10, maxval=10
-                ),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             loss = TestMultiInput(x1, x2)
