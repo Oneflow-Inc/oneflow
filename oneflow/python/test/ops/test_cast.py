@@ -1,23 +1,29 @@
 import os
-import oneflow as flow
+from collections import OrderedDict
+
 import numpy as np
 import tensorflow as tf
-from collections import OrderedDict
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
 
+import oneflow as flow
 import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 
 def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
-    assert device_type in ["gpu", "cpu"]    
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float) 
+    func_config.default_data_type(flow.float)
+
     @flow.function(func_config)
-    def cast_forward(input_def=flow.FixedTensorDef(shape=input_shape, dtype=type_name_to_flow_type[dtype])):
+    def cast_forward(
+        input_def=flow.FixedTensorDef(
+            shape=input_shape, dtype=type_name_to_flow_type[dtype]
+        )
+    ):
         with flow.fixed_placement(device_type, "0:0"):
             return flow.cast(input_def, dtype=type_name_to_flow_type[dtype])
+
     input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])
     of_out = cast_forward(input).get()
     tf_out = tf.cast(input, dtype=type_name_to_np_type[dtype])
@@ -53,7 +59,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
             return loss
 
-     # OneFlow
+    # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_out = CastJob().get()
@@ -64,8 +70,9 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(test_global_storage.Get("x_diff"),
-                       tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 
 def test_cast(test_case):
@@ -75,6 +82,7 @@ def test_cast(test_case):
     arg_dict["dtype"] = ["float32", "double"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_cast_forward(test_case):
     arg_dict = OrderedDict()

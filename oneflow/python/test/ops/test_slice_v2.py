@@ -1,4 +1,5 @@
 import numpy as np
+
 import oneflow as flow
 
 
@@ -73,7 +74,13 @@ def test_slice_with_collapse_dims(test_case):
     input = np.random.rand(2, 5, 4, 4, 3).astype(np.float32)
     results = [input[:, 0:2, :, :, 1:None]]
     args = [
-        [(None, None, None), (0, 2, None), (None, None, None), (None, None, None), (1, None, None)]
+        [
+            (None, None, None),
+            (0, 2, None),
+            (None, None, None),
+            (None, None, None),
+            (1, None, None),
+        ]
     ]
     outputs = _run_slice(input, args)
     _check(test_case, results, outputs)

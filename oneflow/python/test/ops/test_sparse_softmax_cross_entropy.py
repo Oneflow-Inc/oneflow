@@ -1,20 +1,21 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
 from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import tensorflow as tf
+
+import oneflow as flow
 import test_global_storage
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, data_type, label_type, num_classes, batch_size):
+def compare_with_tensorflow(
+    device_type, data_type, label_type, num_classes, batch_size
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -22,11 +23,12 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-
     @flow.function(func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
-            labels=flow.FixedTensorDef((batch_size, ), dtype=type_name_to_flow_type[label_type])
-        ):
+        labels=flow.FixedTensorDef(
+            (batch_size,), dtype=type_name_to_flow_type[label_type]
+        )
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
@@ -35,7 +37,9 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=x)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                labels=labels, logits=x
+            )
             loss = flow.math.square(loss)
             flow.losses.add_loss(loss)
 
@@ -46,7 +50,9 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
         return loss
 
     # fake labels
-    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(type_name_to_np_type[label_type])
+    labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(
+        type_name_to_np_type[label_type]
+    )
 
     # OneFlow
     check_point = flow.train.CheckPoint()

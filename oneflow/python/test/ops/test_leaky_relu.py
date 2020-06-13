@@ -1,12 +1,12 @@
 import os
+from collections import OrderedDict
+
 import numpy as np
 import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
-from test_util import type_name_to_flow_type
 
-from test_util import GenArgList
+import oneflow as flow
 import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -55,6 +55,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, alpha):
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
+
 
 def test_leaky_relu(test_case):
     arg_dict = OrderedDict()

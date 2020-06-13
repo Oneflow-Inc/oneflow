@@ -1,5 +1,6 @@
-import oneflow as flow
 import numpy as np
+
+import oneflow as flow
 
 
 def _of_tensor_list_identity(test_case, verbose=False):

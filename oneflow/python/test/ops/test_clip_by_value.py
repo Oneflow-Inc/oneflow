@@ -1,7 +1,9 @@
-import numpy as np
-import oneflow as flow
-import tensorflow as tf
 from collections import OrderedDict
+
+import numpy as np
+import tensorflow as tf
+
+import oneflow as flow
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -80,7 +82,9 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
 
     def compare_dy(dy_blob):
         test_case.assertTrue(
-            np.array_equal(dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray())
+            np.array_equal(
+                dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray()
+            )
         )
 
     of_y = _of_clip_by_value(

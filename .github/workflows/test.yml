@@ -19,7 +19,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Check format
       run: |
+        python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r docker/ci/make/requirements.txt --user
         python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+        python3 ci/check/run_py_format.py --source_dir oneflow/python
     - name: Setup environment
       run: |
         echo $HOSTNAME

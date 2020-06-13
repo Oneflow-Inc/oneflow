@@ -1,11 +1,19 @@
-import oneflow as flow
 import numpy as np
 
+import oneflow as flow
+
+
 def my_test_source(name, out_num):
-    return flow.user_op_builder(name).Op("TestSourceMultiGpuFixedOutNum")\
-            .Output("out")\
-            .Attr("out_num", out_num, "AttrTypeInt64")\
-            .Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("TestSourceMultiGpuFixedOutNum")
+        .Output("out")
+        .Attr("out_num", out_num, "AttrTypeInt64")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def test_testsource_2_gpu(test_case):
     func_config = flow.FunctionConfig()
@@ -22,5 +30,3 @@ def test_testsource_2_gpu(test_case):
 
     y = TestSourceJob().get().ndarray()
     test_case.assertTrue(np.array_equal(y, np.append(np.arange(5.0), np.arange(5.0))))
-
-

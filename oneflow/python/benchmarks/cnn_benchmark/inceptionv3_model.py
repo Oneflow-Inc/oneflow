@@ -1,7 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -507,4 +504,3 @@ def inceptionv3(images, labels, trainable=True):
         fc1 = flow.nn.bias_add(fc1, bias)
 
     return fc1
-

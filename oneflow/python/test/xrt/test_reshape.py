@@ -1,36 +1,44 @@
 import unittest
+
 import numpy as np
 
 import oneflow as flow
 
 config = flow.function_config()
 
+
 def make_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def reshape_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+    def reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
+
     return reshape_job
+
 
 def make_xla_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_reshape_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+    def xla_reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
+
     return xla_reshape_job
+
 
 def make_trt_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_reshape_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+    def trt_reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
+
     return trt_reshape_job
+
 
 class TestReshape(unittest.TestCase):
     def _test_body(self, x, shape, dtype=np.float32):
@@ -69,5 +77,6 @@ class TestReshape(unittest.TestCase):
         self._test_random_body((2, 10, 2), (4, 10))
         self._test_random_body((2, 5, 2, 2), (2, 5, 4))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

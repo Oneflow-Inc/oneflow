@@ -1,5 +1,6 @@
-import oneflow as flow
 import numpy as np
+
+import oneflow as flow
 
 
 def test_get_variable_with_same_name(test_case):

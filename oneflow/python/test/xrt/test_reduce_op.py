@@ -1,12 +1,15 @@
 import unittest
+
 import numpy as np
 
 import oneflow as flow
 
 config = flow.function_config()
 
+
 class TestReduce(unittest.TestCase):
     run_test = False
+
     def _test_body(self, x, axis, keepdims, dtype=np.float32):
         if not self.run_test:
             return
@@ -55,24 +58,28 @@ class TestReduce(unittest.TestCase):
         self._test_random_body((2, 10, 2), [1, 2], False)
         self._test_random_body((2, 10, 2), [1, 2], True)
 
+
 class TestReduceSum(TestReduce):
     run_test = True
+
     def make_job(self, x_shape, axis, keepdims, dtype=flow.float32):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+
         return reduce_sum_job
-    
+
     def make_xla_job(self, x_shape, axis, keepdims, dtype=flow.float32):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def xla_reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+
         return xla_reduce_sum_job
 
     def make_trt_job(self, x_shape, axis, keepdims, dtype=flow.float32):
@@ -80,20 +87,24 @@ class TestReduceSum(TestReduce):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
-           return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+        def trt_reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+            return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+
         return trt_reduce_sum_job
+
 
 # XLA has not support ReduceMean, so it will fallback to oneflow automatically.
 class TestReduceMean(TestReduce):
     run_test = True
+
     def make_job(self, x_shape, axis, keepdims, dtype=flow.float32):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
+
         return reduce_mean_job
 
     def make_xla_job(self, x_shape, axis, keepdims, dtype=flow.float32):
@@ -101,8 +112,9 @@ class TestReduceMean(TestReduce):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def xla_reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
+
         return xla_reduce_mean_job
 
     def make_trt_job(self, x_shape, axis, keepdims, dtype=flow.float32):
@@ -110,9 +122,11 @@ class TestReduceMean(TestReduce):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
-           return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
+        def trt_reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+            return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
+
         return trt_reduce_mean_job
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

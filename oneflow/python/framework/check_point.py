@@ -1,18 +1,21 @@
 from __future__ import absolute_import
 
-from oneflow.python.oneflow_export import oneflow_export
+import datetime
+import os
+
+import numpy as np
+
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
-import numpy as np
-import os
-import datetime
+from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export('train.CheckPoint')
+@oneflow_export("train.CheckPoint")
 class CheckPoint(object):
     """Create a `CheckPoint` object to manage checkpoint manually.
 
     """
+
     def __init__(self):
         pass
 
@@ -32,7 +35,6 @@ class CheckPoint(object):
         """
         session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
 
-
     @session_ctx.try_init_default_session
     def load(self, path):
         r"""load a checkpoint from `path` and initialize models.
@@ -50,37 +52,46 @@ def _MakeModelInitJobFunc():
 
     def finish_cb():
         pass
+
     sess = session_ctx.GetDefaultSession()
-    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_init_job_name),
-                                        push_cb=push_cb,
-                                        finish_cb=finish_cb)
+    return job_instance.MakeJobInstance(
+        str(sess.inter_user_job_info.global_model_init_job_name),
+        push_cb=push_cb,
+        finish_cb=finish_cb,
+    )
 
 
 def _MakeModelLoadJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(path.encode('ascii'), dtype=np.int8))
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
-    
+
     sess = session_ctx.GetDefaultSession()
-    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_load_job_name),
-                                        push_cb=push_cb,
-                                        finish_cb=finish_cb)
+    return job_instance.MakeJobInstance(
+        str(sess.inter_user_job_info.global_model_load_job_name),
+        push_cb=push_cb,
+        finish_cb=finish_cb,
+    )
+
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(path.encode('ascii'), dtype=np.int8))
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
-    
-    sess = session_ctx.GetDefaultSession()
-    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_save_job_name),
-                                        push_cb=push_cb,
-                                        finish_cb=finish_cb)
 
-@oneflow_export('train.SimpleCheckPointManager')
+    sess = session_ctx.GetDefaultSession()
+    return job_instance.MakeJobInstance(
+        str(sess.inter_user_job_info.global_model_save_job_name),
+        push_cb=push_cb,
+        finish_cb=finish_cb,
+    )
+
+
+@oneflow_export("train.SimpleCheckPointManager")
 class SimpleCheckPointManager(object):
     r"""`SimpleCheckPointManager` is a simple automatic checkpoint manager.
 
@@ -88,7 +99,8 @@ class SimpleCheckPointManager(object):
         root_path: root path of snapshot
         prefix: prefix of snapshot
     """
-    def __init__(self, root_path, prefix='snapshot_'):
+
+    def __init__(self, root_path, prefix="snapshot_"):
         if not os.path.exists(root_path):
             os.makedirs(root_path)
         else:
@@ -101,7 +113,7 @@ class SimpleCheckPointManager(object):
         def is_snapshot(name):
             if not name.startswith(self._prefix):
                 return False
-            snapshot_done = os.path.join(self._GetSnapshotPath(name), 'snapshot_done')
+            snapshot_done = os.path.join(self._GetSnapshotPath(name), "snapshot_done")
             return os.path.exists(snapshot_done) and os.path.isfile(snapshot_done)
 
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
@@ -125,7 +137,7 @@ class SimpleCheckPointManager(object):
         self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
 
     def _NextSnapshotName(self):
-        return self._prefix + datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        return self._prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
     def _GetSnapshotPath(self, name):
         return os.path.join(self._root_path, name)
