@@ -89,6 +89,12 @@ KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetIsMatchedPred(
   return *this;
 }
 
+KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetIsMatchedPredHob(
+    IsMatchedPredicatorHob hob) {
+  wrapper_.reg_val.is_mathed_hob = hob;
+  return *this;
+}
+
 KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInferTmpSizeFn(InferTmpSizeFn fn) {
   wrapper_.reg_val.infer_tmp_size_fn = std::move(fn);
   return *this;

@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/common/high_order_bool.h"
 
 namespace oneflow {
 
@@ -52,12 +53,14 @@ using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
     int32_t in_arg_index, bool is_mutable)>;
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
+using IsMatchedPredicatorHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;
   IsMatchedPredicator is_matched_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
+  IsMatchedPredicatorHob is_mathed_hob;
 };
 
 struct KernelRegistryWrapper final {
@@ -75,6 +78,7 @@ class KernelRegistryWrapperBuilder final {
     return SetCreateFn([]() -> const OpKernel* { return new T(); });
   }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
+  KernelRegistryWrapperBuilder& SetIsMatchedPredHob(IsMatchedPredicatorHob hob);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 

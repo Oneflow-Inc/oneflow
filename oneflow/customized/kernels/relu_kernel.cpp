@@ -28,6 +28,8 @@ class ReluKernel final : public user_op::OpKernel {
         const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);           \
         return ctx.device_type() == device && y_desc->data_type() == GetDataType<dtype>::value; \
       })                                                                                        \
+      .SetIsMatchedPredHob(user_op::HobDeviceTypeEq<device>()                                   \
+                           & user_op::HobDataTypeEq<dtype>("out", 0))                           \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
