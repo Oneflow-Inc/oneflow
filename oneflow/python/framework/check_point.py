@@ -1,12 +1,12 @@
-from __future__ import absolute_import
-
 import datetime
 import os
 
 import numpy as np
 
+import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -27,13 +27,13 @@ class CheckPoint(object):
             path: A `string` of path to save checkpoint. 
         """
         assert type(path) is str
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
+        enable_if.unique(lazy_checkpoint_save, eager_checkpoint_save)(path)
 
     @session_ctx.try_init_default_session
     def init(self):
         r"""Initialize models by default initializer of op or Job.
         """
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
+        enable_if.unique(lazy_checkpoint_init, eager_checkpoint_init)()
 
     @session_ctx.try_init_default_session
     def load(self, path):
@@ -43,7 +43,37 @@ class CheckPoint(object):
             path: A `string` of path to load checkpoint.
         """
         assert type(path) is str
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
+        enable_if.unique(lazy_checkpoint_load, eager_checkpoint_load)(path)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_save(path):
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_init():
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_load(path):
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_save(path):
+    raise NotImplementedError
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_init():
+    raise NotImplementedError
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_load(path):
+    raise NotImplementedError
 
 
 def _MakeModelInitJobFunc():
