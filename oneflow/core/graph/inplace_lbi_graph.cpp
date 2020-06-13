@@ -7,7 +7,7 @@ namespace {
 
 bool IsSourceNode(const Operator& op) {
   const auto& op_conf = op.op_conf();
-  if (op_conf().has_user_conf() && op_conf.user_conf().input().size() == 0
+  if (op_conf.has_user_conf() && op_conf.user_conf().input().size() == 0
       && op_conf.user_conf().output().size() == 1) {
     return true;
   }
