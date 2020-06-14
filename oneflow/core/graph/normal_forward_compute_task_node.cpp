@@ -59,7 +59,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   if (IsMultiOutRegst()) {
     HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
     for (const std::string& obn : op.output_bns()) {
-      const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(obn);
       std::string out_regst_name = GetOutRegstNameByObn(obn);
       lbi2out_regst_name.insert({lbi, out_regst_name});
       ProduceOutRegstByNameAndBlockNum(out_regst_name, mem_block_num);
@@ -71,9 +71,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       const Operator& dst_op = *dst_node->logical_node()->SoleOp();
       bool is_find = false;
       for (const std::string& ibn : dst_op.input_bns()) {
-        const LogicalBlobId& dst_in_lbi = dst_op->BnInOp2Lbi(ibn);
+        const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
         if (lbi2out_regst_name.find(dst_in_lbi) != lbi2out_regst_name.end()) {
-          if_find = true;
+          is_find = true;
           BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(dst_in_lbi));
         }
       }
@@ -138,16 +138,16 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 void NormalForwardCompTaskNode::BuildOutRegst() {
   if (IsMultiOutRegst()) {
     ExecNode* exec_node = mut_exec_gph().SoleNode();
-    for (const std::string& obn : cur_node->op()->output_bns()) {
+    for (const std::string& obn : exec_node->op()->output_bns()) {
       std::string out_regst_name = GetOutRegstNameByObn(obn);
       std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
-      out_regst->AddLbi(cur_node->op()->BnInOp2Lbi(obn));
-      cur_node->BindBnWithRegst(obn, out_regst);
+      out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
+      exec_node->BindBnWithRegst(obn, out_regst);
     }
   } else {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
     ExecNode* exec_node = mut_exec_gph().SoleNode();
-    for (const std::string& obn : cur_node->op()->output_bns()) {
+    for (const std::string& obn : exec_node->op()->output_bns()) {
       out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
       exec_node->BindBnWithRegst(obn, out_regst);
     }
