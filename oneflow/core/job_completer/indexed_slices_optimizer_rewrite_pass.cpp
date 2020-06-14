@@ -34,6 +34,10 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     if (src_op.op_type_name() == "unsorted_segment_sum" && src_op.attr<int64_t>("axis") == 0) {
       indices_lbn = src_op.input("segment_ids", 0);
       values_lbn = src_op.input("data", 0);
+    } else if (src_op.op_type_name() == "unsorted_segment_sum_like"
+               && src_op.attr<int64_t>("axis") == 0) {
+      indices_lbn = src_op.input("segment_ids", 0);
+      values_lbn = src_op.input("data", 0);
     } else {
       return;
     }
