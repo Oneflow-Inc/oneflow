@@ -9,6 +9,7 @@ namespace oneflow {
 const int64_t BITSET_SIZE = 8 * 1024;
 
 class TaskNode;
+class TaskEdge;
 
 struct Chain {
   // nodes belong to this chain
@@ -72,9 +73,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     return task_node2chain_node_.at(task_node);
   }
 
-  void GroupTaskNodesByMachineAndCollectAncestors(
-      const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
-      HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const;
+  void GroupTaskNodesByMachine(const TaskGraph& task_gph,
+                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const;
+  void CollectTaskNodeAncestors(const TaskGraph& task_gph,
+                                HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors,
+                                HashSet<TaskEdge*>* ignore_edges) const;
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
                       const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                       std::vector<std::vector<TaskNode*>>* chains) const;
