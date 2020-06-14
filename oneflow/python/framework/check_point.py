@@ -1,18 +1,20 @@
-from __future__ import absolute_import
-
-from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import numpy as np
 import os
 import datetime
 
+from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('train.CheckPoint')
+
+@oneflow_export("train.CheckPoint")
 class CheckPoint(object):
     """Create a `CheckPoint` object to manage checkpoint manually.
 
     """
+
     def __init__(self):
         pass
 
@@ -24,14 +26,13 @@ class CheckPoint(object):
             path: A `string` of path to save checkpoint. 
         """
         assert type(path) is str
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
+        enable_if.unique(lazy_checkpoint_save, eager_checkpoint_save)(path)
 
     @session_ctx.try_init_default_session
     def init(self):
         r"""Initialize models by default initializer of op or Job.
         """
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
-
+        enable_if.unique(lazy_checkpoint_init, eager_checkpoint_init)()
 
     @session_ctx.try_init_default_session
     def load(self, path):
@@ -41,7 +42,37 @@ class CheckPoint(object):
             path: A `string` of path to load checkpoint.
         """
         assert type(path) is str
-        session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
+        enable_if.unique(lazy_checkpoint_load, eager_checkpoint_load)(path)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_save(path):
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_init():
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+def lazy_checkpoint_load(path):
+    session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_save(path):
+    raise NotImplementedError
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_init():
+    raise NotImplementedError
+
+
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_checkpoint_load(path):
+    raise NotImplementedError
 
 
 def _MakeModelInitJobFunc():
@@ -50,6 +81,7 @@ def _MakeModelInitJobFunc():
 
     def finish_cb():
         pass
+
     sess = session_ctx.GetDefaultSession()
     return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_init_job_name),
                                         push_cb=push_cb,
@@ -62,11 +94,12 @@ def _MakeModelLoadJobFunc(path):
 
     def finish_cb():
         pass
-    
+
     sess = session_ctx.GetDefaultSession()
     return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_load_job_name),
                                         push_cb=push_cb,
                                         finish_cb=finish_cb)
+
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
@@ -74,11 +107,12 @@ def _MakeModelSaveJobFunc(path):
 
     def finish_cb():
         pass
-    
+
     sess = session_ctx.GetDefaultSession()
     return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_save_job_name),
                                         push_cb=push_cb,
                                         finish_cb=finish_cb)
+
 
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
