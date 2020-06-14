@@ -205,7 +205,7 @@ def bias_add(value, bias, data_format=None, name=None):
 
     if os.getenv("ENABLE_USER_OP") == "True":
         return (
-            oneflow.user_op_builder(name)
+            flow.user_op_builder(name)
             .Op("bias_add")
             .Input("a", [value])
             .Input("b", [bias])
@@ -249,7 +249,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
-            oneflow.user_op_builder(
+            flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool2D_")
             )
             .Op("max_pool_2d")
@@ -300,7 +300,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
-            oneflow.user_op_builder(
+            flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool2D_")
             )
             .Op("avg_pool_2d")
@@ -351,7 +351,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
-            oneflow.user_op_builder(
+            flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool3D_")
             )
             .Op("max_pool_3d")
@@ -402,7 +402,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     """
     if os.getenv("ENABLE_USER_OP") == "True":
         op = (
-            oneflow.user_op_builder(
+            flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool3D_")
             )
             .Op("avg_pool_3d")
@@ -491,10 +491,10 @@ def softmax(logits, axis=None, name=None):
 
     need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
-        logits = oneflow.transpose(logits, perm=permute)
+        logits = flow.transpose(logits, perm=permute)
 
     out = (
-        oneflow.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Softmax_")
         )
         .Op("softmax")
@@ -506,7 +506,7 @@ def softmax(logits, axis=None, name=None):
     )
 
     if need_transpose:
-        out = oneflow.transpose(out, perm=permute)
+        out = flow.transpose(out, perm=permute)
     return out
 
 
@@ -525,8 +525,8 @@ def softmax_grad(y, dy, axis=None, name=None):
         need_transpose, permute = _softmax_need_transpose(y, axis)
 
         if need_transpose:
-            y = oneflow.transpose(y, perm=permute)
-            dy = oneflow.transpose(dy, perm=permute)
+            y = flow.transpose(y, perm=permute)
+            dy = flow.transpose(dy, perm=permute)
         setattr(op_conf.softmax_grad_conf, "y", y.unique_name)
         setattr(op_conf.softmax_grad_conf, "dy", dy.unique_name)
 
@@ -539,16 +539,16 @@ def softmax_grad(y, dy, axis=None, name=None):
         dx = remote_blob_util.RemoteBlob(lbi)
 
         if need_transpose:
-            dx = oneflow.transpose(dx, perm=permute)
+            dx = flow.transpose(dx, perm=permute)
         return dx
 
     need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
-        y = oneflow.transpose(y, perm=permute)
-        dy = oneflow.transpose(dy, perm=permute)
+        y = flow.transpose(y, perm=permute)
+        dy = flow.transpose(dy, perm=permute)
 
     dx = (
-        oneflow.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Softmax_")
         )
         .Op("softmax_grad")
@@ -561,7 +561,7 @@ def softmax_grad(y, dy, axis=None, name=None):
     )
 
     if need_transpose:
-        dx = oneflow.transpose(dx, perm=permute)
+        dx = flow.transpose(dx, perm=permute)
     return dx
 
 
@@ -691,7 +691,7 @@ def _GetSequence(value, n, name):
 def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
-        oneflow.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("RandomMaskLike_")
         )
         .Op("random_mask_like")
@@ -757,7 +757,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask = random_mask_like(x, rate, seed, noise_shape)
     return (
-        oneflow.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Dropout_")
         )
         .Op("dropout")
@@ -896,7 +896,7 @@ def deconv2d(
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(x, alpha=0.2, name=None):
     return (
-        oneflow.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("LeakyRelu_")
         )
         .Op("leaky_relu")
