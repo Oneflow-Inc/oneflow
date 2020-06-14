@@ -17,9 +17,35 @@ size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
   }
 }
 
+std::string GetOutRegstNameByObn(const std::string& obn) {
+  return "NormalForwardCompTaskNodeOutRegstName_" + obn;
+}
+
 }  // namespace
 
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
+
+bool NormalForwardCompTaskNode::IsMultiOutRegst() const {
+  return logical_node()->SoleOp()->output_bns().size() > 1 && IsAllOut121();
+}
+
+bool NormalForwardCompTaskNode::IsAllOut121() const {
+  bool ret = true;
+  ForEachNodeOnOutDataEdge([&](TaskNode* node) {
+    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    if (fw_node == nullptr) { ret = false; }
+  });
+  return ret;
+}
+
+void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
+                                                                 size_t mem_block_num) {
+  if (mem_block_num != -1) {
+    ProduceRegst(name, false, mem_block_num, mem_block_num);
+  } else {
+    ProduceRegst(name, true);
+  }
+}
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
@@ -27,14 +53,38 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   bool all_outputs_constant =
       (op.op_conf().has_user_conf() && op.op_conf().user_conf().all_outputs_constant());
   if (all_outputs_constant) { mem_block_num = 1; }
-  if (mem_block_num != -1) {
-    ProduceRegst("out", false, mem_block_num, mem_block_num);
+
+  // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
+  // create multi out regst by output blob name in op
+  if (IsMultiOutRegst()) {
+    HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
+    for (const std::string& obn : op.output_bns()) {
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
+      std::string out_regst_name = GetOutRegstNameByObn(obn);
+      lbi2out_regst_name.insert({lbi, out_regst_name});
+      ProduceOutRegstByNameAndBlockNum(out_regst_name, mem_block_num);
+    }
+    ForEachOutDataEdge([&](TaskEdge* edge) {
+      TaskNode* node = edge->dst_node();
+      auto* dst_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+      CHECK(dst_node != nullptr) << "1regst1blob ONLY support normal fw comp task node 121";
+      const Operator& dst_op = *dst_node->logical_node()->SoleOp();
+      bool is_find = false;
+      for (const std::string& ibn : dst_op.input_bns()) {
+        const LogicalBlobId& dst_in_lbi = dst_op->BnInOp2Lbi(ibn);
+        if (lbi2out_regst_name.find(dst_in_lbi) != lbi2out_regst_name.end()) {
+          if_find = true;
+          BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(dst_in_lbi));
+        }
+      }
+      CHECK(is_find) << "Cannot find comsumed blob in dst op: " << dst_op.op_name();
+    });
   } else {
-    ProduceRegst("out", true);
+    ProduceOutRegstByNameAndBlockNum("out", mem_block_num);
+    ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
   }
   ProduceRegst("tmp", true);
   ProduceRegst("const_buf", false, 1, 1);
-  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
@@ -86,15 +136,22 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    HashSet<LogicalBlobId> found_lbis;
-    for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
+  if (IsMultiOutRegst()) {
+    ExecNode* exec_node = mut_exec_gph().SoleNode();
     for (const std::string& obn : cur_node->op()->output_bns()) {
+      std::string out_regst_name = GetOutRegstNameByObn(obn);
+      std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
       out_regst->AddLbi(cur_node->op()->BnInOp2Lbi(obn));
       cur_node->BindBnWithRegst(obn, out_regst);
     }
-  });
+  } else {
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+    ExecNode* exec_node = mut_exec_gph().SoleNode();
+    for (const std::string& obn : cur_node->op()->output_bns()) {
+      out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
+      exec_node->BindBnWithRegst(obn, out_regst);
+    }
+  }
 }
 
 void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
