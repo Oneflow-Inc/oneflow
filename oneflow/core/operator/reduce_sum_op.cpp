@@ -43,11 +43,14 @@ Maybe<void> ReduceSumOp::InferBatchAxis(
   HashSet<int64_t> conf_axes = {conf.axis().begin(), conf.axis().end()};
   const OptInt64* in_batch_axis = BatchAxis4BnInOp("in");
   OptInt64* out_batch_axis = BatchAxis4BnInOp("out");
-  out_batch_axis->clear_value();
   if (in_batch_axis->has_value()) {
     if (keep_dims || conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
       *out_batch_axis = *in_batch_axis;
+    } else {
+      out_batch_axis->clear_value();
     }
+  } else {
+    out_batch_axis->clear_value();
   }
   return Maybe<void>::Ok();
 }

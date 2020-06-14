@@ -9,9 +9,10 @@ import os
 from oneflow.python.oneflow_export import oneflow_export
 
 
-def _check_name(name, unique_name):
+def _gen_unique_name_if_need(name, default_name):
     if name is None:
-        return id_util.UniqueStr(unique_name)
+        return id_util.UniqueStr(default_name)
+
     assert isinstance(name, str), name
     return name
 
@@ -47,19 +48,19 @@ def _do_reduce(x, name, op_type_name, keepdims, axis):
 
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
-    r"""Sum of elements across dimensions of a `Blob`.
-
-    Analogous to `tf.math.reduce_sum <https://www.tensorflow.org/api_docs/python/tf/math/reduce_sum>`_
+    r"""Computes the sum of elements across dimensions of a tensor.
 
     Args:
         input_tensor: A `Blob`.
-        axis: Dimensions to reduce. By default, all dimensions will be reduced.
-        keepdims: If true, every reduced dimension with a length of 1 will be kept.
-        name: A name for the operator (optional).
+        axis: The dimensions to reduce. If None (by default), reduces all dimensions.
+            Must be a int or a list/tuple of int which must be in the range 
+            [-len(input_tensor.shape), len(input_tensor.shape))
+        keepdims: If true, reduced dimensions will be kept with length 1.
+        name: A name for the operator.
     Returns:
         A `Blob`.
     """
-    name = _check_name(name, "ReduceSum_")
+    name = _gen_unique_name_if_need(name, "ReduceSum_")
 
     axis = _check_axis(axis, input_tensor.shape)
     if len(axis) == 0:
@@ -92,7 +93,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_any")
 def reduce_any(x, axis=None, keepdims=False, name=None):
-    name = _check_name(name, "ReduceAny_")
+    name = _gen_unique_name_if_need(name, "ReduceAny_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
         return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
@@ -101,7 +102,7 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_min")
 def reduce_min(x, axis=None, keepdims=False, name=None):
-    name = _check_name(name, "ReduceMin_")
+    name = _gen_unique_name_if_need(name, "ReduceMin_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
         return x
@@ -110,7 +111,7 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_prod")
 def reduce_prod(x, axis=None, keepdims=False, name=None):
-    name = _check_name(name, "ReduceProd_")
+    name = _gen_unique_name_if_need(name, "ReduceProd_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
         return x
@@ -119,7 +120,7 @@ def reduce_prod(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_all")
 def reduce_all(x, axis=None, keepdims=False, name=None):
-    name = _check_name(name, "ReduceAll_")
+    name = _gen_unique_name_if_need(name, "ReduceAll_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
         return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
