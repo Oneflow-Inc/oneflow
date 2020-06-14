@@ -559,9 +559,14 @@ def where(condition, x=None, y=None, name=None):
         if name is None:
             name = id_util.UniqueStr("Where_")
 
-        broadcast_cond = flow.broadcast_to_compatible_with(condition, [x, y])
-        broadcast_x = flow.broadcast_to_compatible_with(x, [condition, y])
-        broadcast_y = flow.broadcast_to_compatible_with(y, [condition, x])
+        if x.shape == condition.shape and y.shape == condition.shape:
+            broadcast_cond = condition
+            broadcast_x = x
+            broadcast_y = y
+        else:
+            broadcast_cond = flow.broadcast_to_compatible_with(condition, [x, y])
+            broadcast_x = flow.broadcast_to_compatible_with(x, [condition, y])
+            broadcast_y = flow.broadcast_to_compatible_with(y, [condition, x])
         return (
             flow.user_op_builder(name)
             .Op("where")
