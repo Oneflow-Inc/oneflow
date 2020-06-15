@@ -115,6 +115,11 @@ def glorot_uniform_initializer(data_format=""):
     return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
 
+@oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
+def glorot_uniform_initializer(data_format=""):
+    return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
+
+
 @oneflow_export("variance_scaling_initializer")
 def variance_scaling_initializer(
     scale=1.0, mode="fan_in", distribution="truncated_normal", data_format=""
@@ -153,7 +158,7 @@ def kaiming_initializer(
     mode="fan_in",
     nonlinearity="leaky_relu",
     negative_slope=0.0,
-    data_format="channels_first",
+    data_format="NCHW",
 ):
     r"""Initialize weight according to the method described in `Delving deep into
     rectifiers: Surpassing human-level performance on ImageNet classification`
@@ -164,7 +169,7 @@ def kaiming_initializer(
         mode: 'fan_in', 'fan_out' or 'fan_avg'
         nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
         negative_slope: the negative slope of leaky_relu
-        data_format: 'channels_first', 'channels_last'
+        data_format: 'NCHW', 'NHW'
     """
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
@@ -174,9 +179,9 @@ def kaiming_initializer(
     assert distribution in ["random_normal", "random_uniform"]
     assert mode in ["fan_in", "fan_out", "fan_avg"]
     assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
-    assert data_format in ["channels_first", "channels_last"]
+    assert data_format in ["NCHW", "NHWC"]
 
-    fan = _CalcFan(shape, mode, data_format)
+    fan = _CalcFan(shape, mode, _get_data_format(data_format))
     gain = _CalcGain(nonlinearity, negative_slope)
     std = gain / math.sqrt(fan)
     if distribution == "random_normal":
@@ -218,6 +223,9 @@ def _get_data_format(data_format):
     elif data_format.startswith("N") and data_format.endswith("C"):
         return "channels_last"
     else:
+        assert data_format == "", ValueError(
+            'data_format must be "N...C" or "NC..." or ""'
+        )
         return ""
 
 
