@@ -85,12 +85,10 @@ struct BinaryFuncFloorMod final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
     T trunc_mod = x % y;
-    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y
-                                                               : trunc_mod;
+    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
 #else
     T trunc_mod = x % y;
-    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y
-                                                               : trunc_mod;
+    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
 #endif
   }
 };
@@ -239,8 +237,7 @@ template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
     const float trunc_mod = fmodf(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y
-                                                            : trunc_mod;
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
@@ -248,8 +245,7 @@ template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
     const double trunc_mod = fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y
-                                                            : trunc_mod;
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
@@ -259,7 +255,7 @@ struct BinaryFuncFloorMod<half> final {
 #if __CUDA_ARCH__ >= 530
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
     return (trunc_mod != half(0)) && (y < half(0) != trunc_mod < half(0)) ? trunc_mod + y
-                                                                           : trunc_mod;
+                                                                          : trunc_mod;
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -272,8 +268,7 @@ template<>
 struct BinaryFuncFloorMod<float> final {
   static inline const float Invoke(const float x, const float y) {
     const float trunc_mod = std::fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y
-                                                            : trunc_mod;
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
@@ -281,17 +276,18 @@ template<>
 struct BinaryFuncFloorMod<double> final {
   static inline const double Invoke(const double x, const double y) {
     const double trunc_mod = std::fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y
-                                                            : trunc_mod;
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<float16> final {
   static inline const float16 Invoke(const float16 x, const float16 y) {
-    const float16 trunc_mod = static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
-    return (trunc_mod != float16(0)) && ((y < float16(0)) != (trunc_mod < float16(0))) ? trunc_mod + y
-                                                                                 : trunc_mod;
+    const float16 trunc_mod =
+        static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
+    return (trunc_mod != float16(0)) && ((y < float16(0)) != (trunc_mod < float16(0)))
+               ? trunc_mod + y
+               : trunc_mod;
   }
 };
 
