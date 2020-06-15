@@ -35,7 +35,8 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
 def IsOpTypeNameCpuSupportOnly(op_type_name):
     ret, error_str = oneflow_internal.IsOpTypeNameCpuSupportOnly(op_type_name)
     error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
     return ret
 
 
