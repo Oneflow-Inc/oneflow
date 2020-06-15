@@ -383,11 +383,8 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if not trainable and training:
-        raise ValueError(
-            '"training" of normalization cannot be True \
-                when "trainable" is False'
-        )
+    if not trainable:
+        training = False
 
     if os.getenv("ENABLE_USER_OP") == "True":
         if center:
