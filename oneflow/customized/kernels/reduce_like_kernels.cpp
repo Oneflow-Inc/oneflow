@@ -25,7 +25,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     if (axis.empty()) {
-      CHECK_EQ(tensor_x->shape(), tensor_x->shape());
+      CHECK_EQ(tensor_x->shape(), tensor_y->shape());
       Memcpy<device_type>(ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
                           tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
