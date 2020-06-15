@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
@@ -70,7 +68,9 @@ def _of_where(
             return flow.where(condition, x, y)
 
     if dynamic:
-        func_config.default_placement_scope(flow.device_prior_placement(device_type, "0:0"))
+        func_config.default_placement_scope(
+            flow.device_prior_placement(device_type, "0:0")
+        )
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
         @flow.function(func_config)
@@ -136,7 +136,10 @@ def _compare_with_tf(
         if verbose:
             print("condition:", condition)
             print("tf_dz_dx:", dz_dx.numpy())
-            print("of_dz_dx:", dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray())
+            print(
+                "of_dz_dx:",
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
+            )
 
         test_case.assertTrue(
             np.array_equal(
@@ -149,7 +152,10 @@ def _compare_with_tf(
         if verbose:
             print("condition:", condition)
             print("tf_dz_dy:", dz_dy.numpy())
-            print("of_dz_dy:", dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray())
+            print(
+                "of_dz_dy:",
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
+            )
 
         test_case.assertTrue(
             np.array_equal(
@@ -159,7 +165,14 @@ def _compare_with_tf(
         )
 
     of_z = _of_where(
-        condition, x, y, device_type, machine_device_ids, dynamic, compare_dz_dx, compare_dz_dy
+        condition,
+        x,
+        y,
+        device_type,
+        machine_device_ids,
+        dynamic,
+        compare_dz_dx,
+        compare_dz_dy,
     )
     test_case.assertTrue(np.array_equal(z.numpy(), of_z))
 

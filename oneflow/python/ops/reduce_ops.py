@@ -53,7 +53,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     Args:
         input_tensor: A `Blob`.
         axis: The dimensions to reduce. If None (by default), reduces all dimensions.
-            Must be a int or a list/tuple of int which must be in the range 
+            Must be a int or a list/tuple of int which must be in the range
             [-len(input_tensor.shape), len(input_tensor.shape))
         keepdims: If true, reduced dimensions will be kept with length 1.
         name: A name for the operator.
@@ -100,7 +100,6 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_any", keepdims, axis)
 
 
-
 @oneflow_export("math.reduce_min")
 def reduce_min(x, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceMin_")
@@ -108,7 +107,6 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
     if len(axis) == 0:
         return x
     return _do_reduce(x, name, "reduce_min", keepdims, axis)
-
 
 
 @oneflow_export("math.reduce_prod")
@@ -120,7 +118,6 @@ def reduce_prod(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_prod", keepdims, axis)
 
 
-
 @oneflow_export("math.reduce_all")
 def reduce_all(x, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceAll_")
@@ -128,7 +125,6 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
     if len(axis) == 0:
         return flow.math.not_equal(x, flow.constant_scalar(value=0.0, dtype=x.dtype))
     return _do_reduce(x, name, "reduce_all", keepdims, axis)
-
 
 
 @oneflow_export("math.reduce_euclidean_norm")
