@@ -29,7 +29,7 @@ if __name__ == "__main__":
     command_proc = Popen(version_cmd.format("black", "19.10b0"), shell=True)
     command_proc.communicate()
     if command_proc.returncode:
-        print("Linter requires {}=={} !".format("black", "19.10b0"))
+        print('Please install black 19.10b0. For instance, run "pip3 install black==19.10b0 --user"')
         error = True
     if error:
         sys.exit(1)
