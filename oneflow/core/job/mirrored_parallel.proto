@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+message MirroredParallel {
+}
+
+message OptMirroredParallel {
+  optional MirroredParallel mirrored_parallel = 1;
+}
+
+message MirroredSignature {
+  map<string, OptMirroredParallel> bn_in_op2opt_mirrored_parallel = 1;
+}

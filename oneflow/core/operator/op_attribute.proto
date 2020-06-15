@@ -3,6 +3,8 @@ package oneflow;
 
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/job/mirrored_parallel.proto";
 
 message InputBlobModifier {
   optional bool is_mutable = 1 [default = false];
@@ -20,6 +22,13 @@ message OutputBlobModifier {
   }
 }
 
+message BlobParallelView {
+  oneof view_type {
+    SbpParallel sbp_parallel = 1;
+    MirroredParallel mirrored_parallel = 2;
+  }
+}
+
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
@@ -28,6 +37,8 @@ message OpAttribute {
   repeated string output_bns = 4;
   repeated string tmp_bns = 5;
   repeated string const_buf_bns = 6;
+
+  map<string, BlobParallelView> bn_in_op2blob_parallel_view = 7;
 
   map<string, InputBlobModifier> ibn2input_blob_modifier = 15;
   map<string, OutputBlobModifier> obn2output_blob_modifier = 16;
