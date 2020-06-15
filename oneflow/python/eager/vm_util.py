@@ -23,19 +23,33 @@ import oneflow
 
 from contextlib import contextmanager
 
+
 def PhysicalRun(build):
-    return _Run(build, vm_id_util.PhysicalIdGenerator(), c_api_util.RunPhysicalInstruction,
-                _ReleasePhysicalBlobObject)
+    return _Run(
+        build,
+        vm_id_util.PhysicalIdGenerator(),
+        c_api_util.RunPhysicalInstruction,
+        _ReleasePhysicalBlobObject,
+    )
+
 
 def LogicalRun(build):
-    return _Run(build, vm_id_util.LogicalIdGenerator(), c_api_util.RunLogicalInstruction,
-                _ReleaseLogicalBlobObject)
+    return _Run(
+        build,
+        vm_id_util.LogicalIdGenerator(),
+        c_api_util.RunLogicalInstruction,
+        _ReleaseLogicalBlobObject,
+    )
+
 
 def _Run(build, id_generator, run_api, release_blob_object):
     instruction_list = session_ctx.GetDefaultSession().instruction_list
     eager_symbol_list = session_ctx.GetDefaultSession().eager_symbol_list
-    build(InstructionsBuilder(id_generator, release_blob_object,
-                              instruction_list, eager_symbol_list))
+    build(
+        InstructionsBuilder(
+            id_generator, release_blob_object, instruction_list, eager_symbol_list
+        )
+    )
     run_api(instruction_list, eager_symbol_list)
     instruction_list.ClearField("instruction")
     eager_symbol_list.ClearField("eager_symbol")
@@ -46,7 +60,9 @@ def _DefaultBlobObject4Ibn(ibn):
 
 
 class InstructionsBuilder(object):
-    def __init__(self, id_generator, release_blob_object, instruction_list, eager_symbol_list):
+    def __init__(
+        self, id_generator, release_blob_object, instruction_list, eager_symbol_list
+    ):
         self.id_generator_ = id_generator
         self.release_blob_object_ = release_blob_object
         assert isinstance(instruction_list, instr_util.InstructionListProto)
@@ -57,59 +73,119 @@ class InstructionsBuilder(object):
     def StatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
         op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
         self._CheckRefInBlobObjectParallelDesc(
-                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
+            op_attribute,
+            op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
+
         def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
-            return _FindOrCreateDelegateBlobObject(self, blob_object, op_parallel_desc_symbol)
-        self._StatelessCall("compute", op_attribute,
-                op_parallel_desc_sym=op_parallel_desc_sym,
-                blob_parallel_desc_sym=op_parallel_desc_sym,
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDelegateBlobObject)
+            return _FindOrCreateDelegateBlobObject(
+                self, blob_object, op_parallel_desc_symbol
+            )
 
-    def CudaD2HStatelessCall(self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}):
+        self._StatelessCall(
+            "compute",
+            op_attribute,
+            op_parallel_desc_sym=op_parallel_desc_sym,
+            blob_parallel_desc_sym=op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+            get_delegate_blob_object=GetDelegateBlobObject,
+        )
+
+    def CudaD2HStatelessCall(
+        self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}
+    ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(in_parallel_conf)
-        blob_parallel_desc_sym = boxing_util.TryReplaceDeviceTag(self, op_parallel_desc_sym, "cpu")
+        blob_parallel_desc_sym = boxing_util.TryReplaceDeviceTag(
+            self, op_parallel_desc_sym, "cpu"
+        )
         self._CheckRefInBlobObjectParallelDesc(
-                op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
-        self._StatelessCall("copy_d2h", op_attribute,
-                op_parallel_desc_sym=op_parallel_desc_sym,
-                blob_parallel_desc_sym=blob_parallel_desc_sym,
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDirectBlobObject)
+            op_attribute,
+            blob_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
 
-    def CudaH2DStatelessCall(self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol):
+            return blob_object
+
+        self._StatelessCall(
+            "copy_d2h",
+            op_attribute,
+            op_parallel_desc_sym=op_parallel_desc_sym,
+            blob_parallel_desc_sym=blob_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+            get_delegate_blob_object=GetDirectBlobObject,
+        )
+
+    def CudaH2DStatelessCall(
+        self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}
+    ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(out_parallel_conf)
         self._CheckRefInBlobObjectParallelDesc(
-                op_attribute, op_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol): return blob_object
-        self._StatelessCall("copy_h2d", op_attribute,
-                op_parallel_desc_sym=op_parallel_desc_sym,
-                blob_parallel_desc_sym=op_parallel_desc_sym,
-                bn_in_op2blob_object=bn_in_op2blob_object,
-                get_delegate_blob_object=GetDirectBlobObject)
+            op_attribute,
+            op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
 
-    def _StatelessCall(self, stream_tag, op_attribute,
-                       op_parallel_desc_sym=None, blob_parallel_desc_sym=None,
-                       bn_in_op2blob_object={}, get_delegate_blob_object=None):
+        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol):
+            return blob_object
+
+        self._StatelessCall(
+            "copy_h2d",
+            op_attribute,
+            op_parallel_desc_sym=op_parallel_desc_sym,
+            blob_parallel_desc_sym=op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+            get_delegate_blob_object=GetDirectBlobObject,
+        )
+
+    def _StatelessCall(
+        self,
+        stream_tag,
+        op_attribute,
+        op_parallel_desc_sym=None,
+        blob_parallel_desc_sym=None,
+        bn_in_op2blob_object={},
+        get_delegate_blob_object=None,
+    ):
         assert callable(get_delegate_blob_object)
-        assert op_parallel_desc_sym is not None 
+        assert op_parallel_desc_sym is not None
+
         def DelegateBlobObject4Ibn(ibn):
-            return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_parallel_desc_sym)
+            return get_delegate_blob_object(
+                bn_in_op2blob_object[ibn], op_parallel_desc_sym
+            )
+
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
-        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(op_parallel_desc_sym)
+        opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
+            op_parallel_desc_sym
+        )
         const_operand_blob_objects = self._GetConstOperandBlobObjects(
-                op_attribute, blob_object4ibn=DelegateBlobObject4Ibn)
+            op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
+        )
         mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
-                op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
+            op_attribute,
+            blob_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
         mut2_operand_blob_objects = self._GetMut2OperandBlobObjects(
-                op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object=bn_in_op2blob_object)
-        is_user_op = op_attribute.op_conf.HasField('user_conf')
+            op_attribute,
+            blob_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
+        is_user_op = op_attribute.op_conf.HasField("user_conf")
         instruction_prefix = "User" if is_user_op else "System"
-        self._StatelessCallOpKernel("%s.%sStatelessCallOpKernel"%(stream_tag, instruction_prefix),
-                op_parallel_desc_sym, job_conf_sym, op_conf_sym, opkernel_obj,
-                const_operand_blob_objects, mut1_operand_blob_objects, mut2_operand_blob_objects)
+        self._StatelessCallOpKernel(
+            "%s.%sStatelessCallOpKernel" % (stream_tag, instruction_prefix),
+            op_parallel_desc_sym,
+            job_conf_sym,
+            op_conf_sym,
+            opkernel_obj,
+            const_operand_blob_objects,
+            mut1_operand_blob_objects,
+            mut2_operand_blob_objects,
+        )
 
     def DeleteBlob(self, blob_object):
         self._TryClearObject(blob_object)
@@ -126,21 +202,28 @@ class InstructionsBuilder(object):
         parallel_conf = parallel_desc_symbol.parallel_conf
         _, device_tag, _ = parallel_conf.device_name[0].split(":")
         machine_id2device_ids = placement_ctx.MakeMachineId2DeviceIdList(parallel_conf)
+
         def GetPhysicalBlob(machine_id, device_id):
             parallel_conf = placement_pb_util.ParallelConf()
-            parallel_conf.device_name.append("%d:%s:%d" % (machine_id, device_tag, device_id))
+            parallel_conf.device_name.append(
+                "%d:%s:%d" % (machine_id, device_tag, device_id)
+            )
             parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
             pyhsical_blob_object = self._NewBlobObject(parallel_desc_sym)
             return pyhsical_blob_object
+
         physical_blob_objects = []
         for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids: 
+            for device_id in device_ids:
                 physical_blob_objects.append(GetPhysicalBlob(machine_id, device_id))
-        self._ReplaceMirrored(parallel_desc_symbol, physical_blob_objects, [blob_object])
+        self._ReplaceMirrored(
+            parallel_desc_symbol, physical_blob_objects, [blob_object]
+        )
         return physical_blob_objects
 
     def GetSymbol4String(self, string):
-        if symbol_cache.HasSymbol4String(string): return symbol_cache.GetSymbol4String(string)
+        if symbol_cache.HasSymbol4String(string):
+            return symbol_cache.GetSymbol4String(string)
         symbol_id = self._NewSymbolId4String(string)
         symbol = symbol_util.Symbol(symbol_id, string)
         symbol_cache.SetSymbol4String(string, symbol)
@@ -158,7 +241,9 @@ class InstructionsBuilder(object):
         _, device_tag, _ = parallel_conf.device_name[0].split(":")
         serialized_parallel_conf = parallel_conf.SerializeToString()
         if symbol_cache.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
-            return symbol_cache.GetSymbol4SerializedParallelConf(serialized_parallel_conf)
+            return symbol_cache.GetSymbol4SerializedParallelConf(
+                serialized_parallel_conf
+            )
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
         symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
         symbol_cache.SetSymbol4SerializedParallelConf(serialized_parallel_conf, symbol)
@@ -166,8 +251,12 @@ class InstructionsBuilder(object):
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_cache.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-            return object_cache.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
-        object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
+            return object_cache.GetSharedOpKernelObject4ParallelConfSymbol(
+                parallel_desc_sym
+            )
+        object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(
+            parallel_desc_sym
+        )
         obj = object_util.Object(object_id, parallel_desc_sym)
         object_cache.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
         return obj
@@ -181,10 +270,17 @@ class InstructionsBuilder(object):
             self._CudaHostUnregisterBlob(blob_object)
 
     def BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
-        device_ids = sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
-        for _, dev_ids in device_ids.items(): assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
-        object_id = self._BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym)
-        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
+        device_ids = (
+            sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
+        )
+        for _, dev_ids in device_ids.items():
+            assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
+        object_id = self._BroadcastObjectReference(
+            sole_mirrored_blob_object, parallel_desc_sym
+        )
+        return object_util.BlobObject(
+            object_id, parallel_desc_sym, self.release_blob_object_
+        )
 
     def _CudaHostRegisterBlob(self, blob_object):
         instruction = instr_util.InstructionProto()
@@ -224,21 +320,27 @@ class InstructionsBuilder(object):
         assert callable(blob_object4ibn)
         const_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
-            if op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            if op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+                continue
             ibn_sym = self.GetSymbol4String(ibn)
             in_object = blob_object4ibn(ibn)
             const_operand_blob_objects.append((ibn_sym, in_object))
         return const_operand_blob_objects
 
-    def _GetMut1OperandBlobObjects(self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}):
+    def _GetMut1OperandBlobObjects(
+        self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}
+    ):
         mut1_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
-            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+                continue
             ibn_sym = self.GetSymbol4String(ibn)
             ref_blob_object = bn_in_op2blob_object[ibn]
             mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
         for obn in op_attribute.output_bns:
-            if not op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute:
+            if not op_attribute.obn2output_blob_modifier[
+                obn
+            ].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
             out_blob_object = self._NewBlobObject(parallel_desc_sym)
@@ -247,17 +349,22 @@ class InstructionsBuilder(object):
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut1_operand_blob_objects
 
-    def _CheckRefInBlobObjectParallelDesc(self, op_attribute, op_parallel_desc_sym,
-                                          bn_in_op2blob_object={}):
+    def _CheckRefInBlobObjectParallelDesc(
+        self, op_attribute, op_parallel_desc_sym, bn_in_op2blob_object={}
+    ):
         for ibn in op_attribute.input_bns:
-            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable: continue
+            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+                continue
             ref_blob_object = bn_in_op2blob_object[ibn]
             assert op_parallel_desc_sym == ref_blob_object.parallel_desc_symbol
 
-    def _GetMut2OperandBlobObjects(self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}):
+    def _GetMut2OperandBlobObjects(
+        self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}
+    ):
         mut2_operand_blob_objects = []
         for obn in op_attribute.output_bns:
-            if op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute: continue
+            if op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute:
+                continue
             obn_sym = self.GetSymbol4String(obn)
             out_blob_object = self._NewBlobObject(parallel_desc_sym)
             bn_in_op2blob_object[obn] = out_blob_object
@@ -266,7 +373,9 @@ class InstructionsBuilder(object):
 
     def _NewBlobObject(self, parallel_desc_sym):
         object_id = self._NewObjectId(parallel_desc_sym)
-        return object_util.BlobObject(object_id, parallel_desc_sym, self.release_blob_object_)
+        return object_util.BlobObject(
+            object_id, parallel_desc_sym, self.release_blob_object_
+        )
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -291,11 +400,22 @@ class InstructionsBuilder(object):
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
         return self._NewObjectId(parallel_desc_sym)
 
-    def _StatelessCallOpKernel(self, instr_name, parallel_desc_sym, job_conf_sym, op_conf_sym,
-                               shared_opkernel_obj, const_operand_blob_objects,
-                               mut1_operand_blob_objects, mut2_operand_blob_objects):
+    def _StatelessCallOpKernel(
+        self,
+        instr_name,
+        parallel_desc_sym,
+        job_conf_sym,
+        op_conf_sym,
+        shared_opkernel_obj,
+        const_operand_blob_objects,
+        mut1_operand_blob_objects,
+        mut2_operand_blob_objects,
+    ):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "%s.%s" % (parallel_desc_sym.device_tag, instr_name)
+        instruction.instr_type_name = "%s.%s" % (
+            parallel_desc_sym.device_tag,
+            instr_name,
+        )
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
@@ -388,7 +508,7 @@ class InstructionsBuilder(object):
         unique_callback_id = physical_blob_callback.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
-        instruction.instr_type_name = "%s.%s"%(device_tag, instruction_name)
+        instruction.instr_type_name = "%s.%s" % (device_tag, instruction_name)
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_ConstOperand(blob_object.object_id))
         instruction.operand.append(_Int64Operand(unique_callback_id))
@@ -418,53 +538,64 @@ class InstructionsBuilder(object):
             instruction.operand.append(_Int64Operand(rhs_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
+
 def _SymbolOperand(val):
     operand = instr_util.InstructionOperandProto()
     _SetSoleMirroredOperand(operand.symbol_operand, val)
     return operand
+
 
 def _InitSymbolOperand(val):
     operand = instr_util.InstructionOperandProto()
     _SetSoleMirroredOperand(operand.init_symbol_operand, val)
     return operand
 
+
 def _ConstOperand(val):
     operand = instr_util.InstructionOperandProto()
     _SetMirroredOperand(operand.const_operand, val)
     return operand
+
 
 def _MutOperand(val):
     operand = instr_util.InstructionOperandProto()
     _SetMirroredOperand(operand.mut_operand, val)
     return operand
 
+
 def _Mut2Operand(val):
     operand = instr_util.InstructionOperandProto()
     _SetMirroredOperand(operand.mut2_operand, val)
     return operand
+
 
 def _DelObjectOperand(val):
     operand = instr_util.InstructionOperandProto()
     _SetAllMirroredOperand(operand.mut_operand, val)
     return operand
 
+
 def _Int64Operand(val):
     operand = instr_util.InstructionOperandProto()
     operand.int64_operand = val
     return operand
+
 
 def _OperandSeparator():
     operand = instr_util.InstructionOperandProto()
     operand.separator.SetInParent()
     return operand
 
+
 def _SetMirroredOperand(operand, val):
     operand.logical_object_id = val
     operand.current_global_device_id.SetInParent()
 
+
 def _SetSoleMirroredOperand(operand, val):
     operand.logical_object_id = val
     operand.sole_mirrored_object.SetInParent()
+
 
 def _SetAllMirroredOperand(operand, val):
     operand.logical_object_id = val
@@ -472,29 +603,38 @@ def _SetAllMirroredOperand(operand, val):
 
 
 def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
-    if x_blob_object.parallel_desc_symbol == op_parallel_desc_symbol: return x_blob_object
+    if x_blob_object.parallel_desc_symbol == op_parallel_desc_symbol:
+        return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
+
     def Fetch(x_blob_object, op_parallel_desc_symbol):
         return _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol)
+
     return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch)
+
 
 def _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
     op_device_ids = op_parallel_desc_symbol.machine_id2device_id_list
     prompt = "\nboxing is not supported yet."
-    assert blob_device_ids == op_device_ids, "%s blob_device_ids: %s\nop_device_ids: %s"%(
-            prompt, blob_device_ids, op_device_ids)
+    assert blob_device_ids == op_device_ids, (
+        "%s blob_device_ids: %s\nop_device_ids: %s"
+        % (prompt, blob_device_ids, op_device_ids)
+    )
     blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     op_device_tag = op_parallel_desc_symbol.device_tag
-    assert blob_device_tag != op_device_tag, "\nblob_device_tag: %s\nop_device_tag: %s"%(
-            blob_device_tag, op_device_tag)
+    assert (
+        blob_device_tag != op_device_tag
+    ), "\nblob_device_tag: %s\nop_device_tag: %s" % (blob_device_tag, op_device_tag)
     return boxing_util.BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
 
+
 def _GetOpConfBlobNameAttr(pb_message, field):
-    if hasattr(pb_message, field): return getattr(pb_message, field);
+    if hasattr(pb_message, field):
+        return getattr(pb_message, field)
     m = re.search("_(\d+)$", field)
     assert m is not None
-    blob_name = field[0:-len(m.group(0))]
+    blob_name = field[0 : -len(m.group(0))]
     index = int(m.group(0)[1:])
     assert hasattr(pb_message, blob_name), (pb_message, blob_name)
     repeated_field = getattr(pb_message, blob_name)
@@ -502,9 +642,10 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     assert index < len(repeated_field)
     return repeated_field[index]
 
+
 def _ReleaseLogicalBlobObject(blob_object):
     LogicalRun(lambda builder: builder.DeleteBlob(blob_object))
 
+
 def _ReleasePhysicalBlobObject(blob_object):
     PhysicalRun(lambda builder: builder.DeleteBlob(blob_object))
-

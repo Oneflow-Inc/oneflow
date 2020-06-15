@@ -1,15 +1,16 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 
 namespace {
 
-void UpdateSbpConf(const OpNode& op_node,
-                   const HashMap<OpBlobArg, std::vector<OpBlobArg>>& oba2sbp_identical_obas,
-                   SbpConf* sbp_conf) {
-  auto* op_name2sbp_signature = sbp_conf->mutable_op_name2sbp_signature_conf();
+void UpdateJobParallelViewConf(
+    const OpNode& op_node, const HashMap<OpBlobArg, std::vector<OpBlobArg>>& oba2sbp_identical_obas,
+    JobParallelViewConf* job_parallel_view_conf) {
+  auto* op_name2sbp_signature = job_parallel_view_conf->mutable_op_name2sbp_signature_conf();
   auto Update = [&](const std::string& bn) {
     const auto& sbp_parallel = op_node.sbp_signature().bn_in_op2sbp_parallel().at(bn);
     const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), bn);
@@ -371,6 +372,20 @@ void OpNode::InitLbi2SbpParallel() {
   Update(op().output_bns());
 }
 
+void OpNode::InitLbi2MirroredParallel() {
+  const auto& map = mirrored_signature_.bn_in_op2opt_mirrored_parallel();
+  const auto Update = [&](const std::string& bn_in_op) {
+    const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
+    lbi2is_mirrored_parallel_view_[lbi] = map.at(bn_in_op).has_mirrored_parallel();
+  };
+  for (const auto& ibn : op().input_bns()) { Update(ibn); }
+  for (const auto& obn : op().output_bns()) { Update(obn); }
+}
+
+bool OpNode::IsMirroredParallelView4Lbi(const LogicalBlobId& lbi) const {
+  return lbi2is_mirrored_parallel_view_.at(lbi);
+}
+
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode([&](OpNode* node) {
@@ -483,6 +498,26 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   op_node->InitLbi2SbpParallel();
 }
 
+void OpGraph::InferOpNodeMirroredSignature(OpNode* op_node,
+                                           bool is_mirrored_parallel_view_conf) const {
+  HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
+  for (const std::string& ibn : op_node->op().input_bns()) {
+    const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+    const auto* producer = op_node->MutSrcNode4InputBnInOp(ibn);
+    const ParallelDesc* parallel_desc = &producer->parallel_desc();
+    MirroredSigInferHint infer_ctx(parallel_desc, producer->IsMirroredParallelView4Lbi(lbi));
+    ibn2mirrored_sig_infer_hint.emplace(ibn, infer_ctx);
+  }
+  const auto& MirroredSigInferHint4Ibn =
+      [&](const std::string& ibn) -> Maybe<const MirroredSigInferHint*> {
+    return &ibn2mirrored_sig_infer_hint.at(ibn);
+  };
+  CHECK_JUST(op_node->op().InferMirroredSignatureIf(
+      op_node->mut_mirrored_signature(), is_mirrored_parallel_view_conf, MirroredSigInferHint4Ibn,
+      op_node->parallel_desc()));
+  op_node->InitLbi2MirroredParallel();
+}
+
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
   auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
   op_node->SplitLogicalInputBlobDesc();
@@ -518,7 +553,7 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
 }
 
 void OpGraph::InferLogicalBlobDesc(const Job& job) const {
-  SbpConf sbp_conf(job.sbp_conf());
+  JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
   for (const auto& pair : job.helper().identical_sbp_oba_pairs().pair()) {
     oba2sbp_identical_obas[pair.first()].push_back(pair.second());
@@ -535,16 +570,24 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
     };
     CHECK_JUST(op_node->op().InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4BnInOp));
+    // infer mirrored_signature
+    bool is_mirrored_parallel_view_conf = false;
+    {
+      const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
+      const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
+      if (iter != op_name2is_mirrored.end()) { is_mirrored_parallel_view_conf = iter->second; }
+    }
+    InferOpNodeMirroredSignature(op_node, is_mirrored_parallel_view_conf);
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
-      const auto& op_name2sbp_sig_conf = sbp_conf.op_name2sbp_signature_conf();
-      const auto& it = op_name2sbp_sig_conf.find(op_node->op().op_name());
-      if (it != op_name2sbp_sig_conf.end()) { sbp_sig_conf = it->second; }
+      const auto& op_name2sbp_sig_conf = job_parallel_view_conf.op_name2sbp_signature_conf();
+      const auto& iter = op_name2sbp_sig_conf.find(op_node->op().op_name());
+      if (iter != op_name2sbp_sig_conf.end()) { sbp_sig_conf = iter->second; }
     }
     InferOpNodeSbpSignature(op_node, sbp_sig_conf);
     op_node->InferBlobParallelDesc();
-    UpdateSbpConf(*op_node, oba2sbp_identical_obas, &sbp_conf);
+    UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     // infer logical_blob_desc
     InferOpNodeLogicalBlobDesc(op_node);
   });
@@ -763,8 +806,8 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
 
 void OpGraph::DumpSbpSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) {
-    (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
-        node->sbp_signature();
+    (*job->mutable_job_parallel_view_conf()
+          ->mutable_op_name2sbp_signature_conf())[node->op().op_name()] = node->sbp_signature();
   });
 }
 

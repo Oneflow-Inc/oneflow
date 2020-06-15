@@ -1,12 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
-from test_util import type_name_to_flow_type
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -63,6 +62,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
+
 def test_softmax(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -70,9 +70,11 @@ def test_softmax(test_case):
     arg_dict["data_type"] = ["float32", "double", "float16"]
     arg_dict["axis"] = [-1, 1, 2, 3]
     for arg in GenArgList(arg_dict):
-        if arg[0] == "cpu" and arg[2] == "float16": continue
-        if arg[3] >= len(arg[1]): continue
-        if os.getenv("ENABLE_USER_OP") != 'True':
-            if arg[3] != -1: continue # axis
+        if arg[0] == "cpu" and arg[2] == "float16":
+            continue
+        if arg[3] >= len(arg[1]):
+            continue
+        if os.getenv("ENABLE_USER_OP") != "True":
+            if arg[3] != -1:
+                continue  # axis
         compare_with_tensorflow(*arg)
-        

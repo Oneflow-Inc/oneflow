@@ -1,11 +1,12 @@
-import oneflow as flow
-import numpy as np
-import random
 import os
+import random
+
+import cv2
+import numpy as np
+import oneflow as flow
+
 
 def _random_sample_images(anno_file, image_dir, batch_size):
-    from pycocotools.coco import COCO
-
     image_files = []
     image_ids = []
     batch_group_id = -1
@@ -32,8 +33,6 @@ def _random_sample_images(anno_file, image_dir, batch_size):
         image_ids.append(rand_img_id)
 
     assert len(image_files) == len(image_ids)
-    import cv2
-
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     bbox_list = _get_images_bbox_list(coco, image_ids)
     return images, bbox_list
@@ -43,8 +42,12 @@ def _get_images_bbox_list(coco, image_ids):
     bbox_list = []
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
-        anno_ids = list(filter(lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, anno_ids))
-        bbox_array = np.array([coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single)
+        anno_ids = list(
+            filter(lambda anno_id: coco.anns[anno_id]["iscrowd"] == 0, anno_ids)
+        )
+        bbox_array = np.array(
+            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single
+        )
         bbox_list.append(bbox_array)
     return bbox_list
 
@@ -54,7 +57,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     image_static_shape.insert(0, len(image_shapes))
     return image_static_shape
@@ -65,7 +70,9 @@ def _get_bbox_static_shape(bbox_list):
     bbox_static_shape = np.amax(bbox_shapes, axis=0)
     assert isinstance(
         bbox_static_shape, np.ndarray
-    ), "bbox_shapes: {}, bbox_static_shape: {}".format(str(bbox_shapes), str(bbox_static_shape))
+    ), "bbox_shapes: {}, bbox_static_shape: {}".format(
+        str(bbox_shapes), str(bbox_static_shape)
+    )
     bbox_static_shape = bbox_static_shape.tolist()
     bbox_static_shape.insert(0, len(bbox_list))
     return bbox_static_shape
@@ -83,7 +90,9 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
 
     @flow.function(func_config)
     def target_resize_bbox_scale_job(
-        image_def=flow.MirroredTensorListDef(shape=tuple(image_shape), dtype=flow.float),
+        image_def=flow.MirroredTensorListDef(
+            shape=tuple(image_shape), dtype=flow.float
+        ),
         bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
@@ -106,14 +115,22 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
 
 
 def _compare_bbox_scale(
-    test_case, anno_file, image_dir, batch_size, target_size, max_size, print_debug_info=False
+    test_case,
+    anno_file,
+    image_dir,
+    batch_size,
+    target_size,
+    max_size,
+    print_debug_info=False,
 ):
     images, bbox_list = _random_sample_images(anno_file, image_dir, batch_size)
     of_bbox_list, image_size_list = _of_target_resize_bbox_scale(
         images, bbox_list, target_size, max_size
     )
 
-    for image, bbox, of_bbox, image_size in zip(images, bbox_list, of_bbox_list, image_size_list):
+    for image, bbox, of_bbox, image_size in zip(
+        images, bbox_list, of_bbox_list, image_size_list
+    ):
         h, w = image_size
         oh, ow = image.shape[0:2]
         scale_h = h / oh

@@ -1,7 +1,8 @@
+import argparse
+from datetime import datetime
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
-import argparse
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
 _MODEL_SAVE_DIR = "./model_save-{}".format(
@@ -93,8 +94,11 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=12, data_part_num=8, name="decode"
+        data_dir,
+        (label_blob_conf, image_blob_conf),
+        batch_size=12,
+        data_part_num=8,
+        name="decode",
     )
 
 
@@ -169,6 +173,7 @@ def alexnet(images, labels, trainable=True):
 
     return loss
 
+
 @flow.function
 def alexnet_train_job():
     flow.config.train.primary_lr(0.00001)
@@ -211,17 +216,9 @@ if __name__ == "__main__":
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(10):
-        print(
-            fmt_str.format(
-                i, "train loss:", alexnet_train_job().get().mean()
-            )
-        )
+        print(fmt_str.format(i, "train loss:", alexnet_train_job().get().mean()))
         if (i + 1) % 10 == 0:
-            print(
-                fmt_str.format(
-                    i, "eval loss:", alexnet_eval_job().get().mean()
-                )
-            )
+            print(fmt_str.format(i, "eval loss:", alexnet_eval_job().get().mean()))
         if (i + 1) % 100 == 0:
             check_point.save(_MODEL_SAVE_DIR + str(i))
     if (

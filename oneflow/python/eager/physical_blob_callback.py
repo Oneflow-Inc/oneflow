@@ -7,16 +7,19 @@ import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import traceback
 
+
 def GetIdForRegisteredCallback(cb):
     assert callable(cb)
     global unique_id2handler
     unique_id2handler[id(cb)] = cb
     return id(cb)
 
+
 def DeleteRegisteredCallback(cb):
     global unique_id2handler
     assert id(cb) in unique_id2handler
     del unique_id2handler[id(cb)]
+
 
 class _WorkerCallback(oneflow_internal.ForeignWorkerCallback):
     def __init__(self):
@@ -29,6 +32,7 @@ class _WorkerCallback(oneflow_internal.ForeignWorkerCallback):
             print(traceback.format_exc())
             raise e
 
+
 def _WatcherHandler(unique_id, of_blob_ptr):
     global unique_id2handler
     assert unique_id in unique_id2handler
@@ -36,7 +40,8 @@ def _WatcherHandler(unique_id, of_blob_ptr):
     assert callable(handler)
     handler(ofblob.OfBlob(of_blob_ptr))
 
+
 unique_id2handler = {}
-# static lifetime 
+# static lifetime
 _worker_callback = _WorkerCallback()
 c_api_util.RegisterWorkerCallbackOnlyOnce(_worker_callback)

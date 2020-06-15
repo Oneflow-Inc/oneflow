@@ -83,11 +83,6 @@ bool IsStateless4OpTypeName(const std::string& op_type_name) {
   return IsStateless4OpTypeName()->at(op_type_name);
 }
 
-void CheckStatefulnessConsistency(const std::string& op_type_name, bool is_stateless) {
-  bool prev = IsStateless4OpTypeName()->emplace(op_type_name, is_stateless).first->second;
-  CHECK_EQ(prev, is_stateless);
-}
-
 KernelRegistryWrapperBuilder::KernelRegistryWrapperBuilder(const std::string& op_type_name) {
   wrapper_.op_type_name = op_type_name;
 }

@@ -41,7 +41,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       SbpSignature identity_sbp_signature;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["in"] = dst_sbp_parallel;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["out"] = dst_sbp_parallel;
-      (*job_builder->mutable_sbp_conf()
+      (*job_builder->mutable_job_parallel_view_conf()
             ->mutable_op_name2sbp_signature_conf())[identity_op_conf.name()] =
           identity_sbp_signature;
       LogicalBlobId grouped_lbi;

@@ -1,9 +1,8 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import argparse
-
 from datetime import datetime
 
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 DATA_DIR = "/dataset/imagenet_original_ofrecord/train"
 MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/resnet50/models/of_model"
@@ -17,18 +16,12 @@ BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-g", "--gpu_num_per_node", type=int, default=1, required=False
-)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-s",
-    "--skip_scp_binary",
-    default=False,
-    action="store_true",
-    required=False,
+    "-s", "--skip_scp_binary", default=False, action="store_true", required=False,
 )
 parser.add_argument(
     "-c",
@@ -41,21 +34,13 @@ parser.add_argument(
     "-r", "--remote_by_hand", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
-parser.add_argument(
-    "-e", "--eval_dir", type=str, default=DATA_DIR, required=False
-)
-parser.add_argument(
-    "-t", "--train_dir", type=str, default=DATA_DIR, required=False
-)
-parser.add_argument(
-    "-load", "--model_load_dir", type=str, default=None, required=False
-)
+parser.add_argument("-e", "--eval_dir", type=str, default=DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str, default=DATA_DIR, required=False)
+parser.add_argument("-load", "--model_load_dir", type=str, default=None, required=False)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False
 )
-parser.add_argument(
-    "-dn", "--data_part_num", type=int, default=8, required=False
-)
+parser.add_argument("-dn", "--data_part_num", type=int, default=8, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
 g_args = parser.parse_args()
@@ -73,9 +58,7 @@ def _data_load(data_dir):
                 flow.data.ImagePreprocessor("bgr2rgb"),
             ]
         ),
-        preprocessors=[
-            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
-        ],
+        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -140,9 +123,7 @@ def conv2d_affine(
     return output
 
 
-def bottleneck_transformation(
-    input, block_name, filters, filters_inner, strides
-):
+def bottleneck_transformation(input, block_name, filters, filters_inner, strides):
     a = conv2d_affine(
         input,
         block_name + "_branch2a",
@@ -181,18 +162,12 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
     return flow.keras.activations.relu(shortcut + bottleneck)
 
 
-def residual_stage(
-    input, stage_name, counts, filters, filters_inner, stride_init=2
-):
+def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
     output = input
     for i in range(counts):
         block_name = "%s_%d" % (stage_name, i)
         output = residual_block(
-            output,
-            block_name,
-            filters,
-            filters_inner,
-            stride_init if i == 0 else 1,
+            output, block_name, filters, filters_inner, stride_init if i == 0 else 1,
         )
 
     return output
@@ -205,12 +180,7 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
     ):
         stage_name = "res%d" % (i + 2)
         output = residual_stage(
-            output,
-            stage_name,
-            counts,
-            filters,
-            filters_inner,
-            1 if i == 0 else 2,
+            output, stage_name, counts, filters, filters_inner, 1 if i == 0 else 2,
         )
         on_stage_end(output)
 
@@ -221,12 +191,7 @@ def resnet_stem(input):
     conv1 = _conv2d("conv1", input, 64, 7, 2)
     conv1_bn = flow.keras.activations.relu(_batch_norm(conv1, "conv1_bn"))
     pool1 = flow.nn.max_pool2d(
-        conv1_bn,
-        ksize=3,
-        strides=2,
-        padding="VALID",
-        data_format="NCHW",
-        name="pool1",
+        conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
     )
     return pool1
 
@@ -239,12 +204,7 @@ def resnet50(data_dir):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(
-            body,
-            ksize=7,
-            strides=1,
-            padding="VALID",
-            data_format="NCHW",
-            name="pool5",
+            body, ksize=7, strides=1, padding="VALID", data_format="NCHW", name="pool5",
         )
 
         fc1001 = flow.layers.dense(
@@ -295,9 +255,7 @@ def main():
 
     if g_args.multinode:
         flow.config.ctrl_port(12139)
-        flow.config.machine(
-            [{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}]
-        )
+        flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
 
         if g_args.scp_binary_without_uuid:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=False)

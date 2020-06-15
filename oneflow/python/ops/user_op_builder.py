@@ -1,9 +1,10 @@
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.hob as hob
-import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
@@ -22,6 +23,7 @@ import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.lib.core.enable_if as enable_if
 import random
+
 
 class UserOp(object):
     def __init__(self, op_name):
@@ -61,7 +63,7 @@ class UserOp(object):
         return blobs[0]
 
 
-@oneflow_export('user_op_builder')
+@oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
     return enable_if.unique(
         lazy_user_op_builder,
@@ -69,10 +71,12 @@ def api_user_op_builder(op_name):
         eager_physical_user_op_builder,
     )(op_name)
 
+
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_builder(op_name): 
+def lazy_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+
 
 class LazyUserOp(UserOp):
     def __init__(self, op_name):
@@ -85,10 +89,12 @@ class LazyUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
+
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_builder(op_name): 
+def eager_logical_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
+
 
 class EagerLogicalUserOp(UserOp):
     def __init__(self, op_name):
@@ -96,22 +102,33 @@ class EagerLogicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
+
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            with object_cache.BnInOp2BlobObjectScope(
+                op_attribute
+            ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(op_attribute, parallel_conf,
-                        bn_in_op2blob_object=bn_in_op2blob_object)
+                builder.StatelessCall(
+                    op_attribute,
+                    parallel_conf,
+                    bn_in_op2blob_object=bn_in_op2blob_object,
+                )
+
         vm_util.LogicalRun(BuildInstruction)
         return self
 
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
-in_physical_placement = (hob.env_initialized & hob.is_current_placement_physical)
+
+in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
+
+
 @enable_if.condition(hob.in_normal_mode & in_physical_placement)
 def eager_physical_user_op_builder(op_name):
     job_name = job_conf_ctx.CurrentJobConf().job_name
     return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
+
 
 class EagerPhysicalUserOp(UserOp):
     def __init__(self, op_name):
@@ -119,26 +136,35 @@ class EagerPhysicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            with object_cache.BnInOp2BlobObjectScope(
+                op_attribute
+            ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(op_attribute, parallel_conf,
-                        bn_in_op2blob_object=bn_in_op2blob_object)
+                builder.StatelessCall(
+                    op_attribute,
+                    parallel_conf,
+                    bn_in_op2blob_object=bn_in_op2blob_object,
+                )
+
         vm_util.PhysicalRun(BuildInstruction)
         return self
 
     def MakeRemoteBlob(self, lbi):
-        return eager_blob_util.EagerPhysicalBlob("%s/%s"%(lbi.op_name, lbi.blob_name))
+        return eager_blob_util.EagerPhysicalBlob("%s/%s" % (lbi.op_name, lbi.blob_name))
 
 
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
     return enable_if.unique(consistent_user_op_builder)(op_name)
 
+
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
+
 
 class ConsistentUserOp(UserOp):
     def __init__(self, op_name):
@@ -152,9 +178,10 @@ class ConsistentUserOp(UserOp):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-def NonTraceableEagerLogicalUserOpBuilder(op_name): 
+def NonTraceableEagerLogicalUserOpBuilder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
+
 
 class NonTraceableEagerLogicalUserOp(UserOp):
     def __init__(self, op_name):
@@ -162,11 +189,18 @@ class NonTraceableEagerLogicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            with object_cache.BnInOp2BlobObjectScope(
+                op_attribute
+            ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(op_attribute, parallel_conf,
-                        bn_in_op2blob_object=bn_in_op2blob_object)
+                builder.StatelessCall(
+                    op_attribute,
+                    parallel_conf,
+                    bn_in_op2blob_object=bn_in_op2blob_object,
+                )
+
         vm_util.LogicalRun(BuildInstruction)
         return self
 
@@ -181,7 +215,9 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
-        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
+            self.user_op_.op_conf_
+        )
         return self.user_op_
 
     def Op(self, op_type_name):
@@ -192,7 +228,9 @@ class UserOpConfBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(
+                input_blob.unique_name
+            )
         return self
 
     def Output(self, output_name, num=1):
@@ -271,7 +309,9 @@ class UserOpConfBuilder(object):
             if seed is None:
                 seed = -1
         else:
-            raise ValueError("Unknow distirbute strategy when set random seed to user op")
+            raise ValueError(
+                "Unknow distirbute strategy when set random seed to user op"
+            )
 
         return self.Attr("has_seed", (seed is not None), "AttrTypeBool").Attr(
             "seed", seed, "AttrTypeInt64"

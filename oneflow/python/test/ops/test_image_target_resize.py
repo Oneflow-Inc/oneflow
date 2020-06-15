@@ -1,5 +1,8 @@
-import oneflow as flow
+import cv2
 import numpy as np
+import oneflow as flow
+from PIL import Image
+
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     flow.clear_default_session()
@@ -10,7 +13,9 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
 
     @flow.function(func_config)
     def image_target_resize_job(
-        images_def=flow.MirroredTensorListDef(shape=image_static_shape, dtype=flow.float)
+        images_def=flow.MirroredTensorListDef(
+            shape=image_static_shape, dtype=flow.float
+        )
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         resized_images_buffer, size, scale = flow.image_target_resize(
@@ -31,17 +36,15 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
 
 
 def _read_images_by_pil(image_files):
-    from PIL import Image
-
     images = [Image.open(image_file) for image_file in image_files]
     # convert image to BGR
-    converted_images = [np.array(image).astype(np.single)[:, :, ::-1] for image in images]
+    converted_images = [
+        np.array(image).astype(np.single)[:, :, ::-1] for image in images
+    ]
     return [np.expand_dims(image, axis=0) for image in converted_images]
 
 
 def _read_images_by_cv(image_files):
-    import cv2
-
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
@@ -51,7 +54,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     assert image_static_shape[0] == 1, str(image_static_shape)
     image_static_shape[0] = len(image_shapes)
@@ -60,8 +65,6 @@ def _get_images_static_shape(images):
 
 def _target_resize_by_cv(images, target_size, max_size):
     resized_images = []
-    import cv2
-
     for image in images:
         squeeze_image = image.squeeze()
         w, h = _get_target_resize_size(
@@ -77,12 +80,20 @@ def _get_target_resize_size(w, h, target_size, max_size):
     max_original_size = float(max((w, h)))
 
     min_resized_size = target_size
-    max_resized_size = int(round(max_original_size / min_original_size * min_resized_size))
+    max_resized_size = int(
+        round(max_original_size / min_original_size * min_resized_size)
+    )
     if max_resized_size > max_size:
         max_resized_size = max_size
-        min_resized_size = int(round(max_resized_size * min_original_size / max_original_size))
+        min_resized_size = int(
+            round(max_resized_size * min_original_size / max_original_size)
+        )
 
-    return (min_resized_size, max_resized_size) if w < h else (max_resized_size, min_resized_size)
+    return (
+        (min_resized_size, max_resized_size)
+        if w < h
+        else (max_resized_size, min_resized_size)
+    )
 
 
 def _compare_image_target_resize_with_cv(

@@ -9,6 +9,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.ops.user_op_builder as user_op_builder_util
@@ -19,6 +20,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
 import os
+
 
 @oneflow_export("get_variable")
 def api_get_variable(
@@ -45,18 +47,21 @@ def api_get_variable(
 
     """
     return enable_if.unique(get_lazy_variable, get_eager_variable)(
-            name,
-            shape=shape,
-            dtype=dtype,
-            initializer=initializer,
-            regularizer=regularizer,
-            trainable=trainable,
-            model_name=model_name,
-            random_seed=random_seed,
-            distribute=distribute)
+        name,
+        shape=shape,
+        dtype=dtype,
+        initializer=initializer,
+        regularizer=regularizer,
+        trainable=trainable,
+        model_name=model_name,
+        random_seed=random_seed,
+        distribute=distribute,
+    )
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled
-                     & ~hob.consistent_view_enabled)
+
+@enable_if.condition(
+    hob.in_global_mode & hob.eager_execution_enabled & ~hob.consistent_view_enabled
+)
 def get_eager_variable(
     name,
     shape=None,
@@ -69,7 +74,9 @@ def get_eager_variable(
     distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
-    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    assert isinstance(
+        shape, (list, tuple)
+    ), "param shape should be a list or tuple of dimension"
     # TODO(lixinqi) only BroadcastDistribute supported yet
     assert isinstance(distribute, distribute_util.BroadcastDistribute)
 
@@ -112,7 +119,9 @@ def get_lazy_variable(
     distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
-    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    assert isinstance(
+        shape, (list, tuple)
+    ), "param shape should be a list or tuple of dimension"
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
@@ -159,7 +168,9 @@ def _GenerateVariableOpConf(
     if dtype is not None:
         op_conf.variable_conf.data_type = dtype
 
-    root_path = compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    root_path = (
+        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    )
     dir_path = os.path.join(root_path, name)
     file_path = os.path.join(dir_path, "out")
     if root_path and os.path.isfile(file_path):
@@ -199,40 +210,55 @@ def _CreateVariableBlob(op_conf, parallel_conf):
     lbi.blob_name = op_conf.variable_conf.out
     return remote_blob_util.RemoteBlob(lbi)
 
+
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
     op_attribute = compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
     bn_in_op2blob_object = {}
+
     def BuildInstruction(builder):
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        builder.StatelessCall(op_attribute, parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object)
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+        )
+
     vm_util.LogicalRun(BuildInstruction)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
-    return remote_blob_util.EagerLogicalBlob(lbi, blob_object=bn_in_op2blob_object['out'])
+    return remote_blob_util.EagerLogicalBlob(
+        lbi, blob_object=bn_in_op2blob_object["out"]
+    )
+
 
 def _InitVariableBlob(var_op_conf, var_blob):
     with oneflow.fixed_placement("cpu", "0:0"):
         _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
-        
+
+
 def _Assign(var_blob_object, value_blob_object):
     def BuildAssignInstruction(builder):
         tmp_blob_object = boxing_util.OneToManyBroadcastBlobReference(
-                builder, value_blob_object, var_blob_object.parallel_desc_symbol)
+            builder, value_blob_object, var_blob_object.parallel_desc_symbol
+        )
         boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
+
     vm_util.LogicalRun(BuildAssignInstruction)
+
 
 def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
     bn_in_op2blob_object = {}
+
     def BuildModeInitInstruction(builder):
         op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        builder.StatelessCall(op_attribute, parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object)
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+        )
+
     vm_util.LogicalRun(BuildModeInitInstruction)
-    return bn_in_op2blob_object['out_0']
+    return bn_in_op2blob_object["out_0"]
+
 
 def _GetModelInitAndLbi(var_op_conf):
     variable_op_conf = op_conf_util.VariableOpConf()

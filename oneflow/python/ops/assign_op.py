@@ -13,11 +13,14 @@ import oneflow.python.framework.placement_context as placement_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
+
 @oneflow_export("system.assign")
 def api_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
     return enable_if.unique(lazy_assign, eager_assign)(
-            ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name)
+        ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name
+    )
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
@@ -25,16 +28,22 @@ def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     compile_context.CurJobAddOp(op_conf, ref.parallel_conf)
     return ref
 
+
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _AssignOpConf(ref, value, name=name)
     # no backward for assign
-    vm_util.LogicalRun(lambda builder:
-            boxing_util.BuildAssignInstruction(builder, ref.blob_object, value.blob_object, op_conf))
+    vm_util.LogicalRun(
+        lambda builder: boxing_util.BuildAssignInstruction(
+            builder, ref.blob_object, value.blob_object, op_conf
+        )
+    )
     return ref
 
-def _AssignOpConf(ref, value, name = None):
-    if name is None: name = id_util.UniqueStr("Assign_")
+
+def _AssignOpConf(ref, value, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Assign_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     op_conf.assign_conf.ref = ref.unique_name

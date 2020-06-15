@@ -69,7 +69,6 @@ struct KernelRegistryWrapper final {
 };
 
 bool IsStateless4OpTypeName(const std::string& op_type_name);
-void CheckStatefulnessConsistency(const std::string& op_type_name, bool is_stateless);
 
 class KernelRegistryWrapperBuilder final {
  public:
@@ -78,8 +77,6 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapperBuilder& SetCreateFn() {
     //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
     //    OpKernel");
-    bool is_stateless = typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState);
-    CheckStatefulnessConsistency(wrapper_.op_type_name, is_stateless);
     return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);

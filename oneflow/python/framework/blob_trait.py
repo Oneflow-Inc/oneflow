@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow
 
+
 class BlobHeaderTrait(object):
     @property
     def static_shape(self):
@@ -25,7 +26,6 @@ class BlobHeaderTrait(object):
 
 
 class BlobOperatorTrait(object):
-
     def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
 
@@ -76,4 +76,3 @@ class BlobOperatorTrait(object):
 
     def __ge__(self, rhs):
         return oneflow.math.greater_equal(self, rhs)
-
