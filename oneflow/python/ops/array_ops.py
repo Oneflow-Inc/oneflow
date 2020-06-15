@@ -777,9 +777,7 @@ def identity(x, name=None):
 def identity_n(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("IdentityN_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("IdentityN_"),
     )
     assert len(inputs) > 1
     out_bns = []

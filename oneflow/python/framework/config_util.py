@@ -239,7 +239,7 @@ def do_nothing(*args, **kwargs):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.enable_fusion')
+@oneflow_export("config.collective_boxing.enable_fusion")
 def enable_fusion(val=True):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
@@ -247,7 +247,7 @@ def enable_fusion(val=True):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.num_callback_threads')
+@oneflow_export("config.collective_boxing.num_callback_threads")
 def num_callback_threads(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
@@ -255,7 +255,7 @@ def num_callback_threads(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_num_streams')
+@oneflow_export("config.collective_boxing.nccl_num_streams")
 def nccl_num_streams(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
@@ -263,7 +263,7 @@ def nccl_num_streams(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_threshold_mb')
+@oneflow_export("config.collective_boxing.nccl_fusion_threshold_mb")
 def nccl_fusion_threshold_mb(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
@@ -271,15 +271,17 @@ def nccl_fusion_threshold_mb(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_all_reduce_use_buffer')
+@oneflow_export("config.collective_boxing.nccl_fusion_all_reduce_use_buffer")
 def nccl_fusion_all_reduce_use_buffer(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce_use_buffer = val
+    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce_use_buffer = (
+        val
+    )
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_all_reduce')
+@oneflow_export("config.collective_boxing.nccl_fusion_all_reduce")
 def nccl_fusion_all_reduce(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
@@ -287,7 +289,7 @@ def nccl_fusion_all_reduce(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_reduce_scatter')
+@oneflow_export("config.collective_boxing.nccl_fusion_reduce_scatter")
 def nccl_fusion_reduce_scatter(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
@@ -295,7 +297,7 @@ def nccl_fusion_reduce_scatter(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_all_gather')
+@oneflow_export("config.collective_boxing.nccl_fusion_all_gather")
 def nccl_fusion_all_gather(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
@@ -303,7 +305,7 @@ def nccl_fusion_all_gather(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_reduce')
+@oneflow_export("config.collective_boxing.nccl_fusion_reduce")
 def nccl_fusion_reduce(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
@@ -311,7 +313,7 @@ def nccl_fusion_reduce(val):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-@oneflow_export('config.collective_boxing.nccl_fusion_broadcast')
+@oneflow_export("config.collective_boxing.nccl_fusion_broadcast")
 def nccl_fusion_broadcast(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
