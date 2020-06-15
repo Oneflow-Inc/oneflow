@@ -254,8 +254,9 @@ struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
-    return __hne(trunc_mod, half(0)) && __hne(__hlt(y, half(0)), __hlt(trunc_mod, half(0))) ? trunc_mod + y
-                                                                          : trunc_mod;
+    return __hne(trunc_mod, half(0)) && __hne(__hlt(y, half(0)), __hlt(trunc_mod, half(0)))
+               ? trunc_mod + y
+               : trunc_mod;
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -283,8 +284,7 @@ struct BinaryFuncFloorMod<double> final {
 template<>
 struct BinaryFuncFloorMod<float16> final {
   static inline const float16 Invoke(const float16 x, const float16 y) {
-    const float trunc_mod =
-        std::fmod(static_cast<float>(x), static_cast<float>(y));
+    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
     return (trunc_mod != float(0)) && ((y < float(0)) != (trunc_mod < float(0)))
                ? static_cast<float16>(trunc_mod + y)
                : static_cast<float16>(trunc_mod);
