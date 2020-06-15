@@ -1,15 +1,15 @@
 from __future__ import absolute_import
 
+import collections
 import os
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
-import collections
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.reduce_sum")
@@ -32,10 +32,11 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
         if axis is None:
             axis = []
         elif isinstance(axis, (list, tuple)):
-           if len(axis) == 0: return input_tensor
+            if len(axis) == 0:
+                return input_tensor
         else:
-           assert type(axis) is int 
-           axis = [axis]
+            assert type(axis) is int
+            axis = [axis]
         return (
             flow.user_op_builder(name)
             .Op("reduce_sum")

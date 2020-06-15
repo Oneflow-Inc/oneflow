@@ -1,6 +1,7 @@
-import oneflow as flow
-import numpy as np
 import random
+
+import numpy as np
+import oneflow as flow
 
 
 def _of_object_bbox_flip(bbox_list, image_size, flip_code):
@@ -19,7 +20,9 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     ):
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
         flip_bbox = flow.object_bbox_flip(bbox_buffer, image_size_def, flip_code)
-        return flow.tensor_buffer_to_tensor_list(flip_bbox, shape=bbox_shape[1:], dtype=flow.float)
+        return flow.tensor_buffer_to_tensor_list(
+            flip_bbox, shape=bbox_shape[1:], dtype=flow.float
+        )
 
     input_bbox_list = [np.expand_dims(bbox, axis=0) for bbox in bbox_list]
     bbox_tensor = object_bbox_flip_job([input_bbox_list], [image_size]).get()
@@ -31,13 +34,17 @@ def _get_bbox_static_shape(bbox_list):
     bbox_static_shape = np.amax(bbox_shapes, axis=0)
     assert isinstance(
         bbox_static_shape, np.ndarray
-    ), "bbox_shapes: {}, bbox_static_shape: {}".format(str(bbox_shapes), str(bbox_static_shape))
+    ), "bbox_shapes: {}, bbox_static_shape: {}".format(
+        str(bbox_shapes), str(bbox_static_shape)
+    )
     bbox_static_shape = bbox_static_shape.tolist()
     bbox_static_shape.insert(0, len(bbox_list))
     return bbox_static_shape
 
 
-def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_info=False):
+def _compare_bbox_flip(
+    test_case, anno_file, batch_size, flip_code, print_debug_info=False
+):
     from pycocotools.coco import COCO
 
     coco = COCO(anno_file)
@@ -51,9 +58,13 @@ def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_
         anno_ids = coco.getAnnIds(imgIds=[rand_img_id])
         if len(anno_ids) == 0:
             continue
-        bbox_array = np.array([coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single)
+        bbox_array = np.array(
+            [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single
+        )
         bbox_list.append(bbox_array)
-        image_size_list.append([coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]])
+        image_size_list.append(
+            [coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]]
+        )
         sample_cnt += 1
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
@@ -77,4 +88,6 @@ def _compare_bbox_flip(test_case, anno_file, batch_size, flip_code, print_debug_
 
 
 def test_object_bbox_flip(test_case):
-    _compare_bbox_flip(test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1)
+    _compare_bbox_flip(
+        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
+    )
