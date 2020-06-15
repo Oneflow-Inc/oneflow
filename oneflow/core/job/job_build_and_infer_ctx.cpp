@@ -791,8 +791,10 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
 }
 
 void JobBuildAndInferCtx::VirtualInferOp(const Operator& op) {
-  UpdateOpName2AncestorsNeedNoGrad(op);
-  Updatelbi2ConsumedByGradientOp(op);
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    UpdateOpName2AncestorsNeedNoGrad(op);
+    Updatelbi2ConsumedByGradientOp(op);
+  }
 }
 
 void JobBuildAndInferCtx::UpdateOpName2AncestorsNeedNoGrad(const Operator& op) {
