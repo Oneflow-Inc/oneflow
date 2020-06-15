@@ -13,8 +13,9 @@ Maybe<void> GenerateBackwardOpConf(
   CHECK(op.op_conf().has_user_conf());
   const UserOpConf& user_conf = op.op_conf().user_conf();
   const user_op::GradRegistrationVal* val = user_op::LookUpInGradRegistry(user_conf.op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << " Cannot find op_type: " << user_conf.op_type_name()
-                                  << " 's grad func in GradRegistration!";
+  if (val == nullptr) {
+    return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
+  }
   user_op::UserOpWrapper user_op(op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
   auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
     op_confs->push_back(wrapper.op_conf());
