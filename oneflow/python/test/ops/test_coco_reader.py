@@ -1,8 +1,9 @@
+import math
+import os
+
+import cv2
 import numpy as np
 import oneflow as flow
-import os
-import cv2
-import math
 
 VERBOSE = False
 coco_dict = dict()
@@ -60,14 +61,28 @@ def _make_coco_data_load_fn(
             image_list = flow.tensor_buffer_to_tensor_list(
                 decoded_image, shape=(800, 1333, 3), dtype=flow.float
             )
-            bbox_list = flow.tensor_buffer_to_tensor_list(gt_bbox, shape=(128, 4), dtype=flow.float)
-            label_list = flow.tensor_buffer_to_tensor_list(gt_label, shape=(128,), dtype=flow.int32)
-            segm_list = flow.tensor_buffer_to_tensor_list(gt_segm, shape=(1024, 2), dtype=flow.float)
+            bbox_list = flow.tensor_buffer_to_tensor_list(
+                gt_bbox, shape=(128, 4), dtype=flow.float
+            )
+            label_list = flow.tensor_buffer_to_tensor_list(
+                gt_label, shape=(128,), dtype=flow.int32
+            )
+            segm_list = flow.tensor_buffer_to_tensor_list(
+                gt_segm, shape=(1024, 2), dtype=flow.float
+            )
             segm_index_list = flow.tensor_buffer_to_tensor_list(
                 gt_segm_index, shape=(1024, 3), dtype=flow.int32
             )
 
-        return image_id, image_size, image_list, bbox_list, label_list, segm_list, segm_index_list
+        return (
+            image_id,
+            image_size,
+            image_list,
+            bbox_list,
+            label_list,
+            segm_list,
+            segm_index_list,
+        )
 
     return coco_load_fn
 
@@ -82,7 +97,9 @@ def _get_coco_image_samples(anno_file, image_dir, image_ids):
     poly, poly_index = _segm_poly_list_to_tensor(img_segm_poly_list)
     samples = []
     for im, ims, b, l, p, pi in zip(image, image_size, bbox, label, poly, poly_index):
-        samples.append(dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi))
+        samples.append(
+            dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi)
+        )
     return samples
 
 
@@ -91,9 +108,17 @@ def _get_category_id_to_contiguous_id_map(coco):
 
 
 def _read_images_with_cv(coco, image_dir, image_ids):
-    image_files = [os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids]
-    image_size = [(coco.imgs[img_id]["height"], coco.imgs[img_id]["width"]) for img_id in image_ids]
-    return [cv2.imread(image_file).astype(np.single) for image_file in image_files], image_size
+    image_files = [
+        os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids
+    ]
+    image_size = [
+        (coco.imgs[img_id]["height"], coco.imgs[img_id]["width"])
+        for img_id in image_ids
+    ]
+    return (
+        [cv2.imread(image_file).astype(np.single) for image_file in image_files],
+        image_size,
+    )
 
 
 def _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w):
@@ -173,7 +198,9 @@ def _read_segm_poly(coco, image_ids):
             segm = anno["segmentation"]
             assert isinstance(segm, list)
             assert len(segm) > 0, str(len(segm))
-            assert all([len(poly) > 0 for poly in segm]), str([len(poly) for poly in segm])
+            assert all([len(poly) > 0 for poly in segm]), str(
+                [len(poly) for poly in segm]
+            )
             segm_poly_list.append(segm)
 
         img_segm_poly_list.append(segm_poly_list)
@@ -285,7 +312,10 @@ class GroupedDistributedSampler(object):
                 sample_ids_cur_rank = []
                 group_buckets_cur_rank = self._group_buckets[rank]
 
-                if len(group_buckets_cur_rank[0]) > 0 and len(group_buckets_cur_rank[1]) > 0:
+                if (
+                    len(group_buckets_cur_rank[0]) > 0
+                    and len(group_buckets_cur_rank[1]) > 0
+                ):
                     if (
                         group_buckets_cur_rank[0][0]["index"]
                         < group_buckets_cur_rank[1][0]["index"]
@@ -378,7 +408,9 @@ def test_coco_reader(test_case, verbose=VERBOSE):
             cur_label = np.array([cur_label])
         test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
         test_case.assertTrue(np.allclose(poly[0][i].squeeze(), sample["poly"]))
-        test_case.assertTrue(np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"]))
+        test_case.assertTrue(
+            np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"])
+        )
 
 
 def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
@@ -391,12 +423,17 @@ def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
         for i, image_info in enumerate(image_info_list[:20]):
             print(
                 "index: {}, image_id: {}, group_id: {}, anno len: {}".format(
-                    i, image_info["image_id"], image_info["group_id"], image_info["anno_len"]
+                    i,
+                    image_info["image_id"],
+                    image_info["group_id"],
+                    image_info["anno_len"],
                 )
             )
 
     sampler = GroupedDistributedSampler(4, 8, image_info_list, True)
-    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, True, False, True)
+    of_coco_load_fn = _make_coco_data_load_fn(
+        anno_file, image_dir, 4, 8, True, False, True
+    )
     for i, sample_ids in enumerate(sampler):
         image_id = of_coco_load_fn().get().ndarray()
         if verbose:
@@ -411,7 +448,9 @@ def test_coco_reader_distributed_contiguous(test_case, verbose=VERBOSE):
 
     image_info_list = _get_coco_sorted_imgs(anno_file)
     sampler = GroupedDistributedSampler(4, 8, image_info_list, False)
-    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 4, 8, False, False, True)
+    of_coco_load_fn = _make_coco_data_load_fn(
+        anno_file, image_dir, 4, 8, False, False, True
+    )
     for i, sample_ids in enumerate(sampler):
         image_id = of_coco_load_fn().get().ndarray()
         if verbose:

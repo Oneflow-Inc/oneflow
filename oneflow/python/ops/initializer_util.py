@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.common.data_type_pb2 as data_type_conf_util
-from oneflow.python.oneflow_export import oneflow_export
+import functools
+import math
 
 import oneflow as flow
-import math
-import functools
+import oneflow.core.common.data_type_pb2 as data_type_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant_initializer")
@@ -46,9 +46,7 @@ def ones_initializer(dtype=data_type_conf_util.kFloat):
 
 
 @oneflow_export("random_uniform_initializer")
-def random_uniform_initializer(
-    minval=0, maxval=1, dtype=data_type_conf_util.kFloat
-):
+def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
     r"""Initializer that generates blob with a uniform distribution.
 
     Args:
@@ -114,9 +112,7 @@ def truncated_normal_initializer(mean=0.0, stddev=1.0):
 
 @oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
 def glorot_uniform_initializer(data_format=""):
-    return variance_scaling_initializer(
-        1.0, "fan_avg", "random_uniform", data_format
-    )
+    return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
 
 @oneflow_export("variance_scaling_initializer")
@@ -137,9 +133,7 @@ def variance_scaling_initializer(
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.variance_scaling_conf, "scale", float(scale))
     setattr(
-        initializer.variance_scaling_conf,
-        "variance_norm",
-        _get_variance_norm(mode),
+        initializer.variance_scaling_conf, "variance_norm", _get_variance_norm(mode),
     )
     setattr(
         initializer.variance_scaling_conf,
@@ -147,9 +141,7 @@ def variance_scaling_initializer(
         _get_random_distribution(distribution),
     )
     setattr(
-        initializer.variance_scaling_conf,
-        "data_format",
-        _get_data_format(data_format),
+        initializer.variance_scaling_conf, "data_format", _get_data_format(data_format),
     )
     return initializer
 
@@ -193,9 +185,7 @@ def kaiming_initializer(
         bound = math.sqrt(3.0) * std
         return flow.random_uniform_initializer(-bound, bound)
     else:
-        raise NotImplementedError(
-            "Only support normal and uniform distribution"
-        )
+        raise NotImplementedError("Only support normal and uniform distribution")
 
 
 def _get_variance_norm(mode):
@@ -258,9 +248,7 @@ def _CalcFan(shape, mode, data_format):
     elif mode == "fan_out":
         return float(fan_out)
     else:
-        raise NotImplementedError(
-            "Only support 'fan_in', 'fan_out' and 'fan_avg' mode"
-        )
+        raise NotImplementedError("Only support 'fan_in', 'fan_out' and 'fan_avg' mode")
 
 
 def _CalcGain(nonlinearity, negative_slope):

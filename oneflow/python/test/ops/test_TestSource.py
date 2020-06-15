@@ -1,8 +1,17 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
+
 
 def my_test_source(name):
-    return flow.user_op_builder(name).Op("TestSource").Output("out").Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("TestSource")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()
@@ -19,6 +28,7 @@ def test_testsource(test_case):
 
     y = TestSourceJob().get().ndarray()
     test_case.assertTrue(np.array_equal(y, np.arange(5.0)))
+
 
 def TODO_test_mirror_testsource(test_case):
     # TODO(chengcheng) source op set mirrored strategy
@@ -37,4 +47,3 @@ def TODO_test_mirror_testsource(test_case):
     y = TestSourceJob().get().ndarray()
     # y = TestSourceJob().get().ndarray_list()[0]
     test_case.assertTrue(np.array_equal(y, np.arange(5.0)))
-
