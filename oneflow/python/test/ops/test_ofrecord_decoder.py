@@ -6,10 +6,9 @@ import tempfile
 from collections import OrderedDict
 
 import numpy as np
-import six
-
 import oneflow as flow
 import oneflow.core.record.record_pb2 as ofrecord
+import six
 from test_util import GenArgList
 
 tmp = tempfile.mkdtemp()

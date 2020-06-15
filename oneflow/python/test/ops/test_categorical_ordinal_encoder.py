@@ -1,7 +1,6 @@
 import sys
 
 import numpy as np
-
 import oneflow as flow
 
 func_config = flow.FunctionConfig()

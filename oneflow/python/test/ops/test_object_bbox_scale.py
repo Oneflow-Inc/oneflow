@@ -3,7 +3,6 @@ import random
 
 import cv2
 import numpy as np
-
 import oneflow as flow
 
 

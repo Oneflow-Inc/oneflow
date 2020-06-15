@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import numpy as np
-
 import oneflow as flow
 import test_global_storage
 from test_util import GenArgList

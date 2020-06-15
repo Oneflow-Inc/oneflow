@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
-from PIL import Image
-
 import oneflow as flow
+from PIL import Image
 
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):

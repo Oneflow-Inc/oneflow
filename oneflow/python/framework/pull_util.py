@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import threading
 
 import numpy as np
-
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 

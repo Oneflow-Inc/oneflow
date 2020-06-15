@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 import traceback
 
-from google.protobuf import text_format
-
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -11,6 +9,7 @@ import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.session_context as session_ctx
+from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):

@@ -4,9 +4,8 @@ from collections import OrderedDict
 from collections.abc import Iterable
 
 import numpy as np
-import tensorflow as tf
-
 import oneflow as flow
+import tensorflow as tf
 import test_global_storage
 
 

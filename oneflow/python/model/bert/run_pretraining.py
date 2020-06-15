@@ -6,7 +6,6 @@ import time
 from datetime import datetime
 
 import numpy as np
-
 import oneflow as flow
 from pretrain import PreTrain  # , Eval
 

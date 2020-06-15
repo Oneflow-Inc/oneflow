@@ -3,9 +3,8 @@ import os
 import sys
 
 import numpy
-from absl import app, flags
-
 import oneflow
+from absl import app, flags
 
 FLAGS = flags.FLAGS
 

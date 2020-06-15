@@ -18,7 +18,7 @@ if __name__ == "__main__":
         "--fix",
         default=False,
         action="store_true",
-        help="If specified, will re-format the source, including ISort and Black",
+        help="If specified, will re-format the source",
     )
 
     arguments = parser.parse_args()
@@ -26,15 +26,11 @@ if __name__ == "__main__":
     version_cmd = arguments.python_bin + " -m {} --version | grep {} > /dev/null"
 
     error = False
-    for command, version in [
-        ("isort", "4.3.21"),
-        ("black", "19.10b0"),
-    ]:
-        command_proc = Popen(version_cmd.format(command, version), shell=True)
-        command_proc.communicate()
-        if command_proc.returncode:
-            print("Linter requires {}=={} !".format(command, version))
-            error = True
+    command_proc = Popen(version_cmd.format("black", "19.10b0"), shell=True)
+    command_proc.communicate()
+    if command_proc.returncode:
+        print("Linter requires {}=={} !".format("black", "19.10b0"))
+        error = True
     if error:
         sys.exit(1)
 
@@ -43,9 +39,8 @@ if __name__ == "__main__":
     else:
         cmd_line = arguments.python_bin + " -m {} " + arguments.source_dir + " --check"
 
-    for py_module in ["isort -rc", "black"]:
-        command_proc = Popen(cmd_line.format(py_module), shell=True)
-        command_proc.communicate()
-        if command_proc.returncode:
-            error = True
+    command_proc = Popen(cmd_line.format("black"), shell=True)
+    command_proc.communicate()
+    if command_proc.returncode:
+        error = True
     sys.exit(1 if error else 0)

@@ -22,7 +22,7 @@ jobs:
         python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
     - name: Check python format
       run: |
-        docker run --rm -v $PWD:$PWD cytopia/black $PWD/oneflow/python --check
+        docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black -c "pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple -r $PWD/docker/ci/make/requirements.txt --user && python3 $PWD/ci/check/run_py_format.py --source_dir $PWD/oneflow/python"
     - name: Setup environment
       run: |
         echo $HOSTNAME

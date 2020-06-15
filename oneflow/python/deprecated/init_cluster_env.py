@@ -7,7 +7,6 @@ import uuid
 from tempfile import NamedTemporaryFile
 
 import google.protobuf.text_format as pbtxt
-
 import oneflow.python.framework.env_util as env_util
 from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export

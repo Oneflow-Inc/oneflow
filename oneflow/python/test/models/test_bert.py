@@ -2,9 +2,8 @@ import copy
 import sys
 
 import numpy as np
-from absl import flags
-
 import oneflow as flow
+from absl import flags
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS

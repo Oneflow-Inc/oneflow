@@ -2,10 +2,9 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import tensorflow as tf
-
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_util
+import tensorflow as tf
 from test_util import GenArgList
 
 

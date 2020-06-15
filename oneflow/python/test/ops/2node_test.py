@@ -1,10 +1,9 @@
 import atexit
 import os
 
+import oneflow as flow
 from absl import app, flags
 from absl.testing import absltest
-
-import oneflow as flow
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(

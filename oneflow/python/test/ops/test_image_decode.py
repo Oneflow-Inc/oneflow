@@ -1,7 +1,6 @@
 import numpy as np
-from PIL import Image
-
 import oneflow as flow
+from PIL import Image
 
 
 def _of_image_decode(images):

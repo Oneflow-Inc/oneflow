@@ -1,12 +1,11 @@
 import os
 
-import numpy
-from absl import app
-from absl.testing import absltest
-
 import cnns_tests
 import env_1node
+import numpy
 import oneflow as flow
+from absl import app
+from absl.testing import absltest
 from test_1node_mixin import Test1NodeMixin
 
 

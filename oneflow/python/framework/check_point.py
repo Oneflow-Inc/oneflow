@@ -2,7 +2,6 @@ import datetime
 import os
 
 import numpy as np
-
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx

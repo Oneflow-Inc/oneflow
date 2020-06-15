@@ -2,9 +2,8 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import tensorflow as tf
-
 import oneflow as flow
+import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 

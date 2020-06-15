@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import numpy as np
-
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 

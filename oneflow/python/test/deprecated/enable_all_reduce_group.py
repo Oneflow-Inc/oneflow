@@ -1,5 +1,4 @@
 import numpy as np
-
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util

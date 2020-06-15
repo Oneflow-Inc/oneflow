@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 import oneflow as flow
 
 config = flow.function_config()

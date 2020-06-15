@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-from google.protobuf import text_format
-
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
@@ -13,6 +11,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.oneflow_internal as oneflow_internal
+from google.protobuf import text_format
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError

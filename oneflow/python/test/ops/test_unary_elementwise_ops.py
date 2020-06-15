@@ -1,7 +1,6 @@
 import numpy as np
-from scipy.special import erf, erfc, gammaln
-
 import oneflow as flow
+from scipy.special import erf, erfc, gammaln
 
 
 def test_abs(test_case):
