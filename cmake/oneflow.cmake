@@ -142,13 +142,9 @@ endforeach()
 
 # clang format
 add_custom_target(of_format
-            python3
-            ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py
-            --clang_format_binary
-            clang-format
-            --source_dir
-            ${CMAKE_CURRENT_SOURCE_DIR}/oneflow
-            --fix)
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  )
 
 # generate version
 if(BUILD_GIT_VERSION)
