@@ -65,6 +65,12 @@ Error Error::BoxingNotSupported() {
   return error;
 }
 
+Error Error::GradientFunctionNotFound() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_gradient_function_not_found_error();
+  return error;
+}
+
 Error&& operator<=(const std::string& log_str, Error&& error) {
   LogError(log_str, error);
   return std::move(error);
