@@ -27,8 +27,9 @@ message TrainConf {
 message PredictConf {
 }
 
-message SbpConf {
+message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
+  map<string, bool> op_name2is_mirrored_parallel_view = 2;
 }
 
 message ExperimentalRunConf {
@@ -158,6 +159,6 @@ message Job {
   required DLNetConf net = 1;
   required Placement placement = 2;
   required JobConfigProto job_conf = 3;
-  optional SbpConf sbp_conf = 4;
+  optional JobParallelViewConf job_parallel_view_conf = 4;
   optional JobHelperConf helper = 5;
 }
