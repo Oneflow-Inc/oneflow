@@ -500,7 +500,7 @@ def batch_normalization(
             setattr(op_conf.normalization_conf, "beta", beta.unique_name)
         if scale:
             setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
-        if trainable:
+        if trainable and flow.current_global_function_desc().IsTrainable():
             if not training:
                 raise ValueError(
                     "training == False && trainable == True doesn't work in non-user-op mode"
