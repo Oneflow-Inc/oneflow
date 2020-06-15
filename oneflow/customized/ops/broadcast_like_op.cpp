@@ -51,6 +51,7 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
+  CHECK_OR_RETURN(!broadcast_axes.empty());
   const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
