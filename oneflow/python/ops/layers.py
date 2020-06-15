@@ -373,14 +373,11 @@ def batch_normalization(
     # Float32 required to avoid precision-loss when using fp16 input/output
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
+    if not flow.current_global_function_desc().IsTrainable() or not trainable:
+        training = False
+
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
-
-    if not trainable and training:
-        raise ValueError(
-            '"training" of normalization cannot be True \
-                when "trainable" is False'
-        )
 
     if os.getenv("ENABLE_USER_OP") == "True":
         if center:
