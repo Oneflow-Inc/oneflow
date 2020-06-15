@@ -760,9 +760,13 @@ def identity(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") != "True":
         op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Identity_"))
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("Identity_"),
+        )
         setattr(op_conf.identity_conf, "in", x.unique_name)
         setattr(op_conf.identity_conf, "out", "out")
         compile_context.CurJobAddOp(op_conf)
@@ -772,13 +776,15 @@ def identity(x, name=None):
         return remote_blob_util.RemoteBlob(lbi)
     else:
         return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Identity_"))
-                .Op("identity")
-                .Input("in", [x])
-                .Output("out")
-                .Build()
-                .InferAndTryRun()
-                .RemoteBlobList()[0]
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Identity_")
+            )
+            .Op("identity")
+            .Input("in", [x])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
 
 

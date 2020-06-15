@@ -28,8 +28,8 @@ def _run_test(test_case, device_type, shape, data_type):
 
 def test_identity(test_case):
     arg_dict = OrderedDict()
-    arg_dict['device_type'] = ['gpu', 'cpu']
-    arg_dict['shape'] = [(96, 96)]
-    arg_dict['data_type'] = ['int8', 'int32', 'int64', 'float32', 'double']
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["shape"] = [(96, 96)]
+    arg_dict["data_type"] = ["int8", "int32", "int64", "float32", "double"]
     for arg in GenArgList(arg_dict):
         _run_test(test_case, *arg)
