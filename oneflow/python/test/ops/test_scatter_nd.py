@@ -1,7 +1,8 @@
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -9,7 +10,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def _random_inputs(params_shape, indices_shape, updates_shape, allow_duplicate_index=True):
+def _random_inputs(
+    params_shape, indices_shape, updates_shape, allow_duplicate_index=True
+):
     params = np.random.rand(*params_shape).astype(np.float32)
     updates = np.random.rand(*updates_shape).astype(np.float32)
     indices = []
@@ -106,7 +109,9 @@ def _compare_scatter_nd_with_tf(
     if mirrored:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy_dx.numpy(), params_grad.ndarray_list()[0]))
+            test_case.assertTrue(
+                np.array_equal(dy_dx.numpy(), params_grad.ndarray_list()[0])
+            )
 
     else:
 
@@ -220,7 +225,13 @@ def _compare_scatter_nd_update_with_tf(
 
 
 def _of_tensor_scatter_nd_add(
-    params, indices, updates, device_type, mirrored, params_grad_watcher, updates_grad_watcher
+    params,
+    indices,
+    updates,
+    device_type,
+    mirrored,
+    params_grad_watcher,
+    updates_grad_watcher,
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -264,7 +275,11 @@ def _of_tensor_scatter_nd_add(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+        return (
+            tensor_scatter_nd_add_fn([params], [indices], [updates])
+            .get()
+            .ndarray_list()[0]
+        )
 
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -285,7 +300,9 @@ def _of_tensor_scatter_nd_add(
 def _compare_tensor_scatter_nd_add_with_tf(
     test_case, params_shape, indices_shape, updates_shape, device_type, mirrored
 ):
-    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, True)
+    params, updates, indices = _random_inputs(
+        params_shape, indices_shape, updates_shape, True
+    )
 
     params_const = tf.constant(params)
     indices_const = tf.constant(indices)
@@ -317,7 +334,13 @@ def _compare_tensor_scatter_nd_add_with_tf(
         test_case.assertTrue(np.allclose(tf_updates_grad_np, of_updates_grad_np))
 
     of_out = _of_tensor_scatter_nd_add(
-        params, indices, updates, device_type, mirrored, compare_params_grad, compare_updates_grad
+        params,
+        indices,
+        updates,
+        device_type,
+        mirrored,
+        compare_params_grad,
+        compare_updates_grad,
     )
     test_case.assertTrue(np.allclose(tf_out1.numpy(), of_out))
 
@@ -378,7 +401,11 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
         with flow.device_prior_placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_update(params_def, indices_def, updates_def)
 
-    return tensor_scatter_nd_update_fn([params], [indices], [updates]).get().ndarray_list()[0]
+    return (
+        tensor_scatter_nd_update_fn([params], [indices], [updates])
+        .get()
+        .ndarray_list()[0]
+    )
 
 
 def _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(
@@ -389,7 +416,9 @@ def _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(
     indices_static_shape,
     updates_static_shape,
 ):
-    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape, False)
+    params, updates, indices = _random_inputs(
+        params_shape, indices_shape, updates_shape, False
+    )
 
     i = tf.constant(indices)
     x = tf.Variable(params)
@@ -419,7 +448,9 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
         with flow.device_prior_placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
-    return tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+    return (
+        tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+    )
 
 
 def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
@@ -430,7 +461,9 @@ def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
     indices_static_shape,
     updates_static_shape,
 ):
-    params, updates, indices = _random_inputs(params_shape, indices_shape, updates_shape)
+    params, updates, indices = _random_inputs(
+        params_shape, indices_shape, updates_shape
+    )
 
     i = tf.constant(indices)
     x = tf.Variable(params)

@@ -100,6 +100,7 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_any", keepdims, axis)
 
 
+
 @oneflow_export("math.reduce_min")
 def reduce_min(x, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceMin_")
@@ -107,6 +108,7 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
     if len(axis) == 0:
         return x
     return _do_reduce(x, name, "reduce_min", keepdims, axis)
+
 
 
 @oneflow_export("math.reduce_prod")
@@ -118,6 +120,7 @@ def reduce_prod(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_prod", keepdims, axis)
 
 
+
 @oneflow_export("math.reduce_all")
 def reduce_all(x, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceAll_")
@@ -127,14 +130,19 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_all", keepdims, axis)
 
 
+
 @oneflow_export("math.reduce_euclidean_norm")
 def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
-    return flow.math.sqrt(flow.math.reduce_sum(flow.math.square(input_tensor), axis, keepdims))
+    return flow.math.sqrt(
+        flow.math.reduce_sum(flow.math.square(input_tensor), axis, keepdims)
+    )
 
 
 @oneflow_export("math.reduce_logsumexp")
 def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
-    return flow.math.log(flow.math.reduce_sum(flow.math.exp(input_tensor), axis, keepdims))
+    return flow.math.log(
+        flow.math.reduce_sum(flow.math.exp(input_tensor), axis, keepdims)
+    )
 
 
 @oneflow_export("math.reduce_std")

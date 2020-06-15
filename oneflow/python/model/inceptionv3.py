@@ -1,7 +1,8 @@
+import argparse
+from datetime import datetime
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
-import argparse
 
 _DATA_DIR = "/dataset/PNGS/PNG299/of_record_repeated"
 _EVAL_DIR = _DATA_DIR
@@ -102,8 +103,11 @@ def _data_load_layer(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf),
-        batch_size=args.batch_size, data_part_num=32, name="decode"
+        data_dir,
+        (image_blob_conf, label_blob_conf),
+        batch_size=args.batch_size,
+        data_part_num=32,
+        name="decode",
     )
 
 

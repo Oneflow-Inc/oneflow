@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
@@ -39,11 +41,17 @@ def _of_where(
         def do_where(condition, x, y):
             with flow.device_prior_placement(device_type, "0:0"):
                 x_var = flow.get_variable(
-                    "x", shape=x.shape, dtype=flow.float, initializer=flow.constant_initializer(0)
+                    "x",
+                    shape=x.shape,
+                    dtype=flow.float,
+                    initializer=flow.constant_initializer(0),
                 )
                 x_var = x_var + x
                 y_var = flow.get_variable(
-                    "y", shape=y.shape, dtype=flow.float, initializer=flow.constant_initializer(0)
+                    "y",
+                    shape=y.shape,
+                    dtype=flow.float,
+                    initializer=flow.constant_initializer(0),
                 )
                 y_var = y_var + y
 
@@ -132,7 +140,8 @@ def _compare_with_tf(
 
         test_case.assertTrue(
             np.array_equal(
-                dz_dx.numpy(), dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray()
+                dz_dx.numpy(),
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
             )
         )
 
@@ -144,7 +153,8 @@ def _compare_with_tf(
 
         test_case.assertTrue(
             np.array_equal(
-                dz_dy.numpy(), dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray()
+                dz_dy.numpy(),
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
             )
         )
 
