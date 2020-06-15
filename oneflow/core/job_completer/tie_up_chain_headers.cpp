@@ -76,7 +76,8 @@ void AddIdentityOpAndReconnect(
   }
   // set sbp conf for tuple_identity_op
   CHECK_EQ(old_lbi2new_obn.size(), old_lbi2sbp_parallel.size());
-  auto* sbp_sig_conf_map = job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* sbp_sig_conf_map =
+      job->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   auto* sbp_parallel_map = (*sbp_sig_conf_map)[identity_op_name].mutable_bn_in_op2sbp_parallel();
   for (const auto& pair : old_lbi2new_obn) {
     (*sbp_parallel_map)[pair.second] = old_lbi2sbp_parallel.at(pair.first);
