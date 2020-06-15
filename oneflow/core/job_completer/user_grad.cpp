@@ -25,11 +25,10 @@ Maybe<void> GenerateBackwardOpConf(
 
   for (const std::string& ibn : op.input_bns()) {
     LogicalBlobId* lbi = DiffLbi4BnInOp(ibn);
-    if (lbi != nullptr) {
-      CHECK(lbi->has_op_name() && lbi->has_blob_name())
-          << " user_op: " << op.op_name() << " op_type_name: " << user_conf.op_type_name()
-          << " 's input blob " << ibn << " has not generate input diff blob !";
-    }
+    if (lbi == nullptr || (lbi->has_op_name() && lbi->has_blob_name())) { continue; }
+    LOG(ERROR) << "[REQUIRES_GRAD] user_op: " << op.op_name()
+               << " op_type_name: " << user_conf.op_type_name() << " 's input blob " << ibn
+               << " has not generate input diff blob !";
   }
   return Maybe<void>::Ok();
 }
