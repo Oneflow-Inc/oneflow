@@ -254,7 +254,8 @@ struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
-    return __hne(trunc_mod, half(0)) && __hne(__hlt(y, half(0)), __hlt(trunc_mod, half(0)))
+    return __hne(trunc_mod, GetZeroVal<half>())
+                   && __hne(__hlt(y, GetZeroVal<half>()), __hlt(trunc_mod, half(0)))
                ? trunc_mod + y
                : trunc_mod;
 #else
