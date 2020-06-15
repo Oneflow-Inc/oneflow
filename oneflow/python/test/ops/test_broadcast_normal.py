@@ -148,8 +148,8 @@ def compare_with_tensorflow(
         y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
             np_type
         )
-    if isinstance(flow_op, (type(flow.math.divide), type(flow.math.mod))):
-        y[np.where(y == 0)] += 1
+    if flow_op in (flow.math.divide, flow.math.mod):
+        y[np.where(y == 0)[0]] += 1
 
     # Oneflow
     of_out = FlowJob(x, y).get().ndarray()
