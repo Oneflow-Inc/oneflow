@@ -138,7 +138,8 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 
 void JobBuildAndInferCtx::AddOp7AddSbpSigConf2Job(const OperatorConf& operator_conf,
                                                   const SbpSignature& sbp_signature) const {
-  auto* op_name2sbp_sig = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* op_name2sbp_sig =
+      job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   if (sbp_signature.bn_in_op2sbp_parallel().size() > 0) {
     (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
   }
@@ -497,8 +498,8 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
   };
   JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
 
-  // infer sbp
   ParallelDesc parallel_desc(*parallel_conf);
+  // infer sbp
   SbpSignature sbp_sig_to_infer;
   JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc, &sbp_sig_to_infer));
 

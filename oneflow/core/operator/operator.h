@@ -9,6 +9,7 @@
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
@@ -22,6 +23,7 @@ struct OpContext {
 };
 
 class LogicalNode;
+class MirroredSigInferHint;
 
 class Operator {
  public:
@@ -145,6 +147,11 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
+  Maybe<void> InferMirroredSignatureIf(
+      MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*, const OpContext*,
@@ -183,6 +190,11 @@ class Operator {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
   }
+  virtual Maybe<void> InferMirroredSignature(
+      MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
 
   int64_t cudnn_buf_limit_byte() const;
 
